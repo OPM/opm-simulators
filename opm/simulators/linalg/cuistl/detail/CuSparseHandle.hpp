@@ -63,7 +63,5 @@ private:
     CuSparseHandle();
     cusparseHandle_t m_handle;
 };
-
-using CuSparseHandlePtr = std::unique_ptr<CuSparseHandle>;
 } // namespace Opm::cuistl::detail
 #endif // OPM_CUSPARSEHANDLE_HPP
