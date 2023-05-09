@@ -212,6 +212,6 @@ BOOST_AUTO_TEST_CASE(TestRocsparseSolver)
         // Test with 3x3 block solvers.
         test3(prm);
     } catch(const HIPInitException& ) {
-        BOOST_WARN_MESSAGE(true, "Problem with initializing HIP, skipping test");
+        BOOST_ERROR("Problem with initializing HIP.");
     }
 }
