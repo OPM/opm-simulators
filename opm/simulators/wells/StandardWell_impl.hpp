@@ -496,11 +496,7 @@ namespace Opm
         const double volume = 0.1 * unit::cubic(unit::feet) * regularization_factor;
 
         auto& ws = well_state.well(this->index_of_well_);
-
-        ws.vaporized_oil_rate = 0;
-        ws.dissolved_gas_rate = 0;
-        ws.dissolved_gas_rate_in_water = 0;
-        ws.vaporized_wat_rate = 0;
+        ws.phase_mixing_rates.fill(0.0);
 
         const int np = this->number_of_phases_;
 
@@ -558,10 +554,7 @@ namespace Opm
         // ranks sharing this well (this->index_of_well_).
         {
             const auto& comm = this->parallel_well_info_.communication();
-            ws.dissolved_gas_rate = comm.sum(ws.dissolved_gas_rate);
-            ws.dissolved_gas_rate_in_water = comm.sum(ws.dissolved_gas_rate_in_water);
-            ws.vaporized_oil_rate = comm.sum(ws.vaporized_oil_rate);
-            ws.vaporized_wat_rate = comm.sum(ws.vaporized_wat_rate);
+            comm.sum(ws.phase_mixing_rates.data(), ws.phase_mixing_rates.size());
         }
 
         // accumulate resWell_ and duneD_ in parallel to get effects of all perforations (might be distributed)
@@ -649,10 +642,10 @@ namespace Opm
 
         // updating the solution gas rate and solution oil rate
         if (this->isProducer()) {
-            ws.dissolved_gas_rate += perf_rates.dis_gas;
-            ws.dissolved_gas_rate_in_water += perf_rates.dis_gas_in_water;
-            ws.vaporized_oil_rate += perf_rates.vap_oil;
-            ws.vaporized_wat_rate += perf_rates.vap_wat;
+            ws.phase_mixing_rates[ws.dissolved_gas] += perf_rates.dis_gas;
+            ws.phase_mixing_rates[ws.dissolved_gas_in_water] += perf_rates.dis_gas_in_water;
+            ws.phase_mixing_rates[ws.vaporized_oil] += perf_rates.vap_oil;
+            ws.phase_mixing_rates[ws.vaporized_water] += perf_rates.vap_wat;
         }
 
         if constexpr (has_energy) {
