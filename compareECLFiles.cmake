@@ -130,7 +130,7 @@ endfunction()
 #   - This test class compares the output from a parallel simulation
 #     to the output from the serial instance of the same model.
 function(add_test_compare_parallel_simulation)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
 
@@ -138,22 +138,30 @@ function(add_test_compare_parallel_simulation)
     set(PARAM_DIR ${PARAM_CASENAME})
   endif()
 
+  if(PARAM_MPI_PROCS)
+    set(MPI_PROCS ${PARAM_MPI_PROCS})
+  else()
+    set(MPI_PROCS 4)
+  endif()
+
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallel/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${OPM_TESTS_ROOT}/${PARAM_DIR}/${PARAM_FILENAME} ${PARAM_TEST_ARGS})
+  set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+                  -r ${RESULT_PATH}
+                  -b ${PROJECT_BINARY_DIR}/bin
+                  -f ${PARAM_FILENAME}
+                  -a ${PARAM_ABS_TOL}
+                  -t ${PARAM_REL_TOL}
+                  -c ${COMPARE_ECL_COMMAND}
+                  -n ${MPI_PROCS})
 
   # Add test that runs flow_mpi and outputs the results to file
   opm_add_test(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
-                           -r ${RESULT_PATH}
-                           -b ${PROJECT_BINARY_DIR}/bin
-                           -f ${PARAM_FILENAME}
-                           -a ${PARAM_ABS_TOL}
-                           -t ${PARAM_REL_TOL}
-                           -c ${COMPARE_ECL_COMMAND}
+               DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${TEST_ARGS})
   set_tests_properties(compareParallelSim_${PARAM_SIMULATOR}+${PARAM_FILENAME}
-                       PROPERTIES RUN_SERIAL 1)
+                       PROPERTIES PROCESSORS ${MPI_PROCS})
 endfunction()
 
 
@@ -171,14 +179,23 @@ function(add_test_compare_parallel_restarted_simulation)
   set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS RESTART_STEP TEST_NAME)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
   endif()
+
   if (PARAM_TEST_NAME)
     set(TEST_NAME ${PARAM_TEST_NAME})
   else()
     set(TEST_NAME compareParallelRestartedSim_${PARAM_SIMULATOR}+${PARAM_FILENAME})
   endif()
+
+  if(PARAM_MPI_PROCS)
+    set(MPI_PROCS ${PARAM_MPI_PROCS})
+  else()
+    set(MPI_PROCS 4)
+  endif()
+
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallelRestart/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
@@ -188,16 +205,14 @@ function(add_test_compare_parallel_restarted_simulation)
                   -t ${PARAM_REL_TOL}
                   -c ${COMPARE_ECL_COMMAND}
                   -s ${PARAM_RESTART_STEP}
-                  -d ${RST_DECK_COMMAND})
-  if(PARAM_MPI_PROCS)
-    list(APPEND DRIVER_ARGS -n ${PARAM_MPI_PROCS})
-  endif()
+                  -d ${RST_DECK_COMMAND}
+                  -n ${MPI_PROCS})
 
   opm_add_test(${TEST_NAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${PARAM_TEST_ARGS})
-  set_tests_properties(${TEST_NAME} PROPERTIES RUN_SERIAL 1)
+  set_tests_properties(${TEST_NAME} PROPERTIES PROCESSORS ${MPI_PROCS})
 endfunction()
 
 
@@ -212,12 +227,20 @@ endfunction()
 #   - This test class compares the output from a parallel simulation
 #     to that of a parallel simulation running with a custom communicator.
 function(add_test_split_comm)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR MPI_PROCS)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+
   if(NOT PARAM_DIR)
     set(PARAM_DIR ${PARAM_CASENAME})
   endif()
+
+  if(PARAM_MPI_PROCS)
+    set(MPI_PROCS ${PARAM_MPI_PROCS})
+  else()
+    set(MPI_PROCS 4)
+  endif()
+
   set(RESULT_PATH ${BASE_RESULT_PATH}/parallelSplitComm/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
                   -r ${RESULT_PATH}
@@ -225,17 +248,15 @@ function(add_test_split_comm)
                   -f ${PARAM_FILENAME}
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
-                  -c ${COMPARE_ECL_COMMAND})
-  if(PARAM_MPI_PROCS)
-    list(APPEND DRIVER_ARGS -n ${PARAM_MPI_PROCS})
-  endif()
+                  -c ${COMPARE_ECL_COMMAND}
+                  -n ${MPI_PROCS})
 
   opm_add_test(compareParallelSplitComm_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${PARAM_TEST_ARGS})
   set_tests_properties(compareParallelSplitComm_${PARAM_SIMULATOR}+${PARAM_FILENAME}
-                       PROPERTIES RUN_SERIAL 1)
+                       PROPERTIES PROCESSORS ${MPI_PROCS})
 endfunction()
 
 
