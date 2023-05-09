@@ -1711,7 +1711,6 @@ namespace Opm {
             if (tuning.XXXMBE_has_nondefault_value) {
                 param_.tolerance_mb_ = tuning.XXXMBE;
                 if ( terminal_output_ ) {
-                    
                     OpmLog::debug(fmt::format("Setting BlackoilModelEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
                 }
             }
@@ -1742,7 +1741,7 @@ namespace Opm {
             auto cnvErrorPvFraction = computeCnvErrorPv(B_avg, dt);
             cnvErrorPvFraction /= (pvSum - numAquiferPvSum);
 
-            const double tol_mb  = param_.tolerance_mb_;            
+            const double tol_mb  = param_.tolerance_mb_;
             // Default value of relaxed_max_pv_fraction_ is 0.03 and min_strict_cnv_iter_ is 0.
             // For each iteration, we need to determine whether to use the relaxed CNV tolerance.
             // To disable the usage of relaxed CNV tolerance, you can set the relaxed_max_pv_fraction_ to be 0.
