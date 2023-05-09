@@ -61,11 +61,11 @@ getCusparseErrorMessage(int code)
  *
  * Example usage:
  * @code{.cpp}
- * #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
+ * #include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
  * #include <cublas_v2.h>
  *
  * void some_function() {
- *     cublasHandle_t cublasHandle;
+ *     cusparseHandle_t cusparseHandle;
  *     cudaSafeCall(cusparseCreate(&cusparseHandle), "cusparseCreate(&cusparseHandle)", __FILE__, __func__, __LINE__);
  * }
  * @endcode

@@ -23,15 +23,15 @@
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 
 /**
- * @brief OPM_CUDA_CHECK_LAST_ERROR checks the return type of cudaDeviceSynchronize(),
+ * @brief OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE checks the return type of cudaDeviceSynchronize(),
  * and throws an exception if cudaDeviceSynchronize() does not equal cudaSuccess.
  *
  * Example usage:
  * @code{.cpp}
- * #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
+ * #include <opm/simulators/linalg/cuistl/detail/cuda_check_last_error.hpp>
  *
  * void some_function() {
- *     OPM_CUDA_CHECK_LAST_ERROR;
+ *     OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE;
  * }
  * @endcode
  *
@@ -43,8 +43,9 @@
 #ifdef NDEBUG
 #define OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE_IF_DEBUG
 #else
+
 /**
- * @brief OPM_CUDA_CHECK_LAST_ERROR_IF_DEBUG checks the return type of cudaDeviceSynchronize only if NDEBUG is not defined,
+ * @brief OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE_IF_DEBUG checks the return type of cudaDeviceSynchronize only if NDEBUG is not defined,
  * and throws an exception if cudaDeviceSynchronize() does not equal cudaSuccess.
  *
  * Example usage:
@@ -52,7 +53,7 @@
  * #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
  *
  * void some_function() {
- *     OPM_CUDA_CHECK_LAST_ERROR;
+ *     OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE_IF_DEBUG;
  * }
  * @endcode
  *
@@ -68,7 +69,7 @@
  *
  * Example usage:
  * @code{.cpp}
- * #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
+ * #include <opm/simulators/linalg/cuistl/detail/cuda_check_last_error.hpp>
  *
  * void some_function() {
  *     OPM_CUDA_CHECK_LAST_ERROR;
@@ -78,19 +79,21 @@
  * @note This can be used to debug the code, or simply make sure that no error has occured.
  */
 #define OPM_CUDA_CHECK_LAST_ERROR OPM_CUDA_SAFE_CALL(cudaGetLastError())
+
 #ifdef NDEBUG
 #define OPM_CUDA_CHECK_LAST_ERROR_IF_DEBUG
 #else
+
 /**
  * @brief OPM_CUDA_CHECK_LAST_ERROR_IF_DEBUG checks the return type of cudaGetLastError() only if NDEBUG is not defined,
  * and throws an exception if cudaGetLastError() does not equal cudaSuccess.
  *
  * Example usage:
  * @code{.cpp}
- * #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
+ * #include <opm/simulators/linalg/cuistl/detail/cuda_check_last_error.hpp>
  *
  * void some_function() {
- *     OPM_CUDA_CHECK_LAST_ERROR;
+ *     OPM_CUDA_CHECK_LAST_ERROR_IF_DEBUG;
  * }
  * @endcode
  *
@@ -98,4 +101,5 @@
  */
 #define OPM_CUDA_CHECK_LAST_ERROR_IF_DEBUG OPM_CUDA_CHECK_LAST_ERROR
 #endif
+
 #endif

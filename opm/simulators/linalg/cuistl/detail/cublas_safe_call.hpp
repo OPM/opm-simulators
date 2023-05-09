@@ -57,14 +57,14 @@ getCublasErrorMessage(int code)
     return fmt::format("UNKNOWN CUBLAS ERROR {}.", code);
 }
 
-#undef CHECK_CUSPRASE_ERROR_TYPE
+#undef CHECK_CUBLAS_ERROR_TYPE
 /**
  * @brief cublasSafeCall checks the return type of the CUBLAS expression (function call) and throws an exception if it
  * does not equal CUBLAS_STATUS_SUCCESS.
  *
  * Example usage:
  * @code{.cpp}
- * #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
+ * #include <opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp>
  * #include <cublas_v2.h>
  *
  * void some_function() {
@@ -98,6 +98,7 @@ cublasSafeCall(cublasStatus_t error,
     }
 }
 } // namespace Opm::cuistl::detail
+
 /**
  * @brief OPM_CUBLAS_SAFE_CALL checks the return type of the cublas expression (function call) and throws an exception
  * if it does not equal CUBLAS_STATUS_SUCCESS.
