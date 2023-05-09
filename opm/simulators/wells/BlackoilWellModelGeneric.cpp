@@ -42,6 +42,7 @@
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
@@ -907,6 +908,30 @@ hasTHPConstraints() const
 
 bool
 BlackoilWellModelGeneric::
+needRebalanceNetwork(const int report_step) const
+{
+    const auto& network = schedule()[report_step].network();
+    if (!network.active()) {
+        return false;
+    }
+
+    bool network_rebalance_necessary = false;
+    for (const auto& well : well_container_generic_) {
+        const auto& events = this->wellState().well(well->indexOfWell()).events;
+        const bool is_partof_network = network.has_node(well->wellEcl().groupName());
+        // TODO: we might find more relevant events to be included here
+        if (is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
+            network_rebalance_necessary = true;
+            break;
+        }
+    }
+    network_rebalance_necessary = comm_.max(network_rebalance_necessary);
+
+    return network_rebalance_necessary;
+}
+
+bool
+BlackoilWellModelGeneric::
 forceShutWellByName(const std::string& wellname,
                     const double simulation_time)
 {
@@ -958,15 +983,18 @@ inferLocalShutWells()
     }
 }
 
-std::pair<bool, double>
+double
 BlackoilWellModelGeneric::
 updateNetworkPressures(const int reportStepIdx)
 {
     // Get the network and return if inactive.
     const auto& network = schedule()[reportStepIdx].network();
     if (!network.active()) {
-        return { false, 0.0 };
+        return 0.0;
     }
+
+    const auto previous_node_pressures = node_pressures_;
+
     node_pressures_ = WellGroupHelpers::computeNetworkPressures(network,
                                                                 this->wellState(),
                                                                 this->groupState(),
@@ -974,10 +1002,40 @@ updateNetworkPressures(const int reportStepIdx)
                                                                 schedule(),
                                                                 reportStepIdx);
 
-    // Set the thp limits of wells
-    bool active_limit_change = false;
-    double network_imbalance = 0.0;
+    // here, the network imbalance is the difference between the previous nodal pressure and the new nodal pressure
+    double network_imbalance = 0.;
+
+    if (!previous_node_pressures.empty()) {
+        for (const auto& [name, pressure]: previous_node_pressures) {
+            const auto new_pressure = node_pressures_.at(name);
+            const double change = (new_pressure - pressure);
+            if (std::abs(change) > network_imbalance) {
+                network_imbalance = std::abs(change);
+            }
+            // we dampen the amount of the nodal pressure can change during one iteration
+            // due to the fact our nodal pressure calculation is somewhat explicit
+            // TODO: the following parameters are subject to adjustment for optimization purpose
+            constexpr double upper_update_bound = 5.0 * unit::barsa;
+            constexpr double lower_update_bound = 0.05 * unit::barsa;
+            // relative dampening factor based on update value
+            constexpr double damping_factor = 0.1;
+            const double allowed_change = std::max(std::min(damping_factor * std::abs(change), upper_update_bound),
+                                                   lower_update_bound);
+            if (std::abs(change) > allowed_change) {
+                const double sign = change > 0 ? 1. : -1.;
+                node_pressures_[name] = pressure + sign * allowed_change;
+            }
+        }
+    } else {
+        for (const auto& [name, pressure]: node_pressures_) {
+            if (std::abs(pressure) > network_imbalance) {
+                network_imbalance = std::abs(pressure);
+            }
+        }
+    }
+
     for (auto& well : well_container_generic_) {
+
         // Producers only, since we so far only support the
         // "extended" network model (properties defined by
         // BRANPROP and NODEPROP) which only applies to producers.
@@ -988,17 +1046,16 @@ updateNetworkPressures(const int reportStepIdx)
                 // set the dynamic THP constraint of the well accordingly.
                 const double new_limit = it->second;
                 well->setDynamicThpLimit(new_limit);
-                const SingleWellState& ws = this->wellState()[well->indexOfWell()];
+                SingleWellState& ws = this->wellState()[well->indexOfWell()];
                 const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
-                const bool will_switch_to_thp = ws.thp < new_limit;
-                if (thp_is_limit || will_switch_to_thp) {
-                    active_limit_change = true;
-                    network_imbalance = std::max(network_imbalance, std::fabs(new_limit - ws.thp));
+                // TODO: not sure why the thp is NOT updated properly elsewhere
+                if (thp_is_limit) {
+                    ws.thp = well->getTHPConstraint(summaryState_);
                 }
             }
         }
     }
-    return { active_limit_change, network_imbalance };
+    return network_imbalance;
 }
 
 void
@@ -1238,6 +1295,12 @@ bool
 BlackoilWellModelGeneric::
 shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
 {
+    // if network is not active, we do not need to balance the network
+    const auto& network = schedule()[reportStepIdx].network();
+    if (!network.active()) {
+        return false;
+    }
+
     const auto& balance = schedule()[reportStepIdx].network_balance();
     if (balance.mode() == Network::Balance::CalcMode::TimeStepStart) {
         return iterationIdx == 0;
@@ -1253,17 +1316,7 @@ shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
     }
 }
 
-bool
-BlackoilWellModelGeneric::
-moreNetworkIteration(const int reportStepIdx,
-                     const std::size_t iteration,
-                     const double network_imbalance) const
-{
-    const auto& balance = schedule()[reportStepIdx].network_balance();
-    // Iterate if not converged, and number of iterations is not yet max (NETBALAN item 3).
-    return iteration < balance.pressure_max_iter() &&
-           network_imbalance > balance.pressure_tolerance();
-}
+
 
 std::vector<int>
 BlackoilWellModelGeneric::

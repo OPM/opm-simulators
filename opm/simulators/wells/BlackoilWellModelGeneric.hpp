@@ -158,6 +158,9 @@ public:
     /// Return true if any well has a THP constraint.
     bool hasTHPConstraints() const;
 
+    /// Whether it is necessary to re-balance network
+    bool needRebalanceNetwork(const int report_step) const;
+
     /// Shut down any single well
     /// Returns true if the well was actually found and shut.
     bool forceShutWellByName(const std::string& wellname,
@@ -176,10 +179,6 @@ public:
 
     bool shouldBalanceNetwork(const int reportStepIndex,
                               const int iterationIdx) const;
-
-    bool moreNetworkIteration(const int reportStepIdx,
-                              const std::size_t iteration,
-                              const double network_imbalance) const;
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -302,7 +301,7 @@ protected:
 
     bool wasDynamicallyShutThisTimeStep(const int well_index) const;
 
-    std::pair<bool, double> updateNetworkPressures(const int reportStepIdx);
+    double updateNetworkPressures(const int reportStepIdx);
 
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,
