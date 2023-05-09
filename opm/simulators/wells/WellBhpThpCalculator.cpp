@@ -340,7 +340,7 @@ calculateBhpFromThp(const WellState& well_state,
 
 double WellBhpThpCalculator::getVfpBhpAdjustment(const double bhp_tab, const double thp_limit) const
 {
-    return well_.wellEcl().getWVFPDP().getDP(bhp_tab, thp_limit);
+    return well_.wellEcl().getWVFPDP().getPressureLoss(bhp_tab, thp_limit);
 }
 
 template<class ErrorPolicy>
