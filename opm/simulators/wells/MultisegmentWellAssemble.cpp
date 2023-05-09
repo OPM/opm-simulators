@@ -226,7 +226,7 @@ assembleHydroPressureLoss(const int seg,
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
     eqns.residual()[seg][SPres] -= hydro_pressure_drop.value();
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        eqns.D()[seg][seg_upwind][SPres][pv_idx] -= hydro_pressure_drop.derivative(pv_idx + Indices::numEq);
+        eqns.D()[seg][seg][SPres][pv_idx] -= hydro_pressure_drop.derivative(pv_idx + Indices::numEq);
     }
 }
 

@@ -323,8 +323,8 @@ typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 getHydroPressureLoss(const int seg) const
 {   
-    const int seg_upwind = upwinding_segments_[seg];
-    return densities_[seg_upwind] * well_.gravity() * depth_diffs_[seg];
+    //const int seg_upwind = upwinding_segments_[seg];
+    return densities_[seg] * well_.gravity() * depth_diffs_[seg];
 }
 
 
