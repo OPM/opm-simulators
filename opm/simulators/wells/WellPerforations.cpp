@@ -225,6 +225,50 @@ gasOilVolumeRatio(Value& volumeRatio,
     volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
 }
 
+template<class FluidSystem, class Indices, class Scalar, class Value>
+void WellPerforations<FluidSystem,Indices,Scalar,Value>::
+IPR(std::vector<Scalar>& ipr_a,
+    std::vector<Scalar>& ipr_b,
+    const Scalar tw_perf,
+    const Scalar pressure_diff,
+    const Scalar rs,
+    const Scalar rv,
+    const std::vector<Scalar>& mob,
+    const std::vector<Scalar>& b_perf)
+{
+    std::vector<Scalar> ipr_a_perf(ipr_a.size());
+    std::vector<Scalar> ipr_b_perf(ipr_b.size());
+    for (int comp_idx = 0; comp_idx < well_.numComponents(); ++comp_idx) {
+        const Scalar tw_mob = tw_perf * mob[comp_idx] * b_perf[comp_idx];
+        ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
+        ipr_b_perf[comp_idx] += tw_mob;
+    }
+
+           // we need to handle the rs and rv when both oil and gas are present
+    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+        FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        const unsigned oil_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+        const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+
+        const Scalar dis_gas_a = rs * ipr_a_perf[oil_comp_idx];
+        const Scalar vap_oil_a = rv * ipr_a_perf[gas_comp_idx];
+
+        ipr_a_perf[gas_comp_idx] += dis_gas_a;
+        ipr_a_perf[oil_comp_idx] += vap_oil_a;
+
+        const Scalar dis_gas_b = rs * ipr_b_perf[oil_comp_idx];
+        const Scalar vap_oil_b = rv * ipr_b_perf[gas_comp_idx];
+
+        ipr_b_perf[gas_comp_idx] += dis_gas_b;
+        ipr_b_perf[oil_comp_idx] += vap_oil_b;
+    }
+
+    for (size_t comp_idx = 0; comp_idx < ipr_a_perf.size(); ++comp_idx) {
+        ipr_a[comp_idx] += ipr_a_perf[comp_idx];
+        ipr_b[comp_idx] += ipr_b_perf[comp_idx];
+    }
+}
+
 #define INSTANCE(Dim, ...) \
 template class WellPerforations<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, \
                                 __VA_ARGS__, double, double>; \

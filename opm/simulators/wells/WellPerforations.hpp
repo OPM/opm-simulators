@@ -86,6 +86,16 @@ public:
                            const std::vector<Value>& b_perfcells_dense,
                            DeferredLogger& deferred_logger) const;
 
+    //! \brief Add IPR for a perforation.
+    void IPR(std::vector<Scalar>& ipr_a,
+             std::vector<Scalar>& ipr_b,
+             const Scalar tw_perf,
+             const Scalar pressure_diff,
+             const Scalar rs,
+             const Scalar rv,
+             const std::vector<Scalar>& mob,
+             const std::vector<Scalar>& b_perf);
+
 private:
     const WellIfIndices& well_; //!< Reference to well interface
 };

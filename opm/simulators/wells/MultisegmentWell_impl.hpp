@@ -28,6 +28,7 @@
 
 #include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/WellPerforations.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <string>
@@ -1303,39 +1304,9 @@ namespace Opm
 
                 // the well index associated with the connection
                 const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
-
-                std::vector<double> ipr_a_perf(this->ipr_a_.size());
-                std::vector<double> ipr_b_perf(this->ipr_b_.size());
-                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    const double tw_mob = tw_perf * mob[comp_idx] * b_perf[comp_idx];
-                    ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
-                    ipr_b_perf[comp_idx] += tw_mob;
-                }
-
-                // we need to handle the rs and rv when both oil and gas are present
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                    const unsigned oil_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-                    const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                    const double rs = (fs.Rs()).value();
-                    const double rv = (fs.Rv()).value();
-
-                    const double dis_gas_a = rs * ipr_a_perf[oil_comp_idx];
-                    const double vap_oil_a = rv * ipr_a_perf[gas_comp_idx];
-
-                    ipr_a_perf[gas_comp_idx] += dis_gas_a;
-                    ipr_a_perf[oil_comp_idx] += vap_oil_a;
-
-                    const double dis_gas_b = rs * ipr_b_perf[oil_comp_idx];
-                    const double vap_oil_b = rv * ipr_b_perf[gas_comp_idx];
-
-                    ipr_b_perf[gas_comp_idx] += dis_gas_b;
-                    ipr_b_perf[oil_comp_idx] += vap_oil_b;
-                }
-
-                for (size_t comp_idx = 0; comp_idx < ipr_a_perf.size(); ++comp_idx) {
-                    this->ipr_a_[comp_idx] += ipr_a_perf[comp_idx];
-                    this->ipr_b_[comp_idx] += ipr_b_perf[comp_idx];
-                }
+                WellPerforations<FluidSystem,Indices,Scalar,Scalar>(*this).
+                    IPR(this->ipr_a_, this->ipr_b_, tw_perf, pressure_diff,
+                        fs.Rs().value(), fs.Rv().value(), mob, b_perf);
             }
         }
     }
