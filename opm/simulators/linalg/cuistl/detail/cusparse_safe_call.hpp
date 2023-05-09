@@ -22,6 +22,7 @@
 #include <exception>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 namespace Opm::cuistl::detail
 {
@@ -31,12 +32,12 @@ namespace Opm::cuistl::detail
         return #x;                                                                                                     \
     }
 /**
- * @brief getCusparseErrorMessage Converts an error code returned from a cusparse function a human readable string.
+ * @brief getCusparseErrorCodeToString Converts an error code returned from a cusparse function a human readable string.
  * @param code an error code from a cusparse routine
  * @return a human readable string.
  */
 inline std::string
-getCusparseErrorMessage(int code)
+getCusparseErrorCodeToString(int code)
 {
     CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_SUCCESS);
     CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_NOT_INITIALIZED);
@@ -54,6 +55,37 @@ getCusparseErrorMessage(int code)
 }
 
 #undef CHECK_CUSPARSE_ERROR_TYPE
+/**
+ * @brief getCusparseErrorMessage generates the error message to display for a given error.
+ *
+ * @param error the error code from cublas
+ * @param expression the expresison (say "cusparseCreate(&handle)")
+ * @param filename the code file the error occured in (typically __FILE__)
+ * @param functionName name of the function the error occured in (typically __func__)
+ * @param lineNumber the line number the error occured in (typically __LINE__)
+ *
+ * @todo Refactor to use std::source_location once we shift to C++20
+ *
+ * @return An error message to be displayed.
+ *
+ * @note This function is mostly for internal use.
+ */
+inline std::string
+getCusparseErrorMessage(cusparseStatus_t error,
+                        const std::string_view& expression,
+                        const std::string_view& filename,
+                        const std::string_view& functionName,
+                        size_t lineNumber)
+{
+    return fmt::format("cuSparse expression did not execute correctly. Expression was: \n\n"
+                       "    {}\n\nin function {}, in {}, at line {}\n"
+                       "CuSparse error code was: {}\n",
+                       expression,
+                       functionName,
+                       filename,
+                       lineNumber,
+                       getCusparseErrorCodeToString(error));
+}
 
 /**
  * @brief cusparseSafeCall checks the return type of the CUSPARSE expression (function call) and throws an exception if
@@ -66,7 +98,8 @@ getCusparseErrorMessage(int code)
  *
  * void some_function() {
  *     cusparseHandle_t cusparseHandle;
- *     cudaSafeCall(cusparseCreate(&cusparseHandle), "cusparseCreate(&cusparseHandle)", __FILE__, __func__, __LINE__);
+ *     cusparseSafeCall(cusparseCreate(&cusparseHandle), "cusparseCreate(&cusparseHandle)", __FILE__, __func__,
+ * __LINE__);
  * }
  * @endcode
  *
@@ -82,16 +115,51 @@ cusparseSafeCall(cusparseStatus_t error,
                  size_t lineNumber)
 {
     if (error != CUSPARSE_STATUS_SUCCESS) {
-        OPM_THROW(std::runtime_error,
-                  fmt::format("cuSparse expression did not execute correctly. Expression was: \n\n"
-                              "    {}\n\nin function {}, in {}, at line {}\n"
-                              "CuSparse error code was: {}\n",
-                              expression,
-                              functionName,
-                              filename,
-                              lineNumber,
-                              getCusparseErrorMessage(error)));
+        OPM_THROW(std::runtime_error, getCusparseErrorMessage(error, expression, filename, functionName, lineNumber));
     }
+}
+
+/**
+ * @brief cusparseWarnIfError checks the return type of the CUSPARSE expression (function call) and issues a warning if
+ * it does not equal CUSPARSE_STATUS_SUCCESS.
+ *
+ * @param error the error code from cublas
+ * @param expression the expresison (say "cublasCreate(&handle)")
+ * @param filename the code file the error occured in (typically __FILE__)
+ * @param functionName name of the function the error occured in (typically __func__)
+ * @param lineNumber the line number the error occured in (typically __LINE__)
+ *
+ * @return the error sent in (for convenience).
+ *
+ * Example usage:
+ * @code{.cpp}
+ * #include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
+ * #include <cublas_v2.h>
+ *
+ * void some_function() {
+ *     cusparseHandle_t cusparseHandle;
+ *     cusparseWarnIfError(cusparseCreate(&cusparseHandle), "cusparseCreate(&cusparseHandle)", __FILE__, __func__,
+ * __LINE__);
+ * }
+ * @endcode
+ *
+ * @note It is probably easier to use the macro OPM_CUSPARSE_WARN_IF_ERROR
+ * @note Prefer the cusparseSafeCall/OPM_CUSPARSE_SAFE_CALL counterpart unless you really don't want to throw an
+ * exception.
+ * @todo Refactor to use std::source_location once we shift to C++20
+ */
+inline cusparseStatus_t
+cusparseWarnIfError(cusparseStatus_t error,
+                    const std::string_view& expression,
+                    const std::string_view& filename,
+                    const std::string_view& functionName,
+                    size_t lineNumber)
+{
+    if (error != CUSPARSE_STATUS_SUCCESS) {
+        OpmLog::warning(getCusparseErrorMessage(error, expression, filename, functionName, lineNumber));
+    }
+
+    return error;
 }
 } // namespace Opm::cuistl::detail
 
@@ -116,4 +184,25 @@ cusparseSafeCall(cusparseStatus_t error,
  */
 #define OPM_CUSPARSE_SAFE_CALL(expression)                                                                             \
     ::Opm::cuistl::detail::cusparseSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
+
+/**
+ * @brief OPM_CUSPARSE_WARN_IF_ERROR checks the return type of the cusparse expression (function call) and issues a
+ * warning if it does not equal CUSPARSE_STATUS_SUCCESS.
+ *
+ * Example usage:
+ * @code{.cpp}
+ * #include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
+ * #include <cusparse.h>
+ *
+ * void some_function() {
+ *     cusparseHandle_t cusparseHandle;
+ *     OPM_CUSPARSE_WARN_IF_ERROR(cusparseCreate(&cusparseHandle));
+ * }
+ * @endcode
+ *
+ * @note Prefer the cusparseSafeCall/OPM_CUBLAS_SAFE_CALL counterpart unless you really don't want to throw an
+ * exception.
+ */
+#define OPM_CUSPARSE_WARN_IF_ERROR(expression)                                                                         \
+    ::Opm::cuistl::detail::cusparseWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
 #endif // OPM_CUSPARSE_SAFE_CALL_HPP

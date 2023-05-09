@@ -30,7 +30,7 @@ CuSparseHandle::CuSparseHandle()
 
 CuSparseHandle::~CuSparseHandle()
 {
-    OPM_CUSPARSE_SAFE_CALL(cusparseDestroy(m_handle));
+    OPM_CUSPARSE_WARN_IF_ERROR(cusparseDestroy(m_handle));
 }
 
 cusparseHandle_t
