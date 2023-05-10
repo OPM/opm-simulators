@@ -321,10 +321,11 @@ updateUpwindingSegments(const PrimaryVariables& primary_variables)
 template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
-getHydroPressureLoss(const int seg) const
+getHalfHydroPressureLoss(const int seg,
+                         const int seg_side) const
 {   
     //const int seg_upwind = upwinding_segments_[seg];
-    return densities_[seg] * well_.gravity() * depth_diffs_[seg];
+    return 0.5*densities_[seg_side] * well_.gravity() * depth_diffs_[seg];
 }
 
 

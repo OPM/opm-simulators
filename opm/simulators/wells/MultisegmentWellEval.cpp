@@ -261,10 +261,13 @@ assembleDefaultPressureEq(const int seg,
     }
 
     // Do separately since different organization of derivatives 
-    const auto hydro_pressure_drop = segments_.getHydroPressureLoss(seg);
+    const int seg_outlet = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
+    const auto hydro_pressure_drop1 = segments_.getHalfHydroPressureLoss(seg, seg);
+    const auto hydro_pressure_drop2 = segments_.getHalfHydroPressureLoss(seg, seg_outlet);
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
-        assembleHydroPressureLoss(seg, seg_upwind, hydro_pressure_drop, linSys_);
-    segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop.value();
+        assembleHydroPressureLoss(seg, seg_outlet, hydro_pressure_drop1, hydro_pressure_drop2, linSys_);
+
+    segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop1.value() + hydro_pressure_drop2.value();
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>

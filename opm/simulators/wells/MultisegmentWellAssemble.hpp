@@ -89,9 +89,10 @@ public:
 
 
     void assembleHydroPressureLoss(const int seg, 
-                                   const int seg_upwind, 
-                                   const EvalWell& hydro_pressure_drop, 
-                                   Equations& eqs1) const;
+                                   const int seg_outlet, 
+                                   const EvalWell& hydro_pressure_drop_seg, 
+                                   const EvalWell& hydro_pressure_drop_outlet, 
+                                   Equations& eqns1) const;                                   
 
     void assemblePressureEqExtraDerivatives(const int seg, 
                                             const int seg_upwind, 

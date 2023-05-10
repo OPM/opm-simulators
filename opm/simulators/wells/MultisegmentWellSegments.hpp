@@ -51,7 +51,8 @@ public:
     //! \brief Update upwinding segments.
     void updateUpwindingSegments(const PrimaryVariables& primary_variables);
 
-    EvalWell getHydroPressureLoss(const int seg) const;
+    EvalWell getHalfHydroPressureLoss(const int seg,
+                                      const int seg_side) const;
 
     //! Pressure difference between segment and perforation.
     Scalar getPressureDiffSegPerf(const int seg,

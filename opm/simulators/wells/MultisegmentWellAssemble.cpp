@@ -219,14 +219,18 @@ assemblePressureLoss(const int seg,
 template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
 assembleHydroPressureLoss(const int seg, 
-                          const int seg_upwind, 
-                          const EvalWell& hydro_pressure_drop, 
+                          const int seg_outlet, 
+                          const EvalWell& hydro_pressure_drop_seg, 
+                          const EvalWell& hydro_pressure_drop_outlet, 
                           Equations& eqns1) const
 {
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
-    eqns.residual()[seg][SPres] -= hydro_pressure_drop.value();
+    eqns.residual()[seg][SPres] -= (hydro_pressure_drop_seg.value() + hydro_pressure_drop_outlet.value());
     for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
-        eqns.D()[seg][seg][SPres][pv_idx] -= hydro_pressure_drop.derivative(pv_idx + Indices::numEq);
+        eqns.D()[seg][seg][SPres][pv_idx] -= hydro_pressure_drop_seg.derivative(pv_idx + Indices::numEq);
+    }
+    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+        eqns.D()[seg][seg_outlet][SPres][pv_idx] -= hydro_pressure_drop_outlet.derivative(pv_idx + Indices::numEq);
     }
 }
 
