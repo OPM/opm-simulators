@@ -213,6 +213,8 @@ tests[model_field_gridunit_metres]="flow gridunit M_FIELD_GRID_METRES"
 tests[model_metric_gridunit_cm]="flow gridunit M_METRIC_GRID_CM"
 tests[model_metric_gridunit_feet]="flow gridunit M_METRIC_GRID_FEET"
 tests[model_metric_gridunit_metres]="flow gridunit M_METRIC_GRID_METRES"
+tests[01_wgrupcon]="flow wgrupcon 01-WGRUPCON"
+tests[02_wgrupcon]="flow wgrupcon 02-WGRUPCON"
 
 changed_tests=""
 
