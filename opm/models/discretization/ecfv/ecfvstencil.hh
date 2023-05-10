@@ -101,29 +101,25 @@ public:
         { element_ = element; }
 
         void update()
-        {
-            const auto& geometry = element_.geometry();
-            centerPos_ = geometry.center();
-            volume_ = geometry.volume();
-        }
+        { }
 
         /*!
          * \brief The global position associated with the sub-control volume
          */
-        const GlobalPosition& globalPos() const
-        { return centerPos_; }
+        decltype(auto) globalPos() const
+        { return element_.geometry().center(); }
 
         /*!
          * \brief The center of the sub-control volume
          */
-        const GlobalPosition& center() const
-        { return centerPos_; }
+        decltype(auto) center() const
+        { return element_.geometry().center(); }
 
         /*!
          * \brief The volume [m^3] occupied by the sub-control volume
          */
         Scalar volume() const
-        { return volume_; }
+        { return element_.geometry().volume(); }
 
         /*!
          * \brief The geometry of the sub-control volume.
@@ -138,8 +134,6 @@ public:
         { return element_.geometryInFather(); }
 
     private:
-        GlobalPosition centerPos_;
-        Scalar volume_;
         Element element_;
     };
 

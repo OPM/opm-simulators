@@ -347,7 +347,7 @@ public:
      * \param timeIdx The index of the solution vector used by the
      *                time discretization.
      */
-    const GlobalPosition& pos(unsigned dofIdx, unsigned) const
+    decltype(auto) pos(unsigned dofIdx, unsigned) const
     { return stencil_.subControlVolume(dofIdx).globalPos(); }
 
     /*!
