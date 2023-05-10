@@ -864,7 +864,7 @@ namespace Opm
                 const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
                 mob[activeCompIdx] = obtain(intQuants.mobility(phaseIdx));
             }
-            if (has_solvent) {
+            if constexpr (has_solvent) {
                 mob[Indices::contiSolventEqIdx] = obtain(intQuants.solventMobility());
             }
         } else {
