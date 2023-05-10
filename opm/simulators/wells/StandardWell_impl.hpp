@@ -837,6 +837,15 @@ namespace Opm
                              return this->extendEval(value);
                           }
                       };
+        auto relpermArray = []()
+                            {
+                                if constexpr (std::is_same_v<Value, Scalar>) {
+                                    return std::array<Scalar,3>{};
+                                } else {
+                                    return std::array<Eval,3>{};
+                                }
+                            };
+
         const int cell_idx = this->well_cells_[perf];
         assert (int(mob.size()) == this->num_components_);
         const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
@@ -860,7 +869,7 @@ namespace Opm
             }
         } else {
             const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
-            std::array<Eval,3> relativePerms = { 0.0, 0.0, 0.0 };
+            auto relativePerms = relpermArray();
             MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
 
             // reset the satnumvalue back to original
