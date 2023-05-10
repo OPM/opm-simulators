@@ -541,6 +541,15 @@ if(CUDA_FOUND)
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
   set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
+
+  # CUISTL
+  set_tests_properties(cusparse_safe_call
+                       cublas_safe_call
+                       cuda_safe_call
+                       cuda_check_last_error
+                       cublas_handle
+                       cusparse_handle
+                       PROPERTIES LABELS gpu_cuda)
 endif()
 
 if(OpenCL_FOUND)
