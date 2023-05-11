@@ -72,6 +72,9 @@ class WellInterface : public WellInterfaceIndices<GetPropType<TypeTag, Propertie
                                                   GetPropType<TypeTag, Properties::Indices>,
                                                   GetPropType<TypeTag, Properties::Scalar>>
 {
+    using Base = WellInterfaceIndices<GetPropType<TypeTag, Properties::FluidSystem>,
+                                      GetPropType<TypeTag, Properties::Indices>,
+                                      GetPropType<TypeTag, Properties::Scalar>>;
 public:
     using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
 
@@ -94,8 +97,8 @@ public:
 
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
     using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;
+    using Eval = typename Base::Eval;
     using BVector = Dune::BlockVector<VectorBlockType>;
-    using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
     using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
 
     using RateConverterType =
@@ -260,17 +263,6 @@ public:
     void addCellRates(RateVector& rates, int cellIdx) const;
 
     Scalar volumetricSurfaceRateForConnection(int cellIdx, int phaseIdx) const;
-
-    template <class EvalWell>
-    Eval restrictEval(const EvalWell& in) const
-    {
-        Eval out = 0.0;
-        out.setValue(in.value());
-        for (int eqIdx = 0; eqIdx < Indices::numEq; ++eqIdx) {
-            out.setDerivative(eqIdx, in.derivative(eqIdx));
-        }
-        return out;
-    }
 
     // TODO: theoretically, it should be a const function
     // Simulator is not const is because that assembleWellEq is non-const Simulator
