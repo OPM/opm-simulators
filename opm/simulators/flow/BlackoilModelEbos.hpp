@@ -1397,7 +1397,6 @@ namespace Opm {
             // if (param_.enable_aspin_) {
             //     ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             //     ebosSimulator_.problem().beginIteration();
-            //     ebosSimulator_.model().linearizer().resetSystem();
             //     for (const auto& domain : domains_) {
             //         assembleReservoirLocal(domain, iterationIdx);
             //     }
@@ -1421,8 +1420,6 @@ namespace Opm {
             // -------- Mass balance equations --------
             // ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
             // ebosSimulator_.problem().beginIteration();
-            // Need to set residual and jacobian to zero in the domain.
-            ebosSimulator_.model().linearizer().resetSystem(domain);
             // Call the domain-dependent linearization.
             ebosSimulator_.model().linearizer().linearizeDomain(domain);
             // ebosSimulator_.problem().endIteration();
