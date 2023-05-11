@@ -122,6 +122,14 @@ protected:
                           const Eval& concentration,
                           const Eval& viscosityCorrection) const;
 
+    std::tuple<Eval,EvalWell>
+    connectionRatezFraction(double& rate,
+                            const std::vector<EvalWell>& cq_s,
+                            const double dis_gas_rate,
+                            const double wsolvent,
+                            const Eval& xVolume,
+                            const Eval& yVolume) const;
+
     PrimaryVariables primary_variables_; //!< Primary variables for well
 
     // the saturations in the well bore under surface conditions at the beginning of the time step

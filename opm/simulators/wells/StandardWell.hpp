@@ -477,12 +477,6 @@ namespace Opm
                                   const std::vector<EvalWell>& cq_s,
                                   const IntensiveQuantities& intQuants,
                                   DeferredLogger& deferred_logger) const;
-
-        std::tuple<Eval,EvalWell>
-        connectionRatezFraction(double& rate,
-                                const double dis_gas_rate,
-                                const std::vector<EvalWell>& cq_s,
-                                const IntensiveQuantities& intQuants) const;
     };
 
 }

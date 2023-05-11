@@ -687,8 +687,11 @@ namespace Opm
         if constexpr (has_zFraction) {
             std::tie(connectionRates[perf][Indices::contiZfracEqIdx],
                      cq_s_zfrac_effective) =
-                connectionRatezFraction(perf_data.solvent_rates[perf],
-                                        perf_rates.dis_gas, cq_s, intQuants);
+                this->connectionRatezFraction(perf_data.solvent_rates[perf],
+                                              cq_s, perf_rates.dis_gas,
+                                              this->wsolvent(),
+                                              intQuants.xVolume(),
+                                              intQuants.yVolume());
         }
 
         if constexpr (has_brine) {
@@ -2602,32 +2605,6 @@ namespace Opm
         }
 
         return result;
-    }
-
-
-    template <typename TypeTag>
-    std::tuple<typename StandardWell<TypeTag>::Eval,
-               typename StandardWell<TypeTag>::EvalWell>
-    StandardWell<TypeTag>::
-    connectionRatezFraction(double& rate,
-                            const double dis_gas_rate,
-                            const std::vector<EvalWell>& cq_s,
-                            const IntensiveQuantities& intQuants) const
-    {
-        // TODO: the application of well efficiency factor has not been tested with an example yet
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        EvalWell cq_s_zfrac_effective = cq_s[gasCompIdx];
-        if (this->isInjector()) {
-            cq_s_zfrac_effective *= this->wsolvent();
-        } else if (cq_s_zfrac_effective.value() != 0.0) {
-            const double dis_gas_frac = dis_gas_rate / cq_s_zfrac_effective.value();
-            cq_s_zfrac_effective *= this->extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
-        }
-
-        rate = cq_s_zfrac_effective.value();
-
-        cq_s_zfrac_effective *= this->well_efficiency_factor_;
-        return {Base::restrictEval(cq_s_zfrac_effective), cq_s_zfrac_effective};
     }
 
 } // namespace Opm
