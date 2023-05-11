@@ -57,7 +57,7 @@ public:
     double calculateThpFromBhp(const std::vector<double>& rates,
                                const double bhp,
                                const double rho,
-                               const double alq,
+                               const std::optional<double>& alq,
                                DeferredLogger& deferred_logger) const;
 
     //! \brief Compute BHP from THP limit for a producer.
