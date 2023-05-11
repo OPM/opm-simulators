@@ -102,6 +102,10 @@ protected:
                              const double wsalt,
                              const Eval& saltConcentration) const;
 
+    Eval connectionRateFoam(const std::vector<EvalWell>& cq_s,
+                            const double wfoam,
+                            const Eval& concentration) const;
+
     std::tuple<Eval,EvalWell>
     connectionRatePolymer(double& rate,
                           const std::vector<EvalWell>& cq_s,

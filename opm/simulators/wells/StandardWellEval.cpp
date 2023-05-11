@@ -228,6 +228,24 @@ connectionRateBrine(double& rate,
 }
 
 template<class FluidSystem, class Indices, class Scalar>
+typename StandardWellEval<FluidSystem,Indices,Scalar>::Eval
+StandardWellEval<FluidSystem,Indices,Scalar>::
+connectionRateFoam(const std::vector<EvalWell>& cq_s,
+                   const double wfoam,
+                   const Eval& concentration) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+    EvalWell cq_s_foam = cq_s[gasCompIdx] * baseif_.wellEfficiencyFactor();
+    if (baseif_.isInjector()) {
+        cq_s_foam *= wfoam;
+    } else {
+        cq_s_foam *= this->extendEval(concentration);
+    }
+    return baseif_.restrictEval(cq_s_foam);
+}
+
+template<class FluidSystem, class Indices, class Scalar>
 std::tuple<typename StandardWellEval<FluidSystem,Indices,Scalar>::Eval,
            typename StandardWellEval<FluidSystem,Indices,Scalar>::EvalWell>
 StandardWellEval<FluidSystem,Indices,Scalar>::
