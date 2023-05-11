@@ -393,6 +393,8 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                        [maxVel](const auto hf) { return (hf > 0.0) ? maxVel : 0.0; });
     }
 
+    // Note: for the ALQ value, in the StandardWell, WellInterfaceGeneric::getALQ(well_state) is used.
+    // We might want to unify the way regarding AQL value.
     WellBhpThpCalculator(well_)
         .updateThp(rho, stop_or_zero_rate_target, [this]() { return well_.wellEcl().alq_value(); },
                    {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),

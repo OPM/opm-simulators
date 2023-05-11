@@ -41,6 +41,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <optional>
 
 static constexpr bool extraBhpAtThpLimitOutput = false;
 
@@ -101,7 +102,7 @@ double WellBhpThpCalculator::mostStrictBhpFromBhpLimits(const SummaryState& summ
 double WellBhpThpCalculator::calculateThpFromBhp(const std::vector<double>& rates,
                                                  const double bhp,
                                                  const double rho,
-                                                 const double alq,
+                                                 const std::optional<double>& alq,
                                                  DeferredLogger& deferred_logger) const
 {
     assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
@@ -117,6 +118,7 @@ double WellBhpThpCalculator::calculateThpFromBhp(const std::vector<double>& rate
     // pick the density in the top layer
     double thp = 0.0;
     if (well_.isInjector()) {
+        assert(!alq.has_value());
         const int table_id = well_.wellEcl().vfp_table_number();
         const double vfp_ref_depth = well_.vfpProperties()->getInj()->getTable(table_id).getDatumDepth();
         const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
@@ -128,7 +130,8 @@ double WellBhpThpCalculator::calculateThpFromBhp(const std::vector<double>& rate
         const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(table_id).getDatumDepth();
         const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
 
-        thp = well_.vfpProperties()->getProd()->thp(table_id, aqua, liquid, vapour, bhp + dp, alq);
+        assert(alq.has_value());
+        thp = well_.vfpProperties()->getProd()->thp(table_id, aqua, liquid, vapour, bhp + dp, alq.value());
     }
     else {
         OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well", deferred_logger);
@@ -261,7 +264,8 @@ void WellBhpThpCalculator::updateThp(const double rho,
         rates[ Gas ] = ws.surface_rates[pu.phase_pos[ Gas ] ];
     }
 
-    ws.thp = this->calculateThpFromBhp(rates, ws.bhp, rho, alq_value(), deferred_logger);
+    const std::optional<double> alq = this->well_.isProducer() ? std::optional<double>(alq_value()) : std::nullopt;
+    ws.thp = this->calculateThpFromBhp(rates, ws.bhp, rho, alq, deferred_logger);
 }
 
 template<class EvalWell>
