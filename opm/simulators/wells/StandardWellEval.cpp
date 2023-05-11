@@ -227,6 +227,32 @@ connectionRateBrine(double& rate,
     return baseif_.restrictEval(cq_s_sm);
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+std::tuple<typename StandardWellEval<FluidSystem,Indices,Scalar>::Eval,
+           typename StandardWellEval<FluidSystem,Indices,Scalar>::EvalWell>
+StandardWellEval<FluidSystem,Indices,Scalar>::
+connectionRatePolymer(double& rate,
+                      const std::vector<EvalWell>& cq_s,
+                      const Scalar wpolymer,
+                      const Eval& concentration,
+                      const Eval& viscosityCorrection) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    EvalWell cq_s_poly = cq_s[waterCompIdx];
+    if (baseif_.isInjector()) {
+        cq_s_poly *= wpolymer;
+    } else {
+        cq_s_poly *= this->extendEval(concentration * viscosityCorrection);
+    }
+    // Note. Efficiency factor is handled in the output layer
+    rate = cq_s_poly.value();
+
+    cq_s_poly *= baseif_.wellEfficiencyFactor();
+
+    return {baseif_.restrictEval(cq_s_poly), cq_s_poly};
+}
+
 #define INSTANCE(...) \
 template class StandardWellEval<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

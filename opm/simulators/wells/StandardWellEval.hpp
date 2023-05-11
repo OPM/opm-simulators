@@ -102,6 +102,13 @@ protected:
                              const double wsalt,
                              const Eval& saltConcentration) const;
 
+    std::tuple<Eval,EvalWell>
+    connectionRatePolymer(double& rate,
+                          const std::vector<EvalWell>& cq_s,
+                          const Scalar wpolymer,
+                          const Eval& concentration,
+                          const Eval& viscosityCorrection) const;
+
     PrimaryVariables primary_variables_; //!< Primary variables for well
 
     // the saturations in the well bore under surface conditions at the beginning of the time step
