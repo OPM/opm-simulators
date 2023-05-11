@@ -197,6 +197,10 @@ public:
 
     bool stopppedOrZeroRateTarget(const SummaryState& summary_state,
                                   const WellState& well_state) const;
+
+    double wellEfficiencyFactor() const
+    { return well_efficiency_factor_; }
+
 protected:
     bool getAllowCrossFlow() const;
 
