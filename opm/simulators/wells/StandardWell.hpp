@@ -473,11 +473,6 @@ namespace Opm
                                                       DeferredLogger& deferred_logger) const;
 
     private:
-        Eval connectionRateBrine(double& rate,
-                                 const double vap_wat_rate,
-                                 const std::vector<EvalWell>& cq_s,
-                                 const IntensiveQuantities& intQuants) const;
-
         Eval connectionRateEnergy(const double maxOilSaturation,
                                   const std::vector<EvalWell>& cq_s,
                                   const IntensiveQuantities& intQuants,

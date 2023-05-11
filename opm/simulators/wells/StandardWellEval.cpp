@@ -201,6 +201,32 @@ init(std::vector<double>& perf_depth,
     this->linSys_.init(num_cells, numWellEq, baseif_.numPerfs(), baseif_.cells());
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename StandardWellEval<FluidSystem,Indices,Scalar>::Eval
+StandardWellEval<FluidSystem,Indices,Scalar>::
+connectionRateBrine(double& rate,
+                    const double vap_wat_rate,
+                    const std::vector<EvalWell>& cq_s,
+                    const double wsalt,
+                    const Eval& saltConcentration) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    // Correction salt rate; evaporated water does not contain salt
+    EvalWell cq_s_sm = cq_s[waterCompIdx] - vap_wat_rate;
+    if (baseif_.isInjector()) {
+        cq_s_sm *= wsalt;
+    } else {
+        cq_s_sm *= this->extendEval(saltConcentration);
+    }
+
+    // Note. Efficiency factor is handled in the output layer
+    rate = cq_s_sm.value();
+
+    cq_s_sm *= baseif_.wellEfficiencyFactor();
+    return baseif_.restrictEval(cq_s_sm);
+}
+
 #define INSTANCE(...) \
 template class StandardWellEval<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 

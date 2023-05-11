@@ -96,6 +96,12 @@ protected:
                                              WellState& well_state,
                                              DeferredLogger& deferred_logger) const;
 
+    Eval connectionRateBrine(double& rate,
+                             const double vap_wat_rate,
+                             const std::vector<EvalWell>& cq_s,
+                             const double wsalt,
+                             const Eval& saltConcentration) const;
+
     PrimaryVariables primary_variables_; //!< Primary variables for well
 
     // the saturations in the well bore under surface conditions at the beginning of the time step
