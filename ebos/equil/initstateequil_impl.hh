@@ -1436,14 +1436,16 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
             }
             else {
                 if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
-                    throw std::runtime_error(
-                              "Cannot initialise: when no explicit RVWVD table is given, \n"
-                              "datum depth must be at the gas-oil-contact. "
-                              "In EQUIL region "+std::to_string(i + 1)+" (counting from 1), this does not hold.");
+                    rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
+                    const auto msg = "No explicit RVWVD table is given for EQUIL region " + std::to_string(i + 1) +". \n"
+                                     "and datum depth is not at the gas-water-contact. \n"
+                                     "Rvw is set to 0.0 in all cells. \n";
+                    OpmLog::warning(msg);
+                } else {
+                    const double pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
+                    const double TContact = 273.15 + 20; // standard temperature for now
+                    rvwFunc_.push_back(std::make_shared<Miscibility::RvwSatAtContact<FluidSystem>>(pvtIdx,pContact, TContact));
                 }
-                const double pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
-                const double TContact = 273.15 + 20; // standard temperature for now
-                rvwFunc_.push_back(std::make_shared<Miscibility::RvwSatAtContact<FluidSystem>>(pvtIdx,pContact, TContact));
             }
         }
     }
