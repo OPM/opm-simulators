@@ -106,6 +106,15 @@ protected:
                             const double wfoam,
                             const Eval& concentration) const;
 
+    std::tuple<Eval,Eval,Eval>
+    connectionRatesMICP(const std::vector<EvalWell>& cq_s,
+                        const double wmicrobes,
+                        const double woxygen,
+                        const double wurea,
+                        const Eval& microbial,
+                        const Eval& oxygen,
+                        const Eval& urea) const;
+
     std::tuple<Eval,EvalWell>
     connectionRatePolymer(double& rate,
                           const std::vector<EvalWell>& cq_s,

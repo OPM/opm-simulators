@@ -478,10 +478,6 @@ namespace Opm
                                   const IntensiveQuantities& intQuants,
                                   DeferredLogger& deferred_logger) const;
 
-        std::tuple<Eval,Eval,Eval>
-        connectionRatesMICP(const std::vector<EvalWell>& cq_s,
-                            const IntensiveQuantities& intQuants) const;
-
         std::tuple<Eval,EvalWell>
         connectionRatezFraction(double& rate,
                                 const double dis_gas_rate,

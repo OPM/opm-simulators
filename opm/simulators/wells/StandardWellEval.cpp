@@ -247,6 +247,46 @@ connectionRateFoam(const std::vector<EvalWell>& cq_s,
 
 template<class FluidSystem, class Indices, class Scalar>
 std::tuple<typename StandardWellEval<FluidSystem,Indices,Scalar>::Eval,
+           typename StandardWellEval<FluidSystem,Indices,Scalar>::Eval,
+           typename StandardWellEval<FluidSystem,Indices,Scalar>::Eval>
+StandardWellEval<FluidSystem,Indices,Scalar>::
+connectionRatesMICP(const std::vector<EvalWell>& cq_s,
+                    const double wmicrobes,
+                    const double woxygen,
+                    const double wurea,
+                    const Eval& microbial,
+                    const Eval& oxygen,
+                    const Eval& urea) const
+{
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    EvalWell cq_s_microbe = cq_s[waterCompIdx];
+    if (baseif_.isInjector()) {
+        cq_s_microbe *= wmicrobes;
+    } else {
+        cq_s_microbe *= this->extendEval(microbial);
+    }
+
+    EvalWell cq_s_oxygen = cq_s[waterCompIdx];
+    if (baseif_.isInjector()) {
+        cq_s_oxygen *= woxygen;
+    } else {
+        cq_s_oxygen *= this->extendEval(oxygen);
+    }
+
+    EvalWell cq_s_urea = cq_s[waterCompIdx];
+    if (baseif_.isInjector()) {
+        cq_s_urea *= wurea;
+    } else {
+        cq_s_urea *= this->extendEval(urea);
+    }
+
+    return {baseif_.restrictEval(cq_s_microbe),
+            baseif_.restrictEval(cq_s_oxygen),
+            baseif_.restrictEval(cq_s_urea)};
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+std::tuple<typename StandardWellEval<FluidSystem,Indices,Scalar>::Eval,
            typename StandardWellEval<FluidSystem,Indices,Scalar>::EvalWell>
 StandardWellEval<FluidSystem,Indices,Scalar>::
 connectionRatePolymer(double& rate,

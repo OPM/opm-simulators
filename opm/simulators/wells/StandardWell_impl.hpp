@@ -703,7 +703,11 @@ namespace Opm
             std::tie(connectionRates[perf][Indices::contiMicrobialEqIdx],
                      connectionRates[perf][Indices::contiOxygenEqIdx],
                      connectionRates[perf][Indices::contiUreaEqIdx]) =
-                connectionRatesMICP(cq_s, intQuants);
+                this-> connectionRatesMICP(cq_s,
+                                           this->wmicrobes(), this->woxygen(), this->wurea(),
+                                           intQuants.microbialConcentration(),
+                                           intQuants.oxygenConcentration(),
+                                           intQuants.ureaConcentration());
         }
 
         // Store the perforation pressure for later usage.
@@ -2598,42 +2602,6 @@ namespace Opm
         }
 
         return result;
-    }
-
-
-    template <typename TypeTag>
-    std::tuple<typename StandardWell<TypeTag>::Eval,
-               typename StandardWell<TypeTag>::Eval,
-               typename StandardWell<TypeTag>::Eval>
-    StandardWell<TypeTag>::
-    connectionRatesMICP(const std::vector<EvalWell>& cq_s,
-                        const IntensiveQuantities& intQuants) const
-    {
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        EvalWell cq_s_microbe = cq_s[waterCompIdx];
-        if (this->isInjector()) {
-            cq_s_microbe *= this->wmicrobes();
-        } else {
-            cq_s_microbe *= this->extendEval(intQuants.microbialConcentration());
-        }
-
-        EvalWell cq_s_oxygen = cq_s[waterCompIdx];
-        if (this->isInjector()) {
-            cq_s_oxygen *= this->woxygen();
-        } else {
-            cq_s_oxygen *= this->extendEval(intQuants.oxygenConcentration());
-        }
-
-        EvalWell cq_s_urea = cq_s[waterCompIdx];
-        if (this->isInjector()) {
-            cq_s_urea *= this->wurea();
-        } else {
-            cq_s_urea *= this->extendEval(intQuants.ureaConcentration());
-        }
-
-        return {Base::restrictEval(cq_s_microbe),
-                Base::restrictEval(cq_s_oxygen),
-                Base::restrictEval(cq_s_urea)};
     }
 
 
