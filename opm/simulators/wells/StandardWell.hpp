@@ -243,13 +243,13 @@ namespace Opm
 
         void computeConnLevelProdInd(const FluidState& fs,
                                      const std::function<double(const double)>& connPICalc,
-                                     const std::vector<EvalWell>& mobility,
+                                     const std::vector<Scalar>& mobility,
                                      double* connPI) const;
 
         void computeConnLevelInjInd(const typename StandardWell<TypeTag>::FluidState& fs,
                                     const Phase preferred_phase,
                                     const std::function<double(const double)>& connIICalc,
-                                    const std::vector<EvalWell>& mobility,
+                                    const std::vector<Scalar>& mobility,
                                     double* connII,
                                     DeferredLogger& deferred_logger) const;
 

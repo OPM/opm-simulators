@@ -1341,7 +1341,7 @@ namespace Opm
                 return wellPICalc.connectionProdIndStandard(allPerfID, mobility);
             };
 
-            std::vector<EvalWell> mob(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.0});
+            std::vector<Scalar> mob(this->num_components_, 0.0);
             getMobility(ebosSimulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
 
             const auto& fs = fluidState(subsetPerfID);
@@ -2404,7 +2404,7 @@ namespace Opm
     StandardWell<TypeTag>::
     computeConnLevelProdInd(const typename StandardWell<TypeTag>::FluidState& fs,
                             const std::function<double(const double)>& connPICalc,
-                            const std::vector<EvalWell>& mobility,
+                            const std::vector<Scalar>& mobility,
                             double* connPI) const
     {
         const auto& pu = this->phaseUsage();
@@ -2413,7 +2413,7 @@ namespace Opm
             // Note: E100's notion of PI value phase mobility includes
             // the reciprocal FVF.
             const auto connMob =
-                mobility[ this->flowPhaseToEbosCompIdx(p) ].value()
+                mobility[ this->flowPhaseToEbosCompIdx(p) ]
                     * fs.invB(this->flowPhaseToEbosPhaseIdx(p)).value();
 
             connPI[p] = connPICalc(connMob);
@@ -2443,7 +2443,7 @@ namespace Opm
     computeConnLevelInjInd(const typename StandardWell<TypeTag>::FluidState& fs,
                            const Phase preferred_phase,
                            const std::function<double(const double)>& connIICalc,
-                           const std::vector<EvalWell>& mobility,
+                           const std::vector<Scalar>& mobility,
                            double* connII,
                            DeferredLogger& deferred_logger) const
     {
@@ -2468,9 +2468,8 @@ namespace Opm
                              deferred_logger);
         }
 
-        const auto zero   = EvalWell{this->primary_variables_.numWellEq() + Indices::numEq, 0.0};
-        const auto mt     = std::accumulate(mobility.begin(), mobility.end(), zero);
-        connII[phase_pos] = connIICalc(mt.value() * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
+        const auto mt     = std::accumulate(mobility.begin(), mobility.end(), 0.0);
+        connII[phase_pos] = connIICalc(mt * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
     }
 
 
