@@ -1191,6 +1191,7 @@ namespace Opm
             }
         }
     }
+
     template<typename TypeTag>
     typename WellInterface<TypeTag>::Eval
     WellInterface<TypeTag>::getPerfCellPressure(const typename WellInterface<TypeTag>::FluidState& fs) const
@@ -1265,6 +1266,37 @@ namespace Opm
             if constexpr (has_solvent) {
                 OPM_DEFLOG_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent", deferred_logger);
             }
+        }
+    }
+
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    updateWellStateWithTHPTargetProd(const Simulator& ebos_simulator,
+                                     WellState& well_state,
+                                     DeferredLogger& deferred_logger) const
+    {
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+
+        auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
+            ebos_simulator, summary_state, this->getALQ(well_state), deferred_logger);
+        if (bhp_at_thp_limit) {
+            std::vector<double> rates(this->number_of_phases_, 0.0);
+            if (thp_update_iterations) {
+                computeWellRatesWithBhpIterations(ebos_simulator, *bhp_at_thp_limit,
+                                                  rates, deferred_logger);
+            } else {
+                computeWellRatesWithBhp(ebos_simulator, *bhp_at_thp_limit,
+                                        rates, deferred_logger);
+            }
+            auto& ws = well_state.well(this->name());
+            ws.surface_rates = rates;
+            ws.bhp = *bhp_at_thp_limit;
+            ws.thp = this->getTHPConstraint(summary_state);
+            return true;
+        } else {
+            return false;
         }
     }
 

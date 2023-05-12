@@ -322,16 +322,12 @@ namespace Opm
         void computeWellRatesWithBhpIterations(const Simulator& ebosSimulator,
                                               const double& bhp,
                                               std::vector<double>& well_flux,
-                                              DeferredLogger& deferred_logger) const;
+                                              DeferredLogger& deferred_logger) const override;
 
         std::vector<double> computeWellPotentialWithTHP(
             const Simulator& ebosSimulator,
             DeferredLogger& deferred_logger,
             const WellState &well_state) const;
-
-        bool updateWellStateWithTHPTargetProd(const Simulator& ebos_simulator,
-                                              WellState& well_state,
-                                              DeferredLogger& deferred_logger) const override;
 
         virtual double getRefDensity() const override;
 
