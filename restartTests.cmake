@@ -76,14 +76,15 @@ add_test_compare_restarted_simulation(CASENAME msw_3d_hfa
 # only be used in situations where it is challenging to get agreement in the restart file.
 opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-summary-restart-regressionTest.sh "")
 
-add_test_compare_restarted_simulation(CASENAME spe1
+add_test_compare_restarted_simulation(CASENAME spe1_actnum
                                       FILENAME SPE1CASE2_ACTNUM
                                       SIMULATOR flow
                                       TEST_NAME restart_spe1_summary
                                       ABS_TOL ${abs_tol_restart}
                                       REL_TOL ${rel_tol_restart}
                                       RESTART_STEP 6
-                                      TEST_ARGS --sched-restart=false)
+                                      TEST_ARGS --sched-restart=false
+                                      DIR spe1)
 
 # Serialized restart tests
 if(HDF5_FOUND)
