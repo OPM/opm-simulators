@@ -329,14 +329,10 @@ public:
     }
 
 protected:
-
     // simulation parameters
     const ModelParameters& param_;
-
     std::vector<RateVector> connectionRates_;
-
     std::vector< Scalar > B_avg_;
-
     bool changed_to_stopped_this_step_ = false;
 
     double wpolymer() const;
@@ -393,6 +389,15 @@ protected:
                              DeferredLogger& deferred_logger);
 
     Eval getPerfCellPressure(const FluidState& fs) const;
+
+    // get the mobility for specific perforation
+    template<class Value, class Callback>
+    void getMobility(const Simulator& ebosSimulator,
+                     const int perf,
+                     std::vector<Value>& mob,
+                     Callback& extendEval,
+                     [[maybe_unused]] DeferredLogger& deferred_logger) const;
+
 
 };
 

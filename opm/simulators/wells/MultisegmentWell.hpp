@@ -238,7 +238,8 @@ namespace Opm
         template<class Value>
         void getMobility(const Simulator& ebosSimulator,
                          const int perf,
-                         std::vector<Value>& mob) const;
+                         std::vector<Value>& mob,
+                         DeferredLogger& deferred_logger) const;
 
         void computeWellRatesAtBhpLimit(const Simulator& ebosSimulator,
                                         std::vector<double>& well_flux,
