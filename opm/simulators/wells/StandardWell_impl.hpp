@@ -955,6 +955,8 @@ namespace Opm
             // as a result, the polymer and water share the same viscosity
             if constexpr (!Base::has_polymermw) {
                 std::vector<EvalWell> mob_eval(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
+                for (size_t i = 0; i < mob.size(); ++i)
+                    mob_eval[i].setValue(mob[i]);
                 updateWaterMobilityWithPolymer(ebosSimulator, perf, mob_eval, deferred_logger);
                 for (size_t i = 0; i < mob.size(); ++i) {
                     mob[i] = getValue(mob_eval[i]);
