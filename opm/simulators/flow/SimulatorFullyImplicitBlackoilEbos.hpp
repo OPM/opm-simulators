@@ -322,11 +322,9 @@ public:
     }
 
     void updateTUNING(const Tuning& tuning) {
-        if (tuning.XXXMBE_has_nondefault_value) {
-            modelParam_.tolerance_mb_ = tuning.XXXMBE;
-            if (terminalOutput_) {
+        modelParam_.tolerance_mb_ = tuning.XXXMBE;
+        if (terminalOutput_) {
                 OpmLog::debug(fmt::format("Setting SimulatorFullyImplicitBlackoilEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
-            }
         }
     }
 

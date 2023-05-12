@@ -1708,11 +1708,9 @@ namespace Opm {
 
 
         void updateTUNING(const Tuning& tuning) {          
-            if (tuning.XXXMBE_has_nondefault_value) {
-                param_.tolerance_mb_ = tuning.XXXMBE;
-                if ( terminal_output_ ) {
-                    OpmLog::debug(fmt::format("Setting BlackoilModelEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
-                }
+            param_.tolerance_mb_ = tuning.XXXMBE;
+            if ( terminal_output_ ) {
+                OpmLog::debug(fmt::format("Setting BlackoilModelEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
             }
         }
 
