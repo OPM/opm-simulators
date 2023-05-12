@@ -241,18 +241,6 @@ namespace Opm
         virtual std::vector<double> computeCurrentWellRates(const Simulator& ebosSimulator,
                                                             DeferredLogger& deferred_logger) const override;
 
-        void computeConnLevelProdInd(const FluidState& fs,
-                                     const std::function<double(const double)>& connPICalc,
-                                     const std::vector<Scalar>& mobility,
-                                     double* connPI) const;
-
-        void computeConnLevelInjInd(const typename StandardWell<TypeTag>::FluidState& fs,
-                                    const Phase preferred_phase,
-                                    const std::function<double(const double)>& connIICalc,
-                                    const std::vector<Scalar>& mobility,
-                                    double* connII,
-                                    DeferredLogger& deferred_logger) const;
-
         std::vector<double> getPrimaryVars() const override;
 
         int setPrimaryVars(std::vector<double>::const_iterator it) override;
