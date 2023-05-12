@@ -575,4 +575,81 @@ int WellInterfaceGeneric::polymerInjTable_() const
     return this->well_ecl_.getPolymerProperties().m_plymwinjtable;
 }
 
+std::pair<bool,bool> WellInterfaceGeneric::
+computeWellPotentials(std::vector<double>& well_potentials,
+                      const WellState& well_state)
+{
+    const int np = this->number_of_phases_;
+    well_potentials.resize(np, 0.0);
+
+    // Stopped wells have zero potential.
+    if (this->wellIsStopped()) {
+        return {false, false};
+    }
+    this->operability_status_.has_negative_potentials = false;
+
+    // If the well is pressure controlled the potential equals the rate.
+    bool thp_controlled_well = false;
+    bool bhp_controlled_well = false;
+    bool compute_potential = true;
+    const auto& ws = well_state.well(this->index_of_well_);
+    if (this->isInjector()) {
+        const Well::InjectorCMode& current = ws.injection_cmode;
+        if (current == Well::InjectorCMode::THP) {
+            thp_controlled_well = true;
+        }
+        if (current == Well::InjectorCMode::BHP) {
+            bhp_controlled_well = true;
+        }
+    } else {
+        const Well::ProducerCMode& current = ws.production_cmode;
+        if (current == Well::ProducerCMode::THP) {
+            thp_controlled_well = true;
+        }
+        if (current == Well::ProducerCMode::BHP) {
+            bhp_controlled_well = true;
+        }
+    }
+
+    if (!this->changed_to_open_this_step_ &&
+        (thp_controlled_well || bhp_controlled_well)) {
+        double total_rate = 0.0;
+        const double sign = this->isInjector() ? 1.0 : -1.0;
+        for (int phase = 0; phase < np; ++phase){
+            total_rate += sign * ws.surface_rates[phase];
+        }
+        // for pressure controlled wells the well rates are the potentials
+        // if the rates are trivial we are most probably looking at the newly
+        // opened well, and we therefore make the effort of computing the potentials anyway.
+        if (total_rate > 0) {
+            for (int phase = 0; phase < np; ++phase){
+                well_potentials[phase] = sign * ws.surface_rates[phase];
+            }
+            compute_potential = false;
+        }
+    }
+
+    return {compute_potential, bhp_controlled_well};
+}
+
+void WellInterfaceGeneric::
+checkNegativeWellPotentials(std::vector<double>& well_potentials,
+                            const bool checkOperability,
+                            DeferredLogger& deferred_logger)
+{
+    const double sign = this->isInjector() ? 1.0 : -1.0;
+    double total_potential = 0.0;
+    for (int phase = 0; phase < this->number_of_phases_; ++phase) {
+        well_potentials[phase] *= sign;
+        total_potential += well_potentials[phase];
+    }
+    if (total_potential < 0.0 && checkOperability) {
+        // wells with negative potentials are not operable
+        this->operability_status_.has_negative_potentials = true;
+        const std::string msg = std::string("well ") + this->name() +
+                                ": has negative potentials and is not operable";
+        deferred_logger.warning("NEGATIVE_POTENTIALS_INOPERABLE", msg);
+    }
+}
+
 } // namespace Opm
