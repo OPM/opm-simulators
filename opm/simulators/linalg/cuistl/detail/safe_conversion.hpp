@@ -33,7 +33,7 @@
  * bits to 32 bits.
  *
  * The main use case within cuistl is that the cusparse library requires signed int for all its size parameters,
- * while Dune::BlockVector (and relatives) use signed size_t.
+ * while Dune::BlockVector (and relatives) use unsigned size_t.
  */
 
 namespace Opm::cuistl::detail
