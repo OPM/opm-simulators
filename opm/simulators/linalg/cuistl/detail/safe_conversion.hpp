@@ -21,6 +21,7 @@
 
 
 
+#include <cstddef>
 #include <fmt/format.h>
 #include <limits>
 #include <opm/common/ErrorMacros.hpp>
@@ -47,21 +48,21 @@ namespace Opm::cuistl::detail
  * @todo This can be done for more generic types, but then it is probably wise to wait for C++20's cmp-functions
  */
 inline int
-to_int(size_t s)
+to_int(std::size_t s)
 {
     static_assert(
         std::is_signed_v<int>,
         "Weird architecture or my understanding of the standard is flawed. Better have a look at this function.");
     static_assert(
-        !std::is_signed_v<size_t>,
+        !std::is_signed_v<std::size_t>,
         "Weird architecture or my understanding of the standard is flawed. Better have a look at this function.");
 
     static_assert(
-        sizeof(int) <= sizeof(size_t),
+        sizeof(int) <= sizeof(std::size_t),
         "Weird architecture or my understanding of the standard is flawed. Better have a look at this function.");
 
 
-    if (s > size_t(std::numeric_limits<int>::max())) {
+    if (s > std::size_t(std::numeric_limits<int>::max())) {
         OPM_THROW(std::invalid_argument,
                   fmt::format("Trying to convert {} to int, but it is out of range. Maximum possible int: {}. ",
                               s,
@@ -80,18 +81,18 @@ to_int(size_t s)
  * @throw std::invalid_argument if i is negative.
  * @todo This can be done for more generic types, but then it is probably wise to wait for C++20's cmp-functions
  */
-inline size_t
+inline std::size_t
 to_size_t(int i)
 {
     static_assert(
         std::is_signed_v<int>,
         "Weird architecture or my understanding of the standard is flawed. Better have a look at this function.");
     static_assert(
-        !std::is_signed_v<size_t>,
+        !std::is_signed_v<std::size_t>,
         "Weird architecture or my understanding of the standard is flawed. Better have a look at this function.");
 
     static_assert(
-        sizeof(int) <= sizeof(size_t),
+        sizeof(int) <= sizeof(std::size_t),
         "Weird architecture or my understanding of the standard is flawed. Better have a look at this function.");
 
 
@@ -99,7 +100,7 @@ to_size_t(int i)
         OPM_THROW(std::invalid_argument, fmt::format("Trying to convert the negative number {} to size_t.", i));
     }
 
-    return size_t(i);
+    return std::size_t(i);
 }
 } // namespace Opm::cuistl::detail
 
