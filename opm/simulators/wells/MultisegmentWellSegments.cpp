@@ -322,10 +322,9 @@ template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 getHalfHydroPressureLoss(const int seg,
-                         const int seg_side) const
+                         const int seg_density) const
 {   
-    //const int seg_upwind = upwinding_segments_[seg];
-    return 0.5*densities_[seg_side] * well_.gravity() * depth_diffs_[seg];
+    return 0.5*densities_[seg_density] * well_.gravity() * depth_diffs_[seg];
 }
 
 
@@ -487,32 +486,37 @@ getSurfaceVolume(const EvalWell& temperature,
 template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
-getFrictionPressureLoss(const int seg, const bool return_upwind_derivatives) const
+getFrictionPressureLoss(const int seg, const bool return_extra_derivatives) const
 {
     EvalWell mass_rate = mass_rates_[seg];
     const int seg_upwind = upwinding_segments_[seg];
     EvalWell density = densities_[seg_upwind];
     EvalWell visc = viscosities_[seg_upwind];
-    // WARNING
-    // We disregard the derivatives from the upwind density to make sure derivatives
-    // wrt. to different segments dont get mixed.
+    // In the reverse flow case, we don't have enough slots for all derivatives, e.g.,
+    // upwind pressure and flow. We amend this by a second function call optioin, where 
+    // only these remaining derivatives are considered.
+    // For reference: the pressure equation assumes pressure/flow derivatives are given 
+    // at segment node while fraction derivatives are given at upwind node.   
     
     if (seg != seg_upwind) {
-        if (!return_upwind_derivatives){
-            const int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
-            const int SPres = Indices::numEq + PrimaryVariables::SPres;
+        if (!return_extra_derivatives){
+            constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
+            constexpr int SPres = Indices::numEq + PrimaryVariables::SPres;
             density.setDerivative(WQTotal, 0.0);
             density.setDerivative(SPres, 0.0);
             visc.setDerivative(WQTotal, 0.0);
             visc.setDerivative(SPres, 0.0);
         } else {
-            const int WFrac = Indices::numEq + PrimaryVariables::WFrac;
-            const int GFrac = Indices::numEq + PrimaryVariables::GFrac;
-            // if has ...
-            density.setDerivative(WFrac, 0.0);
-            density.setDerivative(GFrac, 0.0);
-            visc.setDerivative(WFrac, 0.0);
-            visc.setDerivative(GFrac, 0.0);
+            if (PrimaryVariables::has_water){
+                constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
+                density.setDerivative(WFrac, 0.0);
+                visc.setDerivative(WFrac, 0.0);
+            }
+            if (PrimaryVariables::has_gas){
+                constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
+                density.setDerivative(GFrac, 0.0);
+                visc.setDerivative(GFrac, 0.0);
+            }
             mass_rate.clearDerivatives();
         }
     }

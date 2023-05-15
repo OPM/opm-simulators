@@ -261,7 +261,7 @@ assemblePressureEq(const int seg,
                    bool gfrac) const
 {
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
-    eqns.residual()[seg][SPres] = pressure_equation.value();
+    eqns.residual()[seg][SPres] += pressure_equation.value();
     eqns.D()[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
     eqns.D()[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
     if (wfrac) {
