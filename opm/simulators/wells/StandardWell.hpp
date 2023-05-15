@@ -333,17 +333,11 @@ namespace Opm
         virtual double getRefDensity() const override;
 
         // get the mobility for specific perforation
-        void getMobilityEval(const Simulator& ebosSimulator,
-                             const int perf,
-                             std::vector<EvalWell>& mob,
-                             DeferredLogger& deferred_logger) const;
-
-        // get the mobility for specific perforation
-        void getMobilityScalar(const Simulator& ebosSimulator,
-                               const int perf,
-                               std::vector<Scalar>& mob,
-                               DeferredLogger& deferred_logger) const;
-
+        template<class Value>
+        void getMobility(const Simulator& ebosSimulator,
+                         const int perf,
+                         std::vector<Value>& mob,
+                         DeferredLogger& deferred_logger) const;
 
         void updateWaterMobilityWithPolymer(const Simulator& ebos_simulator,
                                             const int perf,
