@@ -225,22 +225,12 @@ assembleDefaultPressureEq(const int seg,
     EvalWell extra_derivatives;
 
     // we need to handle the pressure difference between the two segments
-    // we only consider the hydrostatic pressure loss first
+    // hydrostatic pressure loss is assembled seperately at the end 
     // TODO: we might be able to add member variables to store these values, then we update well state
     // after converged
 
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
-
-    // We approximate the hydrostatic pressure loss over the segment by using the mean of the densities
-    // at the current segment node and its outlet node. Since density derivatives are organized 
-    // differently than what is required for assemblePressureEq, this part needs to be assembled separately.  
-    const int seg_outlet = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
-    const auto hydro_pressure_drop_seg = segments_.getHalfHydroPressureLoss(seg, seg);
-    const auto hydro_pressure_drop_outlet = segments_.getHalfHydroPressureLoss(seg, seg_outlet);
-    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
-        assembleHydroPressureLoss(seg, seg_outlet, hydro_pressure_drop_seg, hydro_pressure_drop_outlet, linSys_);
-    segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop_seg.value() + hydro_pressure_drop_outlet.value();
 
     if (this->frictionalPressureLossConsidered()) {
         const auto friction_pressure_drop = segments_.getFrictionPressureLoss(seg, false);
@@ -265,6 +255,16 @@ assembleDefaultPressureEq(const int seg,
     if (this->accelerationalPressureLossConsidered()) {
         handleAccelerationPressureLoss(seg, well_state);
     }
+
+    // We approximate the hydrostatic pressure loss over the segment by using the mean of the densities
+    // at the current segment node and its outlet node. Since density derivatives are organized 
+    // differently than what is required for assemblePressureEq, this part needs to be assembled separately.  
+    const int seg_outlet = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
+    const auto hydro_pressure_drop_seg = segments_.getHalfHydroPressureLoss(seg, seg);
+    const auto hydro_pressure_drop_outlet = segments_.getHalfHydroPressureLoss(seg, seg_outlet);
+    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+        assembleHydroPressureLoss(seg, seg_outlet, hydro_pressure_drop_seg, hydro_pressure_drop_outlet, linSys_);
+    segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop_seg.value() + hydro_pressure_drop_outlet.value();
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
