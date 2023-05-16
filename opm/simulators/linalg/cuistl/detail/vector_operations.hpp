@@ -33,24 +33,24 @@ void setVectorValue(T* deviceData, size_t numberOfElements, const T& value);
 
 /**
  * @brief setZeroAtIndexSet sets deviceData to zero in the indices of contained in indices
- * @param deviceData the data to operate on
+ * @param deviceData the data to operate on (device memory)
  * @param numberOfElements number of indices
- * @param indices the indices to use
+ * @param indices the indices to use (device memory)
  */
 template <class T>
 void setZeroAtIndexSet(T* deviceData, size_t numberOfElements, const int* indices);
 
 /**
  * @brief innerProductAtIndices computes the inner product between deviceA[indices] and deviceB[indices]
- * @param deviceA data A
- * @param deviceB data B
- * @param buffer a buffer with number of elements equal to numberOfElements
+ * @param deviceA data A (device memory)
+ * @param deviceB data B (device memory)
+ * @param buffer a buffer with number of elements equal to numberOfElements (device memory)
  * @param numberOfElements number of indices
- * @param indices the indices to compute the inner product over
+ * @param indices the indices to compute the inner product over (device memory)
  * @return the result of the inner product
  *
  * @note This is equivalent to projecting the vectors to the indices contained in indices, then doing the inner product
- * of those indices.
+ * of those projected vectors.
  */
 template <class T>
 T innerProductAtIndices(const T* deviceA, const T* deviceB, T* buffer, size_t numberOfElements, const int* indices);
