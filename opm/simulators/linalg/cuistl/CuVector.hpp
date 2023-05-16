@@ -34,10 +34,13 @@ namespace Opm::cuistl
 /**
  * @brief The CuVector class is a simple (arithmetic) vector class for the GPU.
  *
- * @note we currently only support simple raw primitives for T (double and float)
+ * @note we currently only support simple raw primitives for T (double, float and int)
+ *
+ * @note We currently only support arithmetic operations on double and float.
  *
  * @note this vector has no notion of block size. The user is responsible for allocating
  *       the correct number of primitives (double or floats)
+ *
  * Example usage:
  *
  * @code{.cpp}
@@ -230,6 +233,8 @@ public:
      * @param scalar the scalar to with which to multiply every element
      *
      * @note This operation is asynchronous.
+     *
+     * @note int is not supported
      */
     CuVector<T>& operator*=(const T& scalar);
 
@@ -278,13 +283,33 @@ public:
      */
     T two_norm() const;
 
-    //! Computes the dot product sum_i this[indexSet[i]] * other[indexSet[i]]
+    /**
+     * Computes the dot product sum_i this[indexSet[i]] * other[indexSet[i]]
+     *
+     * @note int is not supported
+     */
     T dot(const CuVector<T>& other, const CuVector<int>& indexSet, CuVector<T>& buffer) const;
-    //! Computes the norm sqrt(sum_i this[indexSet[i]] * this[indexSet[i]])
+
+    /**
+     * Computes the norm sqrt(sum_i this[indexSet[i]] * this[indexSet[i]])
+     *
+     * @note int is not supported
+     */
     T two_norm(const CuVector<int>& indexSet, CuVector<T>& buffer) const;
-    //! Computes the dot product sum_i this[indexSet[i]] * other[indexSet[i]]
+
+
+    /**
+     * Computes the dot product sum_i this[indexSet[i]] * other[indexSet[i]]
+     *
+     * @note int is not supported
+     */
     T dot(const CuVector<T>& other, const CuVector<int>& indexSet) const;
-    //! Computes the norm sqrt(sum_i this[indexSet[i]] * this[indexSet[i]])
+
+    /**
+     * Computes the norm sqrt(sum_i this[indexSet[i]] * this[indexSet[i]])
+     *
+     * @note int is not supported
+     */
     T two_norm(const CuVector<int>& indexSet) const;
 
 
@@ -338,7 +363,7 @@ private:
     T* m_dataOnDevice = nullptr;
 
     // Note that we store this as int to make sure we are always cublas compatible.
-    // This gives the added benifit that a size_t to int conversion error occurs during construction.
+    // This gives the added benefit that a size_t to int conversion error occurs during construction.
     const int m_numberOfElements;
     detail::CuBlasHandle& m_cuBlasHandle;
 
