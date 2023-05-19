@@ -825,15 +825,10 @@ assignToSolution(data::Solution& sol)
         doInsert(array, data::TargetType::RESTART_OPM_EXTENDED);
     }
 
-    if ((this->enableEnergy_ || this->enableTemperature_) &&
-        ! this->temperature_.empty())
+    if (! this->temperature_.empty())
     {
-        const auto tag = this->enableEnergy_
-            ? data::TargetType::RESTART_SOLUTION
-            : data::TargetType::RESTART_OPM_EXTENDED;
-
         sol.insert("TEMP", UnitSystem::measure::temperature,
-                   std::move(this->temperature_), tag);
+                   std::move(this->temperature_), data::TargetType::RESTART_SOLUTION);
     }
 
     if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
@@ -1143,8 +1138,9 @@ doAllocBuffers(unsigned bufferSize,
     rstKeywords["PRES"] = 0;
     rstKeywords["PRESSURE"] = 0;
 
-    // Allocate memory for temperature
-    if (enableEnergy_ || enableTemperature_) {
+    // If TEMP is set in RPTRST we output temperature even if THERMAL
+    // is not activated
+    if (enableEnergy_ || rstKeywords["TEMP"] > 0) {
         this->temperature_.resize(bufferSize, 0.0);
         rstKeywords["TEMP"] = 0;
     }
