@@ -44,6 +44,7 @@ SingleWellState::SingleWellState(const std::string& name_,
     , productivity_index(pu_.num_phases)
     , surface_rates(pu_.num_phases)
     , reservoir_rates(pu_.num_phases)
+    , explicit_surface_rates(pu_.num_phases)
     , perf_data(perf_input.size(), pressure_first_connection, !is_producer, pu_.num_phases)
     , trivial_target(false)
 {
@@ -84,6 +85,7 @@ void SingleWellState::shut() {
     this->thp = 0;
     this->status = Well::Status::SHUT;
     std::fill(this->surface_rates.begin(), this->surface_rates.end(), 0);
+    std::fill(this->explicit_surface_rates.begin(), this->explicit_surface_rates.end(), 0);
     std::fill(this->reservoir_rates.begin(), this->reservoir_rates.end(), 0);
     std::fill(this->productivity_index.begin(), this->productivity_index.end(), 0);
 
@@ -296,6 +298,7 @@ bool SingleWellState::operator==(const SingleWellState& rhs) const
            this->productivity_index == rhs.productivity_index &&
            this->surface_rates == rhs.surface_rates &&
            this->reservoir_rates == rhs.reservoir_rates &&
+           this->explicit_surface_rates == rhs.explicit_surface_rates &&
            this->trivial_target == rhs.trivial_target &&
            this->segments == rhs.segments &&
            this->events == rhs.events &&

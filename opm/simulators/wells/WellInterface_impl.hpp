@@ -1192,6 +1192,25 @@ namespace Opm
         }
     }
 
+    template <typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    setExplicitSurfaceRates(WellState& well_state, 
+                            const WellState& prev_well_state) const
+    {
+        const int np = this->number_of_phases_;
+        auto& ws = well_state.well(this->index_of_well_);
+        if (!this->changedToOpenThisStep()){
+            for (int p = 0; p<np; ++p){
+                ws.explicit_surface_rates[p] = prev_well_state.well(this->index_of_well_).surface_rates[p];
+            }
+        } else {
+            for (int p = 0; p<np; ++p){
+                ws.explicit_surface_rates[p] = ws.surface_rates[p];
+            }
+        }
+    }
+
     template<typename TypeTag>
     typename WellInterface<TypeTag>::Eval
     WellInterface<TypeTag>::getPerfCellPressure(const typename WellInterface<TypeTag>::FluidState& fs) const

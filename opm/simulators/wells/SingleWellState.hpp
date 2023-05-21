@@ -63,6 +63,7 @@ public:
         serializer(productivity_index);
         serializer(surface_rates);
         serializer(reservoir_rates);
+        serializer(explicit_surface_rates);
         serializer(trivial_target);
         serializer(segments);
         serializer(events);
@@ -95,6 +96,7 @@ public:
     std::vector<double> productivity_index;
     std::vector<double> surface_rates;
     std::vector<double> reservoir_rates;
+    std::vector<double> explicit_surface_rates;
     PerfData perf_data;
     bool trivial_target;
     SegmentState segments;

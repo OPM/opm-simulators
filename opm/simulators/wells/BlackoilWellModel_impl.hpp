@@ -235,7 +235,7 @@ namespace Opm {
                 // update VFP properties
                 vfp_properties_ = std::make_unique<VFPProperties>(sched_state.vfpinj(),
                                                                   sched_state.vfpprod(),
-                                                                  this->prevWellState());
+                                                                  this->wellState());
                 this->initializeWellProdIndCalculators();
                 if (sched_state.events().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX)) {
                     this->runWellPIScaling(timeStepIdx, local_deferredLogger);
@@ -337,6 +337,12 @@ namespace Opm {
                 if (well->isProducer()) {
                     well->updateWellStateRates(ebosSimulator_, this->wellState(), local_deferredLogger);
                 }
+            }
+        }
+
+        for (auto& well : well_container_) {
+            if (well->isVFPActive(local_deferredLogger)){
+                well->setExplicitSurfaceRates(this->wellState(), this->prevWellState());
             }
         }
 

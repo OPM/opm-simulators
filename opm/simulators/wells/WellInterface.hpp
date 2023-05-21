@@ -315,6 +315,9 @@ public:
                               WellState& well_state,
                               DeferredLogger& deferred_logger) const;
 
+    void setExplicitSurfaceRates(WellState& well_state, 
+                                 const WellState& prev_well_state) const;                             
+
     void solveWellEquation(const Simulator& ebosSimulator,
                            WellState& well_state,
                            const GroupState& group_state,

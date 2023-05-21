@@ -471,7 +471,7 @@ bool WellInterfaceGeneric::isOperableAndSolvable() const
 bool WellInterfaceGeneric::useVfpExplicit() const
 {
     const auto& wvfpexp = well_ecl_.getWVFPEXP();
-    return ((wvfpexp.explicit_lookup() && !changedToOpenThisStep())|| operability_status_.use_vfpexplicit);
+    return (wvfpexp.explicit_lookup() || operability_status_.use_vfpexplicit);
 }
 
 bool WellInterfaceGeneric::thpLimitViolatedButNotSwitched() const
