@@ -337,8 +337,6 @@ namespace Opm {
                 return well_container_;
             }
 
-            int numLocalNonshutWells() const;
-
             // prototype for assemble function for ASPIN solveLocal()
             // will try to merge back to assemble() when done prototyping
             void assembleDomain(const int iterationIdx,

@@ -87,6 +87,7 @@ public:
 
     int numLocalWells() const;
     int numLocalWellsEnd() const;
+    int numLocalNonshutWells() const;
     int numPhases() const;
 
     /// return true if wells are available in the reservoir

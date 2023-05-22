@@ -1400,4 +1400,9 @@ int BlackoilWellModelGeneric::numLocalWellsEnd() const
     return w.size();
 }
 
+int BlackoilWellModelGeneric::numLocalNonshutWells() const
+{
+    return well_container_generic_.size();
+}
+
 }

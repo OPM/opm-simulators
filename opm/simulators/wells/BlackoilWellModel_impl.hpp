@@ -1486,15 +1486,6 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    int
-    BlackoilWellModel<TypeTag>::
-    numLocalNonshutWells() const
-    {
-        return well_container_.size();
-    }
-    
-
-    template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x)
