@@ -1330,7 +1330,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    apply( BVector& r) const
+    apply(BVector& r) const
     {
         for (auto& well : well_container_) {
             well->apply(r);
@@ -2309,29 +2309,6 @@ namespace Opm {
         assert(offset == vars.size());
     }
 
-
-
-    template <typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    assignWellTracerRates(data::Wells& wsrpt) const
-    {
-        const auto & wellTracerRates = ebosSimulator_.problem().tracerModel().getWellTracerRates();
-
-        if (wellTracerRates.empty())
-            return; // no tracers
-
-        for (const auto& wTR : wellTracerRates) {
-            std::string wellName = wTR.first.first;
-            auto xwPos = wsrpt.find(wellName);
-            if (xwPos == wsrpt.end()) { // No well results.
-                continue;
-            }
-            std::string tracerName = wTR.first.second;
-            double rate = wTR.second;
-            xwPos->second.rates.set(data::Rates::opt::tracer, rate, tracerName);
-        }
-    }
 
 
     template <typename TypeTag>

@@ -1349,4 +1349,24 @@ BlackoilWellModelGeneric::getWellsForTesting(const int timeStepIdx,
       return {};
 }
 
+void
+BlackoilWellModelGeneric::
+assignWellTracerRates(data::Wells& wsrpt,
+                      const WellTracerRates& wellTracerRates) const
+{
+    if (wellTracerRates.empty())
+        return; // no tracers
+
+    for (const auto& wTR : wellTracerRates) {
+        std::string wellName = wTR.first.first;
+        auto xwPos = wsrpt.find(wellName);
+        if (xwPos == wsrpt.end()) { // No well results.
+            continue;
+        }
+        std::string tracerName = wTR.first.second;
+        double rate = wTR.second;
+        xwPos->second.rates.set(data::Rates::opt::tracer, rate, tracerName);
+    }
+}
+
 }

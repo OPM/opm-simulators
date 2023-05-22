@@ -256,7 +256,9 @@ namespace Opm {
                     return this->wasDynamicallyShutThisTimeStep(well_index);
                 });
 
-                this->assignWellTracerRates(wsrpt);
+                const auto& tracerRates = ebosSimulator_.problem().tracerModel().getWellTracerRates();
+                this->assignWellTracerRates(wsrpt, tracerRates);
+
 
                 BlackoilWellModelGuideRates(*this).assignWellGuideRates(wsrpt, this->reportStepIndex());
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
@@ -511,8 +513,6 @@ namespace Opm {
                            std::vector<double>& resv_coeff) override;
 
             void computeWellTemperature();
-
-            void assignWellTracerRates(data::Wells& wsrpt) const;
 
             int compressedIndexForInterior(int cartesian_cell_idx) const override {
                 return ebosSimulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);

@@ -386,6 +386,10 @@ protected:
     std::vector<std::string> getWellsForTesting(const int timeStepIdx,
                                                 const double simulationTime);
 
+    using WellTracerRates = std::map<std::pair<std::string, std::string>, double>;
+    void assignWellTracerRates(data::Wells& wsrpt,
+                               const WellTracerRates& wellTracerRates) const;
+
     Schedule& schedule_;
     const SummaryState& summaryState_;
     const EclipseState& eclState_;
