@@ -514,6 +514,31 @@ computeProperties(const WellState& well_state,
     this->computePressureDelta();
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval
+StandardWellConnections<FluidSystem,Indices,Scalar>::
+connectionRateBrine(double& rate,
+                    const double vap_wat_rate,
+                    const std::vector<EvalWell>& cq_s,
+                    const std::variant<Scalar,EvalWell>& saltConcentration) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    // Correction salt rate; evaporated water does not contain salt
+    EvalWell cq_s_sm = cq_s[waterCompIdx] - vap_wat_rate;
+    if (well_.isInjector()) {
+        cq_s_sm *= std::get<Scalar>(saltConcentration);
+    } else {
+        cq_s_sm *= std::get<EvalWell>(saltConcentration);
+    }
+
+    // Note. Efficiency factor is handled in the output layer
+    rate = cq_s_sm.value();
+
+    cq_s_sm *= well_.wellEfficiencyFactor();
+    return well_.restrictEval(cq_s_sm);
+}
+
 #define INSTANCE(...) \
 template class StandardWellConnections<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
 
