@@ -30,7 +30,7 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
-#include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -539,8 +539,48 @@ connectionRateBrine(double& rate,
     return well_.restrictEval(cq_s_sm);
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval
+StandardWellConnections<FluidSystem,Indices,Scalar>::
+connectionRateFoam(const std::vector<EvalWell>& cq_s,
+                    const std::variant<Scalar,EvalWell>& foamConcentration,
+                    const Phase transportPhase,
+                    DeferredLogger& deferred_logger) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    auto getFoamTransportIdx = [&deferred_logger,transportPhase] {
+        switch (transportPhase) {
+            case Phase::WATER: {
+                return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+            }
+            case Phase::GAS: {
+                return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            }
+            case Phase::SOLVENT: {
+                if constexpr (Indices::enableSolvent)
+                    return static_cast<unsigned>(Indices::contiSolventEqIdx);
+                else
+                    OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase is SOLVENT but SOLVENT is not activated.", deferred_logger);
+            }
+            default: {
+                OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase must be GAS/WATER/SOLVENT.", deferred_logger);
+            }
+        }
+    };
+
+    EvalWell cq_s_foam = cq_s[getFoamTransportIdx()] * well_.wellEfficiencyFactor();;
+    if (well_.isInjector()) {
+        cq_s_foam *= std::get<Scalar>(foamConcentration);
+    } else {
+        cq_s_foam *= std::get<EvalWell>(foamConcentration);
+    }
+
+    return well_.restrictEval(cq_s_foam);
+}
+
 #define INSTANCE(...) \
-template class StandardWellConnections<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
+template class StandardWellConnections<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, \
+                                       __VA_ARGS__,double>;
 
 // One phase
 INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)

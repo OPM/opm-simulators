@@ -33,6 +33,7 @@ namespace Opm
 {
 
 class DeferredLogger;
+enum class Phase;
 template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
 class WellState;
 
@@ -86,6 +87,11 @@ public:
                              const double vap_wat_rate,
                              const std::vector<EvalWell>& cq_s,
                              const std::variant<Scalar,EvalWell>& saltConcentration) const;
+
+    Eval connectionRateFoam(const std::vector<EvalWell>& cq_s,
+                            const std::variant<Scalar,EvalWell>& foamConcentration,
+                            const Phase transportPhase,
+                            DeferredLogger& deferred_logger) const;
 
 private:
     void computePressureDelta();

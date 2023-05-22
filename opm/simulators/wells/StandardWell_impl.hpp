@@ -537,8 +537,16 @@ namespace Opm
         }
 
         if constexpr (has_foam) {
+            std::variant<Scalar,EvalWell> foamConcentration;
+            if (this->isInjector()) {
+                foamConcentration = this->wfoam();
+            } else {
+                foamConcentration = this->extendEval(intQuants.foamConcentration());
+            }
             connectionRates[perf][Indices::contiFoamEqIdx] =
-                connectionRateFoam(cq_s, intQuants, deferred_logger);
+                this->connections_.connectionRateFoam(cq_s, foamConcentration,
+                                                      FoamModule::transportPhase(),
+                                                      deferred_logger);
         }
 
         if constexpr (has_zFraction) {
@@ -2222,43 +2230,6 @@ namespace Opm
         }
 
         return result;
-    }
-
-
-    template <typename TypeTag>
-    typename StandardWell<TypeTag>::Eval
-    StandardWell<TypeTag>::
-    connectionRateFoam(const std::vector<EvalWell>& cq_s,
-                       const IntensiveQuantities& intQuants,
-                       DeferredLogger& deferred_logger) const
-    {
-        // TODO: the application of well efficiency factor has not been tested with an example yet
-        auto getFoamTransportIdx = [&deferred_logger] {
-            switch (FoamModule::transportPhase()) {
-                case Phase::WATER: {
-                    return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-                }
-                case Phase::GAS: {
-                    return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                }
-                case Phase::SOLVENT: {
-                    if constexpr (has_solvent)
-                        return static_cast<unsigned>(Indices::contiSolventEqIdx);
-                    else
-                        OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase is SOLVENT but SOLVENT is not activated.", deferred_logger);
-                }
-                default: {
-                    OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase must be GAS/WATER/SOLVENT.", deferred_logger);
-                }
-            }
-        };
-        EvalWell cq_s_foam = cq_s[getFoamTransportIdx()] * this->well_efficiency_factor_;
-        if (this->isInjector()) {
-            cq_s_foam *= this->wfoam();
-        } else {
-            cq_s_foam *= this->extendEval(intQuants.foamConcentration());
-        }
-        return Base::restrictEval(cq_s_foam);
     }
 
 
