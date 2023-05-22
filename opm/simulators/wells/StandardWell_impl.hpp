@@ -524,11 +524,19 @@ namespace Opm
         }
 
         if constexpr (has_polymer) {
+            std::variant<Scalar,EvalWell> polymerConcentration;
+            if (this->isInjector()) {
+                polymerConcentration = this->wpolymer();
+            } else {
+                polymerConcentration = this->extendEval(intQuants.polymerConcentration() *
+                                                        intQuants.polymerViscosityCorrection());
+            }
+
             [[maybe_unused]] EvalWell cq_s_poly;
             std::tie(connectionRates[perf][Indices::contiPolymerEqIdx],
                      cq_s_poly) =
-                connectionRatePolymer(perf_data.polymer_rates[perf],
-                                      cq_s, intQuants);
+                this->connections_.connectionRatePolymer(perf_data.polymer_rates[perf],
+                                                         cq_s, polymerConcentration);
 
             if constexpr (Base::has_polymermw) {
                 updateConnectionRatePolyMW(cq_s_poly, intQuants, well_state,
@@ -2245,31 +2253,6 @@ namespace Opm
         }
 
         return result;
-    }
-
-
-    template <typename TypeTag>
-    std::tuple<typename StandardWell<TypeTag>::Eval,
-               typename StandardWell<TypeTag>::EvalWell>
-    StandardWell<TypeTag>::
-    connectionRatePolymer(double& rate,
-                          const std::vector<EvalWell>& cq_s,
-                          const IntensiveQuantities& intQuants) const
-    {
-        // TODO: the application of well efficiency factor has not been tested with an example yet
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        EvalWell cq_s_poly = cq_s[waterCompIdx];
-        if (this->isInjector()) {
-            cq_s_poly *= this->wpolymer();
-        } else {
-            cq_s_poly *= this->extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
-        }
-        // Note. Efficiency factor is handled in the output layer
-        rate = cq_s_poly.value();
-
-        cq_s_poly *= this->well_efficiency_factor_;
-
-        return {Base::restrictEval(cq_s_poly), cq_s_poly};
     }
 
 

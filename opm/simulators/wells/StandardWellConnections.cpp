@@ -615,6 +615,30 @@ connectionRatesMICP(const std::vector<EvalWell>& cq_s,
             well_.restrictEval(cq_s_urea)};
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+std::tuple<typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices,Scalar>::EvalWell>
+StandardWellConnections<FluidSystem,Indices,Scalar>::
+connectionRatePolymer(double& rate,
+                    const std::vector<EvalWell>& cq_s,
+                    const std::variant<Scalar,EvalWell>& polymerConcentration) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    EvalWell cq_s_poly = cq_s[waterCompIdx];
+    if (well_.isInjector()) {
+        cq_s_poly *= std::get<Scalar>(polymerConcentration);
+    } else {
+        cq_s_poly *= std::get<EvalWell>(polymerConcentration);
+    }
+    // Note. Efficiency factor is handled in the output layer
+    rate = cq_s_poly.value();
+
+    cq_s_poly *= well_.wellEfficiencyFactor();
+
+    return {well_.restrictEval(cq_s_poly), cq_s_poly};
+}
+
 #define INSTANCE(...) \
 template class StandardWellConnections<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, \
                                        __VA_ARGS__,double>;

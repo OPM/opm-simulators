@@ -93,6 +93,11 @@ public:
                             const Phase transportPhase,
                             DeferredLogger& deferred_logger) const;
 
+    std::tuple<Eval,EvalWell>
+    connectionRatePolymer(double& rate,
+                          const std::vector<EvalWell>& cq_s,
+                          const std::variant<Scalar,EvalWell>& polymerConcentration) const;
+
     std::tuple<Eval,Eval,Eval>
     connectionRatesMICP(const std::vector<EvalWell>& cq_s,
                         const std::variant<Scalar,EvalWell>& microbialConcentration,
