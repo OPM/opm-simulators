@@ -1745,7 +1745,17 @@ public:
      */
     void initialSolutionApplied()
     {
+        // Calculate all intensive quantities.
         this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx*/0);
+
+        // We also need the intensive quantities for timeIdx == 1
+        // corresponding to the start of the current timestep, if we
+        // do not use the storage cache, or if we cannot recycle the
+        // first iteration storage.
+        if (!this->model().enableStorageCache() || !this->recycleFirstIterationStorage()) {
+            this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx*/1);
+        }
+
         // initialize the wells. Note that this needs to be done after initializing the
         // intrinsic permeabilities and the after applying the initial solution because
         // the well model uses these...
