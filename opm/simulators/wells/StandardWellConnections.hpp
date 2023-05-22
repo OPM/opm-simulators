@@ -104,6 +104,12 @@ public:
                         const std::variant<Scalar,EvalWell>& oxygenConcentration,
                         const std::variant<Scalar,EvalWell>& ureaConcentration) const;
 
+    std::tuple<Eval,EvalWell>
+    connectionRatezFraction(double& rate,
+                            const double dis_gas_rate,
+                            const std::vector<EvalWell>& cq_s,
+                            const std::variant<Scalar, std::array<EvalWell,2>>& solventConcentration) const;
+
 private:
     void computePressureDelta();
 

@@ -639,6 +639,32 @@ connectionRatePolymer(double& rate,
     return {well_.restrictEval(cq_s_poly), cq_s_poly};
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+std::tuple<typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices,Scalar>::EvalWell>
+StandardWellConnections<FluidSystem,Indices,Scalar>::
+connectionRatezFraction(double& rate,
+                        const double dis_gas_rate,
+                        const std::vector<EvalWell>& cq_s,
+                        const std::variant<Scalar, std::array<EvalWell,2>>& solventConcentration) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+    EvalWell cq_s_zfrac_effective = cq_s[gasCompIdx];
+    if (well_.isInjector()) {
+        cq_s_zfrac_effective *= std::get<Scalar>(solventConcentration);
+    } else if (cq_s_zfrac_effective.value() != 0.0) {
+        const double dis_gas_frac = dis_gas_rate / cq_s_zfrac_effective.value();
+        const auto& vol = std::get<std::array<EvalWell,2>>(solventConcentration);
+        cq_s_zfrac_effective *= dis_gas_frac * vol[0] + (1.0 - dis_gas_frac) * vol[1];
+    }
+
+    rate = cq_s_zfrac_effective.value();
+
+    cq_s_zfrac_effective *= well_.wellEfficiencyFactor();
+    return {well_.restrictEval(cq_s_zfrac_effective), cq_s_zfrac_effective};
+}
+
 #define INSTANCE(...) \
 template class StandardWellConnections<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, \
                                        __VA_ARGS__,double>;
