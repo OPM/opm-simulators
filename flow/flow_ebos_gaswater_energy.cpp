@@ -52,6 +52,17 @@ template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::EclFlowGasWaterEnergyProblem> {
     static constexpr bool value = true;
 };
+
+template<class TypeTag>
+struct EnableDisgasInWater<TypeTag, TTag::EclFlowGasWaterEnergyProblem> {
+    static constexpr bool value = true;
+};
+
+template<class TypeTag>
+struct EnableEvaporation<TypeTag, TTag::EclFlowGasWaterEnergyProblem> {
+    static constexpr bool value = true;
+};
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::EclFlowGasWaterEnergyProblem>
