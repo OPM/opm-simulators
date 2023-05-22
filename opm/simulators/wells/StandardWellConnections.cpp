@@ -578,6 +578,43 @@ connectionRateFoam(const std::vector<EvalWell>& cq_s,
     return well_.restrictEval(cq_s_foam);
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+std::tuple<typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval>
+StandardWellConnections<FluidSystem,Indices,Scalar>::
+connectionRatesMICP(const std::vector<EvalWell>& cq_s,
+                    const std::variant<Scalar,EvalWell>& microbialConcentration,
+                    const std::variant<Scalar,EvalWell>& oxygenConcentration,
+                    const std::variant<Scalar,EvalWell>& ureaConcentration) const
+{
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    EvalWell cq_s_microbe = cq_s[waterCompIdx];
+    if (well_.isInjector()) {
+        cq_s_microbe *= std::get<Scalar>(microbialConcentration);
+    } else {
+        cq_s_microbe *= std::get<EvalWell>(microbialConcentration);
+    }
+
+    EvalWell cq_s_oxygen = cq_s[waterCompIdx];
+    if (well_.isInjector()) {
+        cq_s_oxygen *= std::get<Scalar>(oxygenConcentration);
+    } else {
+        cq_s_oxygen *= std::get<EvalWell>(oxygenConcentration);
+    }
+
+    EvalWell cq_s_urea = cq_s[waterCompIdx];
+    if (well_.isInjector()) {
+        cq_s_urea *= std::get<Scalar>(ureaConcentration);
+    } else {
+        cq_s_urea *= std::get<EvalWell>(ureaConcentration);
+    }
+
+    return {well_.restrictEval(cq_s_microbe),
+            well_.restrictEval(cq_s_oxygen),
+            well_.restrictEval(cq_s_urea)};
+}
+
 #define INSTANCE(...) \
 template class StandardWellConnections<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, \
                                        __VA_ARGS__,double>;
