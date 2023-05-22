@@ -800,7 +800,7 @@ public:
             for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
                 const Element& elem = *elemIt;
                 elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
             }
         }
     }
