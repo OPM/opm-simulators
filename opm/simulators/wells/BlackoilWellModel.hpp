@@ -329,8 +329,6 @@ namespace Opm {
 
             void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights) const;
 
-            std::vector<std::vector<int>> getMaxWellConnections() const;
-
             void addWellPressureEquationsStruct(PressureMatrix& jacobian) const;
 
             void initGliftEclWellMap(GLiftEclWells &ecl_well_map);

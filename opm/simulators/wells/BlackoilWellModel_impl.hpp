@@ -1473,31 +1473,6 @@ namespace Opm {
     }
 
     template<typename TypeTag>
-    std::vector<std::vector<int>>
-    BlackoilWellModel<TypeTag>::
-    getMaxWellConnections() const
-    {
-        std::vector<std::vector<int>> wells;
-
-        auto schedule_wells = schedule().getWellsatEnd();
-        schedule_wells.erase(std::remove_if(schedule_wells.begin(), schedule_wells.end(), not_on_process_), schedule_wells.end());
-        wells.reserve(schedule_wells.size());
-
-        // initialize the additional cell connections introduced by wells.
-        for ( const auto& well : schedule_wells )
-        {
-            std::vector<int> compressed_well_perforations = this->getCellsForConnections(well);
-
-            // also include wells with no perforations in case
-            std::sort(compressed_well_perforations.begin(),
-                      compressed_well_perforations.end());
-
-            wells.push_back(compressed_well_perforations);
-        }
-        return wells;
-    }
-
-    template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     addWellPressureEquationsStruct(PressureMatrix& jacobian) const
