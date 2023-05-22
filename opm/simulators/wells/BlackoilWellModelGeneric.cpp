@@ -1393,4 +1393,11 @@ getMaxWellConnections() const
     return wells;
 }
 
+int BlackoilWellModelGeneric::numLocalWellsEnd() const
+{
+    auto w = schedule().getWellsatEnd();
+    w.erase(std::remove_if(w.begin(), w.end(), not_on_process_), w.end());
+    return w.size();
+}
+
 }

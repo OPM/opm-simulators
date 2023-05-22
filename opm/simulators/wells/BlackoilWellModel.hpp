@@ -325,8 +325,6 @@ namespace Opm {
 
             using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
 
-            int numLocalWellsEnd() const;
-
             void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights) const;
 
             void addWellPressureEquationsStruct(PressureMatrix& jacobian) const;
