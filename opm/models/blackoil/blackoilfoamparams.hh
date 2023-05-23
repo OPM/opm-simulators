@@ -78,6 +78,7 @@ struct BlackOilFoamParams {
     std::vector<FoamCoefficients> foamCoefficients_;
     std::vector<TabulatedFunction> adsorbedFoamTable_;
     std::vector<TabulatedFunction> gasMobilityMultiplierTable_;
+    Opm::Phase transport_phase_;
 };
 
 } // namespace Opm
