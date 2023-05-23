@@ -226,8 +226,13 @@ public:
         Evaluation So = 1.0 - Sw - Sg;
 
         // deal with solvent
-        if constexpr (enableSolvent)
-            So -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
+        if constexpr (enableSolvent) {
+            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                So -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
+            } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                Sg -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
+            }
+        }
 
         if (FluidSystem::phaseIsActive(waterPhaseIdx))
             fluidState_.setSaturation(waterPhaseIdx, Sw);
