@@ -1589,7 +1589,7 @@ namespace Opm
                                         deferred_logger);
             } else {
                 const UnitSystem& unit_system = ebosSimulator.vanguard().eclState().getDeckUnitSystem();
-                this->assemblePressureEq(seg, unit_system, well_state, deferred_logger);
+                this->assemblePressureEq(seg, unit_system, well_state, this->param_.use_average_density_ms_wells_, deferred_logger);
             }
         }
 

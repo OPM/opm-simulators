@@ -220,6 +220,9 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteTortuosities);
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteDiffusionCoefficients);
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteEffectiveDiffusionCoefficients);
+            
+            // hide average density option 
+            EWOMS_HIDE_PARAM(TypeTag, UseAverageDensityMsWells);
 
             EWOMS_END_PARAM_REGISTRATION(TypeTag);
 

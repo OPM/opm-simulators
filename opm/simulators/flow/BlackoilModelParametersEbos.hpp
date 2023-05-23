@@ -164,6 +164,10 @@ template<class TypeTag, class MyTypeTag>
 struct MaximumNumberOfWellSwitches {
     using type = UndefinedProperty;
 };
+template<class TypeTag, class MyTypeTag>
+struct UseAverageDensityMsWells {
+    using type = UndefinedProperty;
+};
 
 template<class TypeTag>
 struct DbhpMaxRel<TypeTag, TTag::FlowModelParameters> {
@@ -308,6 +312,14 @@ template<class TypeTag>
 struct MaximumNumberOfWellSwitches<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 3;
 };
+template<class TypeTag>
+struct UseAverageDensityMsWells<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = false;
+};
+
+
+
+
 
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
@@ -421,6 +433,9 @@ namespace Opm
         /// Maximum number of times a well can switch to the same controt
         int max_number_of_well_switches_;
 
+        /// Whether to approximate segment densities by averaging over segment and its outlet 
+        bool use_average_density_ms_wells_;
+
 
 
         /// Construct from user parameters or defaults.
@@ -457,6 +472,7 @@ namespace Opm
             check_well_operability_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheck);
             check_well_operability_iter_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter);
             max_number_of_well_switches_ = EWOMS_GET_PARAM(TypeTag, int, MaximumNumberOfWellSwitches);
+            use_average_density_ms_wells_ = EWOMS_GET_PARAM(TypeTag, bool, UseAverageDensityMsWells);
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         }
 
@@ -495,6 +511,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheck, "Enable the well operability checking");
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter, "Enable the well operability checking during iterations");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaximumNumberOfWellSwitches, "Maximum number of times a well can switch to the same control");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, UseAverageDensityMsWells, "Approximate segment densitities by averaging over segment and its outlet");
         }
     };
 } // namespace Opm
