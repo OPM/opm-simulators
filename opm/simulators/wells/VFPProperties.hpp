@@ -72,7 +72,7 @@ public:
     }
 
     double getExplicitWFR(const int table_id, const size_t well_index) const {
-        const auto& rates = well_state_.well(well_index).explicit_surface_rates;
+        const auto& rates = well_state_.well(well_index).prev_surface_rates;
         const auto& pu = well_state_.phaseUsage();
         const auto& aqua = pu.phase_used[BlackoilPhases::Aqua]? rates[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
         const auto& liquid = pu.phase_used[BlackoilPhases::Liquid]? rates[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;
@@ -82,7 +82,7 @@ public:
     }
 
     double getExplicitGFR(const int table_id, const size_t well_index) const {
-        const auto& rates = well_state_.well(well_index).explicit_surface_rates;
+        const auto& rates = well_state_.well(well_index).prev_surface_rates;
         const auto& pu = well_state_.phaseUsage();
         const auto& aqua = pu.phase_used[BlackoilPhases::Aqua]? rates[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
         const auto& liquid = pu.phase_used[BlackoilPhases::Liquid]? rates[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;

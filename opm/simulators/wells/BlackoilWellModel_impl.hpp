@@ -342,7 +342,7 @@ namespace Opm {
 
         for (auto& well : well_container_) {
             if (well->isVFPActive(local_deferredLogger)){
-                well->setExplicitSurfaceRates(this->wellState(), this->prevWellState());
+                well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
         }
 
