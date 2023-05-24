@@ -251,10 +251,10 @@ public:
      * conduction for energy.
      */
     template <class Context, class FluidState>
-    void setThermalFlow(const Context& context,
-                        unsigned bfIdx,
-                        unsigned timeIdx,
-                        const FluidState& boundaryFluidState)
+    void setThermalFlow([[maybe_unused]] const Context& context,
+                        [[maybe_unused]] unsigned bfIdx,
+                        [[maybe_unused]] unsigned timeIdx,
+                        [[maybe_unused]] const FluidState& boundaryFluidState)
     {
         // set the mass no-flow condition
         setNoFlow();
