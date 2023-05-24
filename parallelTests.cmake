@@ -139,7 +139,7 @@ add_test_compare_parallel_simulation(CASENAME aquflux_01
                                      ABS_TOL ${abs_tol}
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR aquifers
-                                     TEST_ARGS --enable-tuning=true)
+                                     TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7)
 
 add_test_compare_parallel_simulation(CASENAME network_balance_01
 		                             FILENAME NETWORK-01
