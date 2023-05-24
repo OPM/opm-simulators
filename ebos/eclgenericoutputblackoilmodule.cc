@@ -806,7 +806,6 @@ assignToSolution(data::Solution& sol)
         {"PERMFACT", UnitSystem::measure::identity,            permFact_},
         {"PORV_RC",  UnitSystem::measure::identity,            rockCompPorvMultiplier_},
         {"PRES_OVB", UnitSystem::measure::pressure,            overburdenPressure_},
-        {"PRESDIFF", UnitSystem::measure::pressure,            fluidPresDiff_},
         {"RSW",      UnitSystem::measure::gas_oil_ratio,       rsw_},
         {"RVW",      UnitSystem::measure::oil_gas_ratio,       rvw_},
         {"SALTP",    UnitSystem::measure::identity,            pSalt_},
@@ -818,6 +817,16 @@ assignToSolution(data::Solution& sol)
         {"STD_OIL",  UnitSystem::measure::identity,            mFracOil_},
         {"TMULT_RC", UnitSystem::measure::identity,            rockCompTransMultiplier_},
         {"UREA",     UnitSystem::measure::density,             cUrea_},
+        {"MECHPOTF", UnitSystem::measure::pressure,  mechPotentialForce_},
+        {"DISPX", UnitSystem::measure::length,  dispX_},
+        {"DISPY", UnitSystem::measure::length,  dispY_},
+        {"DISPZ", UnitSystem::measure::length,  dispZ_},
+        {"STRESSXY", UnitSystem::measure::length,  stressXX_},
+        {"STRESSYY", UnitSystem::measure::length,  stressYY_},
+        {"STRESSZZ", UnitSystem::measure::length,  stressZZ_},
+        {"STRESSXY", UnitSystem::measure::length,  stressXY_},
+        {"STRESSXZ", UnitSystem::measure::length,  stressXZ_},
+        {"STRESSYZ", UnitSystem::measure::length,  stressYZ_},
     };
 
     for (const auto& array : baseSolutionArrays) {
@@ -1142,8 +1151,28 @@ doAllocBuffers(unsigned bufferSize,
     rstKeywords["PRESSURE"] = 0;
 
     if (enableMech_){
-        this->fluidPresDiff_.resize(bufferSize,0.0);
-        rstKeywords["PresDiff"] = 0;    
+        this->mechPotentialForce_.resize(bufferSize,0.0);
+        rstKeywords["MECHPOTF"] = 0;
+        this->dispX_.resize(bufferSize,0.0);
+        rstKeywords["DISPX"] = 0;
+        this->dispY_.resize(bufferSize,0.0);
+        rstKeywords["DISPY"] = 0;
+        this->dispZ_.resize(bufferSize,0.0);
+        rstKeywords["DISPZ"] = 0;
+        this->stressXX_.resize(bufferSize,0.0);
+        rstKeywords["STRESSXX"] = 0;
+        this->stressYY_.resize(bufferSize,0.0);
+        rstKeywords["STRESSYY"] = 0;
+        this->stressZZ_.resize(bufferSize,0.0);
+        rstKeywords["STRESSZZ"] = 0;
+        this->stressXY_.resize(bufferSize,0.0);
+        rstKeywords["STRESSXY"] = 0;
+        this->stressXZ_.resize(bufferSize,0.0);
+        rstKeywords["STRESSXZ"] = 0;
+        this->stressXY_.resize(bufferSize,0.0);
+        rstKeywords["STRESSXY"] = 0;
+        this->stressYZ_.resize(bufferSize,0.0);
+        rstKeywords["STRESSYZ"] = 0;
     }
     
     // Allocate memory for temperature
