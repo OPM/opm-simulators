@@ -630,8 +630,7 @@ namespace Opm
         DeferredLogger& deferred_logger)
     {
         const auto& well_name = this->name();
-        const auto& summary_state = ebos_simulator.vanguard().summaryState();
-        assert(this->wellHasTHPConstraints(summary_state));
+        assert(this->wellHasTHPConstraints(ebos_simulator.vanguard().summaryState()));
         const auto& schedule = ebos_simulator.vanguard().schedule();
         auto report_step_idx = ebos_simulator.episodeIndex();
         const auto& glo = schedule.glo(report_step_idx);
