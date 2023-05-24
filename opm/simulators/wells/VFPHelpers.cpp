@@ -648,6 +648,7 @@ INSTANCE(DenseAd::Evaluation<double, -1, 7u>)
 INSTANCE(DenseAd::Evaluation<double, -1, 8u>)
 INSTANCE(DenseAd::Evaluation<double, -1, 9u>)
 INSTANCE(DenseAd::Evaluation<double, -1, 10u>)
+INSTANCE(DenseAd::Evaluation<double, -1, 11u>)
 INSTANCE(DenseAd::Evaluation<double, 3, 0u>)
 INSTANCE(DenseAd::Evaluation<double, 4, 0u>)
 INSTANCE(DenseAd::Evaluation<double, 5, 0u>)
@@ -655,7 +656,7 @@ INSTANCE(DenseAd::Evaluation<double, 6, 0u>)
 INSTANCE(DenseAd::Evaluation<double, 7, 0u>)
 INSTANCE(DenseAd::Evaluation<double, 8, 0u>)
 INSTANCE(DenseAd::Evaluation<double, 9, 0u>)
-
+INSTANCE(DenseAd::Evaluation<double, 10, 0u>)
 
 } // namespace detail
 } // namespace Opm
