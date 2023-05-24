@@ -194,7 +194,7 @@ namespace WellGroupHelpers
                                          double& factor)
     {
         factor *= group.getGroupEfficiencyFactor();
-        if (group.parent() != "FIELD")
+        if (group.parent() != "FIELD" && !group.parent().empty())
             accumulateGroupEfficiencyFactor(
                 schedule.getGroup(group.parent(), reportStepIdx), schedule, reportStepIdx, factor);
     }
@@ -923,7 +923,11 @@ namespace WellGroupHelpers
                         const PhaseUsage& pu)
     {
         if (schedule.hasWell(name, reportStepIdx)) {
-            return guideRate->get(name, target, getWellRateVector(wellState, pu, name));
+            if (guideRate->has(name) || guideRate->hasPotentials(name)) {
+                return guideRate->get(name, target, getWellRateVector(wellState, pu, name));
+            } else {
+                return 0.0;
+            }
         }
 
         if (guideRate->has(name)) {
@@ -955,7 +959,9 @@ namespace WellGroupHelpers
             if (!wellState.isProductionGrup(wellName))
                 continue;
 
-            totalGuideRate += guideRate->get(wellName, target, getWellRateVector(wellState, pu, wellName));
+            totalGuideRate += getGuideRate(wellName, schedule, wellState, group_state,
+                                           reportStepIdx, guideRate, target, pu);
+
         }
         return totalGuideRate;
     }
@@ -972,7 +978,8 @@ namespace WellGroupHelpers
                            const PhaseUsage& pu)
     {
         if (schedule.hasWell(name, reportStepIdx)) {
-            return guideRate->get(name, target, getWellRateVector(wellState, pu, name));
+            return getGuideRate(name, schedule, wellState, group_state,
+                                reportStepIdx, guideRate, target, pu);
         }
 
         if (guideRate->has(name, injectionPhase)) {
@@ -1142,7 +1149,8 @@ namespace WellGroupHelpers
     double FractionCalculator::guideRate(const std::string& name, const std::string& always_included_child)
     {
         if (schedule_.hasWell(name, report_step_)) {
-            return guide_rate_->get(name, target_, getWellRateVector(well_state_, pu_, name));
+            return getGuideRate(name, schedule_, well_state_, group_state_,
+                                report_step_, guide_rate_, target_, pu_);
         } else {
             if (groupControlledWells(name, always_included_child) > 0) {
                 if (is_producer_ && guide_rate_->has(name)) {

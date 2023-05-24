@@ -172,12 +172,6 @@ partiallySupported()
             },
          },
          {
-            "PINCH",
-            {
-               {2,{true, allow_values<std::string> {"GAP"}, "PINCH(PINCHOPT) equal to NOGAP is not supported."}},
-            },
-         },
-         {
             "RESTART",
             {
                {3,{true, allow_values<std::string> {}, "RESTART(RSTYPE): restart from SAVE file not supported"}}, // SAVEFILE

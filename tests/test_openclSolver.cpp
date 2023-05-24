@@ -195,6 +195,6 @@ BOOST_AUTO_TEST_CASE(TestOpenclSolver)
         // Test with 3x3 block solvers.
         test3(prm);
     } catch(const PlatformInitException& ) {
-        BOOST_WARN_MESSAGE(true, "Problem with initializing Platform. skipping test");
+        BOOST_ERROR("Problem with initializing Platform.");
     }
 }

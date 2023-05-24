@@ -52,7 +52,11 @@ if (OPM_ENABLE_PYTHON)
     if(PYTHON_EXECUTABLE AND NOT Python3_EXECUTABLE)
       set(Python3_EXECUTABLE ${PYTHON_EXECUTABLE})
     endif()
-    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+    if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
+      find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+    else()
+      find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+    endif()
   endif()
   if(Python3_VERSION_MINOR LESS 3)
     # Python native namespace packages requires python >= 3.3
@@ -426,7 +430,7 @@ set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
                 oilwater oilwater_brine gaswater_brine oilwater_polymer
                 oilwater_polymer_injectivity micp polymer solvent
                 gasoil_energy brine_saltprecipitation
-                gaswater_saltprec_vapwat brine_precsalt_vapwat
+                gaswater_saltprec_vapwat gaswater_saltprec_energy brine_precsalt_vapwat
                 blackoil_legacyassembly gasoildiffuse gaswater_dissolution
                 gaswater_dissolution_diffuse gaswater_energy)
 set(FLOW_VARIANT_MODELS brine_energy onephase onephase_energy)
@@ -536,19 +540,33 @@ add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 if(CUDA_FOUND)
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
   target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
+  set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
+
+  # CUISTL
+  set_tests_properties(cusparse_safe_call
+                       cublas_safe_call
+                       cuda_safe_call
+                       cuda_check_last_error
+                       cublas_handle
+                       cusparse_handle
+                       PROPERTIES LABELS gpu_cuda)
 endif()
 
 if(OpenCL_FOUND)
   target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
+  set_tests_properties(openclSolver solvetransposed3x3 csrToCscOffsetMap
+                       PROPERTIES LABELS gpu_opencl)
 endif()
 
 if(ROCALUTION_FOUND)
   target_include_directories(opmsimulators PUBLIC ${rocalution_INCLUDE_DIR}/rocalution)
+  set_tests_properties(rocalutionSolver PROPERTIES LABELS gpu_rocm)
 endif()
 
 if(rocsparse_FOUND AND rocblas_FOUND)
   target_link_libraries( opmsimulators PUBLIC roc::rocsparse )
   target_link_libraries( opmsimulators PUBLIC roc::rocblas )
+  set_tests_properties(rocsparseSolver PROPERTIES LABELS gpu_rocm)
 endif()
 
 if(VexCL_FOUND)

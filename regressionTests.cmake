@@ -92,6 +92,14 @@ add_test_compareECLFiles(CASENAME spe1_precsalt
                          REL_TOL ${rel_tol}
                          DIR spe1_precsalt)
 
+add_test_compareECLFiles(CASENAME network_balance_01
+		                 FILENAME NETWORK-01
+		                 SIMULATOR flow
+		                 ABS_TOL ${abs_tol}
+		                 REL_TOL ${rel_tol}
+		                 DIR network
+		                 TEST_ARGS --enable-tuning=true)
+
 add_test_compareECLFiles(CASENAME gas_precsalt
                          FILENAME GASWATER_VAPWAT_PRECSALT
                          SIMULATOR flow
@@ -1089,3 +1097,17 @@ add_test_compareECLFiles(CASENAME model_metric_gridunit_metres
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR gridunit)
+
+add_test_compareECLFiles(CASENAME 01_wgrupcon
+                         FILENAME 01-WGRUPCON
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR wgrupcon)
+
+add_test_compareECLFiles(CASENAME 02_wgrupcon
+                         FILENAME 02-WGRUPCON
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR wgrupcon)

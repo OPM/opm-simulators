@@ -124,6 +124,10 @@ namespace Opm
                                     const WellState& well_state,
                                     DeferredLogger& deferred_logger) override;
 
+        virtual void solveEqAndUpdateWellState(const SummaryState& summary_state,
+                                               WellState& well_state,
+                                               DeferredLogger& deferred_logger) override; // const?
+
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state,
                                                  DeferredLogger& deferred_logger) override; // should be const?
@@ -205,8 +209,7 @@ namespace Opm
                                  const bool& allow_cf,
                                  std::vector<EvalWell>& cq_s,
                                  EvalWell& perf_press,
-                                 double& perf_dis_gas_rate,
-                                 double& perf_vap_oil_rate,
+                                 PerforationRates& perf_rates,
                                  DeferredLogger& deferred_logger) const;
 
         template<class Value>
@@ -223,8 +226,7 @@ namespace Opm
                         const std::vector<Value>& cmix_s,
                         std::vector<Value>& cq_s,
                         Value& perf_press,
-                        double& perf_dis_gas_rate,
-                        double& perf_vap_oil_rate,
+                        PerforationRates& perf_rates,
                         DeferredLogger& deferred_logger) const;
 
         // compute the fluid properties, such as densities, viscosities, and so on, in the segments
@@ -233,14 +235,11 @@ namespace Opm
                                            DeferredLogger& deferred_logger);
 
         // get the mobility for specific perforation
-        void getMobilityEval(const Simulator& ebosSimulator,
-                             const int perf,
-                             std::vector<EvalWell>& mob) const;
-
-        // get the mobility for specific perforation
-        void getMobilityScalar(const Simulator& ebosSimulator,
-                               const int perf,
-                               std::vector<Scalar>& mob) const;
+        template<class Value>
+        void getMobility(const Simulator& ebosSimulator,
+                         const int perf,
+                         std::vector<Value>& mob,
+                         DeferredLogger& deferred_logger) const;
 
         void computeWellRatesAtBhpLimit(const Simulator& ebosSimulator,
                                         std::vector<double>& well_flux,

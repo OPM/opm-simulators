@@ -1,5 +1,5 @@
 /*
-  Copyright 2019 SINTEF Digital, Mathematics and Cybernetics.
+  Copyright 2022-2023 SINTEF AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -16,33 +16,34 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-#ifndef OPM_PERFORATIONDATA_HEADER_INCLUDED
-#define OPM_PERFORATIONDATA_HEADER_INCLUDED
-
-#include <cstddef>
-
-namespace Opm
+#include <cublas_v2.h>
+#include <opm/simulators/linalg/cuistl/detail/CuBlasHandle.hpp>
+#include <opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp>
+namespace Opm::cuistl::detail
 {
 
-/// Static data associated with a well perforation.
-struct PerforationData
+
+CuBlasHandle::CuBlasHandle()
 {
-    int cell_index;
-    double connection_transmissibility_factor;
-    int satnum_id;
-    /// \brief The original index of the perforation in ECL Schedule
-    std::size_t ecl_index;
-};
+    OPM_CUBLAS_SAFE_CALL(cublasCreate(&m_handle));
+}
 
-struct PerforationRates
+CuBlasHandle::~CuBlasHandle()
 {
-    double dis_gas = 0.0;
-    double dis_gas_in_water = 0.0;
-    double vap_oil = 0.0;
-    double vap_wat = 0.0;
-};
+    OPM_CUBLAS_WARN_IF_ERROR(cublasDestroy(m_handle));
+}
 
-} // namespace Opm
+cublasHandle_t
+CuBlasHandle::get()
+{
+    return m_handle;
+}
 
-#endif // OPM_PERFORATIONDATA_HEADER_INCLUDED
+CuBlasHandle&
+CuBlasHandle::getInstance()
+{
+    static CuBlasHandle instance;
+    return instance;
+}
+
+} // namespace Opm::cuistl::detail

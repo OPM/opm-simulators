@@ -172,9 +172,9 @@ namespace Opm
                                     const WellState& well_state,
                                     DeferredLogger& deferred_logger) override;
 
-        void solveEqAndUpdateWellState(const SummaryState& summary_state,
-                                       WellState& well_state,
-                                       DeferredLogger& deferred_logger);
+        virtual void solveEqAndUpdateWellState(const SummaryState& summary_state,
+                                               WellState& well_state,
+                                               DeferredLogger& deferred_logger) override;
 
         virtual void calculateExplicitQuantities(const Simulator& ebosSimulator,
                                                  const WellState& well_state,
@@ -265,23 +265,14 @@ namespace Opm
 
         // calculate the properties for the well connections
         // to calulate the pressure difference between well connections.
+        using WellConnectionProps = typename StdWellEval::StdWellConnections::Properties;
         void computePropertiesForWellConnectionPressures(const Simulator& ebosSimulator,
                                                          const WellState& well_state,
-                                                         std::vector<double>& b_perf,
-                                                         std::vector<double>& rsmax_perf,
-                                                         std::vector<double>& rvmax_perf,
-                                                         std::vector<double>& rvwmax_perf,
-                                                         std::vector<double>& rswmax_perf,
-                                                         std::vector<double>& surf_dens_perf) const;
+                                                         WellConnectionProps& props) const;
 
         void computeWellConnectionDensitesPressures(const Simulator& ebosSimulator,
                                                     const WellState& well_state,
-                                                    const std::vector<double>& b_perf,
-                                                    const std::vector<double>& rsmax_perf,
-                                                    const std::vector<double>& rvmax_perf,
-                                                    const std::vector<double>& rvwmax_perf,
-                                                    const std::vector<double>& rswmax_perf,
-                                                    const std::vector<double>& surf_dens_perf,
+                                                    const WellConnectionProps& props,
                                                     DeferredLogger& deferred_logger);
 
         void computeWellConnectionPressures(const Simulator& ebosSimulator,
@@ -295,10 +286,7 @@ namespace Opm
                                  const int perf,
                                  const bool allow_cf,
                                  std::vector<EvalWell>& cq_s,
-                                 double& perf_dis_gas_rate,
-                                 double& perf_dis_gas_rate_in_water,
-                                 double& perf_vap_oil_rate,
-                                 double& perf_vap_wat_rate,
+                                 PerforationRates& perf_rates,
                                  DeferredLogger& deferred_logger) const;
 
         void computePerfRateScalar(const IntensiveQuantities& intQuants,
@@ -325,10 +313,7 @@ namespace Opm
                              const Value& skin_pressure,
                              const std::vector<Value>& cmix_s,
                              std::vector<Value>& cq_s,
-                             double& perf_dis_gas_rate,
-                             double& perf_dis_gas_rate_in_water,
-                             double& perf_vap_oil_rate,
-                             double& perf_vap_wat_rate,
+                             PerforationRates& perf_rates,
                              DeferredLogger& deferred_logger) const;
 
         void computeWellRatesWithBhpIterations(const Simulator& ebosSimulator,
@@ -348,17 +333,11 @@ namespace Opm
         virtual double getRefDensity() const override;
 
         // get the mobility for specific perforation
-        void getMobilityEval(const Simulator& ebosSimulator,
-                             const int perf,
-                             std::vector<EvalWell>& mob,
-                             DeferredLogger& deferred_logger) const;
-
-        // get the mobility for specific perforation
-        void getMobilityScalar(const Simulator& ebosSimulator,
-                               const int perf,
-                               std::vector<Scalar>& mob,
-                               DeferredLogger& deferred_logger) const;
-
+        template<class Value>
+        void getMobility(const Simulator& ebosSimulator,
+                         const int perf,
+                         std::vector<Value>& mob,
+                         DeferredLogger& deferred_logger) const;
 
         void updateWaterMobilityWithPolymer(const Simulator& ebos_simulator,
                                             const int perf,

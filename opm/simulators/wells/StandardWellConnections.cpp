@@ -89,12 +89,7 @@ computePressureDelta()
 template<class FluidSystem, class Indices, class Scalar>
 void StandardWellConnections<FluidSystem,Indices,Scalar>::
 computeDensities(const std::vector<Scalar>& perfComponentRates,
-                 const std::vector<Scalar>& b_perf,
-                 const std::vector<Scalar>& rsmax_perf,
-                 const std::vector<Scalar>& rvmax_perf,
-                 const std::vector<Scalar>& rvwmax_perf,
-                 const std::vector<Scalar>& rswmax_perf,
-                 const std::vector<Scalar>& surf_dens_perf,
+                 const Properties& props,
                  DeferredLogger& deferred_logger)
 {
     // Verify that we have consistent input.
@@ -208,11 +203,11 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
             const unsigned oilpos = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
             Scalar rs = 0.0;
             Scalar rv = 0.0;
-            if (!rsmax_perf.empty() && mix[oilpos] > 1e-12) {
-                rs = std::min(mix[gaspos]/mix[oilpos], rsmax_perf[perf]);
+            if (!props.rsmax_perf.empty() && mix[oilpos] > 1e-12) {
+                rs = std::min(mix[gaspos] / mix[oilpos], props.rsmax_perf[perf]);
             }
-            if (!rvmax_perf.empty() && mix[gaspos] > 1e-12) {
-                rv = std::min(mix[oilpos]/mix[gaspos], rvmax_perf[perf]);
+            if (!props.rvmax_perf.empty() && mix[gaspos] > 1e-12) {
+                rv = std::min(mix[oilpos] / mix[gaspos], props.rvmax_perf[perf]);
             }
             const Scalar d = 1.0 - rs*rv;
             if (d <= 0.0) {
@@ -246,12 +241,12 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
             const unsigned waterpos = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
             const unsigned gaspos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             Scalar rvw = 0.0;
-            if (!rvwmax_perf.empty() && mix[gaspos] > 1e-12) {
-                rvw = std::min(mix[waterpos]/mix[gaspos], rvwmax_perf[perf]);
+            if (!props.rvwmax_perf.empty() && mix[gaspos] > 1e-12) {
+                rvw = std::min(mix[waterpos] / mix[gaspos], props.rvwmax_perf[perf]);
             }
             Scalar rsw = 0.0;
-            if (!rswmax_perf.empty() && mix[waterpos] > 1e-12) {
-                rsw = std::min(mix[gaspos]/mix[waterpos], rswmax_perf[perf]);
+            if (!props.rswmax_perf.empty() && mix[waterpos] > 1e-12) {
+                rsw = std::min(mix[gaspos] / mix[waterpos], props.rswmax_perf[perf]);
             }
             const Scalar d = 1.0 - rsw*rvw;
             if (d <= 0.0) {
@@ -277,10 +272,10 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
 
         Scalar volrat = 0.0;
         for (int component = 0; component < num_comp; ++component) {
-            volrat += x[component] / b_perf[perf*num_comp+ component];
+            volrat += x[component] / props.b_perf[perf * num_comp + component];
         }
         for (int component = 0; component < num_comp; ++component) {
-            surf_dens[component] = surf_dens_perf[perf*num_comp+ component];
+            surf_dens[component] = props.surf_dens_perf[perf * num_comp + component];
         }
 
         // Compute segment density.
@@ -296,17 +291,12 @@ computePropertiesForPressures(const WellState& well_state,
                               const std::function<int(int)>& pvtRegionIdx,
                               const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
                               const std::function<Scalar(int)>& solventRefDensity,
-                              std::vector<Scalar>& b_perf,
-                              std::vector<Scalar>& rsmax_perf,
-                              std::vector<Scalar>& rvmax_perf,
-                              std::vector<Scalar>& rvwmax_perf,
-                              std::vector<Scalar>& rswmax_perf,
-                              std::vector<Scalar>& surf_dens_perf) const
+                              Properties& props) const
 {
     const int nperf = well_.numPerfs();
     const PhaseUsage& pu = well_.phaseUsage();
-    b_perf.resize(nperf * well_.numComponents());
-    surf_dens_perf.resize(nperf * well_.numComponents());
+    props.b_perf.resize(nperf * well_.numComponents());
+    props.surf_dens_perf.resize(nperf * well_.numComponents());
     const auto& ws = well_state.well(well_.indexOfWell());
 
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -319,13 +309,13 @@ computePropertiesForPressures(const WellState& well_state,
 
     //rs and rv are only used if both oil and gas is present
     if (oilPresent && gasPresent) {
-        rsmax_perf.resize(nperf);
-        rvmax_perf.resize(nperf);
+        props.rsmax_perf.resize(nperf);
+        props.rvmax_perf.resize(nperf);
     }
       //rvw is only used if both water and gas is present
     if (waterPresent && gasPresent) {
-        rvwmax_perf.resize(nperf);
-        rswmax_perf.resize(nperf);
+        props.rvwmax_perf.resize(nperf);
+        props.rswmax_perf.resize(nperf);
     }
 
     // Compute the average pressure in each well block
@@ -349,16 +339,16 @@ computePropertiesForPressures(const WellState& well_state,
                 // TODO support mutual solubility in water and oil
                 assert(!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
                 const double waterrate = std::abs(ws.surface_rates[pu.phase_pos[Water]]);
-                rswmax_perf[perf] = FluidSystem::waterPvt().saturatedGasDissolutionFactor(region_idx, temperature, p_avg, saltConcentration);
+                props.rswmax_perf[perf] = FluidSystem::waterPvt().saturatedGasDissolutionFactor(region_idx, temperature, p_avg, saltConcentration);
                 if (waterrate > 0) {
                     const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
                     if (gasrate > 0) {
                         rsw = waterrate / gasrate;
                     }
-                    rsw = std::min(rsw, rswmax_perf[perf]);
+                    rsw = std::min(rsw, props.rswmax_perf[perf]);
                 }
             }
-            b_perf[ waterCompIdx + perf * well_.numComponents()] = FluidSystem::waterPvt().inverseFormationVolumeFactor(region_idx, temperature, p_avg, rsw, saltConcentration);
+            props.b_perf[waterCompIdx + perf * well_.numComponents()] = FluidSystem::waterPvt().inverseFormationVolumeFactor(region_idx, temperature, p_avg, rsw, saltConcentration);
         }
 
         if (gasPresent) {
@@ -368,8 +358,8 @@ computePropertiesForPressures(const WellState& well_state,
             if (oilPresent && waterPresent) {
                 const double oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]); //in order to handle negative rates in producers
                 const double waterrate = std::abs(ws.surface_rates[pu.phase_pos[Water]]); //in order to handle negative rates in producers
-                rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(region_idx, temperature, p_avg);
-                rvwmax_perf[perf] = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(region_idx, temperature, p_avg);
+                props.rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(region_idx, temperature, p_avg);
+                props.rvwmax_perf[perf] = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(region_idx, temperature, p_avg);
                 double rv = 0.0;
                 double rvw = 0.0;
                 if (oilrate > 0) {
@@ -377,58 +367,58 @@ computePropertiesForPressures(const WellState& well_state,
                     if (gasrate > 0) {
                         rv = oilrate / gasrate;
                     }
-                    rv = std::min(rv, rvmax_perf[perf]);
+                    rv = std::min(rv, props.rvmax_perf[perf]);
                 }
                 if (waterrate > 0) {
                     const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
                     if (gasrate > 0) {
                         rvw = waterrate / gasrate;
                     }
-                    rvw = std::min(rvw, rvwmax_perf[perf]);
+                    rvw = std::min(rvw, props.rvwmax_perf[perf]);
                 }
                 if (rv > 0.0 || rvw > 0.0){
-                    b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(region_idx, temperature, p_avg, rv, rvw);
+                    props.b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(region_idx, temperature, p_avg, rv, rvw);
                 }
                 else {
-                    b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
+                    props.b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
                 }
             } else if (oilPresent) {
                 //no water
                 const double oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]); //in order to handle negative rates in producers
-                rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(region_idx, temperature, p_avg);
+                props.rvmax_perf[perf] = FluidSystem::gasPvt().saturatedOilVaporizationFactor(region_idx, temperature, p_avg);
                 if (oilrate > 0) {
                     const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
                     double rv = 0.0;
                     if (gasrate > 0) {
                         rv = oilrate / gasrate;
                     }
-                    rv = std::min(rv, rvmax_perf[perf]);
+                    rv = std::min(rv, props.rvmax_perf[perf]);
 
-                    b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(region_idx, temperature, p_avg, rv, 0.0 /*Rvw*/);
+                    props.b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(region_idx, temperature, p_avg, rv, 0.0 /*Rvw*/);
                 }
                 else {
-                    b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
+                    props.b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
                 }
             } else if (waterPresent) {
                 //no oil
                 const double waterrate = std::abs(ws.surface_rates[pu.phase_pos[Water]]); //in order to handle negative rates in producers
-                rvwmax_perf[perf] = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(region_idx, temperature, p_avg);
+                props.rvwmax_perf[perf] = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(region_idx, temperature, p_avg);
                 if (waterrate > 0) {
                     const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
                     double rvw = 0.0;
                     if (gasrate > 0) {
                         rvw = waterrate / gasrate;
                     }
-                    rvw = std::min(rvw, rvwmax_perf[perf]);
+                    rvw = std::min(rvw, props.rvwmax_perf[perf]);
 
-                    b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(region_idx, temperature, p_avg, 0.0 /*Rv*/, rvw);
+                    props.b_perf[gaspos] = FluidSystem::gasPvt().inverseFormationVolumeFactor(region_idx, temperature, p_avg, 0.0 /*Rv*/, rvw);
                 }
                 else {
-                    b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
+                    props.b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
                 }
 
             } else {
-                b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
+                props.b_perf[gaspos] = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
             }
         }
 
@@ -436,7 +426,7 @@ computePropertiesForPressures(const WellState& well_state,
             const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
             const int oilpos = oilCompIdx + perf * well_.numComponents();
             if (gasPresent) {
-                rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(region_idx, temperature, p_avg);
+                props.rsmax_perf[perf] = FluidSystem::oilPvt().saturatedGasDissolutionFactor(region_idx, temperature, p_avg);
                 const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
                 if (gasrate > 0) {
                     const double oilrate = std::abs(ws.surface_rates[pu.phase_pos[Oil]]);
@@ -444,13 +434,13 @@ computePropertiesForPressures(const WellState& well_state,
                     if (oilrate > 0) {
                         rs = gasrate / oilrate;
                     }
-                    rs = std::min(rs, rsmax_perf[perf]);
-                    b_perf[oilpos] = FluidSystem::oilPvt().inverseFormationVolumeFactor(region_idx, temperature, p_avg, rs);
+                    rs = std::min(rs, props.rsmax_perf[perf]);
+                    props.b_perf[oilpos] = FluidSystem::oilPvt().inverseFormationVolumeFactor(region_idx, temperature, p_avg, rs);
                 } else {
-                    b_perf[oilpos] = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
+                    props.b_perf[oilpos] = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
                 }
             } else {
-                b_perf[oilpos] = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
+                props.b_perf[oilpos] = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(region_idx, temperature, p_avg);
             }
         }
 
@@ -461,13 +451,13 @@ computePropertiesForPressures(const WellState& well_state,
             }
 
             const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-            surf_dens_perf[well_.numComponents() * perf  + compIdx] = FluidSystem::referenceDensity( phaseIdx, region_idx );
+            props.surf_dens_perf[well_.numComponents() * perf  + compIdx] = FluidSystem::referenceDensity( phaseIdx, region_idx );
         }
 
         // We use cell values for solvent injector
         if constexpr (Indices::enableSolvent) {
-            b_perf[well_.numComponents() * perf + Indices::contiSolventEqIdx] = solventInverseFormationVolumeFactor(cell_idx);
-            surf_dens_perf[well_.numComponents() * perf + Indices::contiSolventEqIdx] = solventRefDensity(cell_idx);
+            props.b_perf[well_.numComponents() * perf + Indices::contiSolventEqIdx] = solventInverseFormationVolumeFactor(cell_idx);
+            props.surf_dens_perf[well_.numComponents() * perf + Indices::contiSolventEqIdx] = solventRefDensity(cell_idx);
         }
     }
 }
@@ -479,18 +469,13 @@ computeProperties(const WellState& well_state,
                   const std::function<Scalar(int,int)>& mobility,
                   const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
                   const std::function<Scalar(int)>& solventMobility,
-                  const std::vector<Scalar>& b_perf,
-                  const std::vector<Scalar>& rsmax_perf,
-                  const std::vector<Scalar>& rvmax_perf,
-                  const std::vector<Scalar>& rvwmax_perf,
-                  const std::vector<Scalar>& rswmax_perf,
-                  const std::vector<Scalar>& surf_dens_perf,
+                  const Properties& props,
                   DeferredLogger& deferred_logger)
 {
     // Compute densities
     const int nperf = well_.numPerfs();
     const int np = well_.numPhases();
-    std::vector<double> perfRates(b_perf.size(),0.0);
+    std::vector<double> perfRates(props.b_perf.size(),0.0);
     const auto& ws = well_state.well(well_.indexOfWell());
     const auto& perf_data = ws.perf_data;
     const auto& perf_rates_state = perf_data.phase_rates;
@@ -549,7 +534,7 @@ computeProperties(const WellState& well_state,
         }
     }
 
-    this->computeDensities(perfRates, b_perf, rsmax_perf, rvmax_perf, rvwmax_perf, rswmax_perf, surf_dens_perf, deferred_logger);
+    this->computeDensities(perfRates, props, deferred_logger);
     this->computePressureDelta();
 }
 
@@ -572,6 +557,7 @@ INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)
 // Blackoil
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)

@@ -1,5 +1,5 @@
 /*
-  Copyright 2019 SINTEF Digital, Mathematics and Cybernetics.
+  Copyright 2022-2023 SINTEF AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -16,33 +16,23 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <config.h>
 
-#ifndef OPM_PERFORATIONDATA_HEADER_INCLUDED
-#define OPM_PERFORATIONDATA_HEADER_INCLUDED
+#define BOOST_TEST_MODULE TestCudaCheckLastError
 
-#include <cstddef>
+#include <boost/test/unit_test.hpp>
+#include <opm/simulators/linalg/cuistl/detail/cuda_check_last_error.hpp>
 
-namespace Opm
+
+BOOST_AUTO_TEST_CASE(TestNoThrowLastError)
 {
+    BOOST_CHECK_NO_THROW(OPM_CUDA_CHECK_LAST_ERROR;);
+    BOOST_CHECK_NO_THROW(OPM_CUDA_CHECK_LAST_ERROR_IF_DEBUG;);
+}
 
-/// Static data associated with a well perforation.
-struct PerforationData
+
+BOOST_AUTO_TEST_CASE(TestNoThrowDeviceSynchronize)
 {
-    int cell_index;
-    double connection_transmissibility_factor;
-    int satnum_id;
-    /// \brief The original index of the perforation in ECL Schedule
-    std::size_t ecl_index;
-};
-
-struct PerforationRates
-{
-    double dis_gas = 0.0;
-    double dis_gas_in_water = 0.0;
-    double vap_oil = 0.0;
-    double vap_wat = 0.0;
-};
-
-} // namespace Opm
-
-#endif // OPM_PERFORATIONDATA_HEADER_INCLUDED
+    BOOST_CHECK_NO_THROW(OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE;);
+    BOOST_CHECK_NO_THROW(OPM_CUDA_CHECK_DEVICE_SYNCHRONIZE_IF_DEBUG;);
+}

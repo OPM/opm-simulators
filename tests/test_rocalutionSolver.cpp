@@ -156,6 +156,6 @@ BOOST_AUTO_TEST_CASE(TestRocalutionSolver)
         // test rocalution with 3x3 blocks
         test3(prm);
     } else {
-        BOOST_WARN_MESSAGE(true, "Problem with initializing a device. skipping test");
+        BOOST_ERROR("Problem with initializing a device.");
     }
 }

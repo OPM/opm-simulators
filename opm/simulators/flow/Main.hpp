@@ -37,6 +37,7 @@
 #include <flow/flow_ebos_brine.hpp>
 #include <flow/flow_ebos_brine_saltprecipitation.hpp>
 #include <flow/flow_ebos_gaswater_saltprec_vapwat.hpp>
+#include <flow/flow_ebos_gaswater_saltprec_energy.hpp>
 #include <flow/flow_ebos_brine_precsalt_vapwat.hpp>
 #include <flow/flow_ebos_onephase.hpp>
 #include <flow/flow_ebos_onephase_energy.hpp>
@@ -226,7 +227,7 @@ private:
         }
 
         // Brine case
-        else if (phases.active(Phase::BRINE)) {
+        else if (phases.active(Phase::BRINE) && !thermal) {
             return this->runBrine(phases);
         }
 
@@ -446,6 +447,7 @@ private:
     {
         const bool diffusive = eclipseState_->getSimulationConfig().isDiffusive();
         const bool disgasw = eclipseState_->getSimulationConfig().hasDISGASW();
+        const bool vapwat = eclipseState_->getSimulationConfig().hasVAPWAT();
 
         // oil-gas
         if (phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
@@ -469,7 +471,7 @@ private:
 
         // gas-water
         else if ( phases.active( Phase::GAS ) && phases.active( Phase::WATER ) ) {
-            if (disgasw) {
+            if (disgasw || vapwat) {
                 if (diffusive) {
                     return flowEbosGasWaterDissolutionDiffuseMain(argc_, argv_, outputCout_, outputFiles_);
                 }
@@ -477,7 +479,7 @@ private:
             }
             if (diffusive) {
                 if (outputCout_) {
-                    std::cerr << "The DIFFUSE option is not available for the two-phase gas/water model without disgasw." << std::endl;
+                    std::cerr << "The DIFFUSE option is not available for the two-phase gas/water model without disgasw or vapwat." << std::endl;
                 }
                 return EXIT_FAILURE;
             }
@@ -611,6 +613,10 @@ private:
 
         // water-gas-thermal
         if (!phases.active( Phase::OIL ) && phases.active( Phase::WATER ) && phases.active( Phase::GAS )) {
+
+            if (phases.active(Phase::BRINE)){
+                return flowEbosGasWaterSaltprecEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+            }
             return flowEbosGasWaterEnergyMain(argc_, argv_, outputCout_, outputFiles_);
         }
 

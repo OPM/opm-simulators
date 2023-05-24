@@ -1,5 +1,5 @@
 /*
-  Copyright 2019 SINTEF Digital, Mathematics and Cybernetics.
+  Copyright 2022-2023 SINTEF AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -16,33 +16,34 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-
-#ifndef OPM_PERFORATIONDATA_HEADER_INCLUDED
-#define OPM_PERFORATIONDATA_HEADER_INCLUDED
-
-#include <cstddef>
-
-namespace Opm
+#include <opm/simulators/linalg/cuistl/detail/CuSparseHandle.hpp>
+#include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
+namespace Opm::cuistl::detail
 {
 
-/// Static data associated with a well perforation.
-struct PerforationData
+
+CuSparseHandle::CuSparseHandle()
 {
-    int cell_index;
-    double connection_transmissibility_factor;
-    int satnum_id;
-    /// \brief The original index of the perforation in ECL Schedule
-    std::size_t ecl_index;
-};
+    OPM_CUSPARSE_SAFE_CALL(cusparseCreate(&m_handle));
+    OPM_CUSPARSE_SAFE_CALL(cusparseSetStream(m_handle, 0));
+}
 
-struct PerforationRates
+CuSparseHandle::~CuSparseHandle()
 {
-    double dis_gas = 0.0;
-    double dis_gas_in_water = 0.0;
-    double vap_oil = 0.0;
-    double vap_wat = 0.0;
-};
+    OPM_CUSPARSE_WARN_IF_ERROR(cusparseDestroy(m_handle));
+}
 
-} // namespace Opm
+cusparseHandle_t
+CuSparseHandle::get()
+{
+    return m_handle;
+}
 
-#endif // OPM_PERFORATIONDATA_HEADER_INCLUDED
+CuSparseHandle&
+CuSparseHandle::getInstance()
+{
+    static CuSparseHandle instance;
+    return instance;
+}
+
+} // namespace Opm::cuistl::detail

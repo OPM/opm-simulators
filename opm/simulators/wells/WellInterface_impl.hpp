@@ -1203,4 +1203,68 @@ namespace Opm
         }
     }
 
+    template <typename TypeTag>
+    template<class Value, class Callback>
+    void
+    WellInterface<TypeTag>::
+    getMobility(const Simulator& ebosSimulator,
+                const int perf,
+                std::vector<Value>& mob,
+                Callback& extendEval,
+                [[maybe_unused]] DeferredLogger& deferred_logger) const
+    {
+        auto relpermArray = []()
+                            {
+                                if constexpr (std::is_same_v<Value, Scalar>) {
+                                    return std::array<Scalar,3>{};
+                                } else {
+                                    return std::array<Eval,3>{};
+                                }
+                            };
+        const int cell_idx = this->well_cells_[perf];
+        assert (int(mob.size()) == this->num_components_);
+        const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
+        const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
+
+        // either use mobility of the perforation cell or calculate its own
+        // based on passing the saturation table index
+        const int satid = this->saturation_table_number_[perf] - 1;
+        const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
+        if (satid == satid_elem) { // the same saturation number is used. i.e. just use the mobilty from the cell
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+
+                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                mob[activeCompIdx] = extendEval(intQuants.mobility(phaseIdx));
+            }
+            if constexpr (has_solvent) {
+                mob[Indices::contiSolventEqIdx] = extendEval(intQuants.solventMobility());
+            }
+        } else {
+            const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
+            auto relativePerms = relpermArray();
+            MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
+
+            // reset the satnumvalue back to original
+            materialLawManager->connectionMaterialLawParams(satid_elem, cell_idx);
+
+            // compute the mobility
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+
+                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                mob[activeCompIdx] = extendEval(relativePerms[phaseIdx] / intQuants.fluidState().viscosity(phaseIdx));
+            }
+
+            // this may not work if viscosity and relperms has been modified?
+            if constexpr (has_solvent) {
+                OPM_DEFLOG_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent", deferred_logger);
+            }
+        }
+    }
+
 } // namespace Opm

@@ -540,9 +540,11 @@ WellState::report(const int* globalCellIdxMap,
             well.rates.set(rt::alq, 0.0);
         }
 
-        well.rates.set(rt::dissolved_gas, ws.dissolved_gas_rate + ws.dissolved_gas_rate_in_water);
-        well.rates.set(rt::vaporized_oil, ws.vaporized_oil_rate);
-        well.rates.set(rt::vaporized_water, ws.vaporized_wat_rate);
+        well.rates.set(rt::dissolved_gas,
+                       ws.phase_mixing_rates[ws.dissolved_gas] +
+                       ws.phase_mixing_rates[ws.dissolved_gas_in_water]);
+        well.rates.set(rt::vaporized_oil, ws.phase_mixing_rates[ws.vaporized_oil]);
+        well.rates.set(rt::vaporized_water, ws.phase_mixing_rates[ws.vaporized_water]);
 
         {
             auto& curr = well.current_control;

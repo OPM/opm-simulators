@@ -16,10 +16,7 @@
 */
 #include "config.h"
 
-// Define making clear that the simulator supports AMG
-#define FLOW_SUPPORT_AMG 1
-
-#include <flow/flow_ebos_gaswater_energy.hpp>
+#include <flow/flow_ebos_gaswater_saltprec_energy.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
@@ -28,44 +25,41 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
-#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
-#include <opm/models/discretization/common/tpfalinearizer.hh>
-
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowGasWaterEnergyProblem {
+struct EclFlowGasWaterSaltprecEnergyProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
-
-//template<class TypeTag>
-//struct Linearizer<TypeTag, TTag::EclFlowGasWaterProblem> { using type = TpfaLinearizer<TypeTag>; };
-
-//template<class TypeTag>
-//struct LocalResidual<TypeTag, TTag::EclFlowGasWaterProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
-
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::EclFlowGasWaterEnergyProblem> { static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::EclFlowGasWaterEnergyProblem> {
+struct EnableBrine<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::EclFlowGasWaterEnergyProblem> {
+struct EnableSaltPrecipitation<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableEvaporation<TypeTag, TTag::EclFlowGasWaterEnergyProblem> {
+struct EnableEvaporation<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem> {
+    static constexpr bool value = true;
+};
+
+template<class TypeTag>
+struct EnableDisgasInWater<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem> {
+    static constexpr bool value = true;
+};
+
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem> {
     static constexpr bool value = true;
 };
 
 //! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::EclFlowGasWaterEnergyProblem>
+struct Indices<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -89,22 +83,21 @@ public:
 
 namespace Opm {
 
-
 // ----------------- Main program -----------------
-int flowEbosGasWaterEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowEbosGasWaterSaltprecEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowGasWaterEnergyProblem>
-        mainfunc {argc, argv, outputCout, outputFiles} ;
+    FlowMainEbos<Properties::TTag::EclFlowGasWaterSaltprecEnergyProblem>
+        mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
 
-int flowEbosGasWaterEnergyMainStandalone(int argc, char** argv)
+int flowEbosGasWaterSaltprecEnergyMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowGasWaterEnergyProblem;
+    using TypeTag = Properties::TTag::EclFlowGasWaterSaltprecEnergyProblem;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 }

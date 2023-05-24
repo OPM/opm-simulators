@@ -389,7 +389,7 @@ namespace Opm
                 const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 // flux for each perforation
                 std::vector<Scalar> mob(this->num_components_, 0.);
-                getMobilityScalar(ebosSimulator, perf, mob);
+                getMobility(ebosSimulator, perf, mob, deferred_logger);
                 double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
                 const double Tw = this->well_index_[perf] * trans_mult;
 
@@ -528,6 +528,26 @@ namespace Opm
 
         return potentials;
     }
+
+
+
+    template <typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
+    solveEqAndUpdateWellState(const SummaryState& summary_state,
+                              WellState& well_state,
+                              DeferredLogger& deferred_logger)
+    {
+        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
+
+        // We assemble the well equations, then we check the convergence,
+        // which is why we do not put the assembleWellEq here.
+        const BVectorWell dx_well = this->linSys_.solve();
+
+        updateWellState(summary_state, dx_well, well_state, deferred_logger);
+    }
+
+
 
 
 
@@ -696,7 +716,7 @@ namespace Opm
             };
 
             std::vector<Scalar> mob(this->num_components_, 0.0);
-            getMobilityScalar(ebosSimulator, static_cast<int>(subsetPerfID), mob);
+            getMobility(ebosSimulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
 
             const auto& fs = fluidState(subsetPerfID);
             setToZero(connPI);
@@ -769,8 +789,7 @@ namespace Opm
                     const std::vector<Value>& cmix_s,
                     std::vector<Value>& cq_s,
                     Value& perf_press,
-                    double& perf_dis_gas_rate,
-                    double& perf_vap_oil_rate,
+                    PerforationRates& perf_rates,
                     DeferredLogger& deferred_logger) const
     {
         // pressure difference between the segment and the perforation
@@ -887,10 +906,10 @@ namespace Opm
                 const double d = 1.0 - getValue(rv) * getValue(rs);
                 // vaporized oil into gas
                 // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
-                perf_vap_oil_rate = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+                perf_rates.vap_oil = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
                 // dissolved of gas in oil
                 // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
-                perf_dis_gas_rate = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
+                perf_rates.dis_gas = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
             }
         }
     }
@@ -907,8 +926,7 @@ namespace Opm
                         const bool& allow_cf,
                         std::vector<EvalWell>& cq_s,
                         EvalWell& perf_press,
-                        double& perf_dis_gas_rate,
-                        double& perf_vap_oil_rate,
+                        PerforationRates& perf_rates,
                         DeferredLogger& deferred_logger) const
 
     {
@@ -948,8 +966,7 @@ namespace Opm
                               cmix_s,
                               cq_s,
                               perf_press,
-                              perf_dis_gas_rate,
-                              perf_vap_oil_rate,
+                              perf_rates,
                               deferred_logger);
     }
 
@@ -992,8 +1009,7 @@ namespace Opm
             cmix_s[comp_idx] = getValue(this->primary_variables_.surfaceVolumeFraction(seg, comp_idx));
         }
 
-        Scalar perf_dis_gas_rate = 0.0;
-        Scalar perf_vap_oil_rate = 0.0;
+        PerforationRates perf_rates;
         Scalar perf_press = 0.0;
 
         this->computePerfRate(pressure_cell,
@@ -1009,8 +1025,7 @@ namespace Opm
                               cmix_s,
                               cq_s,
                               perf_press,
-                              perf_dis_gas_rate,
-                              perf_vap_oil_rate,
+                              perf_rates,
                               deferred_logger);
     }
 
@@ -1051,113 +1066,25 @@ namespace Opm
                                                deferred_logger);
     }
 
-
-
-
-
     template <typename TypeTag>
+    template<class Value>
     void
     MultisegmentWell<TypeTag>::
-    getMobilityEval(const Simulator& ebosSimulator,
-                    const int perf,
-                    std::vector<EvalWell>& mob) const
+    getMobility(const Simulator& ebosSimulator,
+                const int perf,
+                std::vector<Value>& mob,
+                DeferredLogger& deferred_logger) const
     {
-        // TODO: most of this function, if not the whole function, can be moved to the base class
-        const int cell_idx = this->well_cells_[perf];
-        assert (int(mob.size()) == this->num_components_);
-        const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
-        const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
-
-        // either use mobility of the perforation cell or calcualte its own
-        // based on passing the saturation table index
-        const int satid = this->saturation_table_number_[perf] - 1;
-        const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
-        if( satid == satid_elem ) { // the same saturation number is used. i.e. just use the mobilty from the cell
-
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                mob[activeCompIdx] = this->extendEval(intQuants.mobility(phaseIdx));
-            }
-            // if (has_solvent) {
-            //     mob[contiSolventEqIdx] = extendEval(intQuants.solventMobility());
-            // }
-        } else {
-
-            const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
-            std::array<Eval,3> relativePerms = { 0.0, 0.0, 0.0 };
-            MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
-
-            // reset the satnumvalue back to original
-            materialLawManager->connectionMaterialLawParams(satid_elem, cell_idx);
-
-            // compute the mobility
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                mob[activeCompIdx] = this->extendEval(relativePerms[phaseIdx] / intQuants.fluidState().viscosity(phaseIdx));
-            }
-        }
+        auto obtain = [this](const Eval& value)
+                      {
+                          if constexpr (std::is_same_v<Value, Scalar>) {
+                              return getValue(value);
+                          } else {
+                              return this->extendEval(value);
+                          }
+                      };
+        WellInterface<TypeTag>::getMobility(ebosSimulator, perf, mob, obtain, deferred_logger);
     }
-
-
-    template <typename TypeTag>
-    void
-    MultisegmentWell<TypeTag>::
-    getMobilityScalar(const Simulator& ebosSimulator,
-                      const int perf,
-                      std::vector<Scalar>& mob) const
-    {
-        // TODO: most of this function, if not the whole function, can be moved to the base class
-        const int cell_idx = this->well_cells_[perf];
-        assert (int(mob.size()) == this->num_components_);
-        const auto& intQuants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
-        const auto& materialLawManager = ebosSimulator.problem().materialLawManager();
-
-        // either use mobility of the perforation cell or calcualte its own
-        // based on passing the saturation table index
-        const int satid = this->saturation_table_number_[perf] - 1;
-        const int satid_elem = materialLawManager->satnumRegionIdx(cell_idx);
-        if( satid == satid_elem ) { // the same saturation number is used. i.e. just use the mobilty from the cell
-
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                mob[activeCompIdx] = getValue(intQuants.mobility(phaseIdx));
-            }
-            // if (has_solvent) {
-            //     mob[contiSolventEqIdx] = extendEval(intQuants.solventMobility());
-            // }
-        } else {
-
-            const auto& paramsCell = materialLawManager->connectionMaterialLawParams(satid, cell_idx);
-            std::array<Scalar,3> relativePerms = { 0.0, 0.0, 0.0 };
-            MaterialLaw::relativePermeabilities(relativePerms, paramsCell, intQuants.fluidState());
-
-            // reset the satnumvalue back to original
-            materialLawManager->connectionMaterialLawParams(satid_elem, cell_idx);
-
-            // compute the mobility
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                mob[activeCompIdx] = relativePerms[phaseIdx] / getValue(intQuants.fluidState().viscosity(phaseIdx));
-            }
-        }
-    }
-
 
 
 
@@ -1255,7 +1182,7 @@ namespace Opm
                 std::vector<Scalar> mob(this->num_components_, 0.0);
 
                 // TODO: maybe we should store the mobility somewhere, so that we only need to calculate it one per iteration
-                getMobilityScalar(ebos_simulator, perf, mob);
+                getMobility(ebos_simulator, perf, mob, deferred_logger);
 
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quantities = ebos_simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
@@ -1545,10 +1472,7 @@ namespace Opm
         this->linSys_.clear();
 
         auto& ws = well_state.well(this->index_of_well_);
-        ws.dissolved_gas_rate = 0;
-        ws.dissolved_gas_rate_in_water = 0;
-        ws.vaporized_oil_rate = 0;
-        ws.vaporized_wat_rate = 0;
+        ws.phase_mixing_rates.fill(0.0);
 
         // for the black oil cases, there will be four equations,
         // the first three of them are the mass balance equations, the last one is the pressure equations.
@@ -1616,19 +1540,19 @@ namespace Opm
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 std::vector<EvalWell> mob(this->num_components_, 0.0);
-                getMobilityEval(ebosSimulator, perf, mob);
+                getMobility(ebosSimulator, perf, mob, deferred_logger);
                 const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
                 const double Tw = this->well_index_[perf] * trans_mult;
                 std::vector<EvalWell> cq_s(this->num_components_, 0.0);
                 EvalWell perf_press;
-                double perf_dis_gas_rate = 0.;
-                double perf_vap_oil_rate = 0.;
-                computePerfRateEval(int_quants, mob, Tw, seg, perf, seg_pressure, allow_cf, cq_s, perf_press, perf_dis_gas_rate, perf_vap_oil_rate, deferred_logger);
+                PerforationRates perfRates;
+                computePerfRateEval(int_quants, mob, Tw, seg, perf, seg_pressure,
+                                    allow_cf, cq_s, perf_press, perfRates, deferred_logger);
 
                 // updating the solution gas rate and solution oil rate
                 if (this->isProducer()) {
-                    ws.dissolved_gas_rate += perf_dis_gas_rate;
-                    ws.vaporized_oil_rate += perf_vap_oil_rate;
+                    ws.phase_mixing_rates[ws.dissolved_gas] += perfRates.dis_gas;
+                    ws.phase_mixing_rates[ws.vaporized_oil] += perfRates.vap_oil;
                 }
 
                 // store the perf pressure and rates
@@ -1928,7 +1852,7 @@ namespace Opm
                 const int cell_idx = this->well_cells_[perf];
                 const auto& int_quants = ebosSimulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
                 std::vector<Scalar> mob(this->num_components_, 0.0);
-                getMobilityScalar(ebosSimulator, perf, mob);
+                getMobility(ebosSimulator, perf, mob, deferred_logger);
                 const double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(int_quants, cell_idx);
                 const double Tw = this->well_index_[perf] * trans_mult;
                 std::vector<Scalar> cq_s(this->num_components_, 0.0);
