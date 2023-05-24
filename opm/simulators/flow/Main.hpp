@@ -37,6 +37,7 @@
 #include <flow/flow_ebos_brine.hpp>
 #include <flow/flow_ebos_brine_saltprecipitation.hpp>
 #include <flow/flow_ebos_gaswater_saltprec_vapwat.hpp>
+#include <flow/flow_ebos_gaswater_saltprec_energy.hpp>
 #include <flow/flow_ebos_brine_precsalt_vapwat.hpp>
 #include <flow/flow_ebos_onephase.hpp>
 #include <flow/flow_ebos_onephase_energy.hpp>
@@ -226,7 +227,7 @@ private:
         }
 
         // Brine case
-        else if (phases.active(Phase::BRINE)) {
+        else if (phases.active(Phase::BRINE) && !thermal) {
             return this->runBrine(phases);
         }
 
@@ -604,6 +605,10 @@ private:
 
         // water-gas-thermal
         if (!phases.active( Phase::OIL ) && phases.active( Phase::WATER ) && phases.active( Phase::GAS )) {
+
+            if (phases.active(Phase::BRINE)){
+                return flowEbosGasWaterSaltprecEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+            }
             return flowEbosGasWaterEnergyMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
