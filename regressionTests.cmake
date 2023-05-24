@@ -928,7 +928,8 @@ add_test_compareECLFiles(CASENAME min_gasrate_1
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wtest/wecon_qg_min )
+                         DIR wtest/wecon_qg_min
+                         TEST_ARGS --enable-tuning=true )
 
 add_test_compareECLFiles(CASENAME min_qoil_1
                          FILENAME MIN_QOIL_1
