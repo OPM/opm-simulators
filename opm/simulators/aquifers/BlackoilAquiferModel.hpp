@@ -140,6 +140,8 @@ private:
     createAnalyticAquiferPointer(const AquiferData& aqData,
                                  const int          aquiferID,
                                  std::string_view   aqType) const;
+
+    void computeConnectionAreaFraction() const;
 };
 
 

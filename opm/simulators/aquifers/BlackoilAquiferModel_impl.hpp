@@ -45,16 +45,22 @@ template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::initialSolutionApplied()
 {
-    for (auto& aquifer : aquifers)
+    this->computeConnectionAreaFraction();
+
+    for (auto& aquifer : this->aquifers) {
         aquifer->initialSolutionApplied();
+    }
 }
 
 template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::initFromRestart(const data::Aquifers& aquiferSoln)
 {
-    for (auto& aquifer : this->aquifers)
+    this->computeConnectionAreaFraction();
+
+    for (auto& aquifer : this->aquifers) {
         aquifer->initFromRestart(aquiferSoln);
+    }
 }
 
 template <typename TypeTag>
@@ -67,6 +73,8 @@ BlackoilAquiferModel<TypeTag>::beginEpisode()
     // SCHEDULE setup in this section it is the beginning of a report step
 
     this->createDynamicAquifers(this->simulator_.episodeIndex());
+
+    this->computeConnectionAreaFraction();
 }
 
 template <typename TypeTag>
@@ -78,8 +86,9 @@ template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::beginTimeStep()
 {
-    for (auto& aquifer : aquifers)
+    for (auto& aquifer : this->aquifers) {
         aquifer->beginTimeStep();
+    }
 }
 
 template <typename TypeTag>
@@ -90,8 +99,9 @@ BlackoilAquiferModel<TypeTag>::addToSource(RateVector& rates,
                                            unsigned spaceIdx,
                                            unsigned timeIdx) const
 {
-    for (auto& aquifer : aquifers)
+    for (auto& aquifer : this->aquifers) {
         aquifer->addToSource(rates, context, spaceIdx, timeIdx);
+    }
 }
 
 template <typename TypeTag>
@@ -100,8 +110,9 @@ BlackoilAquiferModel<TypeTag>::addToSource(RateVector& rates,
                                            unsigned globalSpaceIdx,
                                            unsigned timeIdx) const
 {
-    for (auto& aquifer : aquifers)
+    for (auto& aquifer : this->aquifers) {
         aquifer->addToSource(rates, globalSpaceIdx, timeIdx);
+    }
 }
 
 template <typename TypeTag>
@@ -113,9 +124,10 @@ template <typename TypeTag>
 void
 BlackoilAquiferModel<TypeTag>::endTimeStep()
 {
-    for (auto& aquifer : aquifers) {
+    using NumAq = AquiferNumerical<TypeTag>;
+
+    for (auto& aquifer : this->aquifers) {
         aquifer->endTimeStep();
-        using NumAq = AquiferNumerical<TypeTag>;
         NumAq* num = dynamic_cast<NumAq*>(aquifer.get());
         if (num)
             this->simulator_.vanguard().grid().comm().barrier();
@@ -159,8 +171,9 @@ template<typename TypeTag>
 data::Aquifers BlackoilAquiferModel<TypeTag>::aquiferData() const
 {
     data::Aquifers data;
-    for (const auto& aqu : this->aquifers)
+    for (const auto& aqu : this->aquifers) {
         data.insert_or_assign(aqu->aquiferID(), aqu->aquiferData());
+    }
 
     return data;
 }
@@ -170,7 +183,7 @@ template<class Serializer>
 void BlackoilAquiferModel<TypeTag>::
 serializeOp(Serializer& serializer)
 {
-    for (auto& aiPtr : aquifers) {
+    for (auto& aiPtr : this->aquifers) {
         auto* ct = dynamic_cast<AquiferCarterTracy<TypeTag>*>(aiPtr.get());
         auto* fetp = dynamic_cast<AquiferFetkovich<TypeTag>*>(aiPtr.get());
         auto* num = dynamic_cast<AquiferNumerical<TypeTag>*>(aiPtr.get());
@@ -301,6 +314,28 @@ void BlackoilAquiferModel<TypeTag>::createDynamicAquifers(const int episode_inde
 
             aquFluxPtr->updateAquifer(aquFlux);
         }
+    }
+}
+
+template <typename TypeTag>
+void BlackoilAquiferModel<TypeTag>::computeConnectionAreaFraction() const
+{
+    auto maxAquID =
+        std::accumulate(this->aquifers.begin(), this->aquifers.end(), 0,
+                        [](const int aquID, const auto& aquifer)
+                        { return std::max(aquID, aquifer->aquiferID()); });
+
+    maxAquID = this->simulator_.vanguard().grid().comm().max(maxAquID);
+
+    auto totalConnArea = std::vector<double>(maxAquID, 0.0);
+    for (const auto& aquifer : this->aquifers) {
+        totalConnArea[aquifer->aquiferID() - 1] += aquifer->totalFaceArea();
+    }
+
+    this->simulator_.vanguard().grid().comm().sum(totalConnArea.data(), maxAquID);
+
+    for (auto& aquifer : this->aquifers) {
+        aquifer->computeFaceAreaFraction(totalConnArea);
     }
 }
 

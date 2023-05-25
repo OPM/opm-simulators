@@ -58,6 +58,9 @@ public:
 
     virtual data::AquiferData aquiferData() const = 0;
 
+    virtual void computeFaceAreaFraction(const std::vector<double>& total_face_area) = 0;
+    virtual double totalFaceArea() const = 0;
+
     template <class Context>
     void addToSource(RateVector& rates,
                      const Context& context,
