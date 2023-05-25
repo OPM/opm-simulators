@@ -56,6 +56,24 @@ add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_2aqu
                                       DIR aquifer-num
                                       TEST_ARGS --sched-restart=true --enable-tuning=true)
 
+add_test_compare_restarted_simulation(CASENAME aquflux_01
+                                      FILENAME AQUFLUX-01
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL 3.0e-3
+                                      RESTART_STEP 3
+                                      DIR aquifers
+                                      TEST_ARGS --enable-tuning=true)
+
+add_test_compare_restarted_simulation(CASENAME aquflux_02
+                                      FILENAME AQUFLUX-02
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart}
+                                      RESTART_STEP 50
+                                      DIR aquifers
+                                      TEST_ARGS --enable-tuning=true)
+
 # The dynamic MSW data is not written to /read from the restart file
 # We therefore accept significant deviation in the results.
 # Note also that we use --sched-restart=true since some necessary

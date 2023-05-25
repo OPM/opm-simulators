@@ -44,6 +44,24 @@ add_test_compare_parallel_restarted_simulation(CASENAME numerical_aquifer_3d_1aq
                                                DIR aquifer-num
                                                TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
 
+add_test_compare_parallel_restarted_simulation(CASENAME aquflux_01
+                                               FILENAME AQUFLUX-01
+                                               SIMULATOR flow
+                                               ABS_TOL ${abs_tol_restart}
+                                               REL_TOL 5.0e-2
+                                               RESTART_STEP 3
+                                               DIR aquifers
+                                               TEST_ARGS --solver-max-time-step-in-days=1)
+
+add_test_compare_parallel_restarted_simulation(CASENAME aquflux_02
+                                               FILENAME AQUFLUX-02
+                                               SIMULATOR flow
+                                               ABS_TOL ${abs_tol_restart}
+                                               REL_TOL 5.0e-2
+                                               RESTART_STEP 50
+                                               DIR aquifers
+                                               TEST_ARGS --solver-max-time-step-in-days=1)
+
 # Serialized restart tests
 if(HDF5_FOUND)
   opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-serialization-regressionTest.sh "")
