@@ -199,7 +199,14 @@ add_test_compareECLFiles(CASENAME aquflux_01
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR aquifers)
+                         DIR aquifers --solver-max-time-step-in-days=1)
+
+add_test_compareECLFiles(CASENAME aquflux_02
+                         FILENAME AQUFLUX-02
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR aquifers --solver-max-time-step-in-days=1)
 
 add_test_compareECLFiles(CASENAME spe3
                          FILENAME SPE3CASE1

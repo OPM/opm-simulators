@@ -91,12 +91,18 @@ public:
         aquifer_data_ = aquifer;
     }
 
-    void initFromRestart(const data::Aquifers& /* aquiferSoln */) override {
+    void initFromRestart(const data::Aquifers& aquiferSoln) override
+    {
+        auto xaqPos = aquiferSoln.find(this->aquiferID());
+        if (xaqPos == aquiferSoln.end()) {
+            return;
+        }
+
+        this->cumulative_flux_ = this->area_fraction_ * xaqPos->second.volume;
     }
 
-    void initialSolutionApplied() override {
-    }
-
+    void initialSolutionApplied() override
+    {}
 
     void beginTimeStep() override
     {}

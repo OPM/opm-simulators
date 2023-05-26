@@ -134,6 +134,9 @@ private:
     void createDynamicAquifers(const int episode_index);
 
     void initializeStaticAquifers();
+    void initializeRestartDynamicAquifers();
+
+    bool needRestartDynamicAquifers() const;
 
     template <typename AquiferType, typename AquiferData>
     std::unique_ptr<AquiferType>

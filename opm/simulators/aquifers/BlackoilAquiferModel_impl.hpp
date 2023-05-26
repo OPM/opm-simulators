@@ -165,6 +165,9 @@ void BlackoilAquiferModel<TypeTag>::init()
         this->initializeStaticAquifers();
     }
 
+    if (this->needRestartDynamicAquifers()) {
+        this->initializeRestartDynamicAquifers();
+    }
 }
 
 template<typename TypeTag>
@@ -200,6 +203,15 @@ serializeOp(Serializer& serializer)
             OPM_THROW(std::logic_error, "Error serializing BlackoilAquiferModel: unknown aquifer type");
         }
     }
+}
+
+template <typename TypeTag>
+void BlackoilAquiferModel<TypeTag>::initializeRestartDynamicAquifers()
+{
+    const auto rstStep = this->simulator_.vanguard().eclState()
+        .getInitConfig().getRestartStep() - 1;
+
+    this->createDynamicAquifers(rstStep);
 }
 
 template <typename TypeTag>
@@ -246,6 +258,20 @@ void BlackoilAquiferModel<TypeTag>::initializeStaticAquifers()
             this->aquifers.push_back(std::move(aquNumPtr));
         }
     }
+}
+
+template <typename TypeTag>
+bool BlackoilAquiferModel<TypeTag>::needRestartDynamicAquifers() const
+{
+    const auto& initconfig =
+        this->simulator_.vanguard().eclState().getInitConfig();
+
+    if (! initconfig.restartRequested()) {
+        return false;
+    }
+
+    return this->simulator_.vanguard()
+        .schedule()[initconfig.getRestartStep() - 1].hasAnalyticalAquifers();
 }
 
 template <typename TypeTag>
