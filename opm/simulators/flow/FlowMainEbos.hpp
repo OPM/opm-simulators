@@ -431,12 +431,6 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             }
         }
 
-        const Deck& deck() const
-        { return ebosSimulator_->vanguard().deck(); }
-
-        Deck& deck()
-        { return ebosSimulator_->vanguard().deck(); }
-
         const EclipseState& eclState() const
         { return ebosSimulator_->vanguard().eclState(); }
 
