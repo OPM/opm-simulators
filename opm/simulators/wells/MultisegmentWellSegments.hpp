@@ -51,7 +51,8 @@ public:
     //! \brief Update upwinding segments.
     void updateUpwindingSegments(const PrimaryVariables& primary_variables);
 
-    EvalWell getHydroPressureLoss(const int seg) const;
+    EvalWell getHydroPressureLoss(const int seg,
+                                      const int seg_side) const;
 
     //! Pressure difference between segment and perforation.
     Scalar getPressureDiffSegPerf(const int seg,
@@ -63,7 +64,7 @@ public:
                               const int pvt_region_index,
                               const int seg_idx) const;
 
-    EvalWell getFrictionPressureLoss(const int seg) const;
+    EvalWell getFrictionPressureLoss(const int seg, const bool return_upwind_derivatives) const;
 
     // pressure drop for Spiral ICD segment (WSEGSICD)
     EvalWell pressureDropSpiralICD(const int seg) const;

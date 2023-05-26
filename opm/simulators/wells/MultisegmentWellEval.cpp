@@ -214,25 +214,33 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assembleDefaultPressureEq(const int seg,
-                          WellState& well_state)
+                          WellState& well_state, 
+                          const bool use_average_density)
 {
     assert(seg != 0); // not top segment
+    const int seg_upwind = segments_.upwinding_segment(seg);
+    const bool reverseFlow = seg != seg_upwind; // special treatment for reverse flow
 
     // for top segment, the well control equation will be used.
     EvalWell pressure_equation = primary_variables_.getSegmentPressure(seg);
+    EvalWell extra_derivatives;
 
     // we need to handle the pressure difference between the two segments
-    // we only consider the hydrostatic pressure loss first
+    // hydrostatic pressure loss is assembled seperately at the end 
     // TODO: we might be able to add member variables to store these values, then we update well state
     // after converged
-    const auto hydro_pressure_drop = segments_.getHydroPressureLoss(seg);
+
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
-    segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop.value();
-    pressure_equation -= hydro_pressure_drop;
 
     if (this->frictionalPressureLossConsidered()) {
-        const auto friction_pressure_drop = segments_.getFrictionPressureLoss(seg);
+        const auto friction_pressure_drop = segments_.getFrictionPressureLoss(seg, false);
+        if (reverseFlow){
+            // call function once again to obtain/assemble remaining derivatives
+            extra_derivatives = -segments_.getFrictionPressureLoss(seg, true);
+            MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+                assemblePressureEqExtraDerivatives(seg, seg_upwind, extra_derivatives, linSys_);
+        }
         pressure_equation -= friction_pressure_drop;
         segments.pressure_drop_friction[seg] = friction_pressure_drop.value();
     }
@@ -241,13 +249,29 @@ assembleDefaultPressureEq(const int seg,
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = primary_variables_.getSegmentPressure(outlet_segment_index);
 
-    const int seg_upwind = segments_.upwinding_segment(seg);
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
         assemblePressureEq(seg, seg_upwind, outlet_segment_index,
                            pressure_equation, outlet_pressure, linSys_);
 
     if (this->accelerationalPressureLossConsidered()) {
         handleAccelerationPressureLoss(seg, well_state);
+    }
+
+    // Since density derivatives are organized differently than what is required for assemblePressureEq, 
+    // this part needs to be assembled separately. Optionally use average density variant.  
+    const auto hydro_pressure_drop_seg = segments_.getHydroPressureLoss(seg, seg);
+    if (!use_average_density){
+        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+            assembleHydroPressureLoss(seg, seg, hydro_pressure_drop_seg, linSys_);
+            segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop_seg.value();
+    } else {
+        const int seg_outlet = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
+        const auto hydro_pressure_drop_outlet = segments_.getHydroPressureLoss(seg, seg_outlet);
+        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+            assembleHydroPressureLoss(seg, seg, 0.5*hydro_pressure_drop_seg, linSys_);
+        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+            assembleHydroPressureLoss(seg, seg_outlet, 0.5*hydro_pressure_drop_outlet, linSys_);
+        segments.pressure_drop_hydrostatic[seg] = 0.5*hydro_pressure_drop_seg.value() + 0.5*hydro_pressure_drop_outlet.value();
     }
 }
 
@@ -322,6 +346,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assemblePressureEq(const int seg,
                    const UnitSystem& unit_system,
                    WellState& well_state,
+                   const bool use_average_density,
                    DeferredLogger& deferred_logger)
 {
     switch(this->segmentSet()[seg].segmentType()) {
@@ -332,7 +357,7 @@ assemblePressureEq(const int seg,
             break;
         }
         default :
-            assembleDefaultPressureEq(seg, well_state);
+            assembleDefaultPressureEq(seg, well_state, use_average_density);
     }
 }
 

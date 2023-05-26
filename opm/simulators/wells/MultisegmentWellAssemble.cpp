@@ -218,6 +218,36 @@ assemblePressureLoss(const int seg,
 
 template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+assembleHydroPressureLoss(const int seg, 
+                          const int seg_density, 
+                          const EvalWell& hydro_pressure_drop_seg, 
+                          Equations& eqns1) const
+{
+    MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
+    eqns.residual()[seg][SPres] -= hydro_pressure_drop_seg.value();
+    for (int pv_idx = 0; pv_idx < numWellEq; ++pv_idx) {
+        eqns.D()[seg][seg_density][SPres][pv_idx] -= hydro_pressure_drop_seg.derivative(pv_idx + Indices::numEq);
+    }
+
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+assemblePressureEqExtraDerivatives(const int seg, 
+                                   const int seg_upwind, 
+                                   const EvalWell& extra_derivatives, 
+                                   Equations& eqns1) const
+{
+    MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
+    // diregard residual
+    // Frac - derivatives are zero (they belong to upwind^2)
+    eqns.D()[seg][seg_upwind][SPres][SPres] += extra_derivatives.derivative(SPres + Indices::numEq);
+    eqns.D()[seg][seg_upwind][SPres][WQTotal] += extra_derivatives.derivative(WQTotal + Indices::numEq);
+}                                   
+
+
+template<class FluidSystem, class Indices, class Scalar>
+void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
 assemblePressureEq(const int seg,
                    const int seg_upwind,
                    const int outlet_segment_index,
@@ -228,7 +258,7 @@ assemblePressureEq(const int seg,
                    bool gfrac) const
 {
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
-    eqns.residual()[seg][SPres] = pressure_equation.value();
+    eqns.residual()[seg][SPres] += pressure_equation.value();
     eqns.D()[seg][seg][SPres][SPres] += pressure_equation.derivative(SPres + Indices::numEq);
     eqns.D()[seg][seg][SPres][WQTotal] += pressure_equation.derivative(WQTotal + Indices::numEq);
     if (wfrac) {

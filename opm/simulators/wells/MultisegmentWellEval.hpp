@@ -76,7 +76,8 @@ protected:
     void initMatrixAndVectors(const int num_cells);
 
     void assembleDefaultPressureEq(const int seg,
-                                   WellState& well_state);
+                                   WellState& well_state,
+                                   const bool use_average_density);
 
     // assemble pressure equation for ICD segments
     void assembleICDPressureEq(const int seg,
@@ -88,6 +89,7 @@ protected:
     void assemblePressureEq(const int seg,
                             const UnitSystem& unit_system,
                             WellState& well_state,
+                            const bool use_average_density,
                             DeferredLogger& deferred_logger);
 
     /// check whether the well equations get converged for this well
