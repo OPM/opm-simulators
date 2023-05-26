@@ -690,7 +690,7 @@ public:
                 if (sg < -eps && s > 0.0 && FluidSystem::enableDissolvedGas()) {
                     const Scalar& po = (*this)[pressureSwitchIdx];
                     setPrimaryVarsMeaningGas(GasMeaning::Rs);
-                    Scalar soMax = problem.maxOilSaturation(globalDofIdx);
+                    Scalar soMax = std::max(s, problem.maxOilSaturation(globalDofIdx));
                     Scalar rsMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
                     Scalar rsSat = enableExtbo ? ExtboModule::rs(pvtRegionIndex(),
                                                                  po,

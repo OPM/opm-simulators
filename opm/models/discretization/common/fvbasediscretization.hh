@@ -650,11 +650,11 @@ public:
         // synchronize the ghost DOFs (if necessary)
         asImp_().syncOverlap();
 
-        simulator_.problem().initialSolutionApplied();
-
         // also set the solutions of the "previous" time steps to the initial solution.
         for (unsigned timeIdx = 1; timeIdx < historySize; ++timeIdx)
             solution(timeIdx) = solution(/*timeIdx=*/0);
+
+        simulator_.problem().initialSolutionApplied();
 
 #ifndef NDEBUG
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx)  {
@@ -723,14 +723,18 @@ public:
      */
     const IntensiveQuantities* cachedIntensiveQuantities(unsigned globalIdx, unsigned timeIdx) const
     {
-        if (!enableIntensiveQuantityCache_ ||
-            !intensiveQuantityCacheUpToDate_[timeIdx][globalIdx])
-            return 0;
+        if (!enableIntensiveQuantityCache_ || !intensiveQuantityCacheUpToDate_[timeIdx][globalIdx]) {
+            return nullptr;
+        }
 
-        if (timeIdx > 0 && enableStorageCache_)
-            // with the storage cache enabled, only the intensive quantities for the most
-            // recent time step are cached!
-            return 0;
+        // With the storage cache enabled, usually only the
+        // intensive quantities for the most recent time step are
+        // cached. However, this may be false for some Problem
+        // variants, so we should check if the cache exists for
+        // the timeIdx in question.
+        if (timeIdx > 0 && enableStorageCache_ && intensiveQuantityCache_[timeIdx].empty()) {
+            return nullptr;
+        }
 
         return &intensiveQuantityCache_[timeIdx][globalIdx];
     }
@@ -800,7 +804,7 @@ public:
             for (; !threadedElemIt.isFinished(elemIt); elemIt = threadedElemIt.increment()) {
                 const Element& elem = *elemIt;
                 elemCtx.updatePrimaryStencil(elem);
-                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                elemCtx.updatePrimaryIntensiveQuantities(timeIdx);
             }
         }
     }
@@ -818,10 +822,13 @@ public:
         if (!storeIntensiveQuantities())
             return;
 
-        if (enableStorageCache()) {
-            // if the storage term is cached, the intensive quantities of the previous
+        if (enableStorageCache() && simulator_.problem().recycleFirstIterationStorage()) {
+            // If the storage term is cached, the intensive quantities of the previous
             // time steps do not need to be accessed, and we can thus spare ourselves to
             // copy the objects for the intensive quantities.
+            // However, if the storage term at the start of the timestep cannot be deduced
+            // from the primary variables, we must calculate it from the old intensive
+            // quantities, and need to shift them.
             return;
         }
 
