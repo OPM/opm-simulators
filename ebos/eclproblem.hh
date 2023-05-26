@@ -1120,7 +1120,6 @@ public:
         asImp_().updateCompositionChangeLimits_();
         {
         OPM_TIMEBLOCK(driftCompansation);
-        asImp_().updateCompositionChangeLimits_();
         if (enableDriftCompensation_) {
             const auto& residual = this->model().linearizer().residual();
             for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
