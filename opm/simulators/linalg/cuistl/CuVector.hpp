@@ -370,6 +370,8 @@ private:
     detail::CuBlasHandle& m_cuBlasHandle;
 
     void assertSameSize(const CuVector<T>& other) const;
+    void assertSameSize(int size) const;
+
     void assertHasElements() const;
 };
 } // namespace Opm::cuistl

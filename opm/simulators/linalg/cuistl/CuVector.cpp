@@ -132,9 +132,16 @@ template <typename T>
 void
 CuVector<T>::assertSameSize(const CuVector<T>& x) const
 {
-    if (x.m_numberOfElements != m_numberOfElements) {
+    assertSameSize(x.m_numberOfElements);
+}
+
+template <typename T>
+void
+CuVector<T>::assertSameSize(int size) const
+{
+    if (size != m_numberOfElements) {
         OPM_THROW(std::invalid_argument,
-                  fmt::format("Given vector has {}, while we have {}.", x.m_numberOfElements, m_numberOfElements));
+                  fmt::format("Given vector has {}, while we have {}.", size, m_numberOfElements));
     }
 }
 
@@ -263,6 +270,7 @@ template <class T>
 void
 CuVector<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
+    assertSameSize(detail::to_int(numberOfElements));
     OPM_CUDA_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
 }
 
