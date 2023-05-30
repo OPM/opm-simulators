@@ -150,45 +150,47 @@ public:
 
     /**
      * @brief copyFromHost copies data from a Dune::BlockVector
-     * @param vector the vector to copy from
+     * @param bvector the vector to copy from
      *
      * @note This does synchronous transfer.
      * @note This assumes that the size of this vector is equal to the dim of the input vector.
      */
     template <int BlockDimension>
-    void copyFromHost(const Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& vector)
+    void copyFromHost(const Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector)
     {
-        if (detail::to_size_t(m_numberOfElements) != vector.dim()) {
+        // TODO: [perf] vector.dim() can be replaced by bvector.N() * BlockDimension
+        if (detail::to_size_t(m_numberOfElements) != bvector.dim()) {
             OPM_THROW(std::runtime_error,
                       fmt::format("Given incompatible vector size. CuVector has size {}, \n"
                                   "however, BlockVector has N() = {}, and dim = {}.",
                                   m_numberOfElements,
-                                  vector.N(),
-                                  vector.dim()));
+                                  bvector.N(),
+                                  bvector.dim()));
         }
-        const auto dataPointer = static_cast<const T*>(&(vector[0][0]));
+        const auto dataPointer = static_cast<const T*>(&(bvector[0][0]));
         copyFromHost(dataPointer, m_numberOfElements);
     }
 
     /**
      * @brief copyToHost copies data to a Dune::BlockVector
-     * @param vector the vector to copy to
+     * @param bvector the vector to copy to
      *
      * @note This does synchronous transfer.
      * @note This assumes that the size of this vector is equal to the dim of the input vector.
      */
     template <int BlockDimension>
-    void copyToHost(Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& vector) const
+    void copyToHost(Dune::BlockVector<Dune::FieldVector<T, BlockDimension>>& bvector) const
     {
-        if (detail::to_size_t(m_numberOfElements) != vector.dim()) {
+        // TODO: [perf] vector.dim() can be replaced by bvector.N() * BlockDimension
+        if (detail::to_size_t(m_numberOfElements) != bvector.dim()) {
             OPM_THROW(std::runtime_error,
                       fmt::format("Given incompatible vector size. CuVector has size {},\n however, the BlockVector "
                                   "has has N() = {}, and dim() = {}.",
                                   m_numberOfElements,
-                                  vector.N(),
-                                  vector.dim()));
+                                  bvector.N(),
+                                  bvector.dim()));
         }
-        const auto dataPointer = static_cast<T*>(&(vector[0][0]));
+        const auto dataPointer = static_cast<T*>(&(bvector[0][0]));
         copyToHost(dataPointer, m_numberOfElements);
     }
 
