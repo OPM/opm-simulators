@@ -707,12 +707,12 @@ namespace WellGroupHelpers
         const double error = gpm->pressure_target() - regional_values.at(name)->pressure(number);
         double current_rate = 0.0;
         const auto& pu = well_state.phaseUsage();
-        double sign = 1.0;
+        bool injection = true;
         switch (gpm->flow_target()) {
             case GPMaint::FlowTarget::RESV_PROD:
             {
                 current_rate = -group_state.injection_vrep_rate(group.name());
-                sign = -1.0;
+                injection = false;
                 break;
             }
             case GPMaint::FlowTarget::RESV_OINJ:
@@ -760,8 +760,11 @@ namespace WellGroupHelpers
                 throw std::invalid_argument("Invalid Flow target type in GPMAINT");
         }
         auto& gpmaint_state = group_state.gpmaint(group.name());
-        double rate = gpm->rate(gpmaint_state, current_rate, error, dt);
-        group_state.update_gpmaint_target(group.name(), std::max(0.0, sign * rate));
+        // we only activate gpmaint if pressure is lower than the target regional pressure for injectors
+        // (i.e. error > 0) and higher for producers.
+        bool activate = (injection && error > 0) || (!injection && error < 0);
+        double rate = activate? gpm->rate(gpmaint_state, current_rate, error, dt) : 0.0;
+        group_state.update_gpmaint_target(group.name(), rate);
     }
 
 
