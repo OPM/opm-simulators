@@ -286,13 +286,13 @@ CuSparseMatrix<T>::usmv(T alpha, const CuVector<T>& x, CuVector<T>& y) const
 }
 
 template <class T>
-template <class M>
+template <class VectorType>
 void
-CuSparseMatrix<T>::assertSameSize(const M& x) const
+CuSparseMatrix<T>::assertSameSize(const VectorType& x) const
 {
     if (x.dim() != blockSize() * N()) {
         OPM_THROW(std::invalid_argument,
-                  fmt::format("Size mismatch. Input vector has {} elements, while we have {} elements.",
+                  fmt::format("Size mismatch. Input vector has {} elements, while we have {} rows.",
                               x.dim(),
                               blockSize() * N()));
     }
