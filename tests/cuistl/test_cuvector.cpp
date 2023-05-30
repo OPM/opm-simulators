@@ -167,7 +167,7 @@ BOOST_AUTO_TEST_CASE(Assigment)
 }
 
 
-BOOST_AUTO_TEST_CASE(CopyConstructor)
+BOOST_AUTO_TEST_CASE(CopyAssignment)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
     auto vectorOnGPU = Opm::cuistl::CuVector<double>(data.data(), data.size());
