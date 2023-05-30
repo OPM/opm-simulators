@@ -444,6 +444,25 @@ add_test_compareECLFiles(CASENAME pinch_multzm_all_barrier
                          REL_TOL ${rel_tol}
                          DIR pinch)
 
+set(_pinch_cases
+  T1A_GAP T1A_NOGAP T1A1_NOGAP T1B2_NOGAP T1B3_NOGAP T1B4_NOGAP
+  T1C1_NOGAP T1C2_NOGAP T1C3_NOGAP T1D1_NOGAP T1B1_GAP T1B2_GAP
+  T1C1_GAP T1C2_GAP T1C3_GAP T1D1_GAP T1A_NOPINCH T1B_NOPINCH
+  T1C_NOPINCH T1D_NOPINCH T2A1_GAP T2B_NOPINCH T2A1_NOGAP T2B_GAP
+  T3A_NOPINCH T3A_NOGAP T3A1_NOGAP T3A_GAP T3A1_GAP T3B_NOGAP
+  T3B1_NOGAP T3B1_GAP T4A_NOPINCH T4A_NOGAP T4A_GAP T4B_NOPINCH
+  T4B_NOGAP T4B_GAP)
+
+foreach(pinch_case ${_pinch_cases})
+  string(TOLOWER ${pinch_case} pinch_test)
+  add_test_compareECLFiles(CASENAME ${pinch_case}
+    FILENAME ${pinch_test}
+    SIMULATOR flow
+    ABS_TOL ${abs_tol}
+    REL_TOL ${rel_tol}
+    DIR pinch)
+endforeach()
+
 add_test_compareECLFiles(CASENAME udq_uadd
                          FILENAME UDQ_M1
                          SIMULATOR flow
