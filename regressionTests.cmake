@@ -814,6 +814,13 @@ add_test_compareECLFiles(CASENAME spe1_solvent_foam
                          REL_TOL ${rel_tol}
                          DIR spe1_solvent)
 
+add_test_compareECLFiles(CASENAME spe1_gaswater_solvent
+                         FILENAME SPE1CASE2_GASWATER_SOLVENT
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1_solvent)
+						 
 add_test_compareECLFiles(CASENAME bc_lab
                          FILENAME BC_LAB
                          SIMULATOR flow

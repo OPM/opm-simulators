@@ -80,7 +80,7 @@ public:
     static constexpr bool has_gfrac_variable = Indices::gasEnabled && Indices::numPhases > 1;
     static constexpr int WFrac = has_wfrac_variable ? 1 : -1000;
     static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
-    static constexpr int SFrac = !Indices::enableSolvent ? -1000 : 3;
+    static constexpr int SFrac = !Indices::enableSolvent ? -1000 : has_wfrac_variable+has_gfrac_variable+1;
 
     //! \brief Evaluation for the well equations.
     using EvalWell = DenseAd::DynamicEvaluation<Scalar, numStaticWellEq + Indices::numEq + 1>;

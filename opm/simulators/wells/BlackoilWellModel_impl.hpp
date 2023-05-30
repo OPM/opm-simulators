@@ -1926,14 +1926,10 @@ namespace Opm {
         // in the well equations. As a result, for an oil-water-polymer system, this function will return 2.
         // In some way, it makes this function appear to be confusing from its name, and we need
         // to revisit/revise this function again when extending the variants of system that flow can simulate.
-        if (numPhases() < 3) {
-            return numPhases();
-        }
-        int numComp = FluidSystem::numComponents;
+        int numComp = numPhases() < 3? numPhases(): FluidSystem::numComponents;
         if constexpr (has_solvent_) {
-            numComp ++;
+            numComp++;
         }
-
         return numComp;
     }
 

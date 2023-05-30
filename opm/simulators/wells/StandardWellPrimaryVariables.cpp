@@ -175,8 +175,9 @@ update(const WellState& well_state,
                              (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0) ) / total_well_rate ;
         }
         if constexpr (Indices::enableSolvent) {
-            value_[SFrac] = well_.scalingFactor(pu.phase_pos[Gas]) * ws.sum_solvent_rates() / total_well_rate ;
+            value_[SFrac] = well_.scalingFactor(Indices::contiSolventEqIdx) * ws.sum_solvent_rates() / total_well_rate ;
         }
+
     } else { // total_well_rate == 0
         if (well_.isInjector()) {
             // only single phase injection handled
@@ -355,6 +356,11 @@ copyToWellState(WellState& well_state,
             F[gas_pos] = value_[GFrac];
             F[water_pos] -= F[gas_pos];
         }
+
+        if constexpr (Indices::enableSolvent) {
+            F_solvent = value_[SFrac];
+            F[water_pos] -= F_solvent;
+        }
     }
     else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
         const int gas_pos = pu.phase_pos[Gas];
@@ -438,45 +444,31 @@ volumeFraction(const unsigned compIdx) const
         return EvalWell(numWellEq_ + Indices::numEq, 1.0);
     }
 
+    if (has_gfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
+        return evaluation_[GFrac];
+    }
+
+    if (Indices::enableSolvent && compIdx == (unsigned)Indices::contiSolventEqIdx) {
+        return evaluation_[SFrac];
+    }
+
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
         if (has_wfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)) {
             return evaluation_[WFrac];
         }
-
-        if (has_gfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
-            return evaluation_[GFrac];
-        }
-
-        if (Indices::enableSolvent && compIdx == (unsigned)Indices::contiSolventEqIdx) {
-            return evaluation_[SFrac];
-        }
     }
-    else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-        if (has_gfrac_variable && compIdx == Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)) {
-            return evaluation_[GFrac];
-        }
-    }
-
-    // Oil or WATER fraction
+    // Compute the Oil fraction if oil is present
+    // or the WATER fraction for a gas-water case
     EvalWell well_fraction(numWellEq_ + Indices::numEq, 1.0);
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            well_fraction -= evaluation_[WFrac];
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            well_fraction -= evaluation_[GFrac];
-        }
-
-        if constexpr (Indices::enableSolvent) {
-            well_fraction -= evaluation_[SFrac];
-        }
+    if (has_wfrac_variable && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+        well_fraction -= evaluation_[WFrac];
     }
-    else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) &&
-             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+    if (has_gfrac_variable) {
         well_fraction -= evaluation_[GFrac];
     }
-
+    if constexpr (Indices::enableSolvent) {
+        well_fraction -= evaluation_[SFrac];
+    }
     return well_fraction;
 }
 
@@ -567,6 +559,8 @@ processFractions()
     const auto pu = well_.phaseUsage();
     std::vector<double> F(well_.numPhases(), 0.0);
 
+    [[maybe_unused]] double F_solvent = 0.0;
+
     if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
         F[pu.phase_pos[Oil]] = 1.0;
 
@@ -579,6 +573,10 @@ processFractions()
             F[pu.phase_pos[Gas]] = value_[GFrac];
             F[pu.phase_pos[Oil]] -= F[pu.phase_pos[Gas]];
         }
+        if constexpr (Indices::enableSolvent) {
+            F_solvent = value_[SFrac];
+            F[pu.phase_pos[Oil]] -= F_solvent;
+        }
     }
     else if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
         F[pu.phase_pos[Water]] = 1.0;
@@ -587,15 +585,13 @@ processFractions()
             F[pu.phase_pos[Gas]] = value_[GFrac];
             F[pu.phase_pos[Water]] -= F[pu.phase_pos[Gas]];
         }
+        if constexpr (Indices::enableSolvent) {
+            F_solvent = value_[SFrac];
+            F[pu.phase_pos[Water]] -= F_solvent;
+        }
     }
     else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
         F[pu.phase_pos[Gas]] = 1.0;
-    }
-
-    [[maybe_unused]] double F_solvent;
-    if constexpr (Indices::enableSolvent) {
-        F_solvent = value_[SFrac];
-        F[pu.phase_pos[Oil]] -= F_solvent;
     }
 
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
@@ -732,6 +728,7 @@ INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,2u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)
+INSTANCE(BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>)
 // Blackoil
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)

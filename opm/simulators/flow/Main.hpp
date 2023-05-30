@@ -30,6 +30,7 @@
 #include <flow/flow_ebos_gasoil_energy.hpp>
 #include <flow/flow_ebos_oilwater.hpp>
 #include <flow/flow_ebos_gaswater.hpp>
+#include <flow/flow_ebos_gaswater_solvent.hpp>
 #include <flow/flow_ebos_solvent.hpp>
 #include <flow/flow_ebos_solvent_foam.hpp>
 #include <flow/flow_ebos_polymer.hpp>
@@ -592,7 +593,21 @@ private:
         if (phases.active(Phase::FOAM)) {
             return flowEbosSolventFoamMain(argc_, argv_, outputCout_, outputFiles_);
         }
-        return flowEbosSolventMain(argc_, argv_, outputCout_, outputFiles_);
+        // solvent + gas + water
+        if (!phases.active( Phase::OIL ) && phases.active( Phase::WATER ) && phases.active( Phase::GAS )) {
+            return flowEbosGasWaterSolventMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+
+        // solvent + gas + water + oil
+        if (phases.active( Phase::OIL ) && phases.active( Phase::WATER ) && phases.active( Phase::GAS )) {
+            return flowEbosSolventMain(argc_, argv_, outputCout_, outputFiles_);
+        }
+
+        if (outputCout_)
+            std::cerr << "No valid configuration is found for solvent simulation, valid options include "
+                      << "gas + water + solvent and gas + oil + water + solvent" << std::endl;
+
+        return EXIT_FAILURE;
     }
 
     int runExtendedBlackOil()
