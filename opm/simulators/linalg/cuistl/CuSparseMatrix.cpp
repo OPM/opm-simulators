@@ -75,6 +75,9 @@ CuSparseMatrix<T>::CuSparseMatrix(const T* nonZeroElements,
     , m_matrixDescription(detail::createMatrixDescription())
     , m_cusparseHandle(detail::CuSparseHandle::getInstance())
 {
+    if (detail::to_size_t(rowIndices[numberOfRows]) != numberOfNonzeroBlocks) {
+        OPM_THROW(std::invalid_argument, "Wrong sparsity format. Needs to be CSR compliant. ");
+    }
 }
 
 template <class T>
