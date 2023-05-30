@@ -84,7 +84,7 @@ public:
      * @param matrix the matrix to copy from
      * @param copyNonZeroElementsDirectly if true will do a memcpy from matrix[0][0][0][0], otherwise will build up the
      * non-zero elements by looping over the matrix. Note that setting this to true will yield a performance increase,
-     * but might not always yield correct results depending on how the matrix matrix has been initialized. If unsure,
+     * but might not always yield correct results depending on how the matrix has been initialized. If unsure,
      * leave it as false.
      * @tparam MatrixType is assumed to be a Dune::BCRSMatrix compatible matrix.
      */
@@ -286,7 +286,7 @@ private:
 
     // Notice that we store these three as int to make sure we are cusparse compatible.
     //
-    // This gives the added benifit of checking the size constraints at construction of the matrix
+    // This gives the added benefit of checking the size constraints at construction of the matrix
     // rather than in some call to cusparse.
     const int m_numberOfNonzeroBlocks;
     const int m_numberOfRows;
