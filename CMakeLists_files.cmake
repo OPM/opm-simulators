@@ -147,6 +147,10 @@ if(CUDA_FOUND)
   # CUISTL SOURCE
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/detail/CuBlasHandle.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/detail/CuSparseHandle.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/CuVector.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/detail/vector_operations.cu)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/CuSparseMatrix.cpp)
+
 
   # CUISTL HEADERS
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp)
@@ -155,6 +159,18 @@ if(CUDA_FOUND)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/cuda_check_last_error.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/CuBlasHandle.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/CuSparseHandle.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/CuVector.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/CuSparseMatrix.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/CuMatrixDescription.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/CuSparseResource.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/CuSparseResource_impl.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/safe_conversion.hpp)     
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/cublas_wrapper.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/cusparse_wrapper.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/cusparse_constants.hpp)  
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/vector_operations.hpp)
+
+
 
 endif()
 if(OPENCL_FOUND)
@@ -239,7 +255,9 @@ if(CUDA_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cuda_check_last_error.cpp)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cublas_handle.cpp)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cusparse_handle.cpp)
-
+  list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cuvector.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cusparsematrix.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/cuistl/test_safe_conversion.cpp)
 
 endif()
 if(OPENCL_FOUND)

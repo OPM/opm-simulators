@@ -549,6 +549,8 @@ if(CUDA_FOUND)
                        cuda_check_last_error
                        cublas_handle
                        cusparse_handle
+                       cuvector
+                       cusparsematrix
                        PROPERTIES LABELS gpu_cuda)
 endif()
 
