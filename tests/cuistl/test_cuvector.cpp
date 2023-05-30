@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_CASE(RandomVectors)
         aGPU.axpy(scalar, bGPU);
         auto aOutputSaxypy = aGPU.asStdVector();
         for (size_t i = 0; i < N; ++i) {
-            BOOST_CHECK_CLOSE(aOutputSaxypy[i], a[i] + scalar * b[i], 1e-7);
+            BOOST_CHECK_CLOSE(aOutputSaxypy[i], a[i] + scalar * b[i], 1e-10);
         }
 
         aGPU = GVector(a);
@@ -246,7 +246,7 @@ BOOST_AUTO_TEST_CASE(RandomVectors)
             correct += a[i] * b[i];
         }
 
-        BOOST_CHECK_CLOSE(dotted, correct, 1e-7);
+        BOOST_CHECK_CLOSE(dotted, correct, 1e-10);
 
         aGPU = GVector(a);
         auto twoNorm = aGPU.two_norm();
@@ -256,7 +256,7 @@ BOOST_AUTO_TEST_CASE(RandomVectors)
         }
         correctTwoNorm = std::sqrt(correctTwoNorm);
 
-        BOOST_CHECK_CLOSE(twoNorm, correctTwoNorm, 1e-7);
+        BOOST_CHECK_CLOSE(twoNorm, correctTwoNorm, 1e-12);
 
         aGPU = GVector(a);
         std::vector<int> indexSet;
@@ -290,6 +290,6 @@ BOOST_AUTO_TEST_CASE(RandomVectors)
         }
         correctTwoNormAtIndices = std::sqrt(correctTwoNormAtIndices);
 
-        BOOST_CHECK_CLOSE(correctTwoNormAtIndices, twoNormAtIndices, 1e-7);
+        BOOST_CHECK_CLOSE(correctTwoNormAtIndices, twoNormAtIndices, 1e-13);
     }
 }
