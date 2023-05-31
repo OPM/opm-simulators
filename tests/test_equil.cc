@@ -512,14 +512,11 @@ BOOST_AUTO_TEST_CASE(RegMapping)
     for (const auto& r : eqlmap.activeRegions()) {
         ptable.equilibrate(region[r], vspan);
 
-        PVal::size_type i = 0;
         for (const auto& c : eqlmap.cells(r)) {
             const auto depth = centerDepth(*simulator, c);
 
             ppress[0][c] = ptable.water(depth);
             ppress[1][c] = ptable.oil  (depth);
-
-            ++i;
         }
     }
 
