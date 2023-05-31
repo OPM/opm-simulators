@@ -171,7 +171,7 @@ namespace Dune
                                                                                   *scalarproduct_,
                                                                                   *preconditioner_,
                                                                                   tol,// desired residual reduction factor
-                                                                                  restart, 
+                                                                                  restart,
                                                                                   maxiter, // maximum number of iterations
                                                                                   verbosity);
         } else if (solver_type == "flexgmres") {
@@ -180,7 +180,7 @@ namespace Dune
                                                                                           *scalarproduct_,
                                                                                           *preconditioner_,
                                                                                           tol,// desired residual reduction factor
-                                                                                          restart, 
+                                                                                          restart,
                                                                                           maxiter, // maximum number of iterations
                                                                                           verbosity);
 #if HAVE_SUITESPARSE_UMFPACK
@@ -193,7 +193,7 @@ namespace Dune
         } else if (solver_type == "cubicgstab") {
             linsolver_.reset(new Opm::cuistl::SolverAdapter<Operator, Dune::BiCGSTABSolver, VectorType>(
                 *linearoperator_for_solver_,
-                scalarproduct_,
+                *scalarproduct_,
                 preconditioner_,
                 tol, // desired residual reduction factor
                 maxiter, // maximum number of iterations

@@ -56,12 +56,12 @@ public:
 
     // TODO: Use a std::forward
     SolverAdapter(Operator& op,
-                  std::shared_ptr<Dune::ScalarProduct<X>> sp,
+                  Dune::ScalarProduct<X>& sp,
                   std::shared_ptr<Dune::Preconditioner<X, X>> prec,
                   scalar_real_type reduction,
                   int maxit,
                   int verbose)
-        : Dune::IterativeSolver<X, X>(op, *sp, *prec, reduction, maxit, verbose)
+        : Dune::IterativeSolver<X, X>(op, sp, *prec, reduction, maxit, verbose)
         , m_opOnCPUWithMatrix(op)
         , m_matrix(CuSparseMatrix<real_type>::fromMatrix(op.getmat()))
         , m_underlyingSolver(constructSolver(prec, reduction, maxit, verbose))

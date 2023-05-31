@@ -79,9 +79,9 @@ createSolverAdapterWithMatrix(const size_t N = 10)
     prm.put<double>("relaxation", 1.0);
     prm.put<std::string>("type", "CUILU0");
     auto prec = PrecondFactory::create(*op, prm);
-    auto solverAdapter = std::make_shared<SolverAdapter>(*op, sp, prec, 1.0, 10, 0);
+    auto solverAdapter = std::make_shared<SolverAdapter>(*op, *sp, prec, 1.0, 10, 0);
 
-    return std::make_tuple(matrixPtr, solverAdapter, op);
+    return std::make_tuple(matrixPtr, solverAdapter, op, sp);
 }
 } // namespace
 
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(TestCreation)
 BOOST_AUTO_TEST_CASE(TestSolve)
 {
     const size_t N = 10;
-    auto [matrix, solverAdapter, op] = createSolverAdapterWithMatrix(N);
+    auto [matrix, solverAdapter, op, sp] = createSolverAdapterWithMatrix(N);
 
     Vector xActual(N), xInitial(N), b(N);
     for (size_t i = 0; i < N; ++i) {
