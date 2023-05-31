@@ -25,7 +25,7 @@
 namespace Opm::cuistl::detail
 {
 
-//! @brief Tests (compile time) if the preconditioner type needs to call pre
+//! @brief Tests (compile time) if the preconditioner type needs to call pre() before a call to apply()
 //!
 //! @note This is mostly used to avoid unneeded copying back and front to the GPU, as well
 //! as avoiding communication.
@@ -43,7 +43,7 @@ shouldCallPreconditionerPre()
     }
 }
 
-//! @brief Tests (compile time) if the preconditioner type needs to call pre
+//! @brief Tests (compile time) if the preconditioner type needs to call post() after a call to apply(...)
 //!
 //! @note This is mostly used to avoid unneeded copying back and front to the GPU, as well
 //! as avoiding communication.
