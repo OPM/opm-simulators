@@ -34,6 +34,10 @@
 #include <opm/simulators/utils/DamarisOutputModule.hpp>
 #endif
 
+#if HAVE_CUDA
+#include <opm/simulators/linalg/cuistl/set_device.hpp>
+#endif
+
 namespace Opm {
 
 Main::Main(int argc, char** argv)
@@ -138,6 +142,11 @@ void Main::initMPI()
         isSimulationRank_ = (world_rank > 0);
         EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
     }
+
+#if HAVE_CUDA
+    Opm::cuistl::setDevice(EclGenericVanguard::comm().rank(), EclGenericVanguard::comm().size());
+#endif
+
 #endif // HAVE_MPI
 }
 
