@@ -221,7 +221,7 @@ CuSeqILU0<M, X, Y, l>::analyzeMatrix()
                                                            m_infoU.get(),
                                                            CUSPARSE_SOLVE_POLICY_USE_LEVEL,
                                                            m_buffer->data()));
-    m_analyzisDone = true;
+    m_analysisDone = true;
 }
 
 template <class M, class X, class Y, int l>
@@ -293,7 +293,7 @@ void
 CuSeqILU0<M, X, Y, l>::createILU()
 {
     OPM_ERROR_IF(!m_buffer, "Buffer not initialized. Call findBufferSize() then initialize with the appropiate size.");
-    OPM_ERROR_IF(!m_analyzisDone, "Analyzis of matrix not done. Call analyzeMatrix() first.");
+    OPM_ERROR_IF(!m_analysisDone, "Analyzis of matrix not done. Call analyzeMatrix() first.");
 
     const auto numberOfRows = detail::to_int(m_LU.N());
     const auto numberOfNonzeroBlocks = detail::to_int(m_LU.nonzeroes());

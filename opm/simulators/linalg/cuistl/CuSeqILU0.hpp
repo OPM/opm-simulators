@@ -120,7 +120,7 @@ private:
     std::unique_ptr<CuVector<field_type>> m_buffer;
     detail::CuSparseHandle& m_cuSparseHandle;
 
-    bool m_analyzisDone = false;
+    bool m_analysisDone = false;
 
     void analyzeMatrix();
     size_t findBufferSize();
