@@ -188,19 +188,20 @@ public:
     }
 
     template<class DataHandle>
-    void scatterData(DataHandle& handle) const
+    void scatterData(DataHandle& /*handle*/) const
     {
     // not existing for this type of grid yet
     }
 
     template<class DataHandle>
-    void gatherData(DataHandle& handle) const
+    void gatherData(DataHandle& /*handle*/) const
     {
     // not existing for this type of grid yet
     }
 
     template<class DataHandle, class InterfaceType, class CommunicationDirection>
-    void communicate (DataHandle& data, InterfaceType iftype, CommunicationDirection dir) const
+    void communicate (DataHandle& /*data*/, InterfaceType /*iftype*/,
+                      CommunicationDirection /*dir*/) const
     {
     // not existing for this type of grid yet
     }

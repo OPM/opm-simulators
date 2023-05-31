@@ -932,7 +932,7 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
         return fmt::format("({},{},{})", i + 1,j + 1,k + 1);
     };
 
-    auto print_warning = [&format_ijk, &nncs, &getLocation, &keyword] (const NNCdata& nnc) {
+    auto print_warning = [&format_ijk, &getLocation, &keyword] (const NNCdata& nnc) {
             const auto& location = getLocation( nnc );
             auto warning =  fmt::format("Problem with {} keyword\n"
                                         "In {} line {} \n"

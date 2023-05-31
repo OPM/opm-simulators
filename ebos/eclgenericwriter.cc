@@ -351,7 +351,6 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const 
     std::size_t ny = eclState_.getInputGrid().getNY();
     auto nncData = eclState_.getInputNNC().input();
     const auto& unitSystem = eclState_.getDeckUnitSystem();
-    std::size_t index = 0;
 
     for( const auto& entry : nncData ) {
         // test whether NNC is not a neighboring connection
@@ -365,7 +364,6 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const 
             if ( tt >= 1.0e-6 )
                 outputNnc_.emplace_back(entry.cell1, entry.cell2, entry.trans);
         }
-        ++index;
     }
 
     using GlobalGridView = typename EquilGrid::LeafGridView;
