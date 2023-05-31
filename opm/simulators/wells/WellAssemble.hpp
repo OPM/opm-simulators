@@ -41,8 +41,8 @@ class Schedule;
 class SummaryState;
 template<class FluidSystem> class WellInterfaceFluidSystem;
 class WellState;
-class WellInjectionControls;
-class WellProductionControls;
+struct WellInjectionControls;
+struct WellProductionControls;
 
 template<class FluidSystem>
 class WellAssemble {
