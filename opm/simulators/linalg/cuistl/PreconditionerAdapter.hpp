@@ -22,6 +22,7 @@
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <opm/simulators/linalg/cuistl/PreconditionerHolder.hpp>
 #include <opm/simulators/linalg/cuistl/detail/preconditioner_should_call_post_pre.hpp>
 
 
@@ -36,7 +37,9 @@ namespace Opm::cuistl
 //! \tparam Y the range type (should be on the CPU). Typicall a Dune::BlockVector
 //! \tparam CudaPreconditionerType the preconditioner taking CuVector<real_type> as arguments to apply
 template <class X, class Y, class CudaPreconditionerType>
-class PreconditionerAdapter : public Dune::PreconditionerWithUpdate<X, Y>
+class PreconditionerAdapter
+    : public Dune::PreconditionerWithUpdate<X, Y>,
+      public PreconditionerHolder<CuVector<typename X::field_type>, CuVector<typename Y::field_type>>
 {
 public:
     //! \brief The domain type of the preconditioner.
@@ -112,6 +115,12 @@ public:
     static constexpr bool shouldCallPost()
     {
         return detail::shouldCallPreconditionerPre<CudaPreconditionerType>();
+    }
+
+    virtual std::shared_ptr<Dune::PreconditionerWithUpdate<CuVector<field_type>, CuVector<field_type>>>
+    getUnderlyingPreconditioner() override
+    {
+        return m_underlyingPreconditioner;
     }
 
 private:

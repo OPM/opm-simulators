@@ -172,16 +172,13 @@ if(CUDA_FOUND)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/has_function.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/preconditioner_should_call_post_pre.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp)
-<<<<<<< HEAD
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/CuSeqILU0.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/fix_zero_diagonal.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/PreconditionerConvertFieldTypeAdapter.hpp)
-=======
-  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/PreconditionerConvertFieldTypeAdapter.hpp)
-
-
->>>>>>> 05ee1a855 (Added conversion preconditioner.)
-
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/CuOwnerOverlapCopy.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/SolverAdapter.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/PreconditionerHolder.hpp)
 
 endif()
 if(OPENCL_FOUND)
@@ -271,6 +268,9 @@ if(CUDA_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_safe_conversion.cpp)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cuseqilu0.cpp)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_converttofloatadapter.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cuowneroverlapcopy.cpp)
+  list(APPEND TEST_SOURCE_FILES tests/cuistl/test_solver_adapter.cpp)
+
 
 endif()
 if(OPENCL_FOUND)
