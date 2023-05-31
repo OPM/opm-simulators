@@ -186,7 +186,7 @@ CuSeqILU0<M, X, Y, l>::analyzeMatrix()
     int structuralZero;
     auto statusPivot = cusparseXbsrilu02_zeroPivot(m_cuSparseHandle.get(), m_infoM.get(), &structuralZero);
     OPM_ERROR_IF(statusPivot != CUSPARSE_STATUS_SUCCESS,
-                 fmt::format("Found a structucal zero at A({}, {}). Could not decompuse LU \\approx A.\n\n A has "
+                 fmt::format("Found a structural zero at A({}, {}). Could not decompose LU \\approx A.\n\n A has "
                              "dimension {}, and has {} nonzeroes.",
                              structuralZero,
                              structuralZero,
