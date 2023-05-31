@@ -821,7 +821,7 @@ assignToSolution(data::Solution& sol)
         {"DISPX", UnitSystem::measure::length,  dispX_},
         {"DISPY", UnitSystem::measure::length,  dispY_},
         {"DISPZ", UnitSystem::measure::length,  dispZ_},
-        {"STRESSXY", UnitSystem::measure::length,  stressXX_},
+        {"STRESSXX", UnitSystem::measure::length,  stressXX_},
         {"STRESSYY", UnitSystem::measure::length,  stressYY_},
         {"STRESSZZ", UnitSystem::measure::length,  stressZZ_},
         {"STRESSXY", UnitSystem::measure::length,  stressXY_},
