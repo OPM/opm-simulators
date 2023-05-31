@@ -49,13 +49,13 @@ BASE_NAME=${FILENAME}_RESTART
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --enable-adaptive-time-stepping=false --output-dir=${RESULT_PATH} ${TEST_ARGS}
+mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH}/${FILENAME} --output-dir=${RESULT_PATH} ${TEST_ARGS}
 
 test $? -eq 0 || exit 1
 
 ${RST_DECK_COMMAND} ${INPUT_DATA_PATH}/${FILENAME}.DATA ${FILENAME}.UNRST:${RESTART_STEP} ${BASE_NAME}.DATA -m inline -s
 
-mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${BASE_NAME} --enable-adaptive-time-stepping=false --output-dir=${RESULT_PATH} ${TEST_ARGS}
+mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${BASE_NAME} --output-dir=${RESULT_PATH} ${TEST_ARGS}
 test $? -eq 0 || exit 1
 
 ecode=0
