@@ -230,7 +230,6 @@ struct StandardPreconditioners
 #if HAVE_CUDA
         F::addCreator("CUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const double w = prm.get<double>("relaxation", 1.0);
-            static constexpr auto block_size = V::block_type::dimension;
             using field_type = typename V::field_type;
             using CuILU0 = typename Opm::cuistl::CuSeqILU0<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
             auto cuILU0 = std::make_shared<CuILU0>(op.getmat(), w);
