@@ -76,7 +76,7 @@ namespace Opm::cuistl
 //!
 //!     doubleToFloatConverter.setUnderlyingPreconditioner(floatILU0);
 //!
-//!     // This will convert x and y to float, thenn call floatILU0.apply on the converted arguments
+//!     // This will convert x and y to float, then call floatILU0.apply on the converted arguments
 //!     doubleToFloatConverter.apply(x, y);
 //! }
 //!
@@ -116,7 +116,7 @@ public:
     //!
     //! \note After the PreconditionerConvertFieldTypeAdapter you can get the converted matrix
     //! by calling getConvertedMatrix(), which in turn can be used to create the underlying preconditioner.
-    //! Once the underlying precondtioner has been called, this must be supplied to setUnderlyingPreconditioner.
+    //! Once the underlying preconditioner has been called, this must be supplied to setUnderlyingPreconditioner.
     explicit PreconditionerConvertFieldTypeAdapter(const M& matrix)
         : m_matrix(matrix)
         , m_convertedMatrix(createConvertedMatrix())
