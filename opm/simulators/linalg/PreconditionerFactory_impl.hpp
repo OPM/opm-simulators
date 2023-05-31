@@ -45,6 +45,8 @@
 #include <opm/simulators/linalg/cuistl/CuSeqILU0.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerConvertFieldTypeAdapter.hpp>
+#include <opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp>
+
 #endif
 
 
@@ -224,6 +226,20 @@ struct StandardPreconditioners
             return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(op, prm, weightsCalculator, pressureIndex, comm);
           });
         }
+
+#if HAVE_CUDA
+        F::addCreator("CUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            static constexpr auto block_size = V::block_type::dimension;
+            using field_type = typename V::field_type;
+            using CuILU0 = typename Opm::cuistl::CuSeqILU0<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
+            auto cuILU0 = std::make_shared<CuILU0>(op.getmat(), w);
+
+            auto adapted = std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuILU0>>(cuILU0);
+            auto wrapped = std::make_shared<Opm::cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            return wrapped;
+        });
+#endif
     }
 
 
