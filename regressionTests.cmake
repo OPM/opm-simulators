@@ -1155,3 +1155,10 @@ add_test_compareECLFiles(CASENAME 02_wgrupcon
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wgrupcon)
+add_test_compareECLFiles(CASENAME 01_vappars
+                         FILENAME VAPPARS-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR vappars)                         
+                         
