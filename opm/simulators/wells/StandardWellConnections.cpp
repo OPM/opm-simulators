@@ -513,6 +513,9 @@ computeProperties(const WellState& well_state,
         {
             total_tw = comm.sum(total_tw);
         }
+        // for producers where all perforations have zero rates we
+        // approximate the perforation mixture ration using the (invB * mobility) ratio,
+        // and weight the perforation rates using the well transmissibility.
         for (int perf = 0; perf < nperf; ++perf) {
             const int cell_idx = well_.cells()[perf];
             const double well_tw_fraction = well_.wellIndex()[perf] / total_tw;
@@ -526,10 +529,12 @@ computeProperties(const WellState& well_state,
             }
             for (int p = 0; p < np; ++p) {
                 int ebosPhaseIdx = well_.flowPhaseToEbosPhaseIdx(p);
-                perfRates[perf * well_.numComponents() + p] = well_tw_fraction * mobility(cell_idx, ebosPhaseIdx) / total_mobility;
+                perfRates[perf * well_.numComponents() + p] = well_tw_fraction *
+                        invB(cell_idx, ebosPhaseIdx) * mobility(cell_idx, ebosPhaseIdx) / total_mobility;
             }
             if constexpr (Indices::enableSolvent) {
-                perfRates[perf * well_.numComponents() + Indices::contiSolventEqIdx] = well_tw_fraction * solventInverseFormationVolumeFactor(cell_idx) / total_mobility;
+                perfRates[perf * well_.numComponents() + Indices::contiSolventEqIdx] = well_tw_fraction *
+                        solventInverseFormationVolumeFactor(cell_idx) * solventMobility(cell_idx) / total_mobility;
             }
         }
     }
