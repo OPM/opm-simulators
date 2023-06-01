@@ -552,6 +552,8 @@ if(CUDA_FOUND)
                        cuvector
                        cusparsematrix
                        cuseqilu0
+                       cuowneroverlapcopy
+                       solver_adapter
                        PROPERTIES LABELS gpu_cuda)
 endif()
 
