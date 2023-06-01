@@ -218,26 +218,28 @@ public:
     }
 
     void processElementMech(const ElementContext& elemCtx){
-        const auto& problem = elemCtx.simulator().problem();
-        const auto& model = problem.geoMechModel();
-        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-            const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-            const auto& fs = intQuants.fluidState();
-            typedef typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type FluidState;
-            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-            if(!this->mechPotentialForce_.empty()){
-                //assume all mechancal tings should be written
-                this->mechPotentialForce_[globalDofIdx] = model.mechPotentialForce(globalDofIdx);
-                this->dispX_[globalDofIdx] = model.disp(globalDofIdx,0);
-                this->dispY_[globalDofIdx] = model.disp(globalDofIdx,1);
-                this->dispZ_[globalDofIdx] = model.disp(globalDofIdx,2);
-                this->stressXX_[globalDofIdx] = model.stress(globalDofIdx,0);
-                this->stressYY_[globalDofIdx] = model.stress(globalDofIdx,1);
-                this->stressZZ_[globalDofIdx] = model.stress(globalDofIdx,2);
-                //voight notation
-                this->stressXY_[globalDofIdx] = model.stress(globalDofIdx,5);
-                this->stressXZ_[globalDofIdx] = model.stress(globalDofIdx,4);
-                this->stressYZ_[globalDofIdx] = model.stress(globalDofIdx,3);
+        if constexpr(getPropValue<TypeTag, Properties::EnableMech>()){
+            const auto& problem = elemCtx.simulator().problem();
+            const auto& model = problem.geoMechModel();
+            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
+                const auto& fs = intQuants.fluidState();
+                typedef typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type FluidState;
+                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                if(!this->mechPotentialForce_.empty()){
+                    //assume all mechancal tings should be written
+                    this->mechPotentialForce_[globalDofIdx] = model.mechPotentialForce(globalDofIdx);
+                    this->dispX_[globalDofIdx] = model.disp(globalDofIdx,0);
+                    this->dispY_[globalDofIdx] = model.disp(globalDofIdx,1);
+                    this->dispZ_[globalDofIdx] = model.disp(globalDofIdx,2);
+                    this->stressXX_[globalDofIdx] = model.stress(globalDofIdx,0);
+                    this->stressYY_[globalDofIdx] = model.stress(globalDofIdx,1);
+                    this->stressZZ_[globalDofIdx] = model.stress(globalDofIdx,2);
+                    //voight notation
+                    this->stressXY_[globalDofIdx] = model.stress(globalDofIdx,5);
+                    this->stressXZ_[globalDofIdx] = model.stress(globalDofIdx,4);
+                    this->stressYZ_[globalDofIdx] = model.stress(globalDofIdx,3);
+                }
             }
         }
     }
