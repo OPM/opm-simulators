@@ -1038,6 +1038,15 @@ public:
         // Evaluate UDQ assign statements to make sure the settings are
         // available as UDA controls for the current report step.
         actionHandler_.evalUDQAssignments(episodeIdx, simulator.vanguard().udqState());
+
+        if (episodeIdx >= 0) {
+            const auto& oilVap = schedule[episodeIdx].oilvap();
+            if (oilVap.getType() == OilVaporizationProperties::OilVaporization::VAPPARS) {
+                FluidSystem::setVapPars(oilVap.vap1(), oilVap.vap2());
+            } else {
+                FluidSystem::setVapPars(0.0, 0.0);
+            }
+        }
     }
 
     /*!
