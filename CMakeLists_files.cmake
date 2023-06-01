@@ -151,6 +151,7 @@ if(CUDA_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/detail/vector_operations.cu)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/CuSparseMatrix.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/CuSeqILU0.cpp)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/cuistl/set_device.cpp)
 
   # CUISTL HEADERS
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp)
@@ -179,6 +180,7 @@ if(CUDA_FOUND)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/SolverAdapter.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/PreconditionerHolder.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/linalg/cuistl/set_device.hpp)
 
 endif()
 if(OPENCL_FOUND)
