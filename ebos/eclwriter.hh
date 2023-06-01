@@ -575,7 +575,7 @@ private:
         }
 
         {
-        if(enableMech){    
+        if constexpr(enableMech){    
         OPM_TIMEBLOCK(prepareMechData);
         for (const auto& elem : elements(gridView)) {
             elemCtx.updatePrimaryStencil(elem);
