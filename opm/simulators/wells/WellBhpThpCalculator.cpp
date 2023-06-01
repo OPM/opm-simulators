@@ -166,7 +166,6 @@ findThpFromBhpIteratively(
     bool do_iterate = true;
     int it = 1;
     int max_iterations = 50;
-    bool debug = true;
     while(do_iterate) {
         if (it > max_iterations) {
             break;
@@ -323,7 +322,7 @@ void WellBhpThpCalculator::updateThp(const double rho,
     }
     const std::optional<double> alq = this->well_.isProducer() ? std::optional<double>(alq_value()) : std::nullopt;
     const double thp_limit = well_.getTHPConstraint(summary_state);
-    ws.thp = this->calculateThpFromBhp(rates, ws.bhp, rho, alq_value(), thp_limit, deferred_logger);
+    ws.thp = this->calculateThpFromBhp(rates, ws.bhp, rho, alq, thp_limit, deferred_logger);
 }
 
 template<class EvalWell>
