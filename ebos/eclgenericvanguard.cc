@@ -25,6 +25,8 @@
 #include <ebos/eclgenericvanguard.hh>
 
 #include <opm/common/utility/MemPacker.hpp>
+
+#include <opm/input/eclipse/Schedule/Well/WVFPDP.hpp>
 #include <opm/common/utility/Serializer.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
@@ -63,7 +65,6 @@
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTracerProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WListManager.hpp>
-#include <opm/input/eclipse/Schedule/Well/WVFPDP.hpp>
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/input/eclipse/Python/Python.hpp>
