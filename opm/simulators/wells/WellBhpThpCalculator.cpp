@@ -43,7 +43,10 @@
 #include <cmath>
 #include <optional>
 
+#include <fmt/format.h>
+
 static constexpr bool extraBhpAtThpLimitOutput = false;
+static constexpr bool extraThpFromBhpOutput = false;
 
 namespace Opm
 {
@@ -118,27 +121,71 @@ double WellBhpThpCalculator::calculateThpFromBhp(const std::vector<double>& rate
 
     // pick the density in the top layer
     double thp = 0.0;
-    auto pressure_loss = getVfpBhpAdjustment(bhp, thp_limit);
+    const int table_id = well_.wellEcl().vfp_table_number();
     if (well_.isInjector()) {
         assert(!alq.has_value());
-        const int table_id = well_.wellEcl().vfp_table_number();
         const double vfp_ref_depth = well_.vfpProperties()->getInj()->getTable(table_id).getDatumDepth();
         const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
-
-        thp = well_.vfpProperties()->getInj()->thp(table_id, aqua, liquid, vapour, bhp + dp - pressure_loss);
+        auto thp_func =
+            [this, table_id, vfp_ref_depth, aqua, liquid, vapour, dp](
+                const double bhp_value, const double pressure_loss) {
+                    return this->well_.vfpProperties()->getInj()->thp(
+                           table_id, aqua, liquid, vapour, bhp_value + dp - pressure_loss);
+                };
+        thp = findThpFromBhpIteratively(thp_func, bhp, thp_limit, dp, deferred_logger);
     }
     else if (well_.isProducer()) {
-        const int table_id = well_.wellEcl().vfp_table_number();
         const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(table_id).getDatumDepth();
         const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
-
-        thp = well_.vfpProperties()->getProd()->thp(
-               table_id, aqua, liquid, vapour, bhp + dp - pressure_loss, alq.value());
+        auto thp_func =
+            [this, table_id, vfp_ref_depth, aqua, liquid, vapour, dp, &alq]
+                (const double bhp_value, const double pressure_loss) {
+                    return this->well_.vfpProperties()->getProd()->thp(
+                       table_id, aqua, liquid, vapour, bhp_value + dp - pressure_loss, alq.value());
+                };
+        thp = findThpFromBhpIteratively(thp_func, bhp, thp_limit, dp, deferred_logger);
     }
     else {
         OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER well", deferred_logger);
     }
+    return thp;
+}
 
+double
+WellBhpThpCalculator::
+findThpFromBhpIteratively(
+    const std::function<double(const double, const double)>& thp_func,
+    const double bhp,
+    const double thp_limit,
+    const double dp,
+    DeferredLogger& deferred_logger) const
+{
+    auto pressure_loss = getVfpBhpAdjustment(bhp + dp, thp_limit);
+    auto thp = thp_func(bhp, pressure_loss);
+    const double tolerance = 1e-5 * unit::barsa;
+    bool do_iterate = true;
+    int it = 1;
+    int max_iterations = 50;
+    bool debug = true;
+    while(do_iterate) {
+        if (it > max_iterations) {
+            break;
+        }
+        double thp_prev = thp;
+        pressure_loss = getVfpBhpAdjustment(bhp + dp - pressure_loss, thp_prev);
+        thp = thp_func(bhp, pressure_loss);
+        auto error = std::fabs(thp-thp_prev);
+        if (extraThpFromBhpOutput) {
+            const std::string msg = fmt::format(
+                "findThpFromBhpIteratively(): iteration {}, thp = {}, bhp = {}, "
+                "pressure_loss = {}, error = {}", it, thp, bhp+dp-pressure_loss, pressure_loss, error);
+            deferred_logger.debug(msg);
+        }
+        if (std::fabs(thp-thp_prev) < tolerance) {
+            break;
+        }
+        it++;
+    }
     return thp;
 }
 

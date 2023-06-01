@@ -140,6 +140,12 @@ private:
                                   double& low, double& high,
                                   DeferredLogger& deferred_logger);
 
+    double findThpFromBhpIteratively(const std::function<double(const double, const double)>& thp_func,
+                                     const double bhp,
+                                     const double thp_limit,
+                                     const double dp,
+                                     DeferredLogger& deferred_logger) const;
+
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };
 
