@@ -236,6 +236,7 @@ tests[model_metric_gridunit_metres]="flow gridunit M_METRIC_GRID_METRES"
 tests[01_wgrupcon]="flow wgrupcon 01-WGRUPCON"
 tests[02_wgrupcon]="flow wgrupcon 02-WGRUPCON"
 tests[01_vappars]="flow vappars VAPPARS-01"
+tests[01_weltraj]="flow weltraj WELTRAJ-01"
 
 changed_tests=""
 

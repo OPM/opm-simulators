@@ -1162,3 +1162,9 @@ add_test_compareECLFiles(CASENAME 01_vappars
                          REL_TOL ${rel_tol}
                          DIR vappars)                         
                          
+add_test_compareECLFiles(CASENAME 01_weltraj
+                         FILENAME WELTRAJ-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR weltraj)      
