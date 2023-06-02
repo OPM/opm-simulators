@@ -339,7 +339,7 @@ namespace Opm
                          std::vector<Value>& mob,
                          DeferredLogger& deferred_logger) const;
 
-        double getInjMult(const int perf, DeferredLogger& deferred_logger) const;
+        // double getInjMult(const int perf, DeferredLogger& deferred_logger) const;
 
 
         void updateWaterMobilityWithPolymer(const Simulator& ebos_simulator,

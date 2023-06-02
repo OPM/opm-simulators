@@ -238,6 +238,7 @@ namespace Opm
 	// maybe need to add the seg as argument
         template<class Value>
         void getMobility(const Simulator& ebosSimulator,
+                         const int seg,
                          const int perf,
                          std::vector<Value>& mob,
                          DeferredLogger& deferred_logger) const;
