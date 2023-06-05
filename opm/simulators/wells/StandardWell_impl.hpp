@@ -927,7 +927,7 @@ namespace Opm
         const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
         updatePrimaryVariablesNewton(dwells, stop_or_zero_rate_target, deferred_logger);
 
-        updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, deferred_logger);
+        updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, summary_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }
 
@@ -963,9 +963,10 @@ namespace Opm
     StandardWell<TypeTag>::
     updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
                                         WellState& well_state,
+                                        const SummaryState& summary_state,
                                         DeferredLogger& deferred_logger) const
     {
-        this->StdWellEval::updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, deferred_logger);
+        this->StdWellEval::updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, summary_state, deferred_logger);
 
         // other primary variables related to polymer injectivity study
         if constexpr (Base::has_polymermw) {
@@ -1106,12 +1107,13 @@ namespace Opm
                 computeWellRatesWithBhp(ebos_simulator, bhp_limit, well_rates_bhp_limit, deferred_logger);
 
                 this->adaptRatesForVFP(well_rates_bhp_limit);
+                const double thp_limit = this->getTHPConstraint(summaryState);
                 const double thp = WellBhpThpCalculator(*this).calculateThpFromBhp(well_rates_bhp_limit,
                                                                                    bhp_limit,
                                                                                    this->connections_.rho(),
                                                                                    this->getALQ(well_state),
+                                                                                   thp_limit,
                                                                                    deferred_logger);
-                const double thp_limit = this->getTHPConstraint(summaryState);
                 if ( (this->isProducer() && thp < thp_limit) || (this->isInjector() && thp > thp_limit) ) {
                     this->operability_status_.obey_thp_limit_under_bhp_limit = false;
                 }

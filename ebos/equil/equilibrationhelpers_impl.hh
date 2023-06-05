@@ -175,7 +175,12 @@ operator()(const double depth,
            const double temp,
            const double satOil) const
 {
-    if (std::abs(satOil) > 1e-16) {
+    if (satOil < - std::sqrt(std::numeric_limits<double>::epsilon())) {
+        throw std::logic_error {
+            "Must not pass negative oil saturation"
+        };
+    }
+    if (satOil > 1e-16) {
         return satRv(press, temp);
     }
     else {
@@ -211,7 +216,13 @@ operator()(const double depth,
            const double temp,
            const double satWat) const
 {
-    if (std::abs(satWat) > 1e-16) {
+    if (satWat < - std::sqrt(std::numeric_limits<double>::epsilon())) {
+        throw std::logic_error {
+            "Must not pass negative water saturation"
+        };
+    }
+
+    if (satWat > 1e-16) {
         return satRvw(press, temp); //saturated Rvw
     }
     else {
