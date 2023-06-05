@@ -95,6 +95,7 @@ protected:
 
     void updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
                                              WellState& well_state,
+                                             const SummaryState& summary_state,
                                              DeferredLogger& deferred_logger) const;
 
     PrimaryVariables primary_variables_; //!< Primary variables for well

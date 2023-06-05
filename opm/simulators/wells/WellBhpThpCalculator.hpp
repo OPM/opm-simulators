@@ -58,6 +58,7 @@ public:
                                const double bhp,
                                const double rho,
                                const std::optional<double>& alq,
+                               const double thp_limit,
                                DeferredLogger& deferred_logger) const;
 
     //! \brief Compute BHP from THP limit for a producer.
@@ -86,6 +87,7 @@ public:
                    const std::function<double()>& alq_value,
                    const std::array<unsigned,3>& active,
                    WellState& well_state,
+                   const SummaryState& summary_state,
                    DeferredLogger& deferred_logger) const;
 
   template<class EvalWell>
@@ -122,6 +124,9 @@ private:
                          const std::array<double, 2>& range,
                          DeferredLogger& deferred_logger) const;
 
+    //! \brief Get pressure adjustment to the bhp calculated from VFP table
+    double getVfpBhpAdjustment(const double bph_tab, const double thp_limit) const;
+
     //! \brief Find limits using bisection.
     bool bisectBracket(const std::function<double(const double)>& eq,
                        const std::array<double, 2>& range,
@@ -134,6 +139,12 @@ private:
                                   const std::array<double, 2>& range,
                                   double& low, double& high,
                                   DeferredLogger& deferred_logger);
+
+    double findThpFromBhpIteratively(const std::function<double(const double, const double)>& thp_func,
+                                     const double bhp,
+                                     const double thp_limit,
+                                     const double dp,
+                                     DeferredLogger& deferred_logger) const;
 
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };

@@ -350,6 +350,7 @@ namespace Opm
 
         void updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
                                                  WellState& well_state,
+                                                 const SummaryState& summary_state,
                                                  DeferredLogger& deferred_logger) const;
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
