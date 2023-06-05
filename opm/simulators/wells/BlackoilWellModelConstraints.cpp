@@ -311,13 +311,13 @@ checkGroupProductionConstraints(const Group& group,
             double current_rate = 0.0;
             current_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
                                                               well_state, reportStepIdx,
-                                                              pu.phase_pos[BlackoilPhases::Aqua], true);
+                                                              pu.phase_pos[BlackoilPhases::Aqua], false);
             current_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
                                                               well_state, reportStepIdx,
-                                                              pu.phase_pos[BlackoilPhases::Liquid], true);
+                                                              pu.phase_pos[BlackoilPhases::Liquid], false);
             current_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
                                                               well_state, reportStepIdx,
-                                                              pu.phase_pos[BlackoilPhases::Vapour], true);
+                                                              pu.phase_pos[BlackoilPhases::Vapour], false);
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
