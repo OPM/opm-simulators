@@ -1150,7 +1150,7 @@ doAllocBuffers(unsigned bufferSize,
     rstKeywords["PRES"] = 0;
     rstKeywords["PRESSURE"] = 0;
 
-    if (enableMech_){
+    if (enableMech_ && eclState_.runspec().mech()){
         this->mechPotentialForce_.resize(bufferSize,0.0);
         rstKeywords["MECHPOTF"] = 0;
         this->dispX_.resize(bufferSize,0.0);

@@ -575,13 +575,15 @@ private:
         }
 
         {
-        if constexpr(enableMech){    
-        OPM_TIMEBLOCK(prepareMechData);
-        for (const auto& elem : elements(gridView)) {
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-            eclOutputModule_->processElementMech(elemCtx);
-        }
+        if constexpr(enableMech){
+            if(simulator_.vanguard().eclState().runspec().mech()){
+                OPM_TIMEBLOCK(prepareMechData);
+                for (const auto& elem : elements(gridView)) {
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                    eclOutputModule_->processElementMech(elemCtx);
+                }
+            }
         }
 
         if(! this->simulator_.model().linearizer().getFlowsInfo().empty()){
