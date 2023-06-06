@@ -137,6 +137,9 @@ namespace Opm
                                              WellState& well_state,
                                              DeferredLogger& deferred_logger) const override;
 
+        double connectionDensity(const int globalConnIdx,
+                                 const int openConnIdx) const override;
+
         void addWellContributions(SparseMatrixAdapter& jacobian) const override;
 
         void addWellPressureEquations(PressureMatrix& mat,

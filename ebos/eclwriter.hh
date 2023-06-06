@@ -210,7 +210,7 @@ public:
             simulator_.vanguard().setupTime();
 
         const auto localWellData            = simulator_.problem().wellModel().wellData();
-        const auto localWBP                 = data::WellBlockAveragePressures{};
+        const auto localWBP                 = simulator_.problem().wellModel().wellBlockAveragePressures();
         const auto localGroupAndNetworkData = simulator_.problem().wellModel()
             .groupAndNetworkData(reportStepNum);
 

@@ -38,35 +38,39 @@
 #include <unordered_map>
 #include <vector>
 
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
+#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
-#include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
-#include <opm/input/eclipse/Schedule/Group/Group.hpp>
 
-#include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
+
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
+#include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
-#include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
-#include <opm/simulators/wells/GasLiftGroupInfo.hpp>
+#include <opm/simulators/wells/GasLiftWellState.hpp>
+#include <opm/simulators/wells/MultisegmentWell.hpp>
+#include <opm/simulators/wells/ParallelWBPCalculation.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
-#include <opm/simulators/wells/VFPInjProperties.hpp>
-#include <opm/simulators/wells/VFPProdProperties.hpp>
-#include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/WGState.hpp>
 #include <opm/simulators/wells/RateConverter.hpp>
 #include <opm/simulators/wells/RegionAverageCalculator.hpp>
-#include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
-#include <opm/simulators/wells/MultisegmentWell.hpp>
+#include <opm/simulators/wells/VFPInjProperties.hpp>
+#include <opm/simulators/wells/VFPProdProperties.hpp>
+#include <opm/simulators/wells/WGState.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/WellInterface.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
-#include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/WellState.hpp>
+
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
+
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/matrixmatrix.hh>
@@ -266,6 +270,11 @@ namespace Opm {
                 return wsrpt;
             }
 
+            data::WellBlockAveragePressures wellBlockAveragePressures() const
+            {
+                return this->computeWellBlockAveragePressures();
+            }
+
             // subtract Binv(D)rw from r;
             void apply( BVector& r) const;
 
@@ -387,6 +396,13 @@ namespace Opm {
             std::unique_ptr<RateConverterType> rateConverter_{};
             std::map<std::string, std::unique_ptr<AverageRegionalPressureType>> regionalAveragePressureCalculator_{};
 
+            struct WBPCalcID
+            {
+                std::optional<typename std::vector<WellInterfacePtr>::size_type> openWellIdx_{};
+                std::size_t wbpCalcIdx_{};
+            };
+
+            std::vector<WBPCalcID> wbpCalcMap_{};
 
             SimulatorReportSingle last_report_{};
 
@@ -446,6 +462,16 @@ namespace Opm {
 
             // setting the well_solutions_ based on well_state.
             void updatePrimaryVariables(DeferredLogger& deferred_logger);
+
+            void initializeWBPCalculationService();
+
+            data::WellBlockAveragePressures
+            computeWellBlockAveragePressures() const;
+
+            ParallelWBPCalculation::EvaluatorFactory
+            makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const;
+
+            void registerOpenWellsForWBPCalculation();
 
             void updateAverageFormationFactor();
 

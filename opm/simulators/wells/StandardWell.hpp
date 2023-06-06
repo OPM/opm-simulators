@@ -185,6 +185,9 @@ namespace Opm
                                              WellState& well_state,
                                              DeferredLogger& deferred_logger) const override;
 
+        virtual double connectionDensity(const int globalConnIdx,
+                                         const int openConnIdx) const override;
+
         virtual void addWellContributions(SparseMatrixAdapter& mat) const override;
 
         virtual void addWellPressureEquations(PressureMatrix& mat,

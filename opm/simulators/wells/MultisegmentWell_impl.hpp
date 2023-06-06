@@ -21,8 +21,12 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/input/eclipse/Schedule/MSW/Segment.hpp>
 #include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
+#include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
+#include <opm/input/eclipse/Schedule/Well/Connection.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/material/densead/EvaluationFormat.hpp>
@@ -697,6 +701,28 @@ namespace Opm
 
         assert (static_cast<int>(subsetPerfID) == this->number_of_perforations_ &&
                 "Internal logic error in processing connections for PI/II");
+    }
+
+
+
+
+
+    template<typename TypeTag>
+    double
+    MultisegmentWell<TypeTag>::
+    connectionDensity(const int globalConnIdx,
+                      [[maybe_unused]] const int openConnIdx) const
+    {
+        // Simple approximation: Mixture density at reservoir connection is
+        // mixture density at connection's segment.
+
+        const auto segNum = this->wellEcl()
+            .getConnections()[globalConnIdx].segment();
+
+        const auto segIdx = this->wellEcl()
+            .getSegments().segmentNumberToIndex(segNum);
+
+        return this->segments_.density(segIdx).value();
     }
 
 

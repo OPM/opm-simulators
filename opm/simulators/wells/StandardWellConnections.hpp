@@ -73,7 +73,19 @@ public:
     //! \brief Returns density for first perforation.
     Scalar rho() const
     {
-        return this->perf_densities_.empty() ? 0.0 : perf_densities_[0];
+        return this->rho(0);
+    }
+
+    //! \brief Returns density for specific perforation/connection.
+    //!
+    //! \param[in] i Connection index
+    //!
+    //! \return Mixture density at connection \p i.
+    Scalar rho(const typename std::vector<Scalar>::size_type i) const
+    {
+        return (i < this->perf_densities_.size())
+            ? this->perf_densities_[i]
+            : 0.0;
     }
 
     //! \brief Returns pressure drop for a given perforation.
