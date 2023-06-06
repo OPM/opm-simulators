@@ -116,10 +116,10 @@ protected:
                        data::GroupAndNetworkValues&& localGroupAndNetworkData,
                        data::Aquifers&&              localAquiferData,
                        WellTestState&&               localWTestState,
-                       const Action::State& actionState,
-                       const UDQState& udqState,
-                       const SummaryState& summaryState,
-                       const std::vector<Scalar>& thresholdPressure,
+                       const Action::State&          actionState,
+                       const UDQState&               udqState,
+                       const SummaryState&           summaryState,
+                       const std::vector<Scalar>&    thresholdPressure,
                        Scalar curTime,
                        Scalar nextStepSize,
                        bool doublePrecision,
@@ -128,20 +128,20 @@ protected:
                        bool isFloresn,
                        std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>&& floresn);
 
-    void evalSummary(int reportStepNum,
-                     Scalar curTime,
-                     const std::map<std::size_t, double>& wbpData,
-                     const data::Wells& localWellData,
-                     const data::GroupAndNetworkValues& localGroupAndNetworkData,
-                     const std::map<int,data::AquiferData>& localAquiferData,
+    void evalSummary(int                                                  reportStepNum,
+                     Scalar                                               curTime,
+                     const data::Wells&                                   localWellData,
+                     const data::WellBlockAveragePressures&               localWBPData,
+                     const data::GroupAndNetworkValues&                   localGroupAndNetworkData,
+                     const std::map<int,data::AquiferData>&               localAquiferData,
                      const std::map<std::pair<std::string, int>, double>& blockData,
-                     const std::map<std::string, double>& miscSummaryData,
-                     const std::map<std::string, std::vector<double>>& regionData,
-                     const Inplace& inplace,
-                     const Inplace& initialInPlace,
-                     const EclInterRegFlowMap& interRegionFlowMap,
-                     SummaryState& summaryState,
-                     UDQState& udqState);
+                     const std::map<std::string, double>&                 miscSummaryData,
+                     const std::map<std::string, std::vector<double>>&    regionData,
+                     const Inplace&                                       inplace,
+                     const Inplace&                                       initialInPlace,
+                     const EclInterRegFlowMap&                            interRegFlows,
+                     SummaryState&                                        summaryState,
+                     UDQState&                                            udqState);
 
     CollectDataToIORankType collectToIORank_;
     const Grid& grid_;
@@ -156,7 +156,6 @@ protected:
     const Dune::CartesianIndexMapper<Grid>& cartMapper_;
     const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper_;
     const EquilGrid* equilGrid_;
-    std::vector<std::size_t> wbp_index_list_;
     SimulatorReportSingle sub_step_report_;
     SimulatorReport simulation_report_;
     mutable std::vector<NNCdata> outputNnc_;

@@ -148,22 +148,28 @@ public:
                    simulator.vanguard().eclState(),
                    simulator.vanguard().summaryConfig(),
                    simulator.vanguard().grid(),
-                   simulator.vanguard().grid().comm().rank() == 0 ? &simulator.vanguard().equilGrid() : nullptr,
+                   ((simulator.vanguard().grid().comm().rank() == 0)
+                    ? &simulator.vanguard().equilGrid()
+                    : nullptr),
                    simulator.vanguard().gridView(),
                    simulator.vanguard().cartesianIndexMapper(),
-                   simulator.vanguard().grid().comm().rank() == 0 ? &simulator.vanguard().equilCartesianIndexMapper() : nullptr,
-                   EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncEclOutput), EWOMS_GET_PARAM(TypeTag, bool, EnableEsmry))
+                   ((simulator.vanguard().grid().comm().rank() == 0)
+                    ? &simulator.vanguard().equilCartesianIndexMapper()
+                    : nullptr),
+                   EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncEclOutput),
+                   EWOMS_GET_PARAM(TypeTag, bool, EnableEsmry))
         , simulator_(simulator)
     {
 #ifdef HAVE_DAMARIS
         this->damarisUpdate_ = enableDamarisOutput_();
 #endif
-        this->eclOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>(simulator, this->wbp_index_list_, this->collectToIORank_);
-        this->wbp_index_list_.clear();
+
+        this->eclOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>
+            (simulator, this->collectToIORank_);
     }
 
     ~EclWriter()
-    { }
+    {}
 
     const EquilGrid& globalGrid() const
     {
@@ -204,6 +210,7 @@ public:
             simulator_.vanguard().setupTime();
 
         const auto localWellData            = simulator_.problem().wellModel().wellData();
+        const auto localWBP                 = data::WellBlockAveragePressures{};
         const auto localGroupAndNetworkData = simulator_.problem().wellModel()
             .groupAndNetworkData(reportStepNum);
 
@@ -220,8 +227,8 @@ public:
 
             this->collectToIORank_.collect({},
                                            eclOutputModule_->getBlockData(),
-                                           eclOutputModule_->getWBPData(),
                                            localWellData,
+                                           localWBP,
                                            localGroupAndNetworkData,
                                            localAquiferData,
                                            localWellTestState,
@@ -283,26 +290,34 @@ public:
         if (this->simulation_report_.success.total_newton_iterations != 0) {
             miscSummaryData["MSUMNEWT"] = this->simulation_report_.success.total_newton_iterations;
         }
+
         {
-        OPM_TIMEBLOCK(evalSummary);
-        this->evalSummary(reportStepNum, curTime,
-                          this->collectToIORank_.isParallel() ?
-                            this->collectToIORank_.globalWBPData() :
-                            this->eclOutputModule_->getWBPData(),
-                          localWellData,
-                          localGroupAndNetworkData,
-                          localAquiferData,
-                          this->collectToIORank_.isParallel() ?
-                            this->collectToIORank_.globalBlockData() :
-                            this->eclOutputModule_->getBlockData(),
-                          miscSummaryData, regionData,
-                          inplace,
-                          eclOutputModule_->initialInplace(),
-                          this->collectToIORank_.isParallel()
-                          ? this->collectToIORank_.globalInterRegFlows()
-                          : this->eclOutputModule_->getInterRegFlows(),
-                          summaryState(), udqState());
+            OPM_TIMEBLOCK(evalSummary);
+
+            const auto& blockData = this->collectToIORank_.isParallel()
+                ? this->collectToIORank_.globalBlockData()
+                : this->eclOutputModule_->getBlockData();
+
+            const auto& interRegFlows = this->collectToIORank_.isParallel()
+                ? this->collectToIORank_.globalInterRegFlows()
+                : this->eclOutputModule_->getInterRegFlows();
+
+            this->evalSummary(reportStepNum,
+                              curTime,
+                              localWellData,
+                              localWBP,
+                              localGroupAndNetworkData,
+                              localAquiferData,
+                              blockData,
+                              miscSummaryData,
+                              regionData,
+                              inplace,
+                              this->eclOutputModule_->initialInplace(),
+                              interRegFlows,
+                              this->summaryState(),
+                              this->udqState());
         }
+
         {
         OPM_TIMEBLOCK(outputXXX);
         eclOutputModule_->outputProdLog(reportStepNum, isSubStep, forceDisableProdOutput);
@@ -314,9 +329,11 @@ public:
     void writeOutput(bool isSubStep)
     {
         OPM_TIMEBLOCK(writeOutput);
+
         const int reportStepNum = simulator_.episodeIndex() + 1;
         this->prepareLocalCellData(isSubStep, reportStepNum);
         this->eclOutputModule_->outputErrorLog(simulator_.gridView().comm());
+
 #ifdef HAVE_DAMARIS
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput)) {
             // N.B. damarisUpdate_ should be set to true if at any time the model geometry changes
@@ -340,35 +357,44 @@ public:
             }
         }
 #endif
-        // output using eclWriter if enabled
+
         auto localWellData = simulator_.problem().wellModel().wellData();
         auto localGroupAndNetworkData = simulator_.problem().wellModel()
             .groupAndNetworkData(reportStepNum);
 
         auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
         auto localWellTestState = simulator_.problem().wellModel().wellTestState();
-        auto flowsn = this->eclOutputModule_->getFlowsn();
+
         const bool isFlowsn = this->eclOutputModule_->hasFlowsn();
-        auto floresn = this->eclOutputModule_->getFloresn();
+        auto flowsn = this->eclOutputModule_->getFlowsn();
+
         const bool isFloresn = this->eclOutputModule_->hasFloresn();
+        auto floresn = this->eclOutputModule_->getFloresn();
 
         data::Solution localCellData = {};
         if (! isSubStep) {
             this->eclOutputModule_->assignToSolution(localCellData);
 
-            // add cell data to perforations for Rft output
+            // Add cell data to perforations for RFT output
             this->eclOutputModule_->addRftDataToWells(localWellData, reportStepNum);
         }
 
-        if (this->collectToIORank_.isParallel()|| this->collectToIORank_.doesNeedReordering()) {
+        if (this->collectToIORank_.isParallel() ||
+            this->collectToIORank_.doesNeedReordering())
+        {
+            // Note: We don't need WBP (well-block averaged pressures) or
+            // inter-region flow rate values in order to create restart file
+            // output.  There's consequently no need to collect those
+            // properties on the I/O rank.
+
             this->collectToIORank_.collect(localCellData,
-                                           eclOutputModule_->getBlockData(),
-                                           eclOutputModule_->getWBPData(),
+                                           this->eclOutputModule_->getBlockData(),
                                            localWellData,
+                                           /* wbpData = */ {},
                                            localGroupAndNetworkData,
                                            localAquiferData,
                                            localWellTestState,
-                                           {},
+                                           /* interRegFlows = */ {},
                                            flowsn,
                                            floresn);
         }
@@ -376,6 +402,7 @@ public:
         if (this->collectToIORank_.isIORank()) {
             const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
             const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
+
             this->doWriteOutput(reportStepNum, isSubStep,
                                 std::move(localCellData),
                                 std::move(localWellData),
@@ -385,13 +412,11 @@ public:
                                 this->actionState(),
                                 this->udqState(),
                                 this->summaryState(),
-                                simulator_.problem().thresholdPressure().getRestartVector(),
+                                this->simulator_.problem().thresholdPressure().getRestartVector(),
                                 curTime, nextStepSize,
                                 EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision),
-                                isFlowsn,
-                                std::move(flowsn),
-                                isFloresn,
-                                std::move(floresn));
+                                isFlowsn, std::move(flowsn),
+                                isFloresn, std::move(floresn));
         }
     }
 
@@ -487,7 +512,7 @@ public:
     Scalar restartTimeStepSize() const
     { return restartTimeStepSize_; }
 
-    template<class Serializer>
+    template <class Serializer>
     void serializeOp(Serializer& serializer)
     {
         serializer(*eclOutputModule_);
@@ -496,10 +521,12 @@ public:
 private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
+
 #ifdef HAVE_DAMARIS
     static bool enableDamarisOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput); }
 #endif
+
     const EclipseState& eclState() const
     { return simulator_.vanguard().eclState(); }
 
@@ -519,7 +546,8 @@ private:
                               const int  reportStepNum)
     {
         OPM_TIMEBLOCK(prepareLocalCellData);
-        if (eclOutputModule_->localDataValid()) {
+
+        if (this->eclOutputModule_->localDataValid()) {
             return;
         }
 
@@ -527,54 +555,68 @@ private:
         const int numElements = gridView.size(/*codim=*/0);
         const bool log = this->collectToIORank_.isIORank();
 
-        eclOutputModule_->allocBuffers(numElements, reportStepNum,
-                                      isSubStep, log, /*isRestart*/ false);
+        this->eclOutputModule_->
+            allocBuffers(numElements, reportStepNum,
+                         isSubStep, log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        {
-        OPM_TIMEBLOCK(prepareCellBasedData);
-        for (const auto& elem : elements(gridView)) {
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
-            eclOutputModule_->processElement(elemCtx);
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
+        {
+            OPM_TIMEBLOCK(prepareCellBasedData);
+            for (const auto& elem : elements(gridView)) {
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                this->eclOutputModule_->processElement(elemCtx);
+            }
         }
-        }
-        if(!simulator_.model().linearizer().getFlowsInfo().empty()){
+
+        if (! this->simulator_.model().linearizer().getFlowsInfo().empty()) {
             OPM_TIMEBLOCK(prepareFlowsData);
             for (const auto& elem : elements(gridView)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-                eclOutputModule_->processElementFlows(elemCtx);
+
+                this->eclOutputModule_->processElementFlows(elemCtx);
             }
         }
+
         {
-        OPM_TIMEBLOCK(prepareBlockData);
-        for (const auto& elem : elements(gridView)) {
-            elemCtx.updatePrimaryStencil(elem);
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-            eclOutputModule_->processElementBlockData(elemCtx);
+            OPM_TIMEBLOCK(prepareBlockData);
+            for (const auto& elem : elements(gridView)) {
+                elemCtx.updatePrimaryStencil(elem);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
+                this->eclOutputModule_->processElementBlockData(elemCtx);
+            }
         }
-        }
+
         {
-        OPM_TIMEBLOCK(prepareFluidInPlace);
+            OPM_TIMEBLOCK(prepareFluidInPlace);
+
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (int dofIdx=0; dofIdx < numElements; ++dofIdx){
-                const auto& intQuants = *(simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0));
+            for (int dofIdx = 0; dofIdx < numElements; ++dofIdx) {
+                const auto& intQuants = *simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0);
                 const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
-                eclOutputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
+
+                this->eclOutputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
+            }
         }
-        }
-        eclOutputModule_->validateLocalData();
-        OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ", simulator_.vanguard().grid().comm());
+
+        this->eclOutputModule_->validateLocalData();
+
+        OPM_END_PARALLEL_TRY_CATCH("EclWriter::prepareLocalCellData() failed: ",
+                                   this->simulator_.vanguard().grid().comm());
     }
 
     void captureLocalFluxData()
     {
         OPM_TIMEBLOCK(captureLocalData);
+
         const auto& gridView = this->simulator_.vanguard().gridView();
         const auto timeIdx = 0u;
 
@@ -612,6 +654,7 @@ private:
     Simulator& simulator_;
     std::unique_ptr<EclOutputBlackOilModule<TypeTag>> eclOutputModule_;
     Scalar restartTimeStepSize_;
+
 #ifdef HAVE_DAMARIS
     bool damarisUpdate_ = false;  ///< Whenever this is true writeOutput() will set up Damaris offsets of model fields
 #endif
