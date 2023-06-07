@@ -1435,16 +1435,37 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                 }
             }
             else {
-                if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
-                    rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
-                    const auto msg = "No explicit RVWVD table is given for EQUIL region " + std::to_string(i + 1) +". \n"
-                                     "and datum depth is not at the gas-water-contact. \n"
-                                     "Rvw is set to 0.0 in all cells. \n";
-                    OpmLog::warning(msg);
-                } else {
-                    const double pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
-                    const double TContact = 273.15 + 20; // standard temperature for now
-                    rvwFunc_.push_back(std::make_shared<Miscibility::RvwSatAtContact<FluidSystem>>(pvtIdx,pContact, TContact));
+                const auto oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+                if (oilActive){
+                    if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
+                        rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
+                        const auto msg = "No explicit RVWVD table is given for EQUIL region " + std::to_string(i + 1) +". \n"
+                                        "and datum depth is not at the gas-oil-contact. \n"
+                                        "Rvw is set to 0.0 in all cells. \n";
+                        OpmLog::warning(msg);
+                    } else {
+                        // pg = po + Pcgo = po + (pg - po)
+                        // for gas-condensate with initial no oil zone: water-oil contact depth (OWC) equal gas-oil contact depth (GOC)
+                        const double pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
+                        const double TContact = 273.15 + 20; // standard temperature for now
+                        rvwFunc_.push_back(std::make_shared<Miscibility::RvwSatAtContact<FluidSystem>>(pvtIdx,pContact, TContact));
+                    }
+                }
+                else {
+                     // two-phase gas-water sytem:  water-oil contact depth is taken equal to gas-water contact depth (GWC)
+                     // and water-oil capillary pressure (Pcwo) is taken equal to gas-water capillary pressure (Pcgw) at GWC
+                     if (rec[i].waterOilContactDepth() != rec[i].datumDepth()) {
+                        rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
+                        const auto msg = "No explicit RVWVD table is given for EQUIL region " + std::to_string(i + 1) +". \n"
+                                        "and datum depth is not at the gas-water-contact. \n"
+                                        "Rvw is set to 0.0 in all cells. \n";
+                        OpmLog::warning(msg);
+                    } else {
+                        // pg = pw + Pcgw = pw + (pg - pw)
+                        const double pContact = rec[i].datumDepthPressure() + rec[i].waterOilContactCapillaryPressure();
+                        const double TContact = 273.15 + 20; // standard temperature for now
+                        rvwFunc_.push_back(std::make_shared<Miscibility::RvwSatAtContact<FluidSystem>>(pvtIdx,pContact, TContact));
+                    }
                 }
             }
         }
