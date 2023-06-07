@@ -1198,16 +1198,11 @@ namespace Opm
     setPrevSurfaceRates(WellState& well_state, 
                             const WellState& prev_well_state) const
     {
-        const int np = this->number_of_phases_;
         auto& ws = well_state.well(this->index_of_well_);
         if (!this->changedToOpenThisStep()){
-            for (int p = 0; p<np; ++p){
-                ws.prev_surface_rates[p] = prev_well_state.well(this->index_of_well_).surface_rates[p];
-            }
+            ws.prev_surface_rates = prev_well_state.well(this->index_of_well_).surface_rates;
         } else {
-            for (int p = 0; p<np; ++p){
-                ws.prev_surface_rates[p] = ws.surface_rates[p];
-            }
+            ws.prev_surface_rates = ws.surface_rates;
         }
     }
 
