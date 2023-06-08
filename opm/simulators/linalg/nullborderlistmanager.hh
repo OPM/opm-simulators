@@ -29,13 +29,7 @@
 
 #include "overlaptypes.hh"
 
-#include <dune/grid/common/datahandleif.hh>
-#include <dune/grid/common/gridenums.hh>
-#include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/scalarproducts.hh>
-#include <dune/istl/operators.hh>
-
-#include <algorithm>
+#include <stdexcept>
 
 namespace Opm {
 namespace Linear {
