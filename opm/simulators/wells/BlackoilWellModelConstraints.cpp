@@ -415,6 +415,8 @@ actionOnBrokenConstraints(const Group& group,
         if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
             ss = fmt::format("Group production exceed action is NONE for group {}. Nothing happens.",
                              group.name());
+            if (!ss.empty() && wellModel_.comm().rank() == 0)
+                deferred_logger.info(ss);
         }
         break;
     }
@@ -441,15 +443,14 @@ actionOnBrokenConstraints(const Group& group,
                              group.name(),
                              Group::ProductionCMode2String(oldControl),
                              Group::ProductionCMode2String(newControl));
+            if (!ss.empty() && wellModel_.comm().rank() == 0)
+                deferred_logger.debug(ss);
         }
         break;
     }
     default:
         throw("Invalid procedure for maximum rate limit selected for group" + group.name());
     }
-
-    if (!ss.empty() && wellModel_.comm().rank() == 0)
-        deferred_logger.debug(ss);
 }
 
 bool BlackoilWellModelConstraints::
@@ -496,21 +497,23 @@ updateGroupIndividualControl(const Group& group,
         const auto controls = group.productionControls(wellModel_.summaryState());
         if (changed_this.first != Group::ProductionCMode::NONE)
         {
-            switched_prod.insert_or_assign(group.name(),
-                                  Group::ProductionCMode2String(changed_this.first));
-
             this->actionOnBrokenConstraints(group,
                                             controls.exceed_action,
                                             changed_this.first,
                                             group_state, deferred_logger);
-            WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second,
-                                                                  group,
-                                                                  wellModel_.schedule(),
-                                                                  reportStepIdx,
-                                                                  /* isInjector */ false,
-                                                                  wellModel_.groupState(),
-                                                                  well_state);
-            changed = true;
+            if (controls.exceed_action == Group::ExceedAction::RATE) {
+                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second,
+                                                                    group,
+                                                                    wellModel_.schedule(),
+                                                                    reportStepIdx,
+                                                                    /* isInjector */ false,
+                                                                    wellModel_.groupState(),
+                                                                    well_state);
+                changed = true;
+                switched_prod.insert_or_assign(group.name(),
+                    Group::ProductionCMode2String(changed_this.first));
+
+            }
         }
     }
 
