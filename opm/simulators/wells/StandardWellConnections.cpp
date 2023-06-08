@@ -35,6 +35,8 @@
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <cassert>
+#include <limits>
 #include <numeric>
 #include <sstream>
 
@@ -475,21 +477,35 @@ computeProperties(const WellState& well_state,
             const int cell_idx = well_.cells()[perf];
             const double well_tw_fraction = well_.wellIndex()[perf] / total_tw;
             double total_mobility = 0.0;
+            double total_invB = 0.;
             for (int p = 0; p < np; ++p) {
                 int ebosPhaseIdx = well_.flowPhaseToEbosPhaseIdx(p);
                 total_mobility += invB(cell_idx, ebosPhaseIdx) * mobility(cell_idx, ebosPhaseIdx);
+                total_invB += invB(cell_idx, ebosPhaseIdx);
             }
             if constexpr (Indices::enableSolvent) {
                 total_mobility += solventInverseFormationVolumeFactor(cell_idx) * solventMobility(cell_idx);
+                total_invB += solventInverseFormationVolumeFactor(cell_idx);
             }
+            const bool non_zero_total_mobility = total_mobility > std::numeric_limits<double>::min();
+            assert(total_invB > std::numeric_limits<double>::min());
+            // for the perforation having zero mobility for all the phases, we use a small value to generate a small
+            // perforation rates for those perforations, at the same time, we can use the rates to recover the mixing
+            // ratios for those perforations.
+            constexpr double small_value = 1.e-10;
             for (int p = 0; p < np; ++p) {
-                int ebosPhaseIdx = well_.flowPhaseToEbosPhaseIdx(p);
-                perfRates[perf * well_.numComponents() + p] = well_tw_fraction *
-                        invB(cell_idx, ebosPhaseIdx) * mobility(cell_idx, ebosPhaseIdx) / total_mobility;
+                const int ebosPhaseIdx = well_.flowPhaseToEbosPhaseIdx(p);
+                const auto mob_ratio = non_zero_total_mobility
+                                       ? mobility(cell_idx, ebosPhaseIdx) / total_mobility
+                                       : small_value / total_invB;
+                perfRates[perf * well_.numComponents() + p] = well_tw_fraction * invB(cell_idx, ebosPhaseIdx) * mob_ratio;
             }
             if constexpr (Indices::enableSolvent) {
-                perfRates[perf * well_.numComponents() + Indices::contiSolventEqIdx] = well_tw_fraction *
-                        solventInverseFormationVolumeFactor(cell_idx) * solventMobility(cell_idx) / total_mobility;
+                const auto mob_ratio = non_zero_total_mobility
+                                        ? solventMobility(cell_idx) / total_mobility
+                                        : small_value / total_invB;
+                perfRates[perf * well_.numComponents() + Indices::contiSolventEqIdx] =
+                        well_tw_fraction * solventInverseFormationVolumeFactor(cell_idx) * mob_ratio;
             }
         }
     }
