@@ -1,6 +1,6 @@
 /*
   Copyright 2022 SINTEF Digital, Mathematics and Cybernetics.
-
+  Copyright 2023 Inria
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -32,10 +32,19 @@
 namespace Opm::DamarisOutput
 {
  // Initialize an XML file
- std::string initDamarisXmlFile();
- // Initialize Damaris by filling in th XML file and stroring it in the chosed directory
+ std::string initDamarisTemplateXmlFile();
+ 
+ // Initialize Damaris by filling in th XML file and storing it in the chosen directory
  void initializeDamaris(MPI_Comm comm, int mpiRank, std::string OutputDir, bool enableDamarisOutputCollective);
- // Setup Damaris Parameters for writing e.g., grid size and communicator to output "PRESSURE" field
+ 
+/** 
+* Set up Damaris Parameters for writing e.g., grid size and communicator to output "PRESSURE" field
+* This function is used to set the size of the local arrays and to compute the offsets into a
+* global view of the variable for use by HDF5 collective writing mode and for defining distributed 
+* arrays in Dask. 
+* N.B. As we are to use the HDF5 select-file attribute, the offsets are only used to write the 
+*      'select-file' data i.e. GLOBAL_CELL_INDEX
+*/
  void setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local_grid);
 
 } // namespace Opm::DamarisOutput

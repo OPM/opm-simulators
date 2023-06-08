@@ -435,6 +435,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/ParallelFileMerger.hpp
   opm/simulators/utils/DeferredLoggingErrorHelpers.hpp
   opm/simulators/utils/DeferredLogger.hpp
+  opm/simulators/utils/GridDataOutput.hpp
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
   opm/simulators/utils/ParallelEclipseState.hpp

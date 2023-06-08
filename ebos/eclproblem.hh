@@ -792,8 +792,10 @@ public:
 
         enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
 
-        enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
-
+        enableEclOutput_     = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
+#ifdef HAVE_DAMARIS        
+        enableDamarisOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput) ;
+#endif
         if constexpr (enableExperiments)
             enableAquifers_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableAquifers);
         else
@@ -1212,6 +1214,13 @@ public:
         if (enableEclOutput_){
             eclWriter_->writeOutput(isSubStep);
         }
+        
+#ifdef HAVE_DAMARIS
+        if (enableDamarisOutput_) {
+            eclWriter_->writeDamarisOutput(isSubStep);
+        }
+#endif 
+
     }
 
     void finalizeOutput() {
@@ -3082,6 +3091,10 @@ private:
     EclAquiferModel aquiferModel_;
 
     bool enableEclOutput_;
+#ifdef HAVE_DAMARIS
+    bool enableDamarisOutput_ = false ;
+#endif 
+    
     std::unique_ptr<EclWriterType> eclWriter_;
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
