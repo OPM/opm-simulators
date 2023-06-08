@@ -222,8 +222,42 @@ public:
             succeeded = 1;
         }
         catch (...) {
-            std::cout << "Newton update threw an exception on rank "
-                      << comm.rank() << "\n";
+            succeeded = 0;
+        }
+        succeeded = comm.min(succeeded);
+
+        if (!succeeded)
+            throw NumericalProblem("A process did not succeed in adapting the primary variables");
+
+        numPriVarsSwitched_ = comm.sum(numPriVarsSwitched_);
+    }
+
+    template <class DofIndices>
+    void update_(SolutionVector& nextSolution,
+                 const SolutionVector& currentSolution,
+                 const GlobalEqVector& solutionUpdate,
+                 const GlobalEqVector& currentResidual,
+                 const DofIndices& dofIndices)
+    {
+        const auto& comm = this->simulator_.gridView().comm();
+
+        int succeeded;
+        try {
+            auto zero = solutionUpdate[0];
+            zero = 0.0;
+            for (auto dofIdx : dofIndices) {
+                if (solutionUpdate[dofIdx] == zero) {
+                    continue;
+                }
+                updatePrimaryVariables_(dofIdx,
+                                        nextSolution[dofIdx],
+                                        currentSolution[dofIdx],
+                                        solutionUpdate[dofIdx],
+                                        currentResidual[dofIdx]);
+            }
+            succeeded = 1;
+        }
+        catch (...) {
             succeeded = 0;
         }
         succeeded = comm.min(succeeded);
@@ -326,15 +360,14 @@ protected:
                         delta = currentValue[Indices::compositionSwitchIdx];
                 }
             }
-            else if (enableSolvent && pvIdx == Indices::solventSaturationIdx)
+            else if (enableSolvent && pvIdx == Indices::solventSaturationIdx) {
                 // solvent saturation updates are also subject to the Appleyard chop
                 delta *= satAlpha;
+            }
             else if (enableExtbo && pvIdx == Indices::zFractionIdx) {
                 // z fraction updates are also subject to the Appleyard chop
-                if (delta > currentValue[Indices::zFractionIdx])
-                        delta = currentValue[Indices::zFractionIdx];
-                if (delta < currentValue[Indices::zFractionIdx]-1.0)
-                        delta = currentValue[Indices::zFractionIdx]-1.0;
+                const auto& curr = currentValue[Indices::zFractionIdx]; // or currentValue[pvIdx] given the block condition
+                delta = std::clamp(delta, curr - 1.0, curr);
             }
             else if (enablePolymerWeight && pvIdx == Indices::polymerMoleWeightIdx) {
                 const double sign = delta >= 0. ? 1. : -1.;
