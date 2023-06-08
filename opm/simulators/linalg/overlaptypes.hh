@@ -29,11 +29,11 @@
 #ifndef EWOMS_OVERLAP_TYPES_HH
 #define EWOMS_OVERLAP_TYPES_HH
 
-#include <set>
-#include <list>
-#include <vector>
-#include <map>
 #include <cstddef>
+#include <list>
+#include <map>
+#include <set>
+#include <vector>
 
 namespace Opm {
 namespace Linear {

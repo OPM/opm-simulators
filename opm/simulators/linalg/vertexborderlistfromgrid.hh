@@ -32,12 +32,7 @@
 
 #include <dune/grid/common/datahandleif.hh>
 #include <dune/grid/common/gridenums.hh>
-#include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/scalarproducts.hh>
-#include <dune/istl/operators.hh>
 #include <dune/common/version.hh>
-
-#include <algorithm>
 
 namespace Opm {
 namespace Linear {
