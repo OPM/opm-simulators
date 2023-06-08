@@ -79,6 +79,11 @@ function(add_test_compareECLFiles)
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${TEST_ARGS})
+  set_tests_properties(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} PROPERTIES
+                        DIRNAME ${PARAM_DIR}
+                        FILENAME ${PARAM_FILENAME}
+                        SIMULATOR ${PARAM_SIMULATOR}
+                        TESTNAME ${PARAM_CASENAME})
 endfunction()
 
 ###########################################################################
