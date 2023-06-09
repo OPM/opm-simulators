@@ -231,24 +231,44 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         }
 
         /// Construct a system solver.
-        /// \param[in] parallelInformation In the case of a parallel run
-        ///                                with dune-istl the information about the parallelization.
+        /// \param[in] simulator   The opm-models simulator object
+        /// \param[in] parameters  Explicit parameters for solver setup, do not
+        ///                        read them from command line parameters.
+        ISTLSolverEbos(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
+            : simulator_(simulator),
+              iterations_( 0 ),
+              calls_( 0 ),
+              converged_(false),
+              matrix_(nullptr),
+              parameters_(parameters)
+        {
+            initialize();
+        }
+
+        /// Construct a system solver.
+        /// \param[in] simulator   The opm-models simulator object
         explicit ISTLSolverEbos(const Simulator& simulator)
             : simulator_(simulator),
               iterations_( 0 ),
               calls_( 0 ),
               converged_(false),
-              matrix_()
+              matrix_(nullptr)
+        {
+            parameters_.template init<TypeTag>(simulator_.vanguard().eclState().getSimulationConfig().useCPR());
+            initialize();
+        }
+
+        void initialize()
         {
             OPM_TIMEBLOCK(IstlSolverEbos);
-            const bool on_io_rank = (simulator.gridView().comm().rank() == 0);
-#if HAVE_MPI
-            comm_.reset( new CommunicationType( simulator_.vanguard().grid().comm() ) );
-#endif
-            parameters_.template init<TypeTag>(simulator_.vanguard().eclState().getSimulationConfig().useCPR());
             prm_ = setupPropertyTree(parameters_,
                                      EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
                                      EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverReduction));
+
+            const bool on_io_rank = (simulator_.gridView().comm().rank() == 0);
+#if HAVE_MPI
+            comm_.reset( new CommunicationType( simulator_.vanguard().grid().comm() ) );
+#endif
 
 #if COMPILE_BDA_BRIDGE
             {
@@ -300,7 +320,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             flexibleSolver_.interiorCellNum_ = detail::numMatrixRowsToUseInSolver(simulator_.vanguard().grid(), true);
 
             // Print parameters to PRT/DBG logs.
-            if (on_io_rank) {
+            if (on_io_rank && parameters_.linear_solver_print_json_definition_) {
                 std::ostringstream os;
                 os << "Property tree for linear solver:\n";
                 prm_.write_json(os, true);
@@ -315,11 +335,16 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         void prepare(const SparseMatrixAdapter& M, Vector& b)
         {
+            prepare(M.istlMatrix(), b);
+        }
+
+        void prepare(const Matrix& M, Vector& b)
+        {
             OPM_TIMEBLOCK(istlSolverEbosPrepare);        
-            static bool firstcall = true;
+            const bool firstcall = (matrix_ == nullptr);
 #if HAVE_MPI
             if (firstcall) {
-                const size_t size = M.istlMatrix().N();
+                const size_t size = M.N();
                 detail::copyParValues(parallelInformation_, size, *comm_);
             }
 #endif
@@ -329,7 +354,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 // ebos will not change the matrix object. Hence simply store a pointer
                 // to the original one with a deleter that does nothing.
                 // Outch! We need to be able to scale the linear system! Hence const_cast
-                matrix_ = const_cast<Matrix*>(&M.istlMatrix());
+                matrix_ = const_cast<Matrix*>(&M);
 
                 useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
                 // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
@@ -343,7 +368,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 #endif
             } else {
                 // Pointers should not change
-                if ( &(M.istlMatrix()) != matrix_ ) {
+                if ( &M != matrix_ ) {
                         OPM_THROW(std::logic_error,
                                   "Matrix objects are expected to be reused when reassembling!");
                 }
@@ -360,8 +385,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 #else
             prepareFlexibleSolver();
 #endif
-
-            firstcall = false;
         }
 
 
