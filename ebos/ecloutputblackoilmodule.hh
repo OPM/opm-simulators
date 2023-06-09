@@ -138,7 +138,6 @@ class EclOutputBlackOilModule : public EclGenericOutputBlackoilModule<GetPropTyp
 public:
     template <class CollectDataToIORankType>
     EclOutputBlackOilModule(const Simulator& simulator,
-                            const std::vector<std::size_t>& wbp_index_list,
                             const CollectDataToIORankType& collectToIORank)
         : BaseType(simulator.vanguard().eclState(),
                    simulator.vanguard().schedule(),
@@ -159,22 +158,17 @@ public:
             this->createLocalRegion_(region_pair.second);
         }
 
-        auto isCartIdxOnThisRank = [&collectToIORank](int idx)
-                                   {
-                                       return collectToIORank.isCartIdxOnThisRank(idx);
-                                   };
+        auto isCartIdxOnThisRank = [&collectToIORank](const int idx) {
+            return collectToIORank.isCartIdxOnThisRank(idx);
+        };
 
         this->setupBlockData(isCartIdxOnThisRank);
 
-        for (const auto& global_index : wbp_index_list) {
-            if (collectToIORank.isCartIdxOnThisRank(global_index - 1)) {
-                this->wbpData_.emplace(global_index, 0.0);
-            }
-        }
+        this->forceDisableFipOutput_ =
+            EWOMS_GET_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput);
 
-        this->forceDisableFipOutput_ = EWOMS_GET_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput);
-
-        this->forceDisableFipresvOutput_ = EWOMS_GET_PARAM(TypeTag, bool, ForceDisableResvFluidInPlaceOutput);
+        this->forceDisableFipresvOutput_ =
+            EWOMS_GET_PARAM(TypeTag, bool, ForceDisableResvFluidInPlaceOutput);
     }
 
     /*!
@@ -199,25 +193,32 @@ public:
      *        write to ECL output files
      */
     void
-    allocBuffers(unsigned bufferSize, unsigned reportStepNum, const bool substep, const bool log, const bool isRestart)
+    allocBuffers(const unsigned bufferSize,
+                 const unsigned reportStepNum,
+                 const bool     substep,
+                 const bool     log,
+                 const bool     isRestart)
     {
-        if (!std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value)
+        if (! std::is_same<Discretization, EcfvDiscretization<TypeTag>>::value) {
             return;
+        }
+
+        const auto& problem = this->simulator_.problem();
 
         this->doAllocBuffers(bufferSize,
                              reportStepNum,
                              substep,
                              log,
                              isRestart,
-                             simulator_.problem().vapparsActive(std::max(simulator_.episodeIndex(), 0)),
-                             simulator_.problem().materialLawManager()->enableHysteresis(),
-                             simulator_.problem().tracerModel().numTracers(),
-                             simulator_.problem().eclWriter()->getOutputNnc().size());
+                             problem.vapparsActive(std::max(simulator_.episodeIndex(), 0)),
+                             problem.materialLawManager()->enableHysteresis(),
+                             problem.tracerModel().numTracers(),
+                             problem.eclWriter()->getOutputNnc().size());
     }
 
     /*!
-     * \brief Modify the internal buffers according to the intensive quanties relevant
-     *        for an element
+     * \brief Modify the internal buffers according to the intensive
+     *        quanties relevant for an element
      */
     void processElement(const ElementContext& elemCtx)
     {
@@ -550,7 +551,6 @@ public:
                         = FluidSystem::viscosity(fsInitial, gasPhaseIdx, intQuants.pvtRegionIndex());
             }
 
-
             // Adding Well RFT data
             const auto cartesianIdx = elemCtx.simulator().vanguard().cartesianIndex(globalDofIdx);
             if (this->oilConnectionPressures_.count(cartesianIdx) > 0) {
@@ -562,25 +562,17 @@ public:
             if (this->gasConnectionSaturations_.count(cartesianIdx) > 0) {
                 this->gasConnectionSaturations_[cartesianIdx] = getValue(fs.saturation(gasPhaseIdx));
             }
-            if (this->wbpData_.count(cartesianIdx) > 0) {
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(oilPhaseIdx));
-                } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(gasPhaseIdx));
-                } else if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
-                    this->wbpData_[cartesianIdx] = getValue(fs.pressure(waterPhaseIdx));
-                }
-            }
 
             // tracers
             const auto& tracerModel = simulator_.problem().tracerModel();
-            if (!this->tracerConcentrations_.empty()) {
-                for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); tracerIdx++) {
-                    if (this->tracerConcentrations_[tracerIdx].empty())
+            if (! this->tracerConcentrations_.empty()) {
+                for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); ++tracerIdx) {
+                    if (this->tracerConcentrations_[tracerIdx].empty()) {
                         continue;
+                    }
 
-                    this->tracerConcentrations_[tracerIdx][globalDofIdx]
-                        = tracerModel.tracerConcentration(tracerIdx, globalDofIdx);
+                    this->tracerConcentrations_[tracerIdx][globalDofIdx] =
+                        tracerModel.tracerConcentration(tracerIdx, globalDofIdx);
                 }
             }
         }

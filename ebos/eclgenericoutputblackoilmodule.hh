@@ -234,11 +234,6 @@ public:
         return this->interRegionFlows_.wantInterRegflowSummary();
     }
 
-    const std::map<std::size_t, double>& getWBPData() const
-    {
-        return this->wbpData_;
-    }
-
     const std::map<std::pair<std::string, int>, double>& getBlockData()
     {
         return blockData_;
@@ -552,7 +547,6 @@ protected:
     std::map<size_t, Scalar> waterConnectionSaturations_;
     std::map<size_t, Scalar> gasConnectionSaturations_;
     std::map<std::pair<std::string, int>, double> blockData_;
-    std::map<std::size_t , double> wbpData_;
 
     std::optional<Inplace> initialInplace_;
     bool local_data_valid_;

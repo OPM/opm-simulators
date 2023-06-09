@@ -25,15 +25,21 @@
 
 #include <opm/output/data/Aquifer.hpp>
 #include <opm/output/data/Cells.hpp>
+#include <opm/output/data/Groups.hpp>
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
-#include <opm/output/data/Groups.hpp>
+
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+
 #include <opm/grid/common/p2pcommunicator.hh>
 
 #include <ebos/eclinterregflows.hh>
 
+#include <array>
 #include <map>
+#include <set>
+#include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -67,19 +73,16 @@ public:
                         const std::set<std::string>& fipRegionsInterregFlow = {});
 
     // gather solution to rank 0 for EclipseWriter
-    void collect(const data::Solution& localCellData,
+    void collect(const data::Solution&                                localCellData,
                  const std::map<std::pair<std::string, int>, double>& localBlockData,
-                 const std::map<std::size_t, double>& localWBPData,
-                 const data::Wells& localWellData,
-                 const data::GroupAndNetworkValues& localGroupAndNetworkData,
-                 const data::Aquifers& localAquiferData,
-                 const WellTestState& localWellTestState,
-                 const EclInterRegFlowMap& interRegFlows,
+                 const data::Wells&                                   localWellData,
+                 const data::WellBlockAveragePressures&               localWBPData,
+                 const data::GroupAndNetworkValues&                   localGroupAndNetworkData,
+                 const data::Aquifers&                                localAquiferData,
+                 const WellTestState&                                 localWellTestState,
+                 const EclInterRegFlowMap&                            interRegFlows,
                  const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFlowsn,
                  const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFloresn);
-
-    const std::map<std::size_t, double>& globalWBPData() const
-    { return this->globalWBPData_; }
 
     const std::map<std::pair<std::string, int>, double>& globalBlockData() const
     { return globalBlockData_; }
@@ -90,14 +93,17 @@ public:
     const data::Wells& globalWellData() const
     { return globalWellData_; }
 
-    const WellTestState& globalWellTestState() const
-    { return this->globalWellTestState_; }
+    const data::WellBlockAveragePressures& globalWBPData() const
+    { return this->globalWBPData_; }
 
     const data::GroupAndNetworkValues& globalGroupAndNetworkData() const
     { return globalGroupAndNetworkData_; }
 
     const data::Aquifers& globalAquiferData() const
     { return globalAquiferData_; }
+
+    const WellTestState& globalWellTestState() const
+    { return this->globalWellTestState_; }
 
     EclInterRegFlowMap& globalInterRegFlows()
     { return this->globalInterRegFlows_; }
@@ -144,8 +150,8 @@ protected:
     std::vector<int> globalRanks_;
     data::Solution globalCellData_;
     std::map<std::pair<std::string, int>, double> globalBlockData_;
-    std::map<std::size_t, double> globalWBPData_;
     data::Wells globalWellData_;
+    data::WellBlockAveragePressures globalWBPData_;
     data::GroupAndNetworkValues globalGroupAndNetworkData_;
     data::Aquifers globalAquiferData_;
     WellTestState globalWellTestState_;

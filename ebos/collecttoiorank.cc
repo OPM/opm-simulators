@@ -531,55 +531,48 @@ public:
 
 class PackUnPackWBPData : public P2PCommunicatorType::DataHandleInterface
 {
-    const std::map<std::size_t, double>& localWBPData_;
-    std::map<std::size_t, double>& globalWBPValues_;
+    const data::WellBlockAveragePressures& localWBPData_;
+    data::WellBlockAveragePressures& globalWBPValues_;
 
 public:
-    PackUnPackWBPData(const std::map<std::size_t, double>& localWBPData,
-                      std::map<std::size_t, double>& globalWBPValues,
-                      bool isIORank)
-        : localWBPData_(localWBPData)
+    PackUnPackWBPData(const data::WellBlockAveragePressures& localWBPData,
+                      data::WellBlockAveragePressures&       globalWBPValues,
+                      const bool                             isIORank)
+        : localWBPData_   (localWBPData)
         , globalWBPValues_(globalWBPValues)
     {
-        if (isIORank) {
-            MessageBufferType buffer;
-            pack(0, buffer);
-
-            // pass a dummyLink to satisfy virtual class
-            int dummyLink = -1;
-            unpack(dummyLink, buffer);
+        if (! isIORank) {
+            return;
         }
+
+        MessageBufferType buffer;
+        pack(0, buffer);
+
+        // Pass a dummy link to satisfy base class API requirement
+        const int dummyLink = -1;
+        unpack(dummyLink, buffer);
     }
 
-    // pack all data associated with link
+    // Pack all data associated with link
     void pack(int link, MessageBufferType& buffer)
     {
-        // we should only get one link
-        if (link != 0)
-            throw std::logic_error("link in method pack is not 0 as expected");
-
-        // write all block data
-        unsigned int size = localWBPData_.size();
-        buffer.write(size);
-        for (const auto& [global_index, wbp_value] : localWBPData_) {
-            buffer.write(global_index);
-            buffer.write(wbp_value);
+        // We should only get one link
+        if (link != 0) {
+            throw std::logic_error {
+                "link (" + std::to_string(link) +
+                ") in method pack() is not 0 as expected"
+            };
         }
+
+        // Write all local, per-well, WBP data
+        this->localWBPData_.write(buffer);
     }
 
-    // unpack all data associated with link
-    void unpack(int /*link*/, MessageBufferType& buffer)
+    // Unpack all data associated with link
+    void unpack([[maybe_unused]] const int link,
+                MessageBufferType&         buffer)
     {
-        // read all block data
-        unsigned int size = 0;
-        buffer.read(size);
-        for (size_t i = 0; i < size; ++i) {
-            std::size_t idx;
-            double data;
-            buffer.read(idx);
-            buffer.read(data);
-            globalWBPValues_[idx] = data;
-        }
+        this->globalWBPValues_.read(buffer);
     }
 };
 
@@ -984,21 +977,21 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
 
 template <class Grid, class EquilGrid, class GridView>
 void CollectDataToIORank<Grid,EquilGrid,GridView>::
-collect(const data::Solution& localCellData,
+collect(const data::Solution&                                localCellData,
         const std::map<std::pair<std::string, int>, double>& localBlockData,
-        const std::map<std::size_t, double>& localWBPData,
-        const data::Wells& localWellData,
-        const data::GroupAndNetworkValues& localGroupAndNetworkData,
-        const data::Aquifers& localAquiferData,
-        const WellTestState& localWellTestState,
-        const EclInterRegFlowMap& localInterRegFlows,
+        const data::Wells&                                   localWellData,
+        const data::WellBlockAveragePressures&               localWBPData,
+        const data::GroupAndNetworkValues&                   localGroupAndNetworkData,
+        const data::Aquifers&                                localAquiferData,
+        const WellTestState&                                 localWellTestState,
+        const EclInterRegFlowMap&                            localInterRegFlows,
         const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFlowsn,
         const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFloresn)
 {
     globalCellData_ = {};
     globalBlockData_.clear();
-    globalWBPData_.clear();
     globalWellData_.clear();
+    globalWBPData_.values.clear();
     globalGroupAndNetworkData_.clear();
     globalAquiferData_.clear();
     globalWellTestState_.clear();
@@ -1055,8 +1048,8 @@ collect(const data::Solution& localCellData,
 
     PackUnPackWBPData packUnpackWBPData {
         localWBPData,
-                this->globalWBPData_,
-                this->isIORank()
+        this->globalWBPData_,
+        this->isIORank()
     };
 
     PackUnPackAquiferData packUnpackAquiferData {
@@ -1110,28 +1103,37 @@ template <class Grid, class EquilGrid, class GridView>
 int CollectDataToIORank<Grid,EquilGrid,GridView>::
 localIdxToGlobalIdx(unsigned localIdx) const
 {
-    if (!isParallel())
+    if (!isParallel()) {
         return localIdx;
+    }
 
-    if (localIdxToGlobalIdx_.empty())
+    if (this->localIdxToGlobalIdx_.empty()) {
         throw std::logic_error("index map is not created on this rank");
+    }
 
-    if (localIdx > localIdxToGlobalIdx_.size())
+    if (localIdx > this->localIdxToGlobalIdx_.size()) {
         throw std::logic_error("local index is outside map range");
+    }
 
-    return localIdxToGlobalIdx_[localIdx];
+    return this->localIdxToGlobalIdx_[localIdx];
 }
 
 template <class Grid, class EquilGrid, class GridView>
 bool CollectDataToIORank<Grid,EquilGrid,GridView>::
 isCartIdxOnThisRank(int cartIdx) const
 {
-    if (!isParallel())
+    if (! this->isParallel()) {
         return true;
+    }
 
-    assert(!needsReordering);
-    auto candidate = std::lower_bound(sortedCartesianIdx_.begin(), sortedCartesianIdx_.end(), cartIdx);
-    return (candidate != sortedCartesianIdx_.end() && *candidate == cartIdx);
+    assert (! needsReordering);
+
+    auto candidate = std::lower_bound(this->sortedCartesianIdx_.begin(),
+                                      this->sortedCartesianIdx_.end(),
+                                      cartIdx);
+
+    return (candidate != sortedCartesianIdx_.end())
+        && (*candidate == cartIdx);
 }
 
 

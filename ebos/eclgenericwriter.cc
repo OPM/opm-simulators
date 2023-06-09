@@ -22,12 +22,14 @@
 */
 
 #include <config.h>
+
 #include <ebos/eclgenericwriter.hh>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 #include <opm/grid/polyhedralgrid.hh>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
+
 #if HAVE_DUNE_ALUGRID
 #include "eclalugridvanguard.hh"
 #include <dune/alugrid/grid.hh>
@@ -40,13 +42,14 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
-#include <opm/input/eclipse/Schedule/Well/PAvgCalculatorCollection.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellMatcher.hpp>
+
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
@@ -65,7 +68,12 @@
 #include <mpi.h>
 #endif
 
+#include <algorithm>
 #include <array>
+#include <cassert>
+#include <functional>
+#include <map>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -169,22 +177,22 @@ struct EclWriteTasklet : public Opm::TaskletInterface
         , reportStepNum_(reportStepNum)
         , isSubStep_(isSubStep)
         , secondsElapsed_(secondsElapsed)
-        , restartValue_(restartValue)
+        , restartValue_(std::move(restartValue))
         , writeDoublePrecision_(writeDoublePrecision)
-    { }
+    {}
 
     // callback to eclIO serial writeTimeStep method
     void run()
     {
-        eclIO_.writeTimeStep(actionState_,
-                             wtestState_,
-                             summaryState_,
-                             udqState_,
-                             reportStepNum_,
-                             isSubStep_,
-                             secondsElapsed_,
-                             restartValue_,
-                             writeDoublePrecision_);
+        this->eclIO_.writeTimeStep(this->actionState_,
+                                   this->wtestState_,
+                                   this->summaryState_,
+                                   this->udqState_,
+                                   this->reportStepNum_,
+                                   this->isSubStep_,
+                                   this->secondsElapsed_,
+                                   std::move(this->restartValue_),
+                                   this->writeDoublePrecision_);
     }
 };
 
@@ -210,38 +218,30 @@ EclGenericWriter(const Schedule& schedule,
                        cartMapper,
                        equilCartMapper,
                        summaryConfig.fip_regions_interreg_flow())
-    , grid_(grid)
-    , gridView_(gridView)
-    , schedule_(schedule)
-    , eclState_(eclState)
-    , summaryConfig_(summaryConfig)
-    , cartMapper_(cartMapper)
+    , grid_           (grid)
+    , gridView_       (gridView)
+    , schedule_       (schedule)
+    , eclState_       (eclState)
+    , summaryConfig_  (summaryConfig)
+    , cartMapper_     (cartMapper)
     , equilCartMapper_(equilCartMapper)
-    , equilGrid_(equilGrid)
+    , equilGrid_      (equilGrid)
 {
-    if (collectToIORank_.isIORank()) {
-        eclIO_.reset(new EclipseIO(eclState_,
-                                   UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
-                                   schedule_,
-                                   summaryConfig_, "", enableEsmry));
+    if (this->collectToIORank_.isIORank()) {
+        this->eclIO_ = std::make_unique<EclipseIO>
+            (this->eclState_,
+             UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
+             this->schedule_, this->summaryConfig_, "", enableEsmry);
+    }
 
-        const auto& wbp_calculators = eclIO_->summary().wbp_calculators( schedule.size() - 1 );
-        wbp_index_list_ = wbp_calculators.index_list();
-    }
-    if (collectToIORank_.isParallel()) {
-        const auto& comm = grid_.comm();
-        unsigned long size = wbp_index_list_.size();
-        comm.broadcast(&size, 1, collectToIORank_.ioRank);
-        if (!collectToIORank_.isIORank())
-            wbp_index_list_.resize( size );
-        comm.broadcast(wbp_index_list_.data(), size, collectToIORank_.ioRank);
-    }
     // create output thread if enabled and rank is I/O rank
     // async output is enabled by default if pthread are enabled
     int numWorkerThreads = 0;
-    if (enableAsyncOutput && collectToIORank_.isIORank())
+    if (enableAsyncOutput && collectToIORank_.isIORank()) {
         numWorkerThreads = 1;
-    taskletRunner_.reset(new TaskletRunner(numWorkerThreads));
+    }
+
+    this->taskletRunner_.reset(new TaskletRunner(numWorkerThreads));
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
@@ -257,12 +257,18 @@ void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 writeInit(const std::function<unsigned int(unsigned int)>& map)
 {
     if (collectToIORank_.isIORank()) {
-        std::map<std::string, std::vector<int> > integerVectors;
-        if (collectToIORank_.isParallel())
+        std::map<std::string, std::vector<int>> integerVectors;
+        if (collectToIORank_.isParallel()) {
             integerVectors.emplace("MPI_RANK", collectToIORank_.globalRanks());
+        }
+
         auto cartMap = cartesianToCompressed(equilGrid_->size(0), UgGridHelpers::globalCell(*equilGrid_));
-        eclIO_->writeInitial(computeTrans_(cartMap, map), integerVectors, exportNncStructure_(cartMap, map));
+
+        eclIO_->writeInitial(computeTrans_(cartMap, map),
+                             integerVectors,
+                             exportNncStructure_(cartMap, map));
     }
+
 #if HAVE_MPI
     if (collectToIORank_.isParallel()) {
         const auto& comm = grid_.comm();
@@ -450,8 +456,9 @@ doWriteOutput(const int                     reportStepNum,
     const bool needsReordering = this->collectToIORank_.doesNeedReordering();
 
     RestartValue restartValue {
-        (isParallel || needsReordering) ? this->collectToIORank_.globalCellData()
-                   : std::move(localCellData),
+        (isParallel || needsReordering)
+        ? this->collectToIORank_.globalCellData()
+        : std::move(localCellData),
 
         isParallel ? this->collectToIORank_.globalWellData()
                    : std::move(localWellData),
@@ -515,31 +522,31 @@ doWriteOutput(const int                     reportStepNum,
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-evalSummary(const int reportStepNum,
-            const Scalar curTime,
-            const std::map<std::size_t, double>& wbpData,
-            const data::Wells& localWellData,
-            const data::GroupAndNetworkValues& localGroupAndNetworkData,
-            const std::map<int,data::AquiferData>& localAquiferData,
+evalSummary(const int                                            reportStepNum,
+            const Scalar                                         curTime,
+            const data::Wells&                                   localWellData,
+            const data::WellBlockAveragePressures&               localWBPData,
+            const data::GroupAndNetworkValues&                   localGroupAndNetworkData,
+            const std::map<int,data::AquiferData>&               localAquiferData,
             const std::map<std::pair<std::string, int>, double>& blockData,
-            const std::map<std::string, double>& miscSummaryData,
-            const std::map<std::string, std::vector<double>>& regionData,
-            const Inplace& inplace,
-            const Inplace& initialInPlace,
-            const EclInterRegFlowMap& interRegionFlowMap,
-            SummaryState& summaryState,
-            UDQState& udqState)
+            const std::map<std::string, double>&                 miscSummaryData,
+            const std::map<std::string, std::vector<double>>&    regionData,
+            const Inplace&                                       inplace,
+            const Inplace&                                       initialInPlace,
+            const EclInterRegFlowMap&                            interRegFlows,
+            SummaryState&                                        summaryState,
+            UDQState&                                            udqState)
 {
     if (collectToIORank_.isIORank()) {
         const auto& summary = eclIO_->summary();
-        auto wbp_calculators = summary.wbp_calculators(reportStepNum);
-
-        for (const auto& [global_index, pressure] : wbpData)
-            wbp_calculators.add_pressure( global_index, pressure );
 
         const auto& wellData = this->collectToIORank_.isParallel()
             ? this->collectToIORank_.globalWellData()
             : localWellData;
+
+        const auto& wbpData = this->collectToIORank_.isParallel()
+            ? this->collectToIORank_.globalWBPData()
+            : localWBPData;
 
         const auto& groupAndNetworkData = this->collectToIORank_.isParallel()
             ? this->collectToIORank_.globalGroupAndNetworkData()
@@ -553,24 +560,29 @@ evalSummary(const int reportStepNum,
                      reportStepNum,
                      curTime,
                      wellData,
+                     wbpData,
                      groupAndNetworkData,
                      miscSummaryData,
                      initialInPlace,
                      inplace,
-                     wbp_calculators,
                      regionData,
                      blockData,
                      aquiferData,
-                     getInterRegFlowsAsMap(interRegionFlowMap));
+                     getInterRegFlowsAsMap(interRegFlows));
 
         // Off-by-one-fun: The reportStepNum argument corresponds to the
         // report step these results will be written to, whereas the
         // argument to UDQ function evaluation corresponds to the report
         // step we are currently on.
-        auto udq_step = reportStepNum - 1;
-        const auto& udq_config = schedule_.getUDQConfig(udq_step);
-        udq_config.eval( udq_step, schedule_.wellMatcher(udq_step), summaryState, udqState);
+        const auto udq_step = reportStepNum - 1;
+
+        this->schedule_.getUDQConfig(udq_step)
+            .eval(udq_step,
+                  this->schedule_.wellMatcher(udq_step),
+                  summaryState,
+                  udqState);
     }
+
 #if HAVE_MPI
     if (collectToIORank_.isParallel()) {
         EclMpiSerializer ser(grid_.comm());
