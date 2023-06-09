@@ -88,6 +88,8 @@ private:
 
     void initSolver(const Opm::PropertyTree& prm, const bool is_iorank);
 
+    void recreateDirectSolver();
+
     // Main initialization routine.
     // Call with Comm == Dune::Amg::SequentialInformation to get a serial solver.
     template <class Comm>
@@ -101,6 +103,7 @@ private:
     std::shared_ptr<AbstractPrecondType> preconditioner_;
     std::shared_ptr<AbstractScalarProductType> scalarproduct_;
     std::shared_ptr<AbstractSolverType> linsolver_;
+    bool direct_solver_ = false;
 };
 
 } // namespace Dune
