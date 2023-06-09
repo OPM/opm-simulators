@@ -541,6 +541,12 @@ protected:
     ScalarBuffer stressXY_;
     ScalarBuffer stressXZ_;
     ScalarBuffer stressYZ_;
+    ScalarBuffer delstressXX_;
+    ScalarBuffer delstressYY_;
+    ScalarBuffer delstressZZ_;
+    ScalarBuffer delstressXY_;
+    ScalarBuffer delstressXZ_;
+    ScalarBuffer delstressYZ_;
     ScalarBuffer strainXX_;
     ScalarBuffer strainYY_;
     ScalarBuffer strainZZ_;

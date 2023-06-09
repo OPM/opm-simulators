@@ -829,6 +829,12 @@ assignToSolution(data::Solution& sol)
         {"STRESSXY", UnitSystem::measure::pressure,  stressXY_},
         {"STRESSXZ", UnitSystem::measure::pressure,  stressXZ_},
         {"STRESSYZ", UnitSystem::measure::pressure,  stressYZ_},
+        {"DELSTRXX", UnitSystem::measure::pressure,  delstressXX_},
+        {"DELSTRYY", UnitSystem::measure::pressure,  delstressYY_},
+        {"DELSTRZZ", UnitSystem::measure::pressure,  delstressZZ_},
+        {"DELSTRXY", UnitSystem::measure::pressure,  delstressXY_},
+        {"DELSTRXZ", UnitSystem::measure::pressure,  delstressXZ_},
+        {"DELSTRYZ", UnitSystem::measure::pressure,  delstressYZ_},
         {"STRAINXX", UnitSystem::measure::identity,  strainXX_},
         {"STRAINYY", UnitSystem::measure::identity,  strainYY_},
         {"STRAINZZ", UnitSystem::measure::identity,  strainZZ_},
@@ -1202,6 +1208,21 @@ doAllocBuffers(unsigned bufferSize,
         rstKeywords["STRAINXY"] = 0;
         this->strainYZ_.resize(bufferSize,0.0);
         rstKeywords["STRAINYZ"] = 0;
+
+        this->delstressXX_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRXX"] = 0;
+        this->delstressYY_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRYY"] = 0;
+        this->delstressZZ_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRZZ"] = 0;
+        this->delstressXY_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRXY"] = 0;
+        this->delstressXZ_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRXZ"] = 0;
+        this->delstressXY_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRXY"] = 0;
+        this->delstressYZ_.resize(bufferSize,0.0);
+        rstKeywords["DELSTRYZ"] = 0;
     }
     
     // Allocate memory for temperature

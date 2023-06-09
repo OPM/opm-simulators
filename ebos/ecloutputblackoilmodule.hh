@@ -250,6 +250,15 @@ public:
                     this->strainXY_[globalDofIdx] = model.strain(globalDofIdx,5);
                     this->strainXZ_[globalDofIdx] = model.strain(globalDofIdx,4);
                     this->strainYZ_[globalDofIdx] = model.strain(globalDofIdx,3);
+
+
+                    this->delstressXX_[globalDofIdx] = model.delstress(globalDofIdx,0);
+                    this->delstressYY_[globalDofIdx] = model.delstress(globalDofIdx,1);
+                    this->delstressZZ_[globalDofIdx] = model.delstress(globalDofIdx,2);
+                    //voight notation
+                    this->delstressXY_[globalDofIdx] = model.delstress(globalDofIdx,5);
+                    this->delstressXZ_[globalDofIdx] = model.delstress(globalDofIdx,4);
+                    this->delstressYZ_[globalDofIdx] = model.delstress(globalDofIdx,3);
                 }
             }
         }
