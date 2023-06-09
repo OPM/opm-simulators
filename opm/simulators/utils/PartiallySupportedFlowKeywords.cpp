@@ -97,7 +97,7 @@ partiallySupported()
             "GCONPROD",
             {
                {2,{true, allow_values<std::string> {"NONE", "FLD", "ORAT", "WRAT", "GRAT", "LRAT", "RESV"}, "GCONPROD(TARGET): valid option should be NONE/FLD/ORAT/WRAT/GRAT/LRAT or RESV"}}, // CONTROL_MODE
-               {7,{true, allow_values<std::string> {"RATE"}, "GCONPROD(ACTION): Only RATE is supported"}}, 
+               {7,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTION): Only NONE and RATE is supported"}}, 
                {11,{true, allow_values<std::string> {"NONE"}, "GCONPROD(ACTWAT): water violation procedure not implemented, item should be defaulted"}}, // WATER_EXCEED_PROCEDURE
                {12,{true, allow_values<std::string> {"NONE"}, "GCONPROD(ACTGAS): gas violation procedure not implemented, item should be defaulted"}}, // GAS_EXCEED_PROCEDURE
                {13,{true, allow_values<std::string> {"NONE"}, "GCONPROD(ACTLIQ): liquid violation procedure not implemented, item should be defaulted"}}, // LIQUID_EXCEED_PROCEDURE
