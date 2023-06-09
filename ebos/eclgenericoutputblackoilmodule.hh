@@ -529,6 +529,9 @@ protected:
 
     //buffers for mechanical output
     ScalarBuffer mechPotentialForce_;
+    ScalarBuffer mechPotentialPressForce_;
+    ScalarBuffer mechPotentialTempForce_;
+    
     ScalarBuffer dispX_;
     ScalarBuffer dispY_;
     ScalarBuffer dispZ_;
@@ -538,6 +541,12 @@ protected:
     ScalarBuffer stressXY_;
     ScalarBuffer stressXZ_;
     ScalarBuffer stressYZ_;
+    ScalarBuffer strainXX_;
+    ScalarBuffer strainYY_;
+    ScalarBuffer strainZZ_;
+    ScalarBuffer strainXY_;
+    ScalarBuffer strainXZ_;
+    ScalarBuffer strainYZ_;
     
     std::array<ScalarBuffer, numPhases> saturation_;
     std::array<ScalarBuffer, numPhases> invB_;

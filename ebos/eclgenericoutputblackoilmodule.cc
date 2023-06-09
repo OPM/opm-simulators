@@ -818,15 +818,23 @@ assignToSolution(data::Solution& sol)
         {"TMULT_RC", UnitSystem::measure::identity,            rockCompTransMultiplier_},
         {"UREA",     UnitSystem::measure::density,             cUrea_},
         {"MECHPOTF", UnitSystem::measure::pressure,  mechPotentialForce_},
+        {"TEMPPOTF", UnitSystem::measure::pressure,  mechPotentialTempForce_},
+        {"PRESPOTF", UnitSystem::measure::pressure,  mechPotentialPressForce_},
         {"DISPX", UnitSystem::measure::length,  dispX_},
         {"DISPY", UnitSystem::measure::length,  dispY_},
         {"DISPZ", UnitSystem::measure::length,  dispZ_},
-        {"STRESSXX", UnitSystem::measure::length,  stressXX_},
-        {"STRESSYY", UnitSystem::measure::length,  stressYY_},
-        {"STRESSZZ", UnitSystem::measure::length,  stressZZ_},
-        {"STRESSXY", UnitSystem::measure::length,  stressXY_},
-        {"STRESSXZ", UnitSystem::measure::length,  stressXZ_},
-        {"STRESSYZ", UnitSystem::measure::length,  stressYZ_},
+        {"STRESSXX", UnitSystem::measure::pressure,  stressXX_},
+        {"STRESSYY", UnitSystem::measure::pressure,  stressYY_},
+        {"STRESSZZ", UnitSystem::measure::pressure,  stressZZ_},
+        {"STRESSXY", UnitSystem::measure::pressure,  stressXY_},
+        {"STRESSXZ", UnitSystem::measure::pressure,  stressXZ_},
+        {"STRESSYZ", UnitSystem::measure::pressure,  stressYZ_},
+        {"STRAINXX", UnitSystem::measure::identity,  strainXX_},
+        {"STRAINYY", UnitSystem::measure::identity,  strainYY_},
+        {"STRAINZZ", UnitSystem::measure::identity,  strainZZ_},
+        {"STRAINXY", UnitSystem::measure::identity,  strainXY_},
+        {"STRAINXZ", UnitSystem::measure::identity,  strainXZ_},
+        {"STRAINYZ", UnitSystem::measure::identity,  strainYZ_},
     };
 
     for (const auto& array : baseSolutionArrays) {
@@ -1153,6 +1161,12 @@ doAllocBuffers(unsigned bufferSize,
     if (enableMech_ && eclState_.runspec().mech()){
         this->mechPotentialForce_.resize(bufferSize,0.0);
         rstKeywords["MECHPOTF"] = 0;
+        this->mechPotentialTempForce_.resize(bufferSize,0.0);
+        rstKeywords["TEMPPOTF"] = 0;
+        this->mechPotentialPressForce_.resize(bufferSize,0.0);
+        rstKeywords["PRESPOTF"] = 0;
+
+        
         this->dispX_.resize(bufferSize,0.0);
         rstKeywords["DISPX"] = 0;
         this->dispY_.resize(bufferSize,0.0);
@@ -1173,6 +1187,21 @@ doAllocBuffers(unsigned bufferSize,
         rstKeywords["STRESSXY"] = 0;
         this->stressYZ_.resize(bufferSize,0.0);
         rstKeywords["STRESSYZ"] = 0;
+
+        this->strainXX_.resize(bufferSize,0.0);
+        rstKeywords["STRAINXX"] = 0;
+        this->strainYY_.resize(bufferSize,0.0);
+        rstKeywords["STRAINYY"] = 0;
+        this->strainZZ_.resize(bufferSize,0.0);
+        rstKeywords["STRAINZZ"] = 0;
+        this->strainXY_.resize(bufferSize,0.0);
+        rstKeywords["STRAINXY"] = 0;
+        this->strainXZ_.resize(bufferSize,0.0);
+        rstKeywords["STRAINXZ"] = 0;
+        this->strainXY_.resize(bufferSize,0.0);
+        rstKeywords["STRAINXY"] = 0;
+        this->strainYZ_.resize(bufferSize,0.0);
+        rstKeywords["STRAINYZ"] = 0;
     }
     
     // Allocate memory for temperature

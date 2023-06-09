@@ -229,6 +229,9 @@ public:
                 if(!this->mechPotentialForce_.empty()){
                     //assume all mechancal tings should be written
                     this->mechPotentialForce_[globalDofIdx] = model.mechPotentialForce(globalDofIdx);
+                    this->mechPotentialPressForce_[globalDofIdx] = model.mechPotentialPressForce(globalDofIdx);
+                    this->mechPotentialTempForce_[globalDofIdx] = model.mechPotentialTempForce(globalDofIdx);
+                    
                     this->dispX_[globalDofIdx] = model.disp(globalDofIdx,0);
                     this->dispY_[globalDofIdx] = model.disp(globalDofIdx,1);
                     this->dispZ_[globalDofIdx] = model.disp(globalDofIdx,2);
@@ -239,6 +242,14 @@ public:
                     this->stressXY_[globalDofIdx] = model.stress(globalDofIdx,5);
                     this->stressXZ_[globalDofIdx] = model.stress(globalDofIdx,4);
                     this->stressYZ_[globalDofIdx] = model.stress(globalDofIdx,3);
+
+                    this->strainXX_[globalDofIdx] = model.strain(globalDofIdx,0);
+                    this->strainYY_[globalDofIdx] = model.strain(globalDofIdx,1);
+                    this->strainZZ_[globalDofIdx] = model.strain(globalDofIdx,2);
+                    //voight notation
+                    this->strainXY_[globalDofIdx] = model.strain(globalDofIdx,5);
+                    this->strainXZ_[globalDofIdx] = model.strain(globalDofIdx,4);
+                    this->strainYZ_[globalDofIdx] = model.strain(globalDofIdx,3);
                 }
             }
         }
