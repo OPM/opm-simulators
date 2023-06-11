@@ -389,14 +389,16 @@ public:
         // of threshold pressure is a quite big hack that only makes sense for ECL
         // datasets. (and even there, its physical justification is quite
         // questionable IMO.)
-        if (std::abs(Toolbox::value(pressureDifference)) > thpres) {
-            if (pressureDifference < 0.0)
-                pressureDifference += thpres;
-            else
-                pressureDifference -= thpres;
-        }
-        else {
-            pressureDifference = 0.0;
+        if (thpres > 0.0) {
+            if (std::abs(Toolbox::value(pressureDifference)) > thpres) {
+                if (pressureDifference < 0.0)
+                    pressureDifference += thpres;
+                else
+                    pressureDifference -= thpres;
+            }
+            else {
+                pressureDifference = 0.0;
+            }
         }
     }
 
