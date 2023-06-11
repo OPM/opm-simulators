@@ -73,6 +73,9 @@ namespace Dune
     FlexibleSolver<Operator>::
     apply(VectorType& x, VectorType& rhs, Dune::InverseOperatorResult& res)
     {
+        if (direct_solver_) {
+            recreateDirectSolver();
+        }
         linsolver_->apply(x, rhs, res);
     }
 
@@ -81,6 +84,9 @@ namespace Dune
     FlexibleSolver<Operator>::
     apply(VectorType& x, VectorType& rhs, double reduction, Dune::InverseOperatorResult& res)
     {
+        if (direct_solver_) {
+            recreateDirectSolver();
+        }
         linsolver_->apply(x, rhs, reduction, res);
     }
 
@@ -185,9 +191,9 @@ namespace Dune
                                                                                           verbosity);
 #if HAVE_SUITESPARSE_UMFPACK
         } else if (solver_type == "umfpack") {
-            bool dummy = false;
             using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
-            linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), verbosity, dummy);
+            linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), verbosity, false);
+            direct_solver_ = true;
 #endif
 #if HAVE_CUDA
         } else if (solver_type == "cubicgstab") {
@@ -203,6 +209,25 @@ namespace Dune
             OPM_THROW(std::invalid_argument,
                       "Properties: Solver " + solver_type + " not known.");
         }
+    }
+
+
+    // For now, the only direct solver we support is UMFPACK from SuiteSparse.
+    // When the matrix is updated (keeping sparsity pattern) it is possible to
+    // exploit separation of symbolic and numeric factorization, but we do not
+    // do so at this point. For complete generality, the solver abstract class
+    // Dune::InverseOperator<> should be extended with an update() function.
+    template <class Operator>
+    void
+    FlexibleSolver<Operator>::
+    recreateDirectSolver()
+    {
+#if HAVE_SUITESPARSE_UMFPACK
+        using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
+        linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), 0, false);
+#else
+        OPM_THROW(std::logic_error, "Direct solver specified, but the FlexibleSolver class was not compiled with SuiteSparse support.");
+#endif
     }
 
 
