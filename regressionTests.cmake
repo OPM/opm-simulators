@@ -107,6 +107,13 @@ add_test_compareECLFiles(CASENAME gas_precsalt
                          REL_TOL ${rel_tol}
                          DIR spe1_precsalt)
 
+add_test_compareECLFiles(CASENAME gasoil_precsalt
+                         FILENAME GASCONDENSATE_VAPWAT_PRECSALT
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR spe1_precsalt)
+
 add_test_compareECLFiles(CASENAME spe1_brine_gaswater
                          FILENAME SPE1CASE2_BRINE_GASWATER
                          SIMULATOR flow
