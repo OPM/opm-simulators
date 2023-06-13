@@ -378,13 +378,21 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             mpi_size_ = comm.size();
 
 #if _OPENMP
-            // if openMP is available, default to 2 threads per process.
+            // if openMP is available, default to 2 threads per process unless
+            // OMP_NUM_THREADS is set or command line --threads-per-process used
             if (!getenv("OMP_NUM_THREADS"))
-                omp_set_num_threads(std::min(2, omp_get_num_procs()));
+            {
+                int threads = 2;
+                const int requested_threads = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
+                if (requested_threads > 0)
+                    threads = requested_threads;
+
+                omp_set_num_threads(std::min(threads, omp_get_num_procs()));
+            }
 #endif
 
             using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
-            ThreadManager::init();
+            ThreadManager::init(false);
         }
 
         void mergeParallelLogFiles()
