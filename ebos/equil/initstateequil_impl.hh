@@ -44,6 +44,7 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <dune/grid/common/mcmgmapper.hh>
 
 #include <fmt/format.h>
@@ -1278,6 +1279,15 @@ equilnum(const EclipseState& eclipseState,
         const auto& e = eclipseState.fieldProps().get_int("EQLNUM");
         std::transform(e.begin(), e.end(), eqlnum.begin(), [](int n){ return n - 1;});
     }
+    OPM_BEGIN_PARALLEL_TRY_CATCH();
+    const int num_regions = eclipseState.getTableManager().getEqldims().getNumEquilRegions();
+    if ( std::any_of(eqlnum.begin(), eqlnum.end(), [num_regions](int n){return n >= num_regions;}) ) {
+        throw std::runtime_error("Values larger than maximum Equil regions " + std::to_string(num_regions) + " provided in EQLNUM");
+    }
+    if ( std::any_of(eqlnum.begin(), eqlnum.end(), [](int n){return n < 0;}) ) {
+        throw std::runtime_error("zero or negative values provided in EQLNUM");
+    }
+    OPM_END_PARALLEL_TRY_CATCH("Invalied EQLNUM numbers: ", gridview.comm());
 
     return eqlnum;
 }

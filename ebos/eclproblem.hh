@@ -2334,6 +2334,7 @@ protected:
         const auto& eclState = vanguard.eclState();
 
         // the PVT and saturation region numbers
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         this->updatePvtnum_();
         this->updateSatnum_();
 
@@ -2344,6 +2345,7 @@ protected:
 
         // directional relative permeabilities
         this->updateKrnum_();
+        OPM_END_PARALLEL_TRY_CATCH("Invalid region numbers: ", vanguard.gridView().comm());
         ////////////////////////////////
         // porosity
         updateReferencePorosity_();
