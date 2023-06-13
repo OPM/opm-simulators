@@ -694,9 +694,16 @@ void PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::deriveWa
         // cell.
         const auto pcow = this->press_.oil - this->press_.water;
 
-        sw = this->swatInit_.empty()
-            ? this->invertCapPress(pcow, this->waterPos(), isIncr)
-            : this->applySwatInit(pcow);
+        if (this->swatInit_.empty()) {
+            sw = this->invertCapPress(pcow, this->waterPos(), isIncr);
+        }
+        else {
+            auto [swout, newSwatInit] = this->applySwatInit(pcow);
+            if (newSwatInit == true)
+                sw = this->invertCapPress(pcow, this->waterPos(), isIncr);
+            else
+                sw = swout;
+        }
     }
 }
 
@@ -718,7 +725,13 @@ fixUnphysicalTransition()
         // Re-scale Pc to reflect imposed sw for vanishing oil phase.  This
         // seems consistent with ECLIPSE, but fails to honour SWATINIT in
         // case of non-trivial gas/oil capillary pressure.
-        sw = this->applySwatInit(pcgw, sw);
+        auto [swout, newSwatInit] = this->applySwatInit(pcgw, sw);
+        if (newSwatInit){
+            const auto isIncr = false; // dPcow/dSw <= 0 for all Sw.
+            sw = this->invertCapPress(pcgw, this->waterPos(), isIncr);
+        }
+        else
+            sw = swout;
     }
 
     sw = satFromSumOfPcs<FluidSystem>
@@ -846,18 +859,21 @@ accountForScaledSaturations()
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-double PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
+std::tuple<double, bool>
+PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
 applySwatInit(const double pcow)
 {
-    return this->applySwatInit(pcow, this->swatInit_[this->evalPt_.position->cell]);
+    auto [swout, newSwatInit] = this->applySwatInit(pcow, this->swatInit_[this->evalPt_.position->cell]);
+    return {swout, newSwatInit};
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-double PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
+std::tuple<double, bool>
+PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
 applySwatInit(const double pcow, const double sw)
 {
-    return this->matLawMgr_
-        .applySwatinit(this->evalPt_.position->cell, pcow, sw);
+    auto [swout, newSwatInit] =this->matLawMgr_.applySwatinit(this->evalPt_.position->cell, pcow, sw);
+    return {swout, newSwatInit};
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>

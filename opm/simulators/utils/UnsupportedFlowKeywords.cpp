@@ -490,7 +490,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"PLYATEMP", {true, std::nullopt}},
         {"PLYCAMAX", {true, std::nullopt}},
         {"PLYDHFLF", {true, std::nullopt}},
-        {"PPCWMAX", {true, std::nullopt}},
         {"PRORDER", {true, std::nullopt}},
         {"PRVD", {true, std::nullopt}},
         {"PVTGWO", {true, std::nullopt}},
