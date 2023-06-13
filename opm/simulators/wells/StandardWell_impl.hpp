@@ -2543,4 +2543,38 @@ namespace Opm
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), zero);
         connII[phase_pos] = connIICalc(mt.value() * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
     }
+
+
+
+
+
+    template <typename TypeTag>
+    std::vector<double>
+    StandardWell<TypeTag>::
+    getPrimaryVars() const
+    {
+        const int num_pri_vars = this->primary_variables_.numWellEq();
+        std::vector<double> retval(num_pri_vars);
+        for (int ii = 0; ii < num_pri_vars; ++ii) {
+            retval[ii] = this->primary_variables_.value(ii);
+        }
+        return retval;
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    int
+    StandardWell<TypeTag>::
+    setPrimaryVars(std::vector<double>::const_iterator it)
+    {
+        const int num_pri_vars = this->primary_variables_.numWellEq();
+        for (int ii = 0; ii < num_pri_vars; ++ii) {
+            this->primary_variables_.setValue(ii, it[ii]);
+        }
+        return num_pri_vars;
+    }
+
 } // namespace Opm

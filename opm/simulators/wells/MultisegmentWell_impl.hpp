@@ -1972,4 +1972,41 @@ namespace Opm
     }
 
 
+
+
+    template <typename TypeTag>
+    std::vector<double>
+    MultisegmentWell<TypeTag>::
+    getPrimaryVars() const
+    {
+        const int num_seg = this->numberOfSegments();
+        constexpr int numWellEq = MSWEval::numWellEq;
+        std::vector<double> retval(num_seg * numWellEq);
+        for (int ii = 0; ii < num_seg; ++ii) {
+            const auto& pv = this->primary_variables_.value(ii);
+            std::copy(pv.begin(), pv.end(), retval.begin() + ii * numWellEq);
+        }
+        return retval;
+    }
+
+
+
+
+    template <typename TypeTag>
+    int
+    MultisegmentWell<TypeTag>::
+    setPrimaryVars(std::vector<double>::const_iterator it)
+    {
+        const int num_seg = this->numberOfSegments();
+        constexpr int numWellEq = MSWEval::numWellEq;
+        std::array<double, numWellEq> tmp;
+        for (int ii = 0; ii < num_seg; ++ii) {
+            const auto start = it + num_seg * numWellEq;
+            std::copy(start, start + numWellEq, tmp.begin());
+            this->primary_variables_.setValue(ii, tmp);
+        }
+        return num_seg * numWellEq;
+    }
+
+
 } // namespace Opm

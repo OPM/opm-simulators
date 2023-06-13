@@ -253,6 +253,9 @@ namespace Opm
                                     double* connII,
                                     DeferredLogger& deferred_logger) const;
 
+        std::vector<double> getPrimaryVars() const override;
+
+        int setPrimaryVars(std::vector<double>::const_iterator it) override;
 
     protected:
         bool regularize_;

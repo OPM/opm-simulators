@@ -2094,6 +2094,58 @@ namespace Opm {
     }
 
 
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    logPrimaryVars() const
+    {
+        std::ostringstream os;
+        for (const auto& w : well_container_) {
+            os << w->name() << ":";
+            auto pv = w->getPrimaryVars();
+            for (const double v : pv) {
+                os << ' ' << v;
+            }
+            os << '\n';
+        }
+        OpmLog::debug(os.str());
+    }
+
+
+
+    template <typename TypeTag>
+    std::vector<double>
+    BlackoilWellModel<TypeTag>::
+    getPrimaryVarsDomain(const Domain& domain) const
+    {
+        std::vector<double> ret;
+        for (const auto& well : well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                const auto& pv = well->getPrimaryVars();
+                ret.insert(ret.end(), pv.begin(), pv.end());
+            }
+        }
+        return ret;
+    }
+
+
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    setPrimaryVarsDomain(const Domain& domain, const std::vector<double>& vars)
+    {
+        std::size_t offset = 0;
+        for (auto& well : well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                int num_pri_vars = well->setPrimaryVars(vars.begin() + offset);
+                offset += num_pri_vars;
+            }
+        }
+        assert(offset == vars.size());
+    }
+
+
 
     template <typename TypeTag>
     void
@@ -2118,7 +2170,45 @@ namespace Opm {
     }
 
 
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    setupDomains(const std::vector<Domain>& domains)
+    {
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+        // TODO: This loop nest may be slow for very large numbers
+        // of domains and wells, but that has not been observed on
+        // tests so far. Using the partition vector instead would
+        // be faster if we need to change.
+        for (const auto& wellPtr : this->well_container_) {
+            const int first_well_cell = wellPtr->cells()[0];
+            for (const auto& domain : domains) {
+                const bool found = std::binary_search(domain.cells.begin(), domain.cells.end(), first_well_cell);
+                if (found) {
+                    // Assuming that if the first well cell is found in a domain,
+                    // then all of that well's cells are in that same domain.
+                    well_domain_[wellPtr->name()] = domain.index;
+                    // Verify that all of that well's cells are in that same domain.
+                    for (int well_cell : wellPtr->cells()) {
+                        if (!std::binary_search(domain.cells.begin(), domain.cells.end(), well_cell)) {
+                            OPM_THROW(std::runtime_error, "Well found on multiple domains.");
+                        }
+                    }
+                }
+            }
+        }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::setupDomains(): well found on multiple domains.",
+                                   ebosSimulator_.gridView().comm());
 
-
+        // Write well/domain info to the DBG file.
+        if (ebosSimulator_.gridView().comm().rank() == 0) {
+            std::ostringstream os;
+            os << "Well name      Domain\n";
+            for (const auto& [wname, domain] : well_domain_) {
+                os << wname << std::setw(21 - wname.size()) << domain << '\n';
+            }
+            OpmLog::debug(os.str());
+        }
+    }
 
 } // namespace Opm

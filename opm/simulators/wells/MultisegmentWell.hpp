@@ -166,6 +166,10 @@ namespace Opm
                                         const double alq_value,
                                         DeferredLogger& deferred_logger) const override;
 
+        std::vector<double> getPrimaryVars() const override;
+
+        int setPrimaryVars(std::vector<double>::const_iterator it) override;
+
     protected:
 
         // regularize msw equation
