@@ -137,9 +137,17 @@ public:
     //! \brief Get WQTotal.
     EvalWell getWQTotal() const;
 
-    //! \brief Returns a const ref to an evaluation.
-    const std::array<EvalWell,numWellEq>& eval(const int idx) const
+    //! \brief Returns a const ref to an array of evaluations.
+    const std::array<EvalWell, numWellEq>& eval(const int idx) const
     { return evaluation_[idx]; }
+
+    //! \brief Returns a value array.
+    const std::array<Scalar, numWellEq>& value(const int idx) const
+    { return value_[idx]; }
+
+    //! \brief Set a value array. Note that this does not also set the corresponding evaluation.
+    void setValue(const int idx, const std::array<Scalar, numWellEq>& val)
+    { value_[idx] = val; }
 
 private:
     //! \brief Handle non-reasonable fractions due to numerical overshoot.

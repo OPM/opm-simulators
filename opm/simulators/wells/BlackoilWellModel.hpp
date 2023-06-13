@@ -45,6 +45,7 @@
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/flow/SubDomain.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
@@ -136,6 +137,8 @@ namespace Opm {
             // For computing average pressured used by gpmaint
             using AverageRegionalPressureType = RegionAverageCalculator::
                 AverageRegionalPressure<FluidSystem, std::vector<int> >;
+
+            using Domain = SubDomain<Grid>;
 
             BlackoilWellModel(Simulator& ebosSimulator);
 
@@ -328,6 +331,12 @@ namespace Opm {
 
             int numLocalNonshutWells() const;
 
+            void logPrimaryVars() const;
+            std::vector<double> getPrimaryVarsDomain(const Domain& domain) const;
+            void setPrimaryVarsDomain(const Domain& domain, const std::vector<double>& vars);
+
+            void setupDomains(const std::vector<Domain>& domains);
+
         protected:
             Simulator& ebosSimulator_;
 
@@ -376,6 +385,9 @@ namespace Opm {
             mutable BVector scaleAddRes_{};
 
             std::vector<Scalar> B_avg_{};
+
+            // Keep track of the domain of each well, if using subdomains.
+            std::map<std::string, int> well_domain_;
 
             const Grid& grid() const
             { return ebosSimulator_.vanguard().grid(); }

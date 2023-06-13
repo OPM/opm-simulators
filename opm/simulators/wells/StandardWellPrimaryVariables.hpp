@@ -135,13 +135,17 @@ public:
     //! \brief Returns scaled rate for a component.
     EvalWell getQs(const int compIdx) const;
 
-    //! \brief Returns a const ref to an evaluation.
+    //! \brief Returns a value.
     Scalar value(const int idx) const
     { return value_[idx]; }
 
     //! \brief Returns a const ref to an evaluation.
     const EvalWell& eval(const int idx) const
     { return evaluation_[idx]; }
+
+    //! \brief Set a value. Note that this does not also set the corresponding evaluation.
+    void setValue(const int idx, const Scalar val)
+    { value_[idx] = val; }
 
 private:
     //! \brief Calculate a relaxation factor for producers.
