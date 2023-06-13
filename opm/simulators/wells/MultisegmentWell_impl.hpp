@@ -1980,11 +1980,11 @@ namespace Opm
     getPrimaryVars() const
     {
         const int num_seg = this->numberOfSegments();
-        constexpr int numWellEq = MSWEval::numWellEq;
-        std::vector<double> retval(num_seg * numWellEq);
+        constexpr int num_eq = MSWEval::numWellEq;
+        std::vector<double> retval(num_seg * num_eq);
         for (int ii = 0; ii < num_seg; ++ii) {
             const auto& pv = this->primary_variables_.value(ii);
-            std::copy(pv.begin(), pv.end(), retval.begin() + ii * numWellEq);
+            std::copy(pv.begin(), pv.end(), retval.begin() + ii * num_eq);
         }
         return retval;
     }
@@ -1998,14 +1998,14 @@ namespace Opm
     setPrimaryVars(std::vector<double>::const_iterator it)
     {
         const int num_seg = this->numberOfSegments();
-        constexpr int numWellEq = MSWEval::numWellEq;
-        std::array<double, numWellEq> tmp;
+        constexpr int num_eq = MSWEval::numWellEq;
+        std::array<double, num_eq> tmp;
         for (int ii = 0; ii < num_seg; ++ii) {
-            const auto start = it + num_seg * numWellEq;
-            std::copy(start, start + numWellEq, tmp.begin());
+            const auto start = it + num_seg * num_eq;
+            std::copy(start, start + num_eq, tmp.begin());
             this->primary_variables_.setValue(ii, tmp);
         }
-        return num_seg * numWellEq;
+        return num_seg * num_eq;
     }
 
 
