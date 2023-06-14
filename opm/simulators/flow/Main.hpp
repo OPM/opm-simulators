@@ -670,15 +670,17 @@ private:
         // This function is called before the parallel OpenMP stuff gets initialized.
         // That initialization happends after the deck is read and we want this message.
         // Hence we duplicate the code of setupParallelism to get the number of threads.
-        if (std::getenv("OMP_NUM_THREADS"))
+        if (std::getenv("OMP_NUM_THREADS")) {
             threads =  omp_get_max_threads();
-        else
-            threads = std::min(2, omp_get_max_threads());
+        }
+        else {
+            threads = 2;
 
-        const int input_threads = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
+            const int input_threads = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
 
-        if (input_threads > 0)
-            threads = std::min(input_threads, omp_get_max_threads());
+            if (input_threads > 0)
+                threads = input_threads;
+        }
 #endif
 
         return threads;
