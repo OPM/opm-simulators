@@ -387,7 +387,10 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                 if (requested_threads > 0)
                     threads = requested_threads;
 
-                omp_set_num_threads(std::min(threads, omp_get_num_procs()));
+                // We are not limiting this to the number of processes
+                // reported by OpenMP as on some hardware (and some OpenMPI
+                // versions) this will be 1 when run with mpirun
+                omp_set_num_threads(threads);
             }
 #endif
 
