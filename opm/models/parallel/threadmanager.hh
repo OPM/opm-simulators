@@ -64,34 +64,46 @@ public:
                              "('-1' means 'automatic')");
     }
 
-    static void init()
+    /*!
+     * \brief Initialize number of threads used thread manager.
+     *
+     * \param queryCommandLineParameter if set to true we will query ThreadsPerProcess
+     *        and if set (disregard the environment variable OPM_NUM_THREADS).
+     *        If false we will assume that the number of OpenMP threads is already set
+     *        outside of this function (e.g. by OPM_NUM_THREADS or in the simulator by
+     *        the ThreadsPerProcess parameter).
+     */
+    static void init(bool queryCommandLineParameter = true)
     {
-        numThreads_ = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
+        if (queryCommandLineParameter)
+        {
+            numThreads_ = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
 
-        // some safety checks. This is pretty ugly macro-magic, but so what?
+            // some safety checks. This is pretty ugly macro-magic, but so what?
 #if !defined(_OPENMP)
-        if (numThreads_ != 1 && numThreads_ != -1)
-            throw std::invalid_argument("OpenMP is not available. The only valid values for "
-                                        "threads-per-process is 1 and -1 but it is "+std::to_string(numThreads_)+"!");
-        numThreads_ = 1;
+            if (numThreads_ != 1 && numThreads_ != -1)
+                throw std::invalid_argument("OpenMP is not available. The only valid values for "
+                                            "threads-per-process is 1 and -1 but it is "+std::to_string(numThreads_)+"!");
+            numThreads_ = 1;
 #elif !defined NDEBUG && defined DUNE_INTERFACECHECK
-        if (numThreads_ != 1)
-            throw std::invalid_argument("You explicitly enabled Barton-Nackman interface checking in Dune. "
-                                        "The Dune implementation of this is currently incompatible with "
-                                        "thread parallelism!");
-        numThreads_ = 1;
+            if (numThreads_ != 1)
+                throw std::invalid_argument("You explicitly enabled Barton-Nackman interface checking in Dune. "
+                                            "The Dune implementation of this is currently incompatible with "
+                                            "thread parallelism!");
+            numThreads_ = 1;
 #else
 
-        if (numThreads_ == 0)
-            throw std::invalid_argument("Zero threads per process are not possible: It must be at least 1, "
-                                        "(or -1 for 'automatic')!");
+            if (numThreads_ == 0)
+                throw std::invalid_argument("Zero threads per process are not possible: It must be at least 1, "
+                                            "(or -1 for 'automatic')!");
 #endif
 
 #ifdef _OPENMP
-        // actually limit the number of threads and get the number of threads which are
-        // used in the end.
-        if (numThreads_ > 0)
-            omp_set_num_threads(numThreads_);
+            // actually limit the number of threads and get the number of threads which are
+            // used in the end.
+            if (numThreads_ > 0)
+                omp_set_num_threads(numThreads_);
+        }
 
         numThreads_ = omp_get_max_threads();
 #endif
