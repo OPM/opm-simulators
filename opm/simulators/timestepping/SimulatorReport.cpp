@@ -240,6 +240,7 @@ namespace Opm
 
     void SimulatorReport::reportFullyImplicit(std::ostream& os) const
     {
+        os << fmt::format("Number of timesteps:     {:9}\n", stepreports.size());
         success.reportFullyImplicit(os, &failure);
     }
 

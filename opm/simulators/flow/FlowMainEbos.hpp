@@ -495,7 +495,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                 = omp_get_max_threads();
 #endif
 
-            printFlowTrailer(mpi_size_, threads, report);
+            printFlowTrailer(mpi_size_, threads, report, simulator_->model().localAccumulatedReports());
 
             detail::handleExtraConvergenceOutput(report,
                                                  EWOMS_GET_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo),
