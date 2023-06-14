@@ -1064,11 +1064,6 @@ namespace Opm {
             return convergence_reports_;
         }
 
-        std::vector<StepReport> getStepReportsDestructively() const
-        {
-            return std::move(this->convergence_reports_);
-        }
-
     protected:
         // ---------  Data members  ---------
 
