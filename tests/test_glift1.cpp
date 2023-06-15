@@ -143,7 +143,6 @@ BOOST_AUTO_TEST_CASE(G1)
     int report_step_idx = 0;
     well_model.beginReportStep(report_step_idx);
     well_model.beginTimeStep();
-    well_model.updatePerforationIntensiveQuantities();
     Opm::DeferredLogger deferred_logger;
     well_model.calculateExplicitQuantities(deferred_logger);
     well_model.prepareTimeStep(deferred_logger);
