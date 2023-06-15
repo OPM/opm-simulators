@@ -32,6 +32,7 @@
 
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/input/eclipse/EclipseState/WagHysteresisConfig.hpp>
 #include <opm/material/fluidmatrixinteractions/EclHysteresisTwoPhaseLawParams.hpp>
 
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>

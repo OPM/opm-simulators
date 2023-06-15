@@ -444,6 +444,20 @@ add_test_compareECLFiles(CASENAME pinch_multzm_all_barrier
                          REL_TOL ${rel_tol}
                          DIR pinch)
 
+add_test_compareECLFiles(CASENAME waghyst1
+                         FILENAME WAGHYSTR-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR waghystr)
+
+add_test_compareECLFiles(CASENAME waghyst2
+                         FILENAME WAGHYSTR-02
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR waghystr)
+
 set(_pinch_cases
   T1A_GAP T1A_NOGAP T1A_NOPINCH
   T1A1_NOGAP
