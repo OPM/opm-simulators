@@ -495,6 +495,13 @@ add_test_compareECLFiles(CASENAME co2store
                          REL_TOL ${rel_tol}
                          DIR co2store)
 
+add_test_compareECLFiles(CASENAME ppcwmax
+                         FILENAME PPCWMAX-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR ppcwmax)
+
 add_test_compareECLFiles(CASENAME co2store_diffusive
                          FILENAME CO2STORE_DIFFUSIVE
                          SIMULATOR flow
