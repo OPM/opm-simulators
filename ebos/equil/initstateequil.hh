@@ -544,7 +544,7 @@ private:
     /// \param[in] pcow O/W capillary pressure value (Po - Pw).
     ///
     /// \return Water saturation value.
-    std::tuple<double, bool> applySwatInit(const double pcow);
+    std::pair<double, bool> applySwatInit(const double pcow);
 
     /// Derive water saturation from SWATINIT data.
     ///
@@ -558,7 +558,7 @@ private:
     ///
     /// \return Water saturation value.  Input value, possibly mollified by
     ///    current set of material laws.
-    std::tuple<double, bool> applySwatInit(const double pc, const double sw);
+    std::pair<double, bool> applySwatInit(const double pc, const double sw);
 
     /// Invoke material law container's capillary pressure calculator on
     /// current fluid state.

@@ -699,10 +699,11 @@ void PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::deriveWa
         }
         else {
             auto [swout, newSwatInit] = this->applySwatInit(pcow);
-            if (newSwatInit == true)
+            if (newSwatInit)
                 sw = this->invertCapPress(pcow, this->waterPos(), isIncr);
-            else
+            else {
                 sw = swout;
+            }
         }
     }
 }
@@ -730,8 +731,9 @@ fixUnphysicalTransition()
             const auto isIncr = false; // dPcow/dSw <= 0 for all Sw.
             sw = this->invertCapPress(pcgw, this->waterPos(), isIncr);
         }
-        else
+        else {
             sw = swout;
+        }
     }
 
     sw = satFromSumOfPcs<FluidSystem>
@@ -859,21 +861,19 @@ accountForScaledSaturations()
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-std::tuple<double, bool>
+std::pair<double, bool>
 PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
 applySwatInit(const double pcow)
 {
-    auto [swout, newSwatInit] = this->applySwatInit(pcow, this->swatInit_[this->evalPt_.position->cell]);
-    return {swout, newSwatInit};
+    return this->applySwatInit(pcow, this->swatInit_[this->evalPt_.position->cell]);
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-std::tuple<double, bool>
+std::pair<double, bool>
 PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
 applySwatInit(const double pcow, const double sw)
 {
-    auto [swout, newSwatInit] =this->matLawMgr_.applySwatinit(this->evalPt_.position->cell, pcow, sw);
-    return {swout, newSwatInit};
+    return this->matLawMgr_.applySwatinit(this->evalPt_.position->cell, pcow, sw);
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
