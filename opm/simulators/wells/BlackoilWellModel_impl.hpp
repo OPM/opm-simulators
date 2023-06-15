@@ -38,6 +38,7 @@
 #endif
 
 #include <algorithm>
+#include <iomanip>
 #include <utility>
 
 #include <fmt/format.h>
@@ -115,6 +116,7 @@ namespace Opm {
         }
     }
 
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -138,33 +140,47 @@ namespace Opm {
         }
     }
 
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res)
     {
-        if (!param_.matrix_add_well_contributions_)
-        {
-            OPM_BEGIN_PARALLEL_TRY_CATCH();
-            {
-                // if the well contributions are not supposed to be included explicitly in
-                // the matrix, we only apply the vector part of the Schur complement here.
-                for (const auto& well: well_container_) {
-                    // r = r - duneC_^T * invDuneD_ * resWell_
-                    well->apply(res);
-                }
-            }
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ",
-                                       ebosSimulator_.gridView().comm());
-            return;
-        }
-
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (const auto& well: well_container_) {
-            well->addWellContributions(jacobian);
-
-            // applying the well residual to reservoir residuals
+            // Modifiy the Jacobian with explicit Schur complement
+            // contributions if requested.
+            if (param_.matrix_add_well_contributions_) {
+                well->addWellContributions(jacobian);
+            }
+            // Apply as Schur complement the well residual to reservoir residuals:
             // r = r - duneC_^T * invDuneD_ * resWell_
             well->apply(res);
+        }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ",
+                                   ebosSimulator_.gridView().comm());
+    }
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    linearizeDomain(const Domain& domain, SparseMatrixAdapter& jacobian, GlobalEqVector& res)
+    {
+        // Note: no point in trying to do a parallel gathering
+        // try/catch here, as this function is not called in
+        // parallel but for each individual domain of each rank.
+        for (const auto& well: well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                // Modifiy the Jacobian with explicit Schur complement
+                // contributions if requested.
+                if (param_.matrix_add_well_contributions_) {
+                    well->addWellContributions(jacobian);
+                }
+                // Apply as Schur complement the well residual to reservoir residuals:
+                // r = r - duneC_^T * invDuneD_ * resWell_
+                well->apply(res);
+            }
         }
     }
 
@@ -240,7 +256,6 @@ namespace Opm {
     beginTimeStep()
     {
         OPM_TIMEBLOCK(beginTimeStep);
-        updatePerforationIntensiveQuantities();
         updateAverageFormationFactor();
         DeferredLogger local_deferredLogger;
         switched_prod_groups_.clear();
@@ -914,8 +929,6 @@ namespace Opm {
             }
         }
 
-        updatePerforationIntensiveQuantities();
-
         if (iterationIdx == 0 && wellsActive()) {
             // try-catch is needed here as updateWellControls
             // contains global communication and has either to
@@ -1025,6 +1038,45 @@ namespace Opm {
     }
 
 
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assembleDomain(const int iterationIdx,
+                   const double dt,
+                   const Domain& domain)
+    {
+        last_report_ = SimulatorReportSingle();
+        Dune::Timer perfTimer;
+        perfTimer.start();
+
+        {
+            const int episodeIdx = ebosSimulator_.episodeIndex();
+            const auto& network = schedule()[episodeIdx].network();
+            if ( !wellsActive() && !network.active() ) {
+                return;
+            }
+        }
+
+        // We assume that calculateExplicitQuantities() and
+        // prepareTimeStep() have been called already for the entire
+        // well model, so we do not need to do it here (when
+        // iterationIdx is 0).
+
+        DeferredLogger local_deferredLogger;
+        updateWellControlsDomain(local_deferredLogger, domain);
+        initPrimaryVariablesEvaluationDomain(domain);
+        assembleWellEqDomain(dt, domain, local_deferredLogger);
+
+        // TODO: errors here must be caught higher up, as this method is not called in parallel.
+        // We will log errors on rank 0, but not other ranks for now.
+        if (terminal_output_) {
+            local_deferredLogger.logMessages();
+        }
+
+        last_report_.converged = true;
+        last_report_.assemble_time_well += perfTimer.stop();
+    }
 
 
     template<typename TypeTag>
@@ -1237,6 +1289,20 @@ namespace Opm {
             well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
         }
     }
+
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    assembleWellEqDomain(const double dt, const Domain& domain, DeferredLogger& deferred_logger)
+    {
+        for (auto& well : well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+            }
+        }
+    }
+
 
     template<typename TypeTag>
     void
@@ -1453,6 +1519,7 @@ namespace Opm {
         }
     }
 
+
     template<typename TypeTag>
     int
     BlackoilWellModel<TypeTag>::
@@ -1461,28 +1528,49 @@ namespace Opm {
         return well_container_.size();
     }
     
+
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     recoverWellSolutionAndUpdateWellState(const BVector& x)
     {
-         
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
+            const auto& summary_state = ebosSimulator_.vanguard().summaryState();
             for (auto& well : well_container_) {
-                const auto& summary_state = ebosSimulator_.vanguard().summaryState();
                 well->recoverWellSolutionAndUpdateWellState(summary_state, x, this->wellState(), local_deferredLogger);
             }
-
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
                                        "recoverWellSolutionAndUpdateWellState() failed: ",
                                        terminal_output_, ebosSimulator_.vanguard().grid().comm());
-
     }
 
 
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    recoverWellSolutionAndUpdateWellStateDomain(const BVector& x, const Domain& domain)
+    {
+        // Note: no point in trying to do a parallel gathering
+        // try/catch here, as this function is not called in
+        // parallel but for each individual domain of each rank.
+        DeferredLogger local_deferredLogger;
+        const auto& summary_state = this->ebosSimulator_.vanguard().summaryState();
+        for (auto& well : well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                well->recoverWellSolutionAndUpdateWellState(summary_state, x,
+                                                            this->wellState(),
+                                                            local_deferredLogger);
+            }
+        }
+        // TODO: avoid losing the logging information that could
+        // be stored in the local_deferredlogger in a parallel case.
+        if (terminal_output_) {
+            local_deferredLogger.logMessages();
+        }
+    }
 
 
     template<typename TypeTag>
@@ -1495,6 +1583,84 @@ namespace Opm {
         }
     }
 
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    initPrimaryVariablesEvaluationDomain(const Domain& domain) const
+    {
+        for (auto& well : well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                well->initPrimaryVariablesEvaluation();
+            }
+        }
+    }
+
+
+
+
+
+
+    template<typename TypeTag>
+    ConvergenceReport
+    BlackoilWellModel<TypeTag>::
+    getDomainWellConvergence(const Domain& domain,
+                             const std::vector<Scalar>& B_avg) const
+    {
+        const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+        const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
+        const bool relax_tolerance = iterationIdx > param_.strict_outer_iter_wells_;
+
+        Opm::DeferredLogger local_deferredLogger;
+
+        ConvergenceReport local_report;
+        for (const auto& well : well_container_) {
+            if ((well_domain_.at(well->name()) == domain.index)) {
+                if (well->isOperableAndSolvable() || well->wellIsStopped()) {
+                    local_report += well->getWellConvergence(summary_state,
+                                                             this->wellState(),
+                                                             B_avg,
+                                                             local_deferredLogger,
+                                                             iterationIdx > param_.strict_outer_iter_wells_);
+                } else {
+                    ConvergenceReport report;
+                    using CR = ConvergenceReport;
+                    report.setWellFailed({CR::WellFailure::Type::Unsolvable, CR::Severity::Normal, -1, well->name()});
+                    local_report += report;
+                }
+            }
+        }
+
+        // This function will be called once for each domain on a process,
+        // and the number of domains on a process will vary, so there is
+        // no way to communicate here. There is also no need, as a domain
+        // is local to a single process in our current approach.
+        // Therefore there is no call to gatherDeferredLogger() or to
+        // gatherConvergenceReport() below. However, as of now, log messages
+        // on non-output ranks will be lost here.
+        // TODO: create the DeferredLogger outside this scope to enable it
+        // to be gathered and printed on the output rank.
+        Opm::DeferredLogger global_deferredLogger = local_deferredLogger;
+        ConvergenceReport report = local_report;
+        if (terminal_output_) {
+            global_deferredLogger.logMessages();
+        }
+
+        // Log debug messages for NaN or too large residuals.
+        // TODO: This will as of now only be logged on the output rank.
+        // In the similar code in getWellConvergence(), all ranks will be
+        // at the same spot, that does not hold for this per-domain function.
+        if (terminal_output_) {
+            for (const auto& f : report.wellFailures()) {
+                if (f.severity() == ConvergenceReport::Severity::NotANumber) {
+                    OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
+                } else if (f.severity() == ConvergenceReport::Severity::TooLarge) {
+                    OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
+                }
+            }
+        }
+        return report;
+    }
 
 
 
@@ -1640,6 +1806,26 @@ namespace Opm {
 
         return { changed_well_group, more_network_update };
     }
+
+    template<typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    updateWellControlsDomain(DeferredLogger& deferred_logger, const Domain& domain)
+    {
+        if ( !wellsActive() ) return ;
+
+        // TODO: decide on and implement an approach to handling of
+        // group controls, network and similar for domain solves.
+
+        // Check only individual well constraints and communicate.
+        for (const auto& well : well_container_) {
+            if (well_domain_.at(well->name()) == domain.index) {
+                const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
+                well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+            }
+        }
+    }
+
 
 
     template<typename TypeTag>
@@ -1943,28 +2129,6 @@ namespace Opm {
             depth_[cellIdx] = eclProblem.dofCenterDepth(cellIdx);
         }
     }
-
-    template<typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    updatePerforationIntensiveQuantities()
-    {
-        ElementContext elemCtx(ebosSimulator_);
-        const auto& gridView = ebosSimulator_.gridView();
-
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
-        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-            elemCtx.updatePrimaryStencil(elem);
-            int elemIdx = elemCtx.globalSpaceIndex(0, 0);
-
-            if (!is_cell_perforated_[elemIdx]) {
-                continue;
-            }
-            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-        }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updatePerforationIntensiveQuantities() failed: ", ebosSimulator_.vanguard().grid().comm());
-    }
-
 
     template<typename TypeTag>
     typename BlackoilWellModel<TypeTag>::WellInterfacePtr
