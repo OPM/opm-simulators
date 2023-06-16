@@ -99,12 +99,14 @@ public:
 #endif
 
 #ifdef _OPENMP
-            // actually limit the number of threads and get the number of threads which are
-            // used in the end.
+            // actually limit the number of threads
             if (numThreads_ > 0)
                 omp_set_num_threads(numThreads_);
+#endif
         }
 
+#ifdef _OPENMP
+        // get the number of threads which are used in the end.
         numThreads_ = omp_get_max_threads();
 #endif
     }
