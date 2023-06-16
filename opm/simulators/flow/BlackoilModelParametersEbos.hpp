@@ -168,6 +168,16 @@ template<class TypeTag, class MyTypeTag>
 struct UseAverageDensityMsWells {
     using type = UndefinedProperty;
 };
+// Network solver parameters
+template<class TypeTag, class MyTypeTag>
+struct NetworkMaxStrictIterations {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct NetworkMaxIterations {
+    using type = UndefinedProperty;
+};
+
 
 template<class TypeTag>
 struct DbhpMaxRel<TypeTag, TTag::FlowModelParameters> {
@@ -316,6 +326,15 @@ template<class TypeTag>
 struct UseAverageDensityMsWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = false;
 };
+// Network solver parameters
+template<class TypeTag>
+struct NetworkMaxStrictIterations<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 100;
+};
+template<class TypeTag>
+struct NetworkMaxIterations<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 200;
+};
 
 
 
@@ -436,6 +455,11 @@ namespace Opm
         /// Whether to approximate segment densities by averaging over segment and its outlet 
         bool use_average_density_ms_wells_;
 
+        /// Maximum number of iterations in the network solver before relaxing tolerance
+        int network_max_strict_iterations_;
+        
+        /// Maximum number of iterations in the network solver before giving up
+        int network_max_iterations_;
 
 
         /// Construct from user parameters or defaults.
@@ -474,6 +498,8 @@ namespace Opm
             max_number_of_well_switches_ = EWOMS_GET_PARAM(TypeTag, int, MaximumNumberOfWellSwitches);
             use_average_density_ms_wells_ = EWOMS_GET_PARAM(TypeTag, bool, UseAverageDensityMsWells);
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
+            network_max_strict_iterations_ = EWOMS_GET_PARAM(TypeTag, int, NetworkMaxStrictIterations);
+            network_max_iterations_ = EWOMS_GET_PARAM(TypeTag, int, NetworkMaxIterations);            
         }
 
         static void registerParameters()
@@ -512,6 +538,8 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter, "Enable the well operability checking during iterations");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaximumNumberOfWellSwitches, "Maximum number of times a well can switch to the same control");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseAverageDensityMsWells, "Approximate segment densitities by averaging over segment and its outlet");
+            EWOMS_REGISTER_PARAM(TypeTag, int, NetworkMaxStrictIterations, "Maximum iterations in network solver before relaxing tolerance");
+            EWOMS_REGISTER_PARAM(TypeTag, int, NetworkMaxIterations, "Maximum number of iterations in the network solver before giving up");
         }
     };
 } // namespace Opm

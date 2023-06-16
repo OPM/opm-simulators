@@ -972,9 +972,9 @@ namespace Opm {
         bool do_network_update = true;
         bool well_group_control_changed = false;
         // after certain number of the iterations, we use relaxed tolerance for the network update
-        constexpr size_t iteration_to_relax = 100;
+        const size_t iteration_to_relax = param_.network_max_strict_iterations_;
         // after certain number of the iterations, we terminate
-        constexpr size_t max_iteration = 200;
+        const size_t max_iteration = param_.network_max_iterations_;  
         std::size_t network_update_iteration = 0;
         while (do_network_update) {
             if (network_update_iteration == iteration_to_relax) {
