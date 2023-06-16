@@ -1175,4 +1175,10 @@ add_test_compareECLFiles(CASENAME 01_vappars
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR vappars)                         
+add_test_compareECLFiles(CASENAME 01_multflt
+                         FILENAME MULTFLT-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR mult)                         
                          
