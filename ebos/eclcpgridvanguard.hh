@@ -27,6 +27,8 @@
 #ifndef EWOMS_ECL_CP_GRID_VANGUARD_HH
 #define EWOMS_ECL_CP_GRID_VANGUARD_HH
 
+#include <opm/common/TimingMacros.hpp>
+
 #include <opm/models/common/multiphasebaseproperties.hh>
 
 #include "eclbasevanguard.hh"
@@ -182,6 +184,7 @@ protected:
 
     void allocTrans() override
     {
+        OPM_TIMEBLOCK(allocateTrans);
         globalTrans_.reset(new TransmissibilityType(this->eclState(),
                                                     this->gridView(),
                                                     this->cartesianIndexMapper(),

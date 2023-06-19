@@ -29,6 +29,7 @@
 #include <opm/simulators/utils/readDeck.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/EclipsePRTLog.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/OpmInputError.hpp>
@@ -240,6 +241,7 @@ namespace {
                       const std::optional<int>&            outputInterval,
                       Opm::ErrorGuard&                     errorGuard)
     {
+        OPM_TIMEBLOCK(readDeck);
         if (((schedule == nullptr) || (summaryConfig == nullptr)) &&
             (parseContext == nullptr))
         {
@@ -253,6 +255,7 @@ namespace {
                                        *parseContext, treatCriticalAsNonCritical, errorGuard);
 
         if (eclipseState == nullptr) {
+            OPM_TIMEBLOCK(createEclState);
             eclipseState = createEclipseState(comm, deck);
         }
 
@@ -540,6 +543,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
     parseSuccess = comm.min(parseSuccess);
     try {
         if (parseSuccess) {
+            OPM_TIMEBLOCK(eclBcast);
             eclStateBroadcast(comm, *eclipseState, *schedule,
                               *summaryConfig, *udqState, *actionState, *wtestState);
         }

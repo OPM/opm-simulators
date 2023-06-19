@@ -39,6 +39,7 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
+#include <opm/common/TimingMacros.hpp>
 #include <opm/common/utility/ActiveGridCells.hpp>
 
 #include <dune/grid/common/mcmgmapper.hh>
@@ -125,9 +126,13 @@ doLoadBalance_(const Dune::EdgeWeightMethod            edgeWeightsMethod,
         auto loadBalancerSet = static_cast<int>(externalLoadBalancer.has_value());
         this->grid_->comm().broadcast(&loadBalancerSet, 1, 0);
 
-        const auto faceTrans = ((loadBalancerSet == 0) || partitionJacobiBlocks)
-            ? this->extractFaceTrans(gridView)
-            : std::vector<double>{};
+        std::vector<double> faceTrans;
+        {
+            OPM_TIMEBLOCK(extractTrans);
+            if (loadBalancerSet == 0 || partitionJacobiBlocks) {
+                faceTrans = this->extractFaceTrans(gridView);
+            }
+        }
 
         const auto wells = ((mpiSize > 1) || partitionJacobiBlocks)
             ? schedule.getWellsatEnd()
@@ -162,6 +167,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod            edgeWeightsMethod,
 template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::distributeFieldProps_(EclipseState& eclState1)
 {
+    OPM_TIMEBLOCK(distributeFProps);
     const auto mpiSize = this->grid_->comm().size();
 
     if (mpiSize == 1) {
@@ -265,6 +271,7 @@ distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
                ParallelEclipseState*                   eclState,
                EclGenericVanguard::ParallelWellStruct& parallelWells)
 {
+    OPM_TIMEBLOCK(gridDistribute);
     const auto isIORank = this->grid_->comm().rank() == 0;
 
     const auto* eclGrid = isIORank
@@ -316,7 +323,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         global_porv = eclState.fieldProps().porv(true);
         OpmLog::info("\nProcessing grid");
     }
-
+    OPM_TIMEBLOCK(createGrids);
 #if HAVE_MPI
     this->grid_ = std::make_unique<Dune::CpGrid>(EclGenericVanguard::comm());
 #else
