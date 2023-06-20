@@ -843,7 +843,7 @@ namespace Opm {
         std::pair<SimulatorReportSingle, ConvergenceReport>
         solveDomain(const Domain& domain,
                     const SimulatorTimerInterface& timer,
-                    const int global_iteration,
+                    [[maybe_unused]] const int global_iteration,
                     const bool initial_assembly_required = false)
         {
             SimulatorReportSingle report;
@@ -867,7 +867,7 @@ namespace Opm {
                                                                     ebosSimulator_.timeStepSize(),
                                                                     domain);
                 // Assemble reservoir locally.
-                report += assembleReservoirDomain(domain, iter);
+                report += assembleReservoirDomain(domain);
                 report.assemble_time += detailTimer.stop();
             }
             detailTimer.reset();
@@ -893,7 +893,6 @@ namespace Opm {
 
             // Local Newton loop.
             const int max_iter = param_.max_local_solve_iterations_;
-            bool converged = false;
             do {
                 // Solve local linear system.
                 // Note that x has full size, we expect it to be nonzero only for in-domain cells.
@@ -924,7 +923,7 @@ namespace Opm {
                 ebosSimulator_.problem().wellModel().assembleDomain(ebosSimulator_.model().newtonMethod().numIterations(),
                                                                     ebosSimulator_.timeStepSize(),
                                                                     domain);
-                report += assembleReservoirDomain(domain, iter);
+                report += assembleReservoirDomain(domain);
                 report.assemble_time += detailTimer.stop();
 
                 // Check for local convergence.
@@ -980,9 +979,6 @@ namespace Opm {
         }
 
         /// Assemble the residual and Jacobian of the nonlinear system.
-        /// \param[in]      reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
         SimulatorReportSingle assembleReservoir(const SimulatorTimerInterface& /* timer */,
                                                 const int iterationIdx)
         {
@@ -995,11 +991,7 @@ namespace Opm {
         }
 
         /// Assemble the residual and Jacobian of the nonlinear system.
-        /// \param[in]      reservoir_state   reservoir state variables
-        /// \param[in, out] well_state        well state variables
-        /// \param[in]      initial_assembly  pass true if this is the first call to assemble() in this timestep
-        SimulatorReportSingle assembleReservoirDomain(const Domain& domain,
-                                                      const int iterationIdx)
+        SimulatorReportSingle assembleReservoirDomain(const Domain& domain)
         {
             // -------- Mass balance equations --------
             ebosSimulator_.model().linearizer().linearizeDomain(domain);
@@ -1652,14 +1644,13 @@ namespace Opm {
             }
 
             // Create convergence report.
-            ConvergenceReport report;
+            ConvergenceReport report{reportTime};
             using CR = ConvergenceReport;
             for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                 double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
                 CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
                                                         CR::ReservoirFailure::Type::Cnv };
                 double tol[2] = { tol_mb, tol_cnv };
-                int cell[2] = { -1, maxCoeffCell[compIdx] }; // No cell associated with MB failures.
                 for (int ii : {0, 1}) {
                     if (std::isnan(res[ii])) {
                         report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});//, cell[ii], res[ii]});
@@ -1771,7 +1762,6 @@ namespace Opm {
                 CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
                                                         CR::ReservoirFailure::Type::Cnv };
                 double tol[2] = { tol_mb, tol_cnv };
-                int cell[2] = { -1, maxCoeffCell[compIdx] }; // No cell associated with MB failures.
                 for (int ii : {0, 1}) {
                     if (std::isnan(res[ii])) {
                         report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});//, cell[ii], res[ii]});
