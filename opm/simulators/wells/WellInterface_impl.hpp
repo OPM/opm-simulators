@@ -1181,11 +1181,13 @@ namespace Opm
         // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
         const double initial_nonzero_rate = ws.surface_rates[nonzero_rate_index];
         const int comp_idx_nz = this->flowPhaseToEbosCompIdx(nonzero_rate_index);
-        for (int p = 0; p < this->number_of_phases_; ++p) {
-            if (p != nonzero_rate_index) {
-                const int comp_idx = this->flowPhaseToEbosCompIdx(p);
-                double& rate = ws.surface_rates[p];
-                rate = (initial_nonzero_rate/well_q_s[comp_idx_nz]) * (well_q_s[comp_idx]);
+        if (std::abs(well_q_s[comp_idx_nz]) > floating_point_error_epsilon) {
+            for (int p = 0; p < this->number_of_phases_; ++p) {
+                if (p != nonzero_rate_index) {
+                    const int comp_idx = this->flowPhaseToEbosCompIdx(p);
+                    double& rate = ws.surface_rates[p];
+                    rate = (initial_nonzero_rate / well_q_s[comp_idx_nz]) * (well_q_s[comp_idx]);
+                }
             }
         }
     }
