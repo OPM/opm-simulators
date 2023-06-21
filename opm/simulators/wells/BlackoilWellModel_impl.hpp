@@ -1621,7 +1621,7 @@ namespace Opm {
                                                              this->wellState(),
                                                              B_avg,
                                                              local_deferredLogger,
-                                                             iterationIdx > param_.strict_outer_iter_wells_);
+                                                             relax_tolerance);
                 } else {
                     ConvergenceReport report;
                     using CR = ConvergenceReport;
