@@ -190,6 +190,58 @@ double WellInterfaceGeneric::rsRvInj() const
     return well_ecl_.getInjectionProperties().rsRvInj;
 }
 
+void WellInterfaceGeneric::initInjMult(const std::vector<double>& max_inj_mult)
+{
+    // prev_inj_multiplier_ will stay unchanged during the time step
+    // while inj_multiplier_ might be updated during the time step
+    this->prev_inj_multiplier_ = max_inj_mult;
+    // reset the inj_multipler_ to be 1.0
+    this->inj_multiplier_ = std::vector<double>(max_inj_mult.size(), 1.);
+}
+
+void WellInterfaceGeneric::updateMaxInjMult(std::vector<double>& max_multipliers) const
+{
+    assert(max_multipliers.size() == this->inj_multiplier_.size());
+
+    max_multipliers = this->inj_multiplier_;
+}
+
+
+
+double WellInterfaceGeneric::getInjMult(const int perf,
+                                        const double bhp,
+                                        const double perf_pres) const
+{
+    assert(!this->isProducer());
+
+    const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+    const bool is_wrev = this->well_ecl_.getInjMultMode() == Well::InjMultMode::WREV;
+
+    const auto& injmult = is_wrev ?  this->well_ecl_.getWellInjMult() :
+                                                  this->well_ecl_.getConnections()[perf_ecl_index].injmult();
+    const double pres = is_wrev ? bhp : perf_pres;
+
+
+    double multipler = 1.;
+    if (injmult.active()) {
+        const auto frac_press = injmult.fracture_pressure;
+        const auto gradient = injmult.multiplier_gradient;
+        if (pres > frac_press) {
+            multipler = 1. + (pres - frac_press) * gradient;
+        }
+    }
+
+    if (this->well_ecl_.getInjMultMode() == Well::InjMultMode::CIRR) {
+        multipler = std::max(multipler, this->prev_inj_multiplier_[perf_ecl_index]);
+    }
+
+    this->inj_multiplier_[perf_ecl_index] = multipler;
+    return multipler;
+}
+
+
+
+
 bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryState) const
 {
     // only wells under prediction mode can have THP constraint

@@ -178,6 +178,21 @@ public:
     double wsolvent() const;
     double rsRvInj() const;
 
+    // when creating the well, setting the maximum injection multiplier
+    // it can be used in the multiplier calculation with keyword WINJMULT.
+    // and also reset the inj_multiplier_ to be 1 to start.
+    // the reason we need to have two sets of values is because for CIRR mode,
+    // we will only update the maximum multiplier achieved so far after the solution gets converged,
+    // which gives the best results during testing.
+    void initInjMult(const std::vector<double>& max_inj_mult);
+
+    // update the InjMult information in the BlackoilWellModel at the end of the time step
+    void updateMaxInjMult(std::vector<double>& max_multipliers) const;
+
+    // Note:: for multisegment wells, bhp is actually segment pressure in practice based on observation
+    // it might change in the future
+    double getInjMult(const int perf, const double bhp, const double perf_pres) const;
+
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
@@ -347,6 +362,13 @@ protected:
     double gravity_;
     double wsolvent_;
     std::optional<double> dynamic_thp_limit_;
+
+    // recording the multiplier calculate from the keyword WINJMULT during the time step
+    mutable std::vector<double> inj_multiplier_;
+
+    // the injection multiplier from the previous running, it is mostly used for CIRR mode
+    // which intends to keep the fracturing open
+    std::vector<double> prev_inj_multiplier_;
 
     double well_efficiency_factor_;
     const VFPProperties* vfp_properties_;

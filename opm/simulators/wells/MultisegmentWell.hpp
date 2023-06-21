@@ -220,6 +220,7 @@ namespace Opm
         // get the mobility for specific perforation
         template<class Value>
         void getMobility(const Simulator& ebosSimulator,
+                         const int seg,
                          const int perf,
                          std::vector<Value>& mob,
                          DeferredLogger& deferred_logger) const;
