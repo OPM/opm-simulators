@@ -97,7 +97,7 @@ public:
 
 
     //! Category of the preconditioner (see SolverCategory::Category)
-    virtual Dune::SolverCategory::Category category() const
+    Dune::SolverCategory::Category category() const override
     {
         return m_underlyingPreconditioner->category();
     }
