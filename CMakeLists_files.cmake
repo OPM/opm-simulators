@@ -104,6 +104,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/MultisegmentWellGeneric.cpp
   opm/simulators/wells/MultisegmentWellPrimaryVariables.cpp
   opm/simulators/wells/MultisegmentWellSegments.cpp
+  opm/simulators/wells/ParallelPAvgDynamicSourceData.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
   opm/simulators/wells/PerfData.cpp
   opm/simulators/wells/RateConverter.cpp
@@ -116,8 +117,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/StandardWellPrimaryVariables.cpp
   opm/simulators/wells/TargetCalculator.cpp
   opm/simulators/wells/VFPHelpers.cpp
-  opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/VFPInjProperties.cpp
+  opm/simulators/wells/VFPProdProperties.cpp
   opm/simulators/wells/WellAssemble.cpp
   opm/simulators/wells/WellBhpThpCalculator.cpp
   opm/simulators/wells/WellConnectionAuxiliaryModule.cpp
@@ -227,7 +228,6 @@ endif()
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_SOURCE_FILES
   tests/test_ALQState.cpp
-  tests/test_partitionCells.cpp
   tests/test_blackoil_amg.cpp
   tests/test_convergenceoutputconfiguration.cpp
   tests/test_convergencereport.cpp
@@ -244,7 +244,9 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
   tests/test_norne_pvt.cpp
+  tests/test_parallel_wbp_sourcevalues.cpp
   tests/test_parallelwellinfo.cpp
+  tests/test_partitionCells.cpp
   tests/test_preconditionerfactory.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_RestartSerialization.cpp
@@ -449,6 +451,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/PropsCentroidsDataHandle.hpp
   opm/simulators/utils/SerializationPackers.hpp
   opm/simulators/utils/VectorVectorDataHandle.hpp
+  opm/simulators/utils/readDeck.hpp
   opm/simulators/wells/ALQState.hpp
   opm/simulators/wells/BlackoilWellModel.hpp
   opm/simulators/wells/BlackoilWellModel_impl.hpp
@@ -474,11 +477,11 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/MultisegmentWellGeneric.hpp
   opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp
   opm/simulators/wells/MultisegmentWellSegments.hpp
+  opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp
   opm/simulators/wells/ParallelWellInfo.hpp
   opm/simulators/wells/PerfData.hpp
   opm/simulators/wells/PerforationData.hpp
   opm/simulators/wells/RateConverter.hpp
-  opm/simulators/utils/readDeck.hpp
   opm/simulators/wells/RegionAttributeHelpers.hpp
   opm/simulators/wells/RegionAverageCalculator.hpp
   opm/simulators/wells/SingleWellState.hpp
