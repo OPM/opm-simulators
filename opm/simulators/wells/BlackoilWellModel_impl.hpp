@@ -1042,7 +1042,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assembleDomain(const int iterationIdx,
+    assembleDomain(const int /*iterationIdx*/,
                    const double dt,
                    const Domain& domain)
     {
