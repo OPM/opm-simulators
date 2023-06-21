@@ -110,7 +110,7 @@ testPrec(const Opm::PropertyTree& prm, const std::string& matrix_filename, const
 
 void test1(const Opm::PropertyTree& prm)
 {
-    const int bz = 1;
+    constexpr int bz = 1;
     auto sol = testPrec<bz>(prm, "matr33.txt", "rhs3.txt");
     Dune::BlockVector<Dune::FieldVector<double, bz>> expected {-1.62493,
             -1.76435e-06,
@@ -131,7 +131,7 @@ void test1(const Opm::PropertyTree& prm)
 
 void test3(const Opm::PropertyTree& prm)
 {
-    const int bz = 3;
+    constexpr int bz = 3;
     auto sol = testPrec<bz>(prm, "matr33.txt", "rhs3.txt");
     Dune::BlockVector<Dune::FieldVector<double, bz>> expected {{-1.62493, -1.76435e-06, 1.86991e-10},
             {-458.542, 2.28308e-06, -2.45341e-07},
@@ -176,13 +176,13 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
 
     // Test with 1x1 block solvers.
     {
-        const int bz = 1;
+        constexpr int bz = 1;
         BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::invalid_argument);
     }
 
     // Test with 3x3 block solvers.
     {
-        const int bz = 3;
+        constexpr int bz = 3;
         BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::invalid_argument);
     }
 
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
 
     // Test with 3x3 block solvers.
     {
-        const int bz = 3;
+        constexpr int bz = 3;
         BOOST_CHECK_THROW(testPrec<bz>(prm, "matr33.txt", "rhs3.txt"), std::invalid_argument);
     }
 
@@ -316,7 +316,7 @@ testPrecRepeating(const Opm::PropertyTree& prm, const std::string& matrix_filena
 
 void test1rep(const Opm::PropertyTree& prm)
 {
-    const int bz = 1;
+    constexpr int bz = 1;
     auto sol = testPrecRepeating<bz>(prm, "matr33rep.txt", "rhs3rep.txt");
     Dune::BlockVector<Dune::FieldVector<double, bz>> expected {0.285714285714286,
                                                                0.285714285714286,
@@ -337,7 +337,7 @@ void test1rep(const Opm::PropertyTree& prm)
 
 void test3rep(const Opm::PropertyTree& prm)
 {
-    const int bz = 3;
+    constexpr int bz = 3;
     auto sol = testPrecRepeating<bz>(prm, "matr33rep.txt", "rhs3rep.txt");
     Dune::BlockVector<Dune::FieldVector<double, bz>> expected {
         {0.285714285714286, 0.285714285714286, 0.285714285714286},
