@@ -214,6 +214,14 @@ protected:
     bool wellUnderZeroRateTarget(const SummaryState& summary_state,
                                  const WellState& well_state) const;
 
+    std::pair<bool,bool>
+    computeWellPotentials(std::vector<double>& well_potentials,
+                          const WellState& well_state);
+
+    void checkNegativeWellPotentials(std::vector<double>& well_potentials,
+                                     const bool checkOperability,
+                                     DeferredLogger& deferred_logger);
+
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {
         bool isOperableAndSolvable() const {
