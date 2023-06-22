@@ -91,36 +91,61 @@ namespace Opm
 
 
     template<typename TypeTag>
+    template<class Value>
     void
     StandardWell<TypeTag>::
-    computePerfRateEval(const IntensiveQuantities& intQuants,
-                        const std::vector<EvalWell>& mob,
-                        const EvalWell& bhp,
-                        const double Tw,
-                        const int perf,
-                        const bool allow_cf,
-                        std::vector<EvalWell>& cq_s,
-                        PerforationRates& perf_rates,
-                        DeferredLogger& deferred_logger) const
+    computePerfRate(const IntensiveQuantities& intQuants,
+                    const std::vector<Value>& mob,
+                    const Value& bhp,
+                    const double Tw,
+                    const int perf,
+                    const bool allow_cf,
+                    std::vector<Value>& cq_s,
+                    PerforationRates& perf_rates,
+                    DeferredLogger& deferred_logger) const
     {
+        auto obtain = [this](const Eval& value)
+                      {
+                          if constexpr (std::is_same_v<Value, Scalar>) {
+                              return getValue(value);
+                          } else {
+                              return this->extendEval(value);
+                          }
+                      };
+        auto obtainN = [](const auto& value)
+        {
+            if constexpr (std::is_same_v<Value, Scalar>) {
+                return getValue(value);
+            } else {
+                return value;
+            }
+        };
+        auto zeroElem = [this]()
+                        {
+                            if constexpr (std::is_same_v<Value, Scalar>) {
+                                return 0.0;
+                            } else {
+                                return Value{this->primary_variables_.numWellEq() + Indices::numEq, 0.0};
+                            }
+                        };
+
         const auto& fs = intQuants.fluidState();
-        const EvalWell pressure = this->extendEval(this->getPerfCellPressure(fs));
-        const EvalWell rs = this->extendEval(fs.Rs());
-        const EvalWell rv = this->extendEval(fs.Rv());
-        const EvalWell rvw = this->extendEval(fs.Rvw());
-        const EvalWell rsw = this->extendEval(fs.Rsw());
+        const Value pressure = obtain(this->getPerfCellPressure(fs));
+        const Value rs = obtain(fs.Rs());
+        const Value rv = obtain(fs.Rv());
+        const Value rvw = obtain(fs.Rvw());
+        const Value rsw = obtain(fs.Rsw());
 
-
-        std::vector<EvalWell> b_perfcells_dense(this->num_components_, EvalWell{this->primary_variables_.numWellEq() + Indices::numEq, 0.0});
+        std::vector<Value> b_perfcells_dense(this->numComponents(), zeroElem());
         for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
             }
             const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-            b_perfcells_dense[compIdx] =  this->extendEval(fs.invB(phaseIdx));
+            b_perfcells_dense[compIdx] =  obtain(fs.invB(phaseIdx));
         }
         if constexpr (has_solvent) {
-            b_perfcells_dense[Indices::contiSolventEqIdx] = this->extendEval(intQuants.solventInverseFormationVolumeFactor());
+            b_perfcells_dense[Indices::contiSolventEqIdx] = obtain(intQuants.solventInverseFormationVolumeFactor());
         }
 
         if constexpr (has_zFraction) {
@@ -131,90 +156,18 @@ namespace Opm
             }
         }
 
-        EvalWell skin_pressure = EvalWell{this->primary_variables_.numWellEq() + Indices::numEq, 0.0};
+        Value skin_pressure = zeroElem();
         if (has_polymermw) {
             if (this->isInjector()) {
                 const int pskin_index = Bhp + 1 + this->numPerfs() + perf;
-                skin_pressure = this->primary_variables_.eval(pskin_index);
+                skin_pressure = obtainN(this->primary_variables_.eval(pskin_index));
             }
         }
 
         // surface volume fraction of fluids within wellbore
-        std::vector<EvalWell> cmix_s(this->numComponents(), EvalWell{this->primary_variables_.numWellEq() + Indices::numEq});
+        std::vector<Value> cmix_s(this->numComponents(), zeroElem());
         for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
-            cmix_s[componentIdx] = this->primary_variables_.surfaceVolumeFraction(componentIdx);
-        }
-
-        computePerfRate(mob,
-                        pressure,
-                        bhp,
-                        rs,
-                        rv,
-                        rvw,
-                        rsw,
-                        b_perfcells_dense,
-                        Tw,
-                        perf,
-                        allow_cf,
-                        skin_pressure,
-                        cmix_s,
-                        cq_s,
-                        perf_rates,
-                        deferred_logger);
-    }
-
-    template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    computePerfRateScalar(const IntensiveQuantities& intQuants,
-                          const std::vector<Scalar>& mob,
-                          const Scalar& bhp,
-                          const double Tw,
-                          const int perf,
-                          const bool allow_cf,
-                          std::vector<Scalar>& cq_s,
-                          DeferredLogger& deferred_logger) const
-    {
-        const auto& fs = intQuants.fluidState();
-        const Scalar pressure = this->getPerfCellPressure(fs).value();
-        const Scalar rs = fs.Rs().value();
-        const Scalar rv = fs.Rv().value();
-        const Scalar rvw = fs.Rvw().value();
-        const Scalar rsw = fs.Rsw().value();
-        std::vector<Scalar> b_perfcells_dense(this->num_components_, 0.0);
-        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                continue;
-            }
-            const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-            b_perfcells_dense[compIdx] =  fs.invB(phaseIdx).value();
-        }
-        if constexpr (has_solvent) {
-            b_perfcells_dense[Indices::contiSolventEqIdx] = intQuants.solventInverseFormationVolumeFactor().value();
-        }
-
-        if constexpr (has_zFraction) {
-            if (this->isInjector()) {
-                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                b_perfcells_dense[gasCompIdx] *= (1.0 - this->wsolvent());
-                b_perfcells_dense[gasCompIdx] += this->wsolvent()*intQuants.zPureInvFormationVolumeFactor().value();
-            }
-        }
-
-        Scalar skin_pressure =0.0;
-        if (has_polymermw) {
-            if (this->isInjector()) {
-                const int pskin_index = Bhp + 1 + this->numPerfs() + perf;
-                skin_pressure = getValue(this->primary_variables_.eval(pskin_index));
-            }
-        }
-
-        PerforationRates perf_rates;
-
-        // surface volume fraction of fluids within wellbore
-        std::vector<Scalar> cmix_s(this->numComponents(), 0.0);
-        for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
-            cmix_s[componentIdx] = getValue(this->primary_variables_.surfaceVolumeFraction(componentIdx));
+            cmix_s[componentIdx] = obtainN(this->primary_variables_.surfaceVolumeFraction(componentIdx));
         }
 
         computePerfRate(mob,
@@ -642,8 +595,8 @@ namespace Opm
         PerforationRates perf_rates;
         double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
         const double Tw = this->well_index_[perf] * trans_mult;
-        computePerfRateEval(intQuants, mob, bhp, Tw, perf, allow_cf,
-                            cq_s, perf_rates, deferred_logger);
+        computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
+                        cq_s, perf_rates, deferred_logger);
 
         auto& ws = well_state.well(this->index_of_well_);
         auto& perf_data = ws.perf_data;
@@ -1596,8 +1549,9 @@ namespace Opm
             const double Tw = this->well_index_[perf] * trans_mult;
 
             std::vector<Scalar> cq_s(this->num_components_, 0.);
-            computePerfRateScalar(intQuants, mob, bhp, Tw, perf, allow_cf,
-                            cq_s, deferred_logger);
+            PerforationRates perf_rates;
+            computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
+                            cq_s, perf_rates, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
                 well_flux[this->ebosCompIdxToFlowCompIdx(p)] += cq_s[p];
@@ -1945,8 +1899,8 @@ namespace Opm
             PerforationRates perf_rates;
             double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
             const double Tw = this->well_index_[perf] * trans_mult;
-            computePerfRateEval(int_quant, mob, bhp, Tw, perf, allow_cf, cq_s,
-                                perf_rates, deferred_logger);
+            computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf, cq_s,
+                            perf_rates, deferred_logger);
             // TODO: make area a member
             const double area = 2 * M_PI * this->perf_rep_radius_[perf] * this->perf_length_[perf];
             const auto& material_law_manager = ebos_simulator.problem().materialLawManager();
@@ -2452,8 +2406,9 @@ namespace Opm
             std::vector<Scalar> cq_s(this->num_components_, 0.);
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
             const double Tw = this->well_index_[perf] * trans_mult;
-            computePerfRateScalar(intQuants, mob, bhp.value(), Tw, perf, allow_cf,
-                            cq_s, deferred_logger);
+            PerforationRates perf_rates;
+            computePerfRate(intQuants, mob, bhp.value(), Tw, perf, allow_cf,
+                            cq_s, perf_rates, deferred_logger);
             for (int comp = 0; comp < this->num_components_; ++comp) {
                 well_q_s[comp] += cq_s[comp];
             }

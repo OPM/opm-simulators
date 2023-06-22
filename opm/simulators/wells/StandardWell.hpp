@@ -282,24 +282,16 @@ namespace Opm
                                             const WellState& well_state,
                                             DeferredLogger& deferred_logger);
 
-        void computePerfRateEval(const IntensiveQuantities& intQuants,
-                                 const std::vector<EvalWell>& mob,
-                                 const EvalWell& bhp,
-                                 const double Tw,
-                                 const int perf,
-                                 const bool allow_cf,
-                                 std::vector<EvalWell>& cq_s,
-                                 PerforationRates& perf_rates,
-                                 DeferredLogger& deferred_logger) const;
-
-        void computePerfRateScalar(const IntensiveQuantities& intQuants,
-                                   const std::vector<Scalar>& mob,
-                                   const Scalar& bhp,
-                                   const double Tw,
-                                   const int perf,
-                                   const bool allow_cf,
-                                   std::vector<Scalar>& cq_s,
-                                   DeferredLogger& deferred_logger) const;
+        template<class Value>
+        void computePerfRate(const IntensiveQuantities& intQuants,
+                             const std::vector<Value>& mob,
+                             const Value& bhp,
+                             const double Tw,
+                             const int perf,
+                             const bool allow_cf,
+                             std::vector<Value>& cq_s,
+                             PerforationRates& perf_rates,
+                             DeferredLogger& deferred_logger) const;
 
         template<class Value>
         void computePerfRate(const std::vector<Value>& mob,
