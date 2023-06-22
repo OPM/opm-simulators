@@ -43,6 +43,7 @@ PerfData::PerfData(std::size_t num_perf, double pressure_first_connection_, bool
     , ecl_index(num_perf)
 {
     if (injector) {
+        this->inj_multiplier.resize(num_perf, 1.0);
         this->water_throughput.resize(num_perf);
         this->skin_pressure.resize(num_perf);
         this->water_velocity.resize(num_perf);
@@ -94,6 +95,7 @@ bool PerfData::try_assign(const PerfData& other) {
     this->solvent_rates = other.solvent_rates;
     this->polymer_rates = other.polymer_rates;
     this->brine_rates = other.brine_rates;
+    this->inj_multiplier = other.inj_multiplier;
     this->water_throughput = other.water_throughput;
     this->skin_pressure = other.skin_pressure;
     this->water_velocity = other.water_velocity;
@@ -117,6 +119,7 @@ bool PerfData::operator==(const PerfData& rhs) const
            this->connection_transmissibility_factor == rhs.connection_transmissibility_factor &&
            this->satnum_id == rhs.satnum_id &&
            this->ecl_index == rhs.ecl_index &&
+           this->inj_multiplier == rhs.inj_multiplier &&
            this->water_throughput == rhs.water_throughput &&
            this->skin_pressure == rhs.skin_pressure &&
            this->water_velocity == rhs.water_velocity;

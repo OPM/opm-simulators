@@ -428,9 +428,6 @@ protected:
     std::unique_ptr<VFPProperties> vfp_properties_{};
     std::map<std::string, double> node_pressures_; // Storing network pressures for output.
 
-    // previous injection multiplier, it is used in the injection multiplier calculation for WINJMULT keyword
-    std::unordered_map<std::string, std::vector<double>> prev_inj_multipliers_;
-
     /*
       The various wellState members should be accessed and modified
       through the accessor functions wellState(), prevWellState(),

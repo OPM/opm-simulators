@@ -310,15 +310,12 @@ namespace Opm {
             well->setGuideRate(&guideRate_);
         }
 
-        // initialize the WINJMULT related, we need to record the highest injecting multiplier historically
-        // to support the CIRR mode of  WINJMULT keyword
+        // we need the inj_multiplier from the previous time step
         for (auto& well : well_container_) {
             if (well->isInjector()) {
-                auto& ws = this->wellState().well(well->indexOfWell());
-                if ((this->prev_inj_multipliers_.count(well->name())) == 0 ) {
-                    this->prev_inj_multipliers_[well->name()] = std::vector<double>(ws.perf_data.size(), 1.0);
-                }
-                well->initInjMult(this->prev_inj_multipliers_.at(well->name()));
+                const auto& ws = this->wellState().well(well->indexOfWell());
+                const auto& perf_data = ws.perf_data;
+                well->initInjMult(perf_data.inj_multiplier);
             }
         }
 
@@ -481,8 +478,10 @@ namespace Opm {
             if (getPropValue<TypeTag, Properties::EnablePolymerMW>() && well->isInjector()) {
                 well->updateWaterThroughput(dt, this->wellState());
             }
+            // at the end of the time step, updating the inj_multiplier saved in WellState for later use
             if (well->isInjector()) {
-                well->updateMaxInjMult(this->prev_inj_multipliers_[well->name()]);
+                auto& perf_data = this->wellState().well(well->indexOfWell()).perf_data;
+                well->updateInjMult(perf_data.inj_multiplier);
             }
         }
         // report well switching
