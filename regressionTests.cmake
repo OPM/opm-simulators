@@ -1176,16 +1176,30 @@ add_test_compareECLFiles(CASENAME 02_wgrupcon
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR wgrupcon)
+add_test_compareECLFiles(CASENAME winjmult_stdw
+                         FILENAME WINJMULT_STDW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR winjmult
+                         TEST_ARGS --enable-tuning=true)
+add_test_compareECLFiles(CASENAME winjmult_msw
+                         FILENAME WINJMULT_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR winjmult
+                         TEST_ARGS --enable-tuning=true)
 add_test_compareECLFiles(CASENAME 01_vappars
                          FILENAME VAPPARS-01
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR vappars)                         
+                         DIR vappars)
 add_test_compareECLFiles(CASENAME 01_multflt
                          FILENAME MULTFLT-01
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR mult)                         
-                         
+                         DIR mult)
+
