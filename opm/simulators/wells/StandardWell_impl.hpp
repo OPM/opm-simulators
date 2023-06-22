@@ -23,6 +23,8 @@
 
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/material/densead/EvaluationFormat.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/StandardWellAssemble.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
@@ -621,187 +623,47 @@ namespace Opm
         }
 
         if constexpr (has_energy) {
-            connectionRates[perf][Indices::contiEnergyEqIdx] = 0.0;
-        }
-
-        if constexpr (has_energy) {
-
-            auto fs = intQuants.fluidState();
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                    continue;
-                }
-
-                // convert to reservoir conditions
-                EvalWell cq_r_thermal(this->primary_variables_.numWellEq() + Indices::numEq, 0.);
-                const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-                if ( !both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx ) {
-                    cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
-                } else {
-                    // remove dissolved gas and vapporized oil
-                    const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-                    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                    // q_os = q_or * b_o + rv * q_gr * b_g
-                    // q_gs = q_gr * g_g + rs * q_or * b_o
-                    // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
-                    // d = 1.0 - rs * rv
-                    const EvalWell d = this->extendEval(1.0 - fs.Rv() * fs.Rs());
-                    if (d <= 0.0) {
-                        std::ostringstream sstr;
-                        sstr << "Problematic d value " << d << " obtained for well " << this->name()
-                            << " during calculateSinglePerf with rs " << fs.Rs()
-                            << ", rv " << fs.Rv()
-                            << " obtaining d " << d
-                            << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                            << " for this connection.";
-                        deferred_logger.debug(sstr.str());
-                        cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
-                    } else {
-                        if(FluidSystem::gasPhaseIdx == phaseIdx) {
-                            cq_r_thermal = (cq_s[gasCompIdx] - this->extendEval(fs.Rs()) * cq_s[oilCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );
-                        } else if(FluidSystem::oilPhaseIdx == phaseIdx) {
-                            // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
-                            cq_r_thermal = (cq_s[oilCompIdx] - this->extendEval(fs.Rv()) * cq_s[gasCompIdx]) / (d * this->extendEval(fs.invB(phaseIdx)) );
-                        }
-                    }
-                }
-
-                // change temperature for injecting fluids
-                if (this->isInjector() && cq_s[activeCompIdx] > 0.0){
-                    // only handles single phase injection now
-                    assert(this->well_ecl_.injectorType() != InjectorType::MULTI);
-                    fs.setTemperature(this->well_ecl_.temperature());
-                    typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
-                    typename FluidSystem::template ParameterCache<FsScalar> paramCache;
-                    const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
-                    paramCache.setRegionIndex(pvtRegionIdx);
-                    paramCache.setMaxOilSat(ebosSimulator.problem().maxOilSaturation(cell_idx));
-                    paramCache.updatePhase(fs, phaseIdx);
-
-                    const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);
-                    fs.setDensity(phaseIdx, rho);
-                    const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
-                    fs.setEnthalpy(phaseIdx, h);
-                    cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
-                    connectionRates[perf][Indices::contiEnergyEqIdx] += getValue(cq_r_thermal);
-                } else {
-                    // compute the thermal flux
-                    cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
-                    connectionRates[perf][Indices::contiEnergyEqIdx] += Base::restrictEval(cq_r_thermal);
-                }
-            }
+            connectionRates[perf][Indices::contiEnergyEqIdx] =
+                connectionRateEnergy(ebosSimulator.problem().maxOilSaturation(cell_idx),
+                                     cq_s, intQuants, deferred_logger);
         }
 
         if constexpr (has_polymer) {
-            // TODO: the application of well efficiency factor has not been tested with an example yet
-            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            EvalWell cq_s_poly = cq_s[waterCompIdx];
-            if (this->isInjector()) {
-                cq_s_poly *= this->wpolymer();
-            } else {
-                cq_s_poly *= this->extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
-            }
-            // Note. Efficiency factor is handled in the output layer
-            auto& perf_rate_polymer = perf_data.polymer_rates;
-            perf_rate_polymer[perf] = cq_s_poly.value();
-
-            cq_s_poly *= this->well_efficiency_factor_;
-            connectionRates[perf][Indices::contiPolymerEqIdx] = Base::restrictEval(cq_s_poly);
+            [[maybe_unused]] EvalWell cq_s_poly;
+            std::tie(connectionRates[perf][Indices::contiPolymerEqIdx],
+                     cq_s_poly) =
+                connectionRatePolymer(perf_data.polymer_rates[perf],
+                                      cq_s, intQuants);
 
             if constexpr (Base::has_polymermw) {
-                updateConnectionRatePolyMW(cq_s_poly, intQuants, well_state, perf, connectionRates, deferred_logger);
+                updateConnectionRatePolyMW(cq_s_poly, intQuants, well_state,
+                                           perf, connectionRates, deferred_logger);
             }
         }
 
         if constexpr (has_foam) {
-            // TODO: the application of well efficiency factor has not been tested with an example yet
-            auto getFoamTransportIdx = [&deferred_logger] {
-                switch (FoamModule::transportPhase()) {
-                    case Phase::WATER: {
-                        return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-                    }
-                    case Phase::GAS: {
-                        return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                    }
-                    case Phase::SOLVENT: {
-                        if constexpr (has_solvent)
-                            return (unsigned)Indices::contiSolventEqIdx;
-                        else
-                            OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase is SOLVENT but SOLVENT is not activated.", deferred_logger);
-                    }
-                    default: {
-                        OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase must be GAS/WATER/SOLVENT.", deferred_logger);
-                    }
-                }
-            };
-            EvalWell cq_s_foam = cq_s[getFoamTransportIdx()] * this->well_efficiency_factor_;
-            if (this->isInjector()) {
-                cq_s_foam *= this->wfoam();
-            } else {
-                cq_s_foam *= this->extendEval(intQuants.foamConcentration());
-            }
-            connectionRates[perf][Indices::contiFoamEqIdx] = Base::restrictEval(cq_s_foam);
+            connectionRates[perf][Indices::contiFoamEqIdx] =
+                connectionRateFoam(cq_s, intQuants, deferred_logger);
         }
 
         if constexpr (has_zFraction) {
-            // TODO: the application of well efficiency factor has not been tested with an example yet
-            const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            cq_s_zfrac_effective = cq_s[gasCompIdx];
-            if (this->isInjector()) {
-                cq_s_zfrac_effective *= this->wsolvent();
-            } else if (cq_s_zfrac_effective.value() != 0.0) {
-                const double dis_gas_frac = perf_rates.dis_gas / cq_s_zfrac_effective.value();
-                cq_s_zfrac_effective *= this->extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
-            }
-            auto& perf_rate_solvent = perf_data.solvent_rates;
-            perf_rate_solvent[perf] = cq_s_zfrac_effective.value();
-
-            cq_s_zfrac_effective *= this->well_efficiency_factor_;
-            connectionRates[perf][Indices::contiZfracEqIdx] = Base::restrictEval(cq_s_zfrac_effective);
+            std::tie(connectionRates[perf][Indices::contiZfracEqIdx],
+                     cq_s_zfrac_effective) =
+                connectionRatezFraction(perf_data.solvent_rates[perf],
+                                        perf_rates.dis_gas, cq_s, intQuants);
         }
 
         if constexpr (has_brine) {
-            // TODO: the application of well efficiency factor has not been tested with an example yet
-            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            // Correction salt rate; evaporated water does not contain salt 
-            EvalWell cq_s_sm = cq_s[waterCompIdx] - perf_rates.vap_wat;
-            if (this->isInjector()) {
-                cq_s_sm *= this->wsalt();
-            } else {
-                cq_s_sm *= this->extendEval(intQuants.fluidState().saltConcentration());
-            }
-            // Note. Efficiency factor is handled in the output layer
-            auto& perf_rate_brine = perf_data.brine_rates;
-            perf_rate_brine[perf] = cq_s_sm.value();
-
-            cq_s_sm *= this->well_efficiency_factor_;
-            connectionRates[perf][Indices::contiBrineEqIdx] = Base::restrictEval(cq_s_sm);
+            connectionRates[perf][Indices::contiBrineEqIdx] =
+                connectionRateBrine(perf_data.brine_rates[perf],
+                                    perf_rates.vap_wat, cq_s, intQuants);
         }
 
         if constexpr (has_micp) {
-            const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            EvalWell cq_s_microbe = cq_s[waterCompIdx];
-            if (this->isInjector()) {
-                cq_s_microbe *= this->wmicrobes();
-            } else {
-                cq_s_microbe *= this->extendEval(intQuants.microbialConcentration());
-            }
-            connectionRates[perf][Indices::contiMicrobialEqIdx] = Base::restrictEval(cq_s_microbe);
-            EvalWell cq_s_oxygen = cq_s[waterCompIdx];
-            if (this->isInjector()) {
-                cq_s_oxygen *= this->woxygen();
-            } else {
-                cq_s_oxygen *= this->extendEval(intQuants.oxygenConcentration());
-            }
-            connectionRates[perf][Indices::contiOxygenEqIdx] = Base::restrictEval(cq_s_oxygen);
-            EvalWell cq_s_urea = cq_s[waterCompIdx];
-            if (this->isInjector()) {
-                cq_s_urea *= this->wurea();
-            } else {
-                cq_s_urea *= this->extendEval(intQuants.ureaConcentration());
-            }
-            connectionRates[perf][Indices::contiUreaEqIdx] = Base::restrictEval(cq_s_urea);
+            std::tie(connectionRates[perf][Indices::contiMicrobialEqIdx],
+                     connectionRates[perf][Indices::contiOxygenEqIdx],
+                     connectionRates[perf][Indices::contiUreaEqIdx]) =
+                connectionRatesMICP(cq_s, intQuants);
         }
 
         // Store the perforation pressure for later usage.
@@ -2376,6 +2238,237 @@ namespace Opm
             this->primary_variables_.setValue(ii, it[ii]);
         }
         return num_pri_vars;
+    }
+
+
+    template <typename TypeTag>
+    typename StandardWell<TypeTag>::Eval
+    StandardWell<TypeTag>::
+    connectionRateBrine(double& rate,
+                        const double vap_wat_rate,
+                        const std::vector<EvalWell>& cq_s,
+                        const IntensiveQuantities& intQuants) const
+    {
+        // TODO: the application of well efficiency factor has not been tested with an example yet
+        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        // Correction salt rate; evaporated water does not contain salt
+        EvalWell cq_s_sm = cq_s[waterCompIdx] - vap_wat_rate;
+        if (this->isInjector()) {
+            cq_s_sm *= this->wsalt();
+        } else {
+            cq_s_sm *= this->extendEval(intQuants.fluidState().saltConcentration());
+        }
+
+        // Note. Efficiency factor is handled in the output layer
+        rate = cq_s_sm.value();
+
+        cq_s_sm *= this->well_efficiency_factor_;
+        return Base::restrictEval(cq_s_sm);
+    }
+
+
+    template <typename TypeTag>
+    typename StandardWell<TypeTag>::Eval
+    StandardWell<TypeTag>::
+    connectionRateEnergy(const double maxOilSaturation,
+                         const std::vector<EvalWell>& cq_s,
+                         const IntensiveQuantities& intQuants,
+                         DeferredLogger& deferred_logger) const
+    {
+        auto fs = intQuants.fluidState();
+        Eval result = 0;
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+
+            // convert to reservoir conditions
+            EvalWell cq_r_thermal(this->primary_variables_.numWellEq() + Indices::numEq, 0.);
+            const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+            const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+            if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
+                cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
+            } else {
+                // remove dissolved gas and vapporized oil
+                const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                // q_os = q_or * b_o + rv * q_gr * b_g
+                // q_gs = q_gr * g_g + rs * q_or * b_o
+                // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
+                // d = 1.0 - rs * rv
+                const EvalWell d = this->extendEval(1.0 - fs.Rv() * fs.Rs());
+                if (d <= 0.0) {
+                    deferred_logger.debug(
+                        fmt::format("Problematic d value {} obtained for well {}"
+                                    " during calculateSinglePerf with rs {}"
+                                    ", rv {}. Continue as if no dissolution (rs = 0) and"
+                                    " vaporization (rv = 0) for this connection.",
+                                    d, this->name(), fs.Rs(), fs.Rv()));
+                    cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
+                } else {
+                    if (FluidSystem::gasPhaseIdx == phaseIdx) {
+                        cq_r_thermal = (cq_s[gasCompIdx] -
+                                        this->extendEval(fs.Rs()) * cq_s[oilCompIdx]) /
+                                        (d * this->extendEval(fs.invB(phaseIdx)) );
+                    } else if (FluidSystem::oilPhaseIdx == phaseIdx) {
+                        // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
+                        cq_r_thermal = (cq_s[oilCompIdx] - this->extendEval(fs.Rv()) *
+                                        cq_s[gasCompIdx]) /
+                                       (d * this->extendEval(fs.invB(phaseIdx)) );
+                    }
+                }
+            }
+
+            // change temperature for injecting fluids
+            if (this->isInjector() && cq_s[activeCompIdx] > 0.0){
+                // only handles single phase injection now
+                assert(this->well_ecl_.injectorType() != InjectorType::MULTI);
+                fs.setTemperature(this->well_ecl_.temperature());
+                typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
+                typename FluidSystem::template ParameterCache<FsScalar> paramCache;
+                const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
+                paramCache.setRegionIndex(pvtRegionIdx);
+                paramCache.setMaxOilSat(maxOilSaturation);
+                paramCache.updatePhase(fs, phaseIdx);
+
+                const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);
+                fs.setDensity(phaseIdx, rho);
+                const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
+                fs.setEnthalpy(phaseIdx, h);
+                cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                result += getValue(cq_r_thermal);
+            } else {
+                // compute the thermal flux
+                cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                result += Base::restrictEval(cq_r_thermal);
+            }
+        }
+
+        return result;
+    }
+
+
+    template <typename TypeTag>
+    typename StandardWell<TypeTag>::Eval
+    StandardWell<TypeTag>::
+    connectionRateFoam(const std::vector<EvalWell>& cq_s,
+                       const IntensiveQuantities& intQuants,
+                       DeferredLogger& deferred_logger) const
+    {
+        // TODO: the application of well efficiency factor has not been tested with an example yet
+        auto getFoamTransportIdx = [&deferred_logger] {
+            switch (FoamModule::transportPhase()) {
+                case Phase::WATER: {
+                    return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                }
+                case Phase::GAS: {
+                    return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                }
+                case Phase::SOLVENT: {
+                    if constexpr (has_solvent)
+                        return static_cast<unsigned>(Indices::contiSolventEqIdx);
+                    else
+                        OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase is SOLVENT but SOLVENT is not activated.", deferred_logger);
+                }
+                default: {
+                    OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase must be GAS/WATER/SOLVENT.", deferred_logger);
+                }
+            }
+        };
+        EvalWell cq_s_foam = cq_s[getFoamTransportIdx()] * this->well_efficiency_factor_;
+        if (this->isInjector()) {
+            cq_s_foam *= this->wfoam();
+        } else {
+            cq_s_foam *= this->extendEval(intQuants.foamConcentration());
+        }
+        return Base::restrictEval(cq_s_foam);
+    }
+
+
+    template <typename TypeTag>
+    std::tuple<typename StandardWell<TypeTag>::Eval,
+               typename StandardWell<TypeTag>::Eval,
+               typename StandardWell<TypeTag>::Eval>
+    StandardWell<TypeTag>::
+    connectionRatesMICP(const std::vector<EvalWell>& cq_s,
+                        const IntensiveQuantities& intQuants) const
+    {
+        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        EvalWell cq_s_microbe = cq_s[waterCompIdx];
+        if (this->isInjector()) {
+            cq_s_microbe *= this->wmicrobes();
+        } else {
+            cq_s_microbe *= this->extendEval(intQuants.microbialConcentration());
+        }
+
+        EvalWell cq_s_oxygen = cq_s[waterCompIdx];
+        if (this->isInjector()) {
+            cq_s_oxygen *= this->woxygen();
+        } else {
+            cq_s_oxygen *= this->extendEval(intQuants.oxygenConcentration());
+        }
+
+        EvalWell cq_s_urea = cq_s[waterCompIdx];
+        if (this->isInjector()) {
+            cq_s_urea *= this->wurea();
+        } else {
+            cq_s_urea *= this->extendEval(intQuants.ureaConcentration());
+        }
+
+        return {Base::restrictEval(cq_s_microbe),
+                Base::restrictEval(cq_s_oxygen),
+                Base::restrictEval(cq_s_urea)};
+    }
+
+
+    template <typename TypeTag>
+    std::tuple<typename StandardWell<TypeTag>::Eval,
+               typename StandardWell<TypeTag>::EvalWell>
+    StandardWell<TypeTag>::
+    connectionRatePolymer(double& rate,
+                          const std::vector<EvalWell>& cq_s,
+                          const IntensiveQuantities& intQuants) const
+    {
+        // TODO: the application of well efficiency factor has not been tested with an example yet
+        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+        EvalWell cq_s_poly = cq_s[waterCompIdx];
+        if (this->isInjector()) {
+            cq_s_poly *= this->wpolymer();
+        } else {
+            cq_s_poly *= this->extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
+        }
+        // Note. Efficiency factor is handled in the output layer
+        rate = cq_s_poly.value();
+
+        cq_s_poly *= this->well_efficiency_factor_;
+
+        return {Base::restrictEval(cq_s_poly), cq_s_poly};
+    }
+
+
+    template <typename TypeTag>
+    std::tuple<typename StandardWell<TypeTag>::Eval,
+               typename StandardWell<TypeTag>::EvalWell>
+    StandardWell<TypeTag>::
+    connectionRatezFraction(double& rate,
+                            const double dis_gas_rate,
+                            const std::vector<EvalWell>& cq_s,
+                            const IntensiveQuantities& intQuants) const
+    {
+        // TODO: the application of well efficiency factor has not been tested with an example yet
+        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        EvalWell cq_s_zfrac_effective = cq_s[gasCompIdx];
+        if (this->isInjector()) {
+            cq_s_zfrac_effective *= this->wsolvent();
+        } else if (cq_s_zfrac_effective.value() != 0.0) {
+            const double dis_gas_frac = dis_gas_rate / cq_s_zfrac_effective.value();
+            cq_s_zfrac_effective *= this->extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
+        }
+
+        rate = cq_s_zfrac_effective.value();
+
+        cq_s_zfrac_effective *= this->well_efficiency_factor_;
+        return {Base::restrictEval(cq_s_zfrac_effective), cq_s_zfrac_effective};
     }
 
 } // namespace Opm

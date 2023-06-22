@@ -437,6 +437,35 @@ namespace Opm
                                                       const SummaryState& summary_state,
                                                       DeferredLogger& deferred_logger) const;
 
+    private:
+        Eval connectionRateBrine(double& rate,
+                                 const double vap_wat_rate,
+                                 const std::vector<EvalWell>& cq_s,
+                                 const IntensiveQuantities& intQuants) const;
+
+        Eval connectionRateEnergy(const double maxOilSaturation,
+                                  const std::vector<EvalWell>& cq_s,
+                                  const IntensiveQuantities& intQuants,
+                                  DeferredLogger& deferred_logger) const;
+
+        Eval connectionRateFoam(const std::vector<EvalWell>& cq_s,
+                                const IntensiveQuantities& intQuants,
+                                DeferredLogger& deferred_logger) const;
+
+        std::tuple<Eval,Eval,Eval>
+        connectionRatesMICP(const std::vector<EvalWell>& cq_s,
+                            const IntensiveQuantities& intQuants) const;
+
+        std::tuple<Eval,EvalWell>
+        connectionRatePolymer(double& rate,
+                              const std::vector<EvalWell>& cq_s,
+                              const IntensiveQuantities& intQuants) const;
+
+        std::tuple<Eval,EvalWell>
+        connectionRatezFraction(double& rate,
+                                const double dis_gas_rate,
+                                const std::vector<EvalWell>& cq_s,
+                                const IntensiveQuantities& intQuants) const;
     };
 
 }
