@@ -686,7 +686,7 @@ public:
                          const GridView& gridView,
                          const CartesianIndexMapper& cartMapper,
                          const double grav,
-                         const int num_pressure_points,
+                         const int num_pressure_points = 2000,
                          const bool applySwatInit = true);
 
     using Vec = std::vector<double>;
