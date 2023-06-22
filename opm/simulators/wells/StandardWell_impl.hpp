@@ -1341,7 +1341,7 @@ namespace Opm
                 return wellPICalc.connectionProdIndStandard(allPerfID, mobility);
             };
 
-            std::vector<EvalWell> mob(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.0});
+            std::vector<Scalar> mob(this->num_components_, 0.0);
             getMobility(ebosSimulator, static_cast<int>(subsetPerfID), mob, deferred_logger);
 
             const auto& fs = fluidState(subsetPerfID);
@@ -2394,86 +2394,6 @@ namespace Opm
         }
         return well_q_s;
     }
-
-
-
-
-
-    template <typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    computeConnLevelProdInd(const typename StandardWell<TypeTag>::FluidState& fs,
-                            const std::function<double(const double)>& connPICalc,
-                            const std::vector<EvalWell>& mobility,
-                            double* connPI) const
-    {
-        const auto& pu = this->phaseUsage();
-        const int   np = this->number_of_phases_;
-        for (int p = 0; p < np; ++p) {
-            // Note: E100's notion of PI value phase mobility includes
-            // the reciprocal FVF.
-            const auto connMob =
-                mobility[ this->flowPhaseToEbosCompIdx(p) ].value()
-                    * fs.invB(this->flowPhaseToEbosPhaseIdx(p)).value();
-
-            connPI[p] = connPICalc(connMob);
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-            FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
-        {
-            const auto io = pu.phase_pos[Oil];
-            const auto ig = pu.phase_pos[Gas];
-
-            const auto vapoil = connPI[ig] * fs.Rv().value();
-            const auto disgas = connPI[io] * fs.Rs().value();
-
-            connPI[io] += vapoil;
-            connPI[ig] += disgas;
-        }
-    }
-
-
-
-
-
-    template <typename TypeTag>
-    void
-    StandardWell<TypeTag>::
-    computeConnLevelInjInd(const typename StandardWell<TypeTag>::FluidState& fs,
-                           const Phase preferred_phase,
-                           const std::function<double(const double)>& connIICalc,
-                           const std::vector<EvalWell>& mobility,
-                           double* connII,
-                           DeferredLogger& deferred_logger) const
-    {
-        // Assumes single phase injection
-        const auto& pu = this->phaseUsage();
-
-        auto phase_pos = 0;
-        if (preferred_phase == Phase::GAS) {
-            phase_pos = pu.phase_pos[Gas];
-        }
-        else if (preferred_phase == Phase::OIL) {
-            phase_pos = pu.phase_pos[Oil];
-        }
-        else if (preferred_phase == Phase::WATER) {
-            phase_pos = pu.phase_pos[Water];
-        }
-        else {
-            OPM_DEFLOG_THROW(NotImplemented,
-                             fmt::format("Unsupported Injector Type ({}) "
-                                         "for well {} during connection I.I. calculation",
-                                         static_cast<int>(preferred_phase), this->name()),
-                             deferred_logger);
-        }
-
-        const auto zero   = EvalWell{this->primary_variables_.numWellEq() + Indices::numEq, 0.0};
-        const auto mt     = std::accumulate(mobility.begin(), mobility.end(), zero);
-        connII[phase_pos] = connIICalc(mt.value() * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
-    }
-
-
 
 
 

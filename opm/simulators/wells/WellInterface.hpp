@@ -414,7 +414,17 @@ protected:
                      Callback& extendEval,
                      [[maybe_unused]] DeferredLogger& deferred_logger) const;
 
+    void computeConnLevelProdInd(const FluidState& fs,
+                                 const std::function<double(const double)>& connPICalc,
+                                 const std::vector<Scalar>& mobility,
+                                 double* connPI) const;
 
+    void computeConnLevelInjInd(const FluidState& fs,
+                                const Phase preferred_phase,
+                                const std::function<double(const double)>& connIICalc,
+                                const std::vector<Scalar>& mobility,
+                                double* connII,
+                                DeferredLogger& deferred_logger) const;
 };
 
 }
