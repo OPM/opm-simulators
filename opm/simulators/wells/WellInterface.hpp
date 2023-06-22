@@ -222,9 +222,14 @@ public:
                                            WellState& well_state,
                                            DeferredLogger& deferred_logger) const;
 
-    virtual bool updateWellStateWithTHPTargetProd(const Simulator& ebos_simulator,
-                                                  WellState& well_state,
-                                                  DeferredLogger& deferred_logger) const = 0;
+    virtual void computeWellRatesWithBhpIterations(const Simulator& ebosSimulator,
+                                                   const Scalar& bhp,
+                                                   std::vector<double>& well_flux,
+                                                   DeferredLogger& deferred_logger) const = 0;
+
+    bool updateWellStateWithTHPTargetProd(const Simulator& ebos_simulator,
+                                          WellState& well_state,
+                                          DeferredLogger& deferred_logger) const;
 
     enum class IndividualOrGroup { Individual, Group, Both };
     bool updateWellControl(const Simulator& ebos_simulator,
@@ -344,6 +349,7 @@ protected:
     std::vector<RateVector> connectionRates_;
     std::vector< Scalar > B_avg_;
     bool changed_to_stopped_this_step_ = false;
+    bool thp_update_iterations = false;
 
     double wpolymer() const;
 

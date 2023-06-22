@@ -1662,32 +1662,6 @@ namespace Opm
 
 
     template<typename TypeTag>
-    bool
-    StandardWell<TypeTag>::
-    updateWellStateWithTHPTargetProd(const Simulator& ebos_simulator,
-                                     WellState& well_state,
-                                     DeferredLogger& deferred_logger) const
-    {
-        const auto& summary_state = ebos_simulator.vanguard().summaryState();
-
-        auto bhp_at_thp_limit = computeBhpAtThpLimitProdWithAlq(
-            ebos_simulator, summary_state, this->getALQ(well_state), deferred_logger);
-        if (bhp_at_thp_limit) {
-            std::vector<double> rates(this->number_of_phases_, 0.0);
-            computeWellRatesWithBhp(ebos_simulator, *bhp_at_thp_limit, rates, deferred_logger);
-            auto& ws = well_state.well(this->name());
-            ws.surface_rates = rates;
-            ws.bhp = *bhp_at_thp_limit;
-            ws.thp = this->getTHPConstraint(summary_state);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-
-
-    template<typename TypeTag>
     double
     StandardWell<TypeTag>::
     computeWellRatesAndBhpWithThpAlqProd(const Simulator &ebos_simulator,
