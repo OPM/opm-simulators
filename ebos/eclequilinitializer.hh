@@ -118,7 +118,8 @@ public:
                                  vanguard.grid(),
                                  vanguard.gridView(),
                                  vanguard.cartesianMapper(),
-                                 simulator.problem().gravity()[dimWorld - 1]);
+                                 simulator.problem().gravity()[dimWorld - 1],
+                                 simulator.problem().numPressurePointsEquil());
 
         // copy the result into the array of initial fluid states
         initialFluidStates_.resize(numElems);

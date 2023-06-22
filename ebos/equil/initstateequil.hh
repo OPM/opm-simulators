@@ -686,6 +686,7 @@ public:
                          const GridView& gridView,
                          const CartesianIndexMapper& cartMapper,
                          const double grav,
+                         const int num_pressure_points,
                          const bool applySwatInit = true);
 
     using Vec = std::vector<double>;
@@ -763,6 +764,7 @@ private:
     Vec cellCenterDepth_;
     std::vector<std::pair<double,double>> cellZSpan_;
     std::vector<std::pair<double,double>> cellZMinMax_;
+    int num_pressure_points_;
 };
 
 } // namespace DeckDependent

@@ -198,6 +198,12 @@ template<class TypeTag, class MyTypeTag>
 struct OutputMode {
     using type = UndefinedProperty;
 };
+// Parameterize equilibration accuracy
+template<class TypeTag, class MyTypeTag>
+struct NumPressurePointsEquil {
+    using type = UndefinedProperty;
+};
+
 
 // Set the problem property
 template<class TypeTag>
@@ -583,6 +589,12 @@ template<class TypeTag>
 struct OutputMode<TypeTag, TTag::EclBaseProblem> {
     static constexpr auto value = "all";
 };
+// Parameterize equilibration accuracy
+template<class TypeTag>
+struct NumPressurePointsEquil<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = 2000;
+};
+
 
 } // namespace Opm::Properties
 
@@ -727,6 +739,9 @@ public:
                              "Honor some aspects of the TUNING keyword from the ECL deck.");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
                              "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
+        EWOMS_REGISTER_PARAM(TypeTag, int, NumPressurePointsEquil,
+                             "Number of pressure points (in each direction) in tables used for equilibration");
+        EWOMS_HIDE_PARAM(TypeTag, NumPressurePointsEquil); // Users will typically not need to modify this parameter..
 
     }
 
@@ -806,6 +821,7 @@ public:
         this->maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent);
         this->restartShrinkFactor_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclRestartShrinkFactor);
         this->maxFails_ = EWOMS_GET_PARAM(TypeTag, unsigned, MaxTimeStepDivisions);
+        this->numPressurePointsEquil_ = EWOMS_GET_PARAM(TypeTag, int, NumPressurePointsEquil);
 
         RelpermDiagnostics relpermDiagnostics;
         relpermDiagnostics.diagnosis(vanguard.eclState(), vanguard.cartesianIndexMapper());
