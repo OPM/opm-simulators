@@ -86,6 +86,8 @@ public:
     virtual ~BlackoilWellModelGeneric() = default;
 
     int numLocalWells() const;
+    int numLocalWellsEnd() const;
+    int numLocalNonshutWells() const;
     int numPhases() const;
 
     /// return true if wells are available in the reservoir
@@ -382,9 +384,14 @@ protected:
     virtual int compressedIndexForInterior(int cartesian_cell_idx) const = 0;
 
     std::vector<int> getCellsForConnections(const Well& well) const;
+    std::vector<std::vector<int>> getMaxWellConnections() const;
 
     std::vector<std::string> getWellsForTesting(const int timeStepIdx,
                                                 const double simulationTime);
+
+    using WellTracerRates = std::map<std::pair<std::string, std::string>, double>;
+    void assignWellTracerRates(data::Wells& wsrpt,
+                               const WellTracerRates& wellTracerRates) const;
 
     Schedule& schedule_;
     const SummaryState& summaryState_;

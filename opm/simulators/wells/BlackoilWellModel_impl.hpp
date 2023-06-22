@@ -1330,7 +1330,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    apply( BVector& r) const
+    apply(BVector& r) const
     {
         for (auto& well : well_container_) {
             well->apply(r);
@@ -1463,41 +1463,6 @@ namespace Opm {
 
 
     template<typename TypeTag>
-    int
-    BlackoilWellModel<TypeTag>::
-    numLocalWellsEnd() const
-    {
-        auto w = schedule().getWellsatEnd();
-        w.erase(std::remove_if(w.begin(), w.end(), not_on_process_), w.end());
-        return w.size();
-    }
-
-    template<typename TypeTag>
-    std::vector<std::vector<int>>
-    BlackoilWellModel<TypeTag>::
-    getMaxWellConnections() const
-    {
-        std::vector<std::vector<int>> wells;
-
-        auto schedule_wells = schedule().getWellsatEnd();
-        schedule_wells.erase(std::remove_if(schedule_wells.begin(), schedule_wells.end(), not_on_process_), schedule_wells.end());
-        wells.reserve(schedule_wells.size());
-
-        // initialize the additional cell connections introduced by wells.
-        for ( const auto& well : schedule_wells )
-        {
-            std::vector<int> compressed_well_perforations = this->getCellsForConnections(well);
-
-            // also include wells with no perforations in case
-            std::sort(compressed_well_perforations.begin(),
-                      compressed_well_perforations.end());
-
-            wells.push_back(compressed_well_perforations);
-        }
-        return wells;
-    }
-
-    template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
     addWellPressureEquationsStruct(PressureMatrix& jacobian) const
@@ -1519,15 +1484,6 @@ namespace Opm {
         }
     }
 
-
-    template<typename TypeTag>
-    int
-    BlackoilWellModel<TypeTag>::
-    numLocalNonshutWells() const
-    {
-        return well_container_.size();
-    }
-    
 
     template<typename TypeTag>
     void
@@ -2309,29 +2265,6 @@ namespace Opm {
         assert(offset == vars.size());
     }
 
-
-
-    template <typename TypeTag>
-    void
-    BlackoilWellModel<TypeTag>::
-    assignWellTracerRates(data::Wells& wsrpt) const
-    {
-        const auto & wellTracerRates = ebosSimulator_.problem().tracerModel().getWellTracerRates();
-
-        if (wellTracerRates.empty())
-            return; // no tracers
-
-        for (const auto& wTR : wellTracerRates) {
-            std::string wellName = wTR.first.first;
-            auto xwPos = wsrpt.find(wellName);
-            if (xwPos == wsrpt.end()) { // No well results.
-                continue;
-            }
-            std::string tracerName = wTR.first.second;
-            double rate = wTR.second;
-            xwPos->second.rates.set(data::Rates::opt::tracer, rate, tracerName);
-        }
-    }
 
 
     template <typename TypeTag>

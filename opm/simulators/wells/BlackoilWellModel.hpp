@@ -256,7 +256,9 @@ namespace Opm {
                     return this->wasDynamicallyShutThisTimeStep(well_index);
                 });
 
-                this->assignWellTracerRates(wsrpt);
+                const auto& tracerRates = ebosSimulator_.problem().tracerModel().getWellTracerRates();
+                this->assignWellTracerRates(wsrpt, tracerRates);
+
 
                 BlackoilWellModelGuideRates(*this).assignWellGuideRates(wsrpt, this->reportStepIndex());
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
@@ -323,11 +325,7 @@ namespace Opm {
 
             using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
 
-            int numLocalWellsEnd() const;
-
             void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights) const;
-
-            std::vector<std::vector<int>> getMaxWellConnections() const;
 
             void addWellPressureEquationsStruct(PressureMatrix& jacobian) const;
 
@@ -338,8 +336,6 @@ namespace Opm {
             {
                 return well_container_;
             }
-
-            int numLocalNonshutWells() const;
 
             // prototype for assemble function for ASPIN solveLocal()
             // will try to merge back to assemble() when done prototyping
@@ -511,8 +507,6 @@ namespace Opm {
                            std::vector<double>& resv_coeff) override;
 
             void computeWellTemperature();
-
-            void assignWellTracerRates(data::Wells& wsrpt) const;
 
             int compressedIndexForInterior(int cartesian_cell_idx) const override {
                 return ebosSimulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
