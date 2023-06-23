@@ -762,8 +762,8 @@ namespace Opm
         const Value drawdown = cell_press_at_perf - perf_press;
 
         // producing perforations
-        if ( drawdown > 0.0) {
-            // Do nothing is crossflow is not allowed
+        if (drawdown > 0.0) {
+            // Do nothing if crossflow is not allowed
             if (!allow_cf && this->isInjector()) {
                 return;
             }

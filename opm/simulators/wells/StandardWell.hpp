@@ -466,6 +466,54 @@ namespace Opm
                                 const double dis_gas_rate,
                                 const std::vector<EvalWell>& cq_s,
                                 const IntensiveQuantities& intQuants) const;
+
+        template<class Value>
+        void gasOilPerfRateInj(const std::vector<Value>& cq_s,
+                               PerforationRates& perf_rates,
+                               const Value& rv,
+                               const Value& rs,
+                               const Value& pressure,
+                               const Value& rvw,
+                               DeferredLogger& deferred_logger) const;
+
+        template<class Value>
+        void gasOilPerfRateProd(std::vector<Value>& cq_s,
+                                PerforationRates& perf_rates,
+                                const Value& rv,
+                                const Value& rs,
+                                const Value& rvw) const;
+
+        template<class Value>
+        void gasWaterPerfRateProd(std::vector<Value>& cq_s,
+                                  PerforationRates& perf_rates,
+                                  const Value& rvw,
+                                  const Value& rsw) const;
+
+        template<class Value>
+        void gasWaterPerfRateInj(const std::vector<Value>& cq_s,
+                                 PerforationRates& perf_rates,
+                                 const Value& rvw,
+                                 const Value& rsw,
+                                 const Value& pressure,
+                                 DeferredLogger& deferred_logger) const;
+
+        template<class Value>
+        void disOilVapWatVolumeRatio(Value& volumeRatio,
+                                     const Value& rvw,
+                                     const Value& rsw,
+                                     const Value& pressure,
+                                     const std::vector<Value>& cmix_s,
+                                     const std::vector<Value>& b_perfcells_dense,
+                                     DeferredLogger& deferred_logger) const;
+
+        template<class Value>
+        void gasOilVolumeRatio(Value& volumeRatio,
+                               const Value& rv,
+                               const Value& rs,
+                               const Value& pressure,
+                               const std::vector<Value>& cmix_s,
+                               const std::vector<Value>& b_perfcells_dense,
+                               DeferredLogger& deferred_logger) const;
     };
 
 }
