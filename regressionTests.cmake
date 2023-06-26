@@ -1188,4 +1188,9 @@ add_test_compareECLFiles(CASENAME 01_multflt
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR mult)                         
-                         
+add_test_compareECLFiles(CASENAME 01_ppcwmax
+                         FILENAME PPCWMAX-01
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR ppcwmax)                                                  
