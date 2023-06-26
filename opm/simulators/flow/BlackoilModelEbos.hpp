@@ -27,24 +27,6 @@
 #include <ebos/eclproblem.hh>
 #include <opm/models/utils/start.hh>
 
-#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
-
-#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
-#include <opm/simulators/wells/BlackoilWellModel.hpp>
-#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
-#include <opm/simulators/flow/partitionCells.hpp>
-#include <opm/simulators/flow/SubDomain.hpp>
-#include <opm/simulators/flow/countGlobalCells.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/linalg/extractMatrix.hpp>
-
-#include <opm/grid/common/SubGridPart.hpp>
-#include <opm/simulators/timestepping/SimulatorReport.hpp>
-#include <opm/simulators/linalg/ParallelIstlInformation.hpp>
-#include <opm/core/props/phaseUsageFromDeck.hpp>
-
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -52,30 +34,26 @@
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
 #include <opm/grid/UnstructuredGrid.h>
+#include <opm/grid/common/SubGridPart.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/flow/partitionCells.hpp>
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/flow/SubDomain.hpp>
+#include <opm/simulators/linalg/extractMatrix.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
-
-
-
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
-
-
-#include <dune/istl/matrixmarket.hh>
-#include <opm/simulators/linalg/MatrixMarketSpecializations.hpp>
 
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/common/parallel/communication.hh>
@@ -1666,22 +1644,22 @@ namespace Opm {
                 double tol[2] = { tol_mb, tol_cnv };
                 for (int ii : {0, 1}) {
                     if (std::isnan(res[ii])) {
-                        report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});//, cell[ii], res[ii]});
+                        report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
                         if ( terminal_output_ ) {
                             OpmLog::debug("NaN residual for " + compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] > maxResidualAllowed()) {
-                        report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});//, cell[ii], res[ii]});
+                        report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
                         if ( terminal_output_ ) {
                             OpmLog::debug("Too large residual for " + compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] < 0.0) {
-                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});//, cell[ii], res[ii]});
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                         if ( terminal_output_ ) {
                             OpmLog::debug("Negative residual for " + compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] > tol[ii]) {
-                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});//, cell[ii], res[ii]});
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                     }
                 }
             }
@@ -1777,22 +1755,22 @@ namespace Opm {
                 double tol[2] = { tol_mb, tol_cnv };
                 for (int ii : {0, 1}) {
                     if (std::isnan(res[ii])) {
-                        report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});//, cell[ii], res[ii]});
+                        report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
                         if ( terminal_output_ ) {
                             OpmLog::debug("NaN residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] > maxResidualAllowed()) {
-                        report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});//, cell[ii], res[ii]});
+                        report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
                         if ( terminal_output_ ) {
                             OpmLog::debug("Too large residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] < 0.0) {
-                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});//, cell[ii], res[ii]});
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                         if ( terminal_output_ ) {
                             OpmLog::debug("Negative residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
                     } else if (res[ii] > tol[ii]) {
-                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});//, cell[ii], res[ii]});
+                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                     }
                     report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
                 }
