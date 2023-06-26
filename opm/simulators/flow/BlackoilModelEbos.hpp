@@ -1257,10 +1257,10 @@ namespace Opm {
         /// \brief Get reservoir quantities on this process needed for convergence calculations.
         /// \return A pair of the local pore volume of interior cells and the pore volumes
         ///         of the cells associated with a numerical aquifer.
-        std::tuple<double,double> localConvergenceData(std::vector<Scalar>& R_sum,
-                                    std::vector<Scalar>& maxCoeff,
-                                    std::vector<Scalar>& B_avg,
-                                    std::vector<int>& maxCoeffCell)
+        std::pair<double,double> localConvergenceData(std::vector<Scalar>& R_sum,
+                                                      std::vector<Scalar>& maxCoeff,
+                                                      std::vector<Scalar>& B_avg,
+                                                      std::vector<int>& maxCoeffCell)
         {
             OPM_TIMEBLOCK(localConvergenceData);
             double pvSumLocal = 0.0;
@@ -1275,11 +1275,10 @@ namespace Opm {
             OPM_BEGIN_PARALLEL_TRY_CATCH();
             for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 elemCtx.updatePrimaryStencil(elem);
-                // elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                // const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
+                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
                 const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
@@ -1353,12 +1352,34 @@ namespace Opm {
                 }
 
                 if constexpr (has_energy_) {
-                    B_avg[ contiEnergyEqIdx ] += 1.0;
+                    B_avg[ contiEnergyEqIdx ] += 1.0 / (4.182e1); // converting J -> RM3 (entalpy / (cp * deltaK * rho) assuming change of 1e-5K of water
                     const auto R2 = ebosResid[cell_idx][contiEnergyEqIdx];
                     R_sum[ contiEnergyEqIdx ] += R2;
                     maxCoeff[ contiEnergyEqIdx ] = std::max( maxCoeff[ contiEnergyEqIdx ], std::abs( R2 ) / pvValue );
                 }
 
+                if constexpr (has_micp_) {
+                    B_avg[contiMicrobialEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R1 = ebosResid[cell_idx][contiMicrobialEqIdx];
+                    R_sum[contiMicrobialEqIdx] += R1;
+                    maxCoeff[contiMicrobialEqIdx] = std::max(maxCoeff[contiMicrobialEqIdx], std::abs(R1) / pvValue);
+                    B_avg[contiOxygenEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R2 = ebosResid[cell_idx][contiOxygenEqIdx];
+                    R_sum[contiOxygenEqIdx] += R2;
+                    maxCoeff[contiOxygenEqIdx] = std::max(maxCoeff[contiOxygenEqIdx], std::abs(R2) / pvValue);
+                    B_avg[contiUreaEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R3 = ebosResid[cell_idx][contiUreaEqIdx];
+                    R_sum[contiUreaEqIdx] += R3;
+                    maxCoeff[contiUreaEqIdx] = std::max(maxCoeff[contiUreaEqIdx], std::abs(R3) / pvValue);
+                    B_avg[contiBiofilmEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R4 = ebosResid[cell_idx][contiBiofilmEqIdx];
+                    R_sum[contiBiofilmEqIdx] += R4;
+                    maxCoeff[contiBiofilmEqIdx] = std::max(maxCoeff[contiBiofilmEqIdx], std::abs(R4) / pvValue);
+                    B_avg[contiCalciteEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                    const auto R5 = ebosResid[cell_idx][contiCalciteEqIdx];
+                    R_sum[contiCalciteEqIdx] += R5;
+                    maxCoeff[contiCalciteEqIdx] = std::max(maxCoeff[contiCalciteEqIdx], std::abs(R5) / pvValue);
+                }
             }
 
             OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ", grid_.comm());
@@ -1375,13 +1396,14 @@ namespace Opm {
 
 
         // Get reservoir quantities on this process needed for convergence calculations.
-        double localDomainConvergenceData(const Domain& domain,
-                                          std::vector<Scalar>& R_sum,
-                                          std::vector<Scalar>& maxCoeff,
-                                          std::vector<Scalar>& B_avg,
-                                          std::vector<int>& maxCoeffCell)
+        std::pair<double, double> localDomainConvergenceData(const Domain& domain,
+                                                             std::vector<Scalar>& R_sum,
+                                                             std::vector<Scalar>& maxCoeff,
+                                                             std::vector<Scalar>& B_avg,
+                                                             std::vector<int>& maxCoeffCell)
         {
             double pvSumLocal = 0.0;
+            double numAquiferPvSumLocal = 0.0;
             const auto& ebosModel = ebosSimulator_.model();
             const auto& ebosProblem = ebosSimulator_.problem();
 
@@ -1400,24 +1422,19 @@ namespace Opm {
                 }
                 const auto& elem = *elemIt;
                 elemCtx.updatePrimaryStencil(elem);
-                // elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-
-                // const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
-                auto* intQuantsPtr = ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-                // const auto& intQuants = *(ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0));
-                if (intQuantsPtr == nullptr) {
-                    OpmLog::debug("** no cached intensive quantities for cell " + std::to_string(cell_idx));
-                    elemCtx.updatePrimaryIntensiveQuantities(0);
-                    intQuantsPtr = ebosSimulator_.model().cachedIntensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-                    assert(intQuantsPtr != nullptr);
-                }
-                const auto& intQuants = *intQuantsPtr;
-
+                const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
                 const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
                 pvSumLocal += pvValue;
+
+                if (isNumericalAquiferCell(gridView.grid(), elem))
+                {
+                    numAquiferPvSumLocal += pvValue;
+                }
 
                 for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
                 {
@@ -1521,8 +1538,7 @@ namespace Opm {
                 B_avg[ i ] /= Scalar(domain.cells.size());
             }
 
-            // return {pvSumLocal, numAquiferPvSumLocal};
-            return pvSumLocal;
+            return {pvSumLocal, numAquiferPvSumLocal};
         }
 
 
@@ -1614,14 +1630,11 @@ namespace Opm {
             Vector R_sum(numComp, 0.0 );
             Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
             std::vector<int> maxCoeffCell(numComp, -1);
-            const double pvSum = localDomainConvergenceData(domain, R_sum, maxCoeff, B_avg, maxCoeffCell);
-
-            // compute global sum and max of quantities
-            // const double pvSum = convergenceReduction(grid_.comm(), pvSumLocal,
-            //                                           R_sum, maxCoeff, B_avg);
+            const auto [ pvSum, numAquiferPvSum]
+                = localDomainConvergenceData(domain, R_sum, maxCoeff, B_avg, maxCoeffCell);
 
             auto cnvErrorPvFraction = computeCnvErrorPvLocal(domain, B_avg, dt);
-            cnvErrorPvFraction /= pvSum;
+            cnvErrorPvFraction /= (pvSum - numAquiferPvSum);
 
             const double tol_mb  = param_.local_tolerance_scaling_mb_ * param_.tolerance_mb_;
             // Default value of relaxed_max_pv_fraction_ is 0.03 and min_strict_cnv_iter_ is 0.
