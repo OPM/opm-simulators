@@ -407,7 +407,7 @@ protected:
 
 private:
     template<class T>
-    void updateNum(const std::string& name, std::vector<T>& numbers);
+    void updateNum(const std::string& name, std::vector<T>& numbers, size_t num_regions);
 };
 
 } // namespace Opm

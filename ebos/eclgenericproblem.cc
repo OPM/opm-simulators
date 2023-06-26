@@ -364,7 +364,7 @@ rockFraction(unsigned elementIdx, unsigned timeIdx) const
 template<class GridView, class FluidSystem, class Scalar>
 template<class T>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
-updateNum(const std::string& name, std::vector<T>& numbers)
+updateNum(const std::string& name, std::vector<T>& numbers, size_t num_regions)
 {
     if (!eclState_.fieldProps().has_int(name))
         return;
@@ -374,7 +374,13 @@ updateNum(const std::string& name, std::vector<T>& numbers)
     unsigned numElems = gridView_.size(/*codim=*/0);
     numbers.resize(numElems);
     for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-        numbers[elemIdx] = static_cast<T>(numData[elemIdx]) - 1;
+        if (numData[elemIdx] > (int)num_regions) {
+            throw std::runtime_error("Values larger than maximum number of regions " + std::to_string(num_regions) + " provided in " + name);
+        } else if (numData[elemIdx] > 0) {
+            numbers[elemIdx] = static_cast<T>(numData[elemIdx]) - 1;
+        } else {
+            throw std::runtime_error("zero or negative values provided for region array: " + name);
+        }
     }
 }
 
@@ -382,46 +388,52 @@ template<class GridView, class FluidSystem, class Scalar>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
 updatePvtnum_()
 {
-    updateNum("PVTNUM", pvtnum_);
+    const auto num_regions = eclState_.getTableManager().getTabdims().getNumPVTTables();
+    updateNum("PVTNUM", pvtnum_, num_regions);
 }
 
 template<class GridView, class FluidSystem, class Scalar>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
 updateSatnum_()
 {
-    updateNum("SATNUM", satnum_);
+    const auto num_regions = eclState_.getTableManager().getTabdims().getNumSatTables();
+    updateNum("SATNUM", satnum_, num_regions);
 }
 
 template<class GridView, class FluidSystem, class Scalar>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
 updateMiscnum_()
 {
-    updateNum("MISCNUM", miscnum_);
+    const auto num_regions = 1; // we only support single region
+    updateNum("MISCNUM", miscnum_, num_regions);
 }
 
 template<class GridView, class FluidSystem, class Scalar>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
 updatePlmixnum_()
 {
-    updateNum("PLMIXNUM", plmixnum_);
+    const auto num_regions = 1; // we only support single region
+    updateNum("PLMIXNUM", plmixnum_, num_regions);
 }
 
 template<class GridView, class FluidSystem, class Scalar>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
 updateKrnum_()
 {
-    updateNum("KRNUMX", krnumx_);
-    updateNum("KRNUMY", krnumy_);
-    updateNum("KRNUMZ", krnumz_);
+    const auto num_regions = eclState_.getTableManager().getTabdims().getNumSatTables();
+    updateNum("KRNUMX", krnumx_, num_regions);
+    updateNum("KRNUMY", krnumy_, num_regions);
+    updateNum("KRNUMZ", krnumz_, num_regions);
 }
 
 template<class GridView, class FluidSystem, class Scalar>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
 updateImbnum_()
 {
-    updateNum("IMBNUMX", imbnumx_);
-    updateNum("IMBNUMY", imbnumy_);
-    updateNum("IMBNUMZ", imbnumz_);
+    const auto num_regions = eclState_.getTableManager().getTabdims().getNumSatTables();
+    updateNum("IMBNUMX", imbnumx_, num_regions);
+    updateNum("IMBNUMY", imbnumy_, num_regions);
+    updateNum("IMBNUMZ", imbnumz_, num_regions);
 }
 
 template<class GridView, class FluidSystem, class Scalar>
