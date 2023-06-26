@@ -310,19 +310,13 @@ namespace Opm {
             well->setGuideRate(&guideRate_);
         }
 
-        // we need the inj_multiplier from the previous time step
-        for (auto& well : well_container_) {
-            if (well->isInjector()) {
-                const auto& ws = this->wellState().well(well->indexOfWell());
-                const auto& perf_data = ws.perf_data;
-                well->initInjMult(perf_data.inj_multiplier);
-            }
-        }
-
         // Close completions due to economic reasons
         for (auto& well : well_container_) {
             well->closeCompletions(wellTestState());
         }
+
+        // we need the inj_multiplier from the previous time step
+        this->initInjMult();
 
         if (alternative_well_rate_init_) {
             // Update the well rates of well_state_, if only single-phase rates, to
@@ -478,12 +472,11 @@ namespace Opm {
             if (getPropValue<TypeTag, Properties::EnablePolymerMW>() && well->isInjector()) {
                 well->updateWaterThroughput(dt, this->wellState());
             }
-            // at the end of the time step, updating the inj_multiplier saved in WellState for later use
-            if (well->isInjector()) {
-                auto& perf_data = this->wellState().well(well->indexOfWell()).perf_data;
-                well->updateInjMult(perf_data.inj_multiplier);
-            }
         }
+
+        // at the end of the time step, updating the inj_multiplier saved in WellState for later use
+        this->updateInjMult(local_deferredLogger);
+
         // report well switching
         for (const auto& well : well_container_) {
             well->reportWellSwitching(this->wellState().well(well->indexOfWell()), local_deferredLogger);

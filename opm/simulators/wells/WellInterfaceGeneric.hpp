@@ -182,7 +182,7 @@ public:
     void initInjMult(const std::vector<double>& max_inj_mult);
 
     // update the InjMult information at the end of the time step, so it can be used for later.
-    void updateInjMult(std::vector<double>& inj_multipliers) const;
+    void updateInjMult(std::vector<double>& inj_multipliers, DeferredLogger& deferred_logger) const;
 
     // Note:: for multisegment wells, bhp is actually segment pressure in practice based on observation
     // it might change in the future

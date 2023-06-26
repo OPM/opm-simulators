@@ -369,6 +369,11 @@ protected:
                               const SummaryConfig& summaryConfig,
                               DeferredLogger& deferred_logger);
 
+    void initInjMult();
+
+
+    void updateInjMult(DeferredLogger& deferred_logger);
+
     // create the well container
     virtual void createWellContainer(const int time_step) = 0;
     virtual void initWellContainer(const int reportStepIdx) = 0;

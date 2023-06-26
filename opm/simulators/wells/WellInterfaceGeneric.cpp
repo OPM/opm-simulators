@@ -199,9 +199,14 @@ void WellInterfaceGeneric::initInjMult(const std::vector<double>& max_inj_mult)
     this->inj_multiplier_ = std::vector<double>(max_inj_mult.size(), 1.);
 }
 
-void WellInterfaceGeneric::updateInjMult(std::vector<double>& inj_multipliers) const
+void WellInterfaceGeneric::updateInjMult(std::vector<double>& inj_multipliers, DeferredLogger& deferred_logger) const
 {
-    assert(inj_multipliers.size() == this->inj_multiplier_.size());
+    if (inj_multipliers.size() != this->inj_multiplier_.size()) {
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         fmt::format("We do not support changing connection numbers during simulation with WINJMULT "
+                                     "for well {}", name()),
+                         deferred_logger);
+    }
 
     inj_multipliers = this->inj_multiplier_;
 }
@@ -234,7 +239,7 @@ double WellInterfaceGeneric::getInjMult(const int perf,
         }
     }
 
-    // for CIRR mode, if there is not activel WINJMULT setup, we will use the previous injection multiplier,
+    // for CIRR mode, if there is no active WINJMULT setup, we will use the previous injection multiplier,
     // to mimic keeping the existing fracturing open
     if (this->well_ecl_.getInjMultMode() == Well::InjMultMode::CIRR) {
         multipler = std::max(multipler, this->prev_inj_multiplier_[perf_ecl_index]);
