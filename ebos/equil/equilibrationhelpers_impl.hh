@@ -70,7 +70,7 @@ operator()(const double depth,
            const double temp,
            const double satGas) const
 {
-    if (satGas > 0.0) {
+    if (satGas > std::sqrt(std::numeric_limits<double>::epsilon())) {
         return satRs(press, temp);
     }
     else {
@@ -180,7 +180,7 @@ operator()(const double depth,
             "Must not pass negative oil saturation"
         };
     }
-    if (satOil > 1e-16) {
+    if (satOil > std::sqrt(std::numeric_limits<double>::epsilon())) {
         return satRv(press, temp);
     }
     else {
@@ -222,7 +222,7 @@ operator()(const double depth,
         };
     }
 
-    if (satWat > 1e-16) {
+    if (satWat > std::sqrt(std::numeric_limits<double>::epsilon())) {
         return satRvw(press, temp); //saturated Rvw
     }
     else {
@@ -257,7 +257,7 @@ operator()(const double /* depth */,
            const double temp,
            const double satGas) const
 {
-    if (satGas > 0.0) {
+    if (satGas > std::sqrt(std::numeric_limits<double>::epsilon())) {
         return satRs(press, temp);
     }
     else {
@@ -287,7 +287,7 @@ operator()(const double /*depth*/,
            const double temp,
            const double satOil) const
 {
-    if (satOil > 0.0) {
+    if (satOil > std::sqrt(std::numeric_limits<double>::epsilon())) {
         return satRv(press, temp);
     }
     else {
@@ -317,7 +317,7 @@ operator()(const double /*depth*/,
            const double temp,
            const double satWat) const
 {
-    if (satWat > 0.0) {
+    if (satWat > std::sqrt(std::numeric_limits<double>::epsilon())) {
         return satRvw(press, temp);
     }
     else {
