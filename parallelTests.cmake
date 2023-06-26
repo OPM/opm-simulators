@@ -177,7 +177,7 @@ add_test_compare_parallel_simulation(CASENAME winjmult_msw
                                      FILENAME WINJMULT_MSW
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol}
-                                     REL_TOL 0.21
+                                     REL_TOL 0.12
                                      DIR winjmult
                                      TEST_ARGS --enable-tuning=true)
 

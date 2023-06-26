@@ -1411,16 +1411,18 @@ void BlackoilWellModelGeneric::initInjMult() {
         if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
             const auto& ws = this->wellState().well(well->indexOfWell());
             const auto& perf_data = ws.perf_data;
-            well->initInjMult(perf_data.inj_multiplier);
+            if ((this->prev_inj_multipliers_.count(well->name())) == 0 ) {
+                this->prev_inj_multipliers_[well->name()] = std::vector<double>(perf_data.size(), 1.0);
+            }
+            well->initInjMult(this->prev_inj_multipliers_.at(well->name()));
         }
     }
 }
 
 void BlackoilWellModelGeneric::updateInjMult(DeferredLogger& deferred_logger) {
     for (const auto& well : this->well_container_generic_) {
-        if (well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE && well->isInjector()) {
-            auto& perf_data = this->wellState().well(well->indexOfWell()).perf_data;
-            well->updateInjMult(perf_data.inj_multiplier, deferred_logger);
+        if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
+            well->updateInjMult(this->prev_inj_multipliers_[well->name()], deferred_logger);
         }
     }
 }

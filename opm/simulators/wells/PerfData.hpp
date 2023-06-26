@@ -57,7 +57,6 @@ public:
         serializer(connection_transmissibility_factor);
         serializer(satnum_id);
         serializer(ecl_index);
-        serializer(inj_multiplier);
         serializer(water_throughput);
         serializer(skin_pressure);
         serializer(water_velocity);
@@ -79,9 +78,6 @@ public:
     std::vector<double> connection_transmissibility_factor;
     std::vector<int> satnum_id;
     std::vector<std::size_t> ecl_index;
-    // the injection multiplier due to WINJMULT keyword
-    // it only applies to injectors
-    std::vector<double> inj_multiplier;
 
     // The water_throughput, skin_pressure and water_velocity variables are only
     // used for injectors to check the injectivity.

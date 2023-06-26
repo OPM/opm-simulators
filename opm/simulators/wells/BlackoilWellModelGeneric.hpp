@@ -192,6 +192,7 @@ public:
         serializer(closed_this_step_);
         serializer(guideRate_);
         serializer(node_pressures_);
+        serializer(prev_inj_multipliers_);
         serializer(active_wgstate_);
         serializer(last_valid_wgstate_);
         serializer(nupcol_wgstate_);
@@ -208,6 +209,7 @@ public:
                this->local_shut_wells_ == rhs.local_shut_wells_ &&
                this->closed_this_step_ == rhs.closed_this_step_ &&
                this->node_pressures_ == rhs.node_pressures_ &&
+               this->prev_inj_multipliers_ == rhs.prev_inj_multipliers_ &&
                this->active_wgstate_ == rhs.active_wgstate_ &&
                this->last_valid_wgstate_ == rhs.last_valid_wgstate_ &&
                this->nupcol_wgstate_ == rhs.nupcol_wgstate_ &&
@@ -432,6 +434,9 @@ protected:
     GuideRate guideRate_;
     std::unique_ptr<VFPProperties> vfp_properties_{};
     std::map<std::string, double> node_pressures_; // Storing network pressures for output.
+
+    // previous injection multiplier, it is used in the injection multiplier calculation for WINJMULT keyword
+    std::unordered_map<std::string, std::vector<double>> prev_inj_multipliers_;
 
     /*
       The various wellState members should be accessed and modified
