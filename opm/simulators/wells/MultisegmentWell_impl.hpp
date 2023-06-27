@@ -887,6 +887,7 @@ namespace Opm
         auto obtain = [this](const Eval& value)
                       {
                           if constexpr (std::is_same_v<Value, Scalar>) {
+                              static_cast<void>(this); // suppress clang warning
                               return getValue(value);
                           } else {
                               return this->extendEval(value);
@@ -989,7 +990,7 @@ namespace Opm
         auto obtain = [this](const Eval& value)
                       {
                           if constexpr (std::is_same_v<Value, Scalar>) {
-                              (void)this; // suppress clang warning
+                              static_cast<void>(this); // suppress clang warning
                               return getValue(value);
                           } else {
                               return this->extendEval(value);
