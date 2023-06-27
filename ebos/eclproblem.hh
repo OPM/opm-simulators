@@ -91,6 +91,8 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
+
 #include <set>
 #include <vector>
 #include <string>
@@ -592,7 +594,7 @@ struct OutputMode<TypeTag, TTag::EclBaseProblem> {
 // Parameterize equilibration accuracy
 template<class TypeTag>
 struct NumPressurePointsEquil<TypeTag, TTag::EclBaseProblem> {
-    static constexpr int value = 2000;
+    static constexpr int value = ParserKeywords::EQLDIMS::DEPTH_NODES_P::defaultValue;
 };
 
 
@@ -821,7 +823,17 @@ public:
         this->maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent);
         this->restartShrinkFactor_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclRestartShrinkFactor);
         this->maxFails_ = EWOMS_GET_PARAM(TypeTag, unsigned, MaxTimeStepDivisions);
-        this->numPressurePointsEquil_ = EWOMS_GET_PARAM(TypeTag, int, NumPressurePointsEquil);
+        
+        // The value N for this parameter is defined in the following order of presedence:
+        // 1. Command line value (--num-pressure-points-equil=N)
+        // 2. EQLDIMS item 2 
+        // Default value is defined in opm-common/src/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
+        if (EWOMS_PARAM_IS_SET(TypeTag, int, NumPressurePointsEquil))
+        {
+            this->numPressurePointsEquil_ = EWOMS_GET_PARAM(TypeTag, int, NumPressurePointsEquil);
+        } else {
+            this->numPressurePointsEquil_ = simulator.vanguard().eclState().getTableManager().getEqldims().getNumDepthNodesP();
+        }
 
         RelpermDiagnostics relpermDiagnostics;
         relpermDiagnostics.diagnosis(vanguard.eclState(), vanguard.cartesianIndexMapper());
