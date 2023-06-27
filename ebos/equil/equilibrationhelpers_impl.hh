@@ -70,15 +70,16 @@ operator()(const double depth,
            const double temp,
            const double satGas) const
 {
+    const auto sat_rs = satRs(press, temp);
     if (satGas > std::sqrt(std::numeric_limits<double>::epsilon())) {
-        return satRs(press, temp);
+        return sat_rs;
     }
     else {
         if (rsVsDepth_.xMin() > depth)
-            return rsVsDepth_.valueAt(0);
+            return std::min(sat_rs, rsVsDepth_.valueAt(0));
         else if (rsVsDepth_.xMax() < depth)
-            return rsVsDepth_.valueAt(rsVsDepth_.numSamples() - 1);
-        return std::min(satRs(press, temp), rsVsDepth_.eval(depth, /*extrapolate=*/false));
+            return std::min(sat_rs, rsVsDepth_.valueAt(rsVsDepth_.numSamples() - 1));
+        return std::min(sat_rs, rsVsDepth_.eval(depth, /*extrapolate=*/false));
     }
 }
 
@@ -180,15 +181,16 @@ operator()(const double depth,
             "Must not pass negative oil saturation"
         };
     }
+    const auto sat_rv = satRv(press, temp);
     if (satOil > std::sqrt(std::numeric_limits<double>::epsilon())) {
-        return satRv(press, temp);
+        return sat_rv;
     }
     else {
         if (rvVsDepth_.xMin() > depth)
-            return rvVsDepth_.valueAt(0);
+            return std::min(sat_rv, rvVsDepth_.valueAt(0));
         else if (rvVsDepth_.xMax() < depth)
-            return rvVsDepth_.valueAt(rvVsDepth_.numSamples() - 1);
-        return std::min(satRv(press, temp), rvVsDepth_.eval(depth, /*extrapolate=*/false));
+            return std::min(sat_rv, rvVsDepth_.valueAt(rvVsDepth_.numSamples() - 1));
+        return std::min(sat_rv, rvVsDepth_.eval(depth, /*extrapolate=*/false));
     }
 }
 
@@ -222,15 +224,16 @@ operator()(const double depth,
         };
     }
 
+    const auto sat_rvw = satRvw(press, temp);
     if (satWat > std::sqrt(std::numeric_limits<double>::epsilon())) {
-        return satRvw(press, temp); //saturated Rvw
+        return sat_rvw; //saturated Rvw
     }
     else {
         if (rvwVsDepth_.xMin() > depth)
-            return rvwVsDepth_.valueAt(0);
+            return std::min(sat_rvw,rvwVsDepth_.valueAt(0));
         else if (rvwVsDepth_.xMax() < depth)
-            return rvwVsDepth_.valueAt(rvwVsDepth_.numSamples() - 1);
-        return std::min(satRvw(press, temp), rvwVsDepth_.eval(depth, /*extrapolate=*/false));
+            return std::min(sat_rvw, rvwVsDepth_.valueAt(rvwVsDepth_.numSamples() - 1));
+        return std::min(sat_rvw, rvwVsDepth_.eval(depth, /*extrapolate=*/false));
     }
 }
 
