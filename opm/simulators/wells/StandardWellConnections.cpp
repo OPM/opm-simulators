@@ -30,7 +30,7 @@
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
-#include <opm/simulators/utils/DeferredLogger.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -514,8 +514,160 @@ computeProperties(const WellState& well_state,
     this->computePressureDelta();
 }
 
+template<class FluidSystem, class Indices, class Scalar>
+typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval
+StandardWellConnections<FluidSystem,Indices,Scalar>::
+connectionRateBrine(double& rate,
+                    const double vap_wat_rate,
+                    const std::vector<EvalWell>& cq_s,
+                    const std::variant<Scalar,EvalWell>& saltConcentration) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    // Correction salt rate; evaporated water does not contain salt
+    EvalWell cq_s_sm = cq_s[waterCompIdx] - vap_wat_rate;
+    if (well_.isInjector()) {
+        cq_s_sm *= std::get<Scalar>(saltConcentration);
+    } else {
+        cq_s_sm *= std::get<EvalWell>(saltConcentration);
+    }
+
+    // Note. Efficiency factor is handled in the output layer
+    rate = cq_s_sm.value();
+
+    cq_s_sm *= well_.wellEfficiencyFactor();
+    return well_.restrictEval(cq_s_sm);
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval
+StandardWellConnections<FluidSystem,Indices,Scalar>::
+connectionRateFoam(const std::vector<EvalWell>& cq_s,
+                    const std::variant<Scalar,EvalWell>& foamConcentration,
+                    const Phase transportPhase,
+                    DeferredLogger& deferred_logger) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    auto getFoamTransportIdx = [&deferred_logger,transportPhase] {
+        switch (transportPhase) {
+            case Phase::WATER: {
+                return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+            }
+            case Phase::GAS: {
+                return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+            }
+            case Phase::SOLVENT: {
+                if constexpr (Indices::enableSolvent)
+                    return static_cast<unsigned>(Indices::contiSolventEqIdx);
+                else
+                    OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase is SOLVENT but SOLVENT is not activated.", deferred_logger);
+            }
+            default: {
+                OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase must be GAS/WATER/SOLVENT.", deferred_logger);
+            }
+        }
+    };
+
+    EvalWell cq_s_foam = cq_s[getFoamTransportIdx()] * well_.wellEfficiencyFactor();;
+    if (well_.isInjector()) {
+        cq_s_foam *= std::get<Scalar>(foamConcentration);
+    } else {
+        cq_s_foam *= std::get<EvalWell>(foamConcentration);
+    }
+
+    return well_.restrictEval(cq_s_foam);
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+std::tuple<typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval>
+StandardWellConnections<FluidSystem,Indices,Scalar>::
+connectionRatesMICP(const std::vector<EvalWell>& cq_s,
+                    const std::variant<Scalar,EvalWell>& microbialConcentration,
+                    const std::variant<Scalar,EvalWell>& oxygenConcentration,
+                    const std::variant<Scalar,EvalWell>& ureaConcentration) const
+{
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    EvalWell cq_s_microbe = cq_s[waterCompIdx];
+    if (well_.isInjector()) {
+        cq_s_microbe *= std::get<Scalar>(microbialConcentration);
+    } else {
+        cq_s_microbe *= std::get<EvalWell>(microbialConcentration);
+    }
+
+    EvalWell cq_s_oxygen = cq_s[waterCompIdx];
+    if (well_.isInjector()) {
+        cq_s_oxygen *= std::get<Scalar>(oxygenConcentration);
+    } else {
+        cq_s_oxygen *= std::get<EvalWell>(oxygenConcentration);
+    }
+
+    EvalWell cq_s_urea = cq_s[waterCompIdx];
+    if (well_.isInjector()) {
+        cq_s_urea *= std::get<Scalar>(ureaConcentration);
+    } else {
+        cq_s_urea *= std::get<EvalWell>(ureaConcentration);
+    }
+
+    return {well_.restrictEval(cq_s_microbe),
+            well_.restrictEval(cq_s_oxygen),
+            well_.restrictEval(cq_s_urea)};
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+std::tuple<typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices,Scalar>::EvalWell>
+StandardWellConnections<FluidSystem,Indices,Scalar>::
+connectionRatePolymer(double& rate,
+                    const std::vector<EvalWell>& cq_s,
+                    const std::variant<Scalar,EvalWell>& polymerConcentration) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+    EvalWell cq_s_poly = cq_s[waterCompIdx];
+    if (well_.isInjector()) {
+        cq_s_poly *= std::get<Scalar>(polymerConcentration);
+    } else {
+        cq_s_poly *= std::get<EvalWell>(polymerConcentration);
+    }
+    // Note. Efficiency factor is handled in the output layer
+    rate = cq_s_poly.value();
+
+    cq_s_poly *= well_.wellEfficiencyFactor();
+
+    return {well_.restrictEval(cq_s_poly), cq_s_poly};
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+std::tuple<typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices,Scalar>::EvalWell>
+StandardWellConnections<FluidSystem,Indices,Scalar>::
+connectionRatezFraction(double& rate,
+                        const double dis_gas_rate,
+                        const std::vector<EvalWell>& cq_s,
+                        const std::variant<Scalar, std::array<EvalWell,2>>& solventConcentration) const
+{
+    // TODO: the application of well efficiency factor has not been tested with an example yet
+    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+    EvalWell cq_s_zfrac_effective = cq_s[gasCompIdx];
+    if (well_.isInjector()) {
+        cq_s_zfrac_effective *= std::get<Scalar>(solventConcentration);
+    } else if (cq_s_zfrac_effective.value() != 0.0) {
+        const double dis_gas_frac = dis_gas_rate / cq_s_zfrac_effective.value();
+        const auto& vol = std::get<std::array<EvalWell,2>>(solventConcentration);
+        cq_s_zfrac_effective *= dis_gas_frac * vol[0] + (1.0 - dis_gas_frac) * vol[1];
+    }
+
+    rate = cq_s_zfrac_effective.value();
+
+    cq_s_zfrac_effective *= well_.wellEfficiencyFactor();
+    return {well_.restrictEval(cq_s_zfrac_effective), cq_s_zfrac_effective};
+}
+
 #define INSTANCE(...) \
-template class StandardWellConnections<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
+template class StandardWellConnections<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, \
+                                       __VA_ARGS__,double>;
 
 // One phase
 INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)

@@ -526,11 +526,19 @@ namespace Opm
         }
 
         if constexpr (has_polymer) {
+            std::variant<Scalar,EvalWell> polymerConcentration;
+            if (this->isInjector()) {
+                polymerConcentration = this->wpolymer();
+            } else {
+                polymerConcentration = this->extendEval(intQuants.polymerConcentration() *
+                                                        intQuants.polymerViscosityCorrection());
+            }
+
             [[maybe_unused]] EvalWell cq_s_poly;
             std::tie(connectionRates[perf][Indices::contiPolymerEqIdx],
                      cq_s_poly) =
-                connectionRatePolymer(perf_data.polymer_rates[perf],
-                                      cq_s, intQuants);
+                this->connections_.connectionRatePolymer(perf_data.polymer_rates[perf],
+                                                         cq_s, polymerConcentration);
 
             if constexpr (Base::has_polymermw) {
                 updateConnectionRatePolyMW(cq_s_poly, intQuants, well_state,
@@ -539,28 +547,67 @@ namespace Opm
         }
 
         if constexpr (has_foam) {
+            std::variant<Scalar,EvalWell> foamConcentration;
+            if (this->isInjector()) {
+                foamConcentration = this->wfoam();
+            } else {
+                foamConcentration = this->extendEval(intQuants.foamConcentration());
+            }
             connectionRates[perf][Indices::contiFoamEqIdx] =
-                connectionRateFoam(cq_s, intQuants, deferred_logger);
+                this->connections_.connectionRateFoam(cq_s, foamConcentration,
+                                                      FoamModule::transportPhase(),
+                                                      deferred_logger);
         }
 
         if constexpr (has_zFraction) {
+            std::variant<Scalar,std::array<EvalWell,2>> solventConcentration;
+            if (this->isInjector()) {
+                solventConcentration = this->wsolvent();
+            } else {
+                solventConcentration = std::array{this->extendEval(intQuants.xVolume()),
+                                                  this->extendEval(intQuants.yVolume())};
+            }
             std::tie(connectionRates[perf][Indices::contiZfracEqIdx],
                      cq_s_zfrac_effective) =
-                connectionRatezFraction(perf_data.solvent_rates[perf],
-                                        perf_rates.dis_gas, cq_s, intQuants);
+                this->connections_.connectionRatezFraction(perf_data.solvent_rates[perf],
+                                                           perf_rates.dis_gas, cq_s,
+                                                           solventConcentration);
         }
 
         if constexpr (has_brine) {
+            std::variant<Scalar,EvalWell> saltConcentration;
+            if (this->isInjector()) {
+                saltConcentration = this->wsalt();
+            } else {
+                saltConcentration = this->extendEval(intQuants.fluidState().saltConcentration());
+            }
+
             connectionRates[perf][Indices::contiBrineEqIdx] =
-                connectionRateBrine(perf_data.brine_rates[perf],
-                                    perf_rates.vap_wat, cq_s, intQuants);
+                this->connections_.connectionRateBrine(perf_data.brine_rates[perf],
+                                                       perf_rates.vap_wat, cq_s,
+                                                       saltConcentration);
         }
 
         if constexpr (has_micp) {
+            std::variant<Scalar,EvalWell> microbialConcentration;
+            std::variant<Scalar,EvalWell> oxygenConcentration;
+            std::variant<Scalar,EvalWell> ureaConcentration;
+            if (this->isInjector()) {
+                microbialConcentration = this->wmicrobes();
+                oxygenConcentration = this->woxygen();
+                ureaConcentration = this->wurea();
+            } else {
+                microbialConcentration = this->extendEval(intQuants.microbialConcentration());
+                oxygenConcentration = this->extendEval(intQuants.oxygenConcentration());
+                ureaConcentration = this->extendEval(intQuants.ureaConcentration());
+            }
             std::tie(connectionRates[perf][Indices::contiMicrobialEqIdx],
                      connectionRates[perf][Indices::contiOxygenEqIdx],
                      connectionRates[perf][Indices::contiUreaEqIdx]) =
-                connectionRatesMICP(cq_s, intQuants);
+                this->connections_.connectionRatesMICP(cq_s,
+                                                       microbialConcentration,
+                                                       oxygenConcentration,
+                                                       ureaConcentration);
         }
 
         // Store the perforation pressure for later usage.
@@ -2141,32 +2188,6 @@ namespace Opm
     template <typename TypeTag>
     typename StandardWell<TypeTag>::Eval
     StandardWell<TypeTag>::
-    connectionRateBrine(double& rate,
-                        const double vap_wat_rate,
-                        const std::vector<EvalWell>& cq_s,
-                        const IntensiveQuantities& intQuants) const
-    {
-        // TODO: the application of well efficiency factor has not been tested with an example yet
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        // Correction salt rate; evaporated water does not contain salt
-        EvalWell cq_s_sm = cq_s[waterCompIdx] - vap_wat_rate;
-        if (this->isInjector()) {
-            cq_s_sm *= this->wsalt();
-        } else {
-            cq_s_sm *= this->extendEval(intQuants.fluidState().saltConcentration());
-        }
-
-        // Note. Efficiency factor is handled in the output layer
-        rate = cq_s_sm.value();
-
-        cq_s_sm *= this->well_efficiency_factor_;
-        return Base::restrictEval(cq_s_sm);
-    }
-
-
-    template <typename TypeTag>
-    typename StandardWell<TypeTag>::Eval
-    StandardWell<TypeTag>::
     connectionRateEnergy(const double maxOilSaturation,
                          const std::vector<EvalWell>& cq_s,
                          const IntensiveQuantities& intQuants,
@@ -2242,130 +2263,6 @@ namespace Opm
         }
 
         return result;
-    }
-
-
-    template <typename TypeTag>
-    typename StandardWell<TypeTag>::Eval
-    StandardWell<TypeTag>::
-    connectionRateFoam(const std::vector<EvalWell>& cq_s,
-                       const IntensiveQuantities& intQuants,
-                       DeferredLogger& deferred_logger) const
-    {
-        // TODO: the application of well efficiency factor has not been tested with an example yet
-        auto getFoamTransportIdx = [&deferred_logger] {
-            switch (FoamModule::transportPhase()) {
-                case Phase::WATER: {
-                    return Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-                }
-                case Phase::GAS: {
-                    return Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-                }
-                case Phase::SOLVENT: {
-                    if constexpr (has_solvent)
-                        return static_cast<unsigned>(Indices::contiSolventEqIdx);
-                    else
-                        OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase is SOLVENT but SOLVENT is not activated.", deferred_logger);
-                }
-                default: {
-                    OPM_DEFLOG_THROW(std::runtime_error, "Foam transport phase must be GAS/WATER/SOLVENT.", deferred_logger);
-                }
-            }
-        };
-        EvalWell cq_s_foam = cq_s[getFoamTransportIdx()] * this->well_efficiency_factor_;
-        if (this->isInjector()) {
-            cq_s_foam *= this->wfoam();
-        } else {
-            cq_s_foam *= this->extendEval(intQuants.foamConcentration());
-        }
-        return Base::restrictEval(cq_s_foam);
-    }
-
-
-    template <typename TypeTag>
-    std::tuple<typename StandardWell<TypeTag>::Eval,
-               typename StandardWell<TypeTag>::Eval,
-               typename StandardWell<TypeTag>::Eval>
-    StandardWell<TypeTag>::
-    connectionRatesMICP(const std::vector<EvalWell>& cq_s,
-                        const IntensiveQuantities& intQuants) const
-    {
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        EvalWell cq_s_microbe = cq_s[waterCompIdx];
-        if (this->isInjector()) {
-            cq_s_microbe *= this->wmicrobes();
-        } else {
-            cq_s_microbe *= this->extendEval(intQuants.microbialConcentration());
-        }
-
-        EvalWell cq_s_oxygen = cq_s[waterCompIdx];
-        if (this->isInjector()) {
-            cq_s_oxygen *= this->woxygen();
-        } else {
-            cq_s_oxygen *= this->extendEval(intQuants.oxygenConcentration());
-        }
-
-        EvalWell cq_s_urea = cq_s[waterCompIdx];
-        if (this->isInjector()) {
-            cq_s_urea *= this->wurea();
-        } else {
-            cq_s_urea *= this->extendEval(intQuants.ureaConcentration());
-        }
-
-        return {Base::restrictEval(cq_s_microbe),
-                Base::restrictEval(cq_s_oxygen),
-                Base::restrictEval(cq_s_urea)};
-    }
-
-
-    template <typename TypeTag>
-    std::tuple<typename StandardWell<TypeTag>::Eval,
-               typename StandardWell<TypeTag>::EvalWell>
-    StandardWell<TypeTag>::
-    connectionRatePolymer(double& rate,
-                          const std::vector<EvalWell>& cq_s,
-                          const IntensiveQuantities& intQuants) const
-    {
-        // TODO: the application of well efficiency factor has not been tested with an example yet
-        const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-        EvalWell cq_s_poly = cq_s[waterCompIdx];
-        if (this->isInjector()) {
-            cq_s_poly *= this->wpolymer();
-        } else {
-            cq_s_poly *= this->extendEval(intQuants.polymerConcentration() * intQuants.polymerViscosityCorrection());
-        }
-        // Note. Efficiency factor is handled in the output layer
-        rate = cq_s_poly.value();
-
-        cq_s_poly *= this->well_efficiency_factor_;
-
-        return {Base::restrictEval(cq_s_poly), cq_s_poly};
-    }
-
-
-    template <typename TypeTag>
-    std::tuple<typename StandardWell<TypeTag>::Eval,
-               typename StandardWell<TypeTag>::EvalWell>
-    StandardWell<TypeTag>::
-    connectionRatezFraction(double& rate,
-                            const double dis_gas_rate,
-                            const std::vector<EvalWell>& cq_s,
-                            const IntensiveQuantities& intQuants) const
-    {
-        // TODO: the application of well efficiency factor has not been tested with an example yet
-        const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        EvalWell cq_s_zfrac_effective = cq_s[gasCompIdx];
-        if (this->isInjector()) {
-            cq_s_zfrac_effective *= this->wsolvent();
-        } else if (cq_s_zfrac_effective.value() != 0.0) {
-            const double dis_gas_frac = dis_gas_rate / cq_s_zfrac_effective.value();
-            cq_s_zfrac_effective *= this->extendEval(dis_gas_frac*intQuants.xVolume() + (1.0-dis_gas_frac)*intQuants.yVolume());
-        }
-
-        rate = cq_s_zfrac_effective.value();
-
-        cq_s_zfrac_effective *= this->well_efficiency_factor_;
-        return {Base::restrictEval(cq_s_zfrac_effective), cq_s_zfrac_effective};
     }
 
 

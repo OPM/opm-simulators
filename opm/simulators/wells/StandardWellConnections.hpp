@@ -23,13 +23,17 @@
 #ifndef OPM_STANDARDWELL_CONNECTIONS_HEADER_INCLUDED
 #define OPM_STANDARDWELL_CONNECTIONS_HEADER_INCLUDED
 
+#include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
+
 #include <functional>
+#include <variant>
 #include <vector>
 
 namespace Opm
 {
 
 class DeferredLogger;
+enum class Phase;
 template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
 class WellState;
 
@@ -75,6 +79,36 @@ public:
     //! \brief Returns pressure drop for a given perforation.
     Scalar pressure_diff(const unsigned perf) const
     { return perf_pressure_diffs_[perf]; }
+
+    using Eval = typename WellInterfaceIndices<FluidSystem,Indices,Scalar>::Eval;
+    using EvalWell = typename StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell;
+
+    Eval connectionRateBrine(double& rate,
+                             const double vap_wat_rate,
+                             const std::vector<EvalWell>& cq_s,
+                             const std::variant<Scalar,EvalWell>& saltConcentration) const;
+
+    Eval connectionRateFoam(const std::vector<EvalWell>& cq_s,
+                            const std::variant<Scalar,EvalWell>& foamConcentration,
+                            const Phase transportPhase,
+                            DeferredLogger& deferred_logger) const;
+
+    std::tuple<Eval,EvalWell>
+    connectionRatePolymer(double& rate,
+                          const std::vector<EvalWell>& cq_s,
+                          const std::variant<Scalar,EvalWell>& polymerConcentration) const;
+
+    std::tuple<Eval,Eval,Eval>
+    connectionRatesMICP(const std::vector<EvalWell>& cq_s,
+                        const std::variant<Scalar,EvalWell>& microbialConcentration,
+                        const std::variant<Scalar,EvalWell>& oxygenConcentration,
+                        const std::variant<Scalar,EvalWell>& ureaConcentration) const;
+
+    std::tuple<Eval,EvalWell>
+    connectionRatezFraction(double& rate,
+                            const double dis_gas_rate,
+                            const std::vector<EvalWell>& cq_s,
+                            const std::variant<Scalar, std::array<EvalWell,2>>& solventConcentration) const;
 
 private:
     void computePressureDelta();

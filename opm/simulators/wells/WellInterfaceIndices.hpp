@@ -23,6 +23,8 @@
 #ifndef OPM_WELLINTERFACE_INDICES_HEADER_INCLUDED
 #define OPM_WELLINTERFACE_INDICES_HEADER_INCLUDED
 
+#include <opm/material/densead/Evaluation.hpp>
+
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 
 namespace Opm
@@ -35,10 +37,22 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Gas;
     using WellInterfaceFluidSystem<FluidSystem>::Oil;
     using WellInterfaceFluidSystem<FluidSystem>::Water;
+    using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
 
     int flowPhaseToEbosCompIdx(const int phaseIdx) const;
     int ebosCompIdxToFlowCompIdx(const unsigned compIdx) const;
     double scalingFactor(const int phaseIdx) const;
+
+    template <class EvalWell>
+    Eval restrictEval(const EvalWell& in) const
+    {
+        Eval out = 0.0;
+        out.setValue(in.value());
+        for (int eqIdx = 0; eqIdx < Indices::numEq; ++eqIdx) {
+            out.setDerivative(eqIdx, in.derivative(eqIdx));
+        }
+        return out;
+    }
 
 protected:
     WellInterfaceIndices(const Well& well,
