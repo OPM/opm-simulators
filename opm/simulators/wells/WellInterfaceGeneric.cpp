@@ -219,7 +219,7 @@ double WellInterfaceGeneric::getInjMult(const int perf,
 {
     assert(!this->isProducer());
 
-    double multipler = 1.;
+    double multiplier = 1.;
 
     const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
     const bool is_wrev = this->well_ecl_.getInjMultMode() == Well::InjMultMode::WREV;
@@ -235,18 +235,18 @@ double WellInterfaceGeneric::getInjMult(const int perf,
         const auto frac_press = injmult.fracture_pressure;
         const auto gradient = injmult.multiplier_gradient;
         if (pres > frac_press) {
-            multipler = 1. + (pres - frac_press) * gradient;
+            multiplier = 1. + (pres - frac_press) * gradient;
         }
     }
 
     // for CIRR mode, if there is no active WINJMULT setup, we will use the previous injection multiplier,
     // to mimic keeping the existing fracturing open
     if (this->well_ecl_.getInjMultMode() == Well::InjMultMode::CIRR) {
-        multipler = std::max(multipler, this->prev_inj_multiplier_[perf_ecl_index]);
+        multiplier = std::max(multiplier, this->prev_inj_multiplier_[perf_ecl_index]);
     }
 
-    this->inj_multiplier_[perf_ecl_index] = multipler;
-    return multipler;
+    this->inj_multiplier_[perf_ecl_index] = multiplier;
+    return multiplier;
 }
 
 

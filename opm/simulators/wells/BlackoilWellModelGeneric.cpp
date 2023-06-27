@@ -1411,10 +1411,12 @@ void BlackoilWellModelGeneric::initInjMult() {
         if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
             const auto& ws = this->wellState().well(well->indexOfWell());
             const auto& perf_data = ws.perf_data;
-            if ((this->prev_inj_multipliers_.count(well->name())) == 0 ) {
-                this->prev_inj_multipliers_[well->name()] = std::vector<double>(perf_data.size(), 1.0);
+
+            auto &values = this->prev_inj_multipliers_[well->name()];
+            if (values.empty()) {
+                values.assign(perf_data.size(), 1.0);
             }
-            well->initInjMult(this->prev_inj_multipliers_.at(well->name()));
+            well->initInjMult(values);
         }
     }
 }
