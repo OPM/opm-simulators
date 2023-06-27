@@ -214,7 +214,7 @@ assembleControlEqInj(const WellState& well_state,
         std::vector<double> convert_coeff(well_.numPhases(), 1.0);
         well_.rateConverter().calcInjCoeff(/*fipreg*/ 0, well_.pvtRegionIdx(), convert_coeff);
 
-        double coeff = 1.0;
+        double coeff;
 
         switch (injectorType) {
         case InjectorType::WATER: {

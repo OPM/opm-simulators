@@ -664,7 +664,7 @@ private:
     static int getNumThreads()
     {
 
-        int threads = 1;
+        int threads;
 
 #ifdef _OPENMP
         // This function is called before the parallel OpenMP stuff gets initialized.
@@ -681,6 +681,8 @@ private:
             if (input_threads > 0)
                 threads = input_threads;
         }
+#else
+        threads = 1;
 #endif
 
         return threads;

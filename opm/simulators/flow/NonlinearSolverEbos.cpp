@@ -90,8 +90,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         if (omega == 1.) {
             return;
         }
-        auto i = dx.size();
-        for (i = 0; i < dx.size(); ++i) {
+        for (auto i = 0*dx.size(); i < dx.size(); ++i) {
             dx[i] *= omega;
             tempDxOld[i] *= (1.-omega);
             dx[i] += tempDxOld[i];
