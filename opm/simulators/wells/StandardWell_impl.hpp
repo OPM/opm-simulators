@@ -659,8 +659,17 @@ namespace Opm
                 }
             }
         }
-    }
 
+        // if the injecting well has WINJMULT setup, we update the mobility accordingly
+        if (this->isInjector() && this->well_ecl_.getInjMultMode() != Well::InjMultMode::NONE) {
+            const double bhp = this->primary_variables_.value(Bhp);
+            const double perf_press = bhp +  this->connections_.pressure_diff(perf);
+            const double multiplier = this->getInjMult(perf, bhp, perf_press);
+            for (size_t i = 0; i < mob.size(); ++i) {
+                mob[i] *= multiplier;
+            }
+        }
+    }
 
 
     template<typename TypeTag>

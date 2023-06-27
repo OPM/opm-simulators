@@ -1405,4 +1405,28 @@ int BlackoilWellModelGeneric::numLocalNonshutWells() const
     return well_container_generic_.size();
 }
 
+
+void BlackoilWellModelGeneric::initInjMult() {
+    for (auto& well : this->well_container_generic_) {
+        if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
+            const auto& ws = this->wellState().well(well->indexOfWell());
+            const auto& perf_data = ws.perf_data;
+
+            auto &values = this->prev_inj_multipliers_[well->name()];
+            if (values.empty()) {
+                values.assign(perf_data.size(), 1.0);
+            }
+            well->initInjMult(values);
+        }
+    }
+}
+
+void BlackoilWellModelGeneric::updateInjMult(DeferredLogger& deferred_logger) {
+    for (const auto& well : this->well_container_generic_) {
+        if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
+            well->updateInjMult(this->prev_inj_multipliers_[well->name()], deferred_logger);
+        }
+    }
+}
+
 }

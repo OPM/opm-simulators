@@ -22,6 +22,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/Valve.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/material/densead/EvaluationFormat.hpp>
@@ -996,7 +997,25 @@ namespace Opm
                               return this->extendEval(value);
                           }
                       };
+
         WellInterface<TypeTag>::getMobility(ebosSimulator, perf, mob, obtain, deferred_logger);
+	
+        if (this->isInjector() && this->well_ecl_.getInjMultMode() != Well::InjMultMode::NONE) {
+            const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+            const Connection& con = this->well_ecl_.getConnections()[perf_ecl_index];
+            const int seg = this->segmentNumberToIndex(con.segment());
+            // from the reference results, it looks like MSW uses segment pressure instead of BHP here
+            // Note: this is against the documented definition.
+            // we can change this depending on what we want
+            const double segment_pres = this->primary_variables_.getSegmentPressure(seg).value();
+            const double perf_seg_press_diff = this->gravity() * this->segments_.density(seg).value()
+                                                               * this->segments_.perforation_depth_diff(perf);
+            const double perf_press = segment_pres + perf_seg_press_diff;
+            const double multiplier = this->getInjMult(perf, segment_pres, perf_press);
+            for (size_t i = 0; i < mob.size(); ++i) {
+                mob[i] *= multiplier;
+            }
+        }
     }
 
 

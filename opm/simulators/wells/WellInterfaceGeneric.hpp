@@ -178,6 +178,16 @@ public:
     double wsolvent() const;
     double rsRvInj() const;
 
+    // at the beginning of the time step, we check what inj_multiplier from the previous running
+    void initInjMult(const std::vector<double>& max_inj_mult);
+
+    // update the InjMult information at the end of the time step, so it can be used for later.
+    void updateInjMult(std::vector<double>& inj_multipliers, DeferredLogger& deferred_logger) const;
+
+    // Note:: for multisegment wells, bhp is actually segment pressure in practice based on observation
+    // it might change in the future
+    double getInjMult(const int perf, const double bhp, const double perf_pres) const;
+
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
@@ -351,6 +361,13 @@ protected:
     double gravity_;
     double wsolvent_;
     std::optional<double> dynamic_thp_limit_;
+
+    // recording the multiplier calculate from the keyword WINJMULT during the time step
+    mutable std::vector<double> inj_multiplier_;
+
+    // the injection multiplier from the previous running, it is mostly used for CIRR mode
+    // which intends to keep the fracturing open
+    std::vector<double> prev_inj_multiplier_;
 
     double well_efficiency_factor_;
     const VFPProperties* vfp_properties_;

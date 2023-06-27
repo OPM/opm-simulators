@@ -378,6 +378,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                 // perforations is equal, otherwise initialize
                 // perfphaserates to well rates divided by the
                 // number of perforations.
+                // TODO: we might still need the values from the prev_well if the connection structure changes
                 if (global_num_perf_same)
                 {
                     auto& perf_data = new_well.perf_data;
