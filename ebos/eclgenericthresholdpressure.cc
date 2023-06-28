@@ -99,8 +99,8 @@ thresholdPressure(int elem1Idx, int elem2Idx) const
     }
 
     // threshold pressure accross EQUIL regions
-    unsigned short equilRegion1Idx = elemEquilRegion_[elem1Idx];
-    unsigned short equilRegion2Idx = elemEquilRegion_[elem2Idx];
+    auto equilRegion1Idx = elemEquilRegion_[elem1Idx];
+    auto equilRegion2Idx = elemEquilRegion_[elem2Idx];
 
     if (equilRegion1Idx == equilRegion2Idx)
         return 0.0;
@@ -125,8 +125,8 @@ finishInit()
         std::numeric_limits<std::decay_t<decltype(elemEquilRegion_[0])>>::max();
 
     if (numEquilRegions_ > maxRegions) {
-        // make sure that the index of an equilibration region can be stored in a
-        // single byte
+        // make sure that the index of an equilibration region can be stored
+        // in the vector
         OPM_THROW(std::invalid_argument,
                   (fmt::format("The maximum number of supported "
                                "equilibration regions by OPM flow is {}!",
@@ -176,8 +176,8 @@ applyExplicitThresholdPressures_()
             unsigned insideElemIdx = elementMapper_.index(inside);
             unsigned outsideElemIdx = elementMapper_.index(outside);
 
-            unsigned equilRegionInside = elemEquilRegion_[insideElemIdx];
-            unsigned equilRegionOutside = elemEquilRegion_[outsideElemIdx];
+            auto equilRegionInside = elemEquilRegion_[insideElemIdx];
+            auto equilRegionOutside = elemEquilRegion_[outsideElemIdx];
             if (thpres.hasRegionBarrier(equilRegionInside + 1, equilRegionOutside + 1)) {
                 Scalar pth = 0.0;
                 if (thpres.hasThresholdPressure(equilRegionInside + 1, equilRegionOutside + 1)) {

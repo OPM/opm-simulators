@@ -97,7 +97,7 @@ protected:
     std::vector<Scalar> thpresDefault_;
     std::vector<Scalar> thpres_;
     unsigned numEquilRegions_{};
-    std::vector<unsigned char> elemEquilRegion_;
+    std::vector<unsigned short> elemEquilRegion_;
 
     // threshold pressure accross faults. EXPERIMENTAL!
     std::vector<Scalar> thpresftValues_;
