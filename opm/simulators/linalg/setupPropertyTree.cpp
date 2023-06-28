@@ -96,6 +96,10 @@ setupPropertyTree(FlowLinearSolverParameters p, // Note: copying the parameters 
         return setupILU(conf, p);
     }
 
+    if (conf == "umfpack") {
+        return setupUMFPack(conf, p);
+    }
+
     // At this point, the only separate ISAI implementation is with the OpenCL code, and
     // it will check this argument to see if it should be using ISAI. The parameter tree
     // will be ignored, so this is just a dummy configuration to avoid the throw below.
@@ -259,6 +263,17 @@ setupILU([[maybe_unused]] const std::string& conf, const FlowLinearSolverParamet
     prm.put("preconditioner.type", "ParOverILU0"s);
     prm.put("preconditioner.relaxation", p.ilu_relaxation_);
     prm.put("preconditioner.ilulevel", p.ilu_fillin_level_);
+    return prm;
+}
+
+
+PropertyTree
+setupUMFPack([[maybe_unused]] const std::string& conf, const FlowLinearSolverParameters& p)
+{
+    using namespace std::string_literals;
+    PropertyTree prm;
+    prm.put("verbosity", p.linear_solver_verbosity_);
+    prm.put("solver", "umfpack"s);
     return prm;
 }
 

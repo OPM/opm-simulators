@@ -1049,7 +1049,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    assembleDomain(const int /*iterationIdx*/,
+    assembleDomain([[maybe_unused]] const int iterationIdx,
                    const double dt,
                    const Domain& domain)
     {
@@ -1575,7 +1575,6 @@ namespace Opm {
         const bool relax_tolerance = iterationIdx > param_.strict_outer_iter_wells_;
 
         Opm::DeferredLogger local_deferredLogger;
-
         ConvergenceReport local_report;
         for (const auto& well : well_container_) {
             if ((well_domain_.at(well->name()) == domain.index)) {

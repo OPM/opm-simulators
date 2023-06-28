@@ -28,6 +28,7 @@
 namespace Opm {
 
 struct SimulatorReport;
+struct SimulatorReportSingle;
 
 // Print an ASCII-art header to the PRT and DEBUG files.
 void printPRTHeader(const std::string& parameters,
@@ -39,7 +40,8 @@ void printFlowBanner(int nprocs, int threads, std::string_view moduleVersionName
 
 // Print flow application trailer.
 void printFlowTrailer(int nprocs, int nthreads,
-                      const SimulatorReport& report);
+                      const SimulatorReport& report,
+                      const SimulatorReportSingle& localsolves_report);
 
 } // namespace Opm
 

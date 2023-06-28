@@ -112,13 +112,20 @@ void printFlowBanner(int nprocs, int nthreads, std::string_view moduleVersionNam
 }
 
 void printFlowTrailer(int nprocs, int nthreads,
-                      const SimulatorReport& report)
+                      const SimulatorReport& report,
+                      const SimulatorReportSingle& localsolves_report)
 {
     std::ostringstream ss;
     ss << "\n\n================    End of simulation     ===============\n\n";
     ss << fmt::format("Number of MPI processes: {:9}\n", nprocs);
     ss << fmt::format("Threads per MPI process: {:9}\n", nthreads);
     report.reportFullyImplicit(ss);
+
+    if (localsolves_report.total_linearizations > 0) {
+        ss << "======  Accumulated local solve data  ======\n";
+        localsolves_report.reportFullyImplicit(ss);
+    }
+
     OpmLog::info(ss.str());
 }
 
