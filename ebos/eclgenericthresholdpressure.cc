@@ -22,6 +22,7 @@
 */
 
 #include <config.h>
+#include <limits>
 #include <ebos/eclgenericthresholdpressure.hh>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -120,10 +121,16 @@ finishInit()
         return;
 
     numEquilRegions_ = eclState_.getTableManager().getEqldims().getNumEquilRegions();
-    if (numEquilRegions_ > 0xff) {
+    const decltype(numEquilRegions_) maxRegions =
+        std::numeric_limits<std::decay_t<decltype(elemEquilRegion_[0])>>::max();
+
+    if (numEquilRegions_ > maxRegions) {
         // make sure that the index of an equilibration region can be stored in a
         // single byte
-        throw std::runtime_error("The maximum number of supported equilibration regions is 255!");
+        OPM_THROW(std::invalid_argument,
+                  (fmt::format("The maximum number of supported "
+                               "equilibration regions by OPM flow is {}!",
+                               maxRegions)));
     }
 
     // internalize the data specified using the EQLNUM keyword
