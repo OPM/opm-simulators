@@ -481,8 +481,8 @@ namespace Opm {
                 well->updateWaterThroughput(dt, this->wellState());
             }
 
-            if (well->isInjector()) {
-                well->updateWaterInjectionVolume(dt, this->wellState());
+            if (well->isInjector() && Indices::waterEnabled) {
+                well->updateWaterInjectionVolume(dt, FluidSystem::waterPhaseIdx, this->wellState());
             }
         }
 

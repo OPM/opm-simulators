@@ -188,6 +188,12 @@ public:
     // it might change in the future
     double getInjMult(const int perf, const double bhp, const double perf_pres) const;
 
+    // update the water injection volume, it will be used for calculation related to cake filtration due to injection activity
+    void updateWaterInjectionVolume(const double dt, const size_t water_index, WellState& well_state) const;
+
+    // update the multiplier for well transmissbility due to cake filteration
+    void updateInjFCMult(const std::vector<double>& water_inj_volume);
+
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
@@ -369,11 +375,9 @@ protected:
     // which intends to keep the fracturing open
     std::vector<double> prev_inj_multiplier_;
 
-    // TODO: remove the mutable
     // the multiplier due to injection filtration cake
     mutable std::vector<double> inj_fc_multiplier_;
     // TODO: currently, the water_injection_volume is in PerfData, maybe we should move it here
-
 
     double well_efficiency_factor_;
     const VFPProperties* vfp_properties_;

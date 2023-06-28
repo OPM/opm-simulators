@@ -24,6 +24,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/FilterCake.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellFoamProperties.hpp>
@@ -99,8 +100,6 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
         }
         if (this->isInjector()) {
             inj_fc_multiplier_.resize(number_of_perforations_, 1.0);
-            // TODO: if the injection concentration changes, the filter cake thickness can be different, need to find a general way
-            // can apply to the a few different ways of handling the modeling of filter cake
         }
     }
 
@@ -716,6 +715,73 @@ checkNegativeWellPotentials(std::vector<double>& well_potentials,
         const std::string msg = std::string("well ") + this->name() +
                                 ": has negative potentials and is not operable";
         deferred_logger.warning("NEGATIVE_POTENTIALS_INOPERABLE", msg);
+    }
+}
+
+void WellInterfaceGeneric::
+updateWaterInjectionVolume(const double dt, const size_t water_index, WellState& well_state) const
+{
+    if (!this->isInjector()) {
+        return;
+    }
+
+    const auto injectorType = this->well_ecl_.injectorType();
+    if (injectorType != InjectorType::WATER) {
+        return;
+    }
+
+    // it is currently used for the filter cake modeling related to formation damage study
+    auto& ws = well_state.well(this->index_of_well_);
+    const auto& connection_rates = ws.perf_data.phase_rates;
+    // per connection
+    auto& water_injection_volume = ws.perf_data.water_injection_volume;
+
+    const size_t np = well_state.numPhases();
+    for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+        // not considering the production water
+        const double water_rates = std::max(0., connection_rates[perf * np + water_index]);
+        water_injection_volume[perf] += water_rates * dt;
+    }
+}
+
+void WellInterfaceGeneric::
+updateInjFCMult(const std::vector<double>& water_inj_volume) {
+    // the filter injecting concentration, the porosity, the area size
+    // we also need the permeability of the formation, and rw and some other information
+    for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+        const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+        const auto& connections = this->well_ecl_.getConnections();
+        const auto& connection = connections[perf_ecl_index];
+        if (this->isInjector() && connection.filterCakeActive()) {
+            const auto& filter_cake = connection.getFilterCake();
+            const double conc = this->well_ecl_.getFilterConc();
+            const double area = connection.getFilterCakeArea();
+            const double poro = filter_cake.poro;
+            const double thickness = water_inj_volume[perf] * conc / (area*(1.-poro));
+            const double perm = filter_cake.perm;
+            const double rw = connection.getFilterCakeRadius();
+            const auto cr0 = connection.r0();
+            const auto crw = connection.rw();
+            const auto cskinfactor = connection.skinFactor();
+            const double K = connection.Kh() / connection.connectionLength();
+            const double factor = filter_cake.sf_multiplier;
+            // compute a multiplier for the transmissibility
+            if (filter_cake.geometry == FilterCake::FilterCakeGeometry::LINEAR) {
+                // but we are using this form just for first prototype
+                const double skin_factor = thickness / rw * K / perm * factor;
+                const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
+                const auto denom2 = denom + skin_factor;
+                this->inj_fc_multiplier_[perf] = denom / denom2;
+            } else  if (filter_cake.geometry == FilterCake::FilterCakeGeometry::RADIAL) {
+                const double rc = std::sqrt(rw * rw + 2. * rw * thickness );
+                const double skin_factor = K / perm * std::log(rc/rw) * factor;
+                const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
+                const auto denom2 = denom + skin_factor;
+                this->inj_fc_multiplier_[perf] = denom / denom2;
+            }
+        } else {
+            this->inj_fc_multiplier_[perf] = 1.0;
+        }
     }
 }
 
