@@ -127,7 +127,7 @@ double WellBhpThpCalculator::calculateThpFromBhp(const std::vector<double>& rate
         const double vfp_ref_depth = well_.vfpProperties()->getInj()->getTable(table_id).getDatumDepth();
         const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
         auto thp_func =
-            [this, table_id, vfp_ref_depth, aqua, liquid, vapour, dp](
+            [this, table_id, aqua, liquid, vapour, dp](
                 const double bhp_value, const double pressure_loss) {
                     return this->well_.vfpProperties()->getInj()->thp(
                            table_id, aqua, liquid, vapour, bhp_value + dp - pressure_loss);
@@ -138,7 +138,7 @@ double WellBhpThpCalculator::calculateThpFromBhp(const std::vector<double>& rate
         const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(table_id).getDatumDepth();
         const double dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
         auto thp_func =
-            [this, table_id, vfp_ref_depth, aqua, liquid, vapour, dp, &alq]
+            [this, table_id, aqua, liquid, vapour, dp, &alq]
                 (const double bhp_value, const double pressure_loss) {
                     return this->well_.vfpProperties()->getProd()->thp(
                        table_id, aqua, liquid, vapour, bhp_value + dp - pressure_loss, alq.value());
