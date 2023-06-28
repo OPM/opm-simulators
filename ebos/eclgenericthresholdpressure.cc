@@ -133,6 +133,14 @@ finishInit()
                                maxRegions)));
     }
 
+    if (numEquilRegions_ > 2048) {
+        // warn about performance
+        OpmLog::warning(fmt::format("Number of equil regions is {}. This larger "
+                                 "than 2048. Note, that this might "
+                                 "might have a negative impact on performance "
+                                 "and memory consumption", numEquilRegions_));
+    }
+
     // internalize the data specified using the EQLNUM keyword
     const auto& fp = eclState_.fieldProps();
     const auto& equilRegionData = fp.get_int("EQLNUM");
