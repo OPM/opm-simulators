@@ -443,7 +443,7 @@ public:
     {
         if (bdyInfo.type == BCType::RATE) {
             computeBoundaryFluxRate(bdyFlux, bdyInfo);
-        } else if (bdyInfo.type == BCType::FREE) {
+        } else if (bdyInfo.type == BCType::FREE || bdyInfo.type == BCType::DIRICHLET) {
             computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
         } else {
             throw std::logic_error("Unknown boundary condition type " + std::to_string(static_cast<int>(bdyInfo.type)) + " in computeBoundaryFlux()." );

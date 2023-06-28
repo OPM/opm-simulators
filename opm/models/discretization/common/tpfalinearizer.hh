@@ -331,6 +331,24 @@ public:
         updateStoredTransmissibilities();
     }
 
+    void updateBoundaryConditionData() {
+        for (auto& bdyInfo : boundaryInfo_) {
+            const auto [type, massrateAD] = problem_().boundaryCondition(bdyInfo.cell, bdyInfo.dir);
+
+            // Strip the unnecessary (and zero anyway) derivatives off massrate.
+            VectorBlock massrate(0.0);
+            for (size_t ii = 0; ii < massrate.size(); ++ii) {
+                massrate[ii] = massrateAD[ii].value();
+            }
+            if (type != BCType::NONE) {
+                const auto& exFluidState = problem_().boundaryFluidState(bdyInfo.cell, bdyInfo.dir);
+                bdyInfo.bcdata.type = type;
+                bdyInfo.bcdata.massRate = massrate;
+                bdyInfo.bcdata.exFluidState = exFluidState;
+            }
+        }
+    }
+
     /*!
      * \brief Returns the map of constraint degrees of freedom.
      *
@@ -431,23 +449,22 @@ private:
                 for (unsigned bfIndex = 0; bfIndex < stencil.numBoundaryFaces(); ++bfIndex) {
                     const auto& bf = stencil.boundaryFace(bfIndex);
                     const int dir_id = bf.dirId();
-                    const auto [free, massrateAD] = problem_().boundaryCondition(myIdx, dir_id);
+                    const auto [type, massrateAD] = problem_().boundaryCondition(myIdx, dir_id);
                     // Strip the unnecessary (and zero anyway) derivatives off massrate.
                     VectorBlock massrate(0.0);
                     for (size_t ii = 0; ii < massrate.size(); ++ii) {
                         massrate[ii] = massrateAD[ii].value();
                     }
-                    const bool nonzero_massrate = massrate != VectorBlock(0.0);
-                    if (free || nonzero_massrate) {
+                    if (type!=BCType::NONE) {
                         const auto& exFluidState = problem_().boundaryFluidState(myIdx, dir_id);
-                        BoundaryConditionData bcdata{free ? BCType::FREE : BCType::RATE,
+                        BoundaryConditionData bcdata{type,
                                                      massrate,
                                                      exFluidState.pvtRegionIndex(),
                                                      bfIndex,
                                                      bf.area(),
                                                      bf.integrationPos()[dimWorld - 1],
                                                      exFluidState};
-                        boundaryInfo_.push_back({myIdx, bcdata});
+                        boundaryInfo_.push_back({myIdx, dir_id, bcdata});
                     }
                 }
             }
@@ -804,6 +821,7 @@ private:
     struct BoundaryInfo
     {
         unsigned int cell;
+        int dir;
         BoundaryConditionData bcdata;
     };
     std::vector<BoundaryInfo> boundaryInfo_;

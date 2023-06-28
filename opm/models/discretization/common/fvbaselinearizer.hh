@@ -306,6 +306,11 @@ public:
         // This linearizer stores no such parameters.
     }
 
+    void updateBoundaryConditionData()
+    {
+        // This linearizer stores no such data.
+    }
+
     /*!
      * \brief Returns the map of constraint degrees of freedom.
      *
