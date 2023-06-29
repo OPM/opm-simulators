@@ -327,7 +327,11 @@ namespace Opm {
         {
             // Create partitions.
             const auto& [partition_vector, num_domains] =
-                this->partitionCells();
+                partitionCells(this->grid_,
+                               this->ebosSimulator_.vanguard().schedule().getWellsatEnd(),
+                               this->param_.local_domain_partition_method_,
+                               this->param_.num_local_domains_,
+                               this->param_.local_domain_partition_imbalance_);
 
             // Scan through partitioning to get correct size for each.
             std::vector<int> sizes(num_domains, 0);
@@ -1936,19 +1940,6 @@ namespace Opm {
         }
 
     private:
-        template <typename, class = void>
-        struct HasZoltanPartitioning : public std::false_type {};
-
-        template <typename GridType>
-        struct HasZoltanPartitioning<
-            GridType,
-            std::void_t<decltype(std::declval<GridType>().zoltanPartitionWithoutScatter
-                                 (std::declval<const std::vector<Well>*>(),
-                                  std::declval<const double*>(),
-                                  std::declval<const int>(),
-                                  std::declval<const double>()))>
-            > : public std::true_type {};
-
         template<class T>
         bool isNumericalAquiferCell(const Dune::CpGrid& grid, const T& elem)
         {
@@ -1974,51 +1965,6 @@ namespace Opm {
         double drMaxRel() const { return param_.dr_max_rel_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
         double linear_solve_setup_time_;
-
-        std::pair<std::vector<int>, int> partitionCells() const
-        {
-            const std::string& method = this->param_.local_domain_partition_method_;
-            if (method == "zoltan") {
-                if constexpr (HasZoltanPartitioning<Grid>::value) {
-                    return this->partitionCellsZoltan();
-                } else {
-                    OPM_THROW(std::runtime_error, "Zoltan requested for local domain partitioning, "
-                              "but is not available for the current grid type.");
-                }
-            } else if (method == "simple") {
-                const int num_cells = detail::countLocalInteriorCells(this->grid_);
-                return partitionCellsSimple(num_cells, this->param_.num_local_domains_);
-            } else if (method.size() > 10 && method.substr(method.size() - 10, 10) == ".partition") {
-                // Method string ends with ".partition", interpret as filename for partitioning.
-                const int num_cells = detail::countLocalInteriorCells(this->grid_);
-                return partitionCellsFromFile(method, num_cells);
-            } else {
-                OPM_THROW(std::runtime_error, "Unknown local domain partitioning method requested: " + method);
-            }
-        }
-
-        std::pair<std::vector<int>, int> partitionCellsZoltan() const
-        {
-            const auto wells = this->ebosSimulator_.vanguard().schedule().getWellsatEnd();
-
-            auto partition_vector = this->grid_.zoltanPartitionWithoutScatter
-                (&wells, nullptr, this->param_.num_local_domains_,
-                 this->param_.local_domain_partition_imbalance_);
-
-            return this->countDomains(std::move(partition_vector));
-        }
-
-        std::pair<std::vector<int>, int>
-        countDomains(std::vector<int> partition_vector) const
-        {
-            auto maxPos = std::max_element(partition_vector.begin(),
-                                           partition_vector.end());
-
-            const auto num_domains = (maxPos == partition_vector.end())
-                ? 0 : *maxPos + 1;
-
-            return { std::move(partition_vector), num_domains };
-        }
 
     public:
         std::vector<bool> wasSwitched_;
