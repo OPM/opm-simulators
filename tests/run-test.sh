@@ -33,8 +33,8 @@ TEST_ARGS="$@"
 mkdir -p ${RESULT_PATH}
 if (( ${MPI_PROCS} > 1))
 then
-  mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --output-dir=${RESULT_PATH}
+  mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --output-dir=${RESULT_PATH} "${INPUT_DATA_PATH}/${FILENAME}.DATA"
 else
-  ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --output-dir=${RESULT_PATH}
+  ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --output-dir=${RESULT_PATH} "${INPUT_DATA_PATH}/${FILENAME}.DATA"
 fi
 test $? -eq 0 || exit 1

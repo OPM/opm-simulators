@@ -403,7 +403,7 @@ public:
                     adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning);
                     // \Note: Assumes TUNING is only used with adaptive time-stepping
                     // \Note: Need to update both solver (model) and simulator since solver is re-created each report step.
-                    solver->model().updateTUNING(tuning);
+                    solver_->model().updateTUNING(tuning);
                     this->updateTUNING(tuning);
                 }
             }
