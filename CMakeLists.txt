@@ -338,6 +338,8 @@ opm_add_test(test_gatherconvergencereport
   DRIVER_ARGS
     -n 4
     -b ${PROJECT_BINARY_DIR}
+  PROCESSORS
+    4
 )
 
 opm_add_test(test_gatherdeferredlogger
@@ -350,6 +352,8 @@ opm_add_test(test_gatherdeferredlogger
   DRIVER_ARGS
     -n 4
     -b ${PROJECT_BINARY_DIR}
+  PROCESSORS
+    4
 )
 
 opm_add_test(test_parallelwellinfo_mpi
@@ -361,6 +365,8 @@ opm_add_test(test_parallelwellinfo_mpi
     -n 4
     -b ${PROJECT_BINARY_DIR}
   NO_COMPILE
+  PROCESSORS
+    4
     )
 
 opm_add_test(test_parallel_wbp_sourcevalues_np2
@@ -412,6 +418,8 @@ opm_add_test(test_broadcast
   DRIVER_ARGS
     -n 4
     -b ${PROJECT_BINARY_DIR}
+  PROCESSORS
+    4
 )
 
 opm_add_test(test_HDF5File_Parallel
@@ -424,6 +432,8 @@ opm_add_test(test_HDF5File_Parallel
   DRIVER_ARGS
     -n 4
     -b ${PROJECT_BINARY_DIR}
+  PROCESSORS
+    4
 )
 
 opm_add_test(test_HDF5Serializer_Parallel
@@ -436,6 +446,8 @@ opm_add_test(test_HDF5Serializer_Parallel
   DRIVER_ARGS
     -n 4
     -b ${PROJECT_BINARY_DIR}
+  PROCESSORS
+    4
 )
 
 include(OpmBashCompletion)
