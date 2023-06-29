@@ -24,35 +24,34 @@
 #include <utility>
 #include <vector>
 
-namespace Opm
-{
-    class Well;
+namespace Opm {
 
-    /// Partitions the grid using the specified method.
-    /// \return pair containing a partition vector (partition number for each cell), and the number of partitions.
-    template<class Grid>
-    std::pair<std::vector<int>, int> partitionCells(const Grid& grid,
-                                                    const std::vector<Well>& wells,
-                                                    const std::string& method,
-                                                    const int num_local_domains,
-                                                    const double partition_imbalance);
+class Well;
 
-    /// Read a partitioning from file, assumed to contain one number per cell, its partition number.
-    /// \return pair containing a partition vector (partition number for each cell), and the number of partitions.
-    std::pair<std::vector<int>, int> partitionCellsFromFile(const std::string& filename, const int num_cells);
+/// Partitions the grid using the specified method.
+/// \return pair containing a partition vector (partition number for each cell), and the number of partitions.
+template<class Grid>
+std::pair<std::vector<int>, int> partitionCells(const Grid& grid,
+                                                const std::vector<Well>& wells,
+                                                const std::string& method,
+                                                const int num_local_domains,
+                                                const double partition_imbalance);
 
-    /// Trivially simple partitioner assigning partitions en bloc, consecutively by cell index.
-    /// \return pair containing a partition vector (partition number for each cell), and the number of partitions.
-    std::pair<std::vector<int>, int> partitionCellsSimple(const int num_cells, const int num_domains);
+/// Read a partitioning from file, assumed to contain one number per cell, its partition number.
+/// \return pair containing a partition vector (partition number for each cell), and the number of partitions.
+std::pair<std::vector<int>, int> partitionCellsFromFile(const std::string& filename, const int num_cells);
 
-    /// Partitions the grid using the Zoltan graph partitioner.
-    /// \return pair containing a partition vector (partition number for each cell), and the number of partitions.
-    template<class Grid>
-    std::pair<std::vector<int>, int> partitionCellsZoltan(const Grid& grid,
-                                                          const std::vector<Well>& wells,
-                                                          const int num_domains,
-                                                          const double domain_imbalance);
+/// Trivially simple partitioner assigning partitions en bloc, consecutively by cell index.
+/// \return pair containing a partition vector (partition number for each cell), and the number of partitions.
+std::pair<std::vector<int>, int> partitionCellsSimple(const int num_cells, const int num_domains);
+
+/// Partitions the grid using the Zoltan graph partitioner.
+/// \return pair containing a partition vector (partition number for each cell), and the number of partitions.
+template<class Grid>
+std::pair<std::vector<int>, int> partitionCellsZoltan(const Grid& grid,
+                                                      const std::vector<Well>& wells,
+                                                      const int num_domains,
+                                                      const double domain_imbalance);
 } // namespace Opm
-
 
 #endif // OPM_ASPINPARTITION_HEADER_INCLUDED
