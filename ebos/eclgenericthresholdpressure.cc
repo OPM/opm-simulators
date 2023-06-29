@@ -129,16 +129,17 @@ finishInit()
         // in the vector
         OPM_THROW(std::invalid_argument,
                   (fmt::format("The maximum number of supported "
-                               "equilibration regions by OPM flow is {}!",
-                               maxRegions)));
+                               "equilibration regions by OPM flow is {}, but "
+                               "{} are used!",
+                               maxRegions, numEquilRegions_)));
     }
 
     if (numEquilRegions_ > 2048) {
         // warn about performance
-        OpmLog::warning(fmt::format("Number of equil regions is {}. This larger "
-                                 "than 2048. Note, that this might "
-                                 "might have a negative impact on performance "
-                                 "and memory consumption", numEquilRegions_));
+        OpmLog::warning(fmt::format("Number of equilibration regions is {}, which is "
+                                 "rather large. Note, that this might "
+                                 "have a negative impact on performance "
+                                 "and memory consumption.", numEquilRegions_));
     }
 
     // internalize the data specified using the EQLNUM keyword
