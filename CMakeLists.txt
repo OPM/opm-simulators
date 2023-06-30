@@ -493,6 +493,9 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   if(TARGET fmt::fmt)
     target_link_libraries(flow_lib${OBJ} fmt::fmt)
   endif()
+  if(TARGET opmcommon AND CMAKE_GENERATOR MATCHES "Makefiles")
+      add_dependencies(flow_lib${OBJ} opmcommon)
+  endif()
   opm_add_test(flow_${OBJ}
                ONLY_COMPILE
                SOURCES
