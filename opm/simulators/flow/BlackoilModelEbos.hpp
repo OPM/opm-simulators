@@ -50,6 +50,7 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
+#include <opm/simulators/utils/ComponentName.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -203,72 +204,10 @@ namespace Opm {
         using Mat = typename SparseMatrixAdapter::IstlMatrix;
         using BVector = Dune::BlockVector<VectorBlockType>;
 
+        using ComponentName = ::Opm::ComponentName<FluidSystem,Indices>;
         using Domain = SubDomain<Grid>;
 
         using ISTLSolverType = ISTLSolverEbos<TypeTag>;
-
-        class ComponentName
-        {
-        public:
-            ComponentName()
-                : names_(numEq)
-            {
-                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                        continue;
-                    }
-
-                    const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-                    names_[Indices::canonicalToActiveComponentIndex(canonicalCompIdx)]
-                        = FluidSystem::componentName(canonicalCompIdx);
-                }
-
-                if constexpr (has_solvent_) {
-                    names_[solventSaturationIdx] = "Solvent";
-                }
-
-                if constexpr (has_extbo_) {
-                    names_[zFractionIdx] = "ZFraction";
-                }
-
-                if constexpr (has_polymer_) {
-                    names_[polymerConcentrationIdx] = "Polymer";
-                }
-
-                if constexpr (has_polymermw_) {
-                    assert(has_polymer_);
-                    names_[polymerMoleWeightIdx] = "MolecularWeightP";
-                }
-
-                if constexpr (has_energy_) {
-                    names_[temperatureIdx] = "Energy";
-                }
-
-                if constexpr (has_foam_) {
-                    names_[foamConcentrationIdx] = "Foam";
-                }
-
-                if constexpr (has_brine_) {
-                    names_[saltConcentrationIdx] = "Brine";
-                }
-
-                if constexpr (has_micp_) {
-                    names_[microbialConcentrationIdx] = "Microbes";
-                    names_[oxygenConcentrationIdx] = "Oxygen";
-                    names_[ureaConcentrationIdx] = "Urea";
-                    names_[biofilmConcentrationIdx] = "Biofilm";
-                    names_[calciteConcentrationIdx] = "Calcite";
-                }
-            }
-
-            const std::string& name(const int compIdx) const
-            {
-                return this->names_[compIdx];
-            }
-
-        private:
-            std::vector<std::string> names_{};
-        };
 
         // ---------  Public methods  ---------
 
