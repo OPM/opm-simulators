@@ -253,6 +253,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_RestartSerialization.cpp
   tests/test_stoppedwells.cpp
   tests/test_timer.cpp
+  tests/test_tuning_XXXMBE.cpp
   tests/test_vfpproperties.cpp
   tests/test_wellmodel.cpp
   tests/test_wellprodindexcalculator.cpp

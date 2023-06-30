@@ -24,6 +24,8 @@
 #ifndef OPM_BLACKOILMODELEBOS_HEADER_INCLUDED
 #define OPM_BLACKOILMODELEBOS_HEADER_INCLUDED
 
+#include <fmt/format.h>
+
 #include <ebos/eclproblem.hh>
 
 #include <opm/common/ErrorMacros.hpp>
@@ -1523,6 +1525,7 @@ namespace Opm {
             return grid_.comm().sum(errorPV);
         }
 
+
         ConvergenceReport getDomainReservoirConvergence(const double reportTime,
                                                         const double dt,
                                                         const int iteration,
@@ -1630,6 +1633,14 @@ namespace Opm {
             return report;
         }
 
+
+
+        void updateTUNING(const Tuning& tuning) {          
+            param_.tolerance_mb_ = tuning.XXXMBE;
+            if ( terminal_output_ ) {
+                OpmLog::debug(fmt::format("Setting BlackoilModelEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
+            }
+        }
 
 
         ConvergenceReport getReservoirConvergence(const double reportTime,
