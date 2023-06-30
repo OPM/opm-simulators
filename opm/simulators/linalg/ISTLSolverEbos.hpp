@@ -214,31 +214,39 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             // prm_ = setupPropertyTree(parameters_,
             //                          EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
             //                          EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverReduction));
-            // ------------ the following is hard coded for testing purposes!!!
-            prm_.clear();
-            parameters_.clear();
-            {
-                FlowLinearSolverParameters para;
-                para.init<TypeTag>(false);
-                para.linsolver_ = "cprw";
-                parameters_.push_back(para);
+
+            if (parameters_[0].linsolver_ == "hybrid") {
+                // ------------ the following is hard coded for testing purposes!!!
+                prm_.clear();
+                parameters_.clear();
+                {
+                    FlowLinearSolverParameters para;
+                    para.init<TypeTag>(false);
+                    para.linsolver_ = "cprw";
+                    parameters_.push_back(para);
+                    prm_.push_back(setupPropertyTree(parameters_[0],
+                                                     EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
+                                                     EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverReduction)));
+                }
+                {
+                    FlowLinearSolverParameters para;
+                    para.init<TypeTag>(false);
+                    para.linsolver_ = "ilu0";
+                    parameters_.push_back(para);
+                    prm_.push_back(setupPropertyTree(parameters_[1],
+                                                     EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
+                                                     EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverReduction)));
+                }
+                // ------------
+            } else {
+                // Do a normal linear solver setup.
+                assert(parameters_.size() == 1);
+                assert(prm_.empty());
                 prm_.push_back(setupPropertyTree(parameters_[0],
                                                  EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
-                                                 EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverReduction)
-                                                 ));
-            }
-            {
-                FlowLinearSolverParameters para;
-                para.init<TypeTag>(false);
-                para.linsolver_ = "ilu0";
-                parameters_.push_back(para);
-                prm_.push_back(setupPropertyTree(parameters_[1],
-                                                 EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
-                                                 EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverReduction)
-                                                 ));
+                                                 EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverReduction)));
             }
             flexibleSolver_.resize(prm_.size());
-            // ------------
 
             const bool on_io_rank = (simulator_.gridView().comm().rank() == 0);
 #if HAVE_MPI
