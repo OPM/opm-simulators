@@ -326,27 +326,39 @@ namespace {
     }
 #endif
 
-    bool gridHasValidCellGeometry(const Opm::EclipseGrid& inputGrid,
-                                  const Opm::UnitSystem&  usys)
+    std::pair<bool, std::string>
+    gridHasValidCellGeometry(const Opm::EclipseGrid& inputGrid,
+                             const Opm::UnitSystem&  usys)
     {
         const auto numActive = inputGrid.getNumActive();
 
+        if (numActive == 0)
+        {
+            return {false, R"(Input grid has no active cells at all.
+Please check geometry keywords and modifications to e.g. pore volume,
+especially if grid is imported through GDFILE.)"};
+        }
+
         for (auto activeCell = 0*numActive; activeCell < numActive; ++activeCell) {
             if (inputGrid.isValidCellGeomtry(inputGrid.getGlobalIndex(activeCell), usys)) {
-                return true;
+                return {true, ""};
             }
         }
 
-        return false;
+        return {false, R"(No active cell in input grid has valid/finite cell geometry
+Please check geometry keywords and modifications to e.g. pore volume,
+especially if the grid is imported through GDFILE.)"};
     }
 
-    bool gridHasValidCellGeometry(Opm::Parallel::Communication comm,
+    std::pair<bool, std::string>
+    gridHasValidCellGeometry(Opm::Parallel::Communication comm,
                                   const Opm::EclipseState&     eclipseState)
     {
         bool hasValidCells = false;
+        std::string message;
 
         if (comm.rank() == 0) {
-            hasValidCells =
+            std::tie(hasValidCells, message) =
                 gridHasValidCellGeometry(eclipseState.getInputGrid(),
                                          eclipseState.getDeckUnitSystem());
         }
@@ -361,7 +373,7 @@ namespace {
         }
 #endif  // HAVE_MPI
 
-        return hasValidCells;
+        return {hasValidCells, message};
     }
 }
 
@@ -580,14 +592,12 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
 void Opm::verifyValidCellGeometry(Parallel::Communication comm,
                                   const EclipseState&     eclipseState)
 {
-    if (gridHasValidCellGeometry(comm, eclipseState)) {
+    auto [hasValidCells, message] = gridHasValidCellGeometry(comm, eclipseState);
+    if (hasValidCells) {
         return;
     }
 
-    throw std::invalid_argument {
-        R"(No active cell in input grid has valid/finite cell geometry
-Please check geometry keywords, especially if grid is imported through GDFILE)"
-    };
+    throw std::invalid_argument { message };
 }
 
 std::unique_ptr<Opm::ParseContext> Opm::setupParseContext(const bool strictParsing)
