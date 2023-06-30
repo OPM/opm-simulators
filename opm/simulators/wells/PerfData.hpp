@@ -84,18 +84,6 @@ public:
     std::vector<double> water_throughput;
     std::vector<double> skin_pressure;
     std::vector<double> water_velocity;
-
-    // This is the accumulated water injection volume
-    // At the moment, it will only be used for the filtration cake modeling
-    // TODO: it might be problematic to handle the well open and shut, connection open and shut, since the
-    // information in PerfData will disappear if the well is SHUT
-    // TODO: if the injection concentration change, only the water injection volume will not be enough to
-    // calculate the formation of the filter cake.
-    // TODO: will change to track the volume of the solid formed during the injection
-    // because the injection concentration may vary during the simulation, we track the solid particle volume
-    // instead of tracking the water injection volume
-    // std::vector<double> water_injection_volume;
-    std::vector<double> filtration_particle_volume;
 };
 
 } // namespace Opm

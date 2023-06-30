@@ -376,6 +376,8 @@ protected:
 
     void updateInjMult(DeferredLogger& deferred_logger);
 
+    void updateFiltrationParticleVolume(const double dt, const size_t water_index);
+
     // create the well container
     virtual void createWellContainer(const int time_step) = 0;
     virtual void initWellContainer(const int reportStepIdx) = 0;
@@ -437,6 +439,9 @@ protected:
 
     // previous injection multiplier, it is used in the injection multiplier calculation for WINJMULT keyword
     std::unordered_map<std::string, std::vector<double>> prev_inj_multipliers_;
+
+    // the volume of the filtration particles during water injection
+    std::unordered_map<std::string, std::vector<double>> filtration_particle_volume_;
 
     /*
       The various wellState members should be accessed and modified

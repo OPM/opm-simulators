@@ -189,7 +189,8 @@ public:
     double getInjMult(const int perf, const double bhp, const double perf_pres) const;
 
     // update the water injection volume, it will be used for calculation related to cake filtration due to injection activity
-    void updateFiltrationParticleVolume(const double dt, const size_t water_index, WellState& well_state) const;
+    void updateFiltrationParticleVolume(const double dt, const size_t water_index,
+                                        const WellState& well_state, std::vector<double>& filtration_particle_volume) const;
 
     // update the multiplier for well transmissbility due to cake filteration
     void updateInjFCMult(const std::vector<double>& filtration_particle_volume);
@@ -376,7 +377,7 @@ protected:
     std::vector<double> prev_inj_multiplier_;
 
     // the multiplier due to injection filtration cake
-    mutable std::vector<double> inj_fc_multiplier_;
+    std::vector<double> inj_fc_multiplier_;
 
     double well_efficiency_factor_;
     const VFPProperties* vfp_properties_;

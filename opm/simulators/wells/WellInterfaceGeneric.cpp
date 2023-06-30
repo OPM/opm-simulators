@@ -719,7 +719,8 @@ checkNegativeWellPotentials(std::vector<double>& well_potentials,
 }
 
 void WellInterfaceGeneric::
-updateFiltrationParticleVolume(const double dt, const size_t water_index, WellState& well_state) const
+updateFiltrationParticleVolume(const double dt, const size_t water_index,
+                               const WellState& well_state, std::vector<double>& filtration_particle_volume) const
 {
     if (!this->isInjector()) {
         return;
@@ -738,8 +739,6 @@ updateFiltrationParticleVolume(const double dt, const size_t water_index, WellSt
     // it is currently used for the filter cake modeling related to formation damage study
     auto& ws = well_state.well(this->index_of_well_);
     const auto& connection_rates = ws.perf_data.phase_rates;
-    // per connection
-    auto& filtration_particle_volume = ws.perf_data.filtration_particle_volume;
 
     const size_t np = well_state.numPhases();
     for (int perf = 0; perf < this->number_of_perforations_; ++perf) {

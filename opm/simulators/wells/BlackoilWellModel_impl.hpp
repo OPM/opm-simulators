@@ -312,9 +312,11 @@ namespace Opm {
 
         for (auto& well : well_container_) {
             if (well->isInjector()) {
-                const auto& ws = this->wellState().well(well->indexOfWell());
-                const auto& filtration_particle_volume = ws.perf_data.filtration_particle_volume;
-                well->updateInjFCMult(filtration_particle_volume);
+                const auto it = this->filtration_particle_volume_.find(well->name());
+                if (it != this->filtration_particle_volume_.end()) {
+                    const auto& filtration_particle_volume = it->second;
+                    well->updateInjFCMult(filtration_particle_volume);
+                }
             }
         }
 
@@ -480,10 +482,10 @@ namespace Opm {
             if (getPropValue<TypeTag, Properties::EnablePolymerMW>() && well->isInjector()) {
                 well->updateWaterThroughput(dt, this->wellState());
             }
+        }
 
-            if (well->isInjector() && Indices::waterEnabled) {
-                well->updateFiltrationParticleVolume(dt, FluidSystem::waterPhaseIdx, this->wellState());
-            }
+        if (Indices::waterEnabled) {
+            this->updateFiltrationParticleVolume(dt, FluidSystem::waterPhaseIdx);
         }
 
         // at the end of the time step, updating the inj_multiplier saved in WellState for later use
