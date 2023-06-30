@@ -1570,6 +1570,27 @@ public:
         return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
     }
 
+
+    Scalar temperature(unsigned globalDofIdx, unsigned timeIdx) const
+    {
+        // use the initial temperature of the DOF if temperature is not a primary
+        // variable
+         return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+    }
+
+    const SolidEnergyLawParams&
+    solidEnergyLawParams(unsigned globalSpaceIdx,
+                         unsigned /*timeIdx*/) const
+    {
+        return this->thermalLawManager_->solidEnergyLawParams(globalSpaceIdx);
+    }
+    const ThermalConductionLawParams &
+    thermalConductionLawParams(unsigned globalSpaceIdx,
+                               unsigned /*timeIdx*/)const
+    {
+        return this->thermalLawManager_->thermalConductionLawParams(globalSpaceIdx);
+    }
+
     /*!
      * \copydoc FvBaseProblem::boundary
      *
