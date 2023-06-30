@@ -719,7 +719,7 @@ checkNegativeWellPotentials(std::vector<double>& well_potentials,
 }
 
 void WellInterfaceGeneric::
-updateWaterInjectionVolume(const double dt, const size_t water_index, WellState& well_state) const
+updateFiltrationParticleVolume(const double dt, const size_t water_index, WellState& well_state) const
 {
     if (!this->isInjector()) {
         return;
@@ -730,22 +730,27 @@ updateWaterInjectionVolume(const double dt, const size_t water_index, WellState&
         return;
     }
 
+    const double conc = this->well_ecl_.getFilterConc();
+    if (conc == 0.) {
+        return;
+    }
+
     // it is currently used for the filter cake modeling related to formation damage study
     auto& ws = well_state.well(this->index_of_well_);
     const auto& connection_rates = ws.perf_data.phase_rates;
     // per connection
-    auto& water_injection_volume = ws.perf_data.water_injection_volume;
+    auto& filtration_particle_volume = ws.perf_data.filtration_particle_volume;
 
     const size_t np = well_state.numPhases();
     for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
         // not considering the production water
         const double water_rates = std::max(0., connection_rates[perf * np + water_index]);
-        water_injection_volume[perf] += water_rates * dt;
+        filtration_particle_volume[perf] += water_rates * conc * dt;
     }
 }
 
 void WellInterfaceGeneric::
-updateInjFCMult(const std::vector<double>& water_inj_volume) {
+updateInjFCMult(const std::vector<double>& filtration_particle_volume) {
     // the filter injecting concentration, the porosity, the area size
     // we also need the permeability of the formation, and rw and some other information
     for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
@@ -754,10 +759,9 @@ updateInjFCMult(const std::vector<double>& water_inj_volume) {
         const auto& connection = connections[perf_ecl_index];
         if (this->isInjector() && connection.filterCakeActive()) {
             const auto& filter_cake = connection.getFilterCake();
-            const double conc = this->well_ecl_.getFilterConc();
             const double area = connection.getFilterCakeArea();
             const double poro = filter_cake.poro;
-            const double thickness = water_inj_volume[perf] * conc / (area*(1.-poro));
+            const double thickness = filtration_particle_volume[perf] / (area * (1. - poro));
             const double perm = filter_cake.perm;
             const double rw = connection.getFilterCakeRadius();
             const auto cr0 = connection.r0();

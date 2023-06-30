@@ -313,8 +313,8 @@ namespace Opm {
         for (auto& well : well_container_) {
             if (well->isInjector()) {
                 const auto& ws = this->wellState().well(well->indexOfWell());
-                const auto& water_inj_volume = ws.perf_data.water_injection_volume;
-                well->updateInjFCMult(water_inj_volume);
+                const auto& filtration_particle_volume = ws.perf_data.filtration_particle_volume;
+                well->updateInjFCMult(filtration_particle_volume);
             }
         }
 
@@ -482,7 +482,7 @@ namespace Opm {
             }
 
             if (well->isInjector() && Indices::waterEnabled) {
-                well->updateWaterInjectionVolume(dt, FluidSystem::waterPhaseIdx, this->wellState());
+                well->updateFiltrationParticleVolume(dt, FluidSystem::waterPhaseIdx, this->wellState());
             }
         }
 

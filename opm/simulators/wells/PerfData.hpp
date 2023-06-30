@@ -92,7 +92,10 @@ public:
     // TODO: if the injection concentration change, only the water injection volume will not be enough to
     // calculate the formation of the filter cake.
     // TODO: will change to track the volume of the solid formed during the injection
-    std::vector<double> water_injection_volume;
+    // because the injection concentration may vary during the simulation, we track the solid particle volume
+    // instead of tracking the water injection volume
+    // std::vector<double> water_injection_volume;
+    std::vector<double> filtration_particle_volume;
 };
 
 } // namespace Opm
