@@ -33,56 +33,7 @@ template<class FluidSystem, class Indices>
 class ComponentName
 {
 public:
-    ComponentName()
-        : names_(Indices::numEq)
-    {
-        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-            if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                continue;
-            }
-
-            const unsigned canonicalCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-            names_[Indices::canonicalToActiveComponentIndex(canonicalCompIdx)]
-                = FluidSystem::componentName(canonicalCompIdx);
-        }
-
-        if constexpr (Indices::enableSolvent) {
-            names_[Indices::solventSaturationIdx] = "Solvent";
-        }
-
-        if constexpr (Indices::enableExtbo) {
-            names_[Indices::zFractionIdx] = "ZFraction";
-        }
-
-        if constexpr (Indices::enablePolymer) {
-            names_[Indices::polymerConcentrationIdx] = "Polymer";
-        }
-
-        if constexpr (Indices::polymerMoleWeightIdx >= 0) {
-            assert(Indices::enablePolymer);
-            names_[Indices::polymerMoleWeightIdx] = "MolecularWeightP";
-        }
-
-        if constexpr (Indices::enableEnergy) {
-            names_[Indices::temperatureIdx] = "Energy";
-        }
-
-        if constexpr (Indices::numFoam == 1) {
-            names_[Indices::foamConcentrationIdx] = "Foam";
-        }
-
-        if constexpr (Indices::numBrine == 1) {
-            names_[Indices::saltConcentrationIdx] = "Brine";
-        }
-
-        if constexpr (Indices::enableMICP) {
-            names_[Indices::microbialConcentrationIdx] = "Microbes";
-            names_[Indices::oxygenConcentrationIdx] = "Oxygen";
-            names_[Indices::ureaConcentrationIdx] = "Urea";
-            names_[Indices::biofilmConcentrationIdx] = "Biofilm";
-            names_[Indices::calciteConcentrationIdx] = "Calcite";
-        }
-    }
+    ComponentName();
 
     const std::string& name(const int compIdx) const
     {

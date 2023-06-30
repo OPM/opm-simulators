@@ -72,20 +72,21 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/PreconditionerFactory6.cpp
   opm/simulators/linalg/PropertyTree.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
-  opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
-  opm/simulators/utils/readDeck.cpp
-  opm/simulators/utils/UnsupportedFlowKeywords.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeSteppingEbos.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimerInterface.cpp
   opm/simulators/timestepping/gatherConvergenceReport.cpp
+  opm/simulators/utils/ComponentName.cpp
   opm/simulators/utils/DeferredLogger.cpp
   opm/simulators/utils/gatherDeferredLogger.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
+  opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
+  opm/simulators/utils/readDeck.cpp
   opm/simulators/utils/SerializationPackers.cpp
+  opm/simulators/utils/UnsupportedFlowKeywords.cpp
   opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/BlackoilWellModelConstraints.cpp
   opm/simulators/wells/BlackoilWellModelGeneric.cpp
