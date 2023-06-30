@@ -25,7 +25,6 @@
 #define OPM_BLACKOILMODELEBOS_HEADER_INCLUDED
 
 #include <ebos/eclproblem.hh>
-#include <opm/models/utils/start.hh>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
@@ -52,13 +51,11 @@
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 
-#include <dune/istl/owneroverlapcopy.hh>
-#include <dune/common/parallel/communication.hh>
 #include <dune/common/timer.hh>
-#include <dune/common/unused.hh>
 
 #include <fmt/format.h>
 
@@ -66,9 +63,9 @@
 #include <cassert>
 #include <cmath>
 #include <iomanip>
-#include <iostream>
 #include <limits>
 #include <type_traits>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -161,7 +158,7 @@ namespace Opm {
     {
     public:
         // ---------  Types and enums  ---------
-        typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
+        using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
 
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using Grid = GetPropType<TypeTag, Properties::Grid>;
@@ -173,42 +170,42 @@ namespace Opm {
         using Indices = GetPropType<TypeTag, Properties::Indices>;
         using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
         using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
-        typedef double Scalar;
-        static const int numEq = Indices::numEq;
-        static const int contiSolventEqIdx = Indices::contiSolventEqIdx;
-        static const int contiZfracEqIdx = Indices::contiZfracEqIdx;
-        static const int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
-        static const int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
-        static const int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
-        static const int contiFoamEqIdx = Indices::contiFoamEqIdx;
-	static const int contiBrineEqIdx = Indices::contiBrineEqIdx;
-        static const int contiMicrobialEqIdx = Indices::contiMicrobialEqIdx;
-        static const int contiOxygenEqIdx = Indices::contiOxygenEqIdx;
-        static const int contiUreaEqIdx = Indices::contiUreaEqIdx;
-        static const int contiBiofilmEqIdx = Indices::contiBiofilmEqIdx;
-        static const int contiCalciteEqIdx = Indices::contiCalciteEqIdx;
-        static const int solventSaturationIdx = Indices::solventSaturationIdx;
-        static const int zFractionIdx = Indices::zFractionIdx;
-        static const int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
-        static const int polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
-        static const int temperatureIdx = Indices::temperatureIdx;
-        static const int foamConcentrationIdx = Indices::foamConcentrationIdx;
-	static const int saltConcentrationIdx = Indices::saltConcentrationIdx;
-        static const int microbialConcentrationIdx = Indices::microbialConcentrationIdx;
-        static const int oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
-        static const int ureaConcentrationIdx = Indices::ureaConcentrationIdx;
-        static const int biofilmConcentrationIdx = Indices::biofilmConcentrationIdx;
-        static const int calciteConcentrationIdx = Indices::calciteConcentrationIdx;
+        static constexpr int numEq = Indices::numEq;
+        static constexpr int contiSolventEqIdx = Indices::contiSolventEqIdx;
+        static constexpr int contiZfracEqIdx = Indices::contiZfracEqIdx;
+        static constexpr int contiPolymerEqIdx = Indices::contiPolymerEqIdx;
+        static constexpr int contiEnergyEqIdx = Indices::contiEnergyEqIdx;
+        static constexpr int contiPolymerMWEqIdx = Indices::contiPolymerMWEqIdx;
+        static constexpr int contiFoamEqIdx = Indices::contiFoamEqIdx;
+        static constexpr int contiBrineEqIdx = Indices::contiBrineEqIdx;
+        static constexpr int contiMicrobialEqIdx = Indices::contiMicrobialEqIdx;
+        static constexpr int contiOxygenEqIdx = Indices::contiOxygenEqIdx;
+        static constexpr int contiUreaEqIdx = Indices::contiUreaEqIdx;
+        static constexpr int contiBiofilmEqIdx = Indices::contiBiofilmEqIdx;
+        static constexpr int contiCalciteEqIdx = Indices::contiCalciteEqIdx;
+        static constexpr int solventSaturationIdx = Indices::solventSaturationIdx;
+        static constexpr int zFractionIdx = Indices::zFractionIdx;
+        static constexpr int polymerConcentrationIdx = Indices::polymerConcentrationIdx;
+        static constexpr int polymerMoleWeightIdx = Indices::polymerMoleWeightIdx;
+        static constexpr int temperatureIdx = Indices::temperatureIdx;
+        static constexpr int foamConcentrationIdx = Indices::foamConcentrationIdx;
+        static constexpr int saltConcentrationIdx = Indices::saltConcentrationIdx;
+        static constexpr int microbialConcentrationIdx = Indices::microbialConcentrationIdx;
+        static constexpr int oxygenConcentrationIdx = Indices::oxygenConcentrationIdx;
+        static constexpr int ureaConcentrationIdx = Indices::ureaConcentrationIdx;
+        static constexpr int biofilmConcentrationIdx = Indices::biofilmConcentrationIdx;
+        static constexpr int calciteConcentrationIdx = Indices::calciteConcentrationIdx;
 
-        typedef Dune::FieldVector<Scalar, numEq >        VectorBlockType;
-        typedef typename SparseMatrixAdapter::MatrixBlock MatrixBlockType;
-        typedef typename SparseMatrixAdapter::IstlMatrix Mat;
-        typedef Dune::BlockVector<VectorBlockType>      BVector;
+        using VectorBlockType = Dune::FieldVector<Scalar, numEq>;
+        using MatrixBlockType = typename SparseMatrixAdapter::MatrixBlock;
+        using Mat = typename SparseMatrixAdapter::IstlMatrix;
+        using BVector = Dune::BlockVector<VectorBlockType>;
 
         using Domain = SubDomain<Grid>;
 
-        typedef ISTLSolverEbos<TypeTag> ISTLSolverType;
+        using ISTLSolverType = ISTLSolverEbos<TypeTag>;
 
         class ComponentName
         {
@@ -272,8 +269,6 @@ namespace Opm {
         private:
             std::vector<std::string> names_{};
         };
-
-        //typedef typename SolutionVector :: value_type            PrimaryVariables ;
 
         // ---------  Public methods  ---------
 
@@ -437,7 +432,7 @@ namespace Opm {
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
             if (param_.update_equations_scaling_) {
-                std::cout << "equation scaling not supported yet" << std::endl;
+                OpmLog::error("Equation scaling not supported");
                 //updateEquationsScaling();
             }
 
@@ -934,15 +929,6 @@ namespace Opm {
 
 
 
-        void printIf(int c, double x, double y, double eps, std::string type) {
-            if (std::abs(x-y) > eps) {
-                std::cout << type << " " <<c << ": "<<x << " " << y << std::endl;
-            }
-        }
-
-
-
-
         /// Called once after each time step.
         /// In this class, this function does nothing.
         /// \param[in] timer                  simulation timer
@@ -1171,8 +1157,7 @@ namespace Opm {
             return terminal_output_;
         }
 
-        template <class CollectiveCommunication>
-        std::tuple<double,double> convergenceReduction(const CollectiveCommunication& comm,
+        std::tuple<double,double> convergenceReduction(Parallel::Communication comm,
                                                        const double pvSumLocal,
                                                        const double numAquiferPvSumLocal,
                                                        std::vector< Scalar >& R_sum,
@@ -1711,7 +1696,7 @@ namespace Opm {
                                                   std::vector<Scalar>& residual_norms)
         {
             OPM_TIMEBLOCK(getReservoirConvergence);
-            typedef std::vector< Scalar > Vector;
+            using Vector = std::vector<Scalar>;
 
             const int numComp = numEq;
             Vector R_sum(numComp, 0.0 );
