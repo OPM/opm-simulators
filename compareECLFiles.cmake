@@ -38,36 +38,8 @@ function(add_test_runSimulator)
                            -n ${PARAM_PROCS}
                TEST_ARGS ${TEST_ARGS}
                CONFIGURATION ${PARAM_CONFIGURATION})
+  set_tests_properties(runSimulator/${PARAM_CASENAME} PROPERTIES PROCESSORS ${PARAM_PROCS})
 endfunction()
-
-###########################################################################
-# TEST: runSimulatorAlways - Run as default test (not only with the EXTRA conf)
-###########################################################################
-
-# Input:
-#   - casename: basename (no extension)
-#
-# Details:
-#   - This test class simply runs a simulation
-function(add_test_runSimulatorAlways)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR DIR DIR_PREFIX PROCS)
-  set(multiValueArgs TEST_ARGS)
-  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
-  if(NOT PARAM_DIR)
-    set(PARAM_DIR ${PARAM_CASENAME})
-  endif()
-  set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
-  set(TEST_ARGS ${PARAM_TEST_ARGS})
-  opm_add_test(runSimulator/${PARAM_CASENAME} NO_COMPILE
-               EXE_NAME ${PARAM_SIMULATOR}
-               DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
-                           -r ${RESULT_PATH}
-                           -b ${PROJECT_BINARY_DIR}/bin
-                           -f ${PARAM_FILENAME}
-                           -n ${PARAM_PROCS}
-               TEST_ARGS ${TEST_ARGS})
-endfunction()
-
 
 ###########################################################################
 # TEST: compareECLFiles
@@ -307,14 +279,14 @@ add_test_runSimulator(CASENAME norne
                       FILENAME NORNE_ATW2013
                       SIMULATOR flow
                       PROCS 1
-											CONFIGURATION extra)
+                      CONFIGURATION extra)
 
 add_test_runSimulator(CASENAME norne_parallel
                       FILENAME NORNE_ATW2013
                       SIMULATOR flow
                       DIR norne
                       PROCS 4
-											CONFIGURATION extra)
+                      CONFIGURATION extra)
 
 
 # Tests that are run based on simulator results, but not necessarily direct comparison to reference results
@@ -323,14 +295,14 @@ add_test_runSimulator(CASENAME run_tuning_xxxmbe
                       SIMULATOR flow
 											DIR tuning
                       PROCS 1
-											TEST_ARGS --output-extra-convergence-info=iterations --enable-tuning=true)
+                      TEST_ARGS --output-extra-convergence-info=iterations --enable-tuning=true)
 
 add_test_runSimulator(CASENAME run_notuning_xxxmbe
                       FILENAME 01_TUNING_XXXMBE
                       SIMULATOR flow
 											DIR tuning
                       PROCS 1
-											TEST_ARGS --output-extra-convergence-info=iterations --enable-tuning=false)
+                      TEST_ARGS --output-extra-convergence-info=iterations --enable-tuning=false)
 
 
 set_tests_properties(tuning_XXXMBE PROPERTIES DEPENDS "runSimulator/run_tuning_xxxmbe")

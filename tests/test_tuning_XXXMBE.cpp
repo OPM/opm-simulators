@@ -44,7 +44,7 @@ struct Column : public std::vector<std::string> {
 				const auto& conv_func = [](const std::string& strval) {
 						int ival;
 						try {
-								ival = static_cast<int>(std::stod(strval));
+								ival = std::stoi(strval);
 						} catch (std::invalid_argument& exc) {
 								ival = std::numeric_limits<int>::min();
 						}
@@ -88,7 +88,7 @@ struct ColumnData {
 								raw_columns[i].push_back(colname);
 								++i;
 						}
-						if (i > num_columns) {
+						if (i >= num_columns && iss >> colname) {
 								std::cout << "Warning: Ignoring extra column(s) on line " << lineno << std::endl;
 						}
 						++lineno;
@@ -96,10 +96,10 @@ struct ColumnData {
 		}
 
 		// Get data vectors of different types
-		std::vector<double> get_dvector(const std::string& colname) { return columns[colname]->dvalues(); }
-		std::vector<int> get_ivector(const std::string& colname) { return columns[colname]->ivalues(); }
+		std::vector<double> get_dvector(const std::string& colname) const { return columns.at(colname)->dvalues(); }
+		std::vector<int> get_ivector(const std::string& colname) const { return columns.at(colname)->ivalues(); }
 		// Default is to return double values
-		std::vector<double> operator[](const std::string& colname) { return columns[colname]->dvalues(); }
+		std::vector<double> operator[](const std::string& colname) const { return columns.at(colname)->dvalues(); }
 		
 		std::vector<std::string> column_names;
 		std::vector<Column> raw_columns;
@@ -142,11 +142,11 @@ BOOST_AUTO_TEST_CASE(CheckMassBalanceWithinXXXMBE)
 		}
 		max_mb.push_back( std::max({mbo.back(), mbw.back(), mbg.back(), max_mb_step}) );
 
-		std::cout << "---------------------------------------------------------------------------" << std::endl;
-		std::cout << "Found the following converged max mass balance error (per report step):" << std::endl;
+		BOOST_TEST_MESSAGE("---------------------------------------------------------------------------");
+		BOOST_TEST_MESSAGE("Found the following converged max mass balance error (per report step):");
 		for (auto& val : max_mb)
-				std::cout << val << std::endl;
-		std::cout << "---------------------------------------------------------------------------" << std::endl;
+				BOOST_TEST_MESSAGE(val);
+		BOOST_TEST_MESSAGE("---------------------------------------------------------------------------");
 
 
 		BOOST_CHECK( max_mb[0] < 1.0e-6 );
