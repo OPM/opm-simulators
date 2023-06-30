@@ -31,6 +31,8 @@
 #include <opm/simulators/linalg/ParallelIstlInformation.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <fmt/format.h>
+
 #if COMPILE_BDA_BRIDGE
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -123,6 +125,24 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
                                                     [[maybe_unused]] Comm& comm)
 
 {
+    // Write sizes of linear systems on all ranks to debug log.
+    {
+        auto basic_comm = comm.communicator();
+        std::ostringstream os;
+        os << "Linear system ";
+        if (basic_comm.size() > 1) {
+            os << fmt::format("on MPI rank: {} ", basic_comm.rank());
+        }
+        os << fmt::format("blocksize: {} size: {:7d} block nonzeroes: {:9d}",
+                          Matrix::block_type::rows, matrix.N(), matrix.nonzeroes());
+        DeferredLogger local_logger;
+        local_logger.debug(os.str());
+        auto global_logger = gatherDeferredLogger(local_logger, basic_comm);
+        if (basic_comm.rank() == 0) {
+            global_logger.logMessages();
+        }
+    }
+
     std::function<Vector()> weightsCalculator =
         getWeightsCalculator<Vector>(prm, matrix, pressureIndex, trueFunc);
 
