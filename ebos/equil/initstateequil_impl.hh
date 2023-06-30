@@ -1309,6 +1309,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                      const GridView& gridView,
                      const CartesianIndexMapper& cartMapper,
                      const double grav,
+                     const int num_pressure_points,
                      const bool applySwatInit)
     : temperature_(grid.size(/*codim=*/0)),
       saltConcentration_(grid.size(/*codim=*/0)),
@@ -1320,7 +1321,8 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
       rs_(grid.size(/*codim=*/0)),
       rv_(grid.size(/*codim=*/0)),
       rvw_(grid.size(/*codim=*/0)),
-      cartesianIndexMapper_(cartMapper)
+      cartesianIndexMapper_(cartMapper),
+      num_pressure_points_(num_pressure_points)
 {
     //Check for presence of kw SWATINIT
     if (applySwatInit) {
@@ -1760,8 +1762,8 @@ calcPressSatRsRv(const RMap& reg,
     using PhaseSat = Details::PhaseSaturations<
         MaterialLawManager, FluidSystem, EquilReg, typename RMap::CellId
     >;
-
-    auto ptable = Details::PressureTable<FluidSystem, EquilReg>{ grav };
+    
+    auto ptable = Details::PressureTable<FluidSystem, EquilReg>{ grav, this->num_pressure_points_ };
     auto psat   = PhaseSat { materialLawManager, this->swatInit_ };
     auto vspan  = std::array<double, 2>{};
 

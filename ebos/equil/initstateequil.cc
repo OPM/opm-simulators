@@ -57,6 +57,7 @@ template InitialStateComputer<BlackOilFluidSystem<double>,
                          const GridView&,
                          const Dune::CartesianIndexMapper<Dune::CpGrid>&,
                          const double,
+                         const int,
                          const bool);
 #if HAVE_DUNE_ALUGRID
 #if HAVE_MPI
@@ -84,6 +85,7 @@ template InitialStateComputer<BlackOilFluidSystem<double>,
                          const ALUGridView&,
                          const Dune::CartesianIndexMapper<ALUGrid3CN>&,
                          const double,
+                         const int,
                          const bool);
 #endif //HAVE_DUNE_ALUGRID
 

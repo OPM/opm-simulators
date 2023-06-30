@@ -91,6 +91,8 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
+
 #include <set>
 #include <vector>
 #include <string>
@@ -198,6 +200,12 @@ template<class TypeTag, class MyTypeTag>
 struct OutputMode {
     using type = UndefinedProperty;
 };
+// Parameterize equilibration accuracy
+template<class TypeTag, class MyTypeTag>
+struct NumPressurePointsEquil {
+    using type = UndefinedProperty;
+};
+
 
 // Set the problem property
 template<class TypeTag>
@@ -583,6 +591,12 @@ template<class TypeTag>
 struct OutputMode<TypeTag, TTag::EclBaseProblem> {
     static constexpr auto value = "all";
 };
+// Parameterize equilibration accuracy
+template<class TypeTag>
+struct NumPressurePointsEquil<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = ParserKeywords::EQLDIMS::DEPTH_NODES_P::defaultValue;
+};
+
 
 } // namespace Opm::Properties
 
@@ -727,6 +741,9 @@ public:
                              "Honor some aspects of the TUNING keyword from the ECL deck.");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
                              "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
+        EWOMS_REGISTER_PARAM(TypeTag, int, NumPressurePointsEquil,
+                             "Number of pressure points (in each direction) in tables used for equilibration");
+        EWOMS_HIDE_PARAM(TypeTag, NumPressurePointsEquil); // Users will typically not need to modify this parameter..
 
     }
 
@@ -806,6 +823,17 @@ public:
         this->maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent);
         this->restartShrinkFactor_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclRestartShrinkFactor);
         this->maxFails_ = EWOMS_GET_PARAM(TypeTag, unsigned, MaxTimeStepDivisions);
+        
+        // The value N for this parameter is defined in the following order of presedence:
+        // 1. Command line value (--num-pressure-points-equil=N)
+        // 2. EQLDIMS item 2 
+        // Default value is defined in opm-common/src/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
+        if (EWOMS_PARAM_IS_SET(TypeTag, int, NumPressurePointsEquil))
+        {
+            this->numPressurePointsEquil_ = EWOMS_GET_PARAM(TypeTag, int, NumPressurePointsEquil);
+        } else {
+            this->numPressurePointsEquil_ = simulator.vanguard().eclState().getTableManager().getEqldims().getNumDepthNodesP();
+        }
 
         RelpermDiagnostics relpermDiagnostics;
         relpermDiagnostics.diagnosis(vanguard.eclState(), vanguard.cartesianIndexMapper());
