@@ -534,52 +534,7 @@ namespace Opm {
             auto locally_solved = initial_solution;
 
             // -----------   Decide on an ordering for the domains   -----------
-            std::vector<int> domain_order(domains_.size());
-            if (param_.local_solve_approach_ == "gauss-seidel") {
-                // TODO: enable flexibility and choice in choosing domain ordering approach.
-                if (true) {
-                    // Use average pressures to order domains.
-                    std::vector<std::pair<double, int>> avgpress_per_domain(domains_.size());
-                    for (const auto& domain : domains_) {
-                        double press_sum = 0.0;
-                        for (const int c : domain.cells) {
-                            press_sum += solution[c][Indices::pressureSwitchIdx];
-                        }
-                        const double avgpress = press_sum / domain.cells.size();
-                        avgpress_per_domain[domain.index] = std::make_pair(avgpress, domain.index);
-                    }
-                    // Lexicographical sort by pressure, then index.
-                    std::sort(avgpress_per_domain.begin(), avgpress_per_domain.end());
-                    // Reverse since we want high-pressure regions solved first.
-                    std::reverse(avgpress_per_domain.begin(), avgpress_per_domain.end());
-                    for (size_t ii = 0; ii < domains_.size(); ++ii) {
-                        domain_order[ii] = avgpress_per_domain[ii].second;
-                    }
-                } else {
-                    // Use maximum residual to order domains.
-                    const auto& residual = ebosSimulator_.model().linearizer().residual();
-                    const int num_vars = residual[0].size();
-                    std::vector<std::pair<double, int>> maxres_per_domain(domains_.size());
-                    for (const auto& domain : domains_) {
-                        double maxres = 0.0;
-                        for (const int c : domain.cells) {
-                            for (int ii = 0; ii < num_vars; ++ii) {
-                                maxres = std::max(maxres, std::fabs(residual[c][ii]));
-                            }
-                        }
-                        maxres_per_domain[domain.index] = std::make_pair(maxres, domain.index);
-                    }
-                    // Lexicographical sort by pressure, then index.
-                    std::sort(maxres_per_domain.begin(), maxres_per_domain.end());
-                    // Reverse since we want high-pressure regions solved first.
-                    std::reverse(maxres_per_domain.begin(), maxres_per_domain.end());
-                    for (size_t ii = 0; ii < domains_.size(); ++ii) {
-                        domain_order[ii] = maxres_per_domain[ii].second;
-                    }
-                }
-            } else {
-                std::iota(domain_order.begin(), domain_order.end(), 0);
-            }
+            const auto domain_order = this->getSubdomainOrder();
 
             // -----------   Solve each domain separately   -----------
             std::vector<SimulatorReportSingle> domain_reports(domains_.size());
@@ -1832,6 +1787,61 @@ namespace Opm {
         double drMaxRel() const { return param_.dr_max_rel_; }
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
         double linear_solve_setup_time_;
+
+        //! \brief Returns subdomain ordered according to method and ordering measure.
+        std::vector<int> getSubdomainOrder()
+        {
+            const auto& solution = ebosSimulator().model().solution(0);
+
+            std::vector<int> domain_order(domains_.size());
+            if (param_.local_solve_approach_ == "gauss-seidel") {
+                // TODO: enable flexibility and choice in choosing domain ordering approach.
+                if (true) {
+                    // Use average pressures to order domains.
+                    std::vector<std::pair<double, int>> avgpress_per_domain(domains_.size());
+                    for (const auto& domain : domains_) {
+                        double press_sum = 0.0;
+                        for (const int c : domain.cells) {
+                            press_sum += solution[c][Indices::pressureSwitchIdx];
+                        }
+                        const double avgpress = press_sum / domain.cells.size();
+                        avgpress_per_domain[domain.index] = std::make_pair(avgpress, domain.index);
+                    }
+                    // Lexicographical sort by pressure, then index.
+                    std::sort(avgpress_per_domain.begin(), avgpress_per_domain.end());
+                    // Reverse since we want high-pressure regions solved first.
+                    std::reverse(avgpress_per_domain.begin(), avgpress_per_domain.end());
+                    for (size_t ii = 0; ii < domains_.size(); ++ii) {
+                        domain_order[ii] = avgpress_per_domain[ii].second;
+                    }
+                } else {
+                    // Use maximum residual to order domains.
+                    const auto& residual = ebosSimulator().model().linearizer().residual();
+                    const int num_vars = residual[0].size();
+                    std::vector<std::pair<double, int>> maxres_per_domain(domains_.size());
+                    for (const auto& domain : domains_) {
+                        double maxres = 0.0;
+                        for (const int c : domain.cells) {
+                            for (int ii = 0; ii < num_vars; ++ii) {
+                                maxres = std::max(maxres, std::fabs(residual[c][ii]));
+                            }
+                        }
+                        maxres_per_domain[domain.index] = std::make_pair(maxres, domain.index);
+                    }
+                    // Lexicographical sort by pressure, then index.
+                    std::sort(maxres_per_domain.begin(), maxres_per_domain.end());
+                    // Reverse since we want high-pressure regions solved first.
+                    std::reverse(maxres_per_domain.begin(), maxres_per_domain.end());
+                    for (size_t ii = 0; ii < domains_.size(); ++ii) {
+                        domain_order[ii] = maxres_per_domain[ii].second;
+                    }
+                }
+            } else {
+                std::iota(domain_order.begin(), domain_order.end(), 0);
+            }
+
+            return domain_order;
+        }
 
     public:
         std::vector<bool> wasSwitched_;
