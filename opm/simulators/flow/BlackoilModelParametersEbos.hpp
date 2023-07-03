@@ -20,9 +20,15 @@
 #ifndef OPM_BLACKOILMODELPARAMETERS_EBOS_HEADER_INCLUDED
 #define OPM_BLACKOILMODELPARAMETERS_EBOS_HEADER_INCLUDED
 
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
+#include <opm/models/utils/basicproperties.hh>
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+
+#include <opm/simulators/flow/SubDomain.hpp>
+
+#include <stdexcept>
 #include <string>
 
 namespace Opm::Properties {
@@ -207,6 +213,10 @@ struct LocalDomainsPartitioningImbalance {
 };
 template<class TypeTag, class MyTypeTag>
 struct LocalDomainsPartitioningMethod {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct LocalDomainsOrderingMeasure {
     using type = UndefinedProperty;
 };
 template<class TypeTag>
@@ -401,6 +411,10 @@ template<class TypeTag>
 struct LocalDomainsPartitioningMethod<TypeTag, TTag::FlowModelParameters> {
     static constexpr auto value = "zoltan";
 };
+template<class TypeTag>
+struct LocalDomainsOrderingMeasure<TypeTag, TTag::FlowModelParameters> {
+    static constexpr auto value = "pressure";
+};
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
 template<class TypeTag>
@@ -535,6 +549,7 @@ namespace Opm
         int num_local_domains_{0};
         double local_domain_partition_imbalance_{1.03};
         std::string local_domain_partition_method_;
+        DomainOrderingMeasure local_domain_ordering_{DomainOrderingMeasure::AveragePressure};
 
         /// Construct from user parameters or defaults.
         BlackoilModelParametersEbos()
@@ -581,7 +596,15 @@ namespace Opm
             local_domain_partition_method_ = EWOMS_GET_PARAM(TypeTag, std::string, LocalDomainsPartitioningMethod);
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
             network_max_strict_iterations_ = EWOMS_GET_PARAM(TypeTag, int, NetworkMaxStrictIterations);
-            network_max_iterations_ = EWOMS_GET_PARAM(TypeTag, int, NetworkMaxIterations);            
+            network_max_iterations_ = EWOMS_GET_PARAM(TypeTag, int, NetworkMaxIterations);
+            std::string measure = EWOMS_GET_PARAM(TypeTag, std::string, LocalDomainsOrderingMeasure);
+            if (measure == "residual") {
+                local_domain_ordering_ = DomainOrderingMeasure::Residual;
+            } else if (measure == "pressure") {
+                local_domain_ordering_ = DomainOrderingMeasure::AveragePressure;
+            } else {
+                throw std::runtime_error("Invalid domain ordering '" + measure + "' specified.");
+            }
         }
 
         static void registerParameters()
@@ -631,6 +654,8 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, LocalDomainsPartitioningImbalance, "Subdomain partitioning imbalance tolerance. 1.03 is 3 percent imbalance.");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LocalDomainsPartitioningMethod, "Subdomain partitioning method. "
                                  "Allowed values are 'zoltan', 'simple', and the name of a partition file ending with '.partition'.");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, LocalDomainsOrderingMeasure, "Subdomain ordering measure. "
+                                 "Allowed values are 'pressure' and  'residual'.");
         }
     };
 } // namespace Opm
