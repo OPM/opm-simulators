@@ -1192,20 +1192,6 @@ namespace Opm
         }
     }
 
-    template <typename TypeTag>
-    void
-    WellInterface<TypeTag>::
-    setPrevSurfaceRates(WellState& well_state, 
-                            const WellState& prev_well_state) const
-    {
-        auto& ws = well_state.well(this->index_of_well_);
-        if (!this->changedToOpenThisStep()){
-            ws.prev_surface_rates = prev_well_state.well(this->index_of_well_).surface_rates;
-        } else {
-            ws.prev_surface_rates = ws.surface_rates;
-        }
-    }
-
     template<typename TypeTag>
     typename WellInterface<TypeTag>::Eval
     WellInterface<TypeTag>::getPerfCellPressure(const typename WellInterface<TypeTag>::FluidState& fs) const

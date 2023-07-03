@@ -94,6 +94,7 @@ public:
     void closeCompletions(const WellTestState& wellTestState);
 
     void setVFPProperties(const VFPProperties* vfp_properties_arg);
+    void setPrevSurfaceRates(WellState& well_state, const WellState& prev_well_state) const;
     void setGuideRate(const GuideRate* guide_rate_arg);
     void setWellEfficiencyFactor(const double efficiency_factor);
     void setRepRadiusPerfLength();

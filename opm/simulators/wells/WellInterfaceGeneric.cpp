@@ -347,6 +347,17 @@ void WellInterfaceGeneric::setVFPProperties(const VFPProperties* vfp_properties_
     vfp_properties_ = vfp_properties_arg;
 }
 
+void WellInterfaceGeneric::setPrevSurfaceRates(WellState& well_state, 
+                                               const WellState& prev_well_state) const
+    {
+        auto& ws = well_state.well(this->index_of_well_);
+        if (!this->changedToOpenThisStep()){
+            ws.prev_surface_rates = prev_well_state.well(this->index_of_well_).surface_rates;
+        } else {
+            ws.prev_surface_rates = ws.surface_rates;
+        }
+    }
+
 void WellInterfaceGeneric::setGuideRate(const GuideRate* guide_rate_arg)
 {
     guide_rate_ = guide_rate_arg;
