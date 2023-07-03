@@ -166,6 +166,7 @@ namespace Opm {
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using Grid = GetPropType<TypeTag, Properties::Grid>;
         using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+        using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
         using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
         using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
         using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
@@ -1189,7 +1190,8 @@ namespace Opm {
                 const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
-                const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
+                const auto pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) *
+                                     ebosModel.dofTotalVolume(cell_idx);
                 pvSumLocal += pvValue;
 
                 if (isNumericalAquiferCell(gridView.grid(), elem))
@@ -1197,97 +1199,8 @@ namespace Opm {
                     numAquiferPvSumLocal += pvValue;
                 }
 
-                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
-                {
-                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                        continue;
-                    }
-
-                    const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-
-                    B_avg[ compIdx ] += 1.0 / fs.invB(phaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][compIdx];
-
-                    R_sum[ compIdx ] += R2;
-                    const double Rval = std::abs( R2 ) / pvValue;
-                    if (Rval > maxCoeff[ compIdx ]) {
-                        maxCoeff[ compIdx ] = Rval;
-                        maxCoeffCell[ compIdx ] = cell_idx;
-                    }
-                }
-
-                if constexpr (has_solvent_) {
-                    B_avg[ contiSolventEqIdx ] += 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
-                    const auto R2 = ebosResid[cell_idx][contiSolventEqIdx];
-                    R_sum[ contiSolventEqIdx ] += R2;
-                    maxCoeff[ contiSolventEqIdx ] = std::max( maxCoeff[ contiSolventEqIdx ], std::abs( R2 ) / pvValue );
-                }
-                if constexpr (has_extbo_) {
-                    B_avg[ contiZfracEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][contiZfracEqIdx];
-                    R_sum[ contiZfracEqIdx ] += R2;
-                    maxCoeff[ contiZfracEqIdx ] = std::max( maxCoeff[ contiZfracEqIdx ], std::abs( R2 ) / pvValue );
-                }
-                if constexpr (has_polymer_) {
-                    B_avg[ contiPolymerEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][contiPolymerEqIdx];
-                    R_sum[ contiPolymerEqIdx ] += R2;
-                    maxCoeff[ contiPolymerEqIdx ] = std::max( maxCoeff[ contiPolymerEqIdx ], std::abs( R2 ) / pvValue );
-                }
-                if constexpr (has_foam_) {
-                    B_avg[ contiFoamEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][contiFoamEqIdx];
-                    R_sum[ contiFoamEqIdx ] += R2;
-                    maxCoeff[ contiFoamEqIdx ] = std::max( maxCoeff[ contiFoamEqIdx ], std::abs( R2 ) / pvValue );
-                }
-                if constexpr (has_brine_) {
-                    B_avg[ contiBrineEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][contiBrineEqIdx];
-                    R_sum[ contiBrineEqIdx ] += R2;
-                    maxCoeff[ contiBrineEqIdx ] = std::max( maxCoeff[ contiBrineEqIdx ], std::abs( R2 ) / pvValue );
-                }
-
-                if constexpr (has_polymermw_) {
-                    static_assert(has_polymer_);
-
-                    B_avg[contiPolymerMWEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    // the residual of the polymer molecular equation is scaled down by a 100, since molecular weight
-                    // can be much bigger than 1, and this equation shares the same tolerance with other mass balance equations
-                    // TODO: there should be a more general way to determine the scaling-down coefficient
-                    const auto R2 = ebosResid[cell_idx][contiPolymerMWEqIdx] / 100.;
-                    R_sum[contiPolymerMWEqIdx] += R2;
-                    maxCoeff[contiPolymerMWEqIdx] = std::max( maxCoeff[contiPolymerMWEqIdx], std::abs( R2 ) / pvValue );
-                }
-
-                if constexpr (has_energy_) {
-                    B_avg[ contiEnergyEqIdx ] += 1.0 / (4.182e1); // converting J -> RM3 (entalpy / (cp * deltaK * rho) assuming change of 1e-5K of water
-                    const auto R2 = ebosResid[cell_idx][contiEnergyEqIdx];
-                    R_sum[ contiEnergyEqIdx ] += R2;
-                    maxCoeff[ contiEnergyEqIdx ] = std::max( maxCoeff[ contiEnergyEqIdx ], std::abs( R2 ) / pvValue );
-                }
-
-                if constexpr (has_micp_) {
-                    B_avg[contiMicrobialEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R1 = ebosResid[cell_idx][contiMicrobialEqIdx];
-                    R_sum[contiMicrobialEqIdx] += R1;
-                    maxCoeff[contiMicrobialEqIdx] = std::max(maxCoeff[contiMicrobialEqIdx], std::abs(R1) / pvValue);
-                    B_avg[contiOxygenEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][contiOxygenEqIdx];
-                    R_sum[contiOxygenEqIdx] += R2;
-                    maxCoeff[contiOxygenEqIdx] = std::max(maxCoeff[contiOxygenEqIdx], std::abs(R2) / pvValue);
-                    B_avg[contiUreaEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R3 = ebosResid[cell_idx][contiUreaEqIdx];
-                    R_sum[contiUreaEqIdx] += R3;
-                    maxCoeff[contiUreaEqIdx] = std::max(maxCoeff[contiUreaEqIdx], std::abs(R3) / pvValue);
-                    B_avg[contiBiofilmEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R4 = ebosResid[cell_idx][contiBiofilmEqIdx];
-                    R_sum[contiBiofilmEqIdx] += R4;
-                    maxCoeff[contiBiofilmEqIdx] = std::max(maxCoeff[contiBiofilmEqIdx], std::abs(R4) / pvValue);
-                    B_avg[contiCalciteEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R5 = ebosResid[cell_idx][contiCalciteEqIdx];
-                    R_sum[contiCalciteEqIdx] += R5;
-                    maxCoeff[contiCalciteEqIdx] = std::max(maxCoeff[contiCalciteEqIdx], std::abs(R5) / pvValue);
-                }
+                this->getMaxCoeff(cell_idx, intQuants, fs, ebosResid, pvValue,
+                                  B_avg, R_sum, maxCoeff, maxCoeffCell);
             }
 
             OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ", grid_.comm());
@@ -1336,7 +1249,8 @@ namespace Opm {
                 const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
-                const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
+                const auto pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) *
+                                     ebosModel.dofTotalVolume(cell_idx);
                 pvSumLocal += pvValue;
 
                 if (isNumericalAquiferCell(gridView.grid(), elem))
@@ -1344,97 +1258,8 @@ namespace Opm {
                     numAquiferPvSumLocal += pvValue;
                 }
 
-                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
-                {
-                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
-                        continue;
-                    }
-
-                    const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-
-                    B_avg[ compIdx ] += 1.0 / fs.invB(phaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][compIdx];
-
-                    R_sum[ compIdx ] += R2;
-                    const double Rval = std::abs( R2 ) / pvValue;
-                    if (Rval > maxCoeff[ compIdx ]) {
-                        maxCoeff[ compIdx ] = Rval;
-                        maxCoeffCell[ compIdx ] = cell_idx;
-                    }
-                }
-
-                if constexpr (has_solvent_) {
-                    B_avg[ contiSolventEqIdx ] += 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
-                    const auto R2 = ebosResid[cell_idx][contiSolventEqIdx];
-                    R_sum[ contiSolventEqIdx ] += R2;
-                    maxCoeff[ contiSolventEqIdx ] = std::max( maxCoeff[ contiSolventEqIdx ], std::abs( R2 ) / pvValue );
-                }
-                if constexpr (has_extbo_) {
-                    B_avg[ contiZfracEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][contiZfracEqIdx];
-                    R_sum[ contiZfracEqIdx ] += R2;
-                    maxCoeff[ contiZfracEqIdx ] = std::max( maxCoeff[ contiZfracEqIdx ], std::abs( R2 ) / pvValue );
-                }
-                if constexpr (has_polymer_) {
-                    B_avg[ contiPolymerEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][contiPolymerEqIdx];
-                    R_sum[ contiPolymerEqIdx ] += R2;
-                    maxCoeff[ contiPolymerEqIdx ] = std::max( maxCoeff[ contiPolymerEqIdx ], std::abs( R2 ) / pvValue );
-                }
-                if constexpr (has_foam_) {
-                    B_avg[ contiFoamEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][contiFoamEqIdx];
-                    R_sum[ contiFoamEqIdx ] += R2;
-                    maxCoeff[ contiFoamEqIdx ] = std::max( maxCoeff[ contiFoamEqIdx ], std::abs( R2 ) / pvValue );
-                }
-                if constexpr (has_brine_) {
-                    B_avg[ contiBrineEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][contiBrineEqIdx];
-                    R_sum[ contiBrineEqIdx ] += R2;
-                    maxCoeff[ contiBrineEqIdx ] = std::max( maxCoeff[ contiBrineEqIdx ], std::abs( R2 ) / pvValue );
-                }
-
-                if constexpr (has_polymermw_) {
-                    static_assert(has_polymer_);
-
-                    B_avg[contiPolymerMWEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    // the residual of the polymer molecular equation is scaled down by a 100, since molecular weight
-                    // can be much bigger than 1, and this equation shares the same tolerance with other mass balance equations
-                    // TODO: there should be a more general way to determine the scaling-down coefficient
-                    const auto R2 = ebosResid[cell_idx][contiPolymerMWEqIdx] / 100.;
-                    R_sum[contiPolymerMWEqIdx] += R2;
-                    maxCoeff[contiPolymerMWEqIdx] = std::max( maxCoeff[contiPolymerMWEqIdx], std::abs( R2 ) / pvValue );
-                }
-
-                if constexpr (has_energy_) {
-                    B_avg[ contiEnergyEqIdx ] += 1.0 / (4.182e1); // converting J -> RM3 (entalpy / (cp * deltaK * rho) assuming change of 1e-5K of water
-                    const auto R2 = ebosResid[cell_idx][contiEnergyEqIdx];
-                    R_sum[ contiEnergyEqIdx ] += R2;
-                    maxCoeff[ contiEnergyEqIdx ] = std::max( maxCoeff[ contiEnergyEqIdx ], std::abs( R2 ) / pvValue );
-                }
-
-                if constexpr (has_micp_) {
-                    B_avg[ contiMicrobialEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R1 = ebosResid[cell_idx][contiMicrobialEqIdx];
-                    R_sum[ contiMicrobialEqIdx ] += R1;
-                    maxCoeff[ contiMicrobialEqIdx ] = std::max( maxCoeff[ contiMicrobialEqIdx ], std::abs( R1 ) / pvValue );
-                    B_avg[ contiOxygenEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R2 = ebosResid[cell_idx][contiOxygenEqIdx];
-                    R_sum[ contiOxygenEqIdx ] += R2;
-                    maxCoeff[ contiOxygenEqIdx ] = std::max( maxCoeff[ contiOxygenEqIdx ], std::abs( R2 ) / pvValue );
-                    B_avg[ contiUreaEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R3 = ebosResid[cell_idx][contiUreaEqIdx];
-                    R_sum[ contiUreaEqIdx ] += R3;
-                    maxCoeff[ contiUreaEqIdx ] = std::max( maxCoeff[ contiUreaEqIdx ], std::abs( R3 ) / pvValue );
-                    B_avg[ contiBiofilmEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R4 = ebosResid[cell_idx][contiBiofilmEqIdx];
-                    R_sum[ contiBiofilmEqIdx ] += R4;
-                    maxCoeff[ contiBiofilmEqIdx ] = std::max( maxCoeff[ contiBiofilmEqIdx ], std::abs( R4 ) / pvValue );
-                    B_avg[ contiCalciteEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                    const auto R5 = ebosResid[cell_idx][contiCalciteEqIdx];
-                    R_sum[ contiCalciteEqIdx ] += R5;
-                    maxCoeff[ contiCalciteEqIdx ] = std::max( maxCoeff[ contiCalciteEqIdx ], std::abs( R5 ) / pvValue );
-            }
+                this->getMaxCoeff(cell_idx, intQuants, fs, ebosResid, pvValue,
+                                  B_avg, R_sum, maxCoeff, maxCoeffCell);
           }
 
             OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ", grid_.comm());
@@ -1908,6 +1733,122 @@ namespace Opm {
         isNumericalAquiferCell(const G&, const T&)
         {
             return false;
+        }
+
+        template<class FluidState, class Residual>
+        void getMaxCoeff(const unsigned cell_idx,
+                         const IntensiveQuantities& intQuants,
+                         const FluidState& fs,
+                         const Residual& ebosResid,
+                         const Scalar pvValue,
+                         std::vector<Scalar>& B_avg,
+                         std::vector<Scalar>& R_sum,
+                         std::vector<Scalar>& maxCoeff,
+                         std::vector<int>& maxCoeffCell)
+        {
+            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
+            {
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                }
+
+                const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+
+                B_avg[compIdx] += 1.0 / fs.invB(phaseIdx).value();
+                const auto R2 = ebosResid[cell_idx][compIdx];
+
+                R_sum[compIdx] += R2;
+                const double Rval = std::abs(R2) / pvValue;
+                if (Rval > maxCoeff[compIdx]) {
+                    maxCoeff[compIdx] = Rval;
+                    maxCoeffCell[compIdx] = cell_idx;
+                }
+            }
+
+            if constexpr (has_solvent_) {
+                B_avg[contiSolventEqIdx] += 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
+                const auto R2 = ebosResid[cell_idx][contiSolventEqIdx];
+                R_sum[contiSolventEqIdx] += R2;
+                maxCoeff[contiSolventEqIdx] = std::max(maxCoeff[contiSolventEqIdx],
+                                                       std::abs(R2) / pvValue);
+            }
+            if constexpr (has_extbo_) {
+                B_avg[contiZfracEqIdx] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
+                const auto R2 = ebosResid[cell_idx][contiZfracEqIdx];
+                R_sum[ contiZfracEqIdx ] += R2;
+                maxCoeff[contiZfracEqIdx] = std::max(maxCoeff[contiZfracEqIdx],
+                                                     std::abs(R2) / pvValue);
+            }
+            if constexpr (has_polymer_) {
+                B_avg[contiPolymerEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                const auto R2 = ebosResid[cell_idx][contiPolymerEqIdx];
+                R_sum[contiPolymerEqIdx] += R2;
+                maxCoeff[contiPolymerEqIdx] = std::max(maxCoeff[contiPolymerEqIdx],
+                                                       std::abs(R2) / pvValue);
+            }
+            if constexpr (has_foam_) {
+                B_avg[ contiFoamEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
+                const auto R2 = ebosResid[cell_idx][contiFoamEqIdx];
+                R_sum[contiFoamEqIdx] += R2;
+                maxCoeff[contiFoamEqIdx] = std::max(maxCoeff[contiFoamEqIdx],
+                                                    std::abs(R2) / pvValue);
+            }
+            if constexpr (has_brine_) {
+                B_avg[ contiBrineEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                const auto R2 = ebosResid[cell_idx][contiBrineEqIdx];
+                R_sum[contiBrineEqIdx] += R2;
+                maxCoeff[contiBrineEqIdx] = std::max(maxCoeff[contiBrineEqIdx],
+                                                     std::abs(R2) / pvValue);
+            }
+
+            if constexpr (has_polymermw_) {
+                static_assert(has_polymer_);
+
+                B_avg[contiPolymerMWEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                // the residual of the polymer molecular equation is scaled down by a 100, since molecular weight
+                // can be much bigger than 1, and this equation shares the same tolerance with other mass balance equations
+                // TODO: there should be a more general way to determine the scaling-down coefficient
+                const auto R2 = ebosResid[cell_idx][contiPolymerMWEqIdx] / 100.;
+                R_sum[contiPolymerMWEqIdx] += R2;
+                maxCoeff[contiPolymerMWEqIdx] = std::max(maxCoeff[contiPolymerMWEqIdx],
+                                                         std::abs(R2) / pvValue);
+            }
+
+            if constexpr (has_energy_) {
+                B_avg[contiEnergyEqIdx] += 1.0 / (4.182e1); // converting J -> RM3 (entalpy / (cp * deltaK * rho) assuming change of 1e-5K of water
+                const auto R2 = ebosResid[cell_idx][contiEnergyEqIdx];
+                R_sum[contiEnergyEqIdx] += R2;
+                maxCoeff[contiEnergyEqIdx] = std::max(maxCoeff[contiEnergyEqIdx],
+                                                      std::abs(R2) / pvValue);
+            }
+
+            if constexpr (has_micp_) {
+                B_avg[contiMicrobialEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                const auto R1 = ebosResid[cell_idx][contiMicrobialEqIdx];
+                R_sum[contiMicrobialEqIdx] += R1;
+                maxCoeff[contiMicrobialEqIdx] = std::max(maxCoeff[contiMicrobialEqIdx],
+                                                         std::abs(R1) / pvValue);
+                B_avg[contiOxygenEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                const auto R2 = ebosResid[cell_idx][contiOxygenEqIdx];
+                R_sum[contiOxygenEqIdx] += R2;
+                maxCoeff[contiOxygenEqIdx] = std::max(maxCoeff[contiOxygenEqIdx],
+                                                      std::abs(R2) / pvValue);
+                B_avg[contiUreaEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                const auto R3 = ebosResid[cell_idx][contiUreaEqIdx];
+                R_sum[contiUreaEqIdx] += R3;
+                maxCoeff[contiUreaEqIdx] = std::max(maxCoeff[contiUreaEqIdx],
+                                                    std::abs(R3) / pvValue);
+                B_avg[contiBiofilmEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                const auto R4 = ebosResid[cell_idx][contiBiofilmEqIdx];
+                R_sum[contiBiofilmEqIdx] += R4;
+                maxCoeff[contiBiofilmEqIdx] = std::max(maxCoeff[contiBiofilmEqIdx],
+                                                       std::abs(R4) / pvValue);
+                B_avg[contiCalciteEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
+                const auto R5 = ebosResid[cell_idx][contiCalciteEqIdx];
+                R_sum[contiCalciteEqIdx] += R5;
+                maxCoeff[contiCalciteEqIdx] = std::max(maxCoeff[contiCalciteEqIdx],
+                                                       std::abs(R5) / pvValue);
+            }
         }
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
