@@ -28,6 +28,12 @@
 namespace Opm
 {
 
+    //! \brief Measure to use for domain ordering.
+    enum class DomainOrderingMeasure {
+        AveragePressure,
+        Residual
+    };
+
     /// Representing a part of a grid, in a way suitable for performing
     /// local solves.
     template <class Grid>

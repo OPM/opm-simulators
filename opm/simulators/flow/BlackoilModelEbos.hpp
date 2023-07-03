@@ -1795,8 +1795,8 @@ namespace Opm {
 
             std::vector<int> domain_order(domains_.size());
             if (param_.local_solve_approach_ == "gauss-seidel") {
-                // TODO: enable flexibility and choice in choosing domain ordering approach.
-                if (true) {
+                switch (param_.local_domain_ordering_) {
+                case DomainOrderingMeasure::AveragePressure: {
                     // Use average pressures to order domains.
                     std::vector<std::pair<double, int>> avgpress_per_domain(domains_.size());
                     for (const auto& domain : domains_) {
@@ -1814,7 +1814,9 @@ namespace Opm {
                     for (size_t ii = 0; ii < domains_.size(); ++ii) {
                         domain_order[ii] = avgpress_per_domain[ii].second;
                     }
-                } else {
+                    break;
+                }
+                case DomainOrderingMeasure::Residual: {
                     // Use maximum residual to order domains.
                     const auto& residual = ebosSimulator().model().linearizer().residual();
                     const int num_vars = residual[0].size();
@@ -1835,6 +1837,7 @@ namespace Opm {
                     for (size_t ii = 0; ii < domains_.size(); ++ii) {
                         domain_order[ii] = maxres_per_domain[ii].second;
                     }
+                }
                 }
             } else {
                 std::iota(domain_order.begin(), domain_order.end(), 0);
