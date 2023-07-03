@@ -434,44 +434,9 @@ namespace Opm {
 
             // -----------   Set up reports and timer   -----------
             SimulatorReportSingle report;
-            failureReport_ = SimulatorReportSingle();
             Dune::Timer perfTimer;
 
-            perfTimer.start();
-            report.total_linearizations = 1;
-
-            // -----------   Assemble   -----------
-            try {
-                report += assembleReservoir(timer, iteration);
-                report.assemble_time += perfTimer.stop();
-            }
-            catch (...) {
-                report.assemble_time += perfTimer.stop();
-                failureReport_ += report;
-                throw; // continue throwing the stick
-            }
-
-
-            // -----------   Check if converged   -----------
-            std::vector<double> residual_norms;
-            perfTimer.reset();
-            perfTimer.start();
-            // the step is not considered converged until at least minIter iterations is done
-            {
-                auto convrep = getConvergence(timer, iteration, residual_norms);
-                report.converged = convrep.converged()  && iteration > nonlinear_solver.minIter();;
-                ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
-                convergence_reports_.back().report.push_back(std::move(convrep));
-
-                // Throw if any NaN or too large residual found.
-                if (severity == ConvergenceReport::Severity::NotANumber) {
-                    OPM_THROW(NumericalProblem, "NaN residual found!");
-                } else if (severity == ConvergenceReport::Severity::TooLarge) {
-                    OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
-                }
-            }
-            report.update_time += perfTimer.stop();
-            residual_norms_history_.push_back(residual_norms);
+            this->initialLinearization(report, iteration, nonlinear_solver.minIter(), timer);
 
             // -----------   If not converged, solve linear system and do Newton update  -----------
             if (!report.converged) {
@@ -554,43 +519,9 @@ namespace Opm {
         {
             // -----------   Set up reports and timer   -----------
             SimulatorReportSingle report;
-            failureReport_ = SimulatorReportSingle();
             Dune::Timer perfTimer;
 
-            perfTimer.start();
-            report.total_linearizations = 1;
-
-            // -----------   Assemble   -----------
-            try {
-                report += assembleReservoir(timer, iteration);
-                report.assemble_time += perfTimer.stop();
-            }
-            catch (...) {
-                report.assemble_time += perfTimer.stop();
-                failureReport_ += report;
-                throw; // continue throwing the stick
-            }
-
-            // -----------   Check if converged   -----------
-            std::vector<double> residual_norms;
-            perfTimer.reset();
-            perfTimer.start();
-            // the step is not considered converged until at least minIter iterations is done
-            {
-                auto convrep = getConvergence(timer, iteration, residual_norms);
-                report.converged = convrep.converged()  && iteration > nonlinear_solver.minIter();;
-                ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
-                convergence_reports_.back().report.push_back(std::move(convrep));
-
-                // Throw if any NaN or too large residual found.
-                if (severity == ConvergenceReport::Severity::NotANumber) {
-                    OPM_THROW(NumericalProblem, "NaN residual found!");
-                } else if (severity == ConvergenceReport::Severity::TooLarge) {
-                    OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
-                }
-            }
-            report.update_time += perfTimer.stop();
-            residual_norms_history_.push_back(residual_norms);
+            this->initialLinearization(report, iteration, nonlinear_solver.minIter(), timer);
 
             if (report.converged) {
                 return report;
@@ -1849,6 +1780,51 @@ namespace Opm {
                 maxCoeff[contiCalciteEqIdx] = std::max(maxCoeff[contiCalciteEqIdx],
                                                        std::abs(R5) / pvValue);
             }
+        }
+
+        void initialLinearization(SimulatorReportSingle& report,
+                                  const int iteration,
+                                  const int minIter,
+                                  const SimulatorTimerInterface& timer)
+        {
+            // -----------   Set up reports and timer   -----------
+            failureReport_ = SimulatorReportSingle();
+            Dune::Timer perfTimer;
+
+            perfTimer.start();
+            report.total_linearizations = 1;
+
+            // -----------   Assemble   -----------
+            try {
+                report += assembleReservoir(timer, iteration);
+                report.assemble_time += perfTimer.stop();
+            }
+            catch (...) {
+                report.assemble_time += perfTimer.stop();
+                failureReport_ += report;
+                throw; // continue throwing the stick
+            }
+
+            // -----------   Check if converged   -----------
+            std::vector<double> residual_norms;
+            perfTimer.reset();
+            perfTimer.start();
+            // the step is not considered converged until at least minIter iterations is done
+            {
+                auto convrep = getConvergence(timer, iteration, residual_norms);
+                report.converged = convrep.converged() && iteration > minIter;
+                ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
+                convergence_reports_.back().report.push_back(std::move(convrep));
+
+                // Throw if any NaN or too large residual found.
+                if (severity == ConvergenceReport::Severity::NotANumber) {
+                    OPM_THROW(NumericalProblem, "NaN residual found!");
+                } else if (severity == ConvergenceReport::Severity::TooLarge) {
+                    OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
+                }
+            }
+            report.update_time += perfTimer.stop();
+            residual_norms_history_.push_back(residual_norms);
         }
 
         double dpMaxRel() const { return param_.dp_max_rel_; }
