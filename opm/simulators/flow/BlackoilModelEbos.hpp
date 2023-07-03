@@ -542,20 +542,8 @@ namespace Opm {
                 const auto& domain = domains_[domain_index];
                 SimulatorReportSingle local_report;
                 if (param_.local_solve_approach_ == "jacobi") {
-                    auto initial_local_well_primary_vars = wellModel().getPrimaryVarsDomain(domain);
-                    auto initial_local_solution = Details::extractVector(solution, domain.cells);
-                    auto res = solveDomain(domain, timer, iteration);
-                    local_report = res.first;
-                    if (local_report.converged) {
-                        auto local_solution = Details::extractVector(solution, domain.cells);
-                        Details::setGlobal(local_solution, domain.cells, locally_solved);
-                        Details::setGlobal(initial_local_solution, domain.cells, solution);
-                        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
-                    } else {
-                        wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
-                        Details::setGlobal(initial_local_solution, domain.cells, solution);
-                        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
-                    }
+                    solveDomainJacobi(solution, locally_solved, local_report,
+                                      iteration, timer, domain);
                 } else {
                     assert(param_.local_solve_approach_ == "gauss-seidel");
                     auto initial_local_well_primary_vars = wellModel().getPrimaryVarsDomain(domain);
@@ -1844,6 +1832,30 @@ namespace Opm {
             }
 
             return domain_order;
+        }
+
+        template<class GlobalEqVector>
+        void solveDomainJacobi(GlobalEqVector& solution,
+                               GlobalEqVector& locally_solved,
+                               SimulatorReportSingle& local_report,
+                               const int iteration,
+                               const SimulatorTimerInterface& timer,
+                               const Domain& domain)
+        {
+            auto initial_local_well_primary_vars = wellModel().getPrimaryVarsDomain(domain);
+            auto initial_local_solution = Details::extractVector(solution, domain.cells);
+            auto res = solveDomain(domain, timer, iteration);
+            local_report = res.first;
+            if (local_report.converged) {
+                auto local_solution = Details::extractVector(solution, domain.cells);
+                Details::setGlobal(local_solution, domain.cells, locally_solved);
+                Details::setGlobal(initial_local_solution, domain.cells, solution);
+                ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+            } else {
+                wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
+                Details::setGlobal(initial_local_solution, domain.cells, solution);
+                ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+            }
         }
 
     public:
