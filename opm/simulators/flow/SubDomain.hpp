@@ -27,6 +27,11 @@
 
 namespace Opm
 {
+    //! \brief Solver approach for NLDD.
+    enum class DomainSolveApproach {
+        Jacobi,
+        GaussSeidel
+    };
 
     //! \brief Measure to use for domain ordering.
     enum class DomainOrderingMeasure {

@@ -539,7 +539,7 @@ namespace Opm
         /// Nonlinear solver type: newton or nldd.
         std::string nonlinear_solver_;
         /// 'jacobi' and 'gauss-seidel' supported.
-        std::string local_solve_approach_;
+        DomainSolveApproach local_solve_approach_{DomainSolveApproach::Jacobi};
 
         int max_local_solve_iterations_;
 
@@ -587,7 +587,15 @@ namespace Opm
             max_number_of_well_switches_ = EWOMS_GET_PARAM(TypeTag, int, MaximumNumberOfWellSwitches);
             use_average_density_ms_wells_ = EWOMS_GET_PARAM(TypeTag, bool, UseAverageDensityMsWells);
             nonlinear_solver_ = EWOMS_GET_PARAM(TypeTag, std::string, NonlinearSolver);
-            local_solve_approach_ = EWOMS_GET_PARAM(TypeTag, std::string, LocalSolveApproach);
+            std::string approach = EWOMS_GET_PARAM(TypeTag, std::string, LocalSolveApproach);
+            if (approach == "jacobi") {
+                local_solve_approach_ = DomainSolveApproach::Jacobi;
+            } else if (approach == "gauss-seidel") {
+                local_solve_approach_ = DomainSolveApproach::GaussSeidel;
+            } else {
+                throw std::runtime_error("Invalid domain solver approach '" + approach + "' specified.");
+            }
+
             max_local_solve_iterations_ = EWOMS_GET_PARAM(TypeTag, int, MaxLocalSolveIterations);
             local_tolerance_scaling_mb_ = EWOMS_GET_PARAM(TypeTag, double, LocalToleranceScalingMb);
             local_tolerance_scaling_cnv_ = EWOMS_GET_PARAM(TypeTag, double, LocalToleranceScalingCnv);

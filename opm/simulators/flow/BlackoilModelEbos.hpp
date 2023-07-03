@@ -541,60 +541,16 @@ namespace Opm {
             for (const int domain_index : domain_order) {
                 const auto& domain = domains_[domain_index];
                 SimulatorReportSingle local_report;
-                if (param_.local_solve_approach_ == "jacobi") {
-                    auto initial_local_well_primary_vars = wellModel().getPrimaryVarsDomain(domain);
-                    auto initial_local_solution = Details::extractVector(solution, domain.cells);
-                    auto res = solveDomain(domain, timer, iteration);
-                    local_report = res.first;
-                    if (local_report.converged) {
-                        auto local_solution = Details::extractVector(solution, domain.cells);
-                        Details::setGlobal(local_solution, domain.cells, locally_solved);
-                        Details::setGlobal(initial_local_solution, domain.cells, solution);
-                        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
-                    } else {
-                        wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
-                        Details::setGlobal(initial_local_solution, domain.cells, solution);
-                        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
-                    }
-                } else {
-                    assert(param_.local_solve_approach_ == "gauss-seidel");
-                    auto initial_local_well_primary_vars = wellModel().getPrimaryVarsDomain(domain);
-                    auto initial_local_solution = Details::extractVector(solution, domain.cells);
-                    auto res = solveDomain(domain, timer, iteration);
-                    local_report = res.first;
-                    if (!local_report.converged) {
-                        // We look at the detailed convergence report to evaluate
-                        // if we should accept the unconverged solution.
-                        const auto& convrep = res.second;
-                        // We do not accept a solution if the wells are unconverged.
-                        if (!convrep.wellFailed()) {
-                            // Calculare the sums of the mb and cnv failures.
-                            double mb_sum = 0.0;
-                            double cnv_sum = 0.0;
-                            for (const auto& rc : convrep.reservoirConvergence()) {
-                                if (rc.type() == ConvergenceReport::ReservoirFailure::Type::MassBalance) {
-                                    mb_sum += rc.value();
-                                } else if (rc.type() == ConvergenceReport::ReservoirFailure::Type::Cnv) {
-                                    cnv_sum += rc.value();
-                                }
-                            }
-                            // If not too high, we overrule the convergence failure.
-                            const double acceptable_local_mb_sum = 1e-3;
-                            const double acceptable_local_cnv_sum = 1.0;
-                            if (mb_sum < acceptable_local_mb_sum && cnv_sum < acceptable_local_cnv_sum) {
-                                local_report.converged = true;
-                                OpmLog::debug("Accepting solution in unconverged domain " + std::to_string(domain.index));
-                            }
-                        }
-                    }
-                    if (local_report.converged) {
-                        auto local_solution = Details::extractVector(solution, domain.cells);
-                        Details::setGlobal(local_solution, domain.cells, locally_solved);
-                    } else {
-                        wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
-                        Details::setGlobal(initial_local_solution, domain.cells, solution);
-                        ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
-                    }
+                switch (param_.local_solve_approach_) {
+                case DomainSolveApproach::Jacobi:
+                    solveDomainJacobi(solution, locally_solved, local_report,
+                                      iteration, timer, domain);
+                    break;
+                default:
+                case DomainSolveApproach::GaussSeidel:
+                    solveDomainGaussSeidel(solution, locally_solved, local_report,
+                                           iteration, timer, domain);
+                    break;
                 }
                 // This should have updated the global matrix to be
                 // dR_i/du_j evaluated at new local solutions for
@@ -624,7 +580,7 @@ namespace Opm {
                 local_reports_accumulated_ += rep;
             }
 
-            if (param_.local_solve_approach_ == "jacobi") {
+            if (param_.local_solve_approach_ == DomainSolveApproach::Jacobi) {
                 solution = locally_solved;
                 ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
             }
@@ -1794,7 +1750,8 @@ namespace Opm {
             const auto& solution = ebosSimulator().model().solution(0);
 
             std::vector<int> domain_order(domains_.size());
-            if (param_.local_solve_approach_ == "gauss-seidel") {
+            switch (param_.local_solve_approach_) {
+            case DomainSolveApproach::GaussSeidel: {
                 switch (param_.local_domain_ordering_) {
                 case DomainOrderingMeasure::AveragePressure: {
                     // Use average pressures to order domains.
@@ -1838,12 +1795,89 @@ namespace Opm {
                         domain_order[ii] = maxres_per_domain[ii].second;
                     }
                 }
+                break;
                 }
-            } else {
+                break;
+            }
+
+            case DomainSolveApproach::Jacobi:
+            default:
                 std::iota(domain_order.begin(), domain_order.end(), 0);
+                break;
             }
 
             return domain_order;
+        }
+
+        template<class GlobalEqVector>
+        void solveDomainJacobi(GlobalEqVector& solution,
+                               GlobalEqVector& locally_solved,
+                               SimulatorReportSingle& local_report,
+                               const int iteration,
+                               const SimulatorTimerInterface& timer,
+                               const Domain& domain)
+        {
+            auto initial_local_well_primary_vars = wellModel().getPrimaryVarsDomain(domain);
+            auto initial_local_solution = Details::extractVector(solution, domain.cells);
+            auto res = solveDomain(domain, timer, iteration);
+            local_report = res.first;
+            if (local_report.converged) {
+                auto local_solution = Details::extractVector(solution, domain.cells);
+                Details::setGlobal(local_solution, domain.cells, locally_solved);
+                Details::setGlobal(initial_local_solution, domain.cells, solution);
+                ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+            } else {
+                wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
+                Details::setGlobal(initial_local_solution, domain.cells, solution);
+                ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+            }
+        }
+
+        template<class GlobalEqVector>
+        void solveDomainGaussSeidel(GlobalEqVector& solution,
+                                    GlobalEqVector& locally_solved,
+                                    SimulatorReportSingle& local_report,
+                                    const int iteration,
+                                    const SimulatorTimerInterface& timer,
+                                    const Domain& domain)
+        {
+            auto initial_local_well_primary_vars = wellModel().getPrimaryVarsDomain(domain);
+            auto initial_local_solution = Details::extractVector(solution, domain.cells);
+            auto res = solveDomain(domain, timer, iteration);
+            local_report = res.first;
+            if (!local_report.converged) {
+                // We look at the detailed convergence report to evaluate
+                // if we should accept the unconverged solution.
+                const auto& convrep = res.second;
+                // We do not accept a solution if the wells are unconverged.
+                if (!convrep.wellFailed()) {
+                    // Calculare the sums of the mb and cnv failures.
+                    double mb_sum = 0.0;
+                    double cnv_sum = 0.0;
+                    for (const auto& rc : convrep.reservoirConvergence()) {
+                        if (rc.type() == ConvergenceReport::ReservoirFailure::Type::MassBalance) {
+                            mb_sum += rc.value();
+                        } else if (rc.type() == ConvergenceReport::ReservoirFailure::Type::Cnv) {
+                            cnv_sum += rc.value();
+                        }
+                    }
+                    // If not too high, we overrule the convergence failure.
+                    const double acceptable_local_mb_sum = 1e-3;
+                    const double acceptable_local_cnv_sum = 1.0;
+                    if (mb_sum < acceptable_local_mb_sum && cnv_sum < acceptable_local_cnv_sum) {
+                        local_report.converged = true;
+                        OpmLog::debug("Accepting solution in unconverged domain " + std::to_string(domain.index));
+                    }
+                }
+            }
+            if (local_report.converged) {
+                auto local_solution = Details::extractVector(solution, domain.cells);
+                Details::setGlobal(local_solution, domain.cells, locally_solved);
+            } else {
+                wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
+                Details::setGlobal(initial_local_solution, domain.cells, solution);
+                ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+            }
         }
 
     public:
