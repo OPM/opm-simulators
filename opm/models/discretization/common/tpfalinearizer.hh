@@ -34,10 +34,12 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
 
-#include <opm/models/discretization/common/baseauxiliarymodule.hh>
-
 #include <opm/grid/utility/SparseTable.hpp>
+
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+#include <opm/input/eclipse/Schedule/BCProp.hpp>
+
+#include <opm/models/discretization/common/baseauxiliarymodule.hh>
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -455,7 +457,7 @@ private:
                     for (size_t ii = 0; ii < massrate.size(); ++ii) {
                         massrate[ii] = massrateAD[ii].value();
                     }
-                    if (type!=BCType::NONE) {
+                    if (type != BCType::NONE) {
                         const auto& exFluidState = problem_().boundaryFluidState(myIdx, dir_id);
                         BoundaryConditionData bcdata{type,
                                                      massrate,
