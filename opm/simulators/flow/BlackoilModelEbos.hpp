@@ -541,12 +541,16 @@ namespace Opm {
             for (const int domain_index : domain_order) {
                 const auto& domain = domains_[domain_index];
                 SimulatorReportSingle local_report;
-                if (param_.local_solve_approach_ == "jacobi") {
+                switch (param_.local_solve_approach_) {
+                case DomainSolveApproach::Jacobi:
                     solveDomainJacobi(solution, locally_solved, local_report,
                                       iteration, timer, domain);
-                } else {
+                    break;
+                default:
+                case DomainSolveApproach::GaussSeidel:
                     solveDomainGaussSeidel(solution, locally_solved, local_report,
                                            iteration, timer, domain);
+                    break;
                 }
                 // This should have updated the global matrix to be
                 // dR_i/du_j evaluated at new local solutions for
@@ -576,7 +580,7 @@ namespace Opm {
                 local_reports_accumulated_ += rep;
             }
 
-            if (param_.local_solve_approach_ == "jacobi") {
+            if (param_.local_solve_approach_ == DomainSolveApproach::Jacobi) {
                 solution = locally_solved;
                 ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
             }
@@ -1746,7 +1750,8 @@ namespace Opm {
             const auto& solution = ebosSimulator().model().solution(0);
 
             std::vector<int> domain_order(domains_.size());
-            if (param_.local_solve_approach_ == "gauss-seidel") {
+            switch (param_.local_solve_approach_) {
+            case DomainSolveApproach::GaussSeidel: {
                 switch (param_.local_domain_ordering_) {
                 case DomainOrderingMeasure::AveragePressure: {
                     // Use average pressures to order domains.
@@ -1790,9 +1795,15 @@ namespace Opm {
                         domain_order[ii] = maxres_per_domain[ii].second;
                     }
                 }
+                break;
                 }
-            } else {
+                break;
+            }
+
+            case DomainSolveApproach::Jacobi:
+            default:
                 std::iota(domain_order.begin(), domain_order.end(), 0);
+                break;
             }
 
             return domain_order;
@@ -1830,7 +1841,6 @@ namespace Opm {
                                     const SimulatorTimerInterface& timer,
                                     const Domain& domain)
         {
-            assert(param_.local_solve_approach_ == "gauss-seidel");
             auto initial_local_well_primary_vars = wellModel().getPrimaryVarsDomain(domain);
             auto initial_local_solution = Details::extractVector(solution, domain.cells);
             auto res = solveDomain(domain, timer, iteration);
