@@ -1606,7 +1606,6 @@ namespace Opm {
             ebosSimulator_.problem().endEpisode();
         }
 
-    private:
         template<class FluidState, class Residual>
         void getMaxCoeff(const unsigned cell_idx,
                          const IntensiveQuantities& intQuants,
@@ -1723,6 +1722,7 @@ namespace Opm {
             }
         }
 
+    private:
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
         double drMaxRel() const { return param_.dr_max_rel_; }
