@@ -322,6 +322,13 @@ endmacro (tests_hook)
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
 
+opm_add_test(test_tuning_xxxMBE
+              SOURCES
+                tests/test_tuning_XXXMBE.cpp
+              LIBRARIES
+                ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+              ONLY_COMPILE)
+
 if (HAVE_OPM_TESTS)
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 endif()
