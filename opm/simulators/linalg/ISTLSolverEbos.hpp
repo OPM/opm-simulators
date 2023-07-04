@@ -23,6 +23,7 @@
 #define OPM_ISTLSOLVER_EBOS_HEADER_INCLUDED
 
 #include <dune/istl/owneroverlapcopy.hh>
+#include <dune/istl/solver.hh>
 
 #include <ebos/eclbasevanguard.hh>
 
