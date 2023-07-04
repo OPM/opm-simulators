@@ -360,6 +360,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclinterregflows.hh
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/BlackoilModelEbos.hpp
+  opm/simulators/flow/BlackoilModelEbosNldd.hpp
   opm/simulators/flow/BlackoilModelParametersEbos.hpp
   opm/simulators/flow/Banners.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
