@@ -229,6 +229,7 @@ endif()
 # find tests -name '*.cpp' -a ! -wholename '*/not-unit/*' -printf '\t%p\n' | sort
 list (APPEND TEST_SOURCE_FILES
   tests/test_ALQState.cpp
+  tests/test_aquifergridutils.cpp
   tests/test_blackoil_amg.cpp
   tests/test_convergenceoutputconfiguration.cpp
   tests/test_convergencereport.cpp
@@ -379,8 +380,9 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellContainer.hpp
   opm/simulators/aquifers/AquiferAnalytical.hpp
   opm/simulators/aquifers/AquiferCarterTracy.hpp
-  opm/simulators/aquifers/AquiferFetkovich.hpp
   opm/simulators/aquifers/AquiferConstantFlux.hpp
+  opm/simulators/aquifers/AquiferFetkovich.hpp
+  opm/simulators/aquifers/AquiferGridUtils.hpp
   opm/simulators/aquifers/AquiferInterface.hpp
   opm/simulators/aquifers/AquiferNumerical.hpp
   opm/simulators/aquifers/BlackoilAquiferModel.hpp
