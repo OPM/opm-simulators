@@ -40,6 +40,7 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 
+#include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/partitionCells.hpp>
@@ -1023,6 +1024,7 @@ namespace Opm {
 
             ElementContext elemCtx(ebosSimulator_);
             const auto& gridView = ebosSimulator().gridView();
+            IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
             OPM_BEGIN_PARALLEL_TRY_CATCH();
             for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 elemCtx.updatePrimaryStencil(elem);
@@ -1036,7 +1038,7 @@ namespace Opm {
                                      ebosModel.dofTotalVolume(cell_idx);
                 pvSumLocal += pvValue;
 
-                if (isNumericalAquiferCell(gridView.grid(), elem))
+                if (isNumericalAquiferCell(elem))
                 {
                     numAquiferPvSumLocal += pvValue;
                 }
@@ -1075,6 +1077,7 @@ namespace Opm {
             ElementContext elemCtx(ebosSimulator_);
             const auto& gridView = domain.view;
             const auto& elemEndIt = gridView.template end</*codim=*/0>();
+            IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
             OPM_BEGIN_PARALLEL_TRY_CATCH();
             for (auto elemIt = gridView.template begin</*codim=*/0>();
                  elemIt != elemEndIt;
@@ -1095,7 +1098,7 @@ namespace Opm {
                                      ebosModel.dofTotalVolume(cell_idx);
                 pvSumLocal += pvValue;
 
-                if (isNumericalAquiferCell(gridView.grid(), elem))
+                if (isNumericalAquiferCell(elem))
                 {
                     numAquiferPvSumLocal += pvValue;
                 }
@@ -1157,13 +1160,14 @@ namespace Opm {
             const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             const auto& gridView = ebosSimulator().gridView();
             ElementContext elemCtx(ebosSimulator_);
+            IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
 
             OPM_BEGIN_PARALLEL_TRY_CATCH();
 
             for (const auto& elem : elements(gridView, Dune::Partitions::interiorBorder))
             {
                 // Skip cells of numerical Aquifer
-                if (isNumericalAquiferCell(gridView.grid(), elem))
+                if (isNumericalAquiferCell(elem))
                 {
                     continue;
                 }
@@ -1557,26 +1561,6 @@ namespace Opm {
         }
 
     private:
-        template<class T>
-        bool isNumericalAquiferCell(const Dune::CpGrid& grid, const T& elem)
-        {
-            const auto& aquiferCells = grid.sortedNumAquiferCells();
-            if (aquiferCells.empty())
-            {
-                return false;
-            }
-            auto candidate = std::lower_bound(aquiferCells.begin(), aquiferCells.end(),
-                                              elem.index());
-            return candidate != aquiferCells.end() && *candidate == elem.index();
-        }
-
-        template<class G, class T>
-        typename std::enable_if<!std::is_same<G,Dune::CpGrid>::value, bool>::type
-        isNumericalAquiferCell(const G&, const T&)
-        {
-            return false;
-        }
-
         template<class FluidState, class Residual>
         void getMaxCoeff(const unsigned cell_idx,
                          const IntensiveQuantities& intQuants,
