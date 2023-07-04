@@ -888,6 +888,13 @@ namespace Opm {
         }
 
 
+        // Obtain reference to linear solver setup time
+        double& linearSolveSetupTime()
+        {
+            return linear_solve_setup_time_;
+        }
+
+
         void solveJacobianSystemDomain(const Domain& domain, BVector& global_x)
         {
             Dune::Timer perfTimer;
