@@ -24,13 +24,20 @@
 
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
 
+#include <cstddef>
 #include <vector>
 
-namespace Opm
-{
+namespace Opm {
 
-class UnitSystem;
-class WellInterfaceGeneric;
+    class  AutoICD;
+    struct PhaseUsage;
+    class  SegmentState;
+    class  UnitSystem;
+    class  WellInterfaceGeneric;
+
+} // namespace Opm
+
+namespace Opm {
 
 template<typename FluidSystem, typename Indices, typename Scalar>
 class MultisegmentWellSegments
@@ -52,7 +59,7 @@ public:
     void updateUpwindingSegments(const PrimaryVariables& primary_variables);
 
     EvalWell getHydroPressureLoss(const int seg,
-                                      const int seg_side) const;
+                                  const int seg_side) const;
 
     //! Pressure difference between segment and perforation.
     Scalar getPressureDiffSegPerf(const int seg,
@@ -109,6 +116,9 @@ public:
         return perforation_depth_diffs_[perf];
     }
 
+    void copyPhaseDensities(const PhaseUsage& pu,
+                            SegmentState&     segSol) const;
+
 private:
     // TODO: trying to use the information from the Well opm-parser as much
     // as possible, it will possibly be re-implemented later for efficiency reason.
@@ -149,8 +159,16 @@ private:
     std::vector<std::vector<EvalWell>> phase_viscosities_;
 
     const WellInterfaceGeneric& well_;
+
+    void copyPhaseDensities(const unsigned    phaseIdx,
+                            const std::size_t stride,
+                            double*           dens) const;
+
+    double mixtureDensity(const int seg) const;
+    double mixtureDensityWithExponents(const int seg) const;
+    double mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const;
 };
 
-}
+} // namespace Opm
 
 #endif // OPM_MULTISEGMENTWELL_SEGMENTS_HEADER_INCLUDED

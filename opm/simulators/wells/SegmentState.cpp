@@ -61,6 +61,7 @@ SegmentState::SegmentState(int num_phases, const WellSegments& segments)
     , phase_velocity           (segments.size() * num_phases)
     , phase_holdup             (segments.size() * num_phases)
     , phase_viscosity          (segments.size() * num_phases)
+    , phase_density            (segments.size() * (num_phases + 2)) // +2 for mixture with and without exponents
     , pressure                 (segments.size())
     , pressure_drop_friction   (segments.size())
     , pressure_drop_hydrostatic(segments.size())
@@ -77,12 +78,13 @@ SegmentState SegmentState::serializationTestObject()
     result.phase_resv_rates = {7.0, 8.0};
     result.phase_velocity = {9.0};
     result.phase_holdup = {10.0, 11.0};
-    result.phase_viscosity = {12.0};
-    result.pressure = {13.0, 14.0};
-    result.pressure_drop_friction = {15.0};
-    result.pressure_drop_hydrostatic = {16.0, 17.0};
-    result.pressure_drop_accel = {18.0};
-    result.m_segment_number = {19, 20};
+    result.phase_viscosity = {12.0, 12.5};
+    result.phase_density = {13.0, 13.5, 13.6, 13.75};
+    result.pressure = {14.0, 15.0};
+    result.pressure_drop_friction = {16.0};
+    result.pressure_drop_hydrostatic = {17.0, 18.0};
+    result.pressure_drop_accel = {19.0};
+    result.m_segment_number = {20, 21};
 
     return result;
 }
@@ -124,6 +126,7 @@ bool SegmentState::operator==(const SegmentState& rhs) const
            this->phase_velocity == rhs.phase_velocity &&
            this->phase_holdup == rhs.phase_holdup &&
            this->phase_viscosity == rhs.phase_viscosity &&
+           this->phase_density == rhs.phase_density &&
            this->pressure == rhs.pressure &&
            this->pressure_drop_friction == rhs.pressure_drop_friction &&
            this->pressure_drop_hydrostatic == rhs.pressure_drop_hydrostatic &&

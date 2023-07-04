@@ -56,6 +56,7 @@ public:
         serializer(phase_velocity);
         serializer(phase_holdup);
         serializer(phase_viscosity);
+        serializer(phase_density);
         serializer(pressure);
         serializer(pressure_drop_friction);
         serializer(pressure_drop_hydrostatic);
@@ -80,6 +81,24 @@ public:
 
     /// Segment condition phase viscosities.
     std::vector<double> phase_viscosity;
+
+    /// Segment condition phase densities.
+    ///
+    /// \code num_phases + 2 \endcode elements per segment, with the two
+    /// additional elements being fluid mixture densities.  Fluid mixture
+    /// densities are calculated with and without ICD-related flowing phase
+    /// fraction exponents, respectively.  Mixture density *without* flowing
+    /// phase fraction exponents is stored at offset \c num_phases, and
+    /// mixture density *with* flowing phase fraction exponents is stored at
+    /// offset \code num_phases + 1 \endcode.
+    ///
+    /// In other words, the phase and mixture densities are stored as
+    ///
+    ///   [{ p0, p1, ..., (np - 1), mixture, mixture_with_exponents },
+    ///    { p0, p1, ..., (np - 1), mixture, mixture_with_exponents },
+    ///    ...
+    ///    { p0, p1, ..., (np - 1), mixture, mixture_with_exponents }]
+    std::vector<double> phase_density;
 
     std::vector<double> pressure;
     std::vector<double> pressure_drop_friction;
