@@ -956,7 +956,7 @@ forceShutWellByName(const std::string& wellname,
     // Only log a message on the output rank.
     if (terminal_output_ && well_was_shut) {
         const std::string msg = "Well " + wellname
-            + " will be shut because it cannot get converged.";
+            + " will be shut because it fails to converge.";
         OpmLog::info(msg);
     }
 
