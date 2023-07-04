@@ -797,6 +797,12 @@ public:
                         val.second = getValue(fs.viscosity(gasPhaseIdx));
                     else if (key.first == "BVOIL" || key.first == "BOVIS")
                         val.second = getValue(fs.viscosity(oilPhaseIdx));
+                    else if ((key.first == "BODEN") || (key.first == "BDENO"))
+                        val.second = getValue(fs.density(oilPhaseIdx));
+                    else if ((key.first == "BGDEN") || (key.first == "BDENG"))
+                        val.second = getValue(fs.density(gasPhaseIdx));
+                    else if ((key.first == "BWDEN") || (key.first == "BDENW"))
+                        val.second = getValue(fs.density(waterPhaseIdx));
                     else if ((key.first == "BRPV") ||
                              (key.first == "BOPV") ||
                              (key.first == "BWPV") ||
