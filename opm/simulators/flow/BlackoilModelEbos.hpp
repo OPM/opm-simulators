@@ -1729,6 +1729,12 @@ namespace Opm {
             }
         }
 
+        //! \brief Returns const reference to model parameters.
+        const ModelParameters& param() const
+        {
+            return param_;
+        }
+
     private:
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
