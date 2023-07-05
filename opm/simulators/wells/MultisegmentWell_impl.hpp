@@ -600,6 +600,12 @@ namespace Opm
 
         this->primary_variables_.copyToWellState(*this, getRefDensity(), stop_or_zero_rate_target,
                                                  well_state, summary_state, deferred_logger);
+
+        {
+            auto& ws = well_state.well(this->index_of_well_);
+            this->segments_.copyPhaseDensities(ws.pu, ws.segments);
+        }
+
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }
 

@@ -887,6 +887,7 @@ WellState::reportSegmentResults(const int well_id,
                                 const int seg_no) const
 {
     using PhaseQuant = data::SegmentPhaseQuantity::Item;
+    using PhaseDensity = data::SegmentPhaseDensity::Item;
 
     const auto& segments = this->well(well_id).segments;
     if (segments.empty()) {
@@ -911,6 +912,7 @@ WellState::reportSegmentResults(const int well_id,
     const auto* velocity = &segments.phase_velocity[seg_ix * pu.num_phases];
     const auto* holdup = &segments.phase_holdup[seg_ix * pu.num_phases];
     const auto* viscosity = &segments.phase_viscosity[seg_ix * pu.num_phases];
+    const auto* density = &segments.phase_density[seg_ix * (pu.num_phases + 2)]; // +2 for mixture densities
 
     if (pu.phase_used[Water]) {
         const auto iw = pu.phase_pos[Water];
@@ -920,6 +922,7 @@ WellState::reportSegmentResults(const int well_id,
         seg_res.velocity.set(PhaseQuant::Water, velocity[iw]);
         seg_res.holdup.set(PhaseQuant::Water, holdup[iw]);
         seg_res.viscosity.set(PhaseQuant::Water, viscosity[iw]);
+        seg_res.density.set(PhaseDensity::Water, density[iw]);
     }
 
     if (pu.phase_used[Oil]) {
@@ -931,6 +934,7 @@ WellState::reportSegmentResults(const int well_id,
         seg_res.velocity.set(PhaseQuant::Oil, velocity[io]);
         seg_res.holdup.set(PhaseQuant::Oil, holdup[io]);
         seg_res.viscosity.set(PhaseQuant::Oil, viscosity[io]);
+        seg_res.density.set(PhaseDensity::Oil, density[io]);
     }
 
     if (pu.phase_used[Gas]) {
@@ -942,9 +946,16 @@ WellState::reportSegmentResults(const int well_id,
         seg_res.velocity.set(PhaseQuant::Gas, velocity[ig]);
         seg_res.holdup.set(PhaseQuant::Gas, holdup[ig]);
         seg_res.viscosity.set(PhaseQuant::Gas, viscosity[ig]);
+        seg_res.density.set(PhaseDensity::Gas, density[ig]);
     }
 
     seg_res.segNumber = seg_no;
+
+    // Recall: The mixture density *without* exponents is stored at offset
+    // 'num_phases' and the mixture density *with* exponents is stored at
+    // offset 'num_phases + 1'.
+    seg_res.density.set(PhaseDensity::Mixture, density[pu.num_phases]);
+    seg_res.density.set(PhaseDensity::MixtureWithExponents, density[pu.num_phases + 1]);
 
     return seg_res;
 }

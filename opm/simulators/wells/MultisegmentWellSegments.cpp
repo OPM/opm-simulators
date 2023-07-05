@@ -23,6 +23,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/input/eclipse/Schedule/MSW/AICD.hpp>
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
@@ -37,9 +38,22 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/MSWellHelpers.hpp>
+#include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
+#include <opm/core/props/BlackoilPhases.hpp>
+
 #include <fmt/format.h>
+
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <functional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace Opm
 {
@@ -317,16 +331,14 @@ updateUpwindingSegments(const PrimaryVariables& primary_variables)
     }
 }
 
-
 template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 getHydroPressureLoss(const int seg,
-                         const int seg_density) const
-{   
+                     const int seg_density) const
+{
     return densities_[seg_density] * well_.gravity() * depth_diffs_[seg];
 }
-
 
 template<class FluidSystem, class Indices, class Scalar>
 Scalar MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
@@ -777,6 +789,133 @@ accelerationPressureLoss(const int seg) const
     accelerationPressureLoss *= sign;
 
     return accelerationPressureLoss;
+}
+
+template <class FluidSystem, class Indices, class Scalar>
+void
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+copyPhaseDensities(const PhaseUsage& pu, SegmentState& segSol) const
+{
+    auto* rho = segSol.phase_density.data();
+
+    const auto phaseMap = std::vector {
+        std::pair { BlackoilPhases::Liquid, FluidSystem::oilPhaseIdx },
+        std::pair { BlackoilPhases::Vapour, FluidSystem::gasPhaseIdx },
+        std::pair { BlackoilPhases::Aqua  , FluidSystem::waterPhaseIdx },
+    };
+
+    // Densities stored in 'rho' as
+    // [{ p0, p1, ..., (np - 1), mixture, mixture_with_exponents },
+    //  { p0, p1, ..., (np - 1), mixture, mixture_with_exponents },
+    //  ...
+    //  { p0, p1, ..., (np - 1), mixture, mixture_with_exponents }]
+    // Stride is np + 2.
+    for (const auto& [boPhase, fsPhaseIdx] : phaseMap) {
+        if (pu.phase_used[boPhase]) {
+            this->copyPhaseDensities(fsPhaseIdx, pu.num_phases + 2,
+                                     rho + pu.phase_pos[boPhase]);
+        }
+    }
+
+    // Mixture densities.
+    for (auto seg = 0*this->densities_.size(); seg < this->densities_.size(); ++seg) {
+        const auto mixOffset = seg*(pu.num_phases + 2) + pu.num_phases;
+
+        rho[mixOffset + 0] = this->mixtureDensity(seg);
+        rho[mixOffset + 1] = this->mixtureDensityWithExponents(seg);
+    }
+}
+
+template <class FluidSystem, class Indices, class Scalar>
+void
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+copyPhaseDensities(const unsigned    phaseIdx,
+                   const std::size_t stride,
+                   double*           dens) const
+{
+    const auto compIdx = Indices::canonicalToActiveComponentIndex
+        (FluidSystem::solventComponentIndex(phaseIdx));
+
+    for (const auto& phase_density : this->phase_densities_) {
+        *dens = phase_density[compIdx].value();
+        dens += stride;
+    }
+}
+
+template <class FluidSystem, class Indices, class Scalar>
+double
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+mixtureDensity(const int seg) const
+{
+    auto mixDens = 0.0;
+
+    const auto& rho = this->phase_densities_[seg];
+    const auto& q   = this->phase_fractions_[seg];
+
+    for (const auto& phIdx : {
+            FluidSystem::oilPhaseIdx,
+            FluidSystem::gasPhaseIdx,
+            FluidSystem::waterPhaseIdx
+        })
+    {
+        if (! FluidSystem::phaseIsActive(phIdx)) {
+            continue;
+        }
+
+        const auto compIdx = Indices::
+            canonicalToActiveComponentIndex(phIdx);
+
+        mixDens += q[compIdx].value() * rho[compIdx].value();
+    }
+
+    return mixDens;
+}
+
+template <class FluidSystem, class Indices, class Scalar>
+double
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+mixtureDensityWithExponents(const int seg) const
+{
+    if (const auto& segment = this->well_.wellEcl().getSegments()[seg];
+        segment.isAICD())
+    {
+        return this->mixtureDensityWithExponents(segment.autoICD(), seg);
+    }
+
+    // No other segment type includes exponents of flowing fractions when
+    // calculating the mixture/emulsion density.
+    return this->mixtureDensity(seg);
+}
+
+template <class FluidSystem, class Indices, class Scalar>
+double
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const
+{
+    auto mixDens = 0.0;
+
+    const auto& rho = this->phase_densities_[seg];
+    const auto& q   = this->phase_fractions_[seg];
+
+    constexpr auto densityExponents = std::array {
+        std::pair { FluidSystem::oilPhaseIdx  , &AutoICD::oilDensityExponent   },
+        std::pair { FluidSystem::gasPhaseIdx  , &AutoICD::gasDensityExponent   },
+        std::pair { FluidSystem::waterPhaseIdx, &AutoICD::waterDensityExponent },
+    };
+
+    for (const auto& [fsPhaseIdx, densityExponent] : densityExponents) {
+        if (FluidSystem::phaseIsActive(fsPhaseIdx)) {
+            const auto compIdx = Indices::
+                canonicalToActiveComponentIndex(fsPhaseIdx);
+
+            // exp = (aicd.*densityExponent)() in native syntax.
+            const auto exp = std::invoke(densityExponent, aicd);
+
+            mixDens += std::pow(q[compIdx].value(), exp) * rho[compIdx].value();
+        }
+    }
+
+    return mixDens;
 }
 
 #define INSTANCE(...) \
