@@ -1735,6 +1735,12 @@ namespace Opm {
             return param_;
         }
 
+        //! \brief Returns const reference to component names.
+        const ComponentName& compNames() const
+        {
+            return compNames_;
+        }
+
     private:
         double dpMaxRel() const { return param_.dp_max_rel_; }
         double dsMax() const { return param_.ds_max_; }
