@@ -1550,7 +1550,7 @@ namespace Opm {
         { return failureReport_; }
 
         /// return the statistics if the nonlinearIteration() method failed
-        const SimulatorReportSingle& localAccumulatedReports() const
+        SimulatorReportSingle localAccumulatedReports() const
         { return local_reports_accumulated_; }
 
         const std::vector<StepReport>& stepReports() const
