@@ -1267,6 +1267,17 @@ namespace Opm
                 OPM_DEFLOG_THROW(std::runtime_error, "individual mobility for wells does not work in combination with solvent", deferred_logger);
             }
         }
+
+        if (this->isInjector()) {
+            const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
+            const auto& connections = this->well_ecl_.getConnections();
+            const auto& connection = connections[perf_ecl_index];
+            if (connection.filterCakeActive()) {
+                for (auto& val : mob) {
+                    val *= this->inj_fc_multiplier_[perf];
+                }
+            }
+        }
     }
 
 

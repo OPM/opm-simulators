@@ -768,8 +768,6 @@ namespace Opm
         // Pressure drawdown (also used to determine direction of flow)
         const Value drawdown = cell_press_at_perf - perf_press;
 
-        const double effectiveTw = this->isInjector() ? this->inj_fc_multiplier_[perf] * Tw : Tw;
-
         // producing perforations
         if (drawdown > 0.0) {
             // Do nothing if crossflow is not allowed
@@ -779,7 +777,7 @@ namespace Opm
 
             // compute component volumetric rates at standard conditions
             for (int comp_idx = 0; comp_idx < this->numComponents(); ++comp_idx) {
-                const Value cq_p = - effectiveTw * (mob_perfcells[comp_idx] * drawdown);
+                const Value cq_p = - Tw * (mob_perfcells[comp_idx] * drawdown);
                 cq_s[comp_idx] = b_perfcells[comp_idx] * cq_p;
             }
 
@@ -804,7 +802,7 @@ namespace Opm
             }
 
             // injection perforations total volume rates
-            const Value cqt_i = - effectiveTw * (total_mob * drawdown);
+            const Value cqt_i = - Tw * (total_mob * drawdown);
 
             // compute volume ratio between connection and at standard conditions
             Value volume_ratio = 0.0;
