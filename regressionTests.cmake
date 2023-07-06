@@ -1213,6 +1213,20 @@ add_test_compareECLFiles(CASENAME winjmult_msw
                          REL_TOL ${rel_tol}
                          DIR winjmult
                          TEST_ARGS --enable-tuning=true)
+add_test_compareECLFiles(CASENAME winjdam_stdw
+                         FILENAME WINJDAM_STDW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR winjdam
+                         TEST_ARGS --enable-tuning=true)
+add_test_compareECLFiles(CASENAME winjdam_msw
+                         FILENAME WINJDAM_MSW
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR winjdam
+                         TEST_ARGS --enable-tuning=true)
 add_test_compareECLFiles(CASENAME 01_vappars
                          FILENAME VAPPARS-01
                          SIMULATOR flow

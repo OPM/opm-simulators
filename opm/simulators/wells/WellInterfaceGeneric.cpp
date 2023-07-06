@@ -740,7 +740,7 @@ updateFiltrationParticleVolume(const double dt, const size_t water_index,
     auto& ws = well_state.well(this->index_of_well_);
     const auto& connection_rates = ws.perf_data.phase_rates;
 
-    const size_t np = well_state.numPhases();
+    const std::size_t np = well_state.numPhases();
     for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
         // not considering the production water
         const double water_rates = std::max(0., connection_rates[perf * np + water_index]);
@@ -768,9 +768,8 @@ updateInjFCMult(const std::vector<double>& filtration_particle_volume) {
             const auto cskinfactor = connection.skinFactor();
             const double K = connection.Kh() / connection.connectionLength();
             const double factor = filter_cake.sf_multiplier;
-            // compute a multiplier for the transmissibility
+            // compute a multiplier for the well connection transmissibility
             if (filter_cake.geometry == FilterCake::FilterCakeGeometry::LINEAR) {
-                // but we are using this form just for first prototype
                 const double skin_factor = thickness / rw * K / perm * factor;
                 const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
                 const auto denom2 = denom + skin_factor;
