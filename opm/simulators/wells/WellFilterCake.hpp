@@ -34,17 +34,24 @@ class WellFilterCake {
 public:
     //! \brief Update the water injection volume.
     //! \details Used for calculation related to cake filtration due to injection activity.
-    static void updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
-                                               const double dt,
-                                               const std::size_t water_index,
-                                               const WellState& well_state,
-                                               std::vector<double>& filtration_particle_volume);
+    void updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
+                                        const double dt,
+                                        const std::size_t water_index,
+                                        const WellState& well_state);
 
     //! \brief Update the multiplier for well transmissbility due to cake filtration.
-    static void updateInjFCMult(std::vector<double>& inj_fc_multiplier,
-                                const WellInterfaceGeneric& well,
-                                const std::vector<double>& filtration_particle_volume,
-                                DeferredLogger& deferred_logger);
+    void updateInjFCMult(const WellInterfaceGeneric& well,
+                         DeferredLogger& deferred_logger);
+
+    //! \brief Returns a const-ref to multipliers.
+    const std::vector<double>& multipliers() const
+    {
+        return inj_fc_multiplier_;
+    }
+
+private:
+    std::vector<double> filtration_particle_volume_; //!<// Volume of filtration particles during water injection
+    std::vector<double> inj_fc_multiplier_; //!< Multiplier due to injection filtration cake
 };
 
 }

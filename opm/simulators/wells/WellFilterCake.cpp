@@ -20,10 +20,12 @@
 #include <config.h>
 #include <opm/simulators/wells/WellFilterCake.hpp>
 
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -37,11 +39,15 @@ void WellFilterCake::
 updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
                                const double dt,
                                const std::size_t water_index,
-                               const WellState& well_state,
-                               std::vector<double>& filtration_particle_volume)
+                               const WellState& well_state)
 {
     if (!well.isInjector()) {
         return;
+    }
+
+    if (filtration_particle_volume_.empty()) {
+        const auto& ws = well_state.well(well.indexOfWell());
+        filtration_particle_volume_.assign(ws.perf_data.size(), 0.); // initializing to be zero
     }
 
     const auto injectorType = well.wellEcl().injectorType();
@@ -62,16 +68,18 @@ updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
     for (int perf = 0; perf < well.numPerfs(); ++perf) {
         // not considering the production water
         const double water_rates = std::max(0., connection_rates[perf * np + water_index]);
-        filtration_particle_volume[perf] += water_rates * conc * dt;
+        filtration_particle_volume_[perf] += water_rates * conc * dt;
     }
 }
 
 void WellFilterCake::
-updateInjFCMult(std::vector<double>& inj_fc_multiplier,
-                const WellInterfaceGeneric& well,
-                const std::vector<double>& filtration_particle_volume,
+updateInjFCMult(const WellInterfaceGeneric& well,
                 DeferredLogger& deferred_logger)
 {
+    if (inj_fc_multiplier_.empty()) {
+        inj_fc_multiplier_.resize(well.numPerfs(), 1.0);
+    }
+
     for (int perf = 0; perf < well.numPerfs(); ++perf) {
         const auto perf_ecl_index = well.perforationData()[perf].ecl_index;
         const auto& connections = well.wellEcl().getConnections();
@@ -87,7 +95,7 @@ updateInjFCMult(std::vector<double>& inj_fc_multiplier,
             const double K = connection.Kh() / connection.connectionLength();
             const double factor = filter_cake.sf_multiplier;
             // the thickness of the filtration cake
-            const double thickness = filtration_particle_volume[perf] / (area * (1. - poro));
+            const double thickness = filtration_particle_volume_[perf] / (area * (1. - poro));
 
             double skin_factor = 0.;
             switch (filter_cake.geometry) {
@@ -113,12 +121,11 @@ updateInjFCMult(std::vector<double>& inj_fc_multiplier,
             // compute a multiplier for the well connection transmissibility
             const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
             const auto denom2 = denom + skin_factor;
-            inj_fc_multiplier[perf] = denom / denom2;
+            inj_fc_multiplier_[perf] = denom / denom2;
         } else {
-            inj_fc_multiplier[perf] = 1.0;
+            inj_fc_multiplier_[perf] = 1.0;
         }
     }
 }
-
 
 } // namespace Opm

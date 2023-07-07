@@ -98,9 +98,6 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
             saturation_table_number_[perf] = pd.satnum_id;
             ++perf;
         }
-        if (this->isInjector()) {
-            inj_fc_multiplier_.resize(number_of_perforations_, 1.0);
-        }
     }
 
     // initialization of the completions mapping

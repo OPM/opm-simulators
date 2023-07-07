@@ -31,6 +31,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/WellFilterCake.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WGState.hpp>
 
@@ -441,8 +442,8 @@ protected:
     // previous injection multiplier, it is used in the injection multiplier calculation for WINJMULT keyword
     std::unordered_map<std::string, std::vector<double>> prev_inj_multipliers_;
 
-    // the volume of the filtration particles during water injection
-    std::unordered_map<std::string, std::vector<double>> filtration_particle_volume_;
+    // Handling for filter cake injection multipliers
+    std::unordered_map<std::string, WellFilterCake> filter_cake_;
 
     /*
       The various wellState members should be accessed and modified
@@ -460,7 +461,6 @@ protected:
 
     std::map<std::string, std::string> switched_prod_groups_;
     std::map<std::pair<std::string, Opm::Phase>, std::string> switched_inj_groups_;
-
 
 private:
     WellInterfaceGeneric* getGenWell(const std::string& well_name);

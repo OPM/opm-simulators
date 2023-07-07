@@ -205,7 +205,6 @@ namespace Opm {
         // playing it safe by extending the scope a bit.
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-
             // The well state initialize bhp with the cell pressure in the top cell.
             // We must therefore provide it with updated cell pressures
             this->initializeWellPerfData();

@@ -1428,14 +1428,13 @@ void BlackoilWellModelGeneric::updateFiltrationParticleVolume(const double dt,
 {
     for (auto& well : this->well_container_generic_) {
         if (well->isInjector() && well->wellEcl().getFilterConc() > 0.) {
-            auto &values =  this->filtration_particle_volume_[well->name()];
-            const auto& ws = this->wellState().well(well->indexOfWell());
-            if (values.empty()) {
-                values.assign(ws.perf_data.size(), 0.); // initializing to be zero
-            }
-            WellFilterCake::
-                updateFiltrationParticleVolume(*well, dt, water_index,
-                                               this->wellState(), values);
+            auto fc = this->filter_cake_
+                                      .emplace(std::piecewise_construct,
+                                               std::forward_as_tuple(well->name()),
+                                               std::tuple{});
+
+            fc.first->second.updateFiltrationParticleVolume(*well, dt, water_index,
+                                                            this->wellState());
         }
     }
 }
@@ -1453,14 +1452,10 @@ void BlackoilWellModelGeneric::updateInjFCMult(DeferredLogger& deferred_logger)
 {
     for (auto& well : this->well_container_generic_) {
         if (well->isInjector()) {
-            const auto it = this->filtration_particle_volume_.find(well->name());
-            if (it != this->filtration_particle_volume_.end()) {
-                const auto& filtration_particle_volume = it->second;
-                std::vector<double> multipliers(well->numPerfs(), 0.0);
-                WellFilterCake::
-                    updateInjFCMult(multipliers, *well,
-                                    filtration_particle_volume, deferred_logger);
-                well->updateFilterCakeMultipliers(multipliers);
+            const auto it = filter_cake_.find(well->name());
+            if (it != filter_cake_.end()) {
+                it->second.updateInjFCMult(*well, deferred_logger);
+                well->updateFilterCakeMultipliers(it->second.multipliers());
             }
         }
     }
