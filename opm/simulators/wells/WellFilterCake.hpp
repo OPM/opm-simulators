@@ -25,6 +25,7 @@
 
 namespace Opm {
 
+class DeferredLogger;
 class WellInterfaceGeneric;
 class WellState;
 
@@ -38,6 +39,12 @@ public:
                                                const std::size_t water_index,
                                                const WellState& well_state,
                                                std::vector<double>& filtration_particle_volume);
+
+    //! \brief Update the multiplier for well transmissbility due to cake filtration.
+    static void updateInjFCMult(std::vector<double>& inj_fc_multiplier,
+                                const WellInterfaceGeneric& well,
+                                const std::vector<double>& filtration_particle_volume,
+                                DeferredLogger& deferred_logger);
 };
 
 }

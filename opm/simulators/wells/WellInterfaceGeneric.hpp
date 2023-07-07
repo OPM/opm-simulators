@@ -188,9 +188,6 @@ public:
     // it might change in the future
     double getInjMult(const int perf, const double bhp, const double perf_pres) const;
 
-    // update the multiplier for well transmissbility due to cake filteration
-    void updateInjFCMult(const std::vector<double>& filtration_particle_volume, DeferredLogger& deferred_logger);
-
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
@@ -213,6 +210,12 @@ public:
 
     double wellEfficiencyFactor() const
     { return well_efficiency_factor_; }
+
+    //! \brief Update filter cake multipliers.
+    void updateFilterCakeMultipliers(const std::vector<double>& inj_fc_multiplier)
+    {
+        inj_fc_multiplier_ = inj_fc_multiplier;
+    }
 
 protected:
     bool getAllowCrossFlow() const;

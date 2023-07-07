@@ -1456,7 +1456,11 @@ void BlackoilWellModelGeneric::updateInjFCMult(DeferredLogger& deferred_logger)
             const auto it = this->filtration_particle_volume_.find(well->name());
             if (it != this->filtration_particle_volume_.end()) {
                 const auto& filtration_particle_volume = it->second;
-                well->updateInjFCMult(filtration_particle_volume, deferred_logger);
+                std::vector<double> multipliers(well->numPerfs(), 0.0);
+                WellFilterCake::
+                    updateInjFCMult(multipliers, *well,
+                                    filtration_particle_volume, deferred_logger);
+                well->updateFilterCakeMultipliers(multipliers);
             }
         }
     }
