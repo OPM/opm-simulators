@@ -375,6 +375,7 @@ protected:
 
 
     void updateInjMult(DeferredLogger& deferred_logger);
+    void updateInjFCMult(DeferredLogger& deferred_logger);
 
     void updateFiltrationParticleVolume(const double dt, const size_t water_index);
 

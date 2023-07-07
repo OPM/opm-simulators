@@ -1440,10 +1440,24 @@ void BlackoilWellModelGeneric::updateFiltrationParticleVolume(const double dt,
     }
 }
 
-void BlackoilWellModelGeneric::updateInjMult(DeferredLogger& deferred_logger) {
+void BlackoilWellModelGeneric::updateInjMult(DeferredLogger& deferred_logger)
+{
     for (const auto& well : this->well_container_generic_) {
         if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
             well->updateInjMult(this->prev_inj_multipliers_[well->name()], deferred_logger);
+        }
+    }
+}
+
+void BlackoilWellModelGeneric::updateInjFCMult(DeferredLogger& deferred_logger)
+{
+    for (auto& well : this->well_container_generic_) {
+        if (well->isInjector()) {
+            const auto it = this->filtration_particle_volume_.find(well->name());
+            if (it != this->filtration_particle_volume_.end()) {
+                const auto& filtration_particle_volume = it->second;
+                well->updateInjFCMult(filtration_particle_volume, deferred_logger);
+            }
         }
     }
 }

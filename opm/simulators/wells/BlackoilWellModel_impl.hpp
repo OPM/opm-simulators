@@ -310,15 +310,7 @@ namespace Opm {
             well->setGuideRate(&guideRate_);
         }
 
-        for (auto& well : well_container_) {
-            if (well->isInjector()) {
-                const auto it = this->filtration_particle_volume_.find(well->name());
-                if (it != this->filtration_particle_volume_.end()) {
-                    const auto& filtration_particle_volume = it->second;
-                    well->updateInjFCMult(filtration_particle_volume, local_deferredLogger);
-                }
-            }
-        }
+        this->updateInjFCMult(local_deferredLogger);
 
         // Close completions due to economic reasons
         for (auto& well : well_container_) {
