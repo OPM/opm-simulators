@@ -315,7 +315,7 @@ namespace Opm {
                 const auto it = this->filtration_particle_volume_.find(well->name());
                 if (it != this->filtration_particle_volume_.end()) {
                     const auto& filtration_particle_volume = it->second;
-                    well->updateInjFCMult(filtration_particle_volume);
+                    well->updateInjFCMult(filtration_particle_volume, local_deferredLogger);
                 }
             }
         }

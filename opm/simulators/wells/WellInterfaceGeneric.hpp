@@ -193,7 +193,7 @@ public:
                                         const WellState& well_state, std::vector<double>& filtration_particle_volume) const;
 
     // update the multiplier for well transmissbility due to cake filteration
-    void updateInjFCMult(const std::vector<double>& filtration_particle_volume);
+    void updateInjFCMult(const std::vector<double>& filtration_particle_volume, DeferredLogger& deferred_logger);
 
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
