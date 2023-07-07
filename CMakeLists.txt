@@ -415,6 +415,46 @@ opm_add_test(test_parallel_wbp_sourcevalues_np4
     4
 )
 
+opm_add_test(test_parallel_wbp_calculation
+  SOURCES
+    tests/test_parallel_wbp_calculation.cpp
+  LIBRARIES
+    opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
+  CONDITION
+    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+  ONLY_COMPILE
+)
+
+opm_add_test(test_parallel_wbp_calculation_create
+  EXE_NAME
+    test_parallel_wbp_calculation
+  CONDITION
+    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+  DRIVER_ARGS
+    -n 2
+    -b ${PROJECT_BINARY_DIR}
+  TEST_ARGS
+    --run_test=Create
+  NO_COMPILE
+  PROCESSORS
+    2
+)
+
+opm_add_test(test_parallel_wbp_calculation_well_openconns
+  EXE_NAME
+    test_parallel_wbp_calculation
+  CONDITION
+    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+  DRIVER_ARGS
+    -n 2
+    -b ${PROJECT_BINARY_DIR}
+  TEST_ARGS
+    --run_test=TopOfFormation_Well_OpenConns
+  NO_COMPILE
+  PROCESSORS
+    2
+)
+
 opm_add_test(test_broadcast
   DEPENDS "opmsimulators"
   LIBRARIES opmsimulators ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}

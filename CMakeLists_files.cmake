@@ -105,7 +105,9 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/MultisegmentWellGeneric.cpp
   opm/simulators/wells/MultisegmentWellPrimaryVariables.cpp
   opm/simulators/wells/MultisegmentWellSegments.cpp
+  opm/simulators/wells/ParallelPAvgCalculator.cpp
   opm/simulators/wells/ParallelPAvgDynamicSourceData.cpp
+  opm/simulators/wells/ParallelWBPCalculation.cpp
   opm/simulators/wells/ParallelWellInfo.cpp
   opm/simulators/wells/PerfData.cpp
   opm/simulators/wells/RateConverter.cpp
@@ -264,6 +266,7 @@ if(MPI_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_parallelistlinformation.cpp
                                 tests/test_ParallelSerialization.cpp)
 endif()
+
 if(CUDA_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_cusparseSolver.cpp)
   list(APPEND TEST_SOURCE_FILES tests/cuistl/test_cusparse_safe_call.cpp)
@@ -482,7 +485,9 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/MultisegmentWellGeneric.hpp
   opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp
   opm/simulators/wells/MultisegmentWellSegments.hpp
+  opm/simulators/wells/ParallelPAvgCalculator.hpp
   opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp
+  opm/simulators/wells/ParallelWBPCalculation.hpp
   opm/simulators/wells/ParallelWellInfo.hpp
   opm/simulators/wells/PerfData.hpp
   opm/simulators/wells/PerforationData.hpp
