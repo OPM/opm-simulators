@@ -98,9 +98,6 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
             saturation_table_number_[perf] = pd.satnum_id;
             ++perf;
         }
-        if (this->isInjector()) {
-            inj_fc_multiplier_.resize(number_of_perforations_, 1.0);
-        }
     }
 
     // initialization of the completions mapping
@@ -726,84 +723,6 @@ checkNegativeWellPotentials(std::vector<double>& well_potentials,
         const std::string msg = std::string("well ") + this->name() +
                                 ": has negative potentials and is not operable";
         deferred_logger.warning("NEGATIVE_POTENTIALS_INOPERABLE", msg);
-    }
-}
-
-void WellInterfaceGeneric::
-updateFiltrationParticleVolume(const double dt, const size_t water_index,
-                               const WellState& well_state, std::vector<double>& filtration_particle_volume) const
-{
-    if (!this->isInjector()) {
-        return;
-    }
-
-    const auto injectorType = this->well_ecl_.injectorType();
-    if (injectorType != InjectorType::WATER) {
-        return;
-    }
-
-    const double conc = this->well_ecl_.getFilterConc();
-    if (conc == 0.) {
-        return;
-    }
-
-    // it is currently used for the filter cake modeling related to formation damage study
-    auto& ws = well_state.well(this->index_of_well_);
-    const auto& connection_rates = ws.perf_data.phase_rates;
-
-    const std::size_t np = well_state.numPhases();
-    for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
-        // not considering the production water
-        const double water_rates = std::max(0., connection_rates[perf * np + water_index]);
-        filtration_particle_volume[perf] += water_rates * conc * dt;
-    }
-}
-
-void WellInterfaceGeneric::
-updateInjFCMult(const std::vector<double>& filtration_particle_volume, DeferredLogger& deferred_logger) {
-    for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
-        const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
-        const auto& connections = this->well_ecl_.getConnections();
-        const auto& connection = connections[perf_ecl_index];
-        if (this->isInjector() && connection.filterCakeActive()) {
-            const auto& filter_cake = connection.getFilterCake();
-            const double area = connection.getFilterCakeArea();
-            const double poro = filter_cake.poro;
-            const double perm = filter_cake.perm;
-            const double rw = connection.getFilterCakeRadius();
-            const auto cr0 = connection.r0();
-            const auto crw = connection.rw();
-            const double K = connection.Kh() / connection.connectionLength();
-            const double factor = filter_cake.sf_multiplier;
-            // the thickness of the filtration cake
-            const double thickness = filtration_particle_volume[perf] / (area * (1. - poro));
-
-            double skin_factor = 0.;
-            switch (filter_cake.geometry) {
-                case FilterCake::FilterCakeGeometry::LINEAR: {
-                    skin_factor = thickness / rw * K / perm * factor;
-                    break;
-                }
-                case FilterCake::FilterCakeGeometry::RADIAL: {
-                    const double rc = std::sqrt(rw * rw + 2. * rw * thickness);
-                    skin_factor = K / perm * std::log(rc / rw) * factor;
-                    break;
-                }
-                default:
-                    OPM_DEFLOG_THROW(std::runtime_error,
-                                     fmt::format(" Invalid filtration cake geometry type ({}) for well {}",
-                                                 FilterCake::filterCakeGeometryToString(filter_cake.geometry), name()),
-                                     deferred_logger);
-            }
-            // the original skin factor for the connection
-            const auto cskinfactor = connection.skinFactor();
-            // compute a multiplier for the well connection transmissibility
-            const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
-            const auto denom2 = denom + skin_factor;
-            this->inj_fc_multiplier_[perf] = denom / denom2;
-        } else {
-            this->inj_fc_multiplier_[perf] = 1.0;
-        }
     }
 }
 

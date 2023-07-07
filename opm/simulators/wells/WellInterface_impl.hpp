@@ -1268,7 +1268,7 @@ namespace Opm
             }
         }
 
-        if (this->isInjector()) {
+        if (this->isInjector() && !this->inj_fc_multiplier_.empty()) {
             const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
             const auto& connections = this->well_ecl_.getConnections();
             const auto& connection = connections[perf_ecl_index];

@@ -50,6 +50,7 @@
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/wells/WellFilterCake.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -1422,24 +1423,40 @@ void BlackoilWellModelGeneric::initInjMult() {
 }
 
 
-void BlackoilWellModelGeneric::updateFiltrationParticleVolume(const double dt, const size_t water_index) {
+void BlackoilWellModelGeneric::updateFiltrationParticleVolume(const double dt,
+                                                              const size_t water_index)
+{
     for (auto& well : this->well_container_generic_) {
         if (well->isInjector() && well->wellEcl().getFilterConc() > 0.) {
-            auto &values =  this->filtration_particle_volume_[well->name()];
-            const auto& ws = this->wellState().well(well->indexOfWell());
-            if (values.empty()) {
-                values.assign(ws.perf_data.size(), 0.); // initializing to be zero
-            }
-            well->updateFiltrationParticleVolume(dt, water_index, this->wellState(), values);
+            auto fc = this->filter_cake_
+                                      .emplace(std::piecewise_construct,
+                                               std::forward_as_tuple(well->name()),
+                                               std::tuple{});
+
+            fc.first->second.updateFiltrationParticleVolume(*well, dt, water_index,
+                                                            this->wellState());
         }
     }
-
 }
 
-void BlackoilWellModelGeneric::updateInjMult(DeferredLogger& deferred_logger) {
+void BlackoilWellModelGeneric::updateInjMult(DeferredLogger& deferred_logger)
+{
     for (const auto& well : this->well_container_generic_) {
         if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
             well->updateInjMult(this->prev_inj_multipliers_[well->name()], deferred_logger);
+        }
+    }
+}
+
+void BlackoilWellModelGeneric::updateInjFCMult(DeferredLogger& deferred_logger)
+{
+    for (auto& well : this->well_container_generic_) {
+        if (well->isInjector()) {
+            const auto it = filter_cake_.find(well->name());
+            if (it != filter_cake_.end()) {
+                it->second.updateInjFCMult(*well, deferred_logger);
+                well->updateFilterCakeMultipliers(it->second.multipliers());
+            }
         }
     }
 }
