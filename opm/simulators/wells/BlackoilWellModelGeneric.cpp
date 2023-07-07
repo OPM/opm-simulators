@@ -1421,6 +1421,21 @@ void BlackoilWellModelGeneric::initInjMult() {
     }
 }
 
+
+void BlackoilWellModelGeneric::updateFiltrationParticleVolume(const double dt, const size_t water_index) {
+    for (auto& well : this->well_container_generic_) {
+        if (well->isInjector() && well->wellEcl().getFilterConc() > 0.) {
+            auto &values =  this->filtration_particle_volume_[well->name()];
+            const auto& ws = this->wellState().well(well->indexOfWell());
+            if (values.empty()) {
+                values.assign(ws.perf_data.size(), 0.); // initializing to be zero
+            }
+            well->updateFiltrationParticleVolume(dt, water_index, this->wellState(), values);
+        }
+    }
+
+}
+
 void BlackoilWellModelGeneric::updateInjMult(DeferredLogger& deferred_logger) {
     for (const auto& well : this->well_container_generic_) {
         if (well->isInjector() && well->wellEcl().getInjMultMode() != Well::InjMultMode::NONE) {
