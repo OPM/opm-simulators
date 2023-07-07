@@ -161,7 +161,7 @@ EvalWell VFPProdProperties::bhp(const int table_id,
     EvalWell flo = detail::getFlo(table, aqua, liquid, vapour);
     EvalWell wfr = detail::getWFR(table, aqua, liquid, vapour);
     EvalWell gfr = detail::getGFR(table, aqua, liquid, vapour);
-    if (use_expvfp) {
+    if (use_expvfp || -flo.value() < table.getFloAxis().front()) {
         wfr = explicit_wfr;
         gfr = explicit_gfr;
     }

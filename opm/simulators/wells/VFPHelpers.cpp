@@ -348,7 +348,7 @@ VFPEvaluation bhp(const VFPProdTable& table,
     double flo = detail::getFlo(table, aqua, liquid, vapour);
     double wfr = detail::getWFR(table, aqua, liquid, vapour);
     double gfr = detail::getGFR(table, aqua, liquid, vapour);
-    if (use_vfpexplicit) {
+    if (use_vfpexplicit || -flo < table.getFloAxis().front()) {
         wfr = explicit_wfr;
         gfr = explicit_gfr;
     }

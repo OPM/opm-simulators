@@ -1191,14 +1191,16 @@ add_test_compareECLFiles(CASENAME 01_wgrupcon
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wgrupcon)
+                         DIR wgrupcon
+                         TEST_ARGS --enable-tuning=true)
 
 add_test_compareECLFiles(CASENAME 02_wgrupcon
                          FILENAME 02-WGRUPCON
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
-                         DIR wgrupcon)
+                         DIR wgrupcon
+                         TEST_ARGS --enable-tuning=true)
 add_test_compareECLFiles(CASENAME winjmult_stdw
                          FILENAME WINJMULT_STDW
                          SIMULATOR flow
