@@ -50,6 +50,7 @@
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/wells/WellFilterCake.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -1422,7 +1423,9 @@ void BlackoilWellModelGeneric::initInjMult() {
 }
 
 
-void BlackoilWellModelGeneric::updateFiltrationParticleVolume(const double dt, const size_t water_index) {
+void BlackoilWellModelGeneric::updateFiltrationParticleVolume(const double dt,
+                                                              const size_t water_index)
+{
     for (auto& well : this->well_container_generic_) {
         if (well->isInjector() && well->wellEcl().getFilterConc() > 0.) {
             auto &values =  this->filtration_particle_volume_[well->name()];
@@ -1430,10 +1433,11 @@ void BlackoilWellModelGeneric::updateFiltrationParticleVolume(const double dt, c
             if (values.empty()) {
                 values.assign(ws.perf_data.size(), 0.); // initializing to be zero
             }
-            well->updateFiltrationParticleVolume(dt, water_index, this->wellState(), values);
+            WellFilterCake::
+                updateFiltrationParticleVolume(*well, dt, water_index,
+                                               this->wellState(), values);
         }
     }
-
 }
 
 void BlackoilWellModelGeneric::updateInjMult(DeferredLogger& deferred_logger) {

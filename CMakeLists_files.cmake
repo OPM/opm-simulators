@@ -125,6 +125,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WellConnectionAuxiliaryModule.cpp
   opm/simulators/wells/WellConstraints.cpp
   opm/simulators/wells/WellConvergence.cpp
+  opm/simulators/wells/WellFilterCake.cpp
   opm/simulators/wells/WellGroupConstraints.cpp
   opm/simulators/wells/WellGroupControls.cpp
   opm/simulators/wells/WellGroupHelpers.cpp
@@ -507,6 +508,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellConnectionAuxiliaryModule.hpp
   opm/simulators/wells/WellConstraints.hpp
   opm/simulators/wells/WellConvergence.hpp
+  opm/simulators/wells/WellFilterCake.hpp
   opm/simulators/wells/WellGroupConstraints.hpp
   opm/simulators/wells/WellGroupControls.hpp
   opm/simulators/wells/WellGroupHelpers.hpp
