@@ -307,6 +307,12 @@ partiallySupported()
             },
          },
          {
+            "WPAVE",
+            {
+                {4,{false, allow_values<std::string> {"OPEN"}, "WPAVE(WPAVE4) Connection flag not really supported. Should be OPEN or defaulted."}}, // CONNECTION
+            },
+         },
+         {
             "WTEST",
             {
                {3,{true, allow_values<std::string> {"E", "P", "EP", "PE", ""}, "WTEST(TEST): only the E (economic) and P (physical) reason is currently supported"}}, // REASON
@@ -316,6 +322,12 @@ partiallySupported()
             "WVFPEXP",
             {
                {5,{false, allow_values<std::string> {"WG"}, "WVFPEXP(EXTRAP): only linear extrapolation is support "}}, // EXTRAPOLATION_CONTROL
+            },
+         },
+         {
+            "WWPAVE",
+            {
+                {5,{false, allow_values<std::string> {"OPEN"}, "WWPAVE(WPAVE4) Connection flag not really supported. Should be OPEN or defaulted."}}, // CONNECTION
             },
          },
    };
