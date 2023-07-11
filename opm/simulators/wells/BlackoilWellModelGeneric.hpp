@@ -25,20 +25,28 @@
 
 #include <opm/output/data/GuideRateValue.hpp>
 
-#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
+#include <opm/input/eclipse/Schedule/Well/PAvg.hpp>
+#include <opm/input/eclipse/Schedule/Well/PAvgCalculator.hpp>
+#include <opm/input/eclipse/Schedule/Well/PAvgCalculatorCollection.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
+#include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
+#include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
 #include <opm/simulators/wells/WellProdIndexCalculator.hpp>
 #include <opm/simulators/wells/WGState.hpp>
 
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -419,6 +427,94 @@ protected:
 
     std::vector<Well> wells_ecl_;
     std::vector<std::vector<PerforationData>> well_perf_data_;
+
+    /// Connection index mappings
+    class ConnectionIndexMap
+    {
+    public:
+        /// Constructor.
+        ///
+        /// \param[in] numConns Total number of well connections, both open
+        ///   and closed/shut.  Typically \code WellConnections::size() \endcode.
+        explicit ConnectionIndexMap(const std::size_t numConns)
+            : local_(numConns, -1)
+        {
+            this->global_.reserve(numConns);
+            this->open_.reserve(numConns);
+        }
+
+        /// Enumerate/map new active connection.
+        ///
+        /// \param[in] connIdx Global well connection index.  Must be an
+        ///   integer in the range 0..numConns-1.
+        ///
+        /// \param[in] connIsOpen Whether or not the connection is
+        ///   open/flowing.
+        void addActiveConnection(const int  connIdx,
+                                 const bool connIsOpen)
+        {
+            this->local_[connIdx] =
+                static_cast<int>(this->global_.size());
+
+            this->global_.push_back(connIdx);
+
+            const auto open_conn_idx = connIsOpen
+                ? this->num_open_conns_++
+                : -1;
+
+            this->open_.push_back(open_conn_idx);
+        }
+
+        /// Get local connection IDs/indices of every existing well
+        /// connection.
+        ///
+        /// Negative value (-1) for connections that don't intersect the
+        /// current rank.
+        const std::vector<int>& local() const
+        {
+            return this->local_;
+        }
+
+        /// Get global connection ID of local (on-rank) connection.
+        ///
+        /// \param[in] connIdx Local connection index.
+        ///
+        /// \return Global connection ID of \p connIdx.
+        int global(const int connIdx) const
+        {
+            return this->global_[connIdx];
+        }
+
+        /// Get open connection ID of local (on-rank) connection.
+        ///
+        /// \param[in] connIdx Local connection index.
+        ///
+        /// \return Open connection ID of \p connIdx.  Integer in the range
+        ///   0..#open connections - 1 if the connection is open or negative
+        ///   value (-1) otherwise.
+        int open(const int connIdx) const
+        {
+            return this->open_[connIdx];
+        }
+
+    private:
+        /// Local connection IDs/indices of every existing well connection.
+        /// Negative value (-1) for connections that don't intersect the
+        /// current rank.
+        std::vector<int> local_{};
+
+        /// Global connection index of each on-rank reservoir connection.
+        /// Reverse/transpose mapping of \c local_.
+        std::vector<int> global_{};
+
+        /// Open connection index of each on-rank reservoir connection.
+        std::vector<int> open_{};
+
+        /// Number of open connections on this rank.
+        int num_open_conns_{0};
+    };
+
+    std::vector<ConnectionIndexMap> conn_idx_map_{};
     std::function<bool(const Well&)> not_on_process_{};
 
     // a vector of all the wells.
@@ -430,6 +526,7 @@ protected:
     std::vector<std::reference_wrapper<ParallelWellInfo>> local_parallel_well_info_;
 
     std::vector<WellProdIndexCalculator> prod_index_calc_;
+    mutable ParallelWBPCalculation wbpCalculationService_;
 
     std::vector<int> pvt_region_idx_;
 

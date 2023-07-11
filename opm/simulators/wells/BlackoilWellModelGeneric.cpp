@@ -49,6 +49,7 @@
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
+#include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
@@ -81,6 +82,7 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , eclState_(eclState)
     , comm_(comm)
     , phase_usage_(phase_usage)
+    , wbpCalculationService_ { eclState.gridDims(), comm_ }
     , guideRate_(schedule)
     , active_wgstate_(phase_usage)
     , last_valid_wgstate_(phase_usage)
@@ -287,57 +289,89 @@ BlackoilWellModelGeneric::
 initializeWellPerfData()
 {
     well_perf_data_.resize(wells_ecl_.size());
+
+    this->conn_idx_map_.clear();
+    this->conn_idx_map_.reserve(wells_ecl_.size());
+
     int well_index = 0;
     for (const auto& well : wells_ecl_) {
         int connection_index = 0;
+
         // INVALID_ECL_INDEX marks no above perf available
         int connection_index_above = ParallelWellInfo::INVALID_ECL_INDEX;
+
         well_perf_data_[well_index].clear();
         well_perf_data_[well_index].reserve(well.getConnections().size());
-        CheckDistributedWellConnections checker(well, local_parallel_well_info_[well_index].get());
+
+        auto& connIdxMap = this->conn_idx_map_
+            .emplace_back(well.getConnections().size());
+
+        CheckDistributedWellConnections checker {
+            well, this->local_parallel_well_info_[well_index].get()
+        };
+
         bool hasFirstConnection = false;
         bool firstOpenConnection = true;
+
         auto& parallelWellInfo = this->local_parallel_well_info_[well_index].get();
         parallelWellInfo.beginReset();
 
         for (const auto& connection : well.getConnections()) {
-            const int active_index = compressedIndexForInterior(connection.global_index());
-            if (connection.state() == Connection::State::OPEN) {
+            const auto active_index =
+                this->compressedIndexForInterior(connection.global_index());
+
+            const auto connIsOpen =
+                connection.state() == Connection::State::OPEN;
+
+            if (active_index >= 0) {
+                connIdxMap.addActiveConnection(connection_index, connIsOpen);
+            }
+
+            if ((connIsOpen && (active_index >= 0)) || !connIsOpen) {
+                checker.connectionFound(connection_index);
+            }
+
+            if (connIsOpen) {
                 if (active_index >= 0) {
-                    if (firstOpenConnection)
-                    {
+                    if (firstOpenConnection) {
                         hasFirstConnection = true;
                     }
-                    checker.connectionFound(connection_index);
-                    PerforationData pd;
+
+                    auto pd = PerforationData{};
                     pd.cell_index = active_index;
                     pd.connection_transmissibility_factor = connection.CF();
                     pd.satnum_id = connection.satTableId();
                     pd.ecl_index = connection_index;
+
                     well_perf_data_[well_index].push_back(pd);
+
                     parallelWellInfo.pushBackEclIndex(connection_index_above,
                                                       connection_index);
                 }
+
                 firstOpenConnection = false;
-                // Next time this index is the one above as each open connection is
-                // is stored somehwere.
+
+                // Next time this index is the one above as each open
+                // connection is stored somewhere.
                 connection_index_above = connection_index;
-            } else {
-                checker.connectionFound(connection_index);
-                if (connection.state() != Connection::State::SHUT) {
-                    OPM_THROW(std::runtime_error,
-                              "Connection state: " +
-                              Connection::State2String(connection.state()) +
-                              " not handled");
-                }
             }
-            // Note: we rely on the connections being filtered! I.e. there are only connections
-            // to active cells in the global grid.
+            else if (connection.state() != Connection::State::SHUT) {
+                OPM_THROW(std::runtime_error,
+                          fmt::format("Connection state '{}' not handled",
+                                      Connection::State2String(connection.state())));
+            }
+
+            // Note: we rely on the connections being filtered!  I.e., there
+            // are only connections to active cells in the global grid.
             ++connection_index;
         }
+
         parallelWellInfo.endReset();
+
         checker.checkAllConnectionsFound();
+
         parallelWellInfo.communicateFirstPerforation(hasFirstConnection);
+
         ++well_index;
     }
 }

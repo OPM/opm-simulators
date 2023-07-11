@@ -27,8 +27,11 @@
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
+#include <opm/input/eclipse/Schedule/Well/PAvgDynamicSourceData.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
+#include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
+#include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -73,6 +76,48 @@ namespace Opm {
 
         this->alternative_well_rate_init_ =
             EWOMS_GET_PARAM(TypeTag, bool, AlternativeWellRateInit);
+
+        this->wbpCalculationService_
+            .localCellIndex([this](const std::size_t globalIndex)
+            { return this->compressedIndexForInterior(globalIndex); })
+            .evalCellSource([this](const int                                     localCell,
+                                   PAvgDynamicSourceData::SourceDataSpan<double> sourceTerms)
+            {
+                using Item = PAvgDynamicSourceData::SourceDataSpan<double>::Item;
+
+                const auto* intQuants = this->ebosSimulator_.model()
+                    .cachedIntensiveQuantities(localCell, /*timeIndex = */0);
+                const auto& fs = intQuants->fluidState();
+
+                sourceTerms.set(Item::PoreVol, intQuants->porosity().value() *
+                                this->ebosSimulator_.model().dofTotalVolume(localCell));
+
+                constexpr auto io = FluidSystem::oilPhaseIdx;
+                constexpr auto ig = FluidSystem::gasPhaseIdx;
+                constexpr auto iw = FluidSystem::waterPhaseIdx;
+
+                // Ideally, these would be 'constexpr'.
+                const auto haveOil = FluidSystem::phaseIsActive(io);
+                const auto haveGas = FluidSystem::phaseIsActive(ig);
+                const auto haveWat = FluidSystem::phaseIsActive(iw);
+
+                auto weightedPhaseDensity = [&fs](const auto ip)
+                {
+                    return fs.saturation(ip).value() * fs.density(ip).value();
+                };
+
+                if (haveOil)      { sourceTerms.set(Item::Pressure, fs.pressure(io).value()); }
+                else if (haveGas) { sourceTerms.set(Item::Pressure, fs.pressure(ig).value()); }
+                else              { sourceTerms.set(Item::Pressure, fs.pressure(iw).value()); }
+
+                // Strictly speaking, assumes SUM(s[p]) == 1.
+                auto rho = 0.0;
+                if (haveOil) { rho += weightedPhaseDensity(io); }
+                if (haveGas) { rho += weightedPhaseDensity(ig); }
+                if (haveWat) { rho += weightedPhaseDensity(iw); }
+
+                sourceTerms.set(Item::MixtureDensity, rho);
+            });
     }
 
     template<typename TypeTag>
@@ -209,6 +254,7 @@ namespace Opm {
             // We must therefore provide it with updated cell pressures
             this->initializeWellPerfData();
             this->initializeWellState(timeStepIdx, summaryState);
+            this->initializeWBPCalculationService();
 
             // handling MS well related
             if (param_.use_multisegment_well_&& anyMSWellOpenLocal()) { // if we use MultisegmentWell model
@@ -230,11 +276,16 @@ namespace Opm {
             }
 
             {
-                const auto& sched_state = this->schedule()[timeStepIdx];
                 // update VFP properties
+                const auto& sched_state = this->schedule()[timeStepIdx];
                 vfp_properties_ = std::make_unique<VFPProperties>(sched_state.vfpinj(),
                                                                   sched_state.vfpprod(),
                                                                   this->wellState());
+            }
+
+            {
+                const auto& sched_state = this->schedule()[timeStepIdx];
+
                 this->initializeWellProdIndCalculators();
                 if (sched_state.events().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX)) {
                     this->runWellPIScaling(timeStepIdx, local_deferredLogger);
@@ -799,6 +850,8 @@ namespace Opm {
                 }
             }
         }
+
+        this->registerOpenWellsForWBPCalculation();
     }
 
 
@@ -1798,6 +1851,154 @@ namespace Opm {
             }
         }
     }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    initializeWBPCalculationService()
+    {
+        this->wbpCalcMap_.clear();
+        this->wbpCalcMap_.resize(this->wells_ecl_.size());
+
+        this->registerOpenWellsForWBPCalculation();
+
+        auto wellID = std::size_t{0};
+        for (const auto& well : this->wells_ecl_) {
+            this->wbpCalcMap_[wellID].wbpCalcIdx_ = this->wbpCalculationService_
+                .createCalculator(well,
+                                  this->local_parallel_well_info_[wellID],
+                                  this->conn_idx_map_[wellID].local(),
+                                  this->makeWellSourceEvaluatorFactory(wellID));
+
+            ++wellID;
+        }
+
+        this->wbpCalculationService_.defineCommunication();
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    data::WellBlockAveragePressures
+    BlackoilWellModel<TypeTag>::
+    computeWellBlockAveragePressures() const
+    {
+        auto wbpResult = data::WellBlockAveragePressures{};
+
+        using Calculated = PAvgCalculator::Result::WBPMode;
+        using Output = data::WellBlockAvgPress::Quantity;
+
+        this->wbpCalculationService_.collectDynamicValues();
+
+        const auto numWells = this->wells_ecl_.size();
+        for (auto wellID = 0*numWells; wellID < numWells; ++wellID) {
+            const auto calcIdx = this->wbpCalcMap_[wellID].wbpCalcIdx_;
+            const auto& well = this->wells_ecl_[wellID];
+
+            if (! well.hasRefDepth()) {
+                // Can't perform depth correction without at least a
+                // fall-back datum depth.
+                continue;
+            }
+
+            this->wbpCalculationService_
+                .inferBlockAveragePressures(calcIdx, well.pavg(),
+                                            this->gravity_,
+                                            well.getWPaveRefDepth());
+
+            const auto& result = this->wbpCalculationService_
+                .averagePressures(calcIdx);
+
+            auto& reported = wbpResult.values[well.name()];
+
+            reported[Output::WBP]  = result.value(Calculated::WBP);
+            reported[Output::WBP4] = result.value(Calculated::WBP4);
+            reported[Output::WBP5] = result.value(Calculated::WBP5);
+            reported[Output::WBP9] = result.value(Calculated::WBP9);
+        }
+
+        return wbpResult;
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    ParallelWBPCalculation::EvaluatorFactory
+    BlackoilWellModel<TypeTag>::
+    makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
+    {
+        using Span = PAvgDynamicSourceData::SourceDataSpan<double>;
+        using Item = typename Span::Item;
+
+        return [wellIdx, this]() -> ParallelWBPCalculation::Evaluator
+        {
+            if (! this->wbpCalcMap_[wellIdx].openWellIdx_.has_value()) {
+                // Well is stopped/shut.  Return evaluator for stopped wells.
+                return []([[maybe_unused]] const int connIdx, Span sourceTerm)
+                {
+                    // Well/connection is stopped/shut.  Set all items to
+                    // zero.
+
+                    sourceTerm
+                        .set(Item::Pressure      , 0.0)
+                        .set(Item::PoreVol       , 0.0)
+                        .set(Item::MixtureDensity, 0.0);
+                };
+            }
+
+            // Well is open.  Return an evaluator for open wells/open connections.
+            return [this, wellPtr = this->well_container_[*this->wbpCalcMap_[wellIdx].openWellIdx_].get()]
+                (const int connIdx, Span sourceTerm)
+            {
+                // Note: The only item which actually matters for the WBP
+                // calculation at the well reservoir connection level is the
+                // mixture density.  Set other items to zero.
+
+                const auto& connIdxMap =
+                    this->conn_idx_map_[wellPtr->indexOfWell()];
+
+                const auto rho = wellPtr->
+                    connectionDensity(connIdxMap.global(connIdx),
+                                      connIdxMap.open(connIdx));
+
+                sourceTerm
+                    .set(Item::Pressure      , 0.0)
+                    .set(Item::PoreVol       , 0.0)
+                    .set(Item::MixtureDensity, rho);
+            };
+        };
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    registerOpenWellsForWBPCalculation()
+    {
+        assert (this->wbpCalcMap_.size() == this->wells_ecl_.size());
+
+        for (auto& wbpCalc : this->wbpCalcMap_) {
+            wbpCalc.openWellIdx_.reset();
+        }
+
+        auto openWellIdx = typename std::vector<WellInterfacePtr>::size_type{0};
+        for (const auto* openWell : this->well_container_generic_) {
+            this->wbpCalcMap_[openWell->indexOfWell()].openWellIdx_ = openWellIdx++;
+        }
+    }
+
+
 
 
 

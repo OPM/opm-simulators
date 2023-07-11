@@ -1570,6 +1570,23 @@ namespace Opm
 
 
 
+
+
+    template<typename TypeTag>
+    double
+    StandardWell<TypeTag>::
+    connectionDensity([[maybe_unused]] const int globalConnIdx,
+                      const int openConnIdx) const
+    {
+        return (openConnIdx < 0)
+            ? 0.0
+            : this->connections_.rho(openConnIdx);
+    }
+
+
+
+
+
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
