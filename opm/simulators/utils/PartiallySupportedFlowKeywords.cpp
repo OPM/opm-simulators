@@ -98,9 +98,9 @@ partiallySupported()
             {
                {2,{true, allow_values<std::string> {"NONE", "FLD", "ORAT", "WRAT", "GRAT", "LRAT", "RESV"}, "GCONPROD(TARGET): valid option should be NONE/FLD/ORAT/WRAT/GRAT/LRAT or RESV"}}, // CONTROL_MODE
                {7,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTION): Only NONE and RATE is supported"}}, 
-               {11,{true, allow_values<std::string> {"NONE"}, "GCONPROD(ACTWAT): water violation procedure not implemented, item should be defaulted"}}, // WATER_EXCEED_PROCEDURE
-               {12,{true, allow_values<std::string> {"NONE"}, "GCONPROD(ACTGAS): gas violation procedure not implemented, item should be defaulted"}}, // GAS_EXCEED_PROCEDURE
-               {13,{true, allow_values<std::string> {"NONE"}, "GCONPROD(ACTLIQ): liquid violation procedure not implemented, item should be defaulted"}}, // LIQUID_EXCEED_PROCEDURE
+               {11,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTWAT): Only NONE and RATE is supported"}}, // WATER_EXCEED_PROCEDURE
+               {12,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTGAS): Only NONE and RATE is supported"}}, // GAS_EXCEED_PROCEDURE
+               {13,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTLIQ): Only NONE and RATE is supported"}}, // LIQUID_EXCEED_PROCEDURE
                {21,{true, allow_values<std::string> {"NONE"}, "GCONPROD(COMBPROC): linearly combined procedure is not used and should be defaulted (1*)"}}, // LIN_TARGET_EXCEED_PROCEDURE
             },
          },

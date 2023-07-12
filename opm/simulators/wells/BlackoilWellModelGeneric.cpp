@@ -573,8 +573,11 @@ checkGroupHigherConstraints(const Group& group,
             if (is_changed) {
                 switched_prod_groups_.insert_or_assign(group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD));
                 const auto exceed_action = group.productionControls(summaryState_).exceed_action;
+                const auto water_exceed_action = group.productionControls(summaryState_).water_exceed_action;
+                const auto gas_exceed_action = group.productionControls(summaryState_).gas_exceed_action;
+                const auto liquid_exceed_action = group.productionControls(summaryState_).liquid_exceed_action;
                 BlackoilWellModelConstraints(*this).
-                        actionOnBrokenConstraints(group, exceed_action,
+                        actionOnBrokenConstraints(group, exceed_action, water_exceed_action, gas_exceed_action, liquid_exceed_action,
                                                   Group::ProductionCMode::FLD,
                                                   this->groupState(),
                                                   deferred_logger);
