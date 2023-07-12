@@ -235,68 +235,133 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     beginReportStep(const int timeStepIdx)
     {
-        DeferredLogger local_deferredLogger;
+        DeferredLogger local_deferredLogger{};
 
-        report_step_starts_ = true;
+        this->report_step_starts_ = true;
 
-        const Grid& grid = ebosSimulator_.vanguard().grid();
-        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-        // Make wells_ecl_ contain only this partition's wells.
-        wells_ecl_ = getLocalWells(timeStepIdx);
-        this->local_parallel_well_info_ = createLocalParallelWellInfo(wells_ecl_);
-
-        // at least initializeWellState might be throw
-        // exception in opm-material (UniformTabulated2DFunction.hpp)
-        // playing it safe by extending the scope a bit.
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-            // The well state initialize bhp with the cell pressure in the top cell.
-            // We must therefore provide it with updated cell pressures
-            this->initializeWellPerfData();
-            this->initializeWellState(timeStepIdx, summaryState);
-            this->initializeWBPCalculationService();
+            // WELPI scaling runs at start of report step.
+            const auto enableWellPIScaling = true;
+            this->initializeLocalWellStructure(timeStepIdx, enableWellPIScaling);
+        }
 
-            // handling MS well related
-            if (param_.use_multisegment_well_&& anyMSWellOpenLocal()) { // if we use MultisegmentWell model
-                this->wellState().initWellStateMSWell(wells_ecl_, &this->prevWellState());
-            }
+        this->initializeGroupStructure(timeStepIdx);
 
-            const Group& fieldGroup = schedule().getGroup("FIELD", timeStepIdx);
-            WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, this->groupState());
+        const auto& comm = this->ebosSimulator_.vanguard().grid().comm();
 
-            // Compute reservoir volumes for RESV controls.
-            rateConverter_ = std::make_unique<RateConverterType>(phase_usage_,
-                                                                 std::vector<int>(local_num_cells_, 0));
-            rateConverter_->template defineState<ElementContext>(ebosSimulator_);
+        OPM_BEGIN_PARALLEL_TRY_CATCH()
+        {
+            // Create facility for calculating reservoir voidage volumes for
+            // purpose of RESV controls.
+            this->rateConverter_ = std::make_unique<RateConverterType>
+                (this->phase_usage_, std::vector<int>(this->local_num_cells_, 0));
+            this->rateConverter_->template defineState<ElementContext>(this->ebosSimulator_);
 
-            // Compute regional average pressures used by gpmaint
-            if (schedule_[timeStepIdx].has_gpmaint()) {
-                WellGroupHelpers::setRegionAveragePressureCalculator(fieldGroup, schedule(),
-                        timeStepIdx, this->eclState_.fieldProps(), phase_usage_, regionalAveragePressureCalculator_);
-            }
-
-            {
-                // update VFP properties
-                const auto& sched_state = this->schedule()[timeStepIdx];
-                vfp_properties_ = std::make_unique<VFPProperties>(sched_state.vfpinj(),
-                                                                  sched_state.vfpprod(),
-                                                                  this->wellState());
-            }
-
+            // Update VFP properties.
             {
                 const auto& sched_state = this->schedule()[timeStepIdx];
 
-                this->initializeWellProdIndCalculators();
-                if (sched_state.events().hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX)) {
-                    this->runWellPIScaling(timeStepIdx, local_deferredLogger);
-                }
+                this->vfp_properties_ = std::make_unique<VFPProperties>
+                    (sched_state.vfpinj(), sched_state.vfpprod(), this->wellState());
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "beginReportStep() failed: ",
-                                       terminal_output_, grid.comm());
-        // Store the current well state, to be able to recover in the case of failed iterations
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
+                                       "beginReportStep() failed: ",
+                                       this->terminal_output_, comm)
+
+        // Store the current well and group states in order to recover in
+        // the case of failed iterations
         this->commitWGState();
     }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    initializeLocalWellStructure(const int  reportStepIdx,
+                                 const bool enableWellPIScaling)
+    {
+        DeferredLogger local_deferredLogger{};
+
+        const auto& comm = this->ebosSimulator_.vanguard().grid().comm();
+
+        // Wells_ecl_ holds this rank's wells, both open and stopped/shut.
+        this->wells_ecl_ = this->getLocalWells(reportStepIdx);
+        this->local_parallel_well_info_ =
+            this->createLocalParallelWellInfo(this->wells_ecl_);
+
+        // At least initializeWellState() might be throw an exception in
+        // UniformTabulated2DFunction.  Playing it safe by extending the
+        // scope a bit.
+        OPM_BEGIN_PARALLEL_TRY_CATCH()
+        {
+            this->initializeWellPerfData();
+            this->initializeWellState(reportStepIdx);
+            this->initializeWBPCalculationService();
+
+            if (this->param_.use_multisegment_well_ && this->anyMSWellOpenLocal()) {
+                this->wellState().initWellStateMSWell(this->wells_ecl_, &this->prevWellState());
+            }
+
+            this->initializeWellProdIndCalculators();
+
+            if (enableWellPIScaling && this->schedule()[reportStepIdx].events()
+                .hasEvent(ScheduleEvents::Events::WELL_PRODUCTIVITY_INDEX))
+            {
+                this->runWellPIScaling(reportStepIdx, local_deferredLogger);
+            }
+        }
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
+                                       "Failed to initialize local well structure: ",
+                                       this->terminal_output_, comm)
+    }
+
+
+
+
+
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    initializeGroupStructure(const int reportStepIdx)
+    {
+        DeferredLogger local_deferredLogger{};
+
+        const auto& comm = this->ebosSimulator_.vanguard().grid().comm();
+
+        OPM_BEGIN_PARALLEL_TRY_CATCH()
+        {
+            const auto& fieldGroup =
+                this->schedule().getGroup("FIELD", reportStepIdx);
+
+            WellGroupHelpers::setCmodeGroup(fieldGroup,
+                                            this->schedule(),
+                                            this->summaryState(),
+                                            reportStepIdx,
+                                            this->groupState());
+
+            // Define per region average pressure calculators for use by
+            // pressure maintenance groups (GPMAINT keyword).
+            if (this->schedule()[reportStepIdx].has_gpmaint()) {
+                WellGroupHelpers::setRegionAveragePressureCalculator
+                    (fieldGroup,
+                     this->schedule(),
+                     reportStepIdx,
+                     this->eclState_.fieldProps(),
+                     this->phase_usage_,
+                     this->regionalAveragePressureCalculator_);
+            }
+        }
+        OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
+                                       "Failed to initialize group structure: ",
+                                       this->terminal_output_, comm)
+    }
+
+
+
 
 
     // called at the beginning of a time step
@@ -517,7 +582,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    timeStepSucceeded(const double& simulationTime, const double dt)
+    timeStepSucceeded(const double simulationTime, const double dt)
     {
         this->closed_this_step_.clear();
 
@@ -649,8 +714,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    initializeWellState(const int           timeStepIdx,
-                        const SummaryState& summaryState)
+    initializeWellState(const int timeStepIdx)
     {
         std::vector<double> cellPressures(this->local_num_cells_, 0.0);
         ElementContext elemCtx(ebosSimulator_);
@@ -677,7 +741,7 @@ namespace Opm {
 
         this->wellState().init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
                                &this->prevWellState(), well_perf_data_,
-                               summaryState);
+                               this->summaryState());
     }
 
 
