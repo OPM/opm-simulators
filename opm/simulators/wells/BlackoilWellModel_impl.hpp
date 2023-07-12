@@ -262,7 +262,7 @@ namespace Opm {
             }
 
             const Group& fieldGroup = schedule().getGroup("FIELD", timeStepIdx);
-            WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, this->wellState(), this->groupState());
+            WellGroupHelpers::setCmodeGroup(fieldGroup, schedule(), summaryState, timeStepIdx, this->groupState());
 
             // Compute reservoir volumes for RESV controls.
             rateConverter_ = std::make_unique<RateConverterType>(phase_usage_,

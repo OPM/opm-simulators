@@ -53,7 +53,6 @@ namespace WellGroupHelpers
                        const Schedule& schedule,
                        const SummaryState& summaryState,
                        const int reportStepIdx,
-                       WellState& wellState,
                        GroupState& group_state);
 
     void accumulateGroupEfficiencyFactor(const Group& group,
