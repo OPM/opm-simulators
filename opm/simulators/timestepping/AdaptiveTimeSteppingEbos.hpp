@@ -446,6 +446,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                 std::string causeOfFailure;
                 try {
                     substepReport = solver.step(substepTimer);
+
                     if (solverVerbose_) {
                         // report number of linear iterations
                         OpmLog::debug("Overall linear iterations used: " + std::to_string(substepReport.total_linear_iterations));
@@ -580,7 +581,8 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                         if (solverVerbose_) {
                             OpmLog::error(msg);
                         }
-                        OPM_THROW_NOLOG(NumericalProblem, msg);
+                        // Use throw directly to prevent file and line
+                        throw LinearTimeSteppingBreakdown{msg};
                     }
 
                     // The new, chopped timestep.
@@ -596,7 +598,8 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                         if (solverVerbose_) {
                             OpmLog::error(msg);
                         }
-                        OPM_THROW_NOLOG(NumericalProblem, msg);
+                        // Use throw directly to prevent file and line
+                        throw LinearTimeSteppingBreakdown{msg};
                     }
 
                     // Define utility function for chopping timestep.
