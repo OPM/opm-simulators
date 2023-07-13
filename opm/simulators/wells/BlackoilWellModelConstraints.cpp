@@ -415,7 +415,6 @@ actionOnBrokenConstraints(const Group& group,
     std::string ss;
     switch(exceed_action) {
     case Group::ExceedAction::NONE: {
-        // phase specific exceed actions need to be considered
         if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
             if ((water_exceed_action == Group::ExceedAction::RATE && newControl == Group::ProductionCMode::WRAT) ||
                 (gas_exceed_action == Group::ExceedAction::RATE && newControl == Group::ProductionCMode::GRAT) ||
@@ -427,7 +426,9 @@ actionOnBrokenConstraints(const Group& group,
                                  Group::ProductionCMode2String(newControl));
             } 
             else {
-                ss = fmt::format("Group production exceed action is NONE for group {}. Nothing happens.", group.name());
+                ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. Nothing is done.",
+                                 Group::ProductionCMode2String(oldControl),
+                                 group.name());
             }
         }
         break;
