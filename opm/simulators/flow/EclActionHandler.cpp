@@ -188,21 +188,24 @@ void EclActionHandler::applySimulatorUpdate(const int report_step,
                                             const SimulatorUpdate& sim_update,
                                             bool& commit_wellstate,
                                             const TransFunc& updateTrans)
-  {
-      OPM_TIMEBLOCK(applySimulatorUpdate);
-      this->wellModel_.updateEclWells(report_step, sim_update.affected_wells, summaryState_);
-      if (!sim_update.affected_wells.empty())
-          commit_wellstate = true;
+{
+    OPM_TIMEBLOCK(applySimulatorUpdate);
 
-      if (sim_update.tran_update) {
-          const auto& keywords = schedule_[report_step].geo_keywords();
-          ecl_state_.apply_schedule_keywords( keywords );
-          eclBroadcast(comm_, ecl_state_.getTransMult() );
+    this->wellModel_.updateEclWells(report_step, sim_update, this->summaryState_);
 
-          // re-compute transmissibility
-          updateTrans(true);
-      }
-  }
+    if (!sim_update.affected_wells.empty()) {
+        commit_wellstate = true;
+    }
+
+    if (sim_update.tran_update) {
+        const auto& keywords = schedule_[report_step].geo_keywords();
+        ecl_state_.apply_schedule_keywords( keywords );
+        eclBroadcast(comm_, ecl_state_.getTransMult() );
+
+        // re-compute transmissibility
+        updateTrans(true);
+    }
+}
 
 std::unordered_map<std::string, double>
 EclActionHandler::fetchWellPI(const int reportStep,
