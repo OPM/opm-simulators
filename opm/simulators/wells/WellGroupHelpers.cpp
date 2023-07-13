@@ -134,12 +134,12 @@ namespace WellGroupHelpers
                        const Schedule& schedule,
                        const SummaryState& summaryState,
                        const int reportStepIdx,
-                       WellState& wellState,
                        GroupState& group_state)
     {
 
         for (const std::string& groupName : group.groups()) {
-            setCmodeGroup(schedule.getGroup(groupName, reportStepIdx), schedule, summaryState, reportStepIdx, wellState, group_state);
+            setCmodeGroup(schedule.getGroup(groupName, reportStepIdx),
+                          schedule, summaryState, reportStepIdx, group_state);
         }
 
         // use NONE as default control

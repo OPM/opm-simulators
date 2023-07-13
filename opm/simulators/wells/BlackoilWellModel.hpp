@@ -367,8 +367,7 @@ namespace Opm {
 
             std::vector<bool> is_cell_perforated_{};
 
-            void initializeWellState(const int           timeStepIdx,
-                                     const SummaryState& summaryState);
+            void initializeWellState(const int timeStepIdx);
 
             // create the well container
             void createWellContainer(const int time_step) override;
@@ -445,9 +444,24 @@ namespace Opm {
                                               const double dt,
                                               DeferredLogger& local_deferredLogger);
 
+            /// Update rank's notion of intersecting wells and their
+            /// associate solution variables.
+            ///
+            /// \param[in] reportStepIdx Report step.
+            ///
+            /// \param[in] enableWellPIScaling Whether or not to enable WELPI
+            ///   scaling.  Typically enabled (i.e., true) only at the start
+            ///   of a report step.
+            void initializeLocalWellStructure(const int  reportStepIdx,
+                                              const bool enableWellPIScaling);
+
+            /// Initialize group control modes/constraints and group solution state.
+            ///
+            /// \param[in] reportStepIdx Report step.
+            void initializeGroupStructure(const int reportStepIdx);
 
             // called at the end of a time step
-            void timeStepSucceeded(const double& simulationTime, const double dt);
+            void timeStepSucceeded(const double simulationTime, const double dt);
 
             // called at the end of a report step
             void endReportStep();
