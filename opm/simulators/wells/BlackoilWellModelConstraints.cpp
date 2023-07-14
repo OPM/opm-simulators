@@ -402,7 +402,7 @@ actionOnBrokenConstraints(const Group& group,
 
 void BlackoilWellModelConstraints::
 actionOnBrokenConstraints(const Group& group,
-                          const Group::ExceedAction& exceed_action,
+                          const Group::GroupLimitAction group_limit_action,
                           const Group::ProductionCMode& newControl,
                           GroupState& group_state,
                           DeferredLogger& deferred_logger) const
@@ -410,11 +410,23 @@ actionOnBrokenConstraints(const Group& group,
     const Group::ProductionCMode oldControl = wellModel_.groupState().production_control(group.name());
 
     std::string ss;
-    switch(exceed_action) {
+    switch(group_limit_action.allRates) {
     case Group::ExceedAction::NONE: {
         if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
-            ss = fmt::format("Group production exceed action is NONE for group {}. Nothing happens.",
-                             group.name());
+            if ((group_limit_action.water == Group::ExceedAction::RATE && newControl == Group::ProductionCMode::WRAT) ||
+                (group_limit_action.gas == Group::ExceedAction::RATE && newControl == Group::ProductionCMode::GRAT) ||
+                (group_limit_action.liquid == Group::ExceedAction::RATE && newControl == Group::ProductionCMode::LRAT)) {
+                group_state.production_control(group.name(), newControl);
+                ss = fmt::format("Switching production control mode for group {} from {} to {}",
+                                 group.name(),
+                                 Group::ProductionCMode2String(oldControl),
+                                 Group::ProductionCMode2String(newControl));
+            } 
+            else {
+                ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. Nothing is done.",
+                                 Group::ProductionCMode2String(oldControl),
+                                 group.name());
+            }
         }
         break;
     }
@@ -500,7 +512,7 @@ updateGroupIndividualControl(const Group& group,
                                   Group::ProductionCMode2String(changed_this.first));
 
             this->actionOnBrokenConstraints(group,
-                                            controls.exceed_action,
+                                            controls.group_limit_action,
                                             changed_this.first,
                                             group_state, deferred_logger);
             WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second,

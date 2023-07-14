@@ -607,9 +607,9 @@ checkGroupHigherConstraints(const Group& group,
                 deferred_logger);
             if (is_changed) {
                 switched_prod_groups_.insert_or_assign(group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD));
-                const auto exceed_action = group.productionControls(summaryState_).exceed_action;
+                const auto group_limit_action = group.productionControls(summaryState_).group_limit_action;
                 BlackoilWellModelConstraints(*this).
-                        actionOnBrokenConstraints(group, exceed_action,
+                        actionOnBrokenConstraints(group, group_limit_action,
                                                   Group::ProductionCMode::FLD,
                                                   this->groupState(),
                                                   deferred_logger);
