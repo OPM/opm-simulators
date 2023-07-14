@@ -61,10 +61,7 @@ public:
 
     //! \brief Execute action on broken constraint for a production well group.
     void actionOnBrokenConstraints(const Group& group,
-                                   const Group::ExceedAction& exceed_action,
-                                   const Group::ExceedAction& water_exceed_action,
-                                   const Group::ExceedAction& gas_exceed_action,
-                                   const Group::ExceedAction& liquid_exceed_action,
+                                   const Group::GroupLimitAction group_limit_action,
                                    const Group::ProductionCMode& newControl,
                                    GroupState& group_state,
                                    DeferredLogger& deferred_logger) const;
