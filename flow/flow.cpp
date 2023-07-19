@@ -25,7 +25,10 @@
 
 int main(int argc, char** argv)
 {
-    auto mainObject = Opm::Main(argc, argv);
-    return mainObject.runDynamic();
+    auto mainObject = std::make_unique<Opm::Main>(argc, argv);
+    auto ret = mainObject->runDynamic();
+    // Destruct mainObject as the destructor calls MPI_Finalize!
+    mainObject.reset();
+    return ret;
 }
 

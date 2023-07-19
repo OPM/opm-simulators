@@ -53,8 +53,11 @@ int flowEbosPolymerMain(int argc, char** argv, bool outputCout, bool outputFiles
 int flowEbosPolymerMainStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::EclFlowPolymerProblem;
-    auto mainObject = Opm::Main(argc, argv);
-    return mainObject.runStatic<TypeTag>();
+    auto mainObject = std::make_unique<Opm::Main>(argc, argv);
+    auto ret = mainObject->runStatic<TypeTag>();
+    // Destruct mainObject as the destructor calls MPI_Finalize!
+    mainObject.reset();
+    return ret;
 }
 
 }

@@ -60,8 +60,11 @@ std::vector<int> loadBalanceInZOnly(const Dune::CpGrid& grid)
 
 int main(int argc, char** argv)
 {
-    auto mainObject = Opm::Main(argc, argv);
+    auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     Opm::EclCpGridVanguard<Opm::Properties::TTag::EclFlowProblem>::setExternalLoadBalancer(loadBalanceInZOnly);
-    return mainObject.runDynamic();
+    auto ret = mainObject->runDynamic();
+    // Destruct mainObject as the destructor calls MPI_Finalize!
+    mainObject.reset();
+    return ret;
 }
 
