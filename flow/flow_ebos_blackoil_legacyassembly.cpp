@@ -45,8 +45,11 @@ int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFile
 int flowEbosBlackoilMainStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::EclFlowProblem;
-    auto mainObject = Opm::Main(argc, argv);
-    return mainObject.runStatic<TypeTag>();
+    auto mainObject = std::make_unique<Opm::Main>(argc, argv);
+    auto ret = mainObject->runStatic<TypeTag>();
+    // Destruct mainObject as the destructor calls MPI_Finalize!
+    mainObject.reset();
+    return ret;
 }
 
 }

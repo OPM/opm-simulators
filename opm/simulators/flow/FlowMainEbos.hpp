@@ -75,6 +75,8 @@ struct OutputInterval<TypeTag, TTag::EclFlowProblem> {
 namespace Opm {
 namespace detail {
 
+void checkAllMPIProcesses();
+
 void mergeParallelLogFiles(std::string_view output_dir,
                            std::string_view deck_filename,
                            bool enableLoggingFalloutWarning);
@@ -338,10 +340,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                         std::cout << message.str() << "\n";
                     }
                 }
-#if HAVE_MPI
-                if (this->mpi_size_ > 1)
-                    MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-#endif
+                detail::checkAllMPIProcesses();
                 return EXIT_FAILURE;
             };
 
@@ -364,10 +363,14 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                 return exitCode;
             }
             catch (const LinearTimeSteppingBreakdown& e) {
-                return logger(e, "Simulation aborted: ");
+                auto exitCode = logger(e, "Simulation aborted: ");
+                executeCleanup_();
+                return exitCode;
             }
             catch (const std::exception& e) {
-                return logger(e, "Simulation aborted as program threw an unexpected exception: ");
+                auto exitCode =  logger(e, "Simulation aborted as program threw an unexpected exception: ");
+                executeCleanup_();
+                return exitCode;
             }
         }
 
