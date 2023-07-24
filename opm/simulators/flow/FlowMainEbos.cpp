@@ -95,7 +95,7 @@ void checkAllMPIProcesses()
 
             for(decltype(comm.size()) i = 1; i < comm.size(); ++i)
             {
-                if (auto error = MPI_Irecv(data.data() + i, 1, MPI_INT, i, tag, comm, requests.data() + i - 1);
+                if (auto error = MPI_Irecv(data.data() + (i - 1), 1, MPI_INT, i, tag, comm, requests.data() + (i - 1));
                     error != MPI_SUCCESS) {
                     OpmLog::error(fmt::format("Error: Could not set up MPI receive (error code : {})", error));
                     MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
