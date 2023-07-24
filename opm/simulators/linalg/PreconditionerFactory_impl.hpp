@@ -17,10 +17,11 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
 
-#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/amgcpr.hh>

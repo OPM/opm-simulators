@@ -19,7 +19,7 @@
 */
 #ifndef OPM_PARALLELOVERLAPPINGILU0_HEADER_INCLUDED
 #define OPM_PARALLELOVERLAPPINGILU0_HEADER_INCLUDED
-
+#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/MILU.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <dune/istl/paamg/smoother.hh>

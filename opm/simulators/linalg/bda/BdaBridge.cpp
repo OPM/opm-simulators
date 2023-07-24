@@ -18,7 +18,7 @@
 */
 
 #include <config.h>
-
+#include <opm/common/TimingMacros.hpp>
 #include "dune/istl/bcrsmatrix.hh"
 #include <opm/simulators/linalg/matrixblock.hh>
 

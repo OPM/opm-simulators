@@ -7,7 +7,7 @@
 // dune-istl release 2.6.0. Modifications have been kept as minimal as possible.
 
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-
+#include <opm/common/TimingMacros.hpp>
 #include <dune/common/exceptions.hh>
 #include <dune/common/version.hh>
 #include <dune/istl/paamg/amg.hh>
@@ -42,6 +42,7 @@ namespace Dune
   redistributeMatrixAmg(M& mat, M& matRedist, PI& info, PI& infoRedist,
                         Dune::RedistributeInformation<PI>& redistInfo)
   {
+    OPM_TIMEBLOCK(redistributeMatrixAmg);
     info.buildGlobalLookup(mat.N());
     redistributeMatrixEntries(mat, matRedist, info, infoRedist, redistInfo);
     info.freeGlobalLookup();
@@ -192,6 +193,7 @@ namespace Dune
        */
       void recalculateHierarchy()
       {
+        OPM_TIMEBLOCK(recalculateHierarch);
         auto copyFlags = NegateSet<typename PI::OwnerSet>();
         const auto& matrices =  matrices_->matrices();
         const auto& aggregatesMapHierarchy = matrices_->aggregatesMaps();
@@ -260,6 +262,7 @@ namespace Dune
       void createHierarchies(C& criterion, Operator& matrix,
                              const PI& pinfo)
       {
+        //OPM_TIMEBLOCK(createHierarchies);
         // create shared_ptr with empty deleter
         std::shared_ptr< Operator > op( &matrix, []( Operator* ) {});
         std::shared_ptr< PI > pifo( const_cast< PI* > (&pinfo), []( PI * ) {});
@@ -466,6 +469,7 @@ namespace Dune
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::update()
     {
+      OPM_TIMEBLOCK(update);
       Timer watch;
       smoothers_.reset(new Hierarchy<Smoother,A>);
       solver_.reset();
@@ -488,6 +492,7 @@ namespace Dune
     void AMGCPR<M,X,S,PI,A>::createHierarchies(C& criterion, std::shared_ptr< Operator > matrix,
                                                std::shared_ptr< PI > pinfo )
     {
+      OPM_TIMEBLOCK(createHierarchies);
       Timer watch;
       matrices_.reset(new OperatorHierarchy(matrix, pinfo));
 
@@ -504,6 +509,7 @@ namespace Dune
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::setupCoarseSolver()
     {
+      OPM_TIMEBLOCK(setupCoarseSolver);
       // test whether we should solve on the coarse level. That is the case if we
       // have that level and if there was a redistribution on this level then our
       // communicator has to be valid (size()>0) as the smoother might try to communicate
@@ -607,6 +613,7 @@ namespace Dune
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::pre(Domain& x, Range& b)
     {
+      OPM_TIMEBLOCK(pre);
       // Detect Matrix rows where all offdiagonal entries are
       // zero and set x such that  A_dd*x_d=b_d
       // Thus users can be more careless when setting up their linear
@@ -700,6 +707,7 @@ namespace Dune
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::apply(Domain& v, const Range& d)
     {
+      OPM_TIMEBLOCK(apply);
       LevelContext levelContext;
 
       if(additive) {
@@ -729,6 +737,7 @@ namespace Dune
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::initIteratorsWithFineLevel(LevelContext& levelContext)
     {
+      OPM_TIMEBLOCK(initIteratorsWithFineLevel);
       levelContext.smoother = smoothers_->finest();
       levelContext.matrix = matrices_->matrices().finest();
       levelContext.pinfo = matrices_->parallelInformation().finest();
@@ -744,7 +753,7 @@ namespace Dune
     bool AMGCPR<M,X,S,PI,A>
     ::moveToCoarseLevel(LevelContext& levelContext)
     {
-
+      OPM_TIMEBLOCK(moveToCoarseLevel);
       bool processNextLevel=true;
 
       if(levelContext.redist->isSetup()) {
@@ -793,6 +802,7 @@ namespace Dune
     void AMGCPR<M,X,S,PI,A>
     ::moveToFineLevel(LevelContext& levelContext, bool processNextLevel)
     {
+      OPM_TIMEBLOCK(moveToFineLevel);
       if(processNextLevel) {
         if(levelContext.matrix != matrices_->matrices().coarsest() || matrices_->levels()<matrices_->maxlevels()) {
           // previous level is not the globally coarsest one
@@ -841,6 +851,7 @@ namespace Dune
 
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::mgc(LevelContext& levelContext){
+      //OPM_TIMEBLOCK(mgc);
       if(levelContext.matrix == matrices_->matrices().coarsest() && levels()==maxlevels()) {
         // Solve directly
         InverseOperatorResult res;
@@ -895,7 +906,7 @@ namespace Dune
 
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::additiveMgc(){
-
+      OPM_TIMEBLOCK(additiveMgc);
       // restrict residual to all levels
       typename ParallelInformationHierarchy::Iterator pinfo=matrices_->parallelInformation().finest();
       typename Hierarchy<Range,A>::Iterator rhs=rhs_->finest();
@@ -946,6 +957,7 @@ namespace Dune
     template<class M, class X, class S, class PI, class A>
     void AMGCPR<M,X,S,PI,A>::post([[maybe_unused]] Domain& x)
     {
+      OPM_TIMEBLOCK(post);
       // Postprocess all smoothers
       typedef typename Hierarchy<Smoother,A>::Iterator Iterator;
       typedef typename Hierarchy<Domain,A>::Iterator DIterator;

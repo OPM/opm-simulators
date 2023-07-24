@@ -19,7 +19,7 @@
 
 
 #include <config.h> // CMake
-
+#include <opm/common/TimingMacros.hpp>
 #if HAVE_UMFPACK
 #include <dune/istl/umfpack.hh>
 #endif // HAVE_UMFPACK
@@ -69,6 +69,7 @@ MultisegmentWellContribution::~MultisegmentWellContribution()
 // y -= (C^T * (D^-1 * (B * x)))
 void MultisegmentWellContribution::apply(double *h_x, double *h_y)
 {
+    OPM_TIMEBLOCK(apply);
     // reset z1 and z2
     std::fill(z1.begin(), z1.end(), 0.0);
     std::fill(z2.begin(), z2.end(), 0.0);

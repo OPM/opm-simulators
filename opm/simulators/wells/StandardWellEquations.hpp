@@ -25,7 +25,7 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
-
+#include <opm/common/TimingMacros.hpp>
 #include <dune/common/dynmatrix.hh>
 #include <dune/common/dynvector.hh>
 #include <dune/istl/bcrsmatrix.hh>

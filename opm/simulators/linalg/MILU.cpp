@@ -20,7 +20,7 @@
 
 #include <config.h>
 #include <opm/simulators/linalg/MILU.hpp>
-
+#include <opm/common/TimingMacros.hpp>
 #include <dune/common/version.hh>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>

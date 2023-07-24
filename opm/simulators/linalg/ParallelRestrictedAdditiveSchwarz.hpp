@@ -165,6 +165,7 @@ public:
     */
     virtual void pre (Domain& x, Range& b)
     {
+        OPM_TIMEBLOCK(pre);
         communication_.copyOwnerToAll(x,x);     // make dirichlet values consistent
         preconditioner_.pre(x,b);
     }
@@ -182,6 +183,7 @@ public:
     template<bool forward>
     void apply (Domain& v, const Range& d)
     {
+        OPM_TIMEBLOCK(apply);
         // hack us a mutable d to prevent copying.
         Range& md = const_cast<Range&>(d);
         communication_.copyOwnerToAll(md,md);
@@ -198,6 +200,7 @@ public:
     */
     virtual void post (Range& x)
     {
+        OPM_TIMEBLOCK(post);
         preconditioner_.post(x);
     }
 
