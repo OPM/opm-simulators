@@ -127,7 +127,11 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
 {
     // Write sizes of linear systems on all ranks to debug log.
     {
+#if HAVE_MPI
         auto basic_comm = comm.communicator();
+#else
+        auto basic_comm = Dune::Communication<Dune::No_Comm>{};
+#endif // HAVE_MPI
         std::ostringstream os;
         os << "Linear system ";
         if (basic_comm.size() > 1) {
