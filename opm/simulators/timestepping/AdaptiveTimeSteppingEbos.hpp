@@ -582,7 +582,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                             OpmLog::error(msg);
                         }
                         // Use throw directly to prevent file and line
-                        throw LinearTimeSteppingBreakdown{msg};
+                        throw TimeSteppingBreakdown{msg};
                     }
 
                     // The new, chopped timestep.
@@ -599,7 +599,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                             OpmLog::error(msg);
                         }
                         // Use throw directly to prevent file and line
-                        throw LinearTimeSteppingBreakdown{msg};
+                        throw TimeSteppingBreakdown{msg};
                     }
 
                     // Define utility function for chopping timestep.
