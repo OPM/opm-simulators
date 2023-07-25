@@ -420,6 +420,7 @@ public:
                                 isFloresn, std::move(floresn));
         }
     }
+    
 
     void beginRestart()
     {
@@ -574,7 +575,6 @@ private:
             }
         }
 
-        {
         if constexpr(enableMech){
             if(simulator_.vanguard().eclState().runspec().mech()){
                 OPM_TIMEBLOCK(prepareMechData);
@@ -672,6 +672,7 @@ private:
     bool damarisUpdate_ = false;  ///< Whenever this is true writeOutput() will set up Damaris offsets of model fields
 #endif
 };
+
 } // namespace Opm
 
 #endif
