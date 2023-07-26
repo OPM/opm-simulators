@@ -151,8 +151,7 @@ public:
         // Get the size of the unique vector elements (excludes the shared 'ghost' elements)
         numElements_ = std::distance(interior_elements.begin(), interior_elements.end());
 
-        this->damarisOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>(simulator, this->wbp_index_list_, this->collectToIORank_);
-        this->wbp_index_list_.clear();
+        this->damarisOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>(simulator, this->collectToIORank_);
     }
 
     ~DamarisWriter()

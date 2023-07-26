@@ -141,7 +141,6 @@ protected:
     const Dune::CartesianIndexMapper<Grid>& cartMapper_;
     const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper_;
     const EquilGrid* equilGrid_;
-    std::vector<std::size_t> wbp_index_list_;
     SimulatorReportSingle sub_step_report_;
     SimulatorReport simulation_report_;
     // mutable std::vector<NNCdata> outputNnc_;
