@@ -362,7 +362,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                 }
                 return exitCode;
             }
-            catch (const LinearTimeSteppingBreakdown& e) {
+            catch (const TimeSteppingBreakdown& e) {
                 auto exitCode = logger(e, "Simulation aborted: ");
                 executeCleanup_();
                 return exitCode;
