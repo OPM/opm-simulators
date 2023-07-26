@@ -442,7 +442,7 @@ private:
                                                 // residual
 
         // if the solution is updated, the intensive quantities need to be recalculated
-        ebosSimulator.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+        ebosSimulator.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
     }
 
     //! \brief Get reservoir quantities on this process needed for convergence calculations.
@@ -715,11 +715,11 @@ private:
             auto local_solution = Details::extractVector(solution, domain.cells);
             Details::setGlobal(local_solution, domain.cells, locally_solved);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
-            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         } else {
             model_.wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
-            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         }
     }
 
@@ -766,7 +766,7 @@ private:
         } else {
             model_.wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
-            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain.view);
+            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         }
     }
 
