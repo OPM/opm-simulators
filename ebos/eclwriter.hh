@@ -41,13 +41,14 @@
 
 #include <dune/grid/common/partitionset.hh>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <limits>
 #include <stdexcept>
 #include <string>
 
-#if HAVE_DAMARIS
-#include <opm/simulators/utils/DamarisOutputModule.hpp>
-#endif
+
+// #include <opm/simulators/utils/GridDataOutput.hpp>
 
 
 namespace Opm::Properties {
@@ -64,16 +65,6 @@ template<class TypeTag, class MyTypeTag>
 struct EclOutputDoublePrecision {
     using type = UndefinedProperty;
 };
-#ifdef HAVE_DAMARIS
-template<class TypeTag, class MyTypeTag>
-struct EnableDamarisOutput {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct EnableDamarisOutputCollective {
-    using type = UndefinedProperty;
-};
-#endif
 template<class TypeTag, class MyTypeTag>
 struct EnableEsmry {
     using type = UndefinedProperty;
@@ -120,6 +111,8 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
+    
+    typedef Dune::MultipleCodimMultipleGeomTypeMapper< GridView > VertexMapper;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
@@ -132,12 +125,14 @@ public:
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAsyncEclOutput,
                              "Write the ECL-formated results in a non-blocking way (i.e., using a separate thread).");
-#ifdef HAVE_DAMARIS
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDamarisOutputCollective,
-                             "Write output via Damaris using parallel HDF5 to get single file per timestep instead of one per Damaris core.");
-#endif
+
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEsmry,
                              "Write ESMRY file for fast loading of summary data.");
+                             
+#ifdef HAVE_DAMARIS
+   //     EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDamarisOutputCollective,
+    //                         "Write output via Damaris using parallel HDF5 to get single file per timestep instead of one per Damaris core.");
+#endif                             
     }
 
     // The Simulator object should preferably have been const - the
@@ -160,10 +155,6 @@ public:
                    EWOMS_GET_PARAM(TypeTag, bool, EnableEsmry))
         , simulator_(simulator)
     {
-#ifdef HAVE_DAMARIS
-        this->damarisUpdate_ = enableDamarisOutput_();
-#endif
-
         this->eclOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>
             (simulator, this->collectToIORank_);
     }
@@ -326,7 +317,7 @@ public:
         }
     }
 
-    void writeOutput(bool isSubStep)
+    void writeOutput(data::Solution& localCellData, bool isSubStep)
     {
         OPM_TIMEBLOCK(writeOutput);
 
@@ -334,30 +325,7 @@ public:
         this->prepareLocalCellData(isSubStep, reportStepNum);
         this->eclOutputModule_->outputErrorLog(simulator_.gridView().comm());
 
-#ifdef HAVE_DAMARIS
-        if (EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput)) {
-            // N.B. damarisUpdate_ should be set to true if at any time the model geometry changes
-            if (this->damarisUpdate_) {
-                const auto& gridView = simulator_.gridView();
-                const auto& interior_elements = elements(gridView, Dune::Partitions::interior);
-                const int numElements = std::distance(interior_elements.begin(), interior_elements.end());
-                Opm::DamarisOutput::setupDamarisWritingPars(simulator_.vanguard().grid().comm(), numElements);
-                const std::vector<int>& local_to_global = this->collectToIORank_.localIdxToGlobalIdxMapping();
-                damaris_write("GLOBAL_CELL_INDEX", local_to_global.data());
-                // By default we assume static grid
-                this->damarisUpdate_ = false;
-            }
-
-            if (!isSubStep) {
-                // Output the PRESSURE field
-                if (this->eclOutputModule_->getPRESSURE_ptr() != nullptr) {
-                    damaris_write("PRESSURE", (void*)this->eclOutputModule_->getPRESSURE_ptr());
-                    damaris_end_iteration();
-                }
-            }
-        }
-#endif
-
+        // output using eclWriter if enabled
         auto localWellData = simulator_.problem().wellModel().wellData();
         auto localGroupAndNetworkData = simulator_.problem().wellModel()
             .groupAndNetworkData(reportStepNum);
@@ -371,9 +339,12 @@ public:
         const bool isFloresn = this->eclOutputModule_->hasFloresn();
         auto floresn = this->eclOutputModule_->getFloresn();
 
-        data::Solution localCellData = {};
+        // data::Solution localCellData = {};
         if (! isSubStep) {
-            this->eclOutputModule_->assignToSolution(localCellData);
+            
+            if (localCellData.size() == 0) {
+                this->eclOutputModule_->assignToSolution(localCellData);
+            }
 
             // Add cell data to perforations for RFT output
             this->eclOutputModule_->addRftDataToWells(localWellData, reportStepNum);
@@ -418,7 +389,10 @@ public:
                                 isFlowsn, std::move(flowsn),
                                 isFloresn, std::move(floresn));
         }
+
     }
+    
+    
 
     void beginRestart()
     {
@@ -521,11 +495,6 @@ public:
 private:
     static bool enableEclOutput_()
     { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
-
-#ifdef HAVE_DAMARIS
-    static bool enableDamarisOutput_()
-    { return EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput); }
-#endif
 
     const EclipseState& eclState() const
     { return simulator_.vanguard().eclState(); }
@@ -652,12 +621,9 @@ private:
     }
 
     Simulator& simulator_;
-    std::unique_ptr<EclOutputBlackOilModule<TypeTag>> eclOutputModule_;
+    std::unique_ptr<EclOutputBlackOilModule<TypeTag> > eclOutputModule_;
     Scalar restartTimeStepSize_;
 
-#ifdef HAVE_DAMARIS
-    bool damarisUpdate_ = false;  ///< Whenever this is true writeOutput() will set up Damaris offsets of model fields
-#endif
 };
 } // namespace Opm
 

@@ -27,6 +27,8 @@
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 
+#include <ebos/collecttoiorank.hh>
+
 #include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/utils/readDeck.hpp>
 
@@ -83,23 +85,37 @@ Main::~Main()
     }
 #endif // HAVE_MPI
 
+    //int myrank ;
+    //myrank = EclGenericVanguard::comm().rank() ;
     EclGenericVanguard::setCommunication(nullptr);
-
+    
+    
 #if HAVE_DAMARIS
     if (enableDamarisOutput_) {
         int err;
+        std::string msg ;
         if (isSimulationRank_) {
             err = damaris_stop();
             if (err != DAMARIS_OK) {
-                std::cerr << "ERROR: Damaris library produced an error result for damaris_stop()" << std::endl;
+                msg = "\nERROR: Damaris library produced an error result for damaris_stop()\n" ;
+                OpmLog::error(msg);
             }
         }
+        if (outputCout_) {
+            msg = "\nWaiting for The Damaris server processes to finish recent iteration processing.\n\n" ;
+            std::cout << msg ;
+            // OpmLog::info(msg);
+        }
+        
         err = damaris_finalize();
         if (err != DAMARIS_OK) {
-            std::cerr << "ERROR: Damaris library produced an error result for damaris_finalize()" << std::endl;
+            msg = "\nERROR: Damaris library produced an error result for damaris_finalize()\n" ;
+            OpmLog::error(msg);
         }
     }
 #endif // HAVE_DAMARIS
+
+    
 
 #if HAVE_MPI && !HAVE_DUNE_FEM
     MPI_Finalize();
@@ -233,6 +249,7 @@ void Main::setupVanguard()
 }
 
 #if HAVE_DAMARIS
+
 void Main::setupDamaris(const std::string& outputDir,
                         const bool enableDamarisOutputCollective)
 {
@@ -242,10 +259,36 @@ void Main::setupDamaris(const std::string& outputDir,
 
     // By default EnableDamarisOutputCollective is true so all simulation results will
     // be written into one single file for each iteration using Parallel HDF5.
-    // It set to false, FilePerCore mode is used in Damaris, then simulation results in each
+    // If set to false, FilePerCore mode is used in Damaris, then simulation results in each
     // node are aggregated by dedicated Damaris cores and stored to separate files per Damaris core.
     // Irrespective of mode, output is written asynchronously at the end of each timestep.
     // Using the ModifyModel class to set the XML file for Damaris.
+  /*  using DamarisWriterType = DamarisWriter<int>;
+    using CollectDataToIORankType = CollectDataToIORank<GetPropType<TypeTagEarlyBird, Properties::Grid>,GetPropType<TypeTagEarlyBird, Properties::EquilGrid>,GetPropType<TypeTagEarlyBird, Properties::GridView>>;
+
+    
+    std::unique_ptr<EclOutputBlackOilModule<CollectDataToIORankType>> damarisOutputModule_; 
+    
+   // const Simulator placeholder_simulator;
+   //auto& placeholder_simulator = this->simulator() ;
+    const std::vector<std::size_t> placeholder_wbp_index_list;
+    CollectDataToIORankType placeholder_collectToIORank ;
+    damarisOutputModule_ = std::make_unique<EclOutputBlackOilModule<CollectDataToIORankType>>(nullptr, placeholder_wbp_index_list, placeholder_collectToIORank);
+    //damarisOutputModule_ = std::make_unique<EclOutputBlackOilModule<DamarisWriterType>>({}, {}, {});
+    data::Solution solution_names ;
+    bool textOnly = true ;
+    damarisOutputModule_->assignToSolution(solution_names, textOnly);
+    
+    std::cout << "INFO: Main.cpp setupDamaris() assignToSolution()  has been called " << std::endl ;
+        for ( auto damVar : solution_names ) {
+           // std::map<std::string, data::CellData>
+          const std::string name = damVar.first ;
+          data::CellData  dataCol = damVar.second ;
+          std::cout << "Name of Damaris Varaiable : " << name << "  Size : "  << dataCol.data.size() <<  std::endl ;  // dataCol.data().size()
+          
+        }
+    
+    */
     DamarisOutput::initializeDamaris(EclGenericVanguard::comm(), EclGenericVanguard::comm().rank(), outputDir, enableDamarisOutputCollective);
     int is_client;
     MPI_Comm new_comm;

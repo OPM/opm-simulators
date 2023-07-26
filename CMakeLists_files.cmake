@@ -32,6 +32,7 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenerictracermodel.cc
   ebos/eclgenericvanguard.cc
   ebos/eclgenericwriter.cc
+  ebos/damarisgenericwriter.cc
   ebos/eclinterregflows.cc
   ebos/eclsolutioncontainers.cc
   ebos/ecltransmissibility.cc
@@ -486,6 +487,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/ParallelFileMerger.hpp
   opm/simulators/utils/DeferredLoggingErrorHelpers.hpp
   opm/simulators/utils/DeferredLogger.hpp
+  opm/simulators/utils/GridDataOutput.hpp
   opm/simulators/utils/gatherDeferredLogger.hpp
   opm/simulators/utils/moduleVersion.hpp
   opm/simulators/utils/ParallelEclipseState.hpp
