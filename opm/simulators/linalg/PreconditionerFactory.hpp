@@ -21,7 +21,7 @@
 
 #ifndef OPM_PRECONDITIONERFACTORY_HEADER
 #define OPM_PRECONDITIONERFACTORY_HEADER
-
+#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 
 #include <dune/istl/paamg/aggregates.hh>

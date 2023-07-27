@@ -18,7 +18,7 @@
 */
 
 #include <config.h>
-
+#include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>

@@ -19,7 +19,7 @@
 
 #include <config.h>
 #include <memory>
-
+#include <opm/common/TimingMacros.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/BILU0.hpp>

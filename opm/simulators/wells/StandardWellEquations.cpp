@@ -20,9 +20,11 @@
 */
 
 #include <config.h>
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 
-#include <opm/common/Exceptions.hpp>
+
 
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>

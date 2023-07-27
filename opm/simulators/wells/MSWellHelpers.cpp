@@ -24,6 +24,7 @@
 #include <opm/simulators/wells/MSWellHelpers.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/SICD.hpp>

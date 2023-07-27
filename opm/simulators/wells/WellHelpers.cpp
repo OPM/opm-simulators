@@ -20,7 +20,7 @@
 */
 
 #include <config.h>
-
+#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/WellHelpers.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>

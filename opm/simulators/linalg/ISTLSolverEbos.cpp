@@ -20,7 +20,7 @@
 */
 
 #include <config.h>
-
+#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
 #include <dune/istl/schwarz.hh>

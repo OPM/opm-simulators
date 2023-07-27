@@ -22,7 +22,7 @@
 #define OPM_FLEXIBLE_SOLVER_IMPL_HEADER_INCLUDED
 
 #include <opm/common/ErrorMacros.hpp>
-
+#include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/ilufirstelement.hh>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>

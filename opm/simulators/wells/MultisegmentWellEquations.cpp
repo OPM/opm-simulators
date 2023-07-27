@@ -20,11 +20,11 @@
 */
 
 #include <config.h>
-#include <opm/simulators/wells/MultisegmentWellEquations.hpp>
+#include <opm/common/TimingMacros.hpp>
 
+#include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 #include <dune/istl/umfpack.hh>
 
-#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
