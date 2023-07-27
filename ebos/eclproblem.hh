@@ -1598,7 +1598,7 @@ public:
     /*!
      * \copydoc FvBaseProblem::boundary
      *
-     * ECLiPSE uses no-flow conditions for all boundaries. \todo really?
+     * Reservoir simulation uses no-flow conditions as default for all boundaries.
      */
     template <class Context>
     void boundary(BoundaryRateVector& values,
