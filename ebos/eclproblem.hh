@@ -217,7 +217,7 @@ template<class TypeTag>
 struct Model<TypeTag, TTag::EclBaseProblem> {
     using type = FIBlackOilModel<TypeTag>;
 };
-    
+
 // Select the element centered finite volume method as spatial discretization
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::EclBaseProblem> {
@@ -823,10 +823,10 @@ public:
         this->maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent);
         this->restartShrinkFactor_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclRestartShrinkFactor);
         this->maxFails_ = EWOMS_GET_PARAM(TypeTag, unsigned, MaxTimeStepDivisions);
-        
+
         // The value N for this parameter is defined in the following order of presedence:
         // 1. Command line value (--num-pressure-points-equil=N)
-        // 2. EQLDIMS item 2 
+        // 2. EQLDIMS item 2
         // Default value is defined in opm-common/src/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
         if (EWOMS_PARAM_IS_SET(TypeTag, int, NumPressurePointsEquil))
         {
@@ -1628,8 +1628,7 @@ public:
             unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
             unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
             unsigned pvtRegionIdx = pvtRegionIndex(context, spaceIdx, timeIdx);
-            FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(indexInInside);
-            const auto [type, massrate] = boundaryCondition(globalDofIdx, dir);
+            const auto [type, massrate] = boundaryCondition(globalDofIdx, indexInInside);
             if (type == BCType::THERMAL)
                 values.setThermalFlow(context, spaceIdx, timeIdx, boundaryFluidState(globalDofIdx, indexInInside));
             else if (type == BCType::FREE || type == BCType::DIRICHLET)
