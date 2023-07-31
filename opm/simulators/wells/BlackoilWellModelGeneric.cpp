@@ -1461,14 +1461,17 @@ void BlackoilWellModelGeneric::updateFiltrationParticleVolume(const double dt,
                                                               const std::size_t water_index)
 {
     for (auto& well : this->well_container_generic_) {
-        if (well->isInjector() && well->wellEcl().getFilterConc() > 0.) {
-            auto fc = this->filter_cake_
-                                      .emplace(std::piecewise_construct,
-                                               std::forward_as_tuple(well->name()),
-                                               std::tuple{});
+        if (well->isInjector()) {
+            const double conc = well->wellEcl().evalFilterConc(this->summaryState_);
+            if (conc > 0.) {
+                auto fc = this->filter_cake_
+                        .emplace(std::piecewise_construct,
+                                 std::forward_as_tuple(well->name()),
+                                 std::tuple{});
 
-            fc.first->second.updateFiltrationParticleVolume(*well, dt, water_index,
-                                                            this->wellState());
+                fc.first->second.updateFiltrationParticleVolume(*well, dt, conc, water_index,
+                                                                this->wellState());
+            }
         }
     }
 }
