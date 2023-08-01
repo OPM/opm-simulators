@@ -289,11 +289,7 @@ public:
         serializer(minOilPressure_);
         serializer(overburdenPressure_);
         serializer(solventSaturation_);
-        serializer(microbialConcentration_);
-        serializer(oxygenConcentration_);
-        serializer(ureaConcentration_);
-        serializer(biofilmConcentration_);
-        serializer(calciteConcentration_);
+        serializer(micp_);
         serializer(lastRv_);
         serializer(maxDRv_);
         serializer(convectiveDrs_);
@@ -383,11 +379,7 @@ protected:
     std::vector<Scalar> minOilPressure_;
     std::vector<Scalar> overburdenPressure_;
     std::vector<Scalar> solventSaturation_;
-    std::vector<Scalar> microbialConcentration_;
-    std::vector<Scalar> oxygenConcentration_;
-    std::vector<Scalar> ureaConcentration_;
-    std::vector<Scalar> biofilmConcentration_;
-    std::vector<Scalar> calciteConcentration_;
+    MICPSolutionContainer<Scalar> micp_;
 
     std::vector<Scalar> lastRv_;
     std::vector<Scalar> maxDRv_;

@@ -48,6 +48,39 @@ operator==(const PolymerSolutionContainer<Scalar>& rhs) const
            this->moleWeight == rhs.moleWeight;
 }
 
+template<class Scalar>
+MICPSolutionContainer<Scalar>
+MICPSolutionContainer<Scalar>::serializationTestObject()
+{
+    return {{16.0},
+            {17.0},
+            {18.0},
+            {19.0},
+            {20.0}};
+}
+
+template<class Scalar>
+void MICPSolutionContainer<Scalar>::resize(const unsigned numElems)
+{
+    microbialConcentration.resize(numElems, 0.0);
+    oxygenConcentration.resize(numElems, 0.0);
+    ureaConcentration.resize(numElems, 0.0);
+    biofilmConcentration.resize(numElems, 0.0);
+    calciteConcentration.resize(numElems, 0.0);
+}
+
+template<class Scalar>
+bool MICPSolutionContainer<Scalar>::
+operator==(const MICPSolutionContainer<Scalar>& rhs) const
+{
+    return this->microbialConcentration == rhs.microbialConcentration &&
+           this->oxygenConcentration == rhs.oxygenConcentration &&
+           this->ureaConcentration == rhs.ureaConcentration &&
+           this->biofilmConcentration == rhs.biofilmConcentration &&
+           this->calciteConcentration == rhs.calciteConcentration;
+}
+
 template struct PolymerSolutionContainer<double>;
+template struct MICPSolutionContainer<double>;
 
 } // namespace Opm
