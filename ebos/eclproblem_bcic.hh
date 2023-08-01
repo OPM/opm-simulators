@@ -29,6 +29,7 @@
 #define OPM_ECL_PROBLEM_BCIC_HH
 
 #include <ebos/eclequilinitializer.hh>
+#include <ebos/ecloutputblackoilmodule.hh>
 #include <ebos/eclsolutioncontainers.hh>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -160,6 +161,52 @@ public:
         if constexpr (enablePolymer) {
             polymer.readInitialCondition(eclState.fieldProps(),
                                          enablePolymerMW, numGridDof);
+        }
+    }
+
+    //! \brief Read restart solution from eclipse input.
+    void readEclRestartSolution([[maybe_unused]] std::vector<Scalar>& solventSaturation,
+                                [[maybe_unused]] std::vector<Scalar>& solventRsw,
+                                [[maybe_unused]] MICPSolutionContainer<Scalar>& micp,
+                                [[maybe_unused]] PolymerSolutionContainer<Scalar>& polymer,
+                                const EclOutputBlackOilModule<TypeTag>& input,
+                                const std::size_t numElems,
+                                const std::function<int(int)> pvtRegionIndex)
+    {
+        initialFluidStates_.resize(numElems);
+        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            initialFluidStates_[elemIdx].setPvtRegionIndex(pvtRegionIndex(elemIdx));
+            input.assignToFluidState(initialFluidStates_[elemIdx], elemIdx);
+            // Note: Function processRestartSaturations_() mutates the
+            // 'ssol' argument--the value from the restart file--if solvent
+            // is enabled.  Then, store the updated solvent saturation into
+            // 'solventSaturation_'.  Otherwise, just pass a dummy value to
+            // the function and discard the unchanged result.  Do not index
+            // into 'solventSaturation_' unless solvent is enabled.
+            auto ssol = enableSolvent
+                ? input.getSolventSaturation(elemIdx)
+                : Scalar(0);
+
+            processRestartSaturations_(elemIdx, ssol);
+
+            if constexpr (enableSolvent) {
+                solventSaturation[elemIdx] = ssol;
+                solventRsw[elemIdx] = input.getSolventRsw(elemIdx);
+            }
+
+            if constexpr (enablePolymer) {
+                polymer.concentration[elemIdx] = input.getPolymerConcentration(elemIdx);
+            }
+
+            // if we need to restart for polymer molecular weight simulation, we need to add related here
+
+            if constexpr (enableMICP) {
+                 micp.microbialConcentration[elemIdx] = input.getMicrobialConcentration(elemIdx);
+                 micp.oxygenConcentration[elemIdx] = input.getOxygenConcentration(elemIdx);
+                 micp.ureaConcentration[elemIdx] = input.getUreaConcentration(elemIdx);
+                 micp.biofilmConcentration[elemIdx] = input.getBiofilmConcentration(elemIdx);
+                 micp.calciteConcentration[elemIdx] = input.getCalciteConcentration(elemIdx);
+            }
         }
     }
 
@@ -411,6 +458,47 @@ public:
             solventSaturation.resize(numDof, 0.0);
         }
         solventRsw.resize(numDof, 0.0);
+    }
+
+    //! \brief Clamp small saturations due to single precision input.
+    void processRestartSaturations_(const std::size_t elemIdx,
+                                    Scalar& solventSaturation)
+    {
+        auto& elemFluidState = initialFluidStates_[elemIdx];
+        // each phase needs to be above certain value to be claimed to be existing
+        // this is used to recover some RESTART running with the defaulted single-precision format
+        constexpr Scalar smallSaturationTolerance = 1.e-6;
+        Scalar sumSaturation = 0.0;
+        for (std::size_t phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (FluidSystem::phaseIsActive(phaseIdx)) {
+                if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance) {
+                    elemFluidState.setSaturation(phaseIdx, 0.0);
+                }
+
+                sumSaturation += elemFluidState.saturation(phaseIdx);
+            }
+        }
+
+        if constexpr (enableSolvent) {
+            if (solventSaturation < smallSaturationTolerance) {
+                solventSaturation = 0.0;
+            }
+
+           sumSaturation += solventSaturation;
+        }
+
+        assert(sumSaturation > 0.0);
+
+        for (std::size_t phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (FluidSystem::phaseIsActive(phaseIdx)) {
+                const Scalar saturation = elemFluidState.saturation(phaseIdx) / sumSaturation;
+                elemFluidState.setSaturation(phaseIdx, saturation);
+            }
+        }
+
+        if constexpr (enableSolvent) {
+            solventSaturation = solventSaturation / sumSaturation;
+        }
     }
 
     //! \brief Container for boundary conditions.

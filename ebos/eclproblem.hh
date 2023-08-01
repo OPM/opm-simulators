@@ -2125,15 +2125,16 @@ protected:
         Scalar dt = std::min(eclWriter_->restartTimeStepSize(), simulator.episodeLength());
         simulator.setTimeStepSize(dt);
 
-        std::size_t numElems = this->model().numGridDof();
-        bcic_.initialFluidStates_.resize(numElems);
+        const std::size_t numElems = this->model().numGridDof();
+
         if constexpr (enableSolvent) {
             this->solventSaturation_.resize(numElems, 0.0);
             this->solventRsw_.resize(numElems, 0.0);
         }
 
-        if constexpr (enablePolymer)
+        if constexpr (enablePolymer) {
             this->polymer_.concentration.resize(numElems, 0.0);
+        }
 
         if constexpr (enablePolymerMolarWeight) {
             const std::string msg {"Support of the RESTART for polymer molecular weight "
@@ -2147,43 +2148,21 @@ protected:
             this->micp_.resize(numElems);
         }
 
+        bcic_.readEclRestartSolution(this->solventSaturation_,
+                                     this->solventRsw_,
+                                     this->micp_,
+                                     this->polymer_,
+                                     eclWriter_->eclOutputModule(),
+                                     numElems,
+                                     [this](const unsigned idx)
+                                     { return this->pvtRegionIndex(idx); });
+
+
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto& elemFluidState = bcic_.initialFluidStates_[elemIdx];
-            elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
+            const auto& elemFluidState = bcic_.initialFluidState(elemIdx);
             eclWriter_->eclOutputModule().initHysteresisParams(simulator, elemIdx);
-            eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
-
-            // Note: Function processRestartSaturations_() mutates the
-            // 'ssol' argument--the value from the restart file--if solvent
-            // is enabled.  Then, store the updated solvent saturation into
-            // 'solventSaturation_'.  Otherwise, just pass a dummy value to
-            // the function and discard the unchanged result.  Do not index
-            // into 'solventSaturation_' unless solvent is enabled.
-            {
-                auto ssol = enableSolvent
-                    ? eclWriter_->eclOutputModule().getSolventSaturation(elemIdx)
-                    : Scalar(0);
-
-                processRestartSaturations_(elemFluidState, ssol);
-
-                if constexpr (enableSolvent) {
-                    this->solventSaturation_[elemIdx] = ssol;
-                    this->solventRsw_[elemIdx] = eclWriter_->eclOutputModule().getSolventRsw(elemIdx);
-                }
-            }
 
             this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
-
-            if constexpr (enablePolymer)
-                 this->polymer_.concentration[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
-            if constexpr (enableMICP){
-                 this->micp_.microbialConcentration[elemIdx] = eclWriter_->eclOutputModule().getMicrobialConcentration(elemIdx);
-                 this->micp_.oxygenConcentration[elemIdx] = eclWriter_->eclOutputModule().getOxygenConcentration(elemIdx);
-                 this->micp_.ureaConcentration[elemIdx] = eclWriter_->eclOutputModule().getUreaConcentration(elemIdx);
-                 this->micp_.biofilmConcentration[elemIdx] = eclWriter_->eclOutputModule().getBiofilmConcentration(elemIdx);
-                 this->micp_.calciteConcentration[elemIdx] = eclWriter_->eclOutputModule().getCalciteConcentration(elemIdx);
-            }
-            // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
 
         const int episodeIdx = this->episodeIndex();
@@ -2209,41 +2188,6 @@ protected:
         this->model().syncOverlap();
 
         eclWriter_->endRestart();
-    }
-
-    void processRestartSaturations_(InitialFluidState& elemFluidState, Scalar& solventSaturation)
-    {
-        // each phase needs to be above certain value to be claimed to be existing
-        // this is used to recover some RESTART running with the defaulted single-precision format
-        const Scalar smallSaturationTolerance = 1.e-6;
-        Scalar sumSaturation = 0.0;
-        for (std::size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (FluidSystem::phaseIsActive(phaseIdx)) {
-                if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance)
-                    elemFluidState.setSaturation(phaseIdx, 0.0);
-
-                sumSaturation += elemFluidState.saturation(phaseIdx);
-            }
-
-        }
-        if constexpr (enableSolvent) {
-            if (solventSaturation < smallSaturationTolerance)
-                solventSaturation = 0.0;
-
-           sumSaturation += solventSaturation;
-        }
-
-        assert(sumSaturation > 0.0);
-
-        for (std::size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (FluidSystem::phaseIsActive(phaseIdx)) {
-                const Scalar saturation = elemFluidState.saturation(phaseIdx) / sumSaturation;
-                elemFluidState.setSaturation(phaseIdx, saturation);
-            }
-        }
-        if constexpr (enableSolvent) {
-            solventSaturation = solventSaturation / sumSaturation;
-        }
     }
 
     // update the hysteresis parameters of the material laws for the whole grid
