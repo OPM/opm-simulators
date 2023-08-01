@@ -33,6 +33,7 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenericvanguard.cc
   ebos/eclgenericwriter.cc
   ebos/eclinterregflows.cc
+  ebos/eclsolutioncontainers.cc
   ebos/ecltransmissibility.cc
   ebos/equil/equilibrationhelpers.cc
   ebos/equil/initstateequil.cc
@@ -386,6 +387,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/ecloutputblackoilmodule.hh
   ebos/eclpolyhedralgridvanguard.hh
   ebos/eclproblem.hh
+  ebos/eclsolutioncontainers.hh
   ebos/eclthresholdpressure.hh
   ebos/ecltracermodel.hh
   ebos/ecltransmissibility.hh

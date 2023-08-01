@@ -28,6 +28,8 @@
 #ifndef EWOMS_GENERIC_ECL_PROBLEM_HH
 #define EWOMS_GENERIC_ECL_PROBLEM_HH
 
+#include <ebos/eclsolutioncontainers.hh>
+
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
@@ -282,12 +284,10 @@ public:
     void serializeOp(Serializer& serializer)
     {
         serializer(maxOilSaturation_);
-        serializer(maxPolymerAdsorption_);
+        serializer(polymer_);
         serializer(maxWaterSaturation_);
         serializer(minOilPressure_);
         serializer(overburdenPressure_);
-        serializer(polymerConcentration_);
-        serializer(polymerMoleWeight_);
         serializer(solventSaturation_);
         serializer(microbialConcentration_);
         serializer(oxygenConcentration_);
@@ -377,13 +377,11 @@ protected:
     std::vector<TabulatedFunction> rockCompPoroMult_;
     std::vector<TabulatedFunction> rockCompTransMult_;
 
+    PolymerSolutionContainer<Scalar> polymer_;
     std::vector<Scalar> maxOilSaturation_;
-    std::vector<Scalar> maxPolymerAdsorption_;
     std::vector<Scalar> maxWaterSaturation_;
     std::vector<Scalar> minOilPressure_;
     std::vector<Scalar> overburdenPressure_;
-    std::vector<Scalar> polymerConcentration_;
-    std::vector<Scalar> polymerMoleWeight_; // polymer molecular weight
     std::vector<Scalar> solventSaturation_;
     std::vector<Scalar> microbialConcentration_;
     std::vector<Scalar> oxygenConcentration_;

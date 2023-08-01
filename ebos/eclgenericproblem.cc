@@ -113,12 +113,10 @@ serializationTestObject(const EclipseState& eclState,
 {
     EclGenericProblem result(eclState, schedule, gridView);
     result.maxOilSaturation_ = {1.0, 2.0};
-    result.maxPolymerAdsorption_ = {3.0, 4.0, 5.0};
+    result.polymer_ = PolymerSolutionContainer<Scalar>::serializationTestObject();
     result.maxWaterSaturation_ = {6.0};
     result.minOilPressure_ = {7.0, 8.0, 9.0, 10.0};
     result.overburdenPressure_ = {11.0};
-    result.polymerConcentration_ = {12.0};
-    result.polymerMoleWeight_ = {13.0, 14.0};
     result.solventSaturation_ = {15.0};
     result.microbialConcentration_ = {16.0};
     result.oxygenConcentration_ = {17.0};
@@ -575,16 +573,16 @@ readBlackoilExtentionsInitialConditions_(size_t numDof,
 
     if (enablePolymer) {
         if (eclState_.fieldProps().has_double("SPOLY"))
-            polymerConcentration_ = eclState_.fieldProps().get_double("SPOLY");
+            polymer_.concentration = eclState_.fieldProps().get_double("SPOLY");
         else
-            polymerConcentration_.resize(numDof, 0.0);
+            polymer_.concentration.resize(numDof, 0.0);
     }
 
     if (enablePolymerMolarWeight) {
         if (eclState_.fieldProps().has_double("SPOLYMW"))
-            polymerMoleWeight_ = eclState_.fieldProps().get_double("SPOLYMW");
+            polymer_.moleWeight = eclState_.fieldProps().get_double("SPOLYMW");
         else
-            polymerMoleWeight_.resize(numDof, 0.0);
+            polymer_.moleWeight.resize(numDof, 0.0);
     }
 
     if (enableMICP) {
@@ -671,20 +669,22 @@ template<class GridView, class FluidSystem, class Scalar>
 Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
 polymerConcentration(unsigned elemIdx) const
 {
-    if (polymerConcentration_.empty())
+    if (polymer_.concentration.empty()) {
         return 0;
+    }
 
-    return polymerConcentration_[elemIdx];
+    return polymer_.concentration[elemIdx];
 }
 
 template<class GridView, class FluidSystem, class Scalar>
 Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
 polymerMolecularWeight(const unsigned elemIdx) const
 {
-    if (polymerMoleWeight_.empty())
+    if (polymer_.moleWeight.empty()) {
         return 0.0;
+    }
 
-    return polymerMoleWeight_[elemIdx];
+    return polymer_.moleWeight[elemIdx];
 }
 
 template<class GridView, class FluidSystem, class Scalar>
@@ -781,10 +781,11 @@ template<class GridView, class FluidSystem, class Scalar>
 Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
 maxPolymerAdsorption(unsigned elemIdx) const
 {
-    if (maxPolymerAdsorption_.empty())
+    if (polymer_.maxAdsorption.empty()) {
         return 0;
+    }
 
-    return maxPolymerAdsorption_[elemIdx];
+    return polymer_.maxAdsorption[elemIdx];
 }
 
 template<class GridView, class FluidSystem, class Scalar>
@@ -817,12 +818,10 @@ bool EclGenericProblem<GridView,FluidSystem,Scalar>::
 operator==(const EclGenericProblem& rhs) const
 {
     return this->maxOilSaturation_ == rhs.maxOilSaturation_ &&
-           this->maxPolymerAdsorption_ == rhs.maxPolymerAdsorption_ &&
            this->maxWaterSaturation_ == rhs.maxWaterSaturation_ &&
            this->minOilPressure_ == rhs.minOilPressure_ &&
            this->overburdenPressure_ == rhs.overburdenPressure_ &&
-           this->polymerConcentration_ == rhs.polymerConcentration_ &&
-           this->polymerMoleWeight_ == rhs.polymerMoleWeight_ &&
+           this->polymer_ == rhs.polymer_ &&
            this->solventSaturation_ == rhs.solventSaturation_ &&
            this->microbialConcentration_ == rhs.microbialConcentration_ &&
            this->oxygenConcentration_ == rhs.oxygenConcentration_ &&
