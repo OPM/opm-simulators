@@ -43,6 +43,8 @@
 #include <ebos/alucartesianindexmapper.hh>
 #endif // HAVE_DUNE_ALUGRID
 
+#include <opm/grid/polyhedralgrid.hh>
+
 namespace Opm {
 namespace detail {
 
@@ -387,7 +389,7 @@ using CommunicationType = Dune::CollectiveCommunication<int>;
             const std::vector<Well>&, \
             const std::vector<int>&, \
             const size_t, const bool);
-
+using PolyHedralGrid3D = Dune::PolyhedralGrid<3, 3>;
 #if HAVE_DUNE_ALUGRID
 #if HAVE_MPI
     using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
@@ -398,11 +400,13 @@ using CommunicationType = Dune::CollectiveCommunication<int>;
     template struct BdaSolverInfo<BM<Dim>,BV<Dim>>; \
     INSTANCE_GRID(Dim,Dune::CpGrid) \
     INSTANCE_GRID(Dim,ALUGrid3CN) \
+    INSTANCE_GRID(Dim,PolyHedralGrid3D) \
     INSTANCE_FLEX(Dim)
 #else
 #define INSTANCE(Dim) \
     template struct BdaSolverInfo<BM<Dim>,BV<Dim>>; \
     INSTANCE_GRID(Dim,Dune::CpGrid) \
+    INSTANCE_GRID(Dim,PolyHedralGrid3D)  \
     INSTANCE_FLEX(Dim)
 #endif
 #else

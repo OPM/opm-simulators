@@ -18,6 +18,11 @@
 */
 #include "config.h"
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/grid/polyhedralgrid.hh>
+#include <ebos/eclpolyhedralgridvanguard.hh>
+#include <ebos/equil/initstateequil_impl.hh>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 
 namespace Opm {
 namespace Properties {
@@ -26,9 +31,33 @@ namespace Properties {
             using InheritsFrom = std::tuple<EclFlowProblem>;
         };
     }
-}
 
-int flowEbosBlackoilPolyMain(int argc, char** argv)
+    template<class TypeTag>
+    struct Linearizer<TypeTag, TTag::EclFlowProblemPoly> { using type = TpfaLinearizer<TypeTag>; };
+
+    template<class TypeTag>
+    struct LocalResidual<TypeTag, TTag::EclFlowProblemPoly> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+    template<class TypeTag>
+    struct EnableDiffusion<TypeTag, TTag::EclFlowProblemPoly> { static constexpr bool value = false; };
+
+    template<class TypeTag>
+    struct Grid<TypeTag, TTag::EclFlowProblemPoly> {
+        using type = Dune::PolyhedralGrid<3, 3>;
+    };
+    template<class TypeTag>
+    struct EquilGrid<TypeTag, TTag::EclFlowProblemPoly> {
+        //using type = Dune::CpGrid;
+        using type = GetPropType<TypeTag, Properties::Grid>;
+    };
+
+    template<class TypeTag>
+    struct Vanguard<TypeTag, TTag::EclFlowProblemPoly> {
+        using type = Opm::EclPolyhedralGridVanguard<TypeTag>;
+    };
+}
+}
+int main(int argc, char** argv)
 {
     using TypeTag = Opm::Properties::TTag::EclFlowProblemPoly;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
@@ -36,6 +65,4 @@ int flowEbosBlackoilPolyMain(int argc, char** argv)
     // Destruct mainObject as the destructor calls MPI_Finalize!
     mainObject.reset();
     return ret;
-}
-
 }

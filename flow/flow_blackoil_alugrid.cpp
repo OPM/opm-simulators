@@ -18,7 +18,8 @@
 */
 #include "config.h"
 #include <opm/simulators/flow/Main.hpp>
-
+#include <dune/alugrid/grid.hh>
+#include <ebos/eclalugridvanguard.hh>
 namespace Opm {
 namespace Properties {
 namespace TTag {
@@ -26,6 +27,21 @@ struct EclFlowProblemAlugrid {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
+
+template<class TypeTag>
+struct Grid<TypeTag, TTag::EclFlowProblemAlugrid> {
+    static const int dim = 3;
+    using type = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming,Dune::ALUGridMPIComm>;
+};
+// alugrid need cp grid as equilgrid
+template<class TypeTag>
+struct EquilGrid<TypeTag, TTag::EclFlowProblemAlugrid> {
+    using type = Dune::CpGrid;
+};
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::EclFlowProblemAlugrid> {
+    using type = Opm::EclAluGridVanguard<TypeTag>;
+};
 template<class TypeTag>
 struct EclEnableAquifers<TypeTag, TTag::EclFlowProblemAlugrid> {
     static constexpr bool value = false;
