@@ -208,8 +208,8 @@ public:
         this->doLoadBalance_(this->edgeWeightsMethod(), this->ownersFirst(),
                              this->serialPartitioning(), this->enableDistributedWells(),
                              this->zoltanImbalanceTol(), this->gridView(),
-                             this->schedule(), this->centroids_,
-                             this->eclState(), this->parallelWells_, this->numJacobiBlocks());
+                             this->schedule(), this->eclState(),
+                             this->parallelWells_, this->numJacobiBlocks());
 #endif
 
         this->updateGridView_();
