@@ -131,7 +131,6 @@ protected:
                         const double                            zoltanImbalanceTol,
                         const GridView&                         gridView,
                         const Schedule&                         schedule,
-                        std::vector<double>&                    centroids,
                         EclipseState&                           eclState,
                         EclGenericVanguard::ParallelWellStruct& parallelWells,
                         const int                               numJacobiBlocks);
@@ -149,7 +148,6 @@ private:
                         const bool                              loadBalancerSet,
                         const std::vector<double>&              faceTrans,
                         const std::vector<Well>&                wells,
-                        std::vector<double>&                    centroids,
                         EclipseState&                           eclState,
                         EclGenericVanguard::ParallelWellStruct& parallelWells);
 
@@ -161,7 +159,6 @@ private:
                         const bool                              loadBalancerSet,
                         const std::vector<double>&              faceTrans,
                         const std::vector<Well>&                wells,
-                        std::vector<double>&                    centroids,
                         ParallelEclipseState*                   eclState,
                         EclGenericVanguard::ParallelWellStruct& parallelWells);
 

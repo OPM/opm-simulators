@@ -143,8 +143,8 @@ public:
         this->doLoadBalance_(this->edgeWeightsMethod(), this->ownersFirst(),
                              this->serialPartitioning(), this->enableDistributedWells(),
                              this->zoltanImbalanceTol(), this->gridView(),
-                             this->schedule(), this->centroids_,
-                             this->eclState(), this->parallelWells_, this->numJacobiBlocks());
+                             this->schedule(), this->eclState(),
+                             this->parallelWells_, this->numJacobiBlocks());
 #endif
 
         this->updateGridView_();
@@ -160,7 +160,7 @@ public:
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const {
          return elemIndex;
      }
- 
+
     unsigned int gridIdxToEquilGridIdx(unsigned int elemIndex) const {
         return elemIndex;
     }

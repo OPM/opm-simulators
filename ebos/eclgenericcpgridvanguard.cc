@@ -31,7 +31,7 @@
 
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
-#include <opm/simulators/utils/PropsCentroidsDataHandle.hpp>
+#include <opm/simulators/utils/PropsDataHandle.hpp>
 #include <opm/simulators/utils/SetupZoltanParams.hpp>
 
 #include <opm/grid/cpgrid/GridHelpers.hpp>
@@ -94,7 +94,6 @@ doLoadBalance_(const Dune::EdgeWeightMethod            edgeWeightsMethod,
                const double                            zoltanImbalanceTol,
                const GridView&                         gridView,
                const Schedule&                         schedule,
-               std::vector<double>&                    centroids,
                EclipseState&                           eclState1,
                EclGenericVanguard::ParallelWellStruct& parallelWells,
                const int                               numJacobiBlocks)
@@ -143,7 +142,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod            edgeWeightsMethod,
             this->distributeGrid(edgeWeightsMethod, ownersFirst,
                                  serialPartitioning, enableDistributedWells,
                                  zoltanImbalanceTol, loadBalancerSet != 0,
-                                 faceTrans, wells, centroids,
+                                 faceTrans, wells,
                                  eclState1, parallelWells);
         }
 
@@ -230,7 +229,6 @@ distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
                const bool                              loadBalancerSet,
                const std::vector<double>&              faceTrans,
                const std::vector<Well>&                wells,
-               std::vector<double>&                    centroids,
                EclipseState&                           eclState1,
                EclGenericVanguard::ParallelWellStruct& parallelWells)
 {
@@ -240,7 +238,7 @@ distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
         this->distributeGrid(edgeWeightsMethod, ownersFirst,
                              serialPartitioning, enableDistributedWells,
                              zoltanImbalanceTol, loadBalancerSet, faceTrans,
-                             wells, centroids, eclState, parallelWells);
+                             wells, eclState, parallelWells);
     }
     else {
         const auto message = std::string {
@@ -267,20 +265,14 @@ distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
                const bool                              loadBalancerSet,
                const std::vector<double>&              faceTrans,
                const std::vector<Well>&                wells,
-               std::vector<double>&                    centroids,
                ParallelEclipseState*                   eclState,
                EclGenericVanguard::ParallelWellStruct& parallelWells)
 {
     OPM_TIMEBLOCK(gridDistribute);
     const auto isIORank = this->grid_->comm().rank() == 0;
 
-    const auto* eclGrid = isIORank
-        ? &eclState->getInputGrid()
-        : nullptr;
-
-    PropsCentroidsDataHandle<Dune::CpGrid> handle {
-        *this->grid_, *eclState, eclGrid, centroids,
-        this->cartesianIndexMapper()
+    PropsDataHandle<Dune::CpGrid> handle {
+        *this->grid_, *eclState
     };
 
     const auto addCornerCells = false;

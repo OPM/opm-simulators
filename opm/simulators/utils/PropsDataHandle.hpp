@@ -1,5 +1,5 @@
 /*
-  Copyright 2020 Equinor AS.
+  Copyright 2020, 2023 Equinor AS.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -17,14 +17,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 /*!
- * \file FieldPropsDatahandle.hpp
+ * \file PropsDatahandle.hpp
  * \brief File containing a data handle for communicating the FieldProperties
  *
  * \author Markus Blatt, OPM-OP AS
  */
 
-#ifndef PROPS_CENTROIDS_DATAHANDLE_HPP
-#define PROPS_CENTROIDS_DATAHANDLE_HPP
+#ifndef PROPS_DATAHANDLE_HPP
+#define PROPS_DATAHANDLE_HPP
 
 #if HAVE_MPI
 
@@ -43,13 +43,13 @@ namespace Opm
 {
 
 /*!
- * \brief A Data handle to communicate the field properties and cell centroids during load balance.
+ * \brief A Data handle to communicate the field properties during load balance.
  * \tparam Grid The type of grid where the load balancing is happening.
  * \todo Maybe specialize this for CpGrid to save some space, later.
  */
 template<class Grid>
-class PropsCentroidsDataHandle
-    : public Dune::CommDataHandleIF< PropsCentroidsDataHandle<Grid>, double>
+class PropsDataHandle
+    : public Dune::CommDataHandleIF< PropsDataHandle<Grid>, double>
 {
 public:
     //! \brief the data type we send (ints are converted to double)
@@ -59,18 +59,9 @@ public:
     //! \param grid The grid where the loadbalancing is happening.
     //! \param globalProps The field properties of the global grid
     //! \param distributedProps The distributed field properties
-    //! \param eclGridOnRoot A pointer to eclipse grid on rank zero,
-    //!                      nullptr otherwise.
-    //! \param centroids Array to store the centroids in upon destruction
-    //!                  of the object.
-    //! \param cartMapper The cartesian index mapper of the grid.
-    PropsCentroidsDataHandle(const Grid& grid, ParallelEclipseState& eclState,
-                             const EclipseGrid* eclGridOnRoot,
-                             std::vector<double>& centroids,
-                             const typename Dune::CartesianIndexMapper<Grid>& cartMapper)
+    PropsDataHandle(const Grid& grid, ParallelEclipseState& eclState)
         : m_grid(grid),
-          m_distributed_fieldProps(eclState.m_fieldProps),
-          m_centroids(centroids)
+          m_distributed_fieldProps(eclState.m_fieldProps)
     {
         // Scatter the keys
         const Parallel::Communication comm = m_grid.comm();
@@ -85,7 +76,7 @@ public:
         EclMpiSerializer ser(comm);
         ser.broadcast(*this);
 
-        m_no_data = m_intKeys.size() + m_doubleKeys.size() + Grid::dimensionworld;
+        m_no_data = m_intKeys.size() + m_doubleKeys.size();
 
         if (comm.rank() == 0) {
             const FieldPropsManager& globalProps = eclState.globalFieldProps();
@@ -118,16 +109,11 @@ public:
                     data.emplace_back(fieldData.data[index],
                                       static_cast<unsigned char>(fieldData.value_status[index]));
                 }
-
-                auto cartIndex = cartMapper.cartesianIndex(index);
-                const auto& center = eclGridOnRoot->getCellCenter(cartIndex);
-                for (int dim = 0; dim < Grid::dimensionworld; ++dim)
-                    data.emplace_back(center[dim], '1'); // write garbage for value_status
             }
         }
     }
 
-    ~PropsCentroidsDataHandle()
+    ~PropsDataHandle()
     {
         // distributed grid is now correctly set up.
         for (const auto& intKey : m_intKeys)
@@ -141,8 +127,6 @@ public:
             m_distributed_fieldProps.m_doubleProps[doubleKey].data.resize(m_grid.size(0));
             m_distributed_fieldProps.m_doubleProps[doubleKey].value_status.resize(m_grid.size(0));
         }
-
-        m_centroids.resize(m_grid.size(0) * Grid::dimensionworld);
 
         // copy data for the persistent mao to the field properties
         const auto& idSet = m_grid.localIdSet();
@@ -172,11 +156,6 @@ public:
                 m_distributed_fieldProps.m_doubleProps[doubleKey].data[index] = pair.first;
                 m_distributed_fieldProps.m_doubleProps[doubleKey].value_status[index] = static_cast<value::status>(pair.second);
             }
-
-            auto centroidIter = m_centroids.begin() + Grid::dimensionworld * index;
-            auto centroidIterEnd = centroidIter + Grid::dimensionworld;
-            for ( ; centroidIter != centroidIterEnd; ++centroidIter )
-                *centroidIter = data->second[counter++].first; // value_status discarded
         }
     }
 
@@ -244,13 +223,10 @@ private:
     ///
     /// each entry is a pair of data and value_status.
     std::unordered_map<typename LocalIdSet::IdType, std::vector<std::pair<double,unsigned char> > > elementData_;
-    /// \brief The cell centroids of the distributed grid.
-    std::vector<double>& m_centroids;
     /// \brief The amount of data to send for each element
     std::size_t m_no_data;
 };
 
 } // end namespace Opm
 #endif // HAVE_MPI
-#endif // PROPS_CENTROIDS_DATAHANDLE_HPP
-
+#endif // PROPS_DATAHANDLE_HPP

@@ -513,7 +513,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/moduleVersion.hpp
   opm/simulators/utils/ParallelEclipseState.hpp
   opm/simulators/utils/ParallelRestart.hpp
-  opm/simulators/utils/PropsCentroidsDataHandle.hpp
+  opm/simulators/utils/PropsDataHandle.hpp
   opm/simulators/utils/SerializationPackers.hpp
   opm/simulators/utils/VectorVectorDataHandle.hpp
   opm/simulators/utils/PressureAverage.hpp
