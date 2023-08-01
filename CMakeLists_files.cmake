@@ -361,7 +361,38 @@ list (APPEND TEST_DATA_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
+  ebos/alucartesianindexmapper.hh
+  ebos/collecttoiorank.hh
+  ebos/ebos.hh
+  ebos/eclactionhandler.hh
+  ebos/eclalugridvanguard.hh
+  ebos/eclbaseaquifermodel.hh
+  ebos/eclbasevanguard.hh
+  ebos/eclcpgridvanguard.hh
+  ebos/ecldummygradientcalculator.hh
+  ebos/eclequilinitializer.hh
+  ebos/eclfluxmodule.hh
+  ebos/eclgenericcpgridvanguard.hh
+  ebos/eclgenericoutputblackoilmodule.hh
+  ebos/eclgenericproblem.hh
+  ebos/eclgenericthresholdpressure.hh
+  ebos/eclgenerictracermodel.hh
+  ebos/eclgenerictracermodel_impl.hh
+  ebos/eclgenericvanguard.hh
+  ebos/eclgenericwriter.hh
   ebos/eclinterregflows.hh
+  ebos/eclmpiserializer.hh
+  ebos/eclnewtonmethod.hh
+  ebos/ecloutputblackoilmodule.hh
+  ebos/eclpolyhedralgridvanguard.hh
+  ebos/eclproblem.hh
+  ebos/eclthresholdpressure.hh
+  ebos/ecltracermodel.hh
+  ebos/ecltransmissibility.hh
+  ebos/eclwriter.hh
+  ebos/femcpgridcompat.hh
+  ebos/hdf5serializer.hh
+  ebos/vtkecltracermodule.hh
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/BlackoilModelEbos.hpp
   opm/simulators/flow/BlackoilModelEbosNldd.hpp
