@@ -118,6 +118,26 @@ public:
         }
     }
 
+    //! \brief Reads the configured boundary conditions from eclipse state.
+    void readInitialCondition(EclMaterialLawManager& materialLawManager,
+                              const Simulator& simulator,
+                              const std::size_t numGridDof,
+                              const std::function<int(int)> pvtRegionIndex)
+    {
+        const auto& eclState = simulator.vanguard().eclState();
+
+        if (eclState.getInitConfig().hasEquil()) {
+            this->readEquilInitialCondition_(materialLawManager,
+                                             simulator,
+                                             numGridDof);
+        } else {
+            this->readExplicitInitialCondition_(eclState.fieldProps(),
+                                                materialLawManager,
+                                                numGridDof,
+                                                pvtRegionIndex);
+        }
+    }
+
     //! \brief Calculate equilibrium boundary conditions.
     void readEquilInitialCondition_(EclMaterialLawManager& materialLawManager,
                                     const Simulator& simulator,

@@ -2070,27 +2070,19 @@ protected:
 
     void readInitialCondition_()
     {
-        const auto& simulator = this->simulator();
-        const auto& vanguard = simulator.vanguard();
-        const auto& eclState = vanguard.eclState();
+        bcic_.readInitialCondition(*materialLawManager_,
+                                   this->simulator(),
+                                   this->model().numGridDof(),
+                                   [this](const unsigned idx)
+                                   { return this->pvtRegionIndex(idx); });
 
-        if (eclState.getInitConfig().hasEquil())
-            bcic_.readEquilInitialCondition_(*materialLawManager_,
-                                             this->simulator(),
-                                             this->model().numGridDof());
-        else
-            bcic_.readExplicitInitialCondition_(eclState.fieldProps(),
-                                                *materialLawManager_,
-                                                this->model().numGridDof(),
-                                                [this](const unsigned idx)
-                                                { return this->pvtRegionIndex(idx); });
-
-        if constexpr (enableSolvent || enablePolymer || enablePolymerMolarWeight || enableMICP)
+        if constexpr (enableSolvent || enablePolymer || enablePolymerMolarWeight || enableMICP) {
             this->readBlackoilExtentionsInitialConditions_(this->model().numGridDof(),
                                                            enableSolvent,
                                                            enablePolymer,
                                                            enablePolymerMolarWeight,
                                                            enableMICP);
+        }
 
         //initialize min/max values
         std::size_t numElems = this->model().numGridDof();
@@ -2103,8 +2095,6 @@ protected:
             if (!this->minOilPressure_.empty())
                 this->minOilPressure_[elemIdx] = std::min(this->minOilPressure_[elemIdx], fs.pressure(oilPhaseIdx));
         }
-
-
     }
 
     void readEclRestartSolution_()
