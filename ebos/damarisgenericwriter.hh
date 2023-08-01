@@ -28,7 +28,7 @@
 #ifndef EWOMS_DAMARIS_GENERIC_WRITER_HH
 #define EWOMS_DAMARIS_GENERIC_WRITER_HH
 
-#ifdef HAVE_DAMARIS
+#if HAVE_DAMARIS
 
 #include "collecttoiorank.hh"
 #include <ebos/ecltransmissibility.hh>

@@ -128,21 +128,23 @@ namespace Opm::GridDataOutput
      /**
        Checks for cells that have polyhedral type within the current partition of cells
        
-       returns true if a polyhedral sell is found. If this is the case then this partition 
+       returns true if a polyhedral cell is found. If this is the case then this partition 
        is not going to be available for visualisation as this class does not yet handle 
        polyhedral cells.
     */
     bool polyhedralCellPresent() 
     {
-        for (const auto& cit :  elements(gridView_, dunePartition_))
-        {       
-            auto  corner_geom = cit.geometry() ;
-            if( Dune::VTK::geometryType( corner_geom.type() ) == Dune::VTK::polyhedron )
-            {
-                return true ;
+        if constexpr (std::is_same_v<typename GridView::Grid, Dune::CpGrid>) {
+            return false;
+        } else {
+            for (const auto& cit : elements(gridView_, dunePartition_)) {
+                auto corner_geom = cit.geometry();
+                if (Dune::VTK::geometryType(corner_geom.type()) == Dune::VTK::polyhedron) {
+                    return true;
+                }
             }
-       } 
-       return false;
+        }
+        return false;
     }
 
 

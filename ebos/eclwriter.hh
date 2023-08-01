@@ -112,7 +112,7 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
     
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper< GridView > VertexMapper;
+    using VertexMapper = Dune::MultipleCodimMultipleGeomTypeMapper< GridView >;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
@@ -129,7 +129,7 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEsmry,
                              "Write ESMRY file for fast loading of summary data.");
                              
-#ifdef HAVE_DAMARIS
+#if HAVE_DAMARIS
    //     EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDamarisOutputCollective,
     //                         "Write output via Damaris using parallel HDF5 to get single file per timestep instead of one per Damaris core.");
 #endif                             

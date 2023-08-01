@@ -365,6 +365,8 @@ list (APPEND TEST_DATA_FILES
 list (APPEND PUBLIC_HEADER_FILES
   ebos/alucartesianindexmapper.hh
   ebos/collecttoiorank.hh
+  ebos/damarisgenericwriter.hh
+  ebos/damariswriter.hh
   ebos/ebos.hh
   ebos/eclactionhandler.hh
   ebos/eclalugridvanguard.hh

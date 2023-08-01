@@ -225,7 +225,7 @@ template class DamarisGenericWriter<Dune::CpGrid,
                                 double>;
 
 
-#ifdef HAVE_DUNE_ALUGRID
+#if HAVE_DUNE_ALUGRID
 #if HAVE_MPI
     using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridMPIComm>;
 #else

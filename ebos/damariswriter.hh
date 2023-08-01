@@ -28,7 +28,7 @@
 #ifndef EWOMS_DAMARIS_WRITER_HH
 #define EWOMS_DAMARIS_WRITER_HH
 
-#ifdef HAVE_DAMARIS
+#if HAVE_DAMARIS
 #include <ebos/collecttoiorank.hh>
 #include <ebos/damarisgenericwriter.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
@@ -53,6 +53,7 @@
 #include <opm/simulators/utils/GridDataOutput.hpp>
 #include <damaris/util/DamarisGeometryData.hpp>
 
+#include <fmt/format.h>
 
 namespace Opm::Properties {
 
@@ -83,7 +84,7 @@ namespace Opm {
  * Caveats:
  * - The only DUNE grid which is currently supported is Dune::CpGrid
  *   from the OPM module "opm-grid". Using another grid won't
- *   fail at compile time but you will provoke a fatal exception
+ *   fail at compile time but you will provoke a fatal exception.
  * - This class requires to use the black oil model with the element
  *   centered finite volume discretization.
  */
@@ -109,7 +110,7 @@ class DamarisWriter : public DamarisGenericWriter<GetPropType<TypeTag, Propertie
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
     using BaseType = DamarisGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
     
-    typedef Dune::MultipleCodimMultipleGeomTypeMapper< GridView > VertexMapper;
+    using VertexMapper = Dune::MultipleCodimMultipleGeomTypeMapper< GridView >;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
@@ -218,24 +219,15 @@ public:
     {
         OPM_TIMEBLOCK(writeOutput);
         const int reportStepNum = simulator_.episodeIndex() + 1;
-        std::cout << "INFO: damarisWriter_->writeOutput() prepareLocalCellData being called " << std::endl ;
-        
-        if (!isSubStep)
-            this->damarisOutputModule_->invalidateLocalData() ;  // <jcb> added this as localCellData was not being written
-        this->prepareLocalCellData(isSubStep, reportStepNum);
-        this->damarisOutputModule_->outputErrorLog(simulator_.gridView().comm());
-
-        // output using eclWriter if enabled
-       
+        OpmLog::debug("Writing output using Damaris.");
         //    The damarisWriter is not outputing well or aquifer data (yet)
-            auto localWellData = simulator_.problem().wellModel().wellData(); // data::Well
-            auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
-            auto localWellTestState = simulator_.problem().wellModel().wellTestState();
-            auto flowsn = this->damarisOutputModule_->getFlowsn();
-            const bool isFlowsn = this->damarisOutputModule_->hasFlowsn();
-            auto floresn = this->damarisOutputModule_->getFloresn();
-            const bool isFloresn = this->damarisOutputModule_->hasFloresn();
-        
+        auto localWellData = simulator_.problem().wellModel().wellData(); // data::Well
+        auto localAquiferData = simulator_.problem().aquiferModel().aquiferData();
+        auto localWellTestState = simulator_.problem().wellModel().wellTestState();
+        auto flowsn = this->damarisOutputModule_->getFlowsn();
+        const bool isFlowsn = this->damarisOutputModule_->hasFlowsn();
+        auto floresn = this->damarisOutputModule_->getFloresn();
+        const bool isFloresn = this->damarisOutputModule_->hasFloresn();
         
         // auto localWellData = simulator_.problem().wellModel().wellData(); // data::Well
         // data::Solution localCellData = {};
@@ -258,7 +250,7 @@ public:
            // std::map<std::string, data::CellData>
           const std::string name = damVar.first ;
           data::CellData  dataCol = damVar.second ;
-          std::cout << "Name of Damaris Varaiable       : (" << rank_ << ")  "  << name << "  Size : "  << dataCol.data.size() <<  std::endl ;  // dataCol.data().size()
+          OpmLog::debug(fmt::format("Name of Damaris Variable       : ({})  {}  Size : {}", rank_, name, dataCol.data.size()));
           
           /*if (name == "PRESSURE") {
               if (dataCol.data.data() != nullptr) {
@@ -276,7 +268,7 @@ public:
           const std::string name = std::get<0>(damVar.first) ;
           const int part = std::get<1>(damVar.first) ;
           double  dataCol = damVar.second ;
-          std::cout << "Name of Damaris Block Varaiable : (" << rank_ << ")  "  << name  << "  part : " << part << "  Value : "  << dataCol <<  std::endl ;  // dataCol.data().size()
+          OpmLog::debug(fmt::format("Name of Damaris Block Variable : ({})  {}  part : {}  Value : {}", rank_, name, part, dataCol));
         }
         
         if (! isSubStep)
@@ -339,8 +331,7 @@ private:
                
                damaris_err_ =  damaris_end_iteration();
                if (damaris_err_ != DAMARIS_OK) {
-                    std::cerr << "ERROR rank =" << rank_ << " : damariswriter::writeDamarisCellDataOutput() : damaris_end_iteration()" 
-                    << ", Damaris error = " <<  damaris_error_string(damaris_err_) << std::endl ;
+                   OpmLog::error(fmt::format("Damaris output error on rank {} : {}", rank_, damaris_error_string(damaris_err_)));
                }
             }
         }
@@ -364,8 +355,7 @@ private:
         }
         
         if (damaris_err_ != DAMARIS_OK) {
-            std::cerr << "ERROR rank =" << rank_ << " : eclwrite::writeOutput() : damaris_write(\"GLOBAL_CELL_INDEX\", local_to_global.data())" 
-                  << ", Damaris error = " <<  damaris_error_string(damaris_err_) << std::endl ;
+            OpmLog::error(fmt::format("Damaris output error on rank {} when writing GLOBAL_CELL_INDEX", rank_));
         }
     }
     
@@ -382,7 +372,7 @@ private:
             const int numElements = std::distance(interior_elements.begin(), interior_elements.end());
             // Sets the damaris parameter values which then defines sizes of the arrays per-rank and globally.
             // Also sets the offsets to where a ranks array data sits within the global array. 
-            // This is usefull for HDF5 output and for defining distributed arrays in Dask.
+            // This is useful for HDF5 output and for defining distributed arrays in Dask.
             Opm::DamarisOutput::setupDamarisWritingPars(simulator_.vanguard().grid().comm(), numElements);
             
             Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::Partitions::interior) ; // N.B. we cannot reuse the same object using a different partition.
@@ -394,7 +384,7 @@ private:
                
                 const bool hasPolyCells = geomData.polyhedralCellPresent() ;
                 if ( hasPolyCells ) {
-                    std::cout << "The DUNE geometry grid has polyhedral elements - currently not supported by Damaris " << std::endl ;
+                    OpmLog::error("The grid has polyhedral elements - currently not supported by Damaris.");
                 } 
                 damarisMeshVars.set_hasPolyhedralCells(hasPolyCells) ;
                
@@ -511,7 +501,7 @@ private:
             //this-SetGlobalIndexForDamaris() ;
               
           
-            // Currently by default we assume static grid (unchanging through the simulation)
+            // Currently by default we assume static grid (not changing throughout the simulation)
             // Set damarisUpdate_ to true if we want to update the geometry to sent to Damaris 
             this->damarisUpdate_ = false; 
         }// end of if (this->damarisUpdate_)
@@ -526,7 +516,7 @@ private:
         if (damarisOutputModule_->localDataValid()) {
             return;
         }
-        std::cout << "INFO: damarisWriter_->prepareLocalCellData()  got past localDataValid() " << std::endl ;
+        // std::cout << "INFO: damarisWriter_->prepareLocalCellData()  got past localDataValid() " << std::endl ;
 
         const auto& gridView = simulator_.vanguard().gridView();
         const int numElements = gridView.size(/*codim=*/0);
