@@ -42,6 +42,7 @@
 #include <ebos/eclgenericproblem.hh>
 #include <ebos/eclnewtonmethod.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
+#include <ebos/eclproblem_bcic.hh>
 #include <ebos/eclproblem_properties.hh>
 #include <ebos/eclthresholdpressure.hh>
 #include <ebos/ecltransmissibility.hh>
@@ -1144,7 +1145,7 @@ public:
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+        return bcic_.initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
 
@@ -1152,7 +1153,7 @@ public:
     {
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
-         return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+         return bcic_.initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
     const SolidEnergyLawParams&
@@ -1193,7 +1194,8 @@ public:
             // flow due to a temerature gradient while assuming no-flow for mass
             unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
             unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
-            values.setThermalFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
+            values.setThermalFlow(context, spaceIdx, timeIdx,
+                                  bcic_.initialFluidState(globalDofIdx));
         }
 
         if (nonTrivialBoundaryConditions()) {
@@ -1296,7 +1298,7 @@ public:
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
 
         values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
-        values.assignNaive(initialFluidStates_[globalDofIdx]);
+        values.assignNaive(bcic_.initialFluidState(globalDofIdx));
 
         SolventModule::assignPrimaryVars(values, this->solventSaturation_[globalDofIdx], this->solventRsw_[globalDofIdx]);
 
@@ -1308,10 +1310,10 @@ public:
 
         if constexpr (enableBrine) {
             if (enableSaltPrecipitation && values.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
-                values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltSaturation();
+                values[Indices::saltConcentrationIdx] = bcic_.initialFluidState(globalDofIdx).saltSaturation();
             }
             else {
-                values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltConcentration();
+                values[Indices::saltConcentrationIdx] = bcic_.initialFluidState(globalDofIdx).saltConcentration();
             }
         }
 
@@ -1456,7 +1458,7 @@ public:
 
     // temporary solution to facilitate output of initial state from flow
     const InitialFluidState& initialFluidState(unsigned globalDofIdx) const
-    { return initialFluidStates_[globalDofIdx]; }
+    { return bcic_.initialFluidState(globalDofIdx); }
 
     const EclipseIO& eclIO() const
     { return eclWriter_->eclIO(); }
@@ -1468,7 +1470,7 @@ public:
     { return eclWriter_->setSimulationReport(report); }
 
     bool nonTrivialBoundaryConditions() const
-    { return nonTrivialBoundaryConditions_; }
+    { return bcic_.nonTrivialBoundaryConditions_; }
 
     const InitialFluidState boundaryFluidState(unsigned globalDofIdx, const int directionId) const
     {
@@ -1480,7 +1482,7 @@ public:
             // index == 0: no boundary conditions for this
             // global cell and direction
             if (bcindex_(dir)[globalDofIdx] == 0)
-                return initialFluidStates_[globalDofIdx];
+                return bcic_.initialFluidState(globalDofIdx);
 
             const auto& bc = bcprop[bcindex_(dir)[globalDofIdx]];
             if (bc.bctype == BCType::DIRICHLET )
@@ -1524,7 +1526,7 @@ public:
                 else {
                     phaseIndex = waterPhaseIdx;
                 }
-                double pressure = initialFluidStates_[globalDofIdx].pressure(phaseIndex);
+                double pressure = bcic_.initialFluidState(globalDofIdx).pressure(phaseIndex);
                 const auto pressure_input = bc.pressure;
                 if (pressure_input) {
                     pressure = *pressure_input;
@@ -1548,7 +1550,7 @@ public:
                         fluidState.setPressure(phaseIdx, pressure);
                 }
                 
-                double temperature = initialFluidStates_[globalDofIdx].temperature(phaseIndex);
+                double temperature = bcic_.initialFluidState(globalDofIdx).temperature(phaseIndex);
                 const auto temperature_input = bc.temperature;
                 if(temperature_input)
                     temperature = *temperature_input;
@@ -1579,7 +1581,7 @@ public:
                 return fluidState;
             }
         }
-        return initialFluidStates_[globalDofIdx];
+        return bcic_.initialFluidState(globalDofIdx);
     }
 
     /*!
@@ -1644,7 +1646,7 @@ public:
         // water compaction
         assert(!this->rockCompPoroMultWc_.empty());
         LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
-        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+        LhsEval SwDeltaMax = SwMax - bcic_.initialFluidState(elementIdx).saturation(waterPhaseIdx);
 
         return this->rockCompPoroMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
     }
@@ -1683,7 +1685,7 @@ public:
         // water compaction
         assert(!this->rockCompTransMultWc_.empty());
         LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
-        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+        LhsEval SwDeltaMax = SwMax - bcic_.initialFluidState(elementIdx).saturation(waterPhaseIdx);
 
         return this->rockCompTransMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
     }
@@ -1725,7 +1727,7 @@ public:
     std::pair<BCType, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId) const
     {
         OPM_TIMEBLOCK_LOCAL(boundaryCondition);
-        if (!nonTrivialBoundaryConditions_) {
+        if (!nonTrivialBoundaryConditions()) {
             return { BCType::NONE, RateVector(0.0) };
         }
         FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
@@ -2088,7 +2090,7 @@ protected:
         //initialize min/max values
         std::size_t numElems = this->model().numGridDof();
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            const auto& fs = initialFluidStates_[elemIdx];
+            const auto& fs = bcic_.initialFluidState(elemIdx);
             if (!this->maxWaterSaturation_.empty())
                 this->maxWaterSaturation_[elemIdx] = std::max(this->maxWaterSaturation_[elemIdx], fs.saturation(waterPhaseIdx));
             if (!this->maxOilSaturation_.empty())
@@ -2109,9 +2111,9 @@ protected:
         EquilInitializer equilInitializer(simulator, *materialLawManager_);
 
         std::size_t numElems = this->model().numGridDof();
-        initialFluidStates_.resize(numElems);
+        bcic_.initialFluidStates_.resize(numElems);
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto& elemFluidState = initialFluidStates_[elemIdx];
+            auto& elemFluidState = bcic_.initialFluidStates_[elemIdx];
             elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
         }
     }
@@ -2143,7 +2145,7 @@ protected:
         simulator.setTimeStepSize(dt);
 
         std::size_t numElems = this->model().numGridDof();
-        initialFluidStates_.resize(numElems);
+        bcic_.initialFluidStates_.resize(numElems);
         if constexpr (enableSolvent) {
             this->solventSaturation_.resize(numElems, 0.0);
             this->solventRsw_.resize(numElems, 0.0);
@@ -2165,7 +2167,7 @@ protected:
         }
 
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto& elemFluidState = initialFluidStates_[elemIdx];
+            auto& elemFluidState = bcic_.initialFluidStates_[elemIdx];
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
             eclWriter_->eclOutputModule().initHysteresisParams(simulator, elemIdx);
             eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
@@ -2308,7 +2310,7 @@ protected:
 
         std::size_t numDof = this->model().numGridDof();
 
-        initialFluidStates_.resize(numDof);
+        bcic_.initialFluidStates_.resize(numDof);
 
         std::vector<double> waterSaturationData;
         std::vector<double> gasSaturationData;
@@ -2353,7 +2355,7 @@ protected:
 
         // calculate the initial fluid states
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-            auto& dofFluidState = initialFluidStates_[dofIdx];
+            auto& dofFluidState = bcic_.initialFluidStates_[dofIdx];
 
             dofFluidState.setPvtRegionIndex(pvtRegionIndex(dofIdx));
 
@@ -2548,7 +2550,7 @@ private:
         const auto& vanguard = simulator.vanguard();
         const auto& bcconfig = vanguard.eclState().getSimulationConfig().bcconfig();
         if (bcconfig.size() > 0) {
-            nonTrivialBoundaryConditions_ = true;
+            bcic_.nonTrivialBoundaryConditions_ = true;
 
             std::size_t numCartDof = vanguard.cartesianSize();
             unsigned numElems = vanguard.gridView().size(/*codim=*/0);
@@ -2639,7 +2641,7 @@ private:
         for(const auto& elem: elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& dofFluidState = initialFluidStates_[elemIdx];
+            const auto& dofFluidState = bcic_.initialFluidState(elemIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
@@ -2671,7 +2673,7 @@ private:
 
     EclThresholdPressure<TypeTag> thresholdPressures_;
 
-    std::vector<InitialFluidState> initialFluidStates_;
+    EclProblemBCIC<TypeTag> bcic_;
 
     bool enableDriftCompensation_;
     GlobalEqVector drift_;
@@ -2723,7 +2725,6 @@ private:
     };
 
     BCData<int> bcindex_;
-    bool nonTrivialBoundaryConditions_ = false;
 };
 
 } // namespace Opm
