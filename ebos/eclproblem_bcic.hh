@@ -32,8 +32,12 @@
 #include <ebos/ecloutputblackoilmodule.hh>
 #include <ebos/eclsolutioncontainers.hh>
 
+#include <opm/common/TimingMacros.hpp>
+
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+#include <opm/input/eclipse/Schedule/BCProp.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 
 #include <array>
 #include <cassert>
@@ -55,6 +59,7 @@ class EclProblemBCIC
 {
 public:
     using EclMaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
+    using MaterialLawParams = typename EclMaterialLawManager::MaterialLawParams;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using InitialFluidState = typename EclEquilInitializer<TypeTag>::ScalarFluidState;
@@ -208,6 +213,121 @@ public:
                  micp.calciteConcentration[elemIdx] = input.getCalciteConcentration(elemIdx);
             }
         }
+    }
+
+    InitialFluidState boundaryFluidState(unsigned globalDofIdx,
+                                         const int directionId,
+                                         const int pvtRegionIdx,
+                                         const BCProp& bcprop,
+                                         const MaterialLawParams& matParams) const
+    {
+        OPM_TIMEBLOCK_LOCAL(boundaryFluidState);
+        if (bcprop.size() > 0) {
+            FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
+
+            // index == 0: no boundary conditions for this
+            // global cell and direction
+            if (bcindex_(dir)[globalDofIdx] == 0) {
+                return initialFluidState(globalDofIdx);
+            }
+
+            const auto& bc = bcprop[bcindex_(dir)[globalDofIdx]];
+            if (bc.bctype == BCType::DIRICHLET )
+            {
+                InitialFluidState fluidState;
+                fluidState.setPvtRegionIndex(pvtRegionIdx);
+
+                switch (bc.component) {
+                    case BCComponent::OIL:
+                        if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
+                            throw std::logic_error("oil is not active and you're trying to add oil BC");
+
+                        fluidState.setSaturation(FluidSystem::oilPhaseIdx, 1.0);
+                        break;
+                    case BCComponent::GAS:
+                        if (!FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
+                            throw std::logic_error("gas is not active and you're trying to add gas BC");
+
+                        fluidState.setSaturation(FluidSystem::gasPhaseIdx, 1.0);
+                        break;
+                        case BCComponent::WATER:
+                        if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
+                            throw std::logic_error("water is not active and you're trying to add water BC");
+
+                        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 1.0);
+                        break;
+                    case BCComponent::SOLVENT:
+                    case BCComponent::POLYMER:
+                    case BCComponent::NONE:
+                        throw std::logic_error("you need to specify a valid component (OIL, WATER or GAS) when DIRICHLET type is set in BC");
+                        break;
+                }
+                int phaseIndex;
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    phaseIndex = FluidSystem::oilPhaseIdx;
+                }
+                else if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    phaseIndex = FluidSystem::gasPhaseIdx;
+                }
+                else {
+                    phaseIndex = FluidSystem::waterPhaseIdx;
+                }
+                double pressure = initialFluidState(globalDofIdx).pressure(phaseIndex);
+                const auto pressure_input = bc.pressure;
+                if (pressure_input) {
+                    pressure = *pressure_input;
+                }
+
+                std::array<Scalar, FluidSystem::numPhases> pc = {0};
+                MaterialLaw::capillaryPressures(pc, matParams, fluidState);
+                Valgrind::CheckDefined(pressure);
+                Valgrind::CheckDefined(pc);
+                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                    if (!FluidSystem::phaseIsActive(phaseIdx))
+                        continue;
+
+                    if (Indices::oilEnabled)
+                        fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[FluidSystem::oilPhaseIdx]));
+                    else if (Indices::gasEnabled)
+                        fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[FluidSystem::gasPhaseIdx]));
+                    else if (Indices::waterEnabled)
+                        //single (water) phase
+                        fluidState.setPressure(phaseIdx, pressure);
+                }
+
+                double temperature = initialFluidState(globalDofIdx).temperature(phaseIndex);
+                const auto temperature_input = bc.temperature;
+                if (temperature_input) {
+                    temperature = *temperature_input;
+                }
+                fluidState.setTemperature(temperature);
+
+                if (FluidSystem::enableDissolvedGas()) {
+                    fluidState.setRs(0.0);
+                    fluidState.setRv(0.0);
+                }
+                if (FluidSystem::enableDissolvedGasInWater()) {
+                    fluidState.setRsw(0.0);
+                }
+                if (FluidSystem::enableVaporizedWater())
+                    fluidState.setRvw(0.0);
+
+                for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+                    if (!FluidSystem::phaseIsActive(phaseIdx))
+                        continue;
+
+                    const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState, phaseIdx, pvtRegionIdx);
+                    fluidState.setInvB(phaseIdx, b);
+
+                    const auto& rho = FluidSystem::density(fluidState, phaseIdx, pvtRegionIdx);
+                    fluidState.setDensity(phaseIdx, rho);
+
+                }
+                fluidState.checkDefined();
+                return fluidState;
+            }
+        }
+        return initialFluidState(globalDofIdx);
     }
 
     //! \brief Calculate equilibrium boundary conditions.
