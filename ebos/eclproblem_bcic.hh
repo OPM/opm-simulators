@@ -28,9 +28,10 @@
 #ifndef OPM_ECL_PROBLEM_BCIC_HH
 #define OPM_ECL_PROBLEM_BCIC_HH
 
-#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
-
 #include <ebos/eclequilinitializer.hh>
+
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
 #include <array>
 #include <cassert>
@@ -51,6 +52,7 @@ class EclProblemBCIC
 {
 public:
     using InitialFluidState = typename EclEquilInitializer<TypeTag>::ScalarFluidState;
+    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     //! \brief Returns whether or not boundary conditions are trivial.
     bool nonTrivialBoundaryConditions() const
@@ -62,6 +64,48 @@ public:
     const InitialFluidState& initialFluidState(const unsigned idx) const
     {
         return initialFluidStates_[idx];
+    }
+
+    //! \brief Reads boundary conditions from eclipse state.
+    void readBoundaryConditions(const Vanguard& vanguard)
+    {
+        const auto& bcconfig = vanguard.eclState().getSimulationConfig().bcconfig();
+        if (bcconfig.size() > 0) {
+            nonTrivialBoundaryConditions_ = true;
+
+            std::size_t numCartDof = vanguard.cartesianSize();
+            unsigned numElems = vanguard.gridView().size(/*codim=*/0);
+            std::vector<int> cartesianToCompressedElemIdx(numCartDof, -1);
+
+            for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+                cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
+            }
+
+            bcindex_.resize(numElems, 0);
+            auto loopAndApply = [&cartesianToCompressedElemIdx,
+                                 &vanguard](const auto& bcface,
+                                            auto apply)
+            {
+                for (int i = bcface.i1; i <= bcface.i2; ++i) {
+                    for (int j = bcface.j1; j <= bcface.j2; ++j) {
+                        for (int k = bcface.k1; k <= bcface.k2; ++k) {
+                            std::array<int, 3> tmp = {i,j,k};
+                            auto elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
+                            if (elemIdx >= 0) {
+                                apply(elemIdx);
+                            }
+                        }
+                    }
+                }
+            };
+            for (const auto& bcface : bcconfig) {
+                std::vector<int>& data = bcindex_(bcface.dir);
+                const int index = bcface.index;
+                loopAndApply(bcface,
+                             [&data,index](int elemIdx)
+                             { data[elemIdx] = index; });
+            }
+        }
     }
 
     //! \brief Container for boundary conditions.

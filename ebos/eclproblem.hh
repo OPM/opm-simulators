@@ -427,7 +427,7 @@ public:
             this->polymer_.maxAdsorption.resize(numElements, 0.0);
         }
 
-        readBoundaryConditions_();
+        bcic_.readBoundaryConditions(this->simulator().vanguard());
 
         // compute and set eq weights based on initial b values
         computeAndSetEqWeights_();
@@ -2542,47 +2542,6 @@ private:
         };
 
         pffDofData_.update(distFn);
-    }
-
-    void readBoundaryConditions_()
-    {
-        const auto& simulator = this->simulator();
-        const auto& vanguard = simulator.vanguard();
-        const auto& bcconfig = vanguard.eclState().getSimulationConfig().bcconfig();
-        if (bcconfig.size() > 0) {
-            bcic_.nonTrivialBoundaryConditions_ = true;
-
-            std::size_t numCartDof = vanguard.cartesianSize();
-            unsigned numElems = vanguard.gridView().size(/*codim=*/0);
-            std::vector<int> cartesianToCompressedElemIdx(numCartDof, -1);
-
-            for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx)
-                cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
-
-            bcic_.bcindex_.resize(numElems, 0);
-            auto loopAndApply = [&cartesianToCompressedElemIdx,
-                                 &vanguard](const auto& bcface,
-                                            auto apply)
-            {
-                for (int i = bcface.i1; i <= bcface.i2; ++i) {
-                    for (int j = bcface.j1; j <= bcface.j2; ++j) {
-                        for (int k = bcface.k1; k <= bcface.k2; ++k) {
-                            std::array<int, 3> tmp = {i,j,k};
-                            auto elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
-                            if (elemIdx >= 0)
-                                apply(elemIdx);
-                        }
-                    }
-                }
-            };
-            for (const auto& bcface : bcconfig) {
-                std::vector<int>& data = bcic_.bcindex_(bcface.dir);
-                const int index = bcface.index;
-                    loopAndApply(bcface,
-                                 [&data,index](int elemIdx)
-                                 { data[elemIdx] = index; });
-            }
-        }
     }
 
     // this method applies the runtime constraints specified via the deck and/or command
