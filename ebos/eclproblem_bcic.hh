@@ -30,6 +30,7 @@
 
 #include <ebos/eclequilinitializer.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
+#include <ebos/eclproblem_properties.hh>
 #include <ebos/eclsolutioncontainers.hh>
 
 #include <opm/common/TimingMacros.hpp>
@@ -60,6 +61,7 @@ template <class TypeTag>
 class EclProblemBCIC
 {
 public:
+    using BoundaryRateVector = GetPropType<TypeTag, Properties::BoundaryRateVector>;
     using EclMaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
     using MaterialLawParams = typename EclMaterialLawManager::MaterialLawParams;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -73,10 +75,12 @@ public:
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
+    static constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
     static constexpr bool enableMICP = getPropValue<TypeTag, Properties::EnableMICP>();
     static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
     static constexpr bool enablePolymerMW = getPropValue<TypeTag, Properties::EnablePolymerMW>();
     static constexpr bool enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
+    static constexpr bool enableThermalFluxBoundaries = getPropValue<TypeTag, Properties::EnableThermalFluxBoundaries>();
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
     //! \brief Returns whether or not boundary conditions are trivial.
@@ -389,6 +393,62 @@ public:
         return {bc.bctype, rate};
     }
 
+    //! \brief Returns boundary condition for an element.
+    template <class Context>
+    void boundary(BoundaryRateVector& values,
+                  const Context& context,
+                  unsigned spaceIdx,
+                  unsigned timeIdx,
+                  const int pvtRegionIndex,
+                  const BCProp& bcprop,
+                  const MaterialLawParams& matParams) const
+    {
+        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary);
+        if (!context.intersection(spaceIdx).boundary()) {
+            return;
+        }
+
+        if constexpr (!enableEnergy || !enableThermalFluxBoundaries) {
+            values.setNoFlow();
+        } else {
+            // in the energy case we need to specify a non-trivial boundary condition
+            // because the geothermal gradient needs to be maintained. for this, we
+            // simply assume the initial temperature at the boundary and specify the
+            // thermal flow accordingly. in this context, "thermal flow" means energy
+            // flow due to a temerature gradient while assuming no-flow for mass
+            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
+            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
+            values.setThermalFlow(context, spaceIdx, timeIdx,
+                                  this->initialFluidState(globalDofIdx));
+        }
+
+        if (this->nonTrivialBoundaryConditions()) {
+            unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
+            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
+            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
+            const auto [type, massrate] = this->boundaryCondition(globalDofIdx,
+                                                                  indexInInside,
+                                                                  bcprop);
+            if (type == BCType::THERMAL) {
+                values.setThermalFlow(context, spaceIdx, timeIdx,
+                                      this->boundaryFluidState(globalDofIdx,
+                                                               indexInInside,
+                                                               pvtRegionIndex,
+                                                               bcprop,
+                                                               matParams));
+            } else if (type == BCType::FREE || type == BCType::DIRICHLET) {
+                values.setFreeFlow(context, spaceIdx, timeIdx,
+                                   this->boundaryFluidState(globalDofIdx,
+                                                            indexInInside,
+                                                            pvtRegionIndex,
+                                                            bcprop,
+                                                            matParams));
+            } else if (type == BCType::RATE) {
+                values.setMassRate(massrate, pvtRegionIndex);
+            }
+        }
+    }
+
     //! \brief Returns initial condition for an element.
     template <class Context>
     void initial(PrimaryVariables& values,
@@ -437,6 +497,7 @@ public:
         values.checkDefined();
     }
 
+private:
     //! \brief Calculate equilibrium boundary conditions.
     void readEquilInitialCondition_(EclMaterialLawManager& materialLawManager,
                                     const Simulator& simulator,

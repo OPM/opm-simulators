@@ -1179,40 +1179,16 @@ public:
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     {
-        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary);
-        if (!context.intersection(spaceIdx).boundary())
-            return;
-
-        if constexpr (!enableEnergy || !enableThermalFluxBoundaries) {
-            values.setNoFlow();
-        } else {
-            // in the energy case we need to specify a non-trivial boundary condition
-            // because the geothermal gradient needs to be maintained. for this, we
-            // simply assume the initial temperature at the boundary and specify the
-            // thermal flow accordingly. in this context, "thermal flow" means energy
-            // flow due to a temerature gradient while assuming no-flow for mass
-            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
-            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
-            values.setThermalFlow(context, spaceIdx, timeIdx,
-                                  bcic_.initialFluidState(globalDofIdx));
-        }
-
-        if (nonTrivialBoundaryConditions()) {
-            unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
-            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
-            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
-            unsigned pvtRegionIdx = this->pvtRegionIndex(context, spaceIdx, timeIdx);
-            const auto [type, massrate] = this->boundaryCondition(globalDofIdx, indexInInside);
-            if (type == BCType::THERMAL) {
-                values.setThermalFlow(context, spaceIdx, timeIdx,
-                                      this->boundaryFluidState(globalDofIdx, indexInInside));
-            } else if (type == BCType::FREE || type == BCType::DIRICHLET) {
-                values.setFreeFlow(context, spaceIdx, timeIdx,
-                                   this->boundaryFluidState(globalDofIdx, indexInInside));
-            } else if (type == BCType::RATE) {
-                values.setMassRate(massrate, pvtRegionIdx);
-            }
-        }
+        unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
+        unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
+        const auto& sched = this->simulator().vanguard().schedule();
+        bcic_.boundary(values,
+                       context,
+                       spaceIdx,
+                       timeIdx,
+                       this->pvtRegionIndex(context, spaceIdx, timeIdx),
+                       sched[this->episodeIndex()].bcprop,
+                       this->materialLawParams(globalDofIdx));
     }
 
     /*!
@@ -1451,9 +1427,10 @@ public:
     { return eclWriter_->setSimulationReport(report); }
 
     bool nonTrivialBoundaryConditions() const
-    { return bcic_.nonTrivialBoundaryConditions_; }
+    { return bcic_.nonTrivialBoundaryConditions(); }
 
-    InitialFluidState boundaryFluidState(unsigned globalDofIdx, const int directionId) const
+    InitialFluidState boundaryFluidState(unsigned globalDofIdx,
+                                         const int directionId) const
     {
         const auto& sched = this->simulator().vanguard().schedule();
         return bcic_.boundaryFluidState(globalDofIdx,
