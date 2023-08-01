@@ -37,7 +37,6 @@
 #include <ebos/eclbaseaquifermodel.hh>
 #include <ebos/eclcpgridvanguard.hh>
 #include <ebos/ecldummygradientcalculator.hh>
-#include <ebos/eclequilinitializer.hh>
 #include <ebos/eclfluxmodule.hh>
 #include <ebos/eclgenericproblem.hh>
 #include <ebos/eclnewtonmethod.hh>
@@ -2076,7 +2075,9 @@ protected:
         const auto& eclState = vanguard.eclState();
 
         if (eclState.getInitConfig().hasEquil())
-            readEquilInitialCondition_();
+            bcic_.readEquilInitialCondition_(*materialLawManager_,
+                                             this->simulator(),
+                                             this->model().numGridDof());
         else
             readExplicitInitialCondition_();
 
@@ -2100,22 +2101,6 @@ protected:
         }
 
 
-    }
-
-    void readEquilInitialCondition_()
-    {
-        const auto& simulator = this->simulator();
-
-        // initial condition corresponds to hydrostatic conditions.
-        using EquilInitializer = EclEquilInitializer<TypeTag>;
-        EquilInitializer equilInitializer(simulator, *materialLawManager_);
-
-        std::size_t numElems = this->model().numGridDof();
-        bcic_.initialFluidStates_.resize(numElems);
-        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto& elemFluidState = bcic_.initialFluidStates_[elemIdx];
-            elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
-        }
     }
 
     void readEclRestartSolution_()

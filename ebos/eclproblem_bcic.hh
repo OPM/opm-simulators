@@ -51,7 +51,9 @@ template <class TypeTag>
 class EclProblemBCIC
 {
 public:
+    using EclMaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
     using InitialFluidState = typename EclEquilInitializer<TypeTag>::ScalarFluidState;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
 
     //! \brief Returns whether or not boundary conditions are trivial.
@@ -105,6 +107,22 @@ public:
                              [&data,index](int elemIdx)
                              { data[elemIdx] = index; });
             }
+        }
+    }
+
+    //! \brief Calculate equilibrium boundary conditions.
+    void readEquilInitialCondition_(EclMaterialLawManager& materialLawManager,
+                                    const Simulator& simulator,
+                                    const std::size_t numElems)
+    {
+        // initial condition corresponds to hydrostatic conditions.
+        using EquilInitializer = EclEquilInitializer<TypeTag>;
+        EquilInitializer equilInitializer(simulator, materialLawManager);
+
+        initialFluidStates_.resize(numElems);
+        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+            auto& elemFluidState = initialFluidStates_[elemIdx];
+            elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
         }
     }
 
