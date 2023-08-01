@@ -1481,10 +1481,10 @@ public:
 
             // index == 0: no boundary conditions for this
             // global cell and direction
-            if (bcindex_(dir)[globalDofIdx] == 0)
+            if (bcic_.bcindex_(dir)[globalDofIdx] == 0)
                 return bcic_.initialFluidState(globalDofIdx);
 
-            const auto& bc = bcprop[bcindex_(dir)[globalDofIdx]];
+            const auto& bc = bcprop[bcic_.bcindex_(dir)[globalDofIdx]];
             if (bc.bctype == BCType::DIRICHLET )
             {
                 InitialFluidState fluidState;
@@ -1732,13 +1732,13 @@ public:
         }
         FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
         const auto& schedule = this->simulator().vanguard().schedule();
-        if (bcindex_(dir)[globalSpaceIdx] == 0) {
+        if (bcic_.bcindex_(dir)[globalSpaceIdx] == 0) {
             return { BCType::NONE, RateVector(0.0) };
         }
         if (schedule[this->episodeIndex()].bcprop.size() == 0) {
             return { BCType::NONE, RateVector(0.0) };
         }
-        const auto& bc = schedule[this->episodeIndex()].bcprop[bcindex_(dir)[globalSpaceIdx]];
+        const auto& bc = schedule[this->episodeIndex()].bcprop[bcic_.bcindex_(dir)[globalSpaceIdx]];
         if (bc.bctype!=BCType::RATE) {
             return { bc.bctype, RateVector(0.0) };
         }
@@ -2559,7 +2559,7 @@ private:
             for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx)
                 cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
 
-            bcindex_.resize(numElems, 0);
+            bcic_.bcindex_.resize(numElems, 0);
             auto loopAndApply = [&cartesianToCompressedElemIdx,
                                  &vanguard](const auto& bcface,
                                             auto apply)
@@ -2576,7 +2576,7 @@ private:
                 }
             };
             for (const auto& bcface : bcconfig) {
-                std::vector<int>& data = bcindex_(bcface.dir);
+                std::vector<int>& data = bcic_.bcindex_(bcface.dir);
                 const int index = bcface.index;
                     loopAndApply(bcface,
                                  [&data,index](int elemIdx)
@@ -2694,37 +2694,6 @@ private:
     TracerModel tracerModel_;
 
     EclActionHandler actionHandler_;
-
-    template<class T>
-    struct BCData
-    {
-        std::array<std::vector<T>,6> data;
-
-        void resize(std::size_t size, T defVal)
-        {
-            for (auto& d : data)
-                d.resize(size, defVal);
-        }
-
-        const std::vector<T>& operator()(FaceDir::DirEnum dir) const
-        {
-            if (dir == FaceDir::DirEnum::Unknown)
-                throw std::runtime_error("Tried to access BC data for the 'Unknown' direction");
-            int idx = 0;
-            int div = static_cast<int>(dir);
-            while ((div /= 2) >= 1)
-              ++idx;
-            assert(idx >= 0 && idx <= 5);
-            return data[idx];
-        }
-
-        std::vector<T>& operator()(FaceDir::DirEnum dir)
-        {
-            return const_cast<std::vector<T>&>(std::as_const(*this)(dir));
-        }
-    };
-
-    BCData<int> bcindex_;
 };
 
 } // namespace Opm

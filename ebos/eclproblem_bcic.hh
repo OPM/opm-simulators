@@ -28,8 +28,15 @@
 #ifndef OPM_ECL_PROBLEM_BCIC_HH
 #define OPM_ECL_PROBLEM_BCIC_HH
 
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+
 #include <ebos/eclequilinitializer.hh>
 
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
 namespace Opm {
@@ -57,8 +64,45 @@ public:
         return initialFluidStates_[idx];
     }
 
-    bool nonTrivialBoundaryConditions_ = false;
-    std::vector<InitialFluidState> initialFluidStates_;
+    //! \brief Container for boundary conditions.
+    template<class T>
+    struct BCData
+    {
+        std::array<std::vector<T>,6> data; //!< One vector per FaceDir::DirEnum entry
+
+        //! \brief Resize vectors.
+        void resize(std::size_t size, T defVal)
+        {
+            for (auto& d : data) {
+                d.resize(size, defVal);
+            }
+        }
+
+        //! \brief Returns a const reference to data for a direction.
+        const std::vector<T>& operator()(FaceDir::DirEnum dir) const
+        {
+            if (dir == FaceDir::DirEnum::Unknown) {
+                throw std::runtime_error("Tried to access BC data for the 'Unknown' direction");
+            }
+            int idx = 0;
+            int div = static_cast<int>(dir);
+            while ((div /= 2) >= 1) {
+              ++idx;
+            }
+            assert(idx >= 0 && idx <= 5);
+            return data[idx];
+        }
+
+        //! \brief Returns a reference to data for a direction.
+        std::vector<T>& operator()(FaceDir::DirEnum dir)
+        {
+            return const_cast<std::vector<T>&>(std::as_const(*this)(dir));
+        }
+    };
+
+    BCData<int> bcindex_; //!< Indices for boundary conditions
+    bool nonTrivialBoundaryConditions_ = false; //!< Whether or not non-trivial boundary conditions are used
+    std::vector<InitialFluidState> initialFluidStates_; //!< Vector of initial fluid states for elements
 };
 
 } // namespace Opm
