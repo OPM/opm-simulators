@@ -28,6 +28,8 @@
 #include <config.h>
 #include <ebos/eclsolutioncontainers.hh>
 
+#include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
+
 namespace Opm {
 
 template<class Scalar>
@@ -67,6 +69,28 @@ void MICPSolutionContainer<Scalar>::resize(const unsigned numElems)
     ureaConcentration.resize(numElems, 0.0);
     biofilmConcentration.resize(numElems, 0.0);
     calciteConcentration.resize(numElems, 0.0);
+}
+
+template<class Scalar>
+void MICPSolutionContainer<Scalar>::
+readInitialCondition(const FieldPropsManager& fp,
+                     const unsigned numDof)
+{
+    auto read = [&fp, numDof](std::vector<Scalar>& data,
+                              const char* fname)
+    {
+        if (fp.has_double(fname)) {
+            data = fp.get_double(fname);
+        } else {
+            data.resize(numDof, 0.0);
+        }
+    };
+
+    read(microbialConcentration, "SMICR");
+    read(oxygenConcentration, "SOXYG");
+    read(ureaConcentration, "SUREA");
+    read(biofilmConcentration, "SBIOF");
+    read(calciteConcentration, "SCALC");
 }
 
 template<class Scalar>

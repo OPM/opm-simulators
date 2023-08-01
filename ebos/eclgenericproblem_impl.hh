@@ -521,8 +521,7 @@ template<class GridView, class FluidSystem, class Scalar>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
 readBlackoilExtentionsInitialConditions_(std::size_t numDof,
                                          bool enablePolymer,
-                                         bool enablePolymerMolarWeight,
-                                         bool enableMICP)
+                                         bool enablePolymerMolarWeight)
 {
     if (enablePolymer) {
         if (eclState_.fieldProps().has_double("SPOLY")) {
@@ -537,34 +536,6 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
             polymer_.moleWeight = eclState_.fieldProps().get_double("SPOLYMW");
         } else {
             polymer_.moleWeight.resize(numDof, 0.0);
-        }
-    }
-
-    if (enableMICP) {
-        if (eclState_.fieldProps().has_double("SMICR")) {
-            micp_.microbialConcentration = eclState_.fieldProps().get_double("SMICR");
-        } else {
-            micp_.microbialConcentration.resize(numDof, 0.0);
-        }
-        if (eclState_.fieldProps().has_double("SOXYG")) {
-            micp_.oxygenConcentration = eclState_.fieldProps().get_double("SOXYG");
-        } else {
-            micp_.oxygenConcentration.resize(numDof, 0.0);
-        }
-        if (eclState_.fieldProps().has_double("SUREA")) {
-            micp_.ureaConcentration = eclState_.fieldProps().get_double("SUREA");
-        } else {
-            micp_.ureaConcentration.resize(numDof, 0.0);
-        }
-        if (eclState_.fieldProps().has_double("SBIOF")) {
-            micp_.biofilmConcentration = eclState_.fieldProps().get_double("SBIOF");
-        } else {
-            micp_.biofilmConcentration.resize(numDof, 0.0);
-        }
-        if (eclState_.fieldProps().has_double("SCALC")) {
-            micp_.calciteConcentration = eclState_.fieldProps().get_double("SCALC");
-        } else {
-            micp_.calciteConcentration.resize(numDof, 0.0);
         }
     }
 }

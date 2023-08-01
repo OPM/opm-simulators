@@ -324,8 +324,7 @@ protected:
 
     void readBlackoilExtentionsInitialConditions_(std::size_t numDof,
                                                   bool enablePolymer,
-                                                  bool enablePolymerMolarWeight,
-                                                  bool enableMICP);
+                                                  bool enablePolymerMolarWeight);
 
     void updatePvtnum_();
     void updateSatnum_();

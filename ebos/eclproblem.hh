@@ -2075,17 +2075,15 @@ protected:
                                    this->solventSaturation_,
                                    this->solventRsw_,
                                    this->micp_,
-                                   this->polymer_,
                                    this->simulator(),
                                    numElems,
                                    [this](const unsigned idx)
                                    { return this->pvtRegionIndex(idx); });
 
-        if constexpr (enablePolymer || enablePolymerMolarWeight || enableMICP) {
+        if constexpr (enablePolymer || enablePolymerMolarWeight) {
             this->readBlackoilExtentionsInitialConditions_(this->model().numGridDof(),
                                                            enablePolymer,
-                                                           enablePolymerMolarWeight,
-                                                           enableMICP);
+                                                           enablePolymerMolarWeight);
         }
 
         //initialize min/max values
