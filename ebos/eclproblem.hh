@@ -1295,39 +1295,18 @@ public:
      * the whole domain.
      */
     template <class Context>
-    void initial(PrimaryVariables& values, const Context& context, unsigned spaceIdx, unsigned timeIdx) const
+    void initial(PrimaryVariables& values, const Context& context,
+                 unsigned spaceIdx, unsigned timeIdx) const
     {
-        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-
-        values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
-        values.assignNaive(bcic_.initialFluidState(globalDofIdx));
-
-        SolventModule::assignPrimaryVars(values, this->solventSaturation_[globalDofIdx], this->solventRsw_[globalDofIdx]);
-
-        if constexpr (enablePolymer)
-            values[Indices::polymerConcentrationIdx] = this->polymer_.concentration[globalDofIdx];
-
-        if constexpr (enablePolymerMolarWeight)
-            values[Indices::polymerMoleWeightIdx]= this->polymer_.moleWeight[globalDofIdx];
-
-        if constexpr (enableBrine) {
-            if (enableSaltPrecipitation && values.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
-                values[Indices::saltConcentrationIdx] = bcic_.initialFluidState(globalDofIdx).saltSaturation();
-            }
-            else {
-                values[Indices::saltConcentrationIdx] = bcic_.initialFluidState(globalDofIdx).saltConcentration();
-            }
-        }
-
-        if constexpr (enableMICP){
-            values[Indices::microbialConcentrationIdx] = this->micp_.microbialConcentration[globalDofIdx];
-            values[Indices::oxygenConcentrationIdx]= this->micp_.oxygenConcentration[globalDofIdx];
-            values[Indices::ureaConcentrationIdx]= this->micp_.ureaConcentration[globalDofIdx];
-            values[Indices::calciteConcentrationIdx]= this->micp_.calciteConcentration[globalDofIdx];
-            values[Indices::biofilmConcentrationIdx]= this->micp_.biofilmConcentration[globalDofIdx];
-        }
-
-        values.checkDefined();
+        bcic_.initial(values,
+                      this->solventSaturation_,
+                      this->solventRsw_,
+                      this->micp_,
+                      this->polymer_,
+                      context,
+                      spaceIdx,
+                      timeIdx,
+                      this->pvtRegionIndex(context, spaceIdx, timeIdx));
     }
 
     /*!

@@ -39,6 +39,8 @@
 #include <opm/input/eclipse/Schedule/BCProp.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
+
 #include <array>
 #include <cassert>
 #include <cmath>
@@ -65,6 +67,7 @@ public:
     using InitialFluidState = typename EclEquilInitializer<TypeTag>::ScalarFluidState;
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
@@ -331,6 +334,7 @@ public:
         return initialFluidState(globalDofIdx);
     }
 
+    //! \brief Returns boundary condition for an element.
     std::pair<BCType, RateVector>
     boundaryCondition(const unsigned globalSpaceIdx,
                       const int directionId,
@@ -383,6 +387,54 @@ public:
         }
         //TODO add support for enthalpy rate
         return {bc.bctype, rate};
+    }
+
+    //! \brief Returns initial condition for an element.
+    template <class Context>
+    void initial(PrimaryVariables& values,
+                 const std::vector<Scalar>& solventSaturation,
+                 const std::vector<Scalar>& solventRsw,
+                 const MICPSolutionContainer<Scalar>& micp,
+                 const PolymerSolutionContainer<Scalar>& polymer,
+                 const Context& context,
+                 unsigned spaceIdx,
+                 unsigned timeIdx,
+                 const unsigned pvtRegionIndex) const
+    {
+        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
+        values.setPvtRegionIndex(pvtRegionIndex);
+        values.assignNaive(initialFluidState(globalDofIdx));
+
+        using SolventModule = BlackOilSolventModule<TypeTag>;
+        SolventModule::assignPrimaryVars(values, solventSaturation[globalDofIdx],
+                                         solventRsw[globalDofIdx]);
+
+        if constexpr (enablePolymer) {
+            values[Indices::polymerConcentrationIdx] = polymer.concentration[globalDofIdx];
+        }
+
+        if constexpr (enablePolymerMW) {
+            values[Indices::polymerMoleWeightIdx]= polymer.moleWeight[globalDofIdx];
+        }
+
+        if constexpr (enableBrine) {
+            if (enableSaltPrecipitation && values.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
+                values[Indices::saltConcentrationIdx] = initialFluidState(globalDofIdx).saltSaturation();
+            }
+            else {
+                values[Indices::saltConcentrationIdx] = initialFluidState(globalDofIdx).saltConcentration();
+            }
+        }
+
+        if constexpr (enableMICP) {
+            values[Indices::microbialConcentrationIdx] = micp.microbialConcentration[globalDofIdx];
+            values[Indices::oxygenConcentrationIdx]= micp.oxygenConcentration[globalDofIdx];
+            values[Indices::ureaConcentrationIdx]= micp.ureaConcentration[globalDofIdx];
+            values[Indices::calciteConcentrationIdx]= micp.calciteConcentration[globalDofIdx];
+            values[Indices::biofilmConcentrationIdx]= micp.biofilmConcentration[globalDofIdx];
+        }
+
+        values.checkDefined();
     }
 
     //! \brief Calculate equilibrium boundary conditions.
