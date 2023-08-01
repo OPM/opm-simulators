@@ -64,6 +64,7 @@ public:
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using InitialFluidState = typename EclEquilInitializer<TypeTag>::ScalarFluidState;
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
@@ -328,6 +329,60 @@ public:
             }
         }
         return initialFluidState(globalDofIdx);
+    }
+
+    std::pair<BCType, RateVector>
+    boundaryCondition(const unsigned globalSpaceIdx,
+                      const int directionId,
+                      const BCProp& bcprop) const
+    {
+        OPM_TIMEBLOCK_LOCAL(boundaryCondition);
+        if (!nonTrivialBoundaryConditions()) {
+            return { BCType::NONE, RateVector(0.0) };
+        }
+        FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
+        if (bcindex_(dir)[globalSpaceIdx] == 0) {
+            return { BCType::NONE, RateVector(0.0) };
+        }
+        if (bcprop.size() == 0) {
+            return { BCType::NONE, RateVector(0.0) };
+        }
+        const auto& bc = bcprop[bcindex_(dir)[globalSpaceIdx]];
+        if (bc.bctype != BCType::RATE) {
+            return { bc.bctype, RateVector(0.0) };
+        }
+
+        RateVector rate = 0.0;
+        switch (bc.component) {
+        case BCComponent::OIL:
+            rate[Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx)] = bc.rate;
+            break;
+        case BCComponent::GAS:
+            rate[Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)] = bc.rate;
+            break;
+        case BCComponent::WATER:
+            rate[Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx)] = bc.rate;
+            break;
+        case BCComponent::SOLVENT:
+            if constexpr (!enableSolvent) {
+                throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
+            }
+
+            rate[Indices::solventSaturationIdx] = bc.rate;
+            break;
+        case BCComponent::POLYMER:
+            if constexpr (!enablePolymer) {
+                throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
+            }
+
+            rate[Indices::polymerConcentrationIdx] = bc.rate;
+            break;
+        case BCComponent::NONE:
+            throw std::logic_error("you need to specify the component when RATE type is set in BC");
+            break;
+        }
+        //TODO add support for enthalpy rate
+        return {bc.bctype, rate};
     }
 
     //! \brief Calculate equilibrium boundary conditions.

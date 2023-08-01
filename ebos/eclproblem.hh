@@ -1201,12 +1201,14 @@ public:
             unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
             unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
             unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
-            unsigned pvtRegionIdx = pvtRegionIndex(context, spaceIdx, timeIdx);
-            const auto [type, massrate] = boundaryCondition(globalDofIdx, indexInInside);
+            unsigned pvtRegionIdx = this->pvtRegionIndex(context, spaceIdx, timeIdx);
+            const auto [type, massrate] = this->boundaryCondition(globalDofIdx, indexInInside);
             if (type == BCType::THERMAL) {
-                values.setThermalFlow(context, spaceIdx, timeIdx, this->boundaryFluidState(globalDofIdx, indexInInside));
+                values.setThermalFlow(context, spaceIdx, timeIdx,
+                                      this->boundaryFluidState(globalDofIdx, indexInInside));
             } else if (type == BCType::FREE || type == BCType::DIRICHLET) {
-                values.setFreeFlow(context, spaceIdx, timeIdx, this->boundaryFluidState(globalDofIdx, indexInInside));
+                values.setFreeFlow(context, spaceIdx, timeIdx,
+                                   this->boundaryFluidState(globalDofIdx, indexInInside));
             } else if (type == BCType::RATE) {
                 values.setMassRate(massrate, pvtRegionIdx);
             }
@@ -1624,52 +1626,9 @@ public:
 
     std::pair<BCType, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId) const
     {
-        OPM_TIMEBLOCK_LOCAL(boundaryCondition);
-        if (!nonTrivialBoundaryConditions()) {
-            return { BCType::NONE, RateVector(0.0) };
-        }
-        FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
-        const auto& schedule = this->simulator().vanguard().schedule();
-        if (bcic_.bcindex_(dir)[globalSpaceIdx] == 0) {
-            return { BCType::NONE, RateVector(0.0) };
-        }
-        if (schedule[this->episodeIndex()].bcprop.size() == 0) {
-            return { BCType::NONE, RateVector(0.0) };
-        }
-        const auto& bc = schedule[this->episodeIndex()].bcprop[bcic_.bcindex_(dir)[globalSpaceIdx]];
-        if (bc.bctype!=BCType::RATE) {
-            return { bc.bctype, RateVector(0.0) };
-        }
-
-        RateVector rate = 0.0;
-        switch (bc.component) {
-        case BCComponent::OIL:
-            rate[Indices::canonicalToActiveComponentIndex(oilCompIdx)] = bc.rate;
-            break;
-        case BCComponent::GAS:
-            rate[Indices::canonicalToActiveComponentIndex(gasCompIdx)] = bc.rate;
-            break;
-        case BCComponent::WATER:
-            rate[Indices::canonicalToActiveComponentIndex(waterCompIdx)] = bc.rate;
-            break;
-        case BCComponent::SOLVENT:
-            if constexpr (!enableSolvent)
-                throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
-
-            rate[Indices::solventSaturationIdx] = bc.rate;
-            break;
-        case BCComponent::POLYMER:
-            if constexpr (!enablePolymer)
-                throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
-
-            rate[Indices::polymerConcentrationIdx] = bc.rate;
-            break;
-        case BCComponent::NONE:
-            throw std::logic_error("you need to specify the component when RATE type is set in BC");
-            break;
-        }
-        //TODO add support for enthalpy rate
-        return {bc.bctype, rate};
+        const auto& sched = this->simulator().vanguard().schedule();
+        return bcic_.boundaryCondition(globalSpaceIdx, directionId,
+                                       sched[this->episodeIndex()].bcprop);
     }
 
     const std::unique_ptr<EclWriterType>& eclWriter() const
