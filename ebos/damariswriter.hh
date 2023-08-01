@@ -314,21 +314,21 @@ private:
     }
 
 
-     void writeDamarisCellDataOutput(data::Solution& localCellData, bool isSubStep)
+    void writeDamarisCellDataOutput(data::Solution& localCellData, bool isSubStep)
     {
-        static int firstcall = 0 ;
+        static int firstcall = 0;
         if (!isSubStep) {
             // Output the PRESSURE field
             if (this->damarisOutputModule_->getPRESSURE_ptr() != nullptr) {
                 damaris_write("PRESSURE", (void*)this->damarisOutputModule_->getPRESSURE_ptr());
                // damaris_end_iteration();
-               
+
                // Only call this once, and only when the Damaris data is valid
                if (firstcall == 0) {
-                   SetGlobalIndexForDamaris() ;
-                    firstcall = 1 ;
+                   setGlobalIndexForDamaris() ;
+                   firstcall = 1 ;
                }
-               
+
                damaris_err_ =  damaris_end_iteration();
                if (damaris_err_ != DAMARIS_OK) {
                    OpmLog::error(fmt::format("Damaris output error on rank {} : {}", rank_, damaris_error_string(damaris_err_)));
@@ -337,7 +337,7 @@ private:
         }
     }
     
-     void SetGlobalIndexForDamaris () 
+    void setGlobalIndexForDamaris()
     {
         // GLOBAL_CELL_INDEX is used to reorder variable data when writing to disk 
         // This is enabled using select-file="GLOBAL_CELL_INDEX" in the <variable> XML tag
@@ -480,27 +480,23 @@ private:
                 Opm::GridDataOutput::ConnectivityVertexOrder vtkorder = Opm::GridDataOutput::VTK ;
                 
                 i = geomData.writeConnectivity(var_connectivity->data_ptr(), vtkorder) ;
-                if ( i  != geomData.getNCorners())
+                if ( i != geomData.getNCorners())
                      DUNE_THROW(Dune::IOError, geomData.getError() );
                 
                 i = geomData.writeOffsetsCells(var_offsets->data_ptr()) ;
-                if ( i != geomData.getNCells()+1)
-                     DUNE_THROW(Dune::IOError,geomData.getError() );
+                if ( i != geomData.getNCells() + 1)
+                     DUNE_THROW(Dune::IOError, geomData.getError() );
                 
                 i = geomData.writeCellTypes(var_types->data_ptr()) ;
                 if ( i != geomData.getNCells())
-                     DUNE_THROW(Dune::IOError,geomData.getError() );
+                     DUNE_THROW(Dune::IOError, geomData.getError() );
                 //  Commit and clear damaris functions are called when the object goes out of scope (in the destructor)
             }
             catch (std::exception& e) 
             {
-                std :: cout << e.what() << std::endl;
+                OpmLog::error(e.what());
             }
 
-
-            //this-SetGlobalIndexForDamaris() ;
-              
-          
             // Currently by default we assume static grid (not changing throughout the simulation)
             // Set damarisUpdate_ to true if we want to update the geometry to sent to Damaris 
             this->damarisUpdate_ = false; 
@@ -523,7 +519,7 @@ private:
         const bool log = this->collectToIORank_.isIORank();
 
         damarisOutputModule_->allocBuffers(numElements, reportStepNum,
-                                      isSubStep, log, /*isRestart*/ false);
+                                           isSubStep, log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
         OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -536,7 +532,7 @@ private:
             damarisOutputModule_->processElement(elemCtx);
         }
         }
-        if(!simulator_.model().linearizer().getFlowsInfo().empty()){
+        if (!simulator_.model().linearizer().getFlowsInfo().empty()) {
             OPM_TIMEBLOCK(prepareFlowsData);
             for (const auto& elem : elements(gridView)) {
                 elemCtx.updatePrimaryStencil(elem);
@@ -558,9 +554,9 @@ private:
 #pragma omp parallel for
 #endif
         for (int dofIdx=0; dofIdx < numElements; ++dofIdx){
-                const auto& intQuants = *(simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0));
-                const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
-                damarisOutputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
+            const auto& intQuants = *(simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0));
+            const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
+            damarisOutputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
         }
         }
         damarisOutputModule_->validateLocalData();
