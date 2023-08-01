@@ -322,10 +322,6 @@ protected:
                              std::function<std::array<int,3>(const unsigned)> ijkIndex);
     void readRockCompactionParameters_();
 
-    void readBlackoilExtentionsInitialConditions_(std::size_t numDof,
-                                                  bool enablePolymer,
-                                                  bool enablePolymerMolarWeight);
-
     void updatePvtnum_();
     void updateSatnum_();
     void updateMiscnum_();

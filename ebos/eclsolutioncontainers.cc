@@ -42,6 +42,27 @@ PolymerSolutionContainer<Scalar>::serializationTestObject()
 }
 
 template<class Scalar>
+void PolymerSolutionContainer<Scalar>::
+readInitialCondition(const FieldPropsManager& fp,
+                     bool enablePolymerMW,
+                     const unsigned numDof)
+{
+    if (fp.has_double("SPOLY")) {
+        concentration = fp.get_double("SPOLY");
+    } else {
+        concentration.resize(numDof, 0.0);
+    }
+
+    if (enablePolymerMW) {
+        if (fp.has_double("SPOLYMW")) {
+            moleWeight = fp.get_double("SPOLYMW");
+        } else {
+            moleWeight.resize(numDof, 0.0);
+        }
+    }
+}
+
+template<class Scalar>
 bool PolymerSolutionContainer<Scalar>::
 operator==(const PolymerSolutionContainer<Scalar>& rhs) const
 {

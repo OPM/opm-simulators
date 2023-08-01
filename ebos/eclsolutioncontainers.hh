@@ -43,6 +43,11 @@ struct PolymerSolutionContainer {
 
     static PolymerSolutionContainer serializationTestObject();
 
+    //! \brief Reads initial condition from field properties.
+    void readInitialCondition(const FieldPropsManager& fp,
+                              bool enablePolymerMW,
+                              const unsigned numDof);
+
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {

@@ -518,30 +518,6 @@ initFluidSystem_()
 }
 
 template<class GridView, class FluidSystem, class Scalar>
-void EclGenericProblem<GridView,FluidSystem,Scalar>::
-readBlackoilExtentionsInitialConditions_(std::size_t numDof,
-                                         bool enablePolymer,
-                                         bool enablePolymerMolarWeight)
-{
-    if (enablePolymer) {
-        if (eclState_.fieldProps().has_double("SPOLY")) {
-            polymer_.concentration = eclState_.fieldProps().get_double("SPOLY");
-        } else {
-            polymer_.concentration.resize(numDof, 0.0);
-        }
-    }
-
-    if (enablePolymerMolarWeight) {
-        if (eclState_.fieldProps().has_double("SPOLYMW")) {
-            polymer_.moleWeight = eclState_.fieldProps().get_double("SPOLYMW");
-        } else {
-            polymer_.moleWeight.resize(numDof, 0.0);
-        }
-    }
-}
-
-
-template<class GridView, class FluidSystem, class Scalar>
 Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
 maxWaterSaturation(unsigned globalDofIdx) const
 {

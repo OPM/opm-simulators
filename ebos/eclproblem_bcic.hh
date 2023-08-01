@@ -64,6 +64,8 @@ public:
 
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool enableMICP = getPropValue<TypeTag, Properties::EnableMICP>();
+    static constexpr bool enablePolymer = getPropValue<TypeTag, Properties::EnablePolymer>();
+    static constexpr bool enablePolymerMW = getPropValue<TypeTag, Properties::EnablePolymerMW>();
     static constexpr bool enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
     static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
@@ -126,6 +128,7 @@ public:
                               [[maybe_unused]] std::vector<Scalar>& solventSaturation,
                               [[maybe_unused]] std::vector<Scalar>& solventRsw,
                               [[maybe_unused]] MICPSolutionContainer<Scalar>& micp,
+                              [[maybe_unused]] PolymerSolutionContainer<Scalar>& polymer,
                               const Simulator& simulator,
                               const std::size_t numGridDof,
                               const std::function<int(int)> pvtRegionIndex)
@@ -152,6 +155,11 @@ public:
 
         if constexpr (enableMICP) {
             micp.readInitialCondition(eclState.fieldProps(), numGridDof);
+        }
+
+        if constexpr (enablePolymer) {
+            polymer.readInitialCondition(eclState.fieldProps(),
+                                         enablePolymerMW, numGridDof);
         }
     }
 

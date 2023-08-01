@@ -2075,26 +2075,27 @@ protected:
                                    this->solventSaturation_,
                                    this->solventRsw_,
                                    this->micp_,
+                                   this->polymer_,
                                    this->simulator(),
                                    numElems,
                                    [this](const unsigned idx)
                                    { return this->pvtRegionIndex(idx); });
 
-        if constexpr (enablePolymer || enablePolymerMolarWeight) {
-            this->readBlackoilExtentionsInitialConditions_(this->model().numGridDof(),
-                                                           enablePolymer,
-                                                           enablePolymerMolarWeight);
-        }
-
         //initialize min/max values
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             const auto& fs = bcic_.initialFluidState(elemIdx);
-            if (!this->maxWaterSaturation_.empty())
-                this->maxWaterSaturation_[elemIdx] = std::max(this->maxWaterSaturation_[elemIdx], fs.saturation(waterPhaseIdx));
-            if (!this->maxOilSaturation_.empty())
-                this->maxOilSaturation_[elemIdx] = std::max(this->maxOilSaturation_[elemIdx], fs.saturation(oilPhaseIdx));
-            if (!this->minOilPressure_.empty())
-                this->minOilPressure_[elemIdx] = std::min(this->minOilPressure_[elemIdx], fs.pressure(oilPhaseIdx));
+            if (!this->maxWaterSaturation_.empty()) {
+                this->maxWaterSaturation_[elemIdx] = std::max(this->maxWaterSaturation_[elemIdx],
+                                                              fs.saturation(waterPhaseIdx));
+            }
+            if (!this->maxOilSaturation_.empty()) {
+                this->maxOilSaturation_[elemIdx] = std::max(this->maxOilSaturation_[elemIdx],
+                                                            fs.saturation(oilPhaseIdx));
+            }
+            if (!this->minOilPressure_.empty()) {
+                this->minOilPressure_[elemIdx] = std::min(this->minOilPressure_[elemIdx],
+                                                          fs.pressure(oilPhaseIdx));
+            }
         }
     }
 
