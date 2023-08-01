@@ -29,6 +29,7 @@
 #define OPM_ECL_PROBLEM_BCIC_HH
 
 #include <ebos/eclequilinitializer.hh>
+#include <ebos/eclsolutioncontainers.hh>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
@@ -63,6 +64,7 @@ public:
 
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
+    static constexpr bool enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>();
 
     //! \brief Returns whether or not boundary conditions are trivial.
     bool nonTrivialBoundaryConditions() const
@@ -120,6 +122,10 @@ public:
 
     //! \brief Reads the configured boundary conditions from eclipse state.
     void readInitialCondition(EclMaterialLawManager& materialLawManager,
+                              [[maybe_unused]] std::vector<Scalar>& solventSaturation,
+                              [[maybe_unused]] std::vector<Scalar>& solventRsw,
+                              [[maybe_unused]] MICPSolutionContainer<Scalar>& micp,
+                              [[maybe_unused]] PolymerSolutionContainer<Scalar>& polymer,
                               const Simulator& simulator,
                               const std::size_t numGridDof,
                               const std::function<int(int)> pvtRegionIndex)
@@ -135,6 +141,13 @@ public:
                                                 materialLawManager,
                                                 numGridDof,
                                                 pvtRegionIndex);
+        }
+
+        if constexpr (enableSolvent) {
+            this->readSolventInitialCondition_(solventSaturation,
+                                               solventRsw,
+                                               eclState.fieldProps(),
+                                               numGridDof);
         }
     }
 
@@ -372,6 +385,20 @@ public:
                 dofFluidState.setDensity(phaseIdx, rho);
             }
         }
+    }
+
+    //! \brief Read solvent initial condition from eclipse state.
+    void readSolventInitialCondition_(std::vector<Scalar>& solventSaturation,
+                                      std::vector<Scalar>& solventRsw,
+                                      const FieldPropsManager& fp,
+                                      const unsigned numDof)
+    {
+        if (fp.has_double("SSOL")) {
+            solventSaturation = fp.get_double("SSOL");
+        } else {
+            solventSaturation.resize(numDof, 0.0);
+        }
+        solventRsw.resize(numDof, 0.0);
     }
 
     //! \brief Container for boundary conditions.

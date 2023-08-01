@@ -520,23 +520,10 @@ initFluidSystem_()
 template<class GridView, class FluidSystem, class Scalar>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
 readBlackoilExtentionsInitialConditions_(std::size_t numDof,
-                                         bool enableSolvent,
                                          bool enablePolymer,
                                          bool enablePolymerMolarWeight,
                                          bool enableMICP)
 {
-    if (enableSolvent) {
-        if (eclState_.fieldProps().has_double("SSOL"))
-            solventSaturation_ = eclState_.fieldProps().get_double("SSOL");
-        else
-            solventSaturation_.resize(numDof, 0.0);
-
-        //if (eclState_.fieldProps().has_double("SSOL"))
-        //    solventRsw_ = eclState_.fieldProps().get_double("SSOL");
-        //else
-            solventRsw_.resize(numDof, 0.0);
-    }
-
     if (enablePolymer) {
         if (eclState_.fieldProps().has_double("SPOLY")) {
             polymer_.concentration = eclState_.fieldProps().get_double("SPOLY");

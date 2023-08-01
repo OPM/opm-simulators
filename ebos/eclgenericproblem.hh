@@ -323,7 +323,6 @@ protected:
     void readRockCompactionParameters_();
 
     void readBlackoilExtentionsInitialConditions_(std::size_t numDof,
-                                                  bool enableSolvent,
                                                   bool enablePolymer,
                                                   bool enablePolymerMolarWeight,
                                                   bool enableMICP);

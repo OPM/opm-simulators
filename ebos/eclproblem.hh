@@ -2070,22 +2070,25 @@ protected:
 
     void readInitialCondition_()
     {
+        std::size_t numElems = this->model().numGridDof();
         bcic_.readInitialCondition(*materialLawManager_,
+                                   this->solventSaturation_,
+                                   this->solventRsw_,
+                                   this->micp_,
+                                   this->polymer_,
                                    this->simulator(),
-                                   this->model().numGridDof(),
+                                   numElems,
                                    [this](const unsigned idx)
                                    { return this->pvtRegionIndex(idx); });
 
-        if constexpr (enableSolvent || enablePolymer || enablePolymerMolarWeight || enableMICP) {
+        if constexpr (enablePolymer || enablePolymerMolarWeight || enableMICP) {
             this->readBlackoilExtentionsInitialConditions_(this->model().numGridDof(),
-                                                           enableSolvent,
                                                            enablePolymer,
                                                            enablePolymerMolarWeight,
                                                            enableMICP);
         }
 
         //initialize min/max values
-        std::size_t numElems = this->model().numGridDof();
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             const auto& fs = bcic_.initialFluidState(elemIdx);
             if (!this->maxWaterSaturation_.empty())
