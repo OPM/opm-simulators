@@ -28,17 +28,18 @@
 #ifndef EWOMS_ECL_GENERIC_TRACER_MODEL_HH
 #define EWOMS_ECL_GENERIC_TRACER_MODEL_HH
 
+#include <dune/istl/bcrsmatrix.hh>
+
 #include <opm/grid/common/CartesianIndexMapper.hpp>
-#include <opm/common/ErrorMacros.hpp>
+
 #include <opm/models/blackoil/blackoilmodel.hh>
 
 #include <opm/simulators/linalg/matrixblock.hh>
 
-#include <dune/istl/bcrsmatrix.hh>
-
 #include <array>
 #include <functional>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
