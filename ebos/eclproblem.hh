@@ -914,7 +914,7 @@ public:
             const auto& vanguard = this->simulator().vanguard();
             const auto& gridView = vanguard.gridView();
             int numElements = gridView.size(/*codim=*/0);
-            this->maxPolymerAdsorption_.resize(numElements, 0.0);
+            this->polymer_.maxAdsorption.resize(numElements, 0.0);
         }
 
         readBoundaryConditions_();
@@ -1750,10 +1750,10 @@ public:
             values[Indices::solventSaturationIdx] = this->solventSaturation_[globalDofIdx];
 
         if constexpr (enablePolymer)
-            values[Indices::polymerConcentrationIdx] = this->polymerConcentration_[globalDofIdx];
+            values[Indices::polymerConcentrationIdx] = this->polymer_.concentration[globalDofIdx];
 
         if constexpr (enablePolymerMolarWeight)
-            values[Indices::polymerMoleWeightIdx]= this->polymerMoleWeight_[globalDofIdx];
+            values[Indices::polymerMoleWeightIdx]= this->polymer_.moleWeight[globalDofIdx];
 
         if constexpr (enableBrine) {
             if (enableSaltPrecipitation && values.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
@@ -1765,11 +1765,11 @@ public:
         }
 
         if constexpr (enableMICP){
-            values[Indices::microbialConcentrationIdx]= this->microbialConcentration_[globalDofIdx];
-            values[Indices::oxygenConcentrationIdx]= this->oxygenConcentration_[globalDofIdx];
-            values[Indices::ureaConcentrationIdx]= this->ureaConcentration_[globalDofIdx];
-            values[Indices::calciteConcentrationIdx]= this->calciteConcentration_[globalDofIdx];
-            values[Indices::biofilmConcentrationIdx]= this->biofilmConcentration_[globalDofIdx];
+            values[Indices::microbialConcentrationIdx] = this->micp_.microbialConcentration[globalDofIdx];
+            values[Indices::oxygenConcentrationIdx]= this->micp_.oxygenConcentration[globalDofIdx];
+            values[Indices::ureaConcentrationIdx]= this->micp_.ureaConcentration[globalDofIdx];
+            values[Indices::calciteConcentrationIdx]= this->micp_.calciteConcentration[globalDofIdx];
+            values[Indices::biofilmConcentrationIdx]= this->micp_.biofilmConcentration[globalDofIdx];
         }
 
         values.checkDefined();
@@ -2540,23 +2540,19 @@ protected:
             this->solventSaturation_.resize(numElems, 0.0);
 
         if constexpr (enablePolymer)
-            this->polymerConcentration_.resize(numElems, 0.0);
+            this->polymer_.concentration.resize(numElems, 0.0);
 
         if constexpr (enablePolymerMolarWeight) {
             const std::string msg {"Support of the RESTART for polymer molecular weight "
                                    "is not implemented yet. The polymer weight value will be "
                                    "zero when RESTART begins"};
             OpmLog::warning("NO_POLYMW_RESTART", msg);
-            this->polymerMoleWeight_.resize(numElems, 0.0);
+            this->polymer_.moleWeight.resize(numElems, 0.0);
         }
 
-        if constexpr (enableMICP){
-            this->microbialConcentration_.resize(numElems, 0.0);
-            this->oxygenConcentration_.resize(numElems, 0.0);
-            this->ureaConcentration_.resize(numElems, 0.0);
-            this->biofilmConcentration_.resize(numElems, 0.0);
-            this->calciteConcentration_.resize(numElems, 0.0);
-          }
+        if constexpr (enableMICP) {
+            this->micp_.resize(numElems);
+        }
 
         for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
@@ -2590,13 +2586,13 @@ protected:
             }
 
             if constexpr (enablePolymer)
-                 this->polymerConcentration_[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
+                 this->polymer_.concentration[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
             if constexpr (enableMICP){
-                 this->microbialConcentration_[elemIdx] = eclWriter_->eclOutputModule().getMicrobialConcentration(elemIdx);
-                 this->oxygenConcentration_[elemIdx] = eclWriter_->eclOutputModule().getOxygenConcentration(elemIdx);
-                 this->ureaConcentration_[elemIdx] = eclWriter_->eclOutputModule().getUreaConcentration(elemIdx);
-                 this->biofilmConcentration_[elemIdx] = eclWriter_->eclOutputModule().getBiofilmConcentration(elemIdx);
-                 this->calciteConcentration_[elemIdx] = eclWriter_->eclOutputModule().getCalciteConcentration(elemIdx);
+                 this->micp_.microbialConcentration[elemIdx] = eclWriter_->eclOutputModule().getMicrobialConcentration(elemIdx);
+                 this->micp_.oxygenConcentration[elemIdx] = eclWriter_->eclOutputModule().getOxygenConcentration(elemIdx);
+                 this->micp_.ureaConcentration[elemIdx] = eclWriter_->eclOutputModule().getUreaConcentration(elemIdx);
+                 this->micp_.biofilmConcentration[elemIdx] = eclWriter_->eclOutputModule().getBiofilmConcentration(elemIdx);
+                 this->micp_.calciteConcentration[elemIdx] = eclWriter_->eclOutputModule().getCalciteConcentration(elemIdx);
             }
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
@@ -2900,14 +2896,15 @@ protected:
     bool updateMaxPolymerAdsorption_(unsigned compressedDofIdx, const IntensiveQuantities& iq)
     {
         const Scalar pa = scalarValue(iq.polymerAdsorption());
-        auto& mpa = this->maxPolymerAdsorption_;
-        if(mpa[compressedDofIdx]<pa){
+        auto& mpa = this->polymer_.maxAdsorption;
+        if (mpa[compressedDofIdx] < pa) {
             mpa[compressedDofIdx] = pa;
             return true;
-        }else{
+        } else {
             return false;
         }
     }
+
 private:
     struct PffDofData_
     {
