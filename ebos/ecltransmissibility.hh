@@ -28,18 +28,18 @@
 #ifndef EWOMS_ECL_TRANSMISSIBILITY_HH
 #define EWOMS_ECL_TRANSMISSIBILITY_HH
 
-#include <opm/grid/common/CartesianIndexMapper.hpp>
-
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
+#include <opm/grid/common/CartesianIndexMapper.hpp>
+
 #include <array>
-#include <map>
-#include <tuple>
-#include <vector>
-#include <unordered_map>
 #include <functional>
+#include <map>
 #include <cstdint>
+#include <tuple>
+#include <unordered_map>
+#include <vector>
 
 namespace Opm {
 
