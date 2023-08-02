@@ -27,13 +27,13 @@
 #ifndef EWOMS_ECL_GENERIC_VANGUARD_HH
 #define EWOMS_ECL_GENERIC_VANGUARD_HH
 
+#include <dune/common/parallel/communication.hh>
+
 #include <opm/grid/common/GridEnums.hpp>
 
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
-
-#include <dune/common/parallel/communication.hh>
 
 #include <array>
 #include <cassert>
@@ -45,7 +45,6 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-
 
 namespace Opm {
 
