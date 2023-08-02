@@ -190,8 +190,6 @@ public:
     using EclGenericProblem<GridView,FluidSystem,Scalar>::helpPreamble;
     using EclGenericProblem<GridView,FluidSystem,Scalar>::shouldWriteOutput;
     using EclGenericProblem<GridView,FluidSystem,Scalar>::shouldWriteRestartFile;
-    using EclGenericProblem<GridView,FluidSystem,Scalar>::maxTimeIntegrationFailures;
-    using EclGenericProblem<GridView,FluidSystem,Scalar>::minTimeStepSize;
     using EclGenericProblem<GridView,FluidSystem,Scalar>::rockCompressibility;
     using EclGenericProblem<GridView,FluidSystem,Scalar>::rockReferencePressure;
     using EclGenericProblem<GridView,FluidSystem,Scalar>::porosity;

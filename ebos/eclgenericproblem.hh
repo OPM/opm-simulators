@@ -263,19 +263,6 @@ public:
      */
     Scalar porosity(unsigned globalSpaceIdx, unsigned timeIdx) const;
 
-    /*!
-     * \brief Returns the minimum allowable size of a time step.
-     */
-    Scalar minTimeStepSize() const
-    { return minTimeStepSize_; }
-
-    /*!
-     * \brief Returns the maximum number of subsequent failures for the time integration
-     *        before giving up.
-     */
-    unsigned maxTimeIntegrationFailures() const
-    { return maxFails_; }
-
     bool vapparsActive(int episodeIdx) const;
 
     int numPressurePointsEquil() const
