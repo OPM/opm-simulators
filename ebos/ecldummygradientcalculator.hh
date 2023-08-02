@@ -28,9 +28,11 @@
 #ifndef EWOMS_ECL_DUMMY_GRADIENT_CALCULATOR_HH
 #define EWOMS_ECL_DUMMY_GRADIENT_CALCULATOR_HH
 
+#include <dune/common/fvector.hh>
+
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
-#include <dune/common/fvector.hh>
+#include <stdexcept>
 
 namespace Opm {
 /*!
