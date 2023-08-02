@@ -28,27 +28,30 @@
 #ifndef EWOMS_ECL_GENERIC_TRACER_MODEL_IMPL_HH
 #define EWOMS_ECL_GENERIC_TRACER_MODEL_IMPL_HH
 
-#include <ebos/eclgenerictracermodel.hh>
-
-#include <opm/simulators/linalg/ilufirstelement.hh>
-#include <opm/simulators/linalg/PropertyTree.hpp>
-#include <opm/simulators/linalg/FlexibleSolver.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/grid/CpGrid.hpp>
-#include <opm/grid/polyhedralgrid.hh>
-#include <opm/models/discretization/ecfv/ecfvstencil.hh>
-#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/EclipseState/Phase.hpp>
-#include <opm/input/eclipse/EclipseState/Tables/TracerVdTable.hpp>
-
-#include <opm/input/eclipse/Schedule/Well/Well.hpp>
-#include <opm/input/eclipse/Schedule/Well/WellTracerProperties.hpp>
-
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/schwarz.hh>
 #include <dune/istl/preconditioners.hh>
 #include <dune/istl/schwarz.hh>
+
+#include <ebos/eclgenerictracermodel.hh>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/polyhedralgrid.hh>
+
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/TracerVdTable.hpp>
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellTracerProperties.hpp>
+
+#include <opm/models/discretization/ecfv/ecfvstencil.hh>
+
+#include <opm/simulators/linalg/ilufirstelement.hh>
+#include <opm/simulators/linalg/PropertyTree.hpp>
+#include <opm/simulators/linalg/FlexibleSolver.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
@@ -63,11 +66,13 @@
 #endif // HAVE_DUNE_ALUGRID
 
 #include <fmt/format.h>
+
+#include <array>
+#include <functional>
 #include <iostream>
+#include <memory>
 #include <set>
 #include <stdexcept>
-#include <functional>
-#include <array>
 #include <string>
 
 namespace Opm {
