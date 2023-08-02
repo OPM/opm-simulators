@@ -31,8 +31,13 @@
 #include <ebos/eclgenerictracermodel.hh>
 
 #include <opm/models/utils/propertysystem.hh>
+
 #include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
+#include <array>
+#include <iostream>
+#include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
