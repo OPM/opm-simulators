@@ -471,9 +471,6 @@ beginEpisode_(bool enableExperiments,
         const auto& tuning = sched_state.tuning();
         initialTimeStepSize_ = sched_state.max_next_tstep();
         maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
-        maxTimeStepSize_ = tuning.TSMAXZ;
-        restartShrinkFactor_ = 1./tuning.TSFCNV;
-        minTimeStepSize_ = tuning.TSMINZ;
         return true;
     }
 

@@ -57,6 +57,14 @@
 
 #include <algorithm>
 
+namespace Opm::Properties {
+    namespace TTag {
+    struct TestRestartTypeTag {
+            using InheritsFrom = std::tuple<EbosTypeTag, FlowTimeSteppingParameters>;
+        };
+    }
+}
+
 template<class T>
 std::tuple<T,int,int> PackUnpack(T& in)
 {
@@ -427,11 +435,12 @@ namespace {
 
 struct AquiferFixture {
     AquiferFixture() {
-        using TT = Opm::Properties::TTag::EbosTypeTag;
+        using TT = Opm::Properties::TTag::TestRestartTypeTag;
         const char* argv[] = {
             "test_RestartSerialization",
             "--ecl-deck-file-name=GLIFT1.DATA"
         };
+        Opm::AdaptiveTimeSteppingEbos<TT>::registerParameters();
         Opm::setupParameters_<TT>(2, argv, /*registerParams=*/true);
         Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
     }
@@ -444,7 +453,7 @@ BOOST_GLOBAL_FIXTURE(AquiferFixture);
 #define TEST_FOR_AQUIFER(TYPE) \
 BOOST_AUTO_TEST_CASE(TYPE) \
 { \
-    using TT = Opm::Properties::TTag::EbosTypeTag; \
+    using TT = Opm::Properties::TTag::TestRestartTypeTag; \
     Opm::EclGenericVanguard::readDeck("GLIFT1.DATA"); \
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>; \
     Simulator sim; \
@@ -465,7 +474,7 @@ TEST_FOR_AQUIFER(AquiferFetkovich)
 
 BOOST_AUTO_TEST_CASE(AquiferNumerical)
 {
-    using TT = Opm::Properties::TTag::EbosTypeTag;
+    using TT = Opm::Properties::TTag::TestRestartTypeTag;
     Opm::EclGenericVanguard::readDeck("GLIFT1.DATA");
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
     Simulator sim;
@@ -483,7 +492,7 @@ BOOST_AUTO_TEST_CASE(AquiferNumerical)
 
 BOOST_AUTO_TEST_CASE(AquiferConstantFlux)
 {
-    using TT = Opm::Properties::TTag::EbosTypeTag;
+    using TT = Opm::Properties::TTag::TestRestartTypeTag;
     Opm::EclGenericVanguard::readDeck("GLIFT1.DATA");
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
     Simulator sim;

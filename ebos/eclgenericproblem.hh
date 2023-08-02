@@ -367,10 +367,6 @@ protected:
     bool enableTuning_;
     Scalar initialTimeStepSize_;
     Scalar maxTimeStepAfterWellEvent_;
-    Scalar maxTimeStepSize_;
-    Scalar restartShrinkFactor_;
-    unsigned maxFails_;
-    Scalar minTimeStepSize_;
     
     // equilibration parameters
     int numPressurePointsEquil_;

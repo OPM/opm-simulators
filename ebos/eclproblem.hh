@@ -78,6 +78,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/simulators/flow/EclActionHandler.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
@@ -222,10 +223,6 @@ public:
         if constexpr (enableExperiments)
             EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableAquifers,
                                  "Enable analytic and numeric aquifer models");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent,
-                             "Maximum time step size after an well event");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, EclRestartShrinkFactor,
-                             "Factor by which the time step is reduced after convergence failure");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableTuning,
                              "Honor some aspects of the TUNING keyword from the ECL deck.");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
@@ -233,7 +230,6 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, int, NumPressurePointsEquil,
                              "Number of pressure points (in each direction) in tables used for equilibration");
         EWOMS_HIDE_PARAM(TypeTag, NumPressurePointsEquil); // Users will typically not need to modify this parameter..
-
     }
 
 
@@ -307,11 +303,7 @@ public:
 
         this->enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableTuning);
         this->initialTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
-        this->minTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, MinTimeStepSize);
-        this->maxTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxTimeStepSize);
-        this->maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclMaxTimeStepSizeAfterWellEvent);
-        this->restartShrinkFactor_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclRestartShrinkFactor);
-        this->maxFails_ = EWOMS_GET_PARAM(TypeTag, unsigned, MaxTimeStepDivisions);
+        this->maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, double, TimeStepAfterEventInDays)*24*60*60;
 
         // The value N for this parameter is defined in the following order of presedence:
         // 1. Command line value (--num-pressure-points-equil=N)
@@ -365,9 +357,6 @@ public:
             const auto& tuning = schedule[0].tuning();
             this->initialTimeStepSize_ = tuning.TSINIT;
             this->maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
-            this->maxTimeStepSize_ = tuning.TSMAXZ;
-            this->restartShrinkFactor_ = 1./tuning.TSFCNV;
-            this->minTimeStepSize_ = tuning.TSMINZ;
         }
 
         this->initFluidSystem_();
