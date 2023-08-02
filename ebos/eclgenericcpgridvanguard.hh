@@ -28,9 +28,11 @@
 #define EWOMS_ECL_CP_GRID_GENERIC_VANGUARD_HH
 
 #include <ebos/eclgenericvanguard.hh>
+
 #include <opm/grid/CpGrid.hpp>
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <vector>
 
