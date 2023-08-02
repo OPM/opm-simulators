@@ -27,18 +27,26 @@
 #ifndef EWOMS_ECL_ALU_GRID_VANGUARD_HH
 #define EWOMS_ECL_ALU_GRID_VANGUARD_HH
 
-#include "eclbasevanguard.hh"
-#include "ecltransmissibility.hh"
-#include "alucartesianindexmapper.hh"
-#include <opm/models/common/multiphasebaseproperties.hh>
+#include <dune/alugrid/common/fromtogridfactory.hh>
+#include <dune/alugrid/dgf.hh>
+#include <dune/alugrid/grid.hh>
+
+#include <ebos/alucartesianindexmapper.hh>
+#include <ebos/eclbasevanguard.hh>
+#include <ebos/ecltransmissibility.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <dune/alugrid/grid.hh>
-#include <dune/alugrid/common/fromtogridfactory.hh>
-#include <dune/alugrid/dgf.hh>
 #include <opm/grid/CpGrid.hpp>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
+
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
+
+#include <array>
+#include <memory>
+#include <tuple>
+#include <vector>
 
 namespace Opm {
 template <class TypeTag>
@@ -104,7 +112,7 @@ public:
 
     static constexpr int dimension = Grid::dimension;
     static constexpr int dimensionworld = Grid::dimensionworld;
-public:
+
     EclAluGridVanguard(Simulator& simulator)
         : EclBaseVanguard<TypeTag>(simulator)
     { 
