@@ -40,6 +40,7 @@
 #include <opm/models/discretization/common/fvbasediscretization.hh>
 
 #if HAVE_DUNE_FEM
+#include <opm/models/discretization/common/fvbasediscretizationfemadapt.hh>
 #include <dune/fem/space/common/functionspace.hh>
 #include <dune/fem/space/lagrange.hh>
 #endif
@@ -109,6 +110,18 @@ public:
     // Lagrange discrete function space with unknowns at the cell vertices
     using type = Dune::Fem::LagrangeDiscreteFunctionSpace< FunctionSpace, GridPart, 1 >;
 };
+#else
+template <class TypeTag>
+struct DummySpaceVcfv {
+    using DiscreteFunctionSpace = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>;
+    DummySpaceVcfv(const DiscreteFunctionSpace&) {};
+    DummySpaceVcfv(const int&) {};
+};
+
+template <class TypeTag>
+struct DiscreteFunctionSpace<TypeTag, TTag::VcfvDiscretization> {
+    using type = DummySpaceVcfv<TypeTag>;
+};
 #endif
 
 //! Set the border list creator for vertices
@@ -138,9 +151,9 @@ namespace Opm {
  * \brief The base class for the vertex centered finite volume discretization scheme.
  */
 template<class TypeTag>
-class VcfvDiscretization : public FvBaseDiscretization<TypeTag>
+class VcfvDiscretization : public GetPropType<TypeTag, Properties::BaseDiscretizationType>
 {
-    using ParentType = FvBaseDiscretization<TypeTag>;
+    using ParentType = GetPropType<TypeTag, Properties::BaseDiscretizationType>;
     using Implementation = GetPropType<TypeTag, Properties::Model>;
     using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;

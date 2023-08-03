@@ -90,6 +90,9 @@ struct Stencil { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct DiscreteFunctionSpace { using type = UndefinedProperty; };
 
+template<class TypeTag, class MyTypeTag>
+struct DiscreteFunction { using type = UndefinedProperty; };
+
 //! The type of the problem
 template<class TypeTag, class MyTypeTag>
 struct Problem { using type = UndefinedProperty; };
