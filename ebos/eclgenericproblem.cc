@@ -21,9 +21,40 @@
   copyright holders.
 */
 #include <config.h>
+
 #include <ebos/eclgenericproblem.hh>
 #include <ebos/eclgenericproblem_impl.hh>
 
-template class Opm::EclGenericProblem<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                      Opm::BlackOilFluidSystem<double,Opm::BlackOilDefaultIndexTraits>,
-                                      double>;
+#include <dune/grid/common/defaultgridview.hh>
+#include <dune/grid/common/gridview.hh>
+
+#include <opm/grid/CpGrid.hpp>
+
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#if HAVE_DUNE_FEM
+#include <dune/fem/gridpart/adaptiveleafgridpart.hh>
+#include <dune/fem/gridpart/common/gridpart2gridview.hh>
+#include <ebos/femcpgridcompat.hh>
+#endif // HAVE_DUNE_FEM
+
+namespace Opm {
+
+#if HAVE_DUNE_FEM
+template class EclGenericProblem<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
+                                 BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
+                                 double>;
+template class EclGenericProblem<Dune::Fem::GridPart2GridViewImpl<
+                                    Dune::Fem::AdaptiveLeafGridPart<
+                                        Dune::CpGrid,
+                                        Dune::PartitionIteratorType(4),
+                                        false> >,
+                                 BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
+                                 double>;
+#else
+template class EclGenericProblem<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
+                                 BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
+                                 double>;
+#endif
+
+} // end namespace Opm

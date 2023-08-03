@@ -94,15 +94,12 @@ public:
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     using EquilCartesianIndexMapper = Dune::CartesianIndexMapper<EquilGrid>;
-    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
     static constexpr int dimension = Grid::dimension;
     static constexpr int dimensionworld = Grid::dimensionworld;
 
 private:
     using GridPointer = Grid*;
     using EquilGridPointer = EquilGrid*;
-    //using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
-    //using CartesianIndexMapperPointer = std::unique_ptr<CartesianIndexMapper>;
 
 public:
     using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper,

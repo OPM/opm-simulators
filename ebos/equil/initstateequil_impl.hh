@@ -29,7 +29,6 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/grid/CpGrid.hpp>
 #include <opm/grid/utility/RegionMapping.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -53,17 +52,6 @@
 #include <cassert>
 #include <limits>
 #include <stdexcept>
-
-#if HAVE_DUNE_FEM
-#include <dune/fem/gridpart/adaptiveleafgridpart.hh>
-#include <dune/fem/gridpart/common/gridpart2gridview.hh>
-#include <ebos/femcpgridcompat.hh>
-#endif
-
-#if HAVE_DUNE_ALUGRID
-#include <dune/alugrid/grid.hh>
-#include <dune/alugrid/3d/gridview.hh>
-#endif // HAVE_DUNE_ALUGRID
 
 namespace Opm {
 namespace EQUIL {

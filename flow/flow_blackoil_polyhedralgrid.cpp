@@ -16,14 +16,24 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "config.h"
-#include <opm/simulators/flow/Main.hpp>
-#include <opm/grid/polyhedralgrid.hh>
+#include <config.h>
+
 #include <ebos/eclpolyhedralgridvanguard.hh>
-#include <ebos/equil/initstateequil_impl.hh>
+
+#include <opm/grid/polyhedralgrid.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
+#include <opm/simulators/flow/Main.hpp>
+
+// these are not explicitly instanced in library
+#include <ebos/collecttoiorank_impl.hh>
 #include <ebos/eclgenericproblem_impl.hh>
+#include <ebos/eclgenericthresholdpressure_impl.hh>
+#include <ebos/eclgenerictracermodel_impl.hh>
+#include <ebos/ecltransmissibility_impl.hh>
+#include <ebos/eclgenericwriter_impl.hh>
+#include <ebos/equil/initstateequil_impl.hh>
+
 namespace Opm {
 namespace Properties {
     namespace TTag {

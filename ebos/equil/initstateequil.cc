@@ -21,13 +21,22 @@
   copyright holders.
 */
 
-#include "config.h"
-#include "initstateequil.hh"
-#include "initstateequil_impl.hh"
+#include <config.h>
+#include <ebos/equil/initstateequil.hh>
+#include <ebos/equil/initstateequil_impl.hh>
+
+#include <opm/grid/CpGrid.hpp>
+
+#if HAVE_DUNE_FEM
+#include <dune/fem/gridpart/adaptiveleafgridpart.hh>
+#include <dune/fem/gridpart/common/gridpart2gridview.hh>
+#include <ebos/femcpgridcompat.hh>
+#endif
 
 namespace Opm {
 namespace EQUIL {
 namespace DeckDependent {
+
 #if HAVE_DUNE_FEM
 using GridView = Dune::Fem::GridPart2GridViewImpl<
                                      Dune::Fem::AdaptiveLeafGridPart<
@@ -59,37 +68,6 @@ template InitialStateComputer<BlackOilFluidSystem<double>,
                          const double,
                          const int,
                          const bool);
-#if HAVE_DUNE_ALUGRID
-#if HAVE_MPI
-using ALUGridComm = Dune::ALUGridMPIComm;
-#else
-using ALUGridComm = Dune::ALUGridNoComm;
-#endif //HAVE_MPI
-using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, ALUGridComm>;
-using ALUGridView = Dune::GridView<Dune::ALU3dLeafGridViewTraits<const ALUGrid3CN, Dune::PartitionIteratorType(4)>>;
-using ALUGridMapper = Dune::MultipleCodimMultipleGeomTypeMapper<ALUGridView>;
-template class InitialStateComputer<BlackOilFluidSystem<double>,
-                                    ALUGrid3CN,
-                                    ALUGridView,
-                                    ALUGridMapper,
-                                    Dune::CartesianIndexMapper<ALUGrid3CN>>;
-
-template InitialStateComputer<BlackOilFluidSystem<double>,
-                              ALUGrid3CN,
-                              ALUGridView,
-                              ALUGridMapper,
-                              Dune::CartesianIndexMapper<ALUGrid3CN>>::
-    InitialStateComputer(MatLaw&,
-                         const EclipseState&,
-                         const ALUGrid3CN&,
-                         const ALUGridView&,
-                         const Dune::CartesianIndexMapper<ALUGrid3CN>&,
-                         const double,
-                         const int,
-                         const bool);
-#endif //HAVE_DUNE_ALUGRID
-
-
 } // namespace DeckDependent
 
 namespace Details {
