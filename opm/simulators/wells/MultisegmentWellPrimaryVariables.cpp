@@ -180,7 +180,7 @@ updateNewton(const BVectorWell& dwells,
         {
             const int sign = dwells[seg][SPres] > 0.? 1 : -1;
             const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
-            value_[seg][SPres] = std::max(old_primary_variables[seg][SPres] - dx_limited, 1e5);
+            value_[seg][SPres] = old_primary_variables[seg][SPres] - dx_limited;
         }
 
         // update the total rate // TODO: should we have a limitation of the total rate change?
