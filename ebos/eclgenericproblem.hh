@@ -28,6 +28,7 @@
 #ifndef EWOMS_GENERIC_ECL_PROBLEM_HH
 #define EWOMS_GENERIC_ECL_PROBLEM_HH
 
+#include <ebos/eclmixingratecontrols.hh>
 #include <ebos/eclsolutioncontainers.hh>
 
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
@@ -275,8 +276,8 @@ public:
     { return maxFails_; }
 
     bool vapparsActive(int episodeIdx) const;
-    
-    int numPressurePointsEquil() const 
+
+    int numPressurePointsEquil() const
     { return numPressurePointsEquil_; }
 
     bool operator==(const EclGenericProblem& rhs) const;
@@ -291,22 +292,11 @@ public:
         serializer(overburdenPressure_);
         serializer(solventSaturation_);
         serializer(micp_);
-        serializer(lastRv_);
-        serializer(maxDRv_);
-        serializer(convectiveDrs_);
-        serializer(lastRs_);
-        serializer(maxDRs_);
-        serializer(dRsDtOnlyFreeGas_);
+        serializer(mixControls_);
     }
 
 protected:
-    bool drsdtActive_(int episodeIdx) const;
-    bool drvdtActive_(int episodeIdx) const;
-    bool drsdtConvective_(int episodeIdx) const;
-
     void initFluidSystem_();
-    void initDRSDT_(size_t numDof,
-                    int episodeIdx);
 
     /*!
      * \brief Always returns true. The ecl output writer takes care of the rest
@@ -383,13 +373,7 @@ protected:
     std::vector<Scalar> solventSaturation_;
     MICPSolutionContainer<Scalar> micp_;
 
-    std::vector<Scalar> lastRv_;
-    std::vector<Scalar> maxDRv_;
-
-    std::vector<Scalar> convectiveDrs_;
-    std::vector<Scalar> lastRs_;
-    std::vector<Scalar> maxDRs_;
-    std::vector<bool> dRsDtOnlyFreeGas_; // apply the DRSDT rate limit only to cells that exhibit free gas
+    EclMixingRateControls<FluidSystem, Scalar> mixControls_;
 
     // time stepping parameters
     bool enableTuning_;

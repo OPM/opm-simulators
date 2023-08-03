@@ -88,6 +88,7 @@ EclGenericProblem(const EclipseState& eclState,
     : eclState_(eclState)
     , schedule_(schedule)
     , gridView_(gridView)
+    , mixControls_(schedule)
 {
 }
 
@@ -106,12 +107,7 @@ serializationTestObject(const EclipseState& eclState,
     result.solventSaturation_ = {15.0};
     result.polymer_ = PolymerSolutionContainer<Scalar>::serializationTestObject();
     result.micp_ = MICPSolutionContainer<Scalar>::serializationTestObject();
-    result.lastRv_ = {21.0};
-    result.maxDRv_ = {22.0, 23.0};
-    result.convectiveDrs_ = {24.0, 25.0, 26.0};
-    result.lastRs_ = {27.0};
-    result.maxDRs_ = {28.0};
-    result.dRsDtOnlyFreeGas_ = {false, true};
+    result.mixControls_ = EclMixingRateControls<FluidSystem,Scalar>::serializationTestObject(schedule);
 
     return result;
 }
@@ -446,36 +442,6 @@ vapparsActive(int episodeIdx) const
 
 template<class GridView, class FluidSystem, class Scalar>
 bool EclGenericProblem<GridView,FluidSystem,Scalar>::
-drsdtActive_(int episodeIdx) const
-{
-    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                                  FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-    return (oilVaporizationControl.drsdtActive() && bothOilGasActive);
-}
-
-template<class GridView, class FluidSystem, class Scalar>
-bool EclGenericProblem<GridView,FluidSystem,Scalar>::
-drvdtActive_(int episodeIdx) const
-{
-    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                                  FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-    return (oilVaporizationControl.drvdtActive() && bothOilGasActive);
-}
-
-template<class GridView, class FluidSystem, class Scalar>
-bool EclGenericProblem<GridView,FluidSystem,Scalar>::
-drsdtConvective_(int episodeIdx) const
-{
-    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                                  FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
-    return (oilVaporizationControl.drsdtConvective() && bothOilGasActive);
-}
-
-template<class GridView, class FluidSystem, class Scalar>
-bool EclGenericProblem<GridView,FluidSystem,Scalar>::
 beginEpisode_(bool enableExperiments,
               int episodeIdx)
 {
@@ -539,16 +505,7 @@ beginTimeStep_(bool enableExperiments,
     }
 
     // update explicit quantities between timesteps.
-    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    if (drsdtActive_(episodeIdx))
-        // DRSDT is enabled
-        for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
-            maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*timeStepSize;
-
-    if (drvdtActive_(episodeIdx))
-        // DRVDT is enabled
-        for (size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
-            maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*timeStepSize;
+    this->mixControls_.updateExplicitQuantities(episodeIdx, timeStepSize);
 }
 
 template<class GridView, class FluidSystem, class Scalar>
@@ -615,7 +572,7 @@ readBlackoilExtentionsInitialConditions_(size_t numDof,
         } else {
             micp_.calciteConcentration.resize(numDof, 0.0);
         }
-}
+    }
 }
 
 
@@ -663,15 +620,8 @@ template<class GridView, class FluidSystem, class Scalar>
 Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
 drsdtcon(unsigned elemIdx, int episodeIdx) const
 {
-    if (convectiveDrs_.empty())
-        return 0;
-
-    // The episode index is set to -1 in the initialization phase.
-    // Output drsdt value for index 0
-    episodeIdx = std::max(episodeIdx, 0);
-    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    int pvtRegionIdx = pvtRegionIndex(elemIdx);
-    return oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*convectiveDrs_[elemIdx];
+    return this->mixControls_.drsdtcon(elemIdx, episodeIdx,
+                                       this->pvtRegionIndex(elemIdx));
 }
 
 template<class GridView, class FluidSystem, class Scalar>
@@ -803,47 +753,16 @@ maxPolymerAdsorption(unsigned elemIdx) const
 }
 
 template<class GridView, class FluidSystem, class Scalar>
-void EclGenericProblem<GridView,FluidSystem,Scalar>::
-initDRSDT_(size_t numDof,
-           int episodeIdx)
-{
-    // deal with DRSDT
-    unsigned ntpvt = eclState_.runspec().tabdims().getNumPVTTables();
-    //TODO We may want to only allocate these properties only if active.
-    //But since they may be activated at later time we need some more
-    //intrastructure to handle it
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-        maxDRv_.resize(ntpvt, 1e30);
-        lastRv_.resize(numDof, 0.0);
-        maxDRs_.resize(ntpvt, 1e30);
-        dRsDtOnlyFreeGas_.resize(ntpvt, false);
-        lastRs_.resize(numDof, 0.0);
-        maxDRv_.resize(ntpvt, 1e30);
-        lastRv_.resize(numDof, 0.0);
-        maxOilSaturation_.resize(numDof, 0.0);
-        if (drsdtConvective_(episodeIdx)) {
-            convectiveDrs_.resize(numDof, 1.0);
-        }
-    }
-}
-
-template<class GridView, class FluidSystem, class Scalar>
 bool EclGenericProblem<GridView,FluidSystem,Scalar>::
 operator==(const EclGenericProblem& rhs) const
 {
-    return this->maxOilSaturation_ == rhs.maxOilSaturation_ &&
-           this->maxWaterSaturation_ == rhs.maxWaterSaturation_ &&
+    return this->maxWaterSaturation_ == rhs.maxWaterSaturation_ &&
            this->minOilPressure_ == rhs.minOilPressure_ &&
            this->overburdenPressure_ == rhs.overburdenPressure_ &&
            this->solventSaturation_ == rhs.solventSaturation_ &&
            this->polymer_ == rhs.polymer_ &&
            this->micp_ == rhs.micp_ &&
-           this->lastRv_ == rhs.lastRv_ &&
-           this->maxDRv_ == rhs.maxDRv_ &&
-           this->convectiveDrs_ == rhs.convectiveDrs_ &&
-           this->lastRs_ == rhs.lastRs_ &&
-           this->maxDRs_ == rhs.maxDRs_ &&
-           this->dRsDtOnlyFreeGas_ == rhs.dRsDtOnlyFreeGas_;
+           this->mixControls_ == rhs.mixControls_;
 }
 
 } // namespace Opm
