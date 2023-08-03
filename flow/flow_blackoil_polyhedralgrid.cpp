@@ -23,7 +23,7 @@
 #include <ebos/equil/initstateequil_impl.hh>
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
-
+#include <ebos/eclgenericproblem_impl.hh>
 namespace Opm {
 namespace Properties {
     namespace TTag {

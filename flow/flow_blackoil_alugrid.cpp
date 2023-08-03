@@ -20,6 +20,7 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <dune/alugrid/grid.hh>
 #include <ebos/eclalugridvanguard.hh>
+#include <ebos/eclgenericproblem_impl.hh>
 namespace Opm {
 namespace Properties {
 namespace TTag {
