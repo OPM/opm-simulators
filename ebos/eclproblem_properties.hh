@@ -170,6 +170,23 @@ struct LocalLinearizerSplice<TypeTag, TTag::EclBaseProblem> {
     using type = TTag::AutoDiffLocalLinearizer;
 };
 
+template<class TypeTag>
+struct BaseDiscretizationType<TypeTag, TTag::EclBaseProblem> {
+    using type = FvBaseDiscretizationNoAdapt<TypeTag>;
+};
+
+template<class TypeTag>
+struct DiscreteFunction<TypeTag, TTag::EclBaseProblem> {
+    using BaseDiscretization = FvBaseDiscretization<TypeTag>;
+    using type = typename BaseDiscretization::BlockVectorWrapper;
+};
+
+template<class TypeTag>
+struct GridView<TypeTag, TTag::EclBaseProblem>
+{
+    using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView;
+};
+
 // Set the material law for fluid fluxes
 template<class TypeTag>
 struct MaterialLaw<TypeTag, TTag::EclBaseProblem>
