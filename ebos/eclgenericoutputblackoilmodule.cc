@@ -236,117 +236,10 @@ outputProdLog(size_t reportStepNum,
               const bool substep,
               bool forceDisableProdOutput)
 {
-    if (!substep) {
-        ScalarBuffer  tmp_values(WellProdDataType::numWPValues, 0.0);
-        StringBuffer  tmp_names(WellProdDataType::numWPNames, "");
-        outputProductionReport_(tmp_values, tmp_names, forceDisableProdOutput);
-
-        const auto& st = summaryState_;
-
-        for (const auto& gname: schedule_.groupNames()) {
-
-            auto gName = static_cast<std::string>(gname);
-            auto get = [&st, &gName](const std::string& vector)
-            {
-                const auto key = vector + ':' + gName;
-
-                return st.has(key) ? st.get(key) : 0.0;
-            };
-
-            tmp_names[0] = gname;
-
-            if (tmp_names[0] == "FIELD"){
-                tmp_values[2] = st.get("FOPR", 0.0); //WellProdDataType::OilRate
-                tmp_values[3] = st.get("FWPR", 0.0); //WellProdDataType::WaterRate
-                tmp_values[4] = st.get("FGPR", 0.0); //WellProdDataType::GasRate
-                tmp_values[5] = st.get("FVPR", 0.0); //WellProdDataType::FluidResVol
-                tmp_values[6] = st.get("FWCT", 0.0); //WellProdDataType::WaterCut
-                tmp_values[7] = st.get("FGOR", 0.0); //WellProdDataType::GasOilRatio
-            } else {
-                tmp_values[2] = get("GOPR"); //WellProdDataType::OilRate
-                tmp_values[3] = get("GWPR"); //WellProdDataType::WaterRate
-                tmp_values[4] = get("GGPR"); //WellProdDataType::GasRate
-                tmp_values[5] = get("GVPR"); //WellProdDataType::FluidResVol
-                tmp_values[6] = get("GWCT"); //WellProdDataType::WaterCut
-                tmp_values[7] = get("GGOR"); //WellProdDataType::GasOilRatio
-            }
-
-            tmp_values[8] = tmp_values[3]/tmp_values[4]; //WellProdDataType::WaterGasRatio
-            if (isnan(tmp_values[8])){
-                tmp_values[8] = 0.0;
-            }
-
-            outputProductionReport_(tmp_values, tmp_names, forceDisableProdOutput);
-        }
-
-        for (const auto& wname: schedule_.wellNames(reportStepNum)) {
-
-            // don't bother with wells not on this process
-            if (isDefunctParallelWell(wname)) {
-                continue;
-            }
-
-            const auto& well = schedule_.getWell(wname, reportStepNum);
-
-            // Ignore injector wells
-            if (well.isInjector()){
-                continue;
-            }
-
-            tmp_names[0] = wname;//WellProdDataType::WellName
-
-
-            auto wName = static_cast<std::string>(wname);
-            auto get = [&st, &wName](const std::string& vector)
-            {
-                const auto key = vector + ':' + wName;
-
-                return st.has(key) ? st.get(key) : 0.0;
-            };
-
-            const auto& controls = well.productionControls(st);
-            using CMode = Well::ProducerCMode;
-
-            auto fctl = [](const auto wmctl) -> std::string
-            {
-                switch (wmctl) {
-                case CMode::ORAT: return "ORAT";
-                case CMode::WRAT: return "WRAT";
-                case CMode::GRAT: return "GRAT";
-                case CMode::LRAT: return "LRAT";
-                case CMode::RESV: return "RESV";
-                case CMode::THP:  return "THP";
-                case CMode::BHP:  return "BHP";
-                case CMode::CRAT: return "CRate";
-                case CMode::GRUP: return "GRUP";
-                default:
-                {
-                    return "none";
-                }
-                }
-            };
-
-            tmp_names[1] = fctl(controls.cmode); //WellProdDataType::CTRLMode
-
-            tmp_values[0] = well.getHeadI() + 1;//WellProdDataType::WellLocationi
-            tmp_values[1] = well.getHeadJ() + 1;//WellProdDataType::WellLocationj
-            tmp_values[2] = get("WOPR"); //WellProdDataType::OilRate
-            tmp_values[3] = get("WWPR"); //WellProdDataType::WaterRate
-            tmp_values[4] = get("WGPR"); //WellProdDataType::GasRate
-            tmp_values[5] = get("WVPR"); //WellProdDataType::FluidResVol
-            tmp_values[6] = get("WWCT"); //WellProdDataType::WaterCut
-            tmp_values[7] = get("WGOR"); //WellProdDataType::GasOilRatio
-            tmp_values[9] = get("WBHP"); //WellProdDataType::BHP
-            tmp_values[10] = get("WTHP"); //WellProdDataType::THP
-            //tmp_values[11] = 0; //WellProdDataType::SteadyStatePI //
-
-            tmp_values[8] = tmp_values[3]/tmp_values[4]; //WellProdDataType::WaterGasRatio
-            if (isnan(tmp_values[8])){
-                tmp_values[8] = 0.0;
-            }
-
-            outputProductionReport_(tmp_values, tmp_names, forceDisableProdOutput);
-        }
+    if (!substep && !forceDisableProdOutput) {
+        logOutput_.production(reportStepNum,
+                              [this](const std::string& name)
+                              { return this->isDefunctParallelWell(name); });
     }
 }
 
@@ -1408,44 +1301,6 @@ outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr, const i
     else {
         ss << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (9) <<  reg << ":" << std::setw(15) << cipr[Inplace::Phase::DynamicPoreVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::OilResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::WaterResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::GasResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::OilResVolume] + cipr[Inplace::Phase::GasResVolume] << ":\n"
         << ":---------:---------------:---------------:---------------:---------------:---------------:\n";
-    }
-    OpmLog::note(ss.str());
-}
-
-template<class FluidSystem, class Scalar>
-void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputProductionReport_(const ScalarBuffer& wellProd,
-                    const StringBuffer& wellProdNames,
-                    const bool forceDisableProdOutput)
-{
-    if (forceDisableProdOutput)
-        return;
-
-    const UnitSystem& units = eclState_.getUnits();
-    std::ostringstream ss;
-    if (wellProdNames[WellProdDataType::WellName].empty()) {
-        ss << "======================================================= PRODUCTION REPORT =======================================================\n"//=================== \n"
-           << ":  WELL  :  LOCATION :CTRL:    OIL    :   WATER   :    GAS    :   FLUID   :   WATER   : GAS/OIL  :  WAT/GAS   : BHP OR : THP OR :\n"// STEADY-ST PI       :\n"
-           << ":  NAME  :  (I,J,K)  :MODE:    RATE   :   RATE    :    RATE   :  RES.VOL. :    CUT    :  RATIO   :   RATIO    : CON.PR.: BLK.PR.:\n";// OR POTN OF PREF. PH:\n";
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-                        ss << ":        :           :    :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  SCM/SCM  :  SCM/SCM :  SCM/SCM   :  BARSA :  BARSA :\n";//                    :\n";
-                    }
-                    if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-                        ss << ":        :           :    :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :           : MSCF/STB :  STB/MSCF  :  PSIA  :  PSIA  :\n";//                    :\n";
-                    }
-                if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-                            ss << ":        :           :    :  SCC/HR   :  SCC/HR   :  SCC/HR   :    RCC    :  SCC/SCC  :  SCC/SCC :  SCC/SCC   :  ATMA  :  ATMA  :\n";//                    :\n";
-                    }
-            ss << "=================================================================================================================================\n";//=================== \n";
-    }
-    else {
-        if (wellProd[WellProdDataType::WellLocationi] < 1) {
-            ss << std::right << std::fixed << ":" << std::setw (8) << wellProdNames[WellProdDataType::WellName] << ":" << std::setprecision(0) << std::setw(11) << "" << ":" << std::setw(4) << wellProdNames[WellProdDataType::CTRLMode] << ":" << std::setprecision(1) << std::setw(11) << wellProd[WellProdDataType::OilRate] << ":" << std::setw(11) << wellProd[WellProdDataType::WaterRate] << ":" <<  std::setw(11)<< wellProd[WellProdDataType::GasRate] << ":" <<  std::setw(11) << wellProd[WellProdDataType::FluidResVol] << std::setprecision(3) << ":" <<  std::setw(11) << wellProd[WellProdDataType::WaterCut] << std::setprecision(2) << ":" <<  std::setw(10) << wellProd[WellProdDataType::GasOilRatio] << std::setprecision(4) << ":" <<  std::setw(12) << wellProd[WellProdDataType::WatGasRatio] << std::setprecision(1) << ":" <<  std::setw(8) << "" << ":" <<  std::setw(8) << "" << ": \n";
-        }
-        else {
-            ss << std::right << std::fixed << ":" << std::setw (8) << wellProdNames[WellProdDataType::WellName] << ":" << std::setprecision(0) << std::setw(5) << wellProd[WellProdDataType::WellLocationi] << "," << std::setw(5) << wellProd[WellProdDataType::WellLocationj] << ":" << std::setw(4) << wellProdNames[WellProdDataType::CTRLMode] << ":" << std::setprecision(1) << std::setw(11) << wellProd[WellProdDataType::OilRate] << ":" << std::setw(11) << wellProd[WellProdDataType::WaterRate] << ":" <<  std::setw(11)<< wellProd[WellProdDataType::GasRate] << ":" <<  std::setw(11) << wellProd[WellProdDataType::FluidResVol] << std::setprecision(3) << ":" <<  std::setw(11) << wellProd[WellProdDataType::WaterCut] << std::setprecision(2) << ":" <<  std::setw(10) << wellProd[WellProdDataType::GasOilRatio] << std::setprecision(4) << ":" <<  std::setw(12) << wellProd[WellProdDataType::WatGasRatio] << std::setprecision(1) << ":" <<  std::setw(8) << wellProd[WellProdDataType::BHP] << ":" <<  std::setw(8) << wellProd[WellProdDataType::THP] << ": \n";
-        }
-        ss << ":"<< std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (5) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (11) << ":" << std::setfill ('-') << std::setw (13) << ":" << std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (9) << ":" << "\n";
     }
     OpmLog::note(ss.str());
 }

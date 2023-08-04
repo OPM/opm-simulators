@@ -294,30 +294,6 @@ protected:
                                    bool enableExtbo,
                                    bool enableMICP);
 
-    struct WellProdDataType
-    {
-        enum WPId
-        {
-            WellLocationi = 0, //WLi
-            WellLocationj = 1, //WLj
-            OilRate = 2, //OR
-            WaterRate = 3, //WR
-            GasRate = 4, //GR
-            FluidResVol = 5, //FRV
-            WaterCut = 6, //WC
-            GasOilRatio = 7, //GOR
-            WatGasRatio = 8, //WGR
-            BHP = 9, //BHP
-            THP = 10, //THP
-            SteadyStatePI = 11, //SteadyStatePI
-            WellName = 0, //WName
-            CTRLMode = 1, //CTRL
-        };
-
-        static constexpr int numWPValues = 12;
-        static constexpr int numWPNames = 2;
-    };
-
     struct WellInjDataType
     {
         enum WIId
@@ -359,9 +335,6 @@ protected:
                                    const Scalar& pav, const int reg = 0) const;
     void outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
                                  const int reg = 0) const;
-    void outputProductionReport_(const ScalarBuffer& wellProd,
-                                 const StringBuffer& wellProdNames,
-                                 const bool forceDisableProdOutput);
     void outputInjectionReport_(const ScalarBuffer& wellInj,
                                 const StringBuffer& wellInjNames,
                                 const bool forceDisableInjOutput);

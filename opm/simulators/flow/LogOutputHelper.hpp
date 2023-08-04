@@ -43,9 +43,16 @@ public:
     void cumulative(const std::size_t reportStepNum,
                     std::function<bool(const std::string&)> isDefunct) const;
 
+    //! \brief Write production report to output.
+    void production(const std::size_t reportStepNum,
+                    std::function<bool(const std::string&)> isDefunct) const;
+
 private:
     void outputCumulativeReport_(const std::vector<Scalar>& wellCum,
                                  const std::vector<std::string>& wellCumNames) const;
+
+    void outputProductionReport_(const std::vector<Scalar>& wellProd,
+                                 const std::vector<std::string>& wellProdNames) const;
 
     struct WellCumDataType
     {
@@ -67,6 +74,30 @@ private:
         };
         static constexpr int numWCValues = 10;
         static constexpr int numWCNames = 3;
+    };
+
+    struct WellProdDataType
+    {
+        enum WPId
+        {
+            WellLocationi = 0, // WLi
+            WellLocationj = 1, // WLj
+            OilRate = 2, // OR
+            WaterRate = 3, // WR
+            GasRate = 4, // GR
+            FluidResVol = 5, // FRV
+            WaterCut = 6, // WC
+            GasOilRatio = 7, // GOR
+            WatGasRatio = 8, // WGR
+            BHP = 9, // BHP
+            THP = 10, // THP
+            SteadyStatePI = 11, // SteadyStatePI
+            WellName = 0, // WName
+            CTRLMode = 1, // CTRL
+        };
+
+        static constexpr int numWPValues = 12;
+        static constexpr int numWPNames = 2;
     };
 
     const EclipseState& eclState_;
