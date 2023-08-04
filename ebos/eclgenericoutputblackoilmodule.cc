@@ -191,9 +191,9 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     anyFlows_ = false;
     enableFlores_ = false;  // Used for the output of i+, j+, k+
     enableFloresn_ = false; // Used for the special case of nnc
-    enableFlows_ = false; 
-    enableFlowsn_ = false; 
-    
+    enableFlows_ = false;
+    enableFlowsn_ = false;
+
     for (const auto& block : this->schedule_) { // Uses Schedule::begin() and Schedule::end()
         const auto& rstkw = block.rst_config().keywords;
 
@@ -419,7 +419,7 @@ outputProdLog(size_t reportStepNum,
                 tmp_values[6] = get("GWCT"); //WellProdDataType::WaterCut
                 tmp_values[7] = get("GGOR"); //WellProdDataType::GasOilRatio
             }
-        
+
             tmp_values[8] = tmp_values[3]/tmp_values[4]; //WellProdDataType::WaterGasRatio
             if (isnan(tmp_values[8])){
                 tmp_values[8] = 0.0;
@@ -944,50 +944,43 @@ setRestart(const data::Solution& sol,
     assert(!saturation_[oilPhaseIdx].empty());
     saturation_[oilPhaseIdx][elemIdx] = so;
 
-    if (!fluidPressure_.empty() && sol.has("PRESSURE"))
-        fluidPressure_[elemIdx] = sol.data("PRESSURE")[globalDofIndex];
-    if (!temperature_.empty() && sol.has("TEMP"))
-        temperature_[elemIdx] = sol.data("TEMP")[globalDofIndex];
-    if (!rs_.empty() && sol.has("RS"))
-        rs_[elemIdx] = sol.data("RS")[globalDofIndex];
-    if (!rsw_.empty() && sol.has("RSW"))
-        rsw_[elemIdx] = sol.data("RSW")[globalDofIndex];
-    if (!rv_.empty() && sol.has("RV"))
-        rv_[elemIdx] = sol.data("RV")[globalDofIndex];
-    if (!rvw_.empty() && sol.has("RVW"))
-        rvw_[elemIdx] = sol.data("RVW")[globalDofIndex];
-    if (!cPolymer_.empty() && sol.has("POLYMER"))
-        cPolymer_[elemIdx] = sol.data("POLYMER")[globalDofIndex];
-    if (!cFoam_.empty() && sol.has("FOAM"))
-        cFoam_[elemIdx] = sol.data("FOAM")[globalDofIndex];
-    if (!cSalt_.empty() && sol.has("SALT"))
-        cSalt_[elemIdx] = sol.data("SALT")[globalDofIndex];
-    if (!pSalt_.empty() && sol.has("SALTP"))
-        pSalt_[elemIdx] = sol.data("SALTP")[globalDofIndex];
-    if (!permFact_.empty() && sol.has("PERMFACT"))
-        permFact_[elemIdx] = sol.data("PERMFACT")[globalDofIndex];
-    if (!soMax_.empty() && sol.has("SOMAX"))
-        soMax_[elemIdx] = sol.data("SOMAX")[globalDofIndex];
-    if (!pcSwMdcOw_.empty() && sol.has("PCSWM_OW"))
-        pcSwMdcOw_[elemIdx] = sol.data("PCSWM_OW")[globalDofIndex];
-    if (!krnSwMdcOw_.empty() && sol.has("KRNSW_OW"))
-        krnSwMdcOw_[elemIdx] = sol.data("KRNSW_OW")[globalDofIndex];
-    if (!pcSwMdcGo_.empty() && sol.has("PCSWM_GO"))
-        pcSwMdcGo_[elemIdx] = sol.data("PCSWM_GO")[globalDofIndex];
-    if (!krnSwMdcGo_.empty() && sol.has("KRNSW_GO"))
-        krnSwMdcGo_[elemIdx] = sol.data("KRNSW_GO")[globalDofIndex];
-    if (!ppcw_.empty() && sol.has("PPCW"))
-        ppcw_[elemIdx] = sol.data("PPCW")[globalDofIndex];
-    if (!cMicrobes_.empty() && sol.has("MICROBES"))
-        cMicrobes_[elemIdx] = sol.data("MICROBES")[globalDofIndex];
-    if (!cOxygen_.empty() && sol.has("OXYGEN"))
-        cOxygen_[elemIdx] = sol.data("OXYGEN")[globalDofIndex];
-    if (!cUrea_.empty() && sol.has("UREA"))
-        cUrea_[elemIdx] = sol.data("UREA")[globalDofIndex];
-    if (!cBiofilm_.empty() && sol.has("BIOFILM"))
-        cBiofilm_[elemIdx] = sol.data("BIOFILM")[globalDofIndex];
-    if (!cCalcite_.empty() && sol.has("CALCITE"))
-        cCalcite_[elemIdx] = sol.data("CALCITE")[globalDofIndex];
+    auto assign = [elemIdx, globalDofIndex, &sol](const std::string& name,
+                                                  ScalarBuffer& data)
+
+    {
+        if (!data.empty() && sol.has(name)) {
+            data[elemIdx] = sol.data(name)[globalDofIndex];
+        }
+    };
+
+    const auto fields = std::array{
+        std::pair{"BIOFILM", &cBiofilm_},
+        std::pair{"CALCITE",&cCalcite_},
+        std::pair{"FOAM", &cFoam_},
+        std::pair{"KRNSW_GO", &krnSwMdcGo_},
+        std::pair{"KRNSW_OW", &krnSwMdcOw_},
+        std::pair{"MICROBES", &cMicrobes_},
+        std::pair{"OXYGEN", &cOxygen_},
+        std::pair{"PCSWM_GO", &pcSwMdcGo_},
+        std::pair{"PCSWM_OW", &pcSwMdcOw_},
+        std::pair{"PERMFACT", &permFact_},
+        std::pair{"POLYMER", &cPolymer_},
+        std::pair{"PPCW", &ppcw_},
+        std::pair{"PRESSURE", &fluidPressure_},
+        std::pair{"RS", &rs_},
+        std::pair{"RSW", &rsw_},
+        std::pair{"RV", &rv_},
+        std::pair{"RVW", &rvw_},
+        std::pair{"SALT", &cSalt_},
+        std::pair{"SALTP", &pSalt_},
+        std::pair{"SOMAX", &soMax_},
+        std::pair{"TEMP", &temperature_},
+        std::pair{"UREA", &cUrea_},
+    };
+
+    std::for_each(fields.begin(), fields.end(),
+                  [&assign](const auto& p)
+                  { assign(p.first, *p.second); });
 }
 
 template<class FluidSystem,class Scalar>
@@ -1593,14 +1586,14 @@ outputProductionReport_(const ScalarBuffer& wellProd,
                             ss << ":        :           :    :  SCC/HR   :  SCC/HR   :  SCC/HR   :    RCC    :  SCC/SCC  :  SCC/SCC :  SCC/SCC   :  ATMA  :  ATMA  :\n";//                    :\n";
                     }
             ss << "=================================================================================================================================\n";//=================== \n";
-    } 
+    }
     else {
         if (wellProd[WellProdDataType::WellLocationi] < 1) {
             ss << std::right << std::fixed << ":" << std::setw (8) << wellProdNames[WellProdDataType::WellName] << ":" << std::setprecision(0) << std::setw(11) << "" << ":" << std::setw(4) << wellProdNames[WellProdDataType::CTRLMode] << ":" << std::setprecision(1) << std::setw(11) << wellProd[WellProdDataType::OilRate] << ":" << std::setw(11) << wellProd[WellProdDataType::WaterRate] << ":" <<  std::setw(11)<< wellProd[WellProdDataType::GasRate] << ":" <<  std::setw(11) << wellProd[WellProdDataType::FluidResVol] << std::setprecision(3) << ":" <<  std::setw(11) << wellProd[WellProdDataType::WaterCut] << std::setprecision(2) << ":" <<  std::setw(10) << wellProd[WellProdDataType::GasOilRatio] << std::setprecision(4) << ":" <<  std::setw(12) << wellProd[WellProdDataType::WatGasRatio] << std::setprecision(1) << ":" <<  std::setw(8) << "" << ":" <<  std::setw(8) << "" << ": \n";
         }
         else {
             ss << std::right << std::fixed << ":" << std::setw (8) << wellProdNames[WellProdDataType::WellName] << ":" << std::setprecision(0) << std::setw(5) << wellProd[WellProdDataType::WellLocationi] << "," << std::setw(5) << wellProd[WellProdDataType::WellLocationj] << ":" << std::setw(4) << wellProdNames[WellProdDataType::CTRLMode] << ":" << std::setprecision(1) << std::setw(11) << wellProd[WellProdDataType::OilRate] << ":" << std::setw(11) << wellProd[WellProdDataType::WaterRate] << ":" <<  std::setw(11)<< wellProd[WellProdDataType::GasRate] << ":" <<  std::setw(11) << wellProd[WellProdDataType::FluidResVol] << std::setprecision(3) << ":" <<  std::setw(11) << wellProd[WellProdDataType::WaterCut] << std::setprecision(2) << ":" <<  std::setw(10) << wellProd[WellProdDataType::GasOilRatio] << std::setprecision(4) << ":" <<  std::setw(12) << wellProd[WellProdDataType::WatGasRatio] << std::setprecision(1) << ":" <<  std::setw(8) << wellProd[WellProdDataType::BHP] << ":" <<  std::setw(8) << wellProd[WellProdDataType::THP] << ": \n";
-        }        
+        }
         ss << ":"<< std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (5) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (12) << ":" << std::setfill ('-') << std::setw (11) << ":" << std::setfill ('-') << std::setw (13) << ":" << std::setfill ('-') << std::setw (9) << ":" << std::setfill ('-') << std::setw (9) << ":" << "\n";
     }
     OpmLog::note(ss.str());
