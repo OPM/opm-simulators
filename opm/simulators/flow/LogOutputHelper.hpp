@@ -51,6 +51,9 @@ public:
     void fip(const Inplace& inplace,
              const Inplace& initialInplace) const;
 
+    //! \brief Write fluid-in-place reservoir reports to output.
+    void fipResv(const Inplace& inplace) const;
+
     //! \brief Write injection report to output.
     void injection(const std::size_t reportStepNum,
                    std::function<bool(const std::string&)> isDefunct) const;
@@ -67,6 +70,9 @@ private:
                                    std::unordered_map<Inplace::Phase, Scalar> cip,
                                    const Scalar pav,
                                    const int reg) const;
+
+    void outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
+                                 const int reg) const;
 
     void outputInjectionReport_(const std::vector<Scalar>& wellInj,
                                 const std::vector<std::string>& wellInjNames) const;

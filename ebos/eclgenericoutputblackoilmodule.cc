@@ -293,8 +293,9 @@ outputFipresvLog(std::map<std::string, double>& miscSummaryData,
                               miscSummaryData,
                               regionData);
 
-    if (!substep)
-        outputFipresvLogImpl(inplace);
+    if (!substep && !forceDisableFipresvOutput_) {
+        logOutput_.fipResv(inplace);
+    }
 
     return inplace;
 }
@@ -1043,83 +1044,6 @@ doAllocBuffers(unsigned bufferSize,
     }
 }
 
-template<class FluidSystem, class Scalar>
-void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const
-{
-    const UnitSystem& units = eclState_.getUnits();
-    using M = UnitSystem::measure;
-    const auto unit_map = std::unordered_map<Inplace::Phase, M> {
-        {Inplace::Phase::WATER,             M::liquid_surface_volume},
-        {Inplace::Phase::OIL,               M::liquid_surface_volume},
-        {Inplace::Phase::OilInLiquidPhase,  M::liquid_surface_volume},
-        {Inplace::Phase::OilInGasPhase,     M::liquid_surface_volume},
-        {Inplace::Phase::GAS,               M::gas_surface_volume},
-        {Inplace::Phase::GasInLiquidPhase,  M::gas_surface_volume},
-        {Inplace::Phase::GasInGasPhase,     M::gas_surface_volume},
-        {Inplace::Phase::PoreVolume,        M::volume},
-        {Inplace::Phase::DynamicPoreVolume, M::volume},
-        {Inplace::Phase::WaterResVolume,    M::volume},
-        {Inplace::Phase::OilResVolume,      M::volume},
-        {Inplace::Phase::GasResVolume,      M::volume},
-        {Inplace::Phase::SALT,              M::mass},
-        {Inplace::Phase::CO2InWaterPhase,   M::moles},
-        {Inplace::Phase::CO2InGasPhaseInMob,M::moles},
-        {Inplace::Phase::CO2InGasPhaseMob,  M::moles},
-        {Inplace::Phase::WaterInWaterPhase, M::liquid_surface_volume},
-        {Inplace::Phase::WaterInGasPhase,   M::liquid_surface_volume},
-    };
-
-    for (auto& [phase, value] : fip) {
-        auto unitPos = unit_map.find(phase);
-        if (unitPos != unit_map.end()) {
-            value = units.from_si(unitPos->second, value);
-        }
-    }
-}
-
-template<class FluidSystem, class Scalar>
-void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-pressureUnitConvert_(Scalar& pav) const
-{
-    pav = this->eclState_.getUnits()
-        .from_si(UnitSystem::measure::pressure, pav);
-}
-
-template<class FluidSystem, class Scalar>
-void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr, const int reg) const
-{
-    if (forceDisableFipresvOutput_)
-        return;
-
-    // don't output FIPNUM report if the region has no porv.
-    if (cipr[Inplace::Phase::PoreVolume] == 0)
-        return;
-    const UnitSystem& units = eclState_.getUnits();
-    std::ostringstream ss;
-
-    if (reg == 0) {
-        ss << "                                                     ===================================\n";
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            ss << "                                                     :  RESERVOIR VOLUMES      M3      :\n";
-        }
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            ss << "                                                     :  RESERVOIR VOLUMES      RB      :\n";
-        }
-        ss << ":---------:---------------:---------------:---------------:---------------:---------------:\n"
-           << ": REGION  :  TOTAL PORE   :  PORE VOLUME  :  PORE VOLUME  : PORE VOLUME   :  PORE VOLUME  :\n"
-           << ":         :   VOLUME      :  CONTAINING   :  CONTAINING   : CONTAINING    :  CONTAINING   :\n"
-           << ":         :               :     OIL       :    WATER      :    GAS        :  HYDRO-CARBON :\n"
-           << ":---------:---------------:---------------:---------------:---------------:---------------\n";
-    }
-    else {
-        ss << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (9) <<  reg << ":" << std::setw(15) << cipr[Inplace::Phase::DynamicPoreVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::OilResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::WaterResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::GasResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::OilResVolume] + cipr[Inplace::Phase::GasResVolume] << ":\n"
-        << ":---------:---------------:---------------:---------------:---------------:---------------:\n";
-    }
-    OpmLog::note(ss.str());
-}
-
 template<class FluidSystem,class Scalar>
 bool EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 isOutputCreationDirective_(const std::string& keyword)
@@ -1201,34 +1125,6 @@ outputErrorLog(const Parallel::Communication& comm) const
                          maxNumCellsFaillog,
                          std::get<0>(std::move(globalFailedCellsPdew)),
                          ijkString);
-}
-
-template<class FluidSystem,class Scalar>
-void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputFipresvLogImpl(const Inplace& inplace) const
-{
-    {
-        std::unordered_map<Inplace::Phase, Scalar> current_values;
-
-        for (const auto& phase : Inplace::phases()) {
-            current_values[phase] = inplace.get(phase);
-        }
-        fipUnitConvert_(current_values);
-        outputResvFluidInPlace_(current_values);
-    }
-
-    for (size_t reg = 1; reg <= inplace.max_region("FIPNUM"); ++reg) {
-        std::unordered_map<Inplace::Phase, Scalar> current_values;
-
-        for (const auto& phase : Inplace::phases()) {
-            current_values[phase] = inplace.get("FIPNUM", phase, reg);
-        }
-        current_values[Inplace::Phase::DynamicPoreVolume] =
-            inplace.get("FIPNUM", Inplace::Phase::DynamicPoreVolume, reg);
-
-        fipUnitConvert_(current_values);
-        outputResvFluidInPlace_(current_values, reg);
-    }
 }
 
 template<class FluidSystem,class Scalar>

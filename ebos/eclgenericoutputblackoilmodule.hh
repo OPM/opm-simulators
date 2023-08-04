@@ -304,15 +304,6 @@ protected:
                         unsigned numTracers,
                         unsigned numOutputNnc);
 
-    void fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const;
-
-    void pressureUnitConvert_(Scalar& pav) const;
-
-    void outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
-                                 const int reg = 0) const;
-
-    void outputFipresvLogImpl(const Inplace& inplace) const;
-
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
                        const Parallel::Communication& comm) const;
