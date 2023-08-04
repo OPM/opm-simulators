@@ -28,6 +28,7 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/simulators/flow/LogOutputHelper.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <array>
@@ -339,28 +340,6 @@ protected:
         static constexpr int numWINames = 4;
     };
 
-    struct WellCumDataType
-    {
-        enum WCId
-        {
-            WellLocationi = 0, //WLi
-            WellLocationj = 1, //WLj
-            OilProd = 2, //OP
-            WaterProd = 3, //WP
-            GasProd = 4, //GP
-            FluidResVolProd = 5, //FRVP
-            OilInj = 6, //OI
-            WaterInj = 7, //WI
-            GasInj = 8, //GI
-            FluidResVolInj = 9, //FRVI
-            WellName = 0, //WName
-            WellType = 1, //WType
-            WellCTRL = 2, //WCTRL
-        };
-        static constexpr int numWCValues = 10;
-        static constexpr int numWCNames = 3;
-    };
-
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
                         const bool substep,
@@ -386,9 +365,6 @@ protected:
     void outputInjectionReport_(const ScalarBuffer& wellInj,
                                 const StringBuffer& wellInjNames,
                                 const bool forceDisableInjOutput);
-    void outputCumulativeReport_(const ScalarBuffer& wellCum,
-                                 const StringBuffer& wellCumNames,
-                                 const bool forceDisableCumOutput);
 
     void outputFipLogImpl(const Inplace& inplace) const;
 
@@ -444,6 +420,7 @@ protected:
     const SummaryState& summaryState_;
 
     EclInterRegFlowMap interRegionFlows_;
+    LogOutputHelper<Scalar> logOutput_;
 
     bool enableEnergy_;
     bool enableTemperature_;
