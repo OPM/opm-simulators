@@ -294,28 +294,6 @@ protected:
                                    bool enableExtbo,
                                    bool enableMICP);
 
-    struct WellInjDataType
-    {
-        enum WIId
-        {
-            WellLocationi = 0, //WLi
-            WellLocationj = 1, //WLj
-            OilRate = 2, //OR
-            WaterRate = 3, //WR
-            GasRate = 4, //GR
-            FluidResVol = 5, //FRV
-            BHP = 6, //BHP
-            THP = 7, //THP
-            SteadyStateII = 8, //SteadyStateII
-            WellName = 0, //WName
-            CTRLModeOil = 1, //CTRLo
-            CTRLModeWat = 2, //CTRLw
-            CTRLModeGas = 3, //CTRLg
-        };
-        static constexpr int numWIValues = 9;
-        static constexpr int numWINames = 4;
-    };
-
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
                         const bool substep,
@@ -335,9 +313,6 @@ protected:
                                    const Scalar& pav, const int reg = 0) const;
     void outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
                                  const int reg = 0) const;
-    void outputInjectionReport_(const ScalarBuffer& wellInj,
-                                const StringBuffer& wellInjNames,
-                                const bool forceDisableInjOutput);
 
     void outputFipLogImpl(const Inplace& inplace) const;
 

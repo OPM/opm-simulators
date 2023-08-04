@@ -247,129 +247,10 @@ template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 outputInjLog(size_t reportStepNum, const bool substep, bool forceDisableInjOutput)
 {
-    if (!substep) {
-        ScalarBuffer  tmp_values(WellInjDataType::numWIValues, 0.0);
-        StringBuffer  tmp_names(WellInjDataType::numWINames, "");
-        outputInjectionReport_(tmp_values, tmp_names, forceDisableInjOutput);
-
-        const auto& st = summaryState_;
-        for (const auto& gname: schedule_.groupNames()) {
-
-            auto gName = static_cast<std::string>(gname);
-            auto get = [&st, &gName](const std::string& vector)
-            {
-                const auto key = vector + ':' + gName;
-
-                return st.has(key) ? st.get(key) : 0.0;
-            };
-
-            tmp_names[0] = gname;
-
-            if (tmp_names[0] == "FIELD"){
-                tmp_values[2] = st.get("FOIR", 0.0);//WellInjDataType::OilRate
-                tmp_values[3] = st.get("FWIR", 0.0); //WellInjDataType::WaterRate
-                tmp_values[4] = st.get("FGIR", 0.0); //WellInjDataType::GasRate
-                tmp_values[5] = st.get("FVIR", 0.0);//WellInjDataType::FluidResVol
-            }
-            else {
-                tmp_values[2] = get("GOIR");//WellInjDataType::OilRate
-                tmp_values[3] = get("GWIR"); //WellInjDataType::WaterRate
-                tmp_values[4] = get("GGIR"); //WellInjDataType::GasRate
-                tmp_values[5] = get("GVIR");//WellInjDataType::FluidResVol
-            }
-
-            outputInjectionReport_(tmp_values, tmp_names, forceDisableInjOutput);
-        }
-
-        for (const auto& wname: schedule_.wellNames(reportStepNum)) {
-
-            // don't bother with wells not on this process
-            if (isDefunctParallelWell(wname)) {
-                continue;
-            }
-
-            const auto& well = schedule_.getWell(wname, reportStepNum);
-
-            // Ignore Producer wells
-            if (well.isProducer()){
-                continue;
-            }
-
-            tmp_names[0] = wname;   //WellInjDataType::WellName
-
-            auto wName = static_cast<std::string>(wname);
-            auto get = [&st, &wName](const std::string& vector)
-            {
-                const auto key = vector + ':' + wName;
-
-                return st.has(key) ? st.get(key) : 0.0;
-            };
-
-            const auto& controls = well.injectionControls(st);
-            const auto ctlMode = controls.cmode;
-            const auto injType = controls.injector_type;
-            using CMode = Well::InjectorCMode;
-            using WType = InjectorType;
-
-            auto ftype = [](const auto wtype) -> std::string
-            {
-                switch (wtype) {
-                case WType::OIL:   return "Oil";
-                case WType::WATER: return "Wat";
-                case WType::GAS:   return "Gas";
-                case WType::MULTI: return "Multi";
-                default:
-                {
-                    return "";
-                }
-                }
-            };
-
-            auto fctl = [](const auto wmctl) -> std::string
-            {
-                switch (wmctl) {
-                case CMode::RATE: return "RATE";
-                case CMode::RESV: return "RESV";
-                case CMode::THP:  return "THP";
-                case CMode::BHP:  return "BHP";
-                case CMode::GRUP: return "GRUP";
-                default:
-                {
-                    return "";
-                }
-                }
-            };
-
-            const auto flowtype = ftype(injType);
-            const auto flowctl = fctl(ctlMode);
-            if(flowtype == "Oil") //WellInjDataType::CTRLModeOil
-            {
-                if (flowctl == "RATE"){ tmp_names[1] = "ORAT"; }
-                else { tmp_names[1] =  flowctl; }
-            }
-            else if (flowtype == "Wat") //WellInjDataType::CTRLModeWat
-            {
-                if (flowctl == "RATE"){ tmp_names[3] = "WRAT"; }
-                else { tmp_names[2] =  flowctl; }
-            }
-            else if (flowtype == "Gas") //WellInjDataType::CTRLModeGas
-            {
-                if (flowctl == "RATE"){ tmp_names[3] = "GRAT"; }
-                else { tmp_names[3] =  flowctl; }
-            }
-
-            tmp_values[0] = well.getHeadI() + 1; //WellInjDataType::wellLocationi
-            tmp_values[1] = well.getHeadJ() + 1; //WellInjDataType::wellLocationj
-            tmp_values[2] = get("WOIR"); //WellInjDataType::OilRate
-            tmp_values[3] = get("WWIR"); //WellInjDataType::WaterRate
-            tmp_values[4] = get("WGIR"); //WellInjDataType::GasRate
-            tmp_values[5] = get("WVIR");//WellInjDataType::FluidResVol
-            tmp_values[6] = get("WBHP"); //WellInjDataType::BHP
-            tmp_values[7] = get("WTHP"); //WellInjDataType::THP
-            //tmp_values[8] = 0; //WellInjDataType::SteadyStateII
-
-            outputInjectionReport_(tmp_values, tmp_names, forceDisableInjOutput);
-        }
+    if (!substep && !forceDisableInjOutput) {
+        logOutput_.injection(reportStepNum,
+                             [this](const std::string& name)
+                             { return this->isDefunctParallelWell(name); });
     }
 }
 
@@ -1301,44 +1182,6 @@ outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr, const i
     else {
         ss << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (9) <<  reg << ":" << std::setw(15) << cipr[Inplace::Phase::DynamicPoreVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::OilResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::WaterResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::GasResVolume] << ":" << std::setw(15) << cipr[Inplace::Phase::OilResVolume] + cipr[Inplace::Phase::GasResVolume] << ":\n"
         << ":---------:---------------:---------------:---------------:---------------:---------------:\n";
-    }
-    OpmLog::note(ss.str());
-}
-
-template<class FluidSystem, class Scalar>
-void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputInjectionReport_(const ScalarBuffer& wellInj,
-                   const StringBuffer& wellInjNames,
-                   const bool forceDisableInjOutput)
-{
-    if (forceDisableInjOutput)
-        return;
-
-    const UnitSystem& units = eclState_.getUnits();
-    std::ostringstream ss;
-    if (wellInjNames[WellInjDataType::WellName].empty()) {
-        ss << "=================================================== INJECTION REPORT ========================================\n"//===================== \n"
-           << ":  WELL  :  LOCATION : CTRL : CTRL : CTRL :    OIL    :   WATER   :    GAS    :   FLUID   : BHP OR : THP OR :\n"// STEADY-ST II       :\n"
-           << ":  NAME  :  (I,J,K)  : MODE : MODE : MODE :    RATE   :   RATE    :    RATE   :  RES.VOL. : CON.PR.: BLK.PR.:\n";// OR POTENTIAL       :\n";
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-                            ss << ":        :           : OIL  : WAT  : GAS  :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  BARSA :  BARSA :\n";//                    :\n";
-                    }
-                    if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-                            ss << ":        :           : OIL  : WAT  : GAS  :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :  PSIA  :  PSIA  :\n";//                    :\n";
-                    }
-                    if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-                            ss << ":        :           : OIL  : WAT  : GAS  :   SCC/HR  :  SCC/HR   :  SCC/HR   :  RCC/HR   :  ATMA  :  ATMA  :\n";//                    :\n";
-                    }
-            ss << "==============================================================================================================\n";//===================== \n";
-    }
-            else {
-        if (wellInj[WellInjDataType::WellLocationi] < 1) {
-            ss  << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (8) << wellInjNames[WellInjDataType::WellName] << ":" << std::setw(11) << "" << ":" << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeOil] << ":" << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeWat] << ":" << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeGas] << ":" << std::setprecision(1) << std::setw(11) << wellInj[WellInjDataType::OilRate] << ":" << std::setw(11) << wellInj[WellInjDataType::WaterRate] << ":" << std::setw(11)<< wellInj[WellInjDataType::GasRate] << ":" << std::setw(11) << wellInj[WellInjDataType::FluidResVol] << ":" << std::setw(8)<< "" << ":" << std::setw(8)<< "" << ": \n";//wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
-        }
-        else {
-            ss  << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (8) << wellInjNames[WellInjDataType::WellName] << ":" << std::setw(5) << wellInj[WellInjDataType::WellLocationi] << "," << std::setw(5) << wellInj[WellInjDataType::WellLocationj] << ":" << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeOil] << ":" << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeWat] << ":" << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeGas] << ":" << std::setprecision(1) << std::setw(11) << wellInj[WellInjDataType::OilRate] << ":" << std::setw(11) << wellInj[WellInjDataType::WaterRate] << ":" << std::setw(11)<< wellInj[WellInjDataType::GasRate] << ":" << std::setw(11) << wellInj[WellInjDataType::FluidResVol] << ":" << std::setw(8)<< wellInj[WellInjDataType::BHP] << ":" << std::setw(8)<< wellInj[WellInjDataType::THP] << ": \n";//wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
-        }
-        ss << ":--------:-----------:------:------:------:------------:----------:-----------:-----------:--------:--------: \n";//--------------------:\n";
     }
     OpmLog::note(ss.str());
 }

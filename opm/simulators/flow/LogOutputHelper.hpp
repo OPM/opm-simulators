@@ -43,6 +43,10 @@ public:
     void cumulative(const std::size_t reportStepNum,
                     std::function<bool(const std::string&)> isDefunct) const;
 
+    //! \brief Write injection report to output.
+    void injection(const std::size_t reportStepNum,
+                   std::function<bool(const std::string&)> isDefunct) const;
+
     //! \brief Write production report to output.
     void production(const std::size_t reportStepNum,
                     std::function<bool(const std::string&)> isDefunct) const;
@@ -50,6 +54,9 @@ public:
 private:
     void outputCumulativeReport_(const std::vector<Scalar>& wellCum,
                                  const std::vector<std::string>& wellCumNames) const;
+
+    void outputInjectionReport_(const std::vector<Scalar>& wellInj,
+                                const std::vector<std::string>& wellInjNames) const;
 
     void outputProductionReport_(const std::vector<Scalar>& wellProd,
                                  const std::vector<std::string>& wellProdNames) const;
@@ -74,6 +81,28 @@ private:
         };
         static constexpr int numWCValues = 10;
         static constexpr int numWCNames = 3;
+    };
+
+    struct WellInjDataType
+    {
+        enum WIId
+        {
+            WellLocationi = 0, // WLi
+            WellLocationj = 1, // WLj
+            OilRate = 2, // OR
+            WaterRate = 3, // WR
+            GasRate = 4, // GR
+            FluidResVol = 5, // FRV
+            BHP = 6, // BHP
+            THP = 7, // THP
+            SteadyStateII = 8, // SteadyStateII
+            WellName = 0, // WName
+            CTRLModeOil = 1, // CTRLo
+            CTRLModeWat = 2, // CTRLw
+            CTRLModeGas = 3, // CTRLg
+        };
+        static constexpr int numWIValues = 9;
+        static constexpr int numWINames = 4;
     };
 
     struct WellProdDataType
