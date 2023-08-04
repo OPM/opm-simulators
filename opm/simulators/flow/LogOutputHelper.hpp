@@ -28,6 +28,7 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace Opm {
 
@@ -46,6 +47,10 @@ public:
     //! \brief Write cumulative production and injection reports to output.
     void cumulative(const std::size_t reportStepNum,
                     std::function<bool(const std::string&)> isDefunct) const;
+
+    //! \brief Write error report to output.
+    void error(const std::vector<int>& failedCellsPbub,
+               const std::vector<int>& failedCellsPdew) const;
 
     //! \brief Write fluid-in-place reports to output.
     void fip(const Inplace& inplace,

@@ -1053,44 +1053,6 @@ isOutputCreationDirective_(const std::string& keyword)
         || (keyword == "SAVE")  || (keyword == "SFREQ"); // Not really supported
 }
 
-namespace {
-    template <typename IndexVector, typename IJKString>
-    void logUniqueFailedCells(const std::string& messageTag,
-                              std::string_view   prefix,
-                              const std::size_t  maxNumCellsFaillog,
-                              IndexVector&&      cells,
-                              IJKString&&        ijkString)
-    {
-        if (cells.empty()) {
-            return;
-        }
-
-        std::sort(cells.begin(), cells.end());
-        auto u = std::unique(cells.begin(), cells.end());
-
-        const auto numFailed = static_cast<std::size_t>
-            (std::distance(cells.begin(), u));
-
-        std::ostringstream errlog;
-        errlog << prefix << " failed for " << numFailed << " cell"
-               << ((numFailed != std::size_t{1}) ? "s" : "")
-               << " [" << ijkString(cells[0]);
-
-        const auto maxElems = std::min(maxNumCellsFaillog, numFailed);
-        for (auto i = 1 + 0*maxElems; i < maxElems; ++i) {
-            errlog << ", " << ijkString(cells[i]);
-        }
-
-        if (numFailed > maxNumCellsFaillog) {
-            errlog << ", ...";
-        }
-
-        errlog << ']';
-
-        OpmLog::warning(messageTag, errlog.str());
-    }
-} // Namespace anonymous
-
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 outputErrorLog(const Parallel::Communication& comm) const
@@ -1105,26 +1067,8 @@ outputErrorLog(const Parallel::Communication& comm) const
         return;
     }
 
-    auto ijkString = [this](const std::size_t globalIndex)
-    {
-        const auto ijk = this->eclState_.gridDims().getIJK(globalIndex);
-
-        return fmt::format("({},{},{})", ijk[0] + 1, ijk[1] + 1, ijk[2] + 1);
-    };
-
-    const auto maxNumCellsFaillog = static_cast<std::size_t>(20);
-
-    logUniqueFailedCells("Bubble point numerical problem",
-                         "Finding the bubble point pressure",
-                         maxNumCellsFaillog,
-                         std::get<0>(std::move(globalFailedCellsPbub)),
-                         ijkString);
-
-    logUniqueFailedCells("Dew point numerical problem",
-                         "Finding the dew point pressure",
-                         maxNumCellsFaillog,
-                         std::get<0>(std::move(globalFailedCellsPdew)),
-                         ijkString);
+    logOutput_.error(std::get<0>(globalFailedCellsPbub),
+                     std::get<0>(globalFailedCellsPdew));
 }
 
 template<class FluidSystem,class Scalar>

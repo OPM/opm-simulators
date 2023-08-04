@@ -29,10 +29,54 @@
 
 #include <opm/simulators/utils/PressureAverage.hpp>
 
+#include <fmt/format.h>
+
+#include <algorithm>
 #include <cmath>
 #include <iomanip>
 #include <sstream>
 #include <vector>
+
+namespace {
+
+template <typename IJKString>
+void logUniqueFailedCells(const std::string& messageTag,
+                          std::string_view   prefix,
+                          const std::size_t  maxNumCellsFaillog,
+                          const std::vector<int>& cells,
+                          IJKString&&        ijkString)
+{
+    if (cells.empty()) {
+        return;
+    }
+
+    std::vector<int> sorted(cells);
+    std::sort(sorted.begin(), sorted.end());
+    auto u = std::unique(sorted.begin(), sorted.end());
+
+    const auto numFailed = static_cast<std::size_t>
+        (std::distance(sorted.begin(), u));
+
+    std::ostringstream errlog;
+    errlog << prefix << " failed for " << numFailed << " cell"
+           << ((numFailed != std::size_t{1}) ? "s" : "")
+           << " [" << ijkString(cells[0]);
+
+    const auto maxElems = std::min(maxNumCellsFaillog, numFailed);
+    for (auto i = 1 + 0*maxElems; i < maxElems; ++i) {
+        errlog << ", " << ijkString(cells[i]);
+    }
+
+    if (numFailed > maxNumCellsFaillog) {
+        errlog << ", ...";
+    }
+
+    errlog << ']';
+
+    Opm::OpmLog::warning(messageTag, errlog.str());
+}
+
+} // Namespace anonymous
 
 namespace Opm {
 
@@ -183,6 +227,33 @@ cumulative(const std::size_t reportStepNum,
 
         this->outputCumulativeReport_(tmp_values, tmp_names);
     }
+}
+
+template<class Scalar>
+void LogOutputHelper<Scalar>::
+error(const std::vector<int>& failedCellsPbub,
+      const std::vector<int>& failedCellsPdew) const
+{
+    auto ijkString = [this](const std::size_t globalIndex)
+    {
+        const auto ijk = this->eclState_.gridDims().getIJK(globalIndex);
+
+        return fmt::format("({},{},{})", ijk[0] + 1, ijk[1] + 1, ijk[2] + 1);
+    };
+
+    constexpr auto maxNumCellsFaillog = static_cast<std::size_t>(20);
+
+    logUniqueFailedCells("Bubble point numerical problem",
+                         "Finding the bubble point pressure",
+                         maxNumCellsFaillog,
+                         failedCellsPbub,
+                         ijkString);
+
+    logUniqueFailedCells("Dew point numerical problem",
+                         "Finding the dew point pressure",
+                         maxNumCellsFaillog,
+                         failedCellsPdew,
+                         ijkString);
 }
 
 template<class Scalar>
