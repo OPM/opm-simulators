@@ -85,6 +85,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
+  opm/simulators/utils/PressureAverage.cpp
   opm/simulators/utils/readDeck.cpp
   opm/simulators/utils/SerializationPackers.cpp
   opm/simulators/utils/UnsupportedFlowKeywords.cpp
@@ -514,6 +515,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/PropsCentroidsDataHandle.hpp
   opm/simulators/utils/SerializationPackers.hpp
   opm/simulators/utils/VectorVectorDataHandle.hpp
+  opm/simulators/utils/PressureAverage.hpp
   opm/simulators/utils/readDeck.hpp
   opm/simulators/wells/ALQState.hpp
   opm/simulators/wells/BlackoilWellModel.hpp

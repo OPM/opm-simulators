@@ -330,17 +330,6 @@ protected:
 
     static bool isOutputCreationDirective_(const std::string& keyword);
 
-    static Scalar pressureAverage_(const Scalar& pressurePvHydrocarbon,
-                                   const Scalar& pvHydrocarbon,
-                                   const Scalar& pressurePv,
-                                   const Scalar& pv,
-                                   bool hydrocarbon);
-
-    static ScalarBuffer pressureAverage_(const ScalarBuffer& pressurePvHydrocarbon,
-                                         const ScalarBuffer& pvHydrocarbon,
-                                         const ScalarBuffer& pressurePv,
-                                         const ScalarBuffer& pv,
-                                         bool hydrocarbon);
     // Sum Fip values over regions.
     static ScalarBuffer regionSum(const ScalarBuffer& property,
                                   const std::vector<int>& regionId,
