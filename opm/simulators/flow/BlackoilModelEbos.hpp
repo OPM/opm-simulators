@@ -1176,8 +1176,6 @@ namespace Opm {
         double maxResidualAllowed() const { return param_.max_residual_allowed_; }
         double linear_solve_setup_time_;
 
-        SimulatorReportSingle local_reports_accumulated_; //!< Accumulated convergence report for subdomain solvers
-
     public:
         std::vector<bool> wasSwitched_;
     };
