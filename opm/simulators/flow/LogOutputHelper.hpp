@@ -22,13 +22,17 @@
 #ifndef LOG_OUTPUT_HELPER_HPP
 #define LOG_OUTPUT_HELPER_HPP
 
+#include <opm/output/eclipse/Inplace.hpp>
+
 #include <cstddef>
 #include <functional>
 #include <string>
+#include <unordered_map>
 
 namespace Opm {
 
 class EclipseState;
+class Inplace;
 class Schedule;
 class SummaryState;
 
@@ -43,6 +47,10 @@ public:
     void cumulative(const std::size_t reportStepNum,
                     std::function<bool(const std::string&)> isDefunct) const;
 
+    //! \brief Write fluid-in-place reports to output.
+    void fip(const Inplace& inplace,
+             const Inplace& initialInplace) const;
+
     //! \brief Write injection report to output.
     void injection(const std::size_t reportStepNum,
                    std::function<bool(const std::string&)> isDefunct) const;
@@ -55,11 +63,19 @@ private:
     void outputCumulativeReport_(const std::vector<Scalar>& wellCum,
                                  const std::vector<std::string>& wellCumNames) const;
 
+    void outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
+                                   std::unordered_map<Inplace::Phase, Scalar> cip,
+                                   const Scalar pav,
+                                   const int reg) const;
+
     void outputInjectionReport_(const std::vector<Scalar>& wellInj,
                                 const std::vector<std::string>& wellInjNames) const;
 
     void outputProductionReport_(const std::vector<Scalar>& wellProd,
                                  const std::vector<std::string>& wellProdNames) const;
+
+    void fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const;
+    void pressureUnitConvert_(Scalar& pav) const;
 
     struct WellCumDataType
     {

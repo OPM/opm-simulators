@@ -271,8 +271,9 @@ outputFipLog(std::map<std::string, double>& miscSummaryData,
                               miscSummaryData,
                               regionData);
 
-    if (!substep)
-        outputFipLogImpl(inplace);
+    if (!substep && !forceDisableFipOutput_) {
+        logOutput_.fip(inplace, this->initialInplace());
+    }
 
     return inplace;
 }
@@ -1087,75 +1088,6 @@ pressureUnitConvert_(Scalar& pav) const
 
 template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
-                      std::unordered_map<Inplace::Phase, Scalar> cip,
-                      const Scalar& pav, const int reg) const
-{
-    if (forceDisableFipOutput_)
-        return;
-
-    // don't output FIPNUM report if the region has no porv.
-    if (! (cip[Inplace::Phase::PoreVolume] > Scalar{0}))
-        return;
-
-    const UnitSystem& units = eclState_.getUnits();
-    std::ostringstream ss;
-
-    ss << '\n';
-    if (reg == 0) {
-        ss << "Field total";
-    }
-    else {
-        ss << "FIPNUM report region " << reg;
-    }
-
-    ss << " pressure dependent pore volume = "
-       << std::fixed << std::setprecision(0)
-       << cip[Inplace::Phase::DynamicPoreVolume] << ' '
-       << units.name(UnitSystem::measure::volume) << "\n\n";
-
-    if (reg == 0) {
-        ss << "                                                  ===================================================\n"
-           << "                                                  :                   Field Totals                  :\n";
-    }
-    else {
-        ss << "                                                  ===================================================\n"
-           << "                                                  :        FIPNUM report region  "
-           << std::setw(2) << reg << "                 :\n";
-    }
-    if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        ss << "                                                  :      PAV  =" << std::setw(14) << pav << " BARSA                 :\n"
-           << std::fixed << std::setprecision(0)
-           << "                                                  :      PORV =" << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "   RM3                 :\n";
-        if (!reg) {
-            ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
-               << "                                                  : Porv volumes are taken at reference conditions  :\n";
-        }
-        ss << "                         :--------------- Oil    SM3 ---------------:-- Wat    SM3 --:--------------- Gas    SM3 ---------------:\n";
-    }
-    if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        ss << "                                                  :      PAV  =" << std::setw(14) << pav << "  PSIA                 :\n"
-           << std::fixed << std::setprecision(0)
-           << "                                                  :      PORV =" << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "   RB                  :\n";
-        if (!reg) {
-            ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
-               << "                                                  : Pore volumes are taken at reference conditions  :\n";
-        }
-        ss << "                         :--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:\n";
-    }
-    ss << "                         :      Liquid        Vapour        Total   :      Total     :      Free        Dissolved       Total   :" << "\n"
-       << ":------------------------:------------------------------------------:----------------:------------------------------------------:" << "\n"
-       << ":Currently   in place    :" << std::setw(14) << cip[Inplace::Phase::OilInLiquidPhase] << std::setw(14) << cip[Inplace::Phase::OilInGasPhase] << std::setw(14) << cip[Inplace::Phase::OIL] << ":"
-       << std::setw(13) << cip[Inplace::Phase::WATER] << "   :" << std::setw(14) << (cip[Inplace::Phase::GasInGasPhase]) << std::setw(14) << cip[Inplace::Phase::GasInLiquidPhase] << std::setw(14) << cip[Inplace::Phase::GAS] << ":\n"
-       << ":------------------------:------------------------------------------:----------------:------------------------------------------:\n"
-       << ":Originally  in place    :" << std::setw(14) << oip[Inplace::Phase::OilInLiquidPhase] << std::setw(14) << oip[Inplace::Phase::OilInGasPhase] << std::setw(14) << oip[Inplace::Phase::OIL] << ":"
-       << std::setw(13) << oip[Inplace::Phase::WATER] << "   :" << std::setw(14) << oip[Inplace::Phase::GasInGasPhase] << std::setw(14) << oip[Inplace::Phase::GasInLiquidPhase] << std::setw(14) << oip[Inplace::Phase::GAS] << ":\n"
-       << ":========================:==========================================:================:==========================================:\n";
-    OpmLog::note(ss.str());
-}
-
-template<class FluidSystem, class Scalar>
-void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr, const int reg) const
 {
     if (forceDisableFipresvOutput_)
@@ -1269,66 +1201,6 @@ outputErrorLog(const Parallel::Communication& comm) const
                          maxNumCellsFaillog,
                          std::get<0>(std::move(globalFailedCellsPdew)),
                          ijkString);
-}
-
-template<class FluidSystem,class Scalar>
-void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputFipLogImpl(const Inplace& inplace) const
-{
-    {
-        Scalar fieldHydroCarbonPoreVolumeAveragedPressure =
-            detail::pressureAverage(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
-                                    inplace.get(Inplace::Phase::HydroCarbonPV),
-                                    inplace.get(Inplace::Phase::PressurePV),
-                                    inplace.get(Inplace::Phase::DynamicPoreVolume),
-                                    true);
-
-        std::unordered_map<Inplace::Phase, Scalar> initial_values;
-        std::unordered_map<Inplace::Phase, Scalar> current_values;
-
-        for (const auto& phase : Inplace::phases()) {
-            initial_values[phase] = this->initialInplace_->get(phase);
-            current_values[phase] = inplace.get(phase);
-        }
-
-        current_values[Inplace::Phase::DynamicPoreVolume] =
-            inplace.get(Inplace::Phase::DynamicPoreVolume);
-
-        fipUnitConvert_(initial_values);
-        fipUnitConvert_(current_values);
-
-        pressureUnitConvert_(fieldHydroCarbonPoreVolumeAveragedPressure);
-        outputRegionFluidInPlace_(std::move(initial_values),
-                                  std::move(current_values),
-                                  fieldHydroCarbonPoreVolumeAveragedPressure);
-    }
-
-    for (size_t reg = 1; reg <= inplace.max_region("FIPNUM"); ++reg) {
-        std::unordered_map<Inplace::Phase, Scalar> initial_values;
-        std::unordered_map<Inplace::Phase, Scalar> current_values;
-
-        for (const auto& phase : Inplace::phases()) {
-            initial_values[phase] = this->initialInplace_->get("FIPNUM", phase, reg);
-            current_values[phase] = inplace.get("FIPNUM", phase, reg);
-        }
-
-        current_values[Inplace::Phase::DynamicPoreVolume] =
-            inplace.get("FIPNUM", Inplace::Phase::DynamicPoreVolume, reg);
-
-        fipUnitConvert_(initial_values);
-        fipUnitConvert_(current_values);
-
-        Scalar regHydroCarbonPoreVolumeAveragedPressure =
-            detail::pressureAverage(inplace.get("FIPNUM", Inplace::Phase::PressureHydroCarbonPV, reg),
-                                    inplace.get("FIPNUM", Inplace::Phase::HydroCarbonPV, reg),
-                                    inplace.get("FIPNUM", Inplace::Phase::PressurePV, reg),
-                                    inplace.get("FIPNUM", Inplace::Phase::DynamicPoreVolume, reg),
-                                    true);
-        pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);
-        outputRegionFluidInPlace_(std::move(initial_values),
-                                  std::move(current_values),
-                                  regHydroCarbonPoreVolumeAveragedPressure, reg);
-    }
 }
 
 template<class FluidSystem,class Scalar>

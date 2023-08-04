@@ -308,13 +308,8 @@ protected:
 
     void pressureUnitConvert_(Scalar& pav) const;
 
-    void outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
-                                   std::unordered_map<Inplace::Phase, Scalar> cip,
-                                   const Scalar& pav, const int reg = 0) const;
     void outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
                                  const int reg = 0) const;
-
-    void outputFipLogImpl(const Inplace& inplace) const;
 
     void outputFipresvLogImpl(const Inplace& inplace) const;
 
