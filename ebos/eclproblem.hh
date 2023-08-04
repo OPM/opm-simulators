@@ -1189,6 +1189,9 @@ public:
         }
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
         eclWriter_->evalSummaryState(isSubStep);
+#if HAVE_DAMARIS
+        damarisWriter_->evalSummaryState(isSubStep);
+#endif // HAVE_DAMARIS
 
         int episodeIdx = this->episodeIndex();
 

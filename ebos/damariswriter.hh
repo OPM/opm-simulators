@@ -509,9 +509,9 @@ private:
                               const int  reportStepNum)
     {
         OPM_TIMEBLOCK(prepareLocalCellData);
-        if (damarisOutputModule_->localDataValid()) {
-            return;
-        }
+        // if (damarisOutputModule_->localDataValid()) {
+        //     return;
+        // }
         // std::cout << "INFO: damarisWriter_->prepareLocalCellData()  got past localDataValid() " << std::endl ;
 
         const auto& gridView = simulator_.vanguard().gridView();
