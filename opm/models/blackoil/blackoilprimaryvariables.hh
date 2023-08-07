@@ -493,7 +493,7 @@ public:
      *
      * \return true Iff the interpretation of one of the switching variables was changed
      */
-    bool adaptPrimaryVariables(const Problem& problem, unsigned globalDofIdx, Scalar eps = 0.0)
+    bool adaptPrimaryVariables(const Problem& problem, unsigned globalDofIdx, Scalar swMaximum, Scalar eps = 0.0)
     {
         static const Scalar thresholdWaterFilledCell = 1.0 - eps;
 
@@ -553,9 +553,9 @@ public:
         // as sw >= 1.0 -> gas <= 0 (i.e. gas phase disappears)
         if (sw >= thresholdWaterFilledCell && !FluidSystem::enableDissolvedGasInWater()) {
 
-            // make sure water saturations does not exceed 1.0
+            // make sure water saturations does not exceed sw_maximum. Default to 1.0
             if constexpr (waterEnabled) {
-                (*this)[Indices::waterSwitchIdx] = 1.0;
+                (*this)[Indices::waterSwitchIdx] = std::min(swMaximum, sw);
                 assert(primaryVarsMeaningWater() == WaterMeaning::Sw);
             }
             // the hydrocarbon gas saturation is set to 0.0
