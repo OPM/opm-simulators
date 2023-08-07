@@ -33,6 +33,7 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
+#include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRateConfig.hpp>
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
@@ -49,6 +50,7 @@
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
 #include <opm/simulators/wells/BlackoilWellModelRestart.hpp>
 #include <opm/simulators/wells/GasLiftStage2.hpp>
+#include <opm/simulators/wells/GroupEconomicLimitsChecker.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellFilterCake.hpp>
@@ -373,6 +375,41 @@ initializeWellPerfData()
         parallelWellInfo.communicateFirstPerforation(hasFirstConnection);
 
         ++well_index;
+    }
+}
+
+void
+BlackoilWellModelGeneric::
+checkGEconLimits(
+        const Group& group,
+        const double simulation_time,
+        const int report_step_idx,
+        DeferredLogger& deferred_logger)
+{
+     // call recursively down the group hiearchy
+    for (const std::string& group_name : group.groups()) {
+        checkGEconLimits( schedule().getGroup(group_name, report_step_idx),
+                          simulation_time, report_step_idx, deferred_logger);
+    }
+
+    // check if gecon is used for this group
+    if (!schedule()[report_step_idx].gecon().has_group(group.name())) {
+        return;
+    }
+
+    GroupEconomicLimitsChecker checker {
+        *this, wellTestState(), group, simulation_time, report_step_idx, deferred_logger
+    };
+    if (checker.minOilRate() || checker.minGasRate()) {
+        checker.closeWells();
+    }
+    else if (checker.waterCut() || checker.GOR() || checker.WGR()) {
+        checker.doWorkOver();
+    }
+    if (checker.endRun() && (checker.numProducersOpenInitially() >= 1)
+                             && (checker.numProducersOpen() == 0))
+    {
+        checker.activateEndRun();
     }
 }
 
