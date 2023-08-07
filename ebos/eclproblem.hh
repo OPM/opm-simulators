@@ -38,6 +38,7 @@
 #endif
 
 #include "eclactionhandler.hh"
+#include "eclblackoilmoduleinit.hh"
 #include "eclequilinitializer.hh"
 #include "eclwriter.hh"
 #include "ecloutputblackoilmodule.hh"
@@ -797,12 +798,16 @@ public:
         this->model().addOutputModule(new VtkEclTracerModule<TypeTag>(simulator));
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
-        SolventModule::initFromState(vanguard.eclState(), vanguard.schedule());
-        PolymerModule::initFromState(vanguard.eclState());
-        FoamModule::initFromState(vanguard.eclState());
-        BrineModule::initFromState(vanguard.eclState());
-        ExtboModule::initFromState(vanguard.eclState());
-        MICPModule::initFromState(vanguard.eclState());
+        BrineModule::setParams(setupBrineParams<enableSaltPrecipitation,Scalar>(enableBrine,
+                                                                                vanguard.eclState()));
+        ExtboModule::setParams(setupExtboParams<Scalar>(enableExtbo, vanguard.eclState()));
+        FoamModule::setParams(setupFoamParams<Scalar>(enableFoam, vanguard.eclState()));
+        MICPModule::setParams(setupMICPParams<Scalar>(enableMICP, vanguard.eclState()));
+        PolymerModule::setParams(setupPolymerParams<enablePolymerMolarWeight,Scalar>(enablePolymer,
+                                                                                     vanguard.eclState()));
+        SolventModule::setParams(setupSolventParams<Scalar>(enableSolvent,
+                                                            vanguard.eclState(),
+                                                            vanguard.schedule()));
 
         // create the ECL writer
         eclWriter_ = std::make_unique<EclWriterType>(simulator);
