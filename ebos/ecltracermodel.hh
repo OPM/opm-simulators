@@ -30,12 +30,13 @@
 
 #include <ebos/eclgenerictracermodel.hh>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
 #include <array>
-#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -492,8 +493,9 @@ protected:
                 dx[tIdx] = 0.0;
 
             bool converged = this->linearSolveBatchwise_(*tr.mat, dx, tr.residual_);
-            if (!converged)
-                std::cout << "### Tracer model: Warning, linear solver did not converge. ###" << std::endl;
+            if (!converged) {
+                OpmLog::warning("### Tracer model: Linear solver did not converge. ###");
+            }
 
             for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                 tr.concentration_[tIdx] -= dx[tIdx];
