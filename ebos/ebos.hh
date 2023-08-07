@@ -28,13 +28,13 @@
 #ifndef EBOS_HH
 #define EBOS_HH
 
-#include "eclproblem.hh"
-
-#include <opm/simulators/wells/BlackoilWellModel.hpp>
-#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/linalg/ISTLSolverEbos.hpp>
+#include <ebos/eclproblem.hh>
 
 #include <opm/models/utils/start.hh>
+
+#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+#include <opm/simulators/linalg/ISTLSolverEbos.hpp>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 namespace Opm {
 template <class TypeTag>

@@ -28,13 +28,14 @@
 #ifndef EWOMS_ECL_THRESHOLD_PRESSURE_HH
 #define EWOMS_ECL_THRESHOLD_PRESSURE_HH
 
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/discretization/common/fvbaseproperties.hh>
-#include <opm/models/common/multiphasebaseproperties.hh>
 #include <ebos/eclgenericthresholdpressure.hh>
 
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <algorithm>
 #include <vector>

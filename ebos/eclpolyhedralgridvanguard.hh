@@ -27,12 +27,18 @@
 #ifndef EWOMS_ECL_POLYHEDRAL_GRID_VANGUARD_HH
 #define EWOMS_ECL_POLYHEDRAL_GRID_VANGUARD_HH
 
-#include <opm/models/common/multiphasebaseproperties.hh>
-
-#include "eclbasevanguard.hh"
-#include "ecltransmissibility.hh"
+#include <ebos/eclbasevanguard.hh>
+#include <ebos/ecltransmissibility.hh>
 
 #include <opm/grid/polyhedralgrid.hh>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
+
+#include <array>
+#include <functional>
+#include <string>
+#include <tuple>
+#include <unordered_set>
 
 namespace Opm {
 template <class TypeTag>
@@ -86,7 +92,6 @@ public:
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
-    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, Scalar>;
 
 private:
     using GridPointer = Grid*;
@@ -95,6 +100,9 @@ private:
     using CartesianIndexMapperPointer = std::unique_ptr<CartesianIndexMapper>;
 
 public:
+    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper,
+                                                     CartesianIndexMapper, Scalar>;
+
     EclPolyhedralGridVanguard(Simulator& simulator)
         : EclBaseVanguard<TypeTag>(simulator),
           simulator_( simulator )
@@ -190,7 +198,7 @@ public:
      * It is a function return the centroid for the given element
      * index.
      */
-    std::function<std::array<double,dimensionworld>(int)>
+    std::function<std::array<double,EclBaseVanguard<TypeTag>::dimensionworld>(int)>
     cellCentroids() const
     {
         return this->cellCentroids_(this->cartesianIndexMapper());

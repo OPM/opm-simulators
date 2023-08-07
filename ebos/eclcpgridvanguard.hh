@@ -27,14 +27,20 @@
 #ifndef EWOMS_ECL_CP_GRID_VANGUARD_HH
 #define EWOMS_ECL_CP_GRID_VANGUARD_HH
 
+#include <ebos/eclbasevanguard.hh>
+#include <ebos/eclgenericcpgridvanguard.hh>
+#include <ebos/ecltransmissibility.hh>
+#include <ebos/femcpgridcompat.hh>
+
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
-#include "eclbasevanguard.hh"
-#include "ecltransmissibility.hh"
-#include "femcpgridcompat.hh"
-#include "eclgenericcpgridvanguard.hh"
+#include <array>
+#include <functional>
+#include <memory>
+#include <tuple>
+#include <vector>
 
 namespace Opm {
 template <class TypeTag>

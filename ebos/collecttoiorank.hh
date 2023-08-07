@@ -23,17 +23,17 @@
 #ifndef EWOMS_COLLECT_TO_IO_RANK_HH
 #define EWOMS_COLLECT_TO_IO_RANK_HH
 
-#include <opm/output/data/Aquifer.hpp>
-#include <opm/output/data/Cells.hpp>
-#include <opm/output/data/Groups.hpp>
-#include <opm/output/data/Solution.hpp>
-#include <opm/output/data/Wells.hpp>
+#include <ebos/eclinterregflows.hh>
 
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/grid/common/p2pcommunicator.hh>
 
-#include <ebos/eclinterregflows.hh>
+#include <opm/output/data/Aquifer.hpp>
+#include <opm/output/data/Cells.hpp>
+#include <opm/output/data/Groups.hpp>
+#include <opm/output/data/Solution.hpp>
+#include <opm/output/data/Wells.hpp>
 
 #include <array>
 #include <map>

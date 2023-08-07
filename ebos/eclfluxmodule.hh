@@ -31,17 +31,19 @@
 #ifndef EWOMS_ECL_FLUX_MODULE_HH
 #define EWOMS_ECL_FLUX_MODULE_HH
 
+#include <dune/common/fvector.hh>
+#include <dune/common/fmatrix.hh>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
+
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/utils/signum.hh>
-
-#include <opm/material/common/Valgrind.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
-
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
-#include <fmt/format.h>
 
 #include <array>
 

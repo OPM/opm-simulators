@@ -27,18 +27,16 @@
 #ifndef EWOMS_VTK_ECL_TRACER_MODULE_HH
 #define EWOMS_VTK_ECL_TRACER_MODULE_HH
 
-
-#include <opm/models/io/vtkmultiwriter.hh>
-#include <opm/models/io/baseoutputmodule.hh>
-
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
-#include <opm/models/blackoil/blackoilproperties.hh>
-
-
 #include <dune/common/fvector.hh>
 
-#include <cstdio>
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+
+#include <string>
+#include <vector>
 
 namespace Opm::Properties {
 

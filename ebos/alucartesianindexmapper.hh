@@ -28,19 +28,17 @@
 #ifndef EWOMS_ALU_CARTESIAN_INDEX_MAPPER_HH
 #define EWOMS_ALU_CARTESIAN_INDEX_MAPPER_HH
 
-#include <dune/grid/common/datahandleif.hh>
-#include <dune/grid/utility/persistentcontainer.hh>
-#if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
 #include <dune/alugrid/3d/gridview.hh>
-#endif // HAVE_DUNE_ALUGRID
 #include <opm/grid/common/CartesianIndexMapper.hpp>
+#include <dune/grid/common/datahandleif.hh>
+#include <dune/grid/utility/persistentcontainer.hh>
 
 #include <array>
-#include <memory>
-#include <exception>
-#include <vector>
 #include <cassert>
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
 namespace Dune {
 

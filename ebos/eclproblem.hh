@@ -28,45 +28,37 @@
 #ifndef EWOMS_ECL_PROBLEM_HH
 #define EWOMS_ECL_PROBLEM_HH
 
-#if USE_ALUGRID
-#define DISABLE_ALUGRID_SFC_ORDERING 1
-#include "eclalugridvanguard.hh"
-#elif USE_POLYHEDRALGRID
-#include "eclpolyhedralgridvanguard.hh"
-#else
-#include "eclcpgridvanguard.hh"
-#endif
+#include <dune/common/version.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/fmatrix.hh>
 
-#include "eclactionhandler.hh"
-#include "eclequilinitializer.hh"
-#include "eclwriter.hh"
-#include "ecloutputblackoilmodule.hh"
-#include "ecltransmissibility.hh"
-#include "eclthresholdpressure.hh"
-#include "ecldummygradientcalculator.hh"
-#include "eclfluxmodule.hh"
-#include "eclbaseaquifermodel.hh"
-#include "eclnewtonmethod.hh"
-#include "ecltracermodel.hh"
-#include "vtkecltracermodule.hh"
-#include "eclgenericproblem.hh"
-#include "FIBlackOilModel.hpp"
+#include <ebos/eclactionhandler.hh>
+#include <ebos/eclbaseaquifermodel.hh>
+#include <ebos/ecldummygradientcalculator.hh>
+#include <ebos/eclequilinitializer.hh>
+#include <ebos/eclfluxmodule.hh>
+#include <ebos/eclgenericproblem.hh>
+#include <ebos/eclnewtonmethod.hh>
+#include <ebos/ecloutputblackoilmodule.hh>
+#include <ebos/eclthresholdpressure.hh>
+#include <ebos/ecltransmissibility.hh>
+#include <ebos/eclwriter.hh>
+#include <ebos/ecltracermodel.hh>
+#include <ebos/FIBlackOilModel.hpp>
+#include <ebos/vtkecltracermodule.hh>
+
+#include <opm/common/utility/TimeService.hpp>
 
 #include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
 
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/utils/ParallelSerialization.hpp>
-#include <opm/simulators/timestepping/SimulatorReport.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 
-#include <opm/models/common/directionalmobility.hh>
-#include <opm/models/utils/pffgridvector.hh>
-#include <opm/models/blackoil/blackoilmodel.hh>
-#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
-
-#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
-#include <opm/material/thermal/EclThermalLawManager.hpp>
+#include <opm/material/common/ConditionalStorage.hpp>
+#include <opm/material/common/Valgrind.hpp>
 #include <opm/material/densead/Evaluation.hpp>
-
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
@@ -75,29 +67,37 @@
 #include <opm/material/fluidsystems/blackoilpvt/DeadOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
+#include <opm/material/thermal/EclThermalLawManager.hpp>
 
-#include <opm/material/common/Valgrind.hpp>
-#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/common/utility/TimeService.hpp>
-#include <opm/utility/CopyablePtr.hpp>
-#include <opm/material/common/ConditionalStorage.hpp>
-
-#include <dune/common/version.hh>
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/models/common/directionalmobility.hh>
+#include <opm/models/utils/pffgridvector.hh>
+#include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/ParallelSerialization.hpp>
+
+#include <opm/utility/CopyablePtr.hpp>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
+#if USE_ALUGRID
+#define DISABLE_ALUGRID_SFC_ORDERING 1
+#include <ebos/eclalugridvanguard.hh>
+#elif USE_POLYHEDRALGRID
+#include <ebos/eclpolyhedralgridvanguard.hh>
+#else
+#include <ebos/eclcpgridvanguard.hh>
+#endif
 
-#include <set>
-#include <vector>
-#include <string>
 #include <algorithm>
 #include <functional>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace Opm {
 template <class TypeTag>

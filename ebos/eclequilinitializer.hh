@@ -28,13 +28,16 @@
 #ifndef EWOMS_ECL_EQUIL_INITIALIZER_HH
 #define EWOMS_ECL_EQUIL_INITIALIZER_HH
 
-#include "equil/initstateequil.hh"
+#include <ebos/equil/initstateequil.hh>
 
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/grid/common/CartesianIndexMapper.hpp>
 
-#include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+#include <opm/material/fluidstates/BlackOilFluidState.hpp>
+
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <vector>
 
