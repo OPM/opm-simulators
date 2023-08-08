@@ -154,23 +154,38 @@ public:
 
         int exceptionThrown = 0;
         std::string what;
-        try
-        { vanguard_.reset(new Vanguard(*this)); }
-        catch (const std::exception& e) {
+
+        auto catchAction =
+            [&exceptionThrown, &what, comm](const std::exception& e,
+                                            bool doPrint) {
             exceptionThrown = 1;
             what = e.what();
             if (comm.size() > 1) {
                 what += " (on rank " + std::to_string(comm.rank()) + ")";
             }
-            if (verbose_)
+            if (doPrint)
                 std::cerr << "Rank " << comm.rank() << " threw an exception: " << e.what() << std::endl;
-        }
+        };
 
-        if (comm.max(exceptionThrown)) {
-            auto all_what = gatherStrings(what);
-            assert(!all_what.empty());
-            throw std::runtime_error("Allocating the simulation vanguard failed: " + all_what.front());
+        auto checkParallelException =
+            [comm](const std::string& prefix,
+                   int exceptionThrown_,
+                   const std::string& what_)
+        {
+            if (comm.max(exceptionThrown_)) {
+                auto all_what = gatherStrings(what_);
+                assert(!all_what.empty());
+                throw std::runtime_error(prefix + all_what.front());
+            }
+        };
+
+        try
+        { vanguard_.reset(new Vanguard(*this)); }
+        catch (const std::exception& e) {
+            catchAction(e, verbose_);
         }
+        checkParallelException("Allocating the simulation vanguard failed: ",
+                               exceptionThrown, what);
 
         if (verbose_)
             std::cout << "Distributing the vanguard's data\n" << std::flush;
@@ -178,28 +193,33 @@ public:
         try
         { vanguard_->loadBalance(); }
         catch (const std::exception& e) {
-            exceptionThrown = 1;
-            what = e.what();
-            if (comm.size() > 1) {
-                what += " (on rank " + std::to_string(comm.rank()) + ")";
-            }
-            if (verbose_)
-                std::cerr << "Rank " << comm.rank() << " threw an exception: " << e.what() << std::endl;
+            catchAction(e, verbose_);
         }
-
-        if (comm.max(exceptionThrown)) {
-            auto all_what = gatherStrings(what);
-            assert(!all_what.empty());
-            throw std::runtime_error("Could not distribute the vanguard data: " + all_what.front());
-        }
+        checkParallelException("Could not distribute the vanguard data: ",
+                               exceptionThrown, what);
 
         if (verbose_)
             std::cout << "Allocating the model\n" << std::flush;
-        model_.reset(new Model(*this));
+        try {
+            model_.reset(new Model(*this));
+        }
+        catch (const std::exception& e) {
+            catchAction(e, verbose_);
+        }
+        checkParallelException("Could not allocate model: ",
+                               exceptionThrown, what);
 
         if (verbose_)
             std::cout << "Allocating the problem\n" << std::flush;
-        problem_.reset(new Problem(*this));
+
+        try {
+            problem_.reset(new Problem(*this));
+        }
+        catch (const std::exception& e) {
+            catchAction(e, verbose_);
+        }
+        checkParallelException("Could not allocate the problem: ",
+                               exceptionThrown, what);
 
         if (verbose_)
             std::cout << "Initializing the model\n" << std::flush;
@@ -207,20 +227,10 @@ public:
         try
         { model_->finishInit(); }
         catch (const std::exception& e) {
-            exceptionThrown = 1;
-            what = e.what();
-            if (comm.size() > 1) {
-                what += " (on rank " + std::to_string(comm.rank()) + ")";
-            }
-            if (verbose_)
-                std::cerr << "Rank " << comm.rank() << " threw an exception: " << e.what() << std::endl;
+            catchAction(e, verbose_);
         }
-
-        if (comm.max(exceptionThrown)) {
-            auto all_what = gatherStrings(what);
-            assert(!all_what.empty());
-            throw std::runtime_error("Could not initialize the model: " + all_what.front());
-        }
+        checkParallelException("Could not initialize the  model: ",
+                               exceptionThrown, what);
 
         if (verbose_)
             std::cout << "Initializing the problem\n" << std::flush;
@@ -228,20 +238,10 @@ public:
         try
         { problem_->finishInit(); }
         catch (const std::exception& e) {
-            exceptionThrown = 1;
-            what = e.what();
-            if (comm.size() > 1) {
-                what += " (on rank " + std::to_string(comm.rank()) + ")";
-            }
-            if (verbose_)
-                std::cerr << "Rank " << comm.rank() << " threw an exception: " << e.what() << std::endl;
+            catchAction(e, verbose_);
         }
-
-        if (comm.max(exceptionThrown)) {
-            auto all_what = gatherStrings(what);
-            assert(!all_what.empty());
-            throw std::runtime_error("Could not initialize the problem: " + all_what.front());
-        }
+        checkParallelException("Could not initialize the problem: ",
+                               exceptionThrown, what);
 
         setupTimer_.stop();
 
