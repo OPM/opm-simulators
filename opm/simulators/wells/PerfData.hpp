@@ -21,6 +21,8 @@
 #ifndef OPM_PERFDATA_HEADER_INCLUDED
 #define OPM_PERFDATA_HEADER_INCLUDED
 
+#include <opm/simulators/wells/ConnFiltrateData.hpp>
+
 #include <cstddef>
 #include <vector>
 
@@ -60,6 +62,7 @@ public:
         serializer(water_throughput);
         serializer(skin_pressure);
         serializer(water_velocity);
+        serializer(filtrate_data);
     }
 
     bool operator==(const PerfData&) const;
@@ -73,7 +76,6 @@ public:
     std::vector<double> brine_rates;
     std::vector<double> prod_index;
     std::vector<double> micp_rates;
-
     std::vector<std::size_t> cell_index;
     std::vector<double> connection_transmissibility_factor;
     std::vector<int> satnum_id;
@@ -84,6 +86,8 @@ public:
     std::vector<double> water_throughput;
     std::vector<double> skin_pressure;
     std::vector<double> water_velocity;
+
+    ConnFiltrateData filtrate_data;
 };
 
 } // namespace Opm

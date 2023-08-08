@@ -22,6 +22,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+#include <opm/simulators/wells/ConnFiltrateData.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
 
 namespace Opm {
@@ -46,6 +47,7 @@ PerfData::PerfData(std::size_t num_perf, double pressure_first_connection_, bool
         this->water_throughput.resize(num_perf);
         this->skin_pressure.resize(num_perf);
         this->water_velocity.resize(num_perf);
+        this->filtrate_data.resize(num_perf);
     }
 }
 
@@ -68,6 +70,7 @@ PerfData PerfData::serializationTestObject()
     result.water_throughput = {25.0, 26.0};
     result.skin_pressure = {27.0, 28.0};
     result.water_velocity = {29.0, 30.0};
+    result.filtrate_data = ConnFiltrateData::serializationTestObject();
 
     return result;
 }
@@ -99,6 +102,7 @@ bool PerfData::try_assign(const PerfData& other) {
     this->water_velocity = other.water_velocity;
     this->prod_index = other.prod_index;
     this->micp_rates = other.micp_rates;
+    this->filtrate_data = other.filtrate_data;
     return true;
 }
 
@@ -119,7 +123,8 @@ bool PerfData::operator==(const PerfData& rhs) const
            this->ecl_index == rhs.ecl_index &&
            this->water_throughput == rhs.water_throughput &&
            this->skin_pressure == rhs.skin_pressure &&
-           this->water_velocity == rhs.water_velocity;
+           this->water_velocity == rhs.water_velocity &&
+           this->filtrate_data == rhs.filtrate_data;
 }
 
 }

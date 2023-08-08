@@ -25,7 +25,6 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
-#include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
@@ -40,7 +39,7 @@ updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
                                const double dt,
                                const double conc,
                                const std::size_t water_index,
-                               const WellState& well_state)
+                               WellState& well_state)
 {
     if (!well.isInjector()) {
         return;
@@ -56,25 +55,36 @@ updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
         return;
     }
 
-    // it is currently used for the filter cake modeling related to formation damage study
     auto& ws = well_state.well(well.indexOfWell());
+    ws.filtrate_conc = conc;
+
+    if (conc == 0.) {
+        return;
+    }
+
     const auto& connection_rates = ws.perf_data.phase_rates;
 
     const std::size_t np = well_state.numPhases();
     for (int perf = 0; perf < well.numPerfs(); ++perf) {
         // not considering the production water
         const double water_rates = std::max(0., connection_rates[perf * np + water_index]);
-        filtration_particle_volume_[perf] += water_rates * conc * dt;
+        const double filtrate_rate = water_rates * conc;
+        filtration_particle_volume_[perf] += filtrate_rate * dt;
+        ws.perf_data.filtrate_data.rates[perf] = filtrate_rate;
+        ws.perf_data.filtrate_data.total[perf] = filtration_particle_volume_[perf];
     }
 }
 
 void WellFilterCake::
 updateInjFCMult(const WellInterfaceGeneric& well,
+                WellState& well_state,
                 DeferredLogger& deferred_logger)
 {
     if (inj_fc_multiplier_.empty()) {
         inj_fc_multiplier_.resize(well.numPerfs(), 1.0);
     }
+    auto& ws = well_state.well(well.indexOfWell());
+    auto& perf_data = ws.perf_data;
 
     for (int perf = 0; perf < well.numPerfs(); ++perf) {
         const auto perf_ecl_index = well.perforationData()[perf].ecl_index;
@@ -92,6 +102,12 @@ updateInjFCMult(const WellInterfaceGeneric& well,
             const double factor = filter_cake.sf_multiplier;
             // the thickness of the filtration cake
             const double thickness = filtration_particle_volume_[perf] / (area * (1. - poro));
+            auto& filtrate_data = perf_data.filtrate_data;
+            filtrate_data.thickness[perf] = thickness;
+            filtrate_data.poro[perf] = poro;
+            filtrate_data.perm[perf] = perm;
+            filtrate_data.radius[perf] = connection.getFilterCakeRadius();
+            filtrate_data.area_of_flow[perf] = connection.getFilterCakeArea();
 
             double skin_factor = 0.;
             switch (filter_cake.geometry) {
@@ -112,6 +128,8 @@ updateInjFCMult(const WellInterfaceGeneric& well,
                                                  geometry, well.name()),
                                      deferred_logger);
             }
+            filtrate_data.skin_factor[perf] = skin_factor;
+
             // the original skin factor for the connection
             const auto cskinfactor = connection.skinFactor();
             // compute a multiplier for the well connection transmissibility

@@ -500,6 +500,9 @@ WellState::report(const int* globalCellIdxMap,
         well.bhp = ws.bhp;
         well.thp = ws.thp;
         well.temperature = ws.temperature;
+        well.filtrate.rate = ws.sum_filtrate_rate();
+        well.filtrate.total = ws.sum_filtrate_total();
+        well.filtrate.concentration = ws.filtrate_conc;
 
         if (pu.phase_used[BlackoilPhases::Aqua]) {
             well.rates.set(rt::wat, wv[ pu.phase_pos[BlackoilPhases::Aqua] ] );
@@ -582,7 +585,8 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
                                   const int* globalCellIdxMap) const
 {
     using rt = data::Rates::opt;
-    const auto& perf_data = this->well(well_index).perf_data;
+    const auto& ws = this->well(well_index);
+    const auto& perf_data = ws.perf_data;
     const int num_perf_well = perf_data.size();
     connections.resize(num_perf_well);
     const auto& perf_rates = perf_data.rates;
@@ -594,6 +598,18 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
         connection.pressure = perf_pressure[i];
         connection.reservoir_rate = perf_rates[i];
         connection.trans_factor = perf_data.connection_transmissibility_factor[i];
+        if (!ws.producer) {
+            const auto& filtrate_data = perf_data.filtrate_data;
+            auto& filtrate = connection.filtrate;
+            filtrate.rate = filtrate_data.rates[i];
+            filtrate.total = filtrate_data.total[i];
+            filtrate.skin_factor = filtrate_data.skin_factor[i];
+            filtrate.thickness = filtrate_data.thickness[i];
+            filtrate.poro = filtrate_data.poro[i];
+            filtrate.perm = filtrate_data.perm[i];
+            filtrate.radius = filtrate_data.radius[i];
+            filtrate.area_of_flow = filtrate_data.area_of_flow[i];
+        }
     }
 
     const int np = pu.num_phases;
