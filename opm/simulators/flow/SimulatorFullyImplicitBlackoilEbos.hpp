@@ -410,6 +410,8 @@ public:
             bool event = events.hasEvent(ScheduleEvents::NEW_WELL) ||
                 events.hasEvent(ScheduleEvents::INJECTION_TYPE_CHANGED) ||
                 events.hasEvent(ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER) ||
+                events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE) ||
+                events.hasEvent(ScheduleEvents::INJECTION_UPDATE) ||
                 events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
             auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, nullptr);
             report_ += stepReport;
