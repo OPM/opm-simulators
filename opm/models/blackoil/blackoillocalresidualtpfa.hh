@@ -39,7 +39,7 @@
 #include "blackoilmicpmodules.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
-
+#include <opm/input/eclipse/Schedule/BCProp.hpp>
 
 namespace Opm {
 /*!
