@@ -775,28 +775,73 @@ namespace Opm
             const double h_perf = this->connections_.pressure_diff(perf);
             const double pressure_diff = p_r - h_perf;
 
-            // Let us add a check, since the pressure is calculated based on zero value BHP
-            // it should not be negative anyway. If it is negative, we might need to re-formulate
-            // to taking into consideration the crossflow here.
-            if ( (this->isProducer() && pressure_diff < 0.) || (this->isInjector() && pressure_diff > 0.) ) {
-                deferred_logger.debug("CROSSFLOW_IPR",
-                                "cross flow found when updateIPR for well " + name()
-                                + " . The connection is ignored in IPR calculations");
-                // we ignore these connections for now
-                continue;
-            }
-
             // the well index associated with the connection
             const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
 
-            std::vector<double> ipr_a_perf(this->ipr_a_.size());
-            std::vector<double> ipr_b_perf(this->ipr_b_.size());
-            for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                const double tw_mob = tw_perf * mob[comp_idx] * b_perf[comp_idx];
-                ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
-                ipr_b_perf[comp_idx] += tw_mob;
+            // surface volume fraction of fluids within wellbore
+            std::vector<double> cmix_s(this->numComponents(), 0.0);
+            for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
+                cmix_s[componentIdx] = getValue(this->primary_variables_.surfaceVolumeFraction(componentIdx));
             }
 
+            std::vector<double> ipr_a_perf(this->ipr_a_.size());
+            std::vector<double> ipr_b_perf(this->ipr_b_.size());
+            if (pressure_diff > 0.) {
+                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                    const double tw_mob = tw_perf * mob[comp_idx] * b_perf[comp_idx];
+                    ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
+                    ipr_b_perf[comp_idx] += tw_mob;
+                }
+            } else {
+                double total_mob = mob[0];
+                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                    total_mob += mob[comp_idx];
+                }
+            // compute volume ratio between connection at standard conditions
+            double volumeRatio = 0.0; 
+            const double rs = (fs.Rs()).value();
+            const double rv = (fs.Rv()).value();
+            const double rsw = (fs.Rs()).value();
+            const double rvw = (fs.Rv()).value();
+            if (FluidSystem::enableVaporizedWater() && FluidSystem::enableDissolvedGasInWater()) {
+                disOilVapWatVolumeRatio(volumeRatio, rvw, rsw, p_r,
+                                        cmix_s, b_perf, deferred_logger);
+            } else {
+                if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                    const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
+                    volumeRatio += cmix_s[waterCompIdx] / b_perf[waterCompIdx];
+                }
+            }
+
+            if constexpr (Indices::enableSolvent) {
+                volumeRatio += cmix_s[Indices::contiSolventEqIdx] / b_perf[Indices::contiSolventEqIdx];
+            }
+
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                gasOilVolumeRatio(volumeRatio, rv, rs, p_r,
+                                  cmix_s, b_perf, deferred_logger);
+            }
+            else {
+                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                    const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
+                    volumeRatio += cmix_s[oilCompIdx] / b_perf[oilCompIdx];
+                }
+                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                    const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                    volumeRatio += cmix_s[gasCompIdx] / b_perf[gasCompIdx];
+                }
+            }
+            //double cqt_is = cqt_i / volumeRatio;
+
+                for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+                    const double tw_mob = tw_perf * total_mob / volumeRatio;
+                    ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
+                    ipr_b_perf[comp_idx] += tw_mob;
+                }
+            }
+
+
+            // injecting connections total volumerates at standard conditions
             // we need to handle the rs and rv when both oil and gas are present
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 const unsigned oil_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
