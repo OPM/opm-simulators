@@ -1507,7 +1507,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     calcPressSatRsRv(eqlmap, rec, materialLawManager, comm, grav);
 
     // modify the pressure and saturation for numerical aquifer cells
-    applyNumericalAquifers_(gridView, num_aquifers, eclipseState.runspec().co2Storage());
+    applyNumericalAquifers_(gridView, num_aquifers, eclipseState.runspec().co2Storage() || eclipseState.runspec().h2Storage());
 
     // Modify oil pressure in no-oil regions so that the pressures of present phases can
     // be recovered from the oil pressure and capillary relations.
@@ -1654,7 +1654,7 @@ void InitialStateComputer<FluidSystem,
                           CartesianIndexMapper>::
 applyNumericalAquifers_(const GridView& gridView,
                         const NumericalAquifers& aquifer,
-                        const bool co2store)
+                        const bool co2store_or_h2store)
 {
     const auto num_aqu_cells = aquifer.allAquiferCells();
     if (num_aqu_cells.empty()) return;
@@ -1669,9 +1669,9 @@ applyNumericalAquifers_(const GridView& gridView,
         const auto search = num_aqu_cells.find(cartIx);
         if (search != num_aqu_cells.end()) {
             // numerical aquifer cells are filled with water initially
-            // for co2store the oilphase may be used for the brine
-            bool co2store_oil_as_brine = co2store && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
-            const auto watPos =  co2store_oil_as_brine? FluidSystem::oilPhaseIdx : FluidSystem::waterPhaseIdx;
+            // for co2store and h2store the oil phase may be used for the brine
+            bool oil_as_brine = co2store_or_h2store && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+            const auto watPos =  oil_as_brine? FluidSystem::oilPhaseIdx : FluidSystem::waterPhaseIdx;
             if (FluidSystem::phaseIsActive(watPos)) {
                 this->sat_[watPos][elemIdx] = 1.;
             } else {
@@ -1679,7 +1679,7 @@ applyNumericalAquifers_(const GridView& gridView,
             }
 
             const auto oilPos = FluidSystem::oilPhaseIdx;
-            if (!co2store && FluidSystem::phaseIsActive(oilPos)) {
+            if (!co2store_or_h2store && FluidSystem::phaseIsActive(oilPos)) {
                 this->sat_[oilPos][elemIdx] = 0.;
             }
 

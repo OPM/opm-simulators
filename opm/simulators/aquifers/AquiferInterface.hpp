@@ -78,15 +78,15 @@ public:
     int aquiferID() const { return this->aquiferID_; }
 
 protected:
-    bool co2store_() const
+    bool co2store_or_h2store_() const
     {
-        return ebos_simulator_.vanguard().eclState().runspec().co2Storage();
+        return ebos_simulator_.vanguard().eclState().runspec().co2Storage() || ebos_simulator_.vanguard().eclState().runspec().h2Storage();
     }
 
     int phaseIdx_() const
     {
         // If OIL is used to model brine the aquifer should do the same
-        if (co2store_() && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
+        if (co2store_or_h2store_() && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
             return FluidSystem::oilPhaseIdx;
 
         return FluidSystem::waterPhaseIdx;

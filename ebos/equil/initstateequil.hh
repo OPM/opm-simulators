@@ -715,7 +715,7 @@ private:
 
     void applyNumericalAquifers_(const GridView& gridView,
                                  const NumericalAquifers& aquifer,
-                                 const bool co2store);
+                                 const bool co2store_or_h2store);
 
     template<class RMap>
     void setRegionPvtIdx(const EclipseState& eclState, const RMap& reg);

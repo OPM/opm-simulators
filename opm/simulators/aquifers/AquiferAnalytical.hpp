@@ -246,7 +246,7 @@ protected:
 
     int compIdx_() const
     {
-        if (this->co2store_())
+        if (this->co2store_or_h2store_())
             return FluidSystem::oilCompIdx;
 
         return FluidSystem::waterCompIdx;

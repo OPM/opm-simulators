@@ -104,7 +104,7 @@ public:
         aquCT->dimensionless_pressure = this->dimensionless_pressure_;
         aquCT->influxConstant = this->aquct_data_.influxConstant();
 
-        if (!this->co2store_()) {
+        if (!this->co2store_or_h2store_()) {
             aquCT->timeConstant = this->aquct_data_.timeConstant();
             aquCT->waterDensity = this->aquct_data_.waterDensity();
             aquCT->waterViscosity = this->aquct_data_.waterViscosity();
@@ -217,7 +217,7 @@ protected:
 
     void calculateAquiferConstants() override
     {
-        this->Tc_ = this->co2store_()
+        this->Tc_ = this->co2store_or_h2store_()
             ? this->timeConstantCO2Store()
             : this->aquct_data_.timeConstant();
 
@@ -245,7 +245,7 @@ protected:
             this->Ta0_ = this->aquct_data_.initial_temperature.value();
         }
 
-        this->rhow_ = this->co2store_()
+        this->rhow_ = this->co2store_or_h2store_()
             ? this->waterDensityCO2Store()
             : this->aquct_data_.waterDensity();
     }
