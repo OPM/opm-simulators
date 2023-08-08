@@ -1,6 +1,5 @@
 {
         BasedOnStyle: WebKit,
-        AlignAfterOpenBracket: AlwaysBreak,
         AlignConsecutiveAssignments: false,
         AlignConsecutiveDeclarations: false,
         AlignAfterOpenBracket: Align,
