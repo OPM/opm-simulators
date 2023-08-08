@@ -299,6 +299,7 @@ bool SingleWellState::operator==(const SingleWellState& rhs) const
            this->surface_rates == rhs.surface_rates &&
            this->reservoir_rates == rhs.reservoir_rates &&
            this->prev_surface_rates == rhs.prev_surface_rates &&
+           this->perf_data == rhs.perf_data &&
            this->trivial_target == rhs.trivial_target &&
            this->segments == rhs.segments &&
            this->events == rhs.events &&
