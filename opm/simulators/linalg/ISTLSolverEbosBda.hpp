@@ -19,12 +19,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_ISTLSOLVER_EBOS_WITH_GPU_HEADER_INCLUDED
-#define OPM_ISTLSOLVER_EBOS_WITH_GPU_HEADER_INCLUDED
+#ifndef OPM_ISTLSOLVER_EBOS_WITH_BDA_INCLUDED
+#define OPM_ISTLSOLVER_EBOS_WITH_BDA_INCLUDED
 
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
 namespace Opm {
+
+class Well;
 
 template<class Matrix, class Vector, int block_size> class BdaBridge;
 class WellContributions;
@@ -90,7 +92,7 @@ private:
 /// as a block-structured matrix (one block for all cell variables) for a fixed
 /// number of cell variables np .
 template <class TypeTag>
-class ISTLSolverEbosWithGPU : public ISTLSolverEbos<TypeTag>
+class ISTLSolverEbosBda : public ISTLSolverEbos<TypeTag>
 {
 protected:
     using ParentType = ISTLSolverEbos<TypeTag>;
@@ -124,8 +126,8 @@ public:
     /// \param[in] simulator   The opm-models simulator object
     /// \param[in] parameters  Explicit parameters for solver setup, do not
     ///                        read them from command line parameters.
-    ISTLSolverEbosWithGPU(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
-        : ParentType(simulator)
+    ISTLSolverEbosBda(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
+        : ParentType(simulator, parameters)
     {
         bool have_gpu = true;
         this->initialize(have_gpu);
@@ -133,7 +135,7 @@ public:
 
     /// Construct a system solver.
     /// \param[in] simulator   The opm-models simulator object
-    explicit ISTLSolverEbosWithGPU(const Simulator& simulator)
+    explicit ISTLSolverEbosBda(const Simulator& simulator)
     : ParentType(simulator)
     {
     }
@@ -147,7 +149,7 @@ public:
             std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
             if ((this->simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
                 if (on_io_rank) {
-                    OpmLog::warning("Cannot use GPU with MPI, GPU are disabled");
+                    OpmLog::warning("Cannot use GPU with MPI, GPU is disabled");
                 }
                 accelerator_mode = "none";
             }
@@ -260,4 +262,4 @@ protected:
 
 } // namespace Opm
 
-#endif // OPM_ISTLSOLVER_EBOS_WITH_GPU_HEADER_INCLUDED
+#endif // OPM_ISTLSOLVER_EBOS_BDA_HEADER_INCLUDED

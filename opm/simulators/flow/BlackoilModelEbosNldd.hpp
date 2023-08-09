@@ -36,7 +36,7 @@
 #include <opm/simulators/linalg/extractMatrix.hpp>
 
 #if COMPILE_BDA_BRIDGE
-#include <opm/simulators/linalg/ISTLSolverEbosWithGPU.hpp>
+#include <opm/simulators/linalg/ISTLSolverEbosBda.hpp>
 #else
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 #endif

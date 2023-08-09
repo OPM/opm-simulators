@@ -21,7 +21,7 @@
 
 #include <config.h>
 #include <opm/common/TimingMacros.hpp>
-#include <opm/simulators/linalg/ISTLSolverEbosWithGPU.hpp>
+#include <opm/simulators/linalg/ISTLSolverEbosBda.hpp>
 
 #include <dune/istl/schwarz.hh>
 
@@ -33,10 +33,8 @@
 
 #include <fmt/format.h>
 
-#if COMPILE_BDA_BRIDGE
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
-#endif
 
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
@@ -48,7 +46,6 @@
 namespace Opm {
 namespace detail {
 
-#if COMPILE_BDA_BRIDGE
 template<class Matrix, class Vector>
 BdaSolverInfo<Matrix,Vector>::
 BdaSolverInfo(const std::string& accelerator_mode,
@@ -209,15 +206,12 @@ copyMatToBlockJac(const Matrix& mat, Matrix& blockJac)
         }
     }
 }
-#endif // COMPILE_BDA_BRIDGE
 
 template<int Dim>
 using BM = Dune::BCRSMatrix<MatrixBlock<double,Dim,Dim>>;
 template<int Dim>
 using BV = Dune::BlockVector<Dune::FieldVector<double,Dim>>;
 
-
-#if COMPILE_BDA_BRIDGE
 
 #define INSTANCE_GRID(Dim, Grid)                   \
     template void BdaSolverInfo<BM<Dim>,BV<Dim>>:: \
@@ -250,6 +244,6 @@ INSTANCE(3)
 INSTANCE(4)
 INSTANCE(5)
 INSTANCE(6)
-#endif
-}
-}
+
+} // namespace detail
+} // namespace Opm
