@@ -484,7 +484,7 @@ getResidualMeasureValue(const WellState& well_state,
     assert(int(residuals.size()) == numWellEq + 1);
 
     const double rate_tolerance = tolerance_wells;
-    int count = 0;
+    [[maybe_unused]] int count = 0;
     double sum = 0;
     for (int eq_idx = 0; eq_idx < numWellEq - 1; ++eq_idx) {
         if (residuals[eq_idx] > rate_tolerance) {

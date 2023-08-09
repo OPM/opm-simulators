@@ -21,7 +21,7 @@
   copyright holders.
 */
 #ifndef EWOMS_GENERIC_ECL_PROBLEM_IMPL_HH
-#define EWOMS_GENERIC_ECL_PROBLEM_IPML_HH
+#define EWOMS_GENERIC_ECL_PROBLEM_IMPL_HH
 
 #include <ebos/eclgenericproblem.hh>
 
