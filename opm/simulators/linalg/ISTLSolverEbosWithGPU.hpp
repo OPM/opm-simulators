@@ -19,11 +19,11 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_ISTLSOLVER_EBOS_HEADER_INCLUDED
-#define OPM_ISTLSOLVER_EBOS_HEADER_INCLUDED
+#ifndef OPM_ISTLSOLVER_EBOS_GPU_HEADER_INCLUDED
+#define OPM_ISTLSOLVER_EBOS_GPU_HEADER_INCLUDED
 #if COMPILE_BDA_BRIDGE
 
-#include <opm/simulators/linalg/ISTLSolverEbos.hpp>
+#include <opm/simulators/linalg/ISTLSolverEbosGPU.hpp>
 
 namespace Opm::Properties {
 
