@@ -39,7 +39,6 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/grid/CpGrid.hpp>
-#include <opm/grid/polyhedralgrid.hh>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Phase.hpp>
@@ -52,18 +51,6 @@
 #include <opm/simulators/linalg/ilufirstelement.hh>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
-
-#if HAVE_DUNE_FEM
-#include <dune/fem/gridpart/adaptiveleafgridpart.hh>
-#include <dune/fem/gridpart/common/gridpart2gridview.hh>
-#include <ebos/femcpgridcompat.hh>
-#endif // HAVE_DUNE_FEM
-
-#if HAVE_DUNE_ALUGRID
-#include <dune/alugrid/grid.hh>
-#include <dune/alugrid/3d/gridview.hh>
-#include "alucartesianindexmapper.hh"
-#endif // HAVE_DUNE_ALUGRID
 
 #include <fmt/format.h>
 

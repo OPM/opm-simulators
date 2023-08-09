@@ -317,8 +317,8 @@ endmacro (files_hook)
 
 macro (tests_hook)
 endmacro (tests_hook)
- 
-    
+
+
 # all setup common to the OPM library modules is done here
 include (OpmLibMain)
 
@@ -559,12 +559,6 @@ foreach(OBJ ${FLOW_VARIANT_MODELS})
   set_property(TARGET flow_lib${OBJ} PROPERTY EXCLUDE_FROM_ALL ${FLOW_VARIANTS_DEFAULT_ENABLE_IF})
 endforeach()
 
-add_library(flow_libblackoil_poly OBJECT flow/flow_ebos_blackoil_poly.cpp)
-if(TARGET fmt::fmt)
-  target_link_libraries(flow_libblackoil_poly fmt::fmt)
- endif()
-set_property(TARGET flow_libblackoil_poly PROPERTY EXCLUDE_FROM_ALL ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF})
-
 opm_add_test(flow
   ONLY_COMPILE
   ALWAYS_ENABLE
@@ -577,17 +571,15 @@ opm_add_test(flow
   $<TARGET_OBJECTS:moduleVersion>
   )
 
-opm_add_test(flow_poly
+opm_add_test(flow_blackoil_polyhedralgrid
   ONLY_COMPILE
   ALWAYS_ENABLE
   DEFAULT_ENABLE_IF ${FLOW_POLY_ONLY_DEFAULT_ENABLE_IF}
   DEPENDS opmsimulators
   LIBRARIES opmsimulators
   SOURCES
-  flow/flow_blackoil_poly.cpp
-  $<TARGET_OBJECTS:flow_libblackoil_poly>
+  flow/flow_blackoil_polyhedralgrid.cpp
   $<TARGET_OBJECTS:moduleVersion>)
-target_compile_definitions(flow_poly PRIVATE USE_POLYHEDRALGRID)
 
 opm_add_test(flow_distribute_z
   ONLY_COMPILE
@@ -608,7 +600,7 @@ if(dune-alugrid_FOUND)
     set(FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF "TRUE")
   endif()
 
-  opm_add_test(flow_alugrid
+  opm_add_test(flow_blackoil_alugrid
     ONLY_COMPILE
     ALWAYS_ENABLE
     DEFAULT_ENABLE_IF ${FLOW_ALUGRID_ONLY_DEFAULT_ENABLE_IF}
@@ -617,7 +609,6 @@ if(dune-alugrid_FOUND)
     SOURCES
     flow/flow_blackoil_alugrid.cpp
     $<TARGET_OBJECTS:moduleVersion>)
-  target_compile_definitions(flow_alugrid PRIVATE USE_ALUGRID)
 endif()
 
 if (BUILD_FLOW)
@@ -685,5 +676,3 @@ endif()
 
 install(DIRECTORY doc/man1 DESTINATION ${CMAKE_INSTALL_MANDIR}
   FILES_MATCHING PATTERN "*.1")
-
-

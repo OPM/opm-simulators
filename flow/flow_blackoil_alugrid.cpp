@@ -16,8 +16,25 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "config.h"
+#include <config.h>
+
+#include <dune/alugrid/grid.hh>
+#include <ebos/eclalugridvanguard.hh>
 #include <opm/simulators/flow/Main.hpp>
+
+// for equilgrid in writer
+// need to include this before eclgenericwriter_impl.hh due to specializations.
+#include <opm/grid/CpGrid.hpp>
+#include <opm/grid/cpgrid/GridHelpers.hpp>
+
+// these are not explicitly instanced in library
+#include <ebos/collecttoiorank_impl.hh>
+#include <ebos/eclgenericproblem_impl.hh>
+#include <ebos/eclgenericthresholdpressure_impl.hh>
+#include <ebos/eclgenerictracermodel_impl.hh>
+#include <ebos/eclgenericwriter_impl.hh>
+#include <ebos/ecltransmissibility_impl.hh>
+#include <ebos/equil/initstateequil_impl.hh>
 
 namespace Opm {
 namespace Properties {
@@ -26,6 +43,25 @@ struct EclFlowProblemAlugrid {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
+
+template<class TypeTag>
+struct Grid<TypeTag, TTag::EclFlowProblemAlugrid> {
+    static const int dim = 3;
+#if HAVE_MPI
+     using type = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming,Dune::ALUGridMPIComm>;
+#else
+     using type = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif
+};
+// alugrid need cp grid as equilgrid
+template<class TypeTag>
+struct EquilGrid<TypeTag, TTag::EclFlowProblemAlugrid> {
+    using type = Dune::CpGrid;
+};
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::EclFlowProblemAlugrid> {
+    using type = Opm::EclAluGridVanguard<TypeTag>;
+};
 template<class TypeTag>
 struct EclEnableAquifers<TypeTag, TTag::EclFlowProblemAlugrid> {
     static constexpr bool value = false;
