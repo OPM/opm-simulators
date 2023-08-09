@@ -364,6 +364,7 @@ list (APPEND TEST_DATA_FILES
 list (APPEND PUBLIC_HEADER_FILES
   ebos/alucartesianindexmapper.hh
   ebos/collecttoiorank.hh
+  ebos/collecttoiorank_impl.hh
   ebos/ebos.hh
   ebos/eclactionhandler.hh
   ebos/eclalugridvanguard.hh
@@ -376,11 +377,14 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclgenericcpgridvanguard.hh
   ebos/eclgenericoutputblackoilmodule.hh
   ebos/eclgenericproblem.hh
+  ebos/eclgenericproblem_impl.hh
   ebos/eclgenericthresholdpressure.hh
+  ebos/eclgenericthresholdpressure_impl.hh
   ebos/eclgenerictracermodel.hh
   ebos/eclgenerictracermodel_impl.hh
   ebos/eclgenericvanguard.hh
   ebos/eclgenericwriter.hh
+  ebos/eclgenericwriter_impl.hh
   ebos/eclinterregflows.hh
   ebos/eclmpiserializer.hh
   ebos/eclnewtonmethod.hh
@@ -391,6 +395,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclthresholdpressure.hh
   ebos/ecltracermodel.hh
   ebos/ecltransmissibility.hh
+  ebos/ecltransmissibility_impl.hh
   ebos/eclwriter.hh
   ebos/femcpgridcompat.hh
   ebos/hdf5serializer.hh
