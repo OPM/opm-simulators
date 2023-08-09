@@ -21,14 +21,15 @@
 
 #ifndef OPM_ISTLSOLVER_EBOS_WITH_GPU_HEADER_INCLUDED
 #define OPM_ISTLSOLVER_EBOS_WITH_GPU_HEADER_INCLUDED
+
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
-#if COMPILE_BDA_BRIDGE
-namespace Opm
-{
+
+namespace Opm {
+
 template<class Matrix, class Vector, int block_size> class BdaBridge;
 class WellContributions;
-namespace detail
-{
+namespace detail {
+
 template<class Matrix, class Vector>
 struct BdaSolverInfo
 {
@@ -83,179 +84,180 @@ private:
 };
 
 }
-    /// This class solves the fully implicit black-oil system by
-    /// solving the reduced system (after eliminating well variables)
-    /// as a block-structured matrix (one block for all cell variables) for a fixed
-    /// number of cell variables np .
-    template <class TypeTag>
-    class ISTLSolverEbosWithGPU : public ISTLSolverEbos<TypeTag>
-    {
-    protected:
-        using ParentType = ISTLSolverEbos<TypeTag>;
-        using GridView = GetPropType<TypeTag, Properties::GridView>;
-        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-        using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
-        using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
-        using Indices = GetPropType<TypeTag, Properties::Indices>;
-        using WellModel = GetPropType<TypeTag, Properties::EclWellModel>;
-        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-        using Matrix = typename SparseMatrixAdapter::IstlMatrix;
-        using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
-        using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
-        using AbstractSolverType = Dune::InverseOperator<Vector, Vector>;
-        using AbstractOperatorType = Dune::AssembledLinearOperator<Matrix, Vector, Vector>;
-        using AbstractPreconditionerType = Dune::PreconditionerWithUpdate<Vector, Vector>;
-        using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
-        using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
-        constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
+
+/// This class solves the fully implicit black-oil system by
+/// solving the reduced system (after eliminating well variables)
+/// as a block-structured matrix (one block for all cell variables) for a fixed
+/// number of cell variables np .
+template <class TypeTag>
+class ISTLSolverEbosWithGPU : public ISTLSolverEbos<TypeTag>
+{
+protected:
+    using ParentType = ISTLSolverEbos<TypeTag>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
+    using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using WellModel = GetPropType<TypeTag, Properties::EclWellModel>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Matrix = typename SparseMatrixAdapter::IstlMatrix;
+    using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
+    using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using AbstractSolverType = Dune::InverseOperator<Vector, Vector>;
+    using AbstractOperatorType = Dune::AssembledLinearOperator<Matrix, Vector, Vector>;
+    using AbstractPreconditionerType = Dune::PreconditionerWithUpdate<Vector, Vector>;
+    using WellModelOperator = WellModelAsLinearOperator<WellModel, Vector, Vector>;
+    using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
+    constexpr static std::size_t pressureIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
 
 #if HAVE_MPI
-        using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
+    using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
-        using CommunicationType = Dune::CollectiveCommunication<int>;
+    using CommunicationType = Dune::CollectiveCommunication<int>;
 #endif
 
-    public:
-        using AssembledLinearOperatorType = Dune::AssembledLinearOperator< Matrix, Vector, Vector >;
+public:
+    using AssembledLinearOperatorType = Dune::AssembledLinearOperator< Matrix, Vector, Vector >;
 
-        /// Construct a system solver.
-        /// \param[in] simulator   The opm-models simulator object
-        /// \param[in] parameters  Explicit parameters for solver setup, do not
-        ///                        read them from command line parameters.
-        ISTLSolverEbosWithGPU(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
-            : ParentType(simulator)
-        {
-            bool have_gpu = true;
-            this->initialize(have_gpu);
-        }
-
-        /// Construct a system solver.
-        /// \param[in] simulator   The opm-models simulator object
-        explicit ISTLSolverEbosWithGPU(const Simulator& simulator)
+    /// Construct a system solver.
+    /// \param[in] simulator   The opm-models simulator object
+    /// \param[in] parameters  Explicit parameters for solver setup, do not
+    ///                        read them from command line parameters.
+    ISTLSolverEbosWithGPU(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
         : ParentType(simulator)
-        {
-        }
+    {
+        bool have_gpu = true;
+        this->initialize(have_gpu);
+    }
 
-        void initialize()
+    /// Construct a system solver.
+    /// \param[in] simulator   The opm-models simulator object
+    explicit ISTLSolverEbosWithGPU(const Simulator& simulator)
+    : ParentType(simulator)
+    {
+    }
+
+    void initialize()
+    {
+        OPM_TIMEBLOCK(initialize);
+        ParentType::initialize(false);
+        const bool on_io_rank = (this->simulator_.gridView().comm().rank() == 0);
         {
-            OPM_TIMEBLOCK(initialize);
-            ParentType::initialize(false);
-            const bool on_io_rank = (this->simulator_.gridView().comm().rank() == 0);
-            {
-                std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
-                if ((this->simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
-                    if (on_io_rank) {
-                        OpmLog::warning("Cannot use GPU with MPI, GPU are disabled");
-                    }
-                    accelerator_mode = "none";
+            std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
+            if ((this->simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
+                if (on_io_rank) {
+                    OpmLog::warning("Cannot use GPU with MPI, GPU are disabled");
                 }
-                const int platformID = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
-                const int deviceID = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
-                const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
-                const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
-                const bool opencl_ilu_parallel = EWOMS_GET_PARAM(TypeTag, bool, OpenclIluParallel);
-                const int linear_solver_verbosity = this->parameters_.linear_solver_verbosity_;
-                std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
-                bdaBridge_ = std::make_unique<detail::BdaSolverInfo<Matrix,Vector>>(accelerator_mode,
-                                                                                   linear_solver_verbosity,
-                                                                                   maxit,
-                                                                                   tolerance,
-                                                                                   platformID,
-                                                                                   deviceID,
-                                                                                   opencl_ilu_parallel,
-                                                                                   linsolver);
+                accelerator_mode = "none";
             }
+            const int platformID = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
+            const int deviceID = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
+            const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
+            const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
+            const bool opencl_ilu_parallel = EWOMS_GET_PARAM(TypeTag, bool, OpenclIluParallel);
+            const int linear_solver_verbosity = this->parameters_.linear_solver_verbosity_;
+            std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
+            bdaBridge_ = std::make_unique<detail::BdaSolverInfo<Matrix,Vector>>(accelerator_mode,
+                                                                               linear_solver_verbosity,
+                                                                               maxit,
+                                                                               tolerance,
+                                                                               platformID,
+                                                                               deviceID,
+                                                                               opencl_ilu_parallel,
+                                                                               linsolver);
         }
+    }
 
-        void prepare(const Matrix& M, Vector& b)
-        {
-            OPM_TIMEBLOCK(prepare);
-            ParentType::prepare(M,b);
-            const bool firstcall = (this->matrix_ == nullptr);
-            // update matrix entries for solvers.
-            if (firstcall) {
-                // ebos will not change the matrix object. Hence simply store a pointer
-                // to the original one with a deleter that does nothing.
-                // Outch! We need to be able to scale the linear system! Hence const_cast
-                // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
+    void prepare(const Matrix& M, Vector& b)
+    {
+        OPM_TIMEBLOCK(prepare);
+        ParentType::prepare(M,b);
+        const bool firstcall = (this->matrix_ == nullptr);
+        // update matrix entries for solvers.
+        if (firstcall) {
+            // ebos will not change the matrix object. Hence simply store a pointer
+            // to the original one with a deleter that does nothing.
+            // Outch! We need to be able to scale the linear system! Hence const_cast
+            // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
 #if HAVE_OPENCL
-                bdaBridge_->numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
-                bdaBridge_->prepare(this->simulator_.vanguard().grid(),
-                                   this->simulator_.vanguard().cartesianIndexMapper(),
-                                   this->simulator_.vanguard().schedule().getWellsatEnd(),
-                                   this->simulator_.vanguard().cellPartition(),
-                                   this->getMatrix().nonzeroes(), this->useWellConn_);
+            bdaBridge_->numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
+            bdaBridge_->prepare(this->simulator_.vanguard().grid(),
+                               this->simulator_.vanguard().cartesianIndexMapper(),
+                               this->simulator_.vanguard().schedule().getWellsatEnd(),
+                               this->simulator_.vanguard().cellPartition(),
+                               this->getMatrix().nonzeroes(), this->useWellConn_);
 #endif
-            }
+        }
+    }
+
+
+    void setResidual(Vector& /* b */)
+    {
+        // rhs_ = &b; // Must be handled in prepare() instead.
+    }
+
+    void getResidual(Vector& b) const
+    {
+        b = *(this->rhs_);
+    }
+
+    void setMatrix(const SparseMatrixAdapter& /* M */)
+    {
+        // matrix_ = &M.istlMatrix(); // Must be handled in prepare() instead.
+    }
+
+    bool solve(Vector& x)
+    {
+        OPM_TIMEBLOCK(solve);
+        this->calls_ += 1;
+        // Write linear system if asked for.
+        const int verbosity = this->prm_.template get<int>("verbosity", 0);
+        const bool write_matrix = verbosity > 10;
+        if (write_matrix) {
+            Helper::writeSystem(this->simulator_, //simulator is only used to get names
+                                this->getMatrix(),
+                                *(this->rhs_),
+                                this->comm_.get());
         }
 
+        // Solve system.
+        Dune::InverseOperatorResult result;
 
-        void setResidual(Vector& /* b */)
-        {
-            // rhs_ = &b; // Must be handled in prepare() instead.
-        }
-
-        void getResidual(Vector& b) const
-        {
-            b = *(this->rhs_);
-        }
-
-        void setMatrix(const SparseMatrixAdapter& /* M */)
-        {
-            // matrix_ = &M.istlMatrix(); // Must be handled in prepare() instead.
-        }
-
-        bool solve(Vector& x)
-        {
-            OPM_TIMEBLOCK(solve);
-            this->calls_ += 1;
-            // Write linear system if asked for.
-            const int verbosity = this->prm_.template get<int>("verbosity", 0);
-            const bool write_matrix = verbosity > 10;
-            if (write_matrix) {
-                Helper::writeSystem(this->simulator_, //simulator is only used to get names
-                                    this->getMatrix(),
-                                    *(this->rhs_),
-                                    this->comm_.get());
-            }
-
-            // Solve system.
-            Dune::InverseOperatorResult result;
-
-            std::function<void(WellContributions&)> getContribs =
-                [this](WellContributions& w)
-                {
-                    this->simulator_.problem().wellModel().getWellContributions(w);
-                };
-            if (!bdaBridge_->apply(*(this->rhs_), this->useWellConn_, getContribs,
-                                  this->simulator_.gridView().comm().rank(),
-                                  const_cast<Matrix&>(this->getMatrix()),
-                                  x, result))
+        std::function<void(WellContributions&)> getContribs =
+            [this](WellContributions& w)
             {
-                if(bdaBridge_->gpuActive()){
-                    // bda solve fails use istl solver setup need to be done since it is not setup in prepeare
-                    ParentType::prepareFlexibleSolver();
-                }
-                assert(this->flexibleSolver_.solver_);
-                this->flexibleSolver_.solver_->apply(x, *(this->rhs_), result);
-            }
-
-            // Check convergence, iterations etc.
-            this->checkConvergence(result);
-
-            return this->converged_;
-        }
-    protected:
-
-        void prepareFlexibleSolver()
+                this->simulator_.problem().wellModel().getWellContributions(w);
+            };
+        if (!bdaBridge_->apply(*(this->rhs_), this->useWellConn_, getContribs,
+                              this->simulator_.gridView().comm().rank(),
+                              const_cast<Matrix&>(this->getMatrix()),
+                              x, result))
         {
             if(bdaBridge_->gpuActive()){
+                // bda solve fails use istl solver setup need to be done since it is not setup in prepare
                 ParentType::prepareFlexibleSolver();
             }
+            assert(this->flexibleSolver_.solver_);
+            this->flexibleSolver_.solver_->apply(x, *(this->rhs_), result);
         }
-        std::unique_ptr<detail::BdaSolverInfo<Matrix, Vector>> bdaBridge_;
-    }; // end ISTLSolver
+
+        // Check convergence, iterations etc.
+        this->checkConvergence(result);
+
+        return this->converged_;
+    }
+
+protected:
+    void prepareFlexibleSolver()
+    {
+        if(bdaBridge_->gpuActive()){
+            ParentType::prepareFlexibleSolver();
+        }
+    }
+    std::unique_ptr<detail::BdaSolverInfo<Matrix, Vector>> bdaBridge_;
+}; // end ISTLSolver
 
 } // namespace Opm
-#endif
-#endif
+
+#endif // OPM_ISTLSOLVER_EBOS_WITH_GPU_HEADER_INCLUDED

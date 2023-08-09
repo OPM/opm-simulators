@@ -24,9 +24,10 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/wells/StandardWellEquations.hpp>
 
-
-
+#if COMPILE_BDA_BRIDGE
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
+#endif
+
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
@@ -187,6 +188,7 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     invDuneD_.mv(resWell, xw);
 }
 
+#if COMPILE_BDA_BRIDGE
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::
 extract(const int numStaticWellEq,
@@ -240,6 +242,7 @@ extract(const int numStaticWellEq,
     wellContribs.addMatrix(WellContributions::MatrixType::B,
                            colIndices.data(), nnzValues.data(), duneB_.nonzeroes());
 }
+#endif
 
 template<class Scalar, int numEq>
 template<class SparseMatrixAdapter>
