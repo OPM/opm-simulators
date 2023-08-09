@@ -21,7 +21,7 @@
 
 #include <config.h>
 #include <opm/common/TimingMacros.hpp>
-#include <opm/simulators/linalg/ISTLSolverEbosGPU.hpp>
+#include <opm/simulators/linalg/ISTLSolverEbosWithGPU.hpp>
 
 #include <dune/istl/schwarz.hh>
 
@@ -211,10 +211,15 @@ copyMatToBlockJac(const Matrix& mat, Matrix& blockJac)
 }
 #endif // COMPILE_BDA_BRIDGE
 
+template<int Dim>
+using BM = Dune::BCRSMatrix<MatrixBlock<double,Dim,Dim>>;
+template<int Dim>
+using BV = Dune::BlockVector<Dune::FieldVector<double,Dim>>;
+
 
 #if COMPILE_BDA_BRIDGE
 
-#define INSTANCE_GRID(Dim, Grid) \
+#define INSTANCE_GRID(Dim, Grid)                   \
     template void BdaSolverInfo<BM<Dim>,BV<Dim>>:: \
     prepare(const Grid&, \
             const Dune::CartesianIndexMapper<Grid>&, \
@@ -232,19 +237,19 @@ using PolyHedralGrid3D = Dune::PolyhedralGrid<3, 3>;
     template struct BdaSolverInfo<BM<Dim>,BV<Dim>>; \
     INSTANCE_GRID(Dim,Dune::CpGrid) \
     INSTANCE_GRID(Dim,ALUGrid3CN) \
-    INSTANCE_GRID(Dim,PolyHedralGrid3D) \
-    INSTANCE_FLEX(Dim)
+    INSTANCE_GRID(Dim,PolyHedralGrid3D)
 #else
 #define INSTANCE(Dim) \
     template struct BdaSolverInfo<BM<Dim>,BV<Dim>>; \
     INSTANCE_GRID(Dim,Dune::CpGrid) \
-    INSTANCE_GRID(Dim,PolyHedralGrid3D)  \
-    INSTANCE_FLEX(Dim)
+    INSTANCE_GRID(Dim,PolyHedralGrid3D)
 #endif
-#else
-#define INSTANCE(Dim) \
-    INSTANCE_FLEX(Dim)
-#endif // COMPILE_BDA_BRIDGE
-
+INSTANCE(1)
+INSTANCE(2)
+INSTANCE(3)
+INSTANCE(4)
+INSTANCE(5)
+INSTANCE(6)
+#endif
 }
 }

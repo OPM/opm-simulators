@@ -217,12 +217,12 @@ using CommunicationType = Dune::CollectiveCommunication<int>;
     template void makeOverlapRowsInvalid<BM<Dim>>(BM<Dim>&, const std::vector<int>&); \
     template struct FlexibleSolverInfo<BM<Dim>,BV<Dim>,CommunicationType>;
 
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
+INSTANCE_FLEX(1)
+INSTANCE_FLEX(2)
+INSTANCE_FLEX(3)
+INSTANCE_FLEX(4)
+INSTANCE_FLEX(5)
+INSTANCE_FLEX(6)
 
 }
 }

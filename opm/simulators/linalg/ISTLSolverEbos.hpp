@@ -201,7 +201,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             initialize();
         }
 
-        void initialize()
+        void initialize(bool have_gpu = false)
         {
             OPM_TIMEBLOCK(IstlSolverEbos);
             prm_ = setupPropertyTree(parameters_,
@@ -238,6 +238,12 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 prm_.write_json(os, true);
                 OpmLog::note(os.str());
             }
+            if(have_gpu){
+                if (EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode) != "none") {
+                    OPM_THROW(std::logic_error,"Cannot use accelerated solver since CUDA, OpenCL and amgcl were not found by cmake");
+                }
+            }
+
         }
 
         // nothing to clean here
