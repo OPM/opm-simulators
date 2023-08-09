@@ -47,7 +47,11 @@ struct EclFlowProblemAlugrid {
 template<class TypeTag>
 struct Grid<TypeTag, TTag::EclFlowProblemAlugrid> {
     static const int dim = 3;
-    using type = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming,Dune::ALUGridMPIComm>;
+#if HAVE_MPI
+     using type = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming,Dune::ALUGridMPIComm>;
+#else
+     using type = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
+#endif
 };
 // alugrid need cp grid as equilgrid
 template<class TypeTag>
