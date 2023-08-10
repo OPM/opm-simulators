@@ -377,7 +377,16 @@ public:
         // deal with DRSDT
         this->initDRSDT_(this->model().numGridDof(), this->episodeIndex());
 
-        this->readRockParameters_(simulator.vanguard().cellCenterDepths());
+        this->readRockParameters_(simulator.vanguard().cellCenterDepths(),
+                                  [&simulator](const unsigned idx)
+                                  {
+                                      std::array<int,dim> coords;
+                                      simulator.vanguard().cartesianCoordinate(idx, coords);
+                                      for (auto& c : coords) {
+                                          ++c;
+                                      }
+                                      return coords;
+                                  });
         readMaterialParameters_();
         readThermalParameters_();
 
