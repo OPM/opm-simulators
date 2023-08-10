@@ -38,6 +38,12 @@
 
 namespace Opm {
 
+template class EclGenericWriter<Dune::CpGrid,
+                                Dune::CpGrid,
+                                Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
+                                Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
+                                double>;
+
 #if HAVE_DUNE_FEM
 template class EclGenericWriter<Dune::CpGrid,
                                 Dune::CpGrid,
@@ -57,12 +63,6 @@ template class EclGenericWriter<Dune::CpGrid,
                                             Dune::PartitionIteratorType(4),
                                             false>>>,
                                 double>;
-#else // !HAVE_DUNE_FEM
-template class EclGenericWriter<Dune::CpGrid,
-                                Dune::CpGrid,
-                                Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
-                                double>;
-#endif // HAVE_DUNE_FEM
+#endif // HAVE_DUNE_FEM*/
 
 } // namespace Opm

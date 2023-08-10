@@ -493,44 +493,44 @@ computeCellThickness(const typename GridView::template Codim<0>::Entity& element
     zz2 /=4;
     return zz2-zz1;
 }
+template class EclGenericCpGridVanguard<
+    Dune::MultipleCodimMultipleGeomTypeMapper<
+        Dune::GridView<
+            Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
+    Dune::GridView<
+        Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
+    double>;
 
 #if HAVE_DUNE_FEM
-    template class EclGenericCpGridVanguard<
-        Dune::MultipleCodimMultipleGeomTypeMapper<
-            Dune::GridView<
-                Dune::Fem::GridPart2GridViewTraits<
-                    Dune::Fem::AdaptiveLeafGridPart<
-                        Dune::CpGrid,
-                        Dune::PartitionIteratorType(4),
-                        false>>>>,
+template class EclGenericCpGridVanguard<
+    Dune::MultipleCodimMultipleGeomTypeMapper<
         Dune::GridView<
             Dune::Fem::GridPart2GridViewTraits<
                 Dune::Fem::AdaptiveLeafGridPart<
                     Dune::CpGrid,
                     Dune::PartitionIteratorType(4),
-                    false>>>,
-        double>;
+                    false>>>>,
+    Dune::GridView<
+        Dune::Fem::GridPart2GridViewTraits<
+            Dune::Fem::AdaptiveLeafGridPart<
+                Dune::CpGrid,
+                Dune::PartitionIteratorType(4),
+                false>>>,
+    double>;
 
-    template class EclGenericCpGridVanguard<
-        Dune::MultipleCodimMultipleGeomTypeMapper<
-            Dune::Fem::GridPart2GridViewImpl<
-                Dune::Fem::AdaptiveLeafGridPart<
-                    Dune::CpGrid,
-                    Dune::PartitionIteratorType(4),
-                    false>>>,
+template class EclGenericCpGridVanguard<
+    Dune::MultipleCodimMultipleGeomTypeMapper<
         Dune::Fem::GridPart2GridViewImpl<
             Dune::Fem::AdaptiveLeafGridPart<
                 Dune::CpGrid,
                 Dune::PartitionIteratorType(4),
-                false> >,
-        double>;
-#else
-    template class EclGenericCpGridVanguard<
-        Dune::MultipleCodimMultipleGeomTypeMapper<
-            Dune::GridView<
-                Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
-        Dune::GridView<
-            Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-        double>;
-#endif
+                false>>>,
+    Dune::Fem::GridPart2GridViewImpl<
+        Dune::Fem::AdaptiveLeafGridPart<
+            Dune::CpGrid,
+            Dune::PartitionIteratorType(4),
+            false> >,
+    double>;
+#endif // HAVE_DUNE_FEM
+
 } // namespace Opm

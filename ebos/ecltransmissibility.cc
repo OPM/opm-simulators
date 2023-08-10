@@ -35,6 +35,12 @@
 
 namespace Opm {
 
+template class EclTransmissibility<Dune::CpGrid,
+                                   Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
+                                   Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
+                                   Dune::CartesianIndexMapper<Dune::CpGrid>,
+                                   double>;
+
 #ifdef HAVE_DUNE_FEM
 template class EclTransmissibility<Dune::CpGrid,
                                    Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
@@ -55,12 +61,6 @@ template class EclTransmissibility<Dune::CpGrid,
                                                false> > >,
                                    Dune::CartesianIndexMapper<Dune::CpGrid>,
                                    double>;
-#else // !DUNE_FEM
-template class EclTransmissibility<Dune::CpGrid,
-                                   Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                   Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
-                                   Dune::CartesianIndexMapper<Dune::CpGrid>,
-                                   double>;
-#endif //HAVE_DUNE_FEM
+#endif // HAVE_DUNE_FEM
 
 } // namespace Opm

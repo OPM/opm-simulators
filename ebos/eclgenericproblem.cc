@@ -40,6 +40,10 @@
 
 namespace Opm {
 
+template class EclGenericProblem<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
+                                 BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
+                                 double>;
+
 #if HAVE_DUNE_FEM
 template class EclGenericProblem<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
@@ -51,10 +55,6 @@ template class EclGenericProblem<Dune::Fem::GridPart2GridViewImpl<
                                         false> >,
                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
                                  double>;
-#else
-template class EclGenericProblem<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                 BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
-                                 double>;
-#endif
+#endif // HAVE_DUNE_FEM
 
 } // end namespace Opm

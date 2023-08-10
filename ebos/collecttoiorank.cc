@@ -35,6 +35,10 @@
 
 namespace Opm {
 
+template class CollectDataToIORank<Dune::CpGrid,
+                                   Dune::CpGrid,
+                                   Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>;
+
 #if HAVE_DUNE_FEM
 template class CollectDataToIORank<Dune::CpGrid,
                                    Dune::CpGrid,
@@ -46,10 +50,6 @@ template class CollectDataToIORank<Dune::CpGrid,
                                            Dune::CpGrid,
                                            Dune::PartitionIteratorType(4),
                                            false> > >;
-#else // ! HAVE_DUNE_FEM
-template class CollectDataToIORank<Dune::CpGrid,
-                                   Dune::CpGrid,
-                                   Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>;
-#endif
+#endif // HAVE_DUNE_FEM
 
 } // end namespace Opm
