@@ -439,7 +439,7 @@ struct EnableAsyncEclOutput<TypeTag, TTag::EclBaseProblem> {
 // Write ESMRY file for fast loading of summary data
 template<class TypeTag>
 struct EnableEsmry<TypeTag, TTag::EclBaseProblem> {
-    static constexpr bool value = false;
+    static constexpr bool value = true;
 };
 
 // By default, use single precision for the ECL formated results
