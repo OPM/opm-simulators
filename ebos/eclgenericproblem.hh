@@ -34,6 +34,7 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #include <array>
+#include <functional>
 #include <set>
 #include <string>
 #include <vector>
@@ -332,7 +333,8 @@ protected:
                         Scalar timeStepSize,
                         Scalar endTime);
 
-    void readRockParameters_(const std::vector<Scalar>& cellCenterDepths);
+    void readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
+                             std::function<std::array<int,3>(const unsigned)> ijkIndex);
     void readRockCompactionParameters_();
 
     void readBlackoilExtentionsInitialConditions_(size_t numDof,

@@ -37,6 +37,9 @@
 
 #include <boost/date_time.hpp>
 
+#include <fmt/format.h>
+#include <fmt/ranges.h>
+
 #include <algorithm>
 #include <limits>
 #include <stdexcept>
@@ -148,7 +151,8 @@ briefDescription()
 
 template<class GridView, class FluidSystem, class Scalar>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
-readRockParameters_(const std::vector<Scalar>& cellCenterDepths)
+readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
+                    std::function<std::array<int,3>(const unsigned)> ijkIndex)
 {
     const auto& rock_config = eclState_.getSimulationConfig().rock_config();
 
@@ -169,6 +173,24 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths)
         const auto& num = eclState_.fieldProps().get_int(rock_config.rocknum_property());
         for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
             rockTableIdx_[elemIdx] = num[elemIdx] - 1;
+            auto fmtError =
+                [&num,elemIdx,&ijkIndex,&rock_config](const char* type, std::size_t size)
+                {
+                    return fmt::format("{} table index {} for elem {} read from {}"
+                                      " is is out of bounds for number of tables {}",
+                                      type, num[elemIdx], ijkIndex(elemIdx),
+                                      rock_config.rocknum_property(), size);
+                };
+            if (!rockCompPoroMult_.empty() &&
+                rockTableIdx_[elemIdx] >= rockCompPoroMult_.size()) {
+                throw std::runtime_error(fmtError("Rock compaction",
+                                                  rockCompPoroMult_.size()));
+            }
+            if (!rockCompPoroMultWc_.empty() &&
+                rockTableIdx_[elemIdx] >= rockCompPoroMultWc_.size()) {
+                throw std::runtime_error(fmtError("Rock water compaction",
+                                                  rockCompPoroMultWc_.size()));
+            }
         }
     }
 
