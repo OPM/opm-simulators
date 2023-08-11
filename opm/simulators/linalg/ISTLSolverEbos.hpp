@@ -87,10 +87,6 @@ public:
 namespace Opm
 {
 
-#if COMPILE_BDA_BRIDGE
-template<class Matrix, class Vector, int block_size> class BdaBridge;
-class WellContributions;
-#endif
 
 namespace detail
 {
@@ -116,60 +112,6 @@ struct FlexibleSolverInfo
     size_t interiorCellNum_ = 0;
 };
 
-#if COMPILE_BDA_BRIDGE
-template<class Matrix, class Vector>
-struct BdaSolverInfo
-{
-  using WellContribFunc = std::function<void(WellContributions&)>;
-  using Bridge = BdaBridge<Matrix,Vector,Matrix::block_type::rows>;
-
-  BdaSolverInfo(const std::string& accelerator_mode,
-                const int linear_solver_verbosity,
-                const int maxit,
-                const double tolerance,
-                const int platformID,
-                const int deviceID,
-                const bool opencl_ilu_parallel,
-                const std::string& linsolver);
-
-  ~BdaSolverInfo();
-
-  template<class Grid>
-  void prepare(const Grid& grid,
-               const Dune::CartesianIndexMapper<Grid>& cartMapper,
-               const std::vector<Well>& wellsForConn,
-               const std::vector<int>& cellPartition,
-               const size_t nonzeroes,
-               const bool useWellConn);
-
-  bool apply(Vector& rhs,
-             const bool useWellConn,
-             WellContribFunc getContribs,
-             const int rank,
-             Matrix& matrix,
-             Vector& x,
-             Dune::InverseOperatorResult& result);
-
-  bool gpuActive();
-
-  int numJacobiBlocks_ = 0;
-
-private:
-  /// Create sparsity pattern for block-Jacobi matrix based on partitioning of grid.
-  /// Do not initialize the values, that is done in copyMatToBlockJac()
-  template<class Grid>
-  void blockJacobiAdjacency(const Grid& grid,
-                            const std::vector<int>& cell_part,
-                            size_t nonzeroes);
-
-  void copyMatToBlockJac(const Matrix& mat, Matrix& blockJac);
-
-  std::unique_ptr<Bridge> bridge_;
-  std::string accelerator_mode_;
-  std::unique_ptr<Matrix> blockJacobiForGPUILU0_;
-  std::vector<std::set<int>> wellConnectionsGraph_;
-};
-#endif
 
 #ifdef HAVE_MPI
 /// Copy values in parallel.
@@ -259,7 +201,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             initialize();
         }
 
-        void initialize()
+        void initialize(bool have_gpu = false)
         {
             OPM_TIMEBLOCK(IstlSolverEbos);
             prm_ = setupPropertyTree(parameters_,
@@ -269,37 +211,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             const bool on_io_rank = (simulator_.gridView().comm().rank() == 0);
 #if HAVE_MPI
             comm_.reset( new CommunicationType( simulator_.vanguard().grid().comm() ) );
-#endif
-
-#if COMPILE_BDA_BRIDGE
-            {
-                std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
-                if ((simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
-                    if (on_io_rank) {
-                        OpmLog::warning("Cannot use GPU with MPI, GPU are disabled");
-                    }
-                    accelerator_mode = "none";
-                }
-                const int platformID = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
-                const int deviceID = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
-                const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
-                const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
-                const bool opencl_ilu_parallel = EWOMS_GET_PARAM(TypeTag, bool, OpenclIluParallel);
-                const int linear_solver_verbosity = parameters_.linear_solver_verbosity_;
-                std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
-                bdaBridge = std::make_unique<detail::BdaSolverInfo<Matrix,Vector>>(accelerator_mode,
-                                                                                   linear_solver_verbosity,
-                                                                                   maxit,
-                                                                                   tolerance,
-                                                                                   platformID,
-                                                                                   deviceID,
-                                                                                   opencl_ilu_parallel,
-                                                                                   linsolver);
-            }
-#else
-            if (EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode) != "none") {
-                OPM_THROW(std::logic_error,"Cannot use accelerated solver since CUDA, OpenCL and amgcl were not found by cmake");
-            }
 #endif
             extractParallelGridInformationToISTL(simulator_.vanguard().grid(), parallelInformation_);
 
@@ -327,6 +238,12 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 prm_.write_json(os, true);
                 OpmLog::note(os.str());
             }
+            if(have_gpu){
+                if (EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode) != "none") {
+                    OPM_THROW(std::logic_error,"Cannot use accelerated solver since CUDA, OpenCL and amgcl were not found by cmake");
+                }
+            }
+
         }
 
         // nothing to clean here
@@ -341,7 +258,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         void prepare(const Matrix& M, Vector& b)
         {
-            OPM_TIMEBLOCK(istlSolverEbosPrepare);        
+            OPM_TIMEBLOCK(istlSolverEbosPrepare);
             const bool firstcall = (matrix_ == nullptr);
 #if HAVE_MPI
             if (firstcall) {
@@ -359,14 +276,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
                 useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
                 // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
-#if HAVE_OPENCL
-                bdaBridge->numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
-                bdaBridge->prepare(simulator_.vanguard().grid(),
-                                   simulator_.vanguard().cartesianIndexMapper(),
-                                   simulator_.vanguard().schedule().getWellsatEnd(),
-                                   simulator_.vanguard().cellPartition(),
-                                   getMatrix().nonzeroes(), useWellConn_);
-#endif
             } else {
                 // Pointers should not change
                 if ( &M != matrix_ ) {
@@ -379,13 +288,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if (isParallel() && prm_.get<std::string>("preconditioner.type") != "ParOverILU0") {
                 detail::makeOverlapRowsInvalid(getMatrix(), overlapRows_);
             }
-#if COMPILE_BDA_BRIDGE
-            if(!bdaBridge->gpuActive()){
-                prepareFlexibleSolver();
-            }
-#else
             prepareFlexibleSolver();
-#endif
         }
 
 
@@ -406,7 +309,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         bool solve(Vector& x)
         {
-            OPM_TIMEBLOCK(istlSolverEbosSolve);        
+            OPM_TIMEBLOCK(istlSolverEbosSolve);
             calls_ += 1;
             // Write linear system if asked for.
             const int verbosity = prm_.get<int>("verbosity", 0);
@@ -420,25 +323,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
             // Solve system.
             Dune::InverseOperatorResult result;
-
-#if COMPILE_BDA_BRIDGE
-            std::function<void(WellContributions&)> getContribs =
-                [this](WellContributions& w)
-                {
-                    this->simulator_.problem().wellModel().getWellContributions(w);
-                };
-            if (!bdaBridge->apply(*rhs_, useWellConn_, getContribs,
-                                  simulator_.gridView().comm().rank(),
-                                  const_cast<Matrix&>(this->getMatrix()),
-                                  x, result))
-#endif
             {
                 OPM_TIMEBLOCK(flexibleSolverApply);
-#if COMPILE_BDA_BRIDGE
-                if(bdaBridge->gpuActive()){
-                    prepareFlexibleSolver();
-                }
-#endif
                 assert(flexibleSolver_.solver_);
                 flexibleSolver_.solver_->apply(x, *rhs_, result);
             }
@@ -521,7 +407,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             }
             else
             {
-                OPM_TIMEBLOCK(flexibleSolverUpdate);        
+                OPM_TIMEBLOCK(flexibleSolverUpdate);
                 flexibleSolver_.pre_->update();
             }
         }
@@ -608,10 +494,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         // non-const to be able to scale the linear system
         Matrix* matrix_;
         Vector *rhs_;
-
-#if COMPILE_BDA_BRIDGE
-        std::unique_ptr<detail::BdaSolverInfo<Matrix, Vector>> bdaBridge;
-#endif
 
         detail::FlexibleSolverInfo<Matrix,Vector,CommunicationType> flexibleSolver_;
         std::vector<int> overlapRows_;

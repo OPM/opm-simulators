@@ -31,8 +31,11 @@
 
 namespace Opm {
 template <class TypeTag>
+class ISTLSolverEbosBda;
+template <class TypeTag>
 class ISTLSolverEbos;
 }
+
 
 
 namespace Opm::Properties {
@@ -50,7 +53,7 @@ template<class TypeTag, class MyTypeTag>
 struct RelaxedLinearSolverReduction {
     using type = UndefinedProperty;
 };
-    
+
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverMaxIter {
     using type = UndefinedProperty;
@@ -135,7 +138,7 @@ template<class TypeTag>
 struct RelaxedLinearSolverReduction<TypeTag, TTag::FlowIstlSolverParams> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-2;
-};    
+};
 template<class TypeTag>
 struct LinearSolverMaxIter<TypeTag, TTag::FlowIstlSolverParams> {
     static constexpr int value = 200;
@@ -217,9 +220,12 @@ struct OpenclIluParallel<TypeTag, TTag::FlowIstlSolverParams> {
 // Set the backend to be used.
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams> {
+#if COMPLE_BDA_BRIDGE
+    using type = ISTLSolverEbosBda<TypeTag>;
+#else
     using type = ISTLSolverEbos<TypeTag>;
+#endif
 };
-
 } // namespace Opm::Properties
 
 namespace Opm

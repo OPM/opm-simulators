@@ -28,7 +28,10 @@
 
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
+#if COMPILE_BDA_BRIDGE
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
+#endif
+
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/SmallDenseMatrixUtils.hpp>
@@ -189,6 +192,7 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
     xw = mswellhelpers::applyUMFPack(*duneDSolver_, resWell);
 }
 
+#if COMPILE_BDA_BRIDGE
 template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 extract(WellContributions& wellContribs) const
@@ -255,7 +259,7 @@ extract(WellContributions& wellContribs) const
                                                  Drows,
                                                  Cvals);
 }
-
+#endif
 
 template<class Scalar, int numWellEq, int numEq>
 template<class SparseMatrixAdapter>
