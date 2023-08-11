@@ -254,6 +254,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_GroupState.cpp
   tests/test_invert.cpp
   tests/test_keyword_validator.cpp
+  tests/test_LogOutputHelper.cpp
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
   tests/test_norne_pvt.cpp
