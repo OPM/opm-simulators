@@ -27,6 +27,7 @@
 
 #include <opm/simulators/linalg/bda/BdaBridge.hpp>
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #if HAVE_CUDA
 #include <opm/simulators/linalg/bda/cuda/cusparseSolverBackend.hpp>
