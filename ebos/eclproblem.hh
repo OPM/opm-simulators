@@ -375,7 +375,14 @@ public:
         this->initFluidSystem_();
 
         // deal with DRSDT
-        this->initDRSDT_(this->model().numGridDof(), this->episodeIndex());
+        this->mixControls_.init(this->model().numGridDof(),
+                                this->episodeIndex(),
+                                eclState.runspec().tabdims().getNumPVTTables());
+
+        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+            FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);
+        }
 
         this->readRockParameters_(simulator.vanguard().cellCenterDepths(),
                                   [&simulator](const unsigned idx)
@@ -1166,22 +1173,9 @@ public:
      */
     Scalar maxGasDissolutionFactor(unsigned timeIdx, unsigned globalDofIdx) const
     {
-        int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
-        int episodeIdx = this->episodeIndex();
-        if (!this->drsdtActive_(episodeIdx) || this->maxDRs_[pvtRegionIdx] < 0.0)
-            return std::numeric_limits<Scalar>::max()/2.0;
-
-        Scalar scaling = 1.0;
-        if (this->drsdtConvective_(episodeIdx)) {
-           scaling = this->convectiveDrs_[globalDofIdx];
-        }
-
-        // this is a bit hacky because it assumes that a time discretization with only
-        // two time indices is used.
-        if (timeIdx == 0)
-            return this->lastRs_[globalDofIdx] + this->maxDRs_[pvtRegionIdx] * scaling;
-        else
-            return this->lastRs_[globalDofIdx];
+        return this->mixControls_.maxGasDissolutionFactor(timeIdx, globalDofIdx,
+                                                          this->episodeIndex(),
+                                                          this->pvtRegionIndex(globalDofIdx));
     }
 
     /*!
@@ -1190,17 +1184,9 @@ public:
      */
     Scalar maxOilVaporizationFactor(unsigned timeIdx, unsigned globalDofIdx) const
     {
-        int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
-        int episodeIdx = this->episodeIndex();
-        if (!this->drvdtActive_(episodeIdx) || this->maxDRv_[pvtRegionIdx] < 0.0)
-            return std::numeric_limits<Scalar>::max()/2.0;
-
-        // this is a bit hacky because it assumes that a time discretization with only
-        // two time indices is used.
-        if (timeIdx == 0)
-            return this->lastRv_[globalDofIdx] + this->maxDRv_[pvtRegionIdx];
-        else
-            return this->lastRv_[globalDofIdx];
+        return this->mixControls_.maxOilVaporizationFactor(timeIdx, globalDofIdx,
+                                                           this->episodeIndex(),
+                                                           this->pvtRegionIndex(globalDofIdx));
     }
 
     /*!
@@ -1214,8 +1200,8 @@ public:
     bool recycleFirstIterationStorage() const
     {
         int episodeIdx = this->episodeIndex();
-        return !this->drsdtActive_(episodeIdx) &&
-               !this->drvdtActive_(episodeIdx) &&
+        return !this->mixControls_.drsdtActive(episodeIdx) &&
+               !this->mixControls_.drvdtActive(episodeIdx) &&
                this->rockCompPoroMultWc_.empty() &&
                this->rockCompPoroMult_.empty();
     }
@@ -1712,80 +1698,30 @@ protected:
         // update the "last Rs" values for all elements, including the ones in the ghost
         // and overlap regions
         int episodeIdx = this->episodeIndex();
-        std::array<bool,3> active{this->drsdtConvective_(episodeIdx),
-                                  this->drsdtActive_(episodeIdx),
-                                  this->drvdtActive_(episodeIdx)};
-        if (!active[0] && !active[1] && !active[2])
-          return;
+        std::array<bool,3> active{this->mixControls_.drsdtConvective(episodeIdx),
+                                  this->mixControls_.drsdtActive(episodeIdx),
+                                  this->mixControls_.drvdtActive(episodeIdx)};
+        if (!active[0] && !active[1] && !active[2]) {
+            return;
+        }
 
         this->updateProperty_("EclProblem::updateCompositionChangeLimits_()) failed:",
-                              [this,episodeIdx,active](unsigned compressedDofIdx, const IntensiveQuantities& iq)
+                              [this,episodeIdx,active](unsigned compressedDofIdx,
+                                                       const IntensiveQuantities& iq)
                               {
-                                  this->updateCompositionChangeLimits_(compressedDofIdx,
-                                                                       iq,
-                                                                       episodeIdx,
-                                                                       active);
+                                  const DimMatrix& perm = this->intrinsicPermeability(compressedDofIdx);
+                                  const Scalar distZ = active[0] ? this->simulator().vanguard().cellThickness(compressedDofIdx) : 0.0;
+                                  const int pvtRegionIdx = this->pvtRegionIndex(compressedDofIdx);
+                                  this->mixControls_.update(compressedDofIdx,
+                                                            iq,
+                                                            episodeIdx,
+                                                            this->gravity_[dim - 1],
+                                                            perm[dim - 1][dim - 1],
+                                                            distZ,
+                                                            pvtRegionIdx,
+                                                            active);
                               }
             );
-    }
-
-    void updateCompositionChangeLimits_(unsigned compressedDofIdx, const IntensiveQuantities& iq,int episodeIdx, const std::array<bool,3>& active)
-    {
-        auto& simulator = this->simulator();
-        auto& vanguard = simulator.vanguard();
-        if (active[0]) {
-            // This implements the convective DRSDT as described in
-            // Sandve et al. "Convective dissolution in field scale CO2 storage simulations using the OPM Flow
-            // simulator" Submitted to TCCS 11, 2021
-            const Scalar g = this->gravity_[dim - 1];
-            const DimMatrix& perm = intrinsicPermeability(compressedDofIdx);
-            const Scalar permz = perm[dim - 1][dim - 1]; // The Z permeability
-            const Scalar distZ = vanguard.cellThickness(compressedDofIdx);
-            const auto& fs = iq.fluidState();
-            const Scalar t = getValue(fs.temperature(FluidSystem::oilPhaseIdx));
-            const Scalar p = getValue(fs.pressure(FluidSystem::oilPhaseIdx));
-            const Scalar so = getValue(fs.saturation(FluidSystem::oilPhaseIdx));
-            const Scalar rssat = FluidSystem::oilPvt().saturatedGasDissolutionFactor(fs.pvtRegionIndex(), t, p);
-            const Scalar saturatedInvB
-                = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(fs.pvtRegionIndex(), t, p);
-            const Scalar rsZero = 0.0;
-            const Scalar pureDensity
-                = FluidSystem::oilPvt().inverseFormationVolumeFactor(fs.pvtRegionIndex(), t, p, rsZero)
-                * FluidSystem::oilPvt().oilReferenceDensity(fs.pvtRegionIndex());
-            const Scalar saturatedDensity = saturatedInvB
-                * (FluidSystem::oilPvt().oilReferenceDensity(fs.pvtRegionIndex())
-                   + rssat * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, fs.pvtRegionIndex()));
-            const Scalar deltaDensity = saturatedDensity - pureDensity;
-            const Scalar rs = getValue(fs.Rs());
-            const Scalar visc = FluidSystem::oilPvt().viscosity(fs.pvtRegionIndex(), t, p, rs);
-            const Scalar poro = getValue(iq.porosity());
-            // Note that for so = 0 this gives no limits (inf) for the dissolution rate
-            // Also we restrict the effect of convective mixing to positive density differences
-            // i.e. we only allow for fingers moving downward
-            this->convectiveDrs_[compressedDofIdx]
-                = permz * rssat * max(0.0, deltaDensity) * g / (so * visc * distZ * poro);
-        }
-
-        if (active[1]) {
-            const auto& fs = iq.fluidState();
-
-            using FluidState = typename std::decay<decltype(fs)>::type;
-
-            int pvtRegionIdx = this->pvtRegionIndex(compressedDofIdx);
-            const auto& oilVaporizationControl = vanguard.schedule()[episodeIdx].oilvap();
-            if (oilVaporizationControl.getOption(pvtRegionIdx) || fs.saturation(gasPhaseIdx) > freeGasMinSaturation_)
-                this->lastRs_[compressedDofIdx]
-                    = BlackOil::template getRs_<FluidSystem, FluidState, Scalar>(fs, iq.pvtRegionIndex());
-            else
-                this->lastRs_[compressedDofIdx] = std::numeric_limits<Scalar>::infinity();
-        }
-
-        if (active[2]) {
-            const auto& fs = iq.fluidState();
-            using FluidState = typename std::decay<decltype(fs)>::type;
-            this->lastRv_[compressedDofIdx]
-                = BlackOil::template getRv_<FluidSystem, FluidState, Scalar>(fs, iq.pvtRegionIndex());
-        }
     }
 
     bool updateMaxOilSaturation_()
@@ -2065,13 +2001,7 @@ protected:
                     this->solventSaturation_[elemIdx] = ssol;
             }
 
-            if (! this->lastRs_.empty()) {
-                this->lastRs_[elemIdx] = elemFluidState.Rs();
-            }
-
-            if (! this->lastRv_.empty()) {
-                this->lastRv_[elemIdx] = elemFluidState.Rv();
-            }
+            this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
 
             if constexpr (enablePolymer)
                  this->polymer_.concentration[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
@@ -2086,16 +2016,7 @@ protected:
         }
 
         const int episodeIdx = this->episodeIndex();
-        const auto& oilVaporizationControl = simulator.vanguard().schedule()[episodeIdx].oilvap();
-        if (this->drsdtActive_(episodeIdx))
-            // DRSDT is enabled
-            for (size_t pvtRegionIdx = 0; pvtRegionIdx < this->maxDRs_.size(); ++pvtRegionIdx)
-                this->maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx)*simulator.timeStepSize();
-
-        if (this->drvdtActive_(episodeIdx))
-            // DRVDT is enabled
-            for (size_t pvtRegionIdx = 0; pvtRegionIdx < this->maxDRv_.size(); ++pvtRegionIdx)
-                this->maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx)*simulator.timeStepSize();
+        this->mixControls_.updateMaxValues(episodeIdx, simulator.timeStepSize());
 
         // assign the restart solution to the current solution. note that we still need
         // to compute real initial solution after this because the initial fluid states
@@ -2553,8 +2474,6 @@ private:
     EclThresholdPressure<TypeTag> thresholdPressures_;
 
     std::vector<InitialFluidState> initialFluidStates_;
-
-    constexpr static Scalar freeGasMinSaturation_ = 1e-7;
 
     bool enableDriftCompensation_;
     GlobalEqVector drift_;

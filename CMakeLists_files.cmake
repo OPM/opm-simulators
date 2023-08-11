@@ -33,6 +33,7 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenericvanguard.cc
   ebos/eclgenericwriter.cc
   ebos/eclinterregflows.cc
+  ebos/eclmixingratecontrols.cc
   ebos/eclsolutioncontainers.cc
   ebos/ecltransmissibility.cc
   ebos/equil/equilibrationhelpers.cc
@@ -386,6 +387,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclgenericwriter.hh
   ebos/eclgenericwriter_impl.hh
   ebos/eclinterregflows.hh
+  ebos/eclmixingratecontrols.hh
   ebos/eclmpiserializer.hh
   ebos/eclnewtonmethod.hh
   ebos/ecloutputblackoilmodule.hh
