@@ -39,7 +39,6 @@
 #include "fvbaseboundarycontext.hh"
 #include "fvbaseconstraintscontext.hh"
 #include "fvbaseconstraints.hh"
-#include "fvbasediscretization.hh"
 #include "fvbasegradientcalculator.hh"
 #include "fvbasenewtonmethod.hh"
 #include "fvbaseprimaryvariables.hh"
@@ -64,12 +63,6 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bvector.hh>
 
-#if HAVE_DUNE_FEM
-#include <dune/fem/space/common/adaptationmanager.hh>
-#include <dune/fem/space/common/restrictprolongtuple.hh>
-#include <dune/fem/function/blockvectorfunction.hh>
-#include <dune/fem/misc/capabilities.hh>
-#endif
 
 #include <algorithm>
 #include <cstddef>
@@ -78,9 +71,12 @@
 #include <stdexcept>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace Opm {
+template<class TypeTag>
+class FvBaseDiscretizationNoAdapt;
 template<class TypeTag>
 class FvBaseDiscretization;
 
@@ -322,6 +318,23 @@ struct UseVolumetricResidual<TypeTag, TTag::FvBaseDiscretization> { static const
 template<class TypeTag>
 struct EnableExperiments<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
 
+template <class TypeTag, class MyTypeTag>
+struct BaseDiscretizationType {
+    using type = UndefinedProperty;
+};
+
+#if !HAVE_DUNE_FEM
+template<class TypeTag>
+struct BaseDiscretizationType<TypeTag,TTag::FvBaseDiscretization> {
+    using type = FvBaseDiscretizationNoAdapt<TypeTag>;
+};
+template<class TypeTag>
+struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization> {
+    using BaseDiscretization = FvBaseDiscretization<TypeTag>;
+    using type = typename BaseDiscretization::BlockVectorWrapper;
+};
+#endif
+
 } // namespace Opm::Properties
 
 namespace Opm {
@@ -422,25 +435,8 @@ public:
     };
 
 private:
-#if HAVE_DUNE_FEM
-    using DiscreteFunctionSpace = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>   ;
-
-    // discrete function storing solution data
-    using DiscreteFunction = Dune::Fem::ISTLBlockVectorDiscreteFunction<DiscreteFunctionSpace, PrimaryVariables>;
-
-    // problem restriction and prolongation operator for adaptation
-    using Problem = GetPropType<TypeTag, Properties::Problem>  ;
-    using ProblemRestrictProlongOperator = typename Problem :: RestrictProlongOperator ;
-
-    // discrete function restriction and prolongation operator for adaptation
-    using DiscreteFunctionRestrictProlong = Dune::Fem::RestrictProlongDefault< DiscreteFunction >;
-    using RestrictProlong = Dune::Fem::RestrictProlongTuple< DiscreteFunctionRestrictProlong,  ProblemRestrictProlongOperator >;
-    // adaptation classes
-    using AdaptationManager = Dune::Fem::AdaptationManager<Grid, RestrictProlong  >;
-#else
-    using DiscreteFunction = BlockVectorWrapper ;
-    using DiscreteFunctionSpace = size_t             ;
-#endif
+    using DiscreteFunctionSpace = GetPropType<TypeTag, Properties::DiscreteFunctionSpace>;
+    using DiscreteFunction = GetPropType<TypeTag, Properties::DiscreteFunction>;
 
     // copying a discretization object is not a good idea
     FvBaseDiscretization(const FvBaseDiscretization& );
@@ -457,25 +453,11 @@ public:
         , newtonMethod_(simulator)
         , localLinearizer_(ThreadManager::maxThreads())
         , linearizer_(new Linearizer())
-#if HAVE_DUNE_FEM
-        , space_( simulator.vanguard().gridPart() )
-#else
-        , space_( asImp_().numGridDof() )
-#endif
         , enableGridAdaptation_( EWOMS_GET_PARAM(TypeTag, bool, EnableGridAdaptation) )
         , enableIntensiveQuantityCache_(EWOMS_GET_PARAM(TypeTag, bool, EnableIntensiveQuantityCache))
         , enableStorageCache_(EWOMS_GET_PARAM(TypeTag, bool, EnableStorageCache))
         , enableThermodynamicHints_(EWOMS_GET_PARAM(TypeTag, bool, EnableThermodynamicHints))
     {
-#if HAVE_DUNE_FEM
-        if (enableGridAdaptation_ && !Dune::Fem::Capabilities::isLocallyAdaptive<Grid>::v)
-            throw std::invalid_argument("Grid adaptation enabled, but chosen Grid is not capable"
-                                        " of adaptivity");
-#else
-        if (enableGridAdaptation_)
-            throw std::invalid_argument("Grid adaptation currently requires the presence of the "
-                                        "dune-fem module");
-#endif
         bool isEcfv = std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value;
         if (enableGridAdaptation_ && !isEcfv)
             throw std::invalid_argument("Grid adaptation currently only works for the "
@@ -486,8 +468,6 @@ public:
 
         size_t numDof = asImp_().numGridDof();
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
-            solution_[timeIdx].reset(new DiscreteFunction("solution", space_));
-
             if (storeIntensiveQuantities()) {
                 intensiveQuantityCache_[timeIdx].resize(numDof);
                 intensiveQuantityCacheUpToDate_[timeIdx].resize(numDof, /*value=*/false);
@@ -1420,48 +1400,8 @@ public:
      */
     void adaptGrid()
     {
-#if HAVE_DUNE_FEM
-        // adapt the grid if enabled and if all dependencies are available
-        // adaptation is only done if markForGridAdaptation returns true
-        if (enableGridAdaptation_)
-        {
-            // check if problem allows for adaptation and cells were marked
-            if( simulator_.problem().markForGridAdaptation() )
-            {
-                // adapt the grid and load balance if necessary
-                adaptationManager().adapt();
-
-                // if the grid has potentially changed, we need to re-create the
-                // supporting data structures.
-#if DUNE_VERSION_NEWER(DUNE_GRID, 2, 8)
-                elementMapper_.update(gridView_);
-                vertexMapper_.update(gridView_);
-#else
-                elementMapper_.update();
-                vertexMapper_.update();
-#endif
-                resetLinearizer();
-
-                // this is a bit hacky because it supposes that Problem::finishInit()
-                // works fine multiple times in a row.
-                //
-                // TODO: move this to Problem::gridChanged()
-                finishInit();
-
-                // notify the problem that the grid has changed
-                //
-                // TODO: come up with a mechanism to access the unadapted data structures
-                // outside of the problem (i.e., grid, mappers, solutions)
-                simulator_.problem().gridChanged();
-
-                // notify the modules for visualization output
-                auto outIt = outputModules_.begin();
-                auto outEndIt = outputModules_.end();
-                for (; outIt != outEndIt; ++outIt)
-                    (*outIt)->allocBuffers();
-            }
-        }
-#endif
+        throw std::invalid_argument("Grid adaptation need to be implemented for "
+                                    "specific settings of grid and function spaces");
     }
 
     /*!
@@ -1498,7 +1438,9 @@ public:
     void advanceTimeLevel()
     {
         // at this point we can adapt the grid
-        asImp_().adaptGrid();
+        if (this->enableGridAdaptation_) {
+            asImp_().adaptGrid();
+        }
 
         // make the current solution the previous one.
         solution(/*timeIdx=*/1) = solution(/*timeIdx=*/0);
@@ -1907,22 +1849,6 @@ public:
     bool storeIntensiveQuantities() const
     { return enableIntensiveQuantityCache_ || enableThermodynamicHints_; }
 
-#if HAVE_DUNE_FEM
-    AdaptationManager& adaptationManager()
-    {
-        if( ! adaptationManager_ )
-        {
-            // create adaptation objects here, because when doing so in constructor
-            // problem is not yet intialized, aka seg fault
-            restrictProlong_.reset(
-                new RestrictProlong( DiscreteFunctionRestrictProlong(*(solution_[/*timeIdx=*/ 0] )),
-                                     simulator_.problem().restrictProlongOperator() ) );
-            adaptationManager_.reset( new AdaptationManager( simulator_.vanguard().grid(), *restrictProlong_ ) );
-        }
-        return *adaptationManager_;
-    }
-#endif
-
     const Timer& prePostProcessTimer() const
     { return prePostProcessTimer_; }
 
@@ -1938,13 +1864,9 @@ public:
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
-        for (auto& sol : solution_) {
-#if HAVE_DUNE_FEM
-            serializer(sol->blockVector());
-#else
-            serializer(*sol);
-#endif
-        }
+        using BaseDiscretization = GetPropType<TypeTag, Properties::BaseDiscretizationType>;
+        using Helper = typename BaseDiscretization::template SerializeHelper<Serializer>;
+        Helper::serializeOp(serializer, solution_);
     }
 
     bool operator==(const FvBaseDiscretization& rhs) const
@@ -2049,14 +1971,7 @@ protected:
     // while these are logically bools, concurrent writes to vector<bool> are not thread safe.
     mutable std::vector<unsigned char> intensiveQuantityCacheUpToDate_[historySize];
 
-    DiscreteFunctionSpace space_;
     mutable std::array< std::unique_ptr< DiscreteFunction >, historySize > solution_;
-
-#if HAVE_DUNE_FEM
-    std::unique_ptr<RestrictProlong> restrictProlong_;
-    std::unique_ptr<AdaptationManager> adaptationManager_;
-#endif
-
 
     std::list<BaseOutputModule<TypeTag>*> outputModules_;
 
@@ -2071,6 +1986,50 @@ protected:
     bool enableStorageCache_;
     bool enableThermodynamicHints_;
 };
+
+/*!
+ * \ingroup FiniteVolumeDiscretizations
+ *
+ * \brief The base class for the finite volume discretization schemes without adaptation.
+ */
+template<class TypeTag>
+class FvBaseDiscretizationNoAdapt : public FvBaseDiscretization<TypeTag>
+{
+    using ParentType = FvBaseDiscretization<TypeTag>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using DiscreteFunction = GetPropType<TypeTag, Properties::DiscreteFunction>;
+
+    static constexpr unsigned historySize = getPropValue<TypeTag, Properties::TimeDiscHistorySize>();
+
+public:
+    template<class Serializer>
+    struct SerializeHelper {
+        template<class SolutionType>
+        static void serializeOp(Serializer& serializer,
+                                SolutionType& solution)
+        {
+            for (auto& sol : solution) {
+                serializer(*sol);
+            }
+        }
+    };
+
+    FvBaseDiscretizationNoAdapt(Simulator& simulator)
+        : ParentType(simulator)
+    {
+        if (this->enableGridAdaptation_) {
+            throw std::invalid_argument("Grid adaptation need to use"
+                                        " BaseDiscretization = FvBaseDiscretizationFemAdapt"
+                                        " which currently requires the presence of the"
+                                        " dune-fem module");
+        }
+        size_t numDof = this->asImp_().numGridDof();
+        for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
+            this->solution_[timeIdx] = std::make_unique<DiscreteFunction>("solution", numDof);
+        }
+    }
+};
+
 } // namespace Opm
 
-#endif
+#endif // EWOMS_FV_BASE_DISCRETIZATION_HH
