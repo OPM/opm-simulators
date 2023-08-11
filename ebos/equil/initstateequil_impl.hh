@@ -1669,6 +1669,8 @@ applyNumericalAquifers_(const GridView& gridView,
     ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
     auto elemIt = gridView.template begin</*codim=*/0>();
     const auto& elemEndIt = gridView.template end</*codim=*/0>();
+    const auto oilPos = FluidSystem::oilPhaseIdx;
+    const auto gasPos = FluidSystem::gasPhaseIdx;
     for (; elemIt != elemEndIt; ++elemIt) {
         const Element& element = *elemIt;
         const unsigned int elemIdx = elemMapper.index(element);
@@ -1676,16 +1678,12 @@ applyNumericalAquifers_(const GridView& gridView,
         const auto search = num_aqu_cells.find(cartIx);
         if (search != num_aqu_cells.end()) {
             // numerical aquifer cells are filled with water initially
-            if (FluidSystem::phaseIsActive(watPos)) {
-                this->sat_[watPos][elemIdx] = 1.;
-            }
+            this->sat_[watPos][elemIdx] = 1.;
 
-            const auto oilPos = FluidSystem::oilPhaseIdx;
             if (!co2store_or_h2store && FluidSystem::phaseIsActive(oilPos)) {
                 this->sat_[oilPos][elemIdx] = 0.;
             }
 
-            const auto gasPos = FluidSystem::gasPhaseIdx;
             if (FluidSystem::phaseIsActive(gasPos)) {
                 this->sat_[gasPos][elemIdx] = 0.;
             }
