@@ -1659,6 +1659,13 @@ applyNumericalAquifers_(const GridView& gridView,
     const auto num_aqu_cells = aquifer.allAquiferCells();
     if (num_aqu_cells.empty()) return;
 
+    // Check if water phase is active, or in the case of CO2STORE and H2STORE, water is modelled as oil phase
+    bool oil_as_brine = co2store_or_h2store && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+    const auto watPos =  oil_as_brine? FluidSystem::oilPhaseIdx : FluidSystem::waterPhaseIdx;
+    if (!FluidSystem::phaseIsActive(watPos)){
+        throw std::logic_error  { "Water phase has to be active for numerical aquifer case" };
+    }
+
     ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
     auto elemIt = gridView.template begin</*codim=*/0>();
     const auto& elemEndIt = gridView.template end</*codim=*/0>();
@@ -1669,13 +1676,8 @@ applyNumericalAquifers_(const GridView& gridView,
         const auto search = num_aqu_cells.find(cartIx);
         if (search != num_aqu_cells.end()) {
             // numerical aquifer cells are filled with water initially
-            // for co2store and h2store the oil phase may be used for the brine
-            bool oil_as_brine = co2store_or_h2store && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
-            const auto watPos =  oil_as_brine? FluidSystem::oilPhaseIdx : FluidSystem::waterPhaseIdx;
             if (FluidSystem::phaseIsActive(watPos)) {
                 this->sat_[watPos][elemIdx] = 1.;
-            } else {
-                throw std::logic_error  { "Water phase has to be active for numerical aquifer case" };
             }
 
             const auto oilPos = FluidSystem::oilPhaseIdx;

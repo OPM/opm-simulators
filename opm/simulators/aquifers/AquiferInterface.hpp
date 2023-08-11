@@ -80,7 +80,8 @@ public:
 protected:
     bool co2store_or_h2store_() const
     {
-        return ebos_simulator_.vanguard().eclState().runspec().co2Storage() || ebos_simulator_.vanguard().eclState().runspec().h2Storage();
+        const auto& rspec = ebos_simulator_.vanguard().eclState().runspec();
+        return rspec.co2Storage() || rspec.h2Storage();
     }
 
     int phaseIdx_() const
