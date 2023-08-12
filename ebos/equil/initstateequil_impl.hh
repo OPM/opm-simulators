@@ -1507,7 +1507,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     calcPressSatRsRv(eqlmap, rec, materialLawManager, comm, grav);
 
     // modify the pressure and saturation for numerical aquifer cells
-    applyNumericalAquifers_(gridView, num_aquifers, eclipseState.runspec().co2Storage());
+    applyNumericalAquifers_(gridView, num_aquifers, eclipseState.runspec().co2Storage() || eclipseState.runspec().h2Storage());
 
     // Modify oil pressure in no-oil regions so that the pressures of present phases can
     // be recovered from the oil pressure and capillary relations.
@@ -1654,14 +1654,23 @@ void InitialStateComputer<FluidSystem,
                           CartesianIndexMapper>::
 applyNumericalAquifers_(const GridView& gridView,
                         const NumericalAquifers& aquifer,
-                        const bool co2store)
+                        const bool co2store_or_h2store)
 {
     const auto num_aqu_cells = aquifer.allAquiferCells();
     if (num_aqu_cells.empty()) return;
 
+    // Check if water phase is active, or in the case of CO2STORE and H2STORE, water is modelled as oil phase
+    bool oil_as_brine = co2store_or_h2store && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+    const auto watPos =  oil_as_brine? FluidSystem::oilPhaseIdx : FluidSystem::waterPhaseIdx;
+    if (!FluidSystem::phaseIsActive(watPos)){
+        throw std::logic_error  { "Water phase has to be active for numerical aquifer case" };
+    }
+
     ElementMapper elemMapper(gridView, Dune::mcmgElementLayout());
     auto elemIt = gridView.template begin</*codim=*/0>();
     const auto& elemEndIt = gridView.template end</*codim=*/0>();
+    const auto oilPos = FluidSystem::oilPhaseIdx;
+    const auto gasPos = FluidSystem::gasPhaseIdx;
     for (; elemIt != elemEndIt; ++elemIt) {
         const Element& element = *elemIt;
         const unsigned int elemIdx = elemMapper.index(element);
@@ -1669,21 +1678,12 @@ applyNumericalAquifers_(const GridView& gridView,
         const auto search = num_aqu_cells.find(cartIx);
         if (search != num_aqu_cells.end()) {
             // numerical aquifer cells are filled with water initially
-            // for co2store the oilphase may be used for the brine
-            bool co2store_oil_as_brine = co2store && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
-            const auto watPos =  co2store_oil_as_brine? FluidSystem::oilPhaseIdx : FluidSystem::waterPhaseIdx;
-            if (FluidSystem::phaseIsActive(watPos)) {
-                this->sat_[watPos][elemIdx] = 1.;
-            } else {
-                throw std::logic_error  { "Water phase has to be active for numerical aquifer case" };
-            }
+            this->sat_[watPos][elemIdx] = 1.;
 
-            const auto oilPos = FluidSystem::oilPhaseIdx;
-            if (!co2store && FluidSystem::phaseIsActive(oilPos)) {
+            if (!co2store_or_h2store && FluidSystem::phaseIsActive(oilPos)) {
                 this->sat_[oilPos][elemIdx] = 0.;
             }
 
-            const auto gasPos = FluidSystem::gasPhaseIdx;
             if (FluidSystem::phaseIsActive(gasPos)) {
                 this->sat_[gasPos][elemIdx] = 0.;
             }
