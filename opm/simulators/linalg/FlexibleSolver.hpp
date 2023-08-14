@@ -45,7 +45,10 @@ class FlexibleSolver : public Dune::InverseOperator<typename Operator::domain_ty
 {
 public:
     using VectorType = typename Operator::domain_type; // Assuming symmetry: domain == range
+    using MatrixType = typename Operator::matrix_type;
 
+    /// Base class type of the operator passed to the solver.
+    using AbstractOperatorType = Dune::AssembledLinearOperator<MatrixType, VectorType, VectorType>;
     /// Base class type of the contained preconditioner.
     using AbstractPrecondType = Dune::PreconditionerWithUpdate<VectorType, VectorType>;
 
@@ -100,6 +103,7 @@ private:
               std::size_t pressureIndex);
 
     Operator* linearoperator_for_solver_;
+    std::shared_ptr<AbstractOperatorType> linearoperator_for_precond_;
     std::shared_ptr<AbstractPrecondType> preconditioner_;
     std::shared_ptr<AbstractScalarProductType> scalarproduct_;
     std::shared_ptr<AbstractSolverType> linsolver_;
