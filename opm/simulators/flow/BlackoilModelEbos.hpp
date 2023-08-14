@@ -386,7 +386,7 @@ namespace Opm {
                                                        const SimulatorTimerInterface& timer,
                                                        NonlinearSolverType& nonlinear_solver)
         {
-
+            OPM_TIMEBLOCK(nonlinearIterationNewton);
             // -----------   Set up reports and timer   -----------
             SimulatorReportSingle report;
             Dune::Timer perfTimer;
@@ -802,7 +802,7 @@ namespace Opm {
         }
 
 
-        void updateTUNING(const Tuning& tuning) {          
+        void updateTUNING(const Tuning& tuning) {
             param_.tolerance_mb_ = tuning.XXXMBE;
             if ( terminal_output_ ) {
                 OpmLog::debug(fmt::format("Setting BlackoilModelEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));

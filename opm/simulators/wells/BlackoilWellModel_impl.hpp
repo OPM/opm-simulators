@@ -662,7 +662,7 @@ namespace Opm {
         this->calculateProductivityIndexValues(local_deferredLogger);
 
         this->commitWGState();
- 
+
         const Opm::Parallel::Communication& comm = grid().comm();
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
         if (terminal_output_) {
@@ -886,7 +886,7 @@ namespace Opm {
         }
 
         // Collect log messages and print.
-        
+
         const Opm::Parallel::Communication& comm = grid().comm();
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
         if (terminal_output_) {
@@ -1109,7 +1109,7 @@ namespace Opm {
         // after certain number of the iterations, we use relaxed tolerance for the network update
         const size_t iteration_to_relax = param_.network_max_strict_iterations_;
         // after certain number of the iterations, we terminate
-        const size_t max_iteration = param_.network_max_iterations_;  
+        const size_t max_iteration = param_.network_max_iterations_;
         std::size_t network_update_iteration = 0;
         while (do_network_update) {
             if (network_update_iteration == iteration_to_relax) {
@@ -1181,6 +1181,7 @@ namespace Opm {
                    const double dt,
                    const Domain& domain)
     {
+        OPM_TIMEBLOCK(WellAssembleDomain)
         last_report_ = SimulatorReportSingle();
         Dune::Timer perfTimer;
         perfTimer.start();
@@ -1420,6 +1421,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     assembleWellEq(const double dt, DeferredLogger& deferred_logger)
     {
+        OPM_TIMEBLOCK(assembleWellEq);
         for (auto& well : well_container_) {
             well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
         }
@@ -1431,6 +1433,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     assembleWellEqDomain(const double dt, const Domain& domain, DeferredLogger& deferred_logger)
     {
+        OPM_TIMEBLOCK(assembleWellEqDomain);
         for (auto& well : well_container_) {
             if (well_domain_.at(well->name()) == domain.index) {
                 well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
@@ -1559,7 +1562,7 @@ namespace Opm {
         int nw =  this->numLocalWellsEnd();
         int rdofs = local_num_cells_;
         for ( int i = 0; i < nw; i++ ){
-            int wdof = rdofs + i; 
+            int wdof = rdofs + i;
             jacobian[wdof][wdof] = 1.0;// better scaling ?
         }
 
@@ -1605,14 +1608,14 @@ namespace Opm {
         int nw =  this->numLocalWellsEnd();
         int rdofs = local_num_cells_;
         for(int i=0; i < nw; i++){
-            int wdof = rdofs + i; 
+            int wdof = rdofs + i;
             jacobian.entry(wdof,wdof) = 1.0;// better scaling ?
         }
         std::vector<std::vector<int>> wellconnections = getMaxWellConnections();
         for(int i=0; i < nw; i++){
             const auto& perfcells = wellconnections[i];
             for(int perfcell : perfcells){
-                int wdof = rdofs + i; 
+                int wdof = rdofs + i;
                 jacobian.entry(wdof,perfcell) = 0.0;
                 jacobian.entry(perfcell, wdof) = 0.0;
             }
@@ -2132,7 +2135,7 @@ namespace Opm {
                 this->closed_this_step_.insert(wname);
             }
         }
-               
+
         const Opm::Parallel::Communication comm = grid().comm();
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
         if (terminal_output_) {
