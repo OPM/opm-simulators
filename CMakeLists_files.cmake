@@ -48,6 +48,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/FlowMainEbos.cpp
   opm/simulators/flow/KeywordValidation.cpp
+  opm/simulators/flow/LogOutputHelper.cpp
   opm/simulators/flow/Main.cpp
   opm/simulators/flow/NonlinearSolverEbos.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
@@ -84,6 +85,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
+  opm/simulators/utils/PressureAverage.cpp
   opm/simulators/utils/readDeck.cpp
   opm/simulators/utils/SerializationPackers.cpp
   opm/simulators/utils/UnsupportedFlowKeywords.cpp
@@ -252,6 +254,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_GroupState.cpp
   tests/test_invert.cpp
   tests/test_keyword_validator.cpp
+  tests/test_LogOutputHelper.cpp
   tests/test_milu.cpp
   tests/test_multmatrixtransposed.cpp
   tests/test_norne_pvt.cpp
@@ -425,6 +428,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/NonlinearSolverEbos.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp
   opm/simulators/flow/KeywordValidation.hpp
+  opm/simulators/flow/LogOutputHelper.hpp
   opm/simulators/flow/ValidationFunctions.hpp
   opm/simulators/flow/partitionCells.hpp
   opm/simulators/flow/SubDomain.hpp
@@ -512,6 +516,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/utils/PropsCentroidsDataHandle.hpp
   opm/simulators/utils/SerializationPackers.hpp
   opm/simulators/utils/VectorVectorDataHandle.hpp
+  opm/simulators/utils/PressureAverage.hpp
   opm/simulators/utils/readDeck.hpp
   opm/simulators/wells/ALQState.hpp
   opm/simulators/wells/BlackoilWellModel.hpp

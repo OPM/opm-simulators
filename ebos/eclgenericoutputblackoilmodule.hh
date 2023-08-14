@@ -28,6 +28,7 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/simulators/flow/LogOutputHelper.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <array>
@@ -293,74 +294,6 @@ protected:
                                    bool enableExtbo,
                                    bool enableMICP);
 
-    struct WellProdDataType
-    {
-        enum WPId
-        {
-            WellLocationi = 0, //WLi
-            WellLocationj = 1, //WLj
-            OilRate = 2, //OR
-            WaterRate = 3, //WR
-            GasRate = 4, //GR
-            FluidResVol = 5, //FRV
-            WaterCut = 6, //WC
-            GasOilRatio = 7, //GOR
-            WatGasRatio = 8, //WGR
-            BHP = 9, //BHP
-            THP = 10, //THP
-            SteadyStatePI = 11, //SteadyStatePI
-            WellName = 0, //WName
-            CTRLMode = 1, //CTRL
-        };
-
-        static constexpr int numWPValues = 12;
-        static constexpr int numWPNames = 2;
-    };
-
-    struct WellInjDataType
-    {
-        enum WIId
-        {
-            WellLocationi = 0, //WLi
-            WellLocationj = 1, //WLj
-            OilRate = 2, //OR
-            WaterRate = 3, //WR
-            GasRate = 4, //GR
-            FluidResVol = 5, //FRV
-            BHP = 6, //BHP
-            THP = 7, //THP
-            SteadyStateII = 8, //SteadyStateII
-            WellName = 0, //WName
-            CTRLModeOil = 1, //CTRLo
-            CTRLModeWat = 2, //CTRLw
-            CTRLModeGas = 3, //CTRLg
-        };
-        static constexpr int numWIValues = 9;
-        static constexpr int numWINames = 4;
-    };
-
-    struct WellCumDataType
-    {
-        enum WCId
-        {
-            WellLocationi = 0, //WLi
-            WellLocationj = 1, //WLj
-            OilProd = 2, //OP
-            WaterProd = 3, //WP
-            GasProd = 4, //GP
-            FluidResVolProd = 5, //FRVP
-            OilInj = 6, //OI
-            WaterInj = 7, //WI
-            GasInj = 8, //GI
-            FluidResVolInj = 9, //FRVI
-            WellName = 0, //WName
-            WellType = 1, //WType
-            WellCTRL = 2, //WCTRL
-        };
-        static constexpr int numWCValues = 10;
-        static constexpr int numWCNames = 3;
-    };
-
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
                         const bool substep,
@@ -370,29 +303,6 @@ protected:
                         const bool enableHysteresis,
                         unsigned numTracers,
                         unsigned numOutputNnc);
-
-    void fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const;
-
-    void pressureUnitConvert_(Scalar& pav) const;
-
-    void outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
-                                   std::unordered_map<Inplace::Phase, Scalar> cip,
-                                   const Scalar& pav, const int reg = 0) const;
-    void outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
-                                 const int reg = 0) const;
-    void outputProductionReport_(const ScalarBuffer& wellProd,
-                                 const StringBuffer& wellProdNames,
-                                 const bool forceDisableProdOutput);
-    void outputInjectionReport_(const ScalarBuffer& wellInj,
-                                const StringBuffer& wellInjNames,
-                                const bool forceDisableInjOutput);
-    void outputCumulativeReport_(const ScalarBuffer& wellCum,
-                                 const StringBuffer& wellCumNames,
-                                 const bool forceDisableCumOutput);
-
-    void outputFipLogImpl(const Inplace& inplace) const;
-
-    void outputFipresvLogImpl(const Inplace& inplace) const;
 
     void makeRegionSum(Inplace& inplace,
                        const std::string& region_name,
@@ -406,17 +316,6 @@ protected:
 
     static bool isOutputCreationDirective_(const std::string& keyword);
 
-    static Scalar pressureAverage_(const Scalar& pressurePvHydrocarbon,
-                                   const Scalar& pvHydrocarbon,
-                                   const Scalar& pressurePv,
-                                   const Scalar& pv,
-                                   bool hydrocarbon);
-
-    static ScalarBuffer pressureAverage_(const ScalarBuffer& pressurePvHydrocarbon,
-                                         const ScalarBuffer& pvHydrocarbon,
-                                         const ScalarBuffer& pressurePv,
-                                         const ScalarBuffer& pv,
-                                         bool hydrocarbon);
     // Sum Fip values over regions.
     static ScalarBuffer regionSum(const ScalarBuffer& property,
                                   const std::vector<int>& regionId,
@@ -444,6 +343,7 @@ protected:
     const SummaryState& summaryState_;
 
     EclInterRegFlowMap interRegionFlows_;
+    LogOutputHelper<Scalar> logOutput_;
 
     bool enableEnergy_;
     bool enableTemperature_;
