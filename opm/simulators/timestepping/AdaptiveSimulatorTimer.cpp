@@ -24,10 +24,11 @@
 #include <cassert>
 #include <iostream>
 #include <vector>
-
+#include <stdexcept>
 #include <algorithm>
 #include <numeric>
-
+#include <opm/common/Exceptions.hpp>
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
 
@@ -66,7 +67,10 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
     {
         ++current_step_;
         current_time_ += dt_;
-        assert(dt_ > 0);
+        if(!(dt_ > 0)){
+            OPM_THROW(std::runtime_error,
+                      "TimeStep is zero");
+        }
         // store used time step sizes
         steps_.push_back( dt_ );
         return *this;
@@ -78,7 +82,10 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
         double remaining = (total_time_ - current_time_);
         // apply max time step if it was set
         dt_ = std::min( dt_estimate, max_time_step_ );
-        assert(dt_ > 0);
+        if(!(dt_ > 0)){
+            OPM_THROW(std::runtime_error,
+                      "TimeStep is zero");
+        }        
         if( remaining > 0 ) {
 
             // set new time step (depending on remaining time)
@@ -88,7 +95,10 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
                 if( dt_ > max_time_step_ ) {
                     dt_ = 0.5 * remaining;
                 }
-                assert(dt_ > 0);
+                if(!(dt_ > 0)){
+                    OPM_THROW(std::runtime_error,
+                              "TimeStep is zero");
+                }
                 return;
             }
 
@@ -97,7 +107,10 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
 
             if( 1.5 * dt_ > remaining ) {
                 dt_ = 0.5 * remaining;
-                assert(dt_ > 0);
+                if(!(dt_ > 0)){
+                    OPM_THROW(std::runtime_error,
+                              "TimeStep is zero");
+                }
                 return;
             }
         }
@@ -111,7 +124,10 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
 
     double AdaptiveSimulatorTimer::currentStepLength () const
     {
-      assert(dt_ > 0);
+        if(!(dt_ > 0)){
+            OPM_THROW(std::runtime_error,
+                      "TimeStep is zero");
+        }
         return dt_;
     }
 

@@ -181,7 +181,9 @@ namespace Opm
         const double error = relChange.relativeChange();
         errors_[ 2 ] = error;
         for( int i=0; i<2; ++i ) {
-            assert(std::isfinite(errors_[i]));
+            if(!std::isfinite(errors_[i])){
+                OPM_THROW(std::runtime_error,"Error estimates nonfinite");
+            }
         }
 
         if( errors_[2] > tol_ )
