@@ -49,47 +49,47 @@ class UDQState;
 class EclActionHandler
 {
 public:
-  //! \brief Function handle to update transmissiblities.
-  using TransFunc = std::function<void(bool)>;
+    //! \brief Function handle to update transmissiblities.
+    using TransFunc = std::function<void(bool)>;
 
-  EclActionHandler(EclipseState& ecl_state,
-                   Schedule& schedule,
-                   Action::State& actionState,
-                   SummaryState& summaryState,
-                   BlackoilWellModelGeneric& wellModel,
-                   Parallel::Communication comm);
+    EclActionHandler(EclipseState& ecl_state,
+                     Schedule& schedule,
+                     Action::State& actionState,
+                     SummaryState& summaryState,
+                     BlackoilWellModelGeneric& wellModel,
+                     Parallel::Communication comm);
 
-  void applyActions(int reportStep,
-                    double sim_time,
-                    const TransFunc& updateTrans);
+    void applyActions(int reportStep,
+                      double sim_time,
+                      const TransFunc& updateTrans);
 
-  //! \brief Evaluates UDQ assign statements.
-  void evalUDQAssignments(const unsigned episodeIdx,
-                          UDQState& udq_state);
+    //! \brief Evaluates UDQ assign statements.
+    void evalUDQAssignments(const unsigned episodeIdx,
+                            UDQState& udq_state);
 
-private:
-  /*
-     This function is run after applyAction has been completed in the Schedule
-     implementation. The sim_update argument should have members & flags for
-     the simulator properties which need to be updated. This functionality is
-     probably not complete.
-  */
-  void applySimulatorUpdate(int report_step,
-                            const SimulatorUpdate& sim_update,
-                            bool& commit_wellstate,
-                            const TransFunc& updateTrans);
+  private:
+    /*
+       This function is run after applyAction has been completed in the Schedule
+       implementation. The sim_update argument should have members & flags for
+       the simulator properties which need to be updated. This functionality is
+       probably not complete.
+    */
+    void applySimulatorUpdate(int report_step,
+                              const SimulatorUpdate& sim_update,
+                              bool& commit_wellstate,
+                              const TransFunc& updateTrans);
 
-  std::unordered_map<std::string, double>
-  fetchWellPI(int reportStep,
-              const Action::ActionX& action,
-              const std::vector<std::string>& matching_wells);
+    std::unordered_map<std::string, double>
+    fetchWellPI(int reportStep,
+                const Action::ActionX& action,
+                const std::vector<std::string>& matching_wells);
 
-  EclipseState& ecl_state_;
-  Schedule& schedule_;
-  Action::State& actionState_;
-  SummaryState& summaryState_;
-  BlackoilWellModelGeneric& wellModel_;
-  Parallel::Communication comm_;
+    EclipseState& ecl_state_;
+    Schedule& schedule_;
+    Action::State& actionState_;
+    SummaryState& summaryState_;
+    BlackoilWellModelGeneric& wellModel_;
+    Parallel::Communication comm_;
 };
 
 } // namespace Opm
