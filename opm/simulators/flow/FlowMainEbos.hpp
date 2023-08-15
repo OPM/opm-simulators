@@ -415,7 +415,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             // force closing of all log files.
             OpmLog::removeAllBackends();
 
-            if (mpi_rank_ != 0 || mpi_size_ < 2 || !this->output_files_) {
+            if (mpi_rank_ != 0 || mpi_size_ < 2 || !this->output_files_ || !ebosSimulator_) {
                 return;
             }
 
