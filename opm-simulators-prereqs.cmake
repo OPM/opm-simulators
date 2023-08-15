@@ -22,6 +22,7 @@ set (opm-simulators_CONFIG_VAR
   HAVE_SUITESPARSE_UMFPACK
   HAVE_DAMARIS
   HAVE_HDF5
+  USE_TRACY
   )
 
 # dependencies
@@ -54,6 +55,7 @@ set (opm-simulators_DEPS
   "opm-models REQUIRED"
   "Damaris 1.7"
   "HDF5"
+  "Tracy"
   )
 
 find_package_deps(opm-simulators)
