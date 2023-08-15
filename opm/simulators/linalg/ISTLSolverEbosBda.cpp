@@ -89,7 +89,7 @@ template<class Matrix, class Vector>
 bool BdaSolverInfo<Matrix,Vector>::
 apply(Vector& rhs,
       const bool useWellConn,
-      WellContribFunc getContribs,
+      [[maybe_unused]] WellContribFunc getContribs,
       const int rank,
       Matrix& matrix,
       Vector& x,
