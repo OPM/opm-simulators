@@ -73,7 +73,7 @@ prepare(const Grid& grid,
         const Dune::CartesianIndexMapper<Grid>& cartMapper,
         const std::vector<Well>& wellsForConn,
         const std::vector<int>& cellPartition,
-        const size_t nonzeroes,
+        const std::size_t nonzeroes,
         const bool useWellConn)
 {
     if (numJacobiBlocks_ > 1) {
@@ -146,7 +146,7 @@ template<class Grid>
 void BdaSolverInfo<Matrix,Vector>::
 blockJacobiAdjacency(const Grid& grid,
                      const std::vector<int>& cell_part,
-                     size_t nonzeroes)
+                     std::size_t nonzeroes)
 {
     using size_type = typename Matrix::size_type;
     using Iter = typename Matrix::CreateIterator;
@@ -219,7 +219,7 @@ using BV = Dune::BlockVector<Dune::FieldVector<double,Dim>>;
             const Dune::CartesianIndexMapper<Grid>&, \
             const std::vector<Well>&, \
             const std::vector<int>&, \
-            const size_t, const bool);
+            const std::size_t, const bool);
 using PolyHedralGrid3D = Dune::PolyhedralGrid<3, 3>;
 #if HAVE_DUNE_ALUGRID
 #if HAVE_MPI

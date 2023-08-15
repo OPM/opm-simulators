@@ -72,6 +72,7 @@
         }                                                 \
     }
 
+#include <cstddef>
 
 namespace Opm
 {
@@ -421,7 +422,7 @@ void rocsparseSolverBackend<block_size>::update_system_on_gpu(double *b) {
 
 template <unsigned int block_size>
 bool rocsparseSolverBackend<block_size>::analyze_matrix() {
-    size_t d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
+    std::size_t d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
     Timer t;
 
     ROCSPARSE_CHECK(rocsparse_set_pointer_mode(handle, rocsparse_pointer_mode_host));

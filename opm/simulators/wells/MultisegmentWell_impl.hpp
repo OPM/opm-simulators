@@ -35,8 +35,9 @@
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
-#include <string>
 #include <algorithm>
+#include <cstddef>
+#include <string>
 
 #if HAVE_CUDA || HAVE_OPENCL
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
@@ -1044,7 +1045,7 @@ namespace Opm
                                                                * this->segments_.perforation_depth_diff(perf);
             const double perf_press = segment_pres + perf_seg_press_diff;
             const double multiplier = this->getInjMult(perf, segment_pres, perf_press);
-            for (size_t i = 0; i < mob.size(); ++i) {
+            for (std::size_t i = 0; i < mob.size(); ++i) {
                 mob[i] *= multiplier;
             }
         }
@@ -1160,7 +1161,7 @@ namespace Opm
 
                 // calculating the b for the connection
                 std::vector<double> b_perf(this->num_components_);
-                for (size_t phase = 0; phase < FluidSystem::numPhases; ++phase) {
+                for (std::size_t phase = 0; phase < FluidSystem::numPhases; ++phase) {
                     if (!FluidSystem::phaseIsActive(phase)) {
                         continue;
                     }
@@ -1209,7 +1210,7 @@ namespace Opm
                     ipr_b_perf[oil_comp_idx] += vap_oil_b;
                 }
 
-                for (size_t comp_idx = 0; comp_idx < ipr_a_perf.size(); ++comp_idx) {
+                for (std::size_t comp_idx = 0; comp_idx < ipr_a_perf.size(); ++comp_idx) {
                     this->ipr_a_[comp_idx] += ipr_a_perf[comp_idx];
                     this->ipr_b_[comp_idx] += ipr_b_perf[comp_idx];
                 }

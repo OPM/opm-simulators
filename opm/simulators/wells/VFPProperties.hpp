@@ -25,6 +25,7 @@
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/VFPHelpers.hpp>
 
+#include <cstddef>
 #include <map>
 
 namespace Opm {
@@ -71,7 +72,7 @@ public:
         return &m_prod;
     }
 
-    double getExplicitWFR(const int table_id, const size_t well_index) const {
+    double getExplicitWFR(const int table_id, const std::size_t well_index) const {
         const auto& rates = well_state_.well(well_index).prev_surface_rates;
         const auto& pu = well_state_.phaseUsage();
         const auto& aqua = pu.phase_used[BlackoilPhases::Aqua]? rates[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
@@ -81,7 +82,7 @@ public:
         return detail::getWFR(table, aqua, liquid, vapour);
     }
 
-    double getExplicitGFR(const int table_id, const size_t well_index) const {
+    double getExplicitGFR(const int table_id, const std::size_t well_index) const {
         const auto& rates = well_state_.well(well_index).prev_surface_rates;
         const auto& pu = well_state_.phaseUsage();
         const auto& aqua = pu.phase_used[BlackoilPhases::Aqua]? rates[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;

@@ -161,8 +161,8 @@ name(int tracerIdx) const
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 void EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
-doInit(bool rst, size_t numGridDof,
-       size_t gasPhaseIdx, size_t oilPhaseIdx, size_t waterPhaseIdx)
+doInit(bool rst, std::size_t numGridDof,
+       std::size_t gasPhaseIdx, std::size_t oilPhaseIdx, std::size_t waterPhaseIdx)
 {
     const auto& tracers = eclState_.tracer();
 
@@ -170,13 +170,13 @@ doInit(bool rst, size_t numGridDof,
         return; // tracer treatment is supposed to be disabled
 
     // retrieve the number of tracers from the deck
-    const size_t numTracers = tracers.size();
+    const std::size_t numTracers = tracers.size();
     tracerConcentration_.resize(numTracers);
     storageOfTimeIndex1_.resize(numTracers);
 
     // the phase where the tracer is
     tracerPhaseIdx_.resize(numTracers);
-    for (size_t tracerIdx = 0; tracerIdx < numTracers; tracerIdx++) {
+    for (std::size_t tracerIdx = 0; tracerIdx < numTracers; tracerIdx++) {
         const auto& tracer = tracers[tracerIdx];
 
         if (tracer.phase == Phase::WATER)
@@ -200,7 +200,7 @@ doInit(bool rst, size_t numGridDof,
             if (tblkDatasize < cartMapper_.cartesianSize()){
                 throw std::runtime_error("Wrong size of TBLK for" + tracer.name);
             }
-            for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
+            for (std::size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx) {
                 int cartDofIdx = cartMapper_.cartesianIndex(globalDofIdx);
                 tracerConcentration_[tracerIdx][globalDofIdx] = free_concentration[cartDofIdx];
             }
@@ -208,7 +208,7 @@ doInit(bool rst, size_t numGridDof,
         //TVDPF keyword
         else if (tracer.free_tvdp.has_value()) {
             const auto& free_tvdp = tracer.free_tvdp.value();
-            for (size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx){
+            for (std::size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx) {
                 tracerConcentration_[tracerIdx][globalDofIdx] =
                     free_tvdp.evaluate("TRACER_CONCENTRATION",
                                        centroids_(globalDofIdx)[2]);
@@ -339,7 +339,7 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
             createParallelFlexibleSolver<TracerVector>(gridView_.grid(), M, prm);
         (void) tracerOperator;
         bool converged = true;
-        for (size_t nrhs =0; nrhs < b.size(); ++nrhs) {
+        for (std::size_t nrhs = 0; nrhs < b.size(); ++nrhs) {
             x[nrhs] = 0.0;
             Dune::InverseOperatorResult result;
             solver->apply(x[nrhs], b[nrhs], result);
@@ -364,7 +364,7 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
                              verbosity);
 
         bool converged = true;
-        for (size_t nrhs =0; nrhs < b.size(); ++nrhs) {
+        for (std::size_t nrhs = 0; nrhs < b.size(); ++nrhs) {
             x[nrhs] = 0.0;
             Dune::InverseOperatorResult result;
             solver.apply(x[nrhs], b[nrhs], result);

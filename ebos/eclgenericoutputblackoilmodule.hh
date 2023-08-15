@@ -32,6 +32,7 @@
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <array>
+#include <cstddef>
 #include <functional>
 #include <map>
 #include <numeric>
@@ -62,17 +63,17 @@ public:
     };
     
     // write cumulative production and injection reports to output
-    void outputCumLog(size_t reportStepNum,
+    void outputCumLog(std::size_t reportStepNum,
                       const bool substep,
                       bool forceDisableCumOutput);
 
     // write production report to output
-    void outputProdLog(size_t reportStepNum,
+    void outputProdLog(std::size_t reportStepNum,
                        const bool substep,
                        bool forceDisableProdOutput);
 
     // write injection report to output
-    void outputInjLog(size_t reportStepNum,
+    void outputInjLog(std::size_t reportStepNum,
                       const bool substep,
                       bool forceDisableInjOutput);
 
@@ -93,7 +94,7 @@ public:
     void outputErrorLog(const Parallel::Communication& comm) const;
 
     void addRftDataToWells(data::Wells& wellDatas,
-                           size_t reportStepNum);
+                           std::size_t reportStepNum);
 
     /*!
      * \brief Move all buffers to data::Solution.
@@ -445,9 +446,9 @@ protected:
     std::array<std::pair<std::string, std::pair<std::vector<int>, ScalarBuffer>>, 3> floresn_;
     std::array<std::pair<std::string, std::pair<std::vector<int>, ScalarBuffer>>, 3> flowsn_;
 
-    std::map<size_t, Scalar> oilConnectionPressures_;
-    std::map<size_t, Scalar> waterConnectionSaturations_;
-    std::map<size_t, Scalar> gasConnectionSaturations_;
+    std::map<std::size_t, Scalar> oilConnectionPressures_;
+    std::map<std::size_t, Scalar> waterConnectionSaturations_;
+    std::map<std::size_t, Scalar> gasConnectionSaturations_;
     std::map<std::pair<std::string, int>, double> blockData_;
 
     std::optional<Inplace> initialInplace_;

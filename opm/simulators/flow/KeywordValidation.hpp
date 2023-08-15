@@ -22,6 +22,7 @@
 
 #include <opm/common/OpmLog/KeywordLocation.hpp>
 
+#include <cstddef>
 #include <functional>
 #include <initializer_list>
 #include <map>
@@ -59,7 +60,7 @@ namespace KeywordValidation
 
     // This is used to list the partially supported items of a keyword:
     template <typename T>
-    using PartiallySupportedKeywordItems = std::map<size_t, PartiallySupportedKeywordProperties<T>>;
+    using PartiallySupportedKeywordItems = std::map<std::size_t, PartiallySupportedKeywordProperties<T>>;
 
     // This is used to list the keywords that have partially supported items:
     template <typename T>
@@ -71,8 +72,8 @@ namespace KeywordValidation
     struct ValidationError {
         bool critical; // Determines if the encountered problem should be an error or a warning
         KeywordLocation location; // Location information (keyword name, file and line number)
-        size_t record_number; // Number of the offending record
-        std::optional<size_t> item_number; // Number of the offending item
+        std::size_t record_number; // Number of the offending record
+        std::optional<std::size_t> item_number; // Number of the offending item
         std::optional<std::string> item_value; // The offending value of a problematic item
         std::optional<std::string> user_message; // An optional message to show if a problem is encountered
     };
@@ -127,8 +128,8 @@ namespace KeywordValidation
         void validateKeywordItem(const DeckKeyword& keyword,
                                  const PartiallySupportedKeywordProperties<T>& properties,
                                  const bool multiple_records,
-                                 const size_t record_number,
-                                 const size_t item_number,
+                                 const std::size_t record_number,
+                                 const std::size_t item_number,
                                  const T& item_value,
                                  std::vector<ValidationError>& errors) const;
 

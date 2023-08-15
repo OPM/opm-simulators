@@ -1241,7 +1241,7 @@ private:
 
     void createLocalRegion_(std::vector<int>& region)
     {
-        size_t elemIdx = 0;
+        std::size_t elemIdx = 0;
         for (const auto& elem : elements(simulator_.gridView())) {
             if (elem.partitionType() != Dune::InteriorEntity)
                 region[elemIdx] = 0;

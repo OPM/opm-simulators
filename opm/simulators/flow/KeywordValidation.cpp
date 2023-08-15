@@ -154,9 +154,9 @@ namespace KeywordValidation
         const auto& keyword_properties = partially_supported_items.find(keyword.name());
         if (keyword_properties != partially_supported_items.end()) {
             // If this keyworcs has partially supported items, iterate over all of them.
-            for (size_t record_index = 0; record_index < keyword.size(); record_index++) {
+            for (std::size_t record_index = 0; record_index < keyword.size(); record_index++) {
                 const auto& record = keyword.getRecord(record_index);
-                for (size_t item_index = 0; item_index < record.size(); item_index++) {
+                for (std::size_t item_index = 0; item_index < record.size(); item_index++) {
                     const auto& item = record.getItem(item_index);
                     // Find the index number, which starts counting at one, so item_index + 1
                     const auto& item_properties = keyword_properties->second.find(item_index + 1);
@@ -182,8 +182,8 @@ namespace KeywordValidation
     void KeywordValidator::validateKeywordItem(const DeckKeyword& keyword,
                                                const PartiallySupportedKeywordProperties<T>& properties,
                                                const bool multiple_records,
-                                               const size_t record_index,
-                                               const size_t item_index,
+                                               const std::size_t record_index,
+                                               const std::size_t item_index,
                                                const T& item_value,
                                                std::vector<ValidationError>& errors) const
     {

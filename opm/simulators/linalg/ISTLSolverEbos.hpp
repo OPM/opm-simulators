@@ -101,7 +101,7 @@ struct FlexibleSolverInfo
     void create(const Matrix& matrix,
                 bool parallel,
                 const PropertyTree& prm,
-                size_t pressureIndex,
+                std::size_t pressureIndex,
                 std::function<Vector()> trueFunc,
                 Comm& comm);
 
@@ -109,13 +109,13 @@ struct FlexibleSolverInfo
     std::unique_ptr<AbstractOperatorType> op_;
     std::unique_ptr<LinearOperatorExtra<Vector,Vector>> wellOperator_;
     AbstractPreconditionerType* pre_ = nullptr;
-    size_t interiorCellNum_ = 0;
+    std::size_t interiorCellNum_ = 0;
 };
 
 
 #ifdef HAVE_MPI
 /// Copy values in parallel.
-void copyParValues(std::any& parallelInformation, size_t size,
+void copyParValues(std::any& parallelInformation, std::size_t size,
                    Dune::OwnerOverlapCopyCommunication<int,int>& comm);
 #endif
 
@@ -130,7 +130,7 @@ void makeOverlapRowsInvalid(Matrix& matrix,
 template<class Matrix, class Grid>
 std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                              const std::vector<int>& cell_part,
-                                             size_t nonzeroes,
+                                             std::size_t nonzeroes,
                                              const std::vector<std::set<int>>& wellConnectionsGraph);
 }
 
@@ -262,7 +262,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             const bool firstcall = (matrix_ == nullptr);
 #if HAVE_MPI
             if (firstcall) {
-                const size_t size = M.N();
+                const std::size_t size = M.N();
                 detail::copyParValues(parallelInformation_, size, *comm_);
             }
 #endif

@@ -23,6 +23,8 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <cstddef>
+
 namespace Opm {
 
 
@@ -63,7 +65,7 @@ std::vector<double> ParallelFieldPropsManager::porv(bool global) const
     if (m_comm.rank() == 0)
         global_porv = m_manager.porv(true);
 
-    size_t size = global_porv.size();
+    std::size_t size = global_porv.size();
     m_comm.broadcast(&size, 1, 0);
     global_porv.resize(size);
     m_comm.broadcast(global_porv.data(), size, 0);
@@ -124,7 +126,7 @@ std::vector<int> ParallelFieldPropsManager::get_global_int(const std::string& ke
     if (exceptionThrown)
         OPM_THROW_NOLOG(std::runtime_error, "No integer property field: " + keyword);
 
-    size_t size = result.size();
+    std::size_t size = result.size();
     m_comm.broadcast(&size, 1, 0);
     result.resize(size);
     m_comm.broadcast(result.data(), size, 0);
@@ -178,7 +180,7 @@ std::vector<double> ParallelFieldPropsManager::get_global_double(const std::stri
     if (exceptionThrown)
         OPM_THROW_NOLOG(std::runtime_error, "No double property field: " + keyword);
 
-    size_t size = result.size();
+    std::size_t size = result.size();
     m_comm.broadcast(&size, 1, 0);
     result.resize(size);
     m_comm.broadcast(result.data(), size, 0);

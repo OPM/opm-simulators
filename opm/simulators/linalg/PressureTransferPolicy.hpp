@@ -26,6 +26,7 @@
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 
+#include <cstddef>
 
 namespace Opm
 {
@@ -104,12 +105,12 @@ public:
                 double matrix_el = 0;
                 if (transpose) {
                     const auto& bw = weights_[entry.index()];
-                    for (size_t i = 0; i < bw.size(); ++i) {
+                    for (std::size_t i = 0; i < bw.size(); ++i) {
                         matrix_el += (*entry)[pressure_var_index_][i] * bw[i];
                     }
                 } else {
                     const auto& bw = weights_[row.index()];
-                    for (size_t i = 0; i < bw.size(); ++i) {
+                    for (std::size_t i = 0; i < bw.size(); ++i) {
                         matrix_el += (*entry)[i][pressure_var_index_] * bw[i];
                     }
                 }
@@ -132,7 +133,7 @@ public:
             if (transpose) {
                 rhs_el = (*block)[pressure_var_index_];
             } else {
-                for (size_t i = 0; i < block->size(); ++i) {
+                for (std::size_t i = 0; i < block->size(); ++i) {
                     rhs_el += (*block)[i] * bw[i];
                 }
             }
@@ -149,7 +150,7 @@ public:
         for (auto block = begin; block != end; ++block) {
             if (transpose) {
                 const auto& bw = weights_[block.index()];
-                for (size_t i = 0; i < block->size(); ++i) {
+                for (std::size_t i = 0; i < block->size(); ++i) {
                     (*block)[i] = this->lhs_[block - begin] * bw[i];
                 }
             } else {
@@ -172,6 +173,7 @@ public:
     {
         return pressure_var_index_;
     }
+
 private:
     Communication* communication_;
     const FineVectorType& weights_;

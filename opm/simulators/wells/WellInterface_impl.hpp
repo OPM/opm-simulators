@@ -32,6 +32,8 @@
 
 #include <fmt/format.h>
 
+#include <cstddef>
+
 namespace Opm
 {
 
@@ -286,7 +288,7 @@ namespace Opm
         // individually. We first open all completions, then we close one by one by calling updateWellTestState
         // untill the number of closed completions do not increase anymore.
         while (testWell) {
-            const size_t original_number_closed_completions = welltest_state_temp.num_closed_completions();
+            const std::size_t original_number_closed_completions = welltest_state_temp.num_closed_completions();
             bool converged = solveWellForTesting(simulator, well_state_copy, group_state, deferred_logger);
             if (!converged) {
                 const auto msg = fmt::format("WTEST: Well {} is not solvable (physical)", this->name());

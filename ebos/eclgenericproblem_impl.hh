@@ -54,7 +54,7 @@ int eclPositionalParameter(Dune::ParameterTree& tree,
                            int paramIdx)
 {
     std::string param  = argv[paramIdx];
-    size_t i = param.find('=');
+    std::size_t i = param.find('=');
     if (i != std::string::npos) {
         std::string oldParamName = param.substr(0, i);
         std::string oldParamValue = param.substr(i+1);
@@ -167,7 +167,7 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
     if (eclState_.fieldProps().has_int(rock_config.rocknum_property())) {
         rockTableIdx_.resize(numElem);
         const auto& num = eclState_.fieldProps().get_int(rock_config.rocknum_property());
-        for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
+        for (std::size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
             rockTableIdx_[elemIdx] = num[elemIdx] - 1;
             auto fmtError =
                 [&num,elemIdx,&ijkIndex,&rock_config](const char* type, std::size_t size)
@@ -194,18 +194,18 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
     const auto& overburdTables = eclState_.getTableManager().getOverburdTables();
     if (!overburdTables.empty()) {
         overburdenPressure_.resize(numElem,0.0);
-        size_t numRocktabTables = rock_config.num_rock_tables();
+        std::size_t numRocktabTables = rock_config.num_rock_tables();
 
         if (overburdTables.size() != numRocktabTables)
             throw std::runtime_error(std::to_string(numRocktabTables) +" OVERBURD tables is expected, but " + std::to_string(overburdTables.size()) +" is provided");
 
         std::vector<Tabulated1DFunction<Scalar>> overburdenTables(numRocktabTables);
-        for (size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+        for (std::size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
             const OverburdTable& overburdTable =  overburdTables.template getTable<OverburdTable>(regionIdx);
             overburdenTables[regionIdx].setXYContainers(overburdTable.getDepthColumn(),overburdTable.getOverburdenPressureColumn());
         }
 
-        for (size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
+        for (std::size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
             unsigned tableIdx = 0;
             if (!rockTableIdx_.empty()) {
                 tableIdx = rockTableIdx_[elemIdx];
@@ -237,7 +237,7 @@ readRockCompactionParameters_()
         throw std::runtime_error("Not support ROCKOMP hysteresis option ");
     }
 
-    size_t numRocktabTables = rock_config.num_rock_tables();
+    std::size_t numRocktabTables = rock_config.num_rock_tables();
     bool waterCompaction = rock_config.water_compaction();
 
     if (!waterCompaction) {
@@ -248,7 +248,7 @@ readRockCompactionParameters_()
 
         rockCompPoroMult_.resize(numRocktabTables);
         rockCompTransMult_.resize(numRocktabTables);
-        for (size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+        for (std::size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
             const auto& rocktabTable = rocktabTables.template getTable<RocktabTable>(regionIdx);
             const auto& pressureColumn = rocktabTable.getPressureColumn();
             const auto& poroColumn = rocktabTable.getPoreVolumeMultiplierColumn();
@@ -271,16 +271,16 @@ readRockCompactionParameters_()
                                      +" ROCKWNOD tables is expected, but " + std::to_string(rockwnodTables.size()) +" is provided");
         //TODO check size match
         rockCompPoroMultWc_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::Vertical));
-        for (size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+        for (std::size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
             const RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<RockwnodTable>(regionIdx);
             const auto& rock2dTable = rock2dTables[regionIdx];
 
             if (rockwnodTable.getSaturationColumn().size() != rock2dTable.sizeMultValues())
                 throw std::runtime_error("Number of entries in ROCKWNOD and ROCK2D needs to match.");
 
-            for (size_t xIdx = 0; xIdx < rock2dTable.size(); ++xIdx) {
+            for (std::size_t xIdx = 0; xIdx < rock2dTable.size(); ++xIdx) {
                 rockCompPoroMultWc_[regionIdx].appendXPos(rock2dTable.getPressureValue(xIdx));
-                for (size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx)
+                for (std::size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx)
                     rockCompPoroMultWc_[regionIdx].appendSamplePoint(xIdx,
                                                                        rockwnodTable.getSaturationColumn()[yIdx],
                                                                        rock2dTable.getPvmultValue(xIdx, yIdx));
@@ -289,16 +289,16 @@ readRockCompactionParameters_()
 
         if (!rock2dtrTables.empty()) {
             rockCompTransMultWc_.resize(numRocktabTables, TabulatedTwoDFunction(TabulatedTwoDFunction::InterpolationPolicy::Vertical));
-            for (size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
+            for (std::size_t regionIdx = 0; regionIdx < numRocktabTables; ++regionIdx) {
                 const RockwnodTable& rockwnodTable =  rockwnodTables.template getTable<RockwnodTable>(regionIdx);
                 const auto& rock2dtrTable = rock2dtrTables[regionIdx];
 
                 if (rockwnodTable.getSaturationColumn().size() != rock2dtrTable.sizeMultValues())
                     throw std::runtime_error("Number of entries in ROCKWNOD and ROCK2DTR needs to match.");
 
-                for (size_t xIdx = 0; xIdx < rock2dtrTable.size(); ++xIdx) {
+                for (std::size_t xIdx = 0; xIdx < rock2dtrTable.size(); ++xIdx) {
                     rockCompTransMultWc_[regionIdx].appendXPos(rock2dtrTable.getPressureValue(xIdx));
-                    for (size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx)
+                    for (std::size_t yIdx = 0; yIdx < rockwnodTable.getSaturationColumn().size(); ++yIdx)
                         rockCompTransMultWc_[regionIdx].appendSamplePoint(xIdx,
                                                                                  rockwnodTable.getSaturationColumn()[yIdx],
                                                                                  rock2dtrTable.getTransMultValue(xIdx, yIdx));
@@ -360,7 +360,7 @@ rockFraction(unsigned elementIdx, unsigned timeIdx) const
 template<class GridView, class FluidSystem, class Scalar>
 template<class T>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
-updateNum(const std::string& name, std::vector<T>& numbers, size_t num_regions)
+updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regions)
 {
     if (!eclState_.fieldProps().has_int(name))
         return;
@@ -517,7 +517,7 @@ initFluidSystem_()
 
 template<class GridView, class FluidSystem, class Scalar>
 void EclGenericProblem<GridView,FluidSystem,Scalar>::
-readBlackoilExtentionsInitialConditions_(size_t numDof,
+readBlackoilExtentionsInitialConditions_(std::size_t numDof,
                                          bool enableSolvent,
                                          bool enablePolymer,
                                          bool enablePolymerMolarWeight,

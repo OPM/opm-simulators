@@ -53,7 +53,7 @@ template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 init()
 {
-    for (size_t seg = 0; seg < value_.size(); ++seg) {
+    for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             evaluation_[seg][eq_idx] = 0.0;
             evaluation_[seg][eq_idx].setValue(value_[seg][eq_idx]);
@@ -85,7 +85,7 @@ update(const WellState& well_state, const bool stop_or_zero_rate_target)
     const auto& segment_pressure = segments.pressure;
     const PhaseUsage& pu = well_.phaseUsage();
 
-    for (size_t seg = 0; seg < value_.size(); ++seg) {
+    for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         // calculate the total rate for each segment
         double total_seg_rate = 0.0;
         // the segment pressure
@@ -160,7 +160,7 @@ updateNewton(const BVectorWell& dwells,
 {
     const std::vector<std::array<double, numWellEq>> old_primary_variables = value_;
 
-    for (size_t seg = 0; seg < value_.size(); ++seg) {
+    for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         if (has_wfrac_variable) {
             const int sign = dwells[seg][WFrac] > 0. ? 1 : -1;
             const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]) * relaxation_factor, dFLimit);
@@ -228,7 +228,7 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
     auto& disgas = segments.dissolved_gas_rate;
     auto& vapoil = segments.vaporized_oil_rate;
     auto& segment_pressure = segments.pressure;
-    for (size_t seg = 0; seg < value_.size(); ++seg) {
+    for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         std::vector<double> fractions(well_.numPhases(), 0.0);
         fractions[oil_pos] = 1.0;
 
@@ -540,7 +540,7 @@ typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 getSegmentRateUpwinding(const int seg,
                         const int seg_upwind,
-                        const size_t comp_idx) const
+                        const std::size_t comp_idx) const
 {
     // the result will contain the derivative with respect to WQTotal in segment seg,
     // and the derivatives with respect to WFrac GFrac in segment seg_upwind.

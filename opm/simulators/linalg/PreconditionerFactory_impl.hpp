@@ -128,7 +128,7 @@ makeAmgPreconditioner(const Operator& op,
     if (useKamg) {
         using Type = Dune::DummyUpdatePreconditioner<Dune::Amg::KAMG<Operator, Vector, Smoother>>;
         return std::make_shared<Type>(op, crit, sargs,
-                                      prm.get<size_t>("max_krylov", 1),
+                                      prm.get<std::size_t>("max_krylov", 1),
                                       prm.get<double>("min_reduction", 1e-1));
     } else {
         using Type = Dune::Amg::AMGCPR<Operator, Vector, Smoother>;
@@ -255,7 +255,7 @@ struct StandardPreconditioners
         const bool reorder_spheres = prm.get<bool>("reorder_spheres", false);
         // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
         if (ilulevel == 0) {
-            const size_t num_interior = interiorIfGhostLast(comm);
+            const std::size_t num_interior = interiorIfGhostLast(comm);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, Comm>>(
                 op.getmat(), comm, w, Opm::MILU_VARIANT::ILU, num_interior, redblack, reorder_spheres);
         } else {
@@ -268,10 +268,10 @@ struct StandardPreconditioners
     /// K interior cells from [0, K-1] and ghost cells from [K, N-1].
     /// Returns K if true, otherwise returns N. This is motivated by
     /// usage in the ParallelOverlappingILU0 preconditioner.
-    static size_t interiorIfGhostLast(const Comm& comm)
+    static std::size_t interiorIfGhostLast(const Comm& comm)
     {
-        size_t interior_count = 0;
-        size_t highest_interior_index = 0;
+        std::size_t interior_count = 0;
+        std::size_t highest_interior_index = 0;
         const auto& is = comm.indexSet();
         for (const auto& ind : is) {
             if (Comm::OwnerSet::contains(ind.local().attribute())) {

@@ -1679,7 +1679,7 @@ protected:
         const auto& model = this->simulator().model();
         const auto& primaryVars = model.solution(/*timeIdx*/0);
         const auto& vanguard = this->simulator().vanguard();
-        size_t numGridDof = primaryVars.size();
+        std::size_t numGridDof = primaryVars.size();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 #ifdef _OPENMP
 #pragma omp parallel for
@@ -1869,14 +1869,14 @@ protected:
         const auto& vanguard = simulator.vanguard();
         const auto& eclState = vanguard.eclState();
 
-        size_t numDof = this->model().numGridDof();
+        std::size_t numDof = this->model().numGridDof();
 
         this->referencePorosity_[/*timeIdx=*/0].resize(numDof);
 
         const auto& fp = eclState.fieldProps();
         const std::vector<double> porvData = fp.porv(false);
         const std::vector<int> actnumData = fp.actnum();
-        for (size_t dofIdx = 0; dofIdx < numDof; ++ dofIdx) {
+        for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             Scalar poreVolume = porvData[dofIdx];
 
             // we define the porosity as the accumulated pore volume divided by the
@@ -1907,8 +1907,8 @@ protected:
                                                            enableMICP);
 
         //initialize min/max values
-        size_t numElems = this->model().numGridDof();
-        for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+        std::size_t numElems = this->model().numGridDof();
+        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             const auto& fs = initialFluidStates_[elemIdx];
             if (!this->maxWaterSaturation_.empty())
                 this->maxWaterSaturation_[elemIdx] = std::max(this->maxWaterSaturation_[elemIdx], fs.saturation(waterPhaseIdx));
@@ -1929,9 +1929,9 @@ protected:
         using EquilInitializer = EclEquilInitializer<TypeTag>;
         EquilInitializer equilInitializer(simulator, *materialLawManager_);
 
-        size_t numElems = this->model().numGridDof();
+        std::size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
-        for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
             elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
         }
@@ -1958,7 +1958,7 @@ protected:
         Scalar dt = std::min(eclWriter_->restartTimeStepSize(), simulator.episodeLength());
         simulator.setTimeStepSize(dt);
 
-        size_t numElems = this->model().numGridDof();
+        std::size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
         if constexpr (enableSolvent)
             this->solventSaturation_.resize(numElems, 0.0);
@@ -1978,7 +1978,7 @@ protected:
             this->micp_.resize(numElems);
         }
 
-        for (size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
+        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
             eclWriter_->eclOutputModule().initHysteresisParams(simulator, elemIdx);
@@ -2046,7 +2046,7 @@ protected:
         // this is used to recover some RESTART running with the defaulted single-precision format
         const Scalar smallSaturationTolerance = 1.e-6;
         Scalar sumSaturation = 0.0;
-        for (size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (std::size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (FluidSystem::phaseIsActive(phaseIdx)) {
                 if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance)
                     elemFluidState.setSaturation(phaseIdx, 0.0);
@@ -2064,7 +2064,7 @@ protected:
 
         assert(sumSaturation > 0.0);
 
-        for (size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+        for (std::size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (FluidSystem::phaseIsActive(phaseIdx)) {
                 const Scalar saturation = elemFluidState.saturation(phaseIdx) / sumSaturation;
                 elemFluidState.setSaturation(phaseIdx, saturation);
@@ -2118,7 +2118,7 @@ protected:
             throw std::runtime_error("The ECL input file requires the SALTP keyword to be present if"
                                      " salt precipitation is enabled and the model is initialized explicitly");
 
-        size_t numDof = this->model().numGridDof();
+        std::size_t numDof = this->model().numGridDof();
 
         initialFluidStates_.resize(numDof);
 
@@ -2164,7 +2164,7 @@ protected:
             saltpData = fp.get_double("SALTP");
 
         // calculate the initial fluid states
-        for (size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
+        for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             auto& dofFluidState = initialFluidStates_[dofIdx];
 
             dofFluidState.setPvtRegionIndex(pvtRegionIndex(dofIdx));
@@ -2359,7 +2359,7 @@ private:
         if (bcconfig.size() > 0) {
             nonTrivialBoundaryConditions_ = true;
 
-            size_t numCartDof = vanguard.cartesianSize();
+            std::size_t numCartDof = vanguard.cartesianSize();
             unsigned numElems = vanguard.gridView().size(/*codim=*/0);
             std::vector<int> cartesianToCompressedElemIdx(numCartDof, -1);
 
@@ -2450,7 +2450,7 @@ private:
             }
         }
 
-        size_t numDof = this->model().numGridDof();
+        std::size_t numDof = this->model().numGridDof();
         const auto& comm = this->simulator().vanguard().grid().comm();
         comm.sum(sumInvB.data(),sumInvB.size());
         Scalar numTotalDof = comm.sum(numDof);
@@ -2495,7 +2495,7 @@ private:
     {
         std::array<std::vector<T>,6> data;
 
-        void resize(size_t size, T defVal)
+        void resize(std::size_t size, T defVal)
         {
             for (auto& d : data)
                 d.resize(size, defVal);

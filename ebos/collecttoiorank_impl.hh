@@ -105,10 +105,10 @@ public:
     , recv_(recv)
     , ranks_(ranks)
     {
-        size_t size = globalIndex.size();
+        std::size_t size = globalIndex.size();
         // create mapping globalIndex --> localIndex
         if ( isIORank ) // ioRank
-            for (size_t index = 0; index < size; ++index)
+            for (std::size_t index = 0; index < size; ++index)
                 globalPosition_.insert(std::make_pair(globalIndex[index], index));
 
         // we need to create a mapping from local to global
@@ -117,9 +117,9 @@ public:
                 ranks_.resize(size, -1);
             // for the ioRank create a localIndex to index in global state map
             IndexMapType& indexMap = indexMaps_.back();
-            size_t localSize = localIndexMap_.size();
+            std::size_t localSize = localIndexMap_.size();
             indexMap.resize(localSize);
-            for (size_t i=0; i<localSize; ++i)
+            for (std::size_t i = 0; i < localSize; ++i)
             {
                 int id = distributedGlobalIndex_[localIndexMap_[i]];
                 indexMap[i] = id;
@@ -285,7 +285,7 @@ public:
                        data::Solution& globalCellData,
                        const IndexMapType& localIndexMap,
                        const IndexMapStorageType& indexMaps,
-                       size_t globalSize,
+                       std::size_t globalSize,
                        bool isIORank)
         : localCellData_(localCellData)
         , globalCellData_(globalCellData)
@@ -505,7 +505,7 @@ public:
         // read all block data
         unsigned int size = 0;
         buffer.read(size);
-        for (size_t i = 0; i < size; ++i) {
+        for (std::size_t i = 0; i < size; ++i) {
             std::string name;
             int idx;
             double data;
@@ -879,7 +879,7 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
             // We need a mapping from local to global grid, here we
             // use equilGrid which represents a view on the global grid
             // reserve memory
-            const size_t globalSize = equilGrid->leafGridView().size(0);
+            const std::size_t globalSize = equilGrid->leafGridView().size(0);
             globalCartesianIndex_.resize(globalSize, -1);
             const EquilGridView equilGridView = equilGrid->leafGridView();
 
@@ -926,7 +926,7 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
         }
 
         localIndexMap_.clear();
-        const size_t gridSize = grid.size(0);
+        const std::size_t gridSize = grid.size(0);
         localIndexMap_.reserve(gridSize);
 
         // store the local Cartesian index

@@ -35,6 +35,7 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #include <array>
+#include <cstddef>
 #include <functional>
 #include <set>
 #include <string>
@@ -327,7 +328,7 @@ protected:
                              std::function<std::array<int,3>(const unsigned)> ijkIndex);
     void readRockCompactionParameters_();
 
-    void readBlackoilExtentionsInitialConditions_(size_t numDof,
+    void readBlackoilExtentionsInitialConditions_(std::size_t numDof,
                                                   bool enableSolvent,
                                                   bool enablePolymer,
                                                   bool enablePolymerMolarWeight,
@@ -389,7 +390,7 @@ protected:
 
 private:
     template<class T>
-    void updateNum(const std::string& name, std::vector<T>& numbers, size_t num_regions);
+    void updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regions);
 };
 
 } // namespace Opm

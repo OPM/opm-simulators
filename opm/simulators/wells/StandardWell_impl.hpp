@@ -34,9 +34,9 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <cstddef>
 #include <functional>
 #include <numeric>
-
 
 namespace {
 
@@ -648,10 +648,11 @@ namespace Opm
             if constexpr (!Base::has_polymermw) {
                 if constexpr (std::is_same_v<Value, Scalar>) {
                     std::vector<EvalWell> mob_eval(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
-                    for (size_t i = 0; i < mob.size(); ++i)
+                    for (std::size_t i = 0; i < mob.size(); ++i) {
                         mob_eval[i].setValue(mob[i]);
+                    }
                     updateWaterMobilityWithPolymer(ebosSimulator, perf, mob_eval, deferred_logger);
-                    for (size_t i = 0; i < mob.size(); ++i) {
+                    for (std::size_t i = 0; i < mob.size(); ++i) {
                         mob[i] = getValue(mob_eval[i]);
                     }
                 } else {
@@ -665,7 +666,7 @@ namespace Opm
             const double bhp = this->primary_variables_.value(Bhp);
             const double perf_press = bhp +  this->connections_.pressure_diff(perf);
             const double multiplier = this->getInjMult(perf, bhp, perf_press);
-            for (size_t i = 0; i < mob.size(); ++i) {
+            for (std::size_t i = 0; i < mob.size(); ++i) {
                 mob[i] *= multiplier;
             }
         }
@@ -759,7 +760,7 @@ namespace Opm
 
             // calculating the b for the connection
             std::vector<double> b_perf(this->num_components_);
-            for (size_t phase = 0; phase < FluidSystem::numPhases; ++phase) {
+            for (std::size_t phase = 0; phase < FluidSystem::numPhases; ++phase) {
                 if (!FluidSystem::phaseIsActive(phase)) {
                     continue;
                 }
@@ -816,7 +817,7 @@ namespace Opm
                 ipr_b_perf[oil_comp_idx] += vap_oil_b;
             }
 
-            for (size_t comp_idx = 0; comp_idx < ipr_a_perf.size(); ++comp_idx) {
+            for (std::size_t comp_idx = 0; comp_idx < ipr_a_perf.size(); ++comp_idx) {
                 this->ipr_a_[comp_idx] += ipr_a_perf[comp_idx];
                 this->ipr_b_[comp_idx] += ipr_b_perf[comp_idx];
             }

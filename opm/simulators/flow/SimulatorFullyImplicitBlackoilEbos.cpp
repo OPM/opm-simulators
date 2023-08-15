@@ -96,7 +96,7 @@ void checkSerializedCmdLine(const std::string& current,
 
     std::vector<std::string> only_stored, only_curr;
     if (!difference.empty()) {
-        for (size_t i = 0; i < difference.size(); ) {
+        for (std::size_t i = 0; i < difference.size(); ) {
             auto stored_it = std::find(stored_strings.begin(),
                                        stored_strings.end(), difference[i]);
             auto pos = difference[i].find_first_of('=');

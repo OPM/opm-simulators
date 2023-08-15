@@ -27,6 +27,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <cassert>
+#include <cstddef>
 #include <filesystem>
 #include <stdexcept>
 
@@ -115,7 +116,7 @@ void HDF5File::write(const std::string& group,
     } else {
         auto grps = split_string(realGroup, '/');
         std::string curr;
-        for (size_t i = 0; i < grps.size(); ++i) {
+        for (std::size_t i = 0; i < grps.size(); ++i) {
             if (grps[i].empty())
                 continue;
             curr += '/';

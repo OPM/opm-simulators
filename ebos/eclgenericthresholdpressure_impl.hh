@@ -40,6 +40,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <limits>
 #include <stdexcept>
 
@@ -217,13 +218,13 @@ configureThpresft_()
     int numCartesianElem = eclState_.getInputGrid().getCartesianSize();
     thpresftValues_.resize(numFaults, -1.0);
     cartElemFaultIdx_.resize(numCartesianElem, -1);
-    for (size_t faultIdx = 0; faultIdx < faults.size(); faultIdx++) {
+    for (std::size_t faultIdx = 0; faultIdx < faults.size(); faultIdx++) {
         auto& fault = faults.getFault(faultIdx);
         thpresftValues_[faultIdx] = thpres.getThresholdPressureFault(faultIdx);
         for (const FaultFace& face : fault)
             // "face" is a misnomer because the object describes a set of cell
             // indices, but we go with the conventions of the parser here...
-            for (size_t cartElemIdx : face)
+            for (std::size_t cartElemIdx : face)
                 cartElemFaultIdx_[cartElemIdx] = faultIdx;
     }
 }

@@ -32,6 +32,8 @@
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 
 #include <fmt/format.h>
+
+#include <cstddef>
 #include <vector>
 
 namespace Opm {
@@ -62,7 +64,7 @@ mv (const X& x, Y& y) const
     parallel_well_info_.communication().allgatherv(send, cstring_size,
                                                    cstrings.data(), sizes.data(),
                                                    offsets.data());
-    for(std::size_t i = 0; i < sizes.size(); ++i)
+    for (std::size_t i = 0; i < sizes.size(); ++i)
     {
         std::string name(cstrings.data()+offsets[i]);
         if (name != parallel_well_info_.name())
@@ -164,8 +166,8 @@ template <class DenseMatrix>
 DenseMatrix transposeDenseDynMatrix(const DenseMatrix& M)
 {
     DenseMatrix tmp{M.cols(), M.rows()};
-    for (size_t i = 0; i < M.rows(); ++i) {
-        for (size_t j = 0; j < M.cols(); ++j) {
+    for (std::size_t i = 0; i < M.rows(); ++i) {
+        for (std::size_t j = 0; j < M.cols(); ++j) {
             tmp[j][i] = M[i][j];
         }
     }
