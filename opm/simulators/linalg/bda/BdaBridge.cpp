@@ -61,10 +61,11 @@ namespace Opm
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
 BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string accelerator_mode_,
-                                                             int linear_solver_verbosity, int maxit,
-                                                             double tolerance,
+                                                             int linear_solver_verbosity,
+                                                             [[maybe_unused]] int maxit,
+                                                             [[maybe_unused]] double tolerance,
                                                              [[maybe_unused]] unsigned int platformID,
-                                                             unsigned int deviceID,
+                                                             [[maybe_unused]] unsigned int deviceID,
                                                              [[maybe_unused]] bool opencl_ilu_parallel,
                                                              [[maybe_unused]] std::string linsolver)
 : verbosity(linear_solver_verbosity), accelerator_mode(accelerator_mode_)
