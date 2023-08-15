@@ -23,7 +23,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <ebos/eclinterregflows.hh>
+#include <opm/simulators/flow/EclInterRegFlows.hpp>
 
 #include <algorithm>
 #include <stdexcept>

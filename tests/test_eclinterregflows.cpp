@@ -32,11 +32,11 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <ebos/eclinterregflows.hh>
-
 #include <opm/output/data/InterRegFlowMap.hpp>
 
 #include <opm/grid/common/p2pcommunicator.hh>
+
+#include <opm/simulators/flow/EclInterRegFlows.hpp>
 
 #include <cmath>
 #include <cstddef>

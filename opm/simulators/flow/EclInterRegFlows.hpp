@@ -19,8 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef ECL_INTERREG_FLOWS_MODULE_HH
-#define ECL_INTERREG_FLOWS_MODULE_HH
+#ifndef ECL_INTERREG_FLOWS_MODULE_HPP
+#define ECL_INTERREG_FLOWS_MODULE_HPP
 
 #include <opm/output/data/InterRegFlowMap.hpp>
 
@@ -380,4 +380,4 @@ namespace Opm {
     };
 } // namespace Opm
 
-#endif // ECL_INTERREG_FLOWS_MODULE_HH
+#endif // ECL_INTERREG_FLOWS_MODULE_HPP

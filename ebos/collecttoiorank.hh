@@ -23,8 +23,6 @@
 #ifndef EWOMS_COLLECT_TO_IO_RANK_HH
 #define EWOMS_COLLECT_TO_IO_RANK_HH
 
-#include <ebos/eclinterregflows.hh>
-
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/grid/common/p2pcommunicator.hh>
@@ -34,6 +32,8 @@
 #include <opm/output/data/Groups.hpp>
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
+
+#include <opm/simulators/flow/EclInterRegFlows.hpp>
 
 #include <array>
 #include <cstddef>
