@@ -22,8 +22,7 @@
 */
 
 #include <config.h>
-
-#include <ebos/eclactionhandler.hh>
+#include <opm/simulators/flow/EclActionHandler.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/TimeService.hpp>

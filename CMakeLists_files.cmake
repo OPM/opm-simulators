@@ -24,7 +24,6 @@
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
   ebos/collecttoiorank.cc
-  ebos/eclactionhandler.cc
   ebos/eclgenericcpgridvanguard.cc
   ebos/eclgenericoutputblackoilmodule.cc
   ebos/eclgenericproblem.cc
@@ -45,6 +44,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/Banners.cpp
   opm/simulators/flow/countGlobalCells.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
+  opm/simulators/flow/EclActionHandler.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/FlowMainEbos.cpp
   opm/simulators/flow/KeywordValidation.cpp
@@ -380,7 +380,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/collecttoiorank.hh
   ebos/collecttoiorank_impl.hh
   ebos/ebos.hh
-  ebos/eclactionhandler.hh
   ebos/eclalugridvanguard.hh
   ebos/eclbaseaquifermodel.hh
   ebos/eclbasevanguard.hh
@@ -422,6 +421,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/BlackoilModelParametersEbos.hpp
   opm/simulators/flow/Banners.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
+  opm/simulators/flow/EclActionHandler.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMainEbos.hpp
   opm/simulators/flow/Main.hpp

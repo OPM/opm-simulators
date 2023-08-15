@@ -21,8 +21,8 @@
   copyright holders.
 */
 
-#ifndef ECL_ACTION_HANDLER_HH
-#define ECL_ACTION_HANDLER_HH
+#ifndef ECL_ACTION_HANDLER_HPP
+#define ECL_ACTION_HANDLER_HPP
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -69,10 +69,10 @@ public:
 
 private:
   /*
-    This function is run after applyAction has been completed in the Schedule
-    implementation. The sim_update argument should have members & flags for
-    the simulator properties which need to be updated. This functionality is
-    probably not complete.
+     This function is run after applyAction has been completed in the Schedule
+     implementation. The sim_update argument should have members & flags for
+     the simulator properties which need to be updated. This functionality is
+     probably not complete.
   */
   void applySimulatorUpdate(int report_step,
                             const SimulatorUpdate& sim_update,
@@ -94,4 +94,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // ECL_ACTION_HANDLER_HPP
