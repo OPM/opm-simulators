@@ -23,11 +23,10 @@
 #ifndef EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 
-#include <ebos/eclinterregflows.hh>
-
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/simulators/flow/EclInterRegFlows.hpp>
 #include <opm/simulators/flow/LogOutputHelper.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
