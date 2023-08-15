@@ -82,7 +82,7 @@ public:
     std::unordered_map<std::string, double>
     fetchWellPI(int reportStep,
                 const Action::ActionX& action,
-                const std::vector<std::string>& matching_wells);
+                const std::vector<std::string>& matching_wells) const;
 
     EclipseState& ecl_state_;
     Schedule& schedule_;

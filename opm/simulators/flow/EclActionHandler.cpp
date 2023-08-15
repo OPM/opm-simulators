@@ -207,7 +207,7 @@ void EclActionHandler::applySimulatorUpdate(const int report_step,
 std::unordered_map<std::string, double>
 EclActionHandler::fetchWellPI(const int reportStep,
                               const Action::ActionX& action,
-                              const std::vector<std::string>& matching_wells)
+                              const std::vector<std::string>& matching_wells) const
 {
 
   auto wellpi_wells = action.wellpi_wells(WellMatcher(schedule_[reportStep].well_order(),
