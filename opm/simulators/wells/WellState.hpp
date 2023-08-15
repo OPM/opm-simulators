@@ -108,7 +108,7 @@ public:
                 const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
                 const Schedule& schedule,
                 const bool handle_ms_well,
-                const size_t numCells,
+                const std::size_t numCells,
                 const std::vector<std::vector<PerforationData>>& well_perf_data,
                 const SummaryState& summary_state);
 

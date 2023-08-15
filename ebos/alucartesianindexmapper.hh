@@ -36,6 +36,7 @@
 
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -122,7 +123,7 @@ public:
         //! \brief loop over all internal data handlers and call scatter for
         //! given entity
         template<class MessageBufferImp, class EntityType>
-        void scatter(MessageBufferImp& buff, const EntityType& element, size_t /* n */)
+        void scatter(MessageBufferImp& buff, const EntityType& element, std::size_t /* n */)
         {
             int globalIdx = -1;
             buff.read(globalIdx);
@@ -136,7 +137,7 @@ public:
         //! \brief loop over all internal data handlers and return sum of data
         //! size of given entity
         template<class EntityType>
-        size_t size(const EntityType& /* en */) const
+        std::size_t size(const EntityType& /* en */) const
         { return 1; }
 
     protected:

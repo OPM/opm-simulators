@@ -420,7 +420,7 @@ void WellState::resize(const std::vector<Well>& wells_ecl,
                        const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
                        const Schedule& schedule,
                        const bool handle_ms_well,
-                       const size_t numCells,
+                       const std::size_t numCells,
                        const std::vector<std::vector<PerforationData>>& well_perf_data,
                        const SummaryState& summary_state)
 {
@@ -614,7 +614,7 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
         pi .at( pu.phase_pos[Gas] ) = rt::productivity_index_gas;
     }
 
-    size_t local_conn_index = 0;
+    std::size_t local_conn_index = 0;
     for (auto& comp : connections) {
         const auto * rates = &perf_data.phase_rates[np * local_conn_index];
         const auto * connPI = &perf_data.prod_index[np * local_conn_index];
@@ -670,7 +670,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             // we need to know for each segment, how many perforation it has and how many segments using it as outlet_segment
             // that is why I think we should use a well model to initialize the WellState here
             std::vector<std::vector<int>> segment_perforations(well_nseg);
-            for (size_t perf = 0; perf < completion_set.size(); ++perf) {
+            for (std::size_t perf = 0; perf < completion_set.size(); ++perf) {
                 const Connection& connection = completion_set.get(perf);
                 if (connection.state() == Connection::State::OPEN) {
                     const int segment_index = segment_set.segmentNumberToIndex(connection.segment());

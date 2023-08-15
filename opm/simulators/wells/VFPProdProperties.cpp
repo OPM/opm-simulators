@@ -27,7 +27,7 @@
 
 #include <opm/simulators/wells/VFPHelpers.hpp>
 
-
+#include <cstddef>
 
 namespace Opm {
 
@@ -125,7 +125,7 @@ bhpwithflo(const std::vector<double>& flos,
     const auto alq_i = detail::findInterpData( alq, table.getALQAxis()); //assume constant
 
     std::vector<double> bhps(flos.size(), 0.);
-    for (size_t i = 0; i < flos.size(); ++i) {
+    for (std::size_t i = 0; i < flos.size(); ++i) {
         // Value of FLO is negative in OPM for producers, but positive in VFP table
         const auto flo_i = detail::findInterpData(-flos[i], table.getFloAxis());
         const detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);

@@ -223,7 +223,7 @@ EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 
 template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputCumLog(size_t reportStepNum, const bool substep, bool forceDisableCumOutput)
+outputCumLog(std::size_t reportStepNum, const bool substep, bool forceDisableCumOutput)
 {
     if (!substep && !forceDisableCumOutput) {
         logOutput_.cumulative(reportStepNum,
@@ -234,7 +234,7 @@ outputCumLog(size_t reportStepNum, const bool substep, bool forceDisableCumOutpu
 
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputProdLog(size_t reportStepNum,
+outputProdLog(std::size_t reportStepNum,
               const bool substep,
               bool forceDisableProdOutput)
 {
@@ -247,7 +247,7 @@ outputProdLog(size_t reportStepNum,
 
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputInjLog(size_t reportStepNum, const bool substep, bool forceDisableInjOutput)
+outputInjLog(std::size_t reportStepNum, const bool substep, bool forceDisableInjOutput)
 {
     if (!substep && !forceDisableInjOutput) {
         logOutput_.injection(reportStepNum,
@@ -302,7 +302,7 @@ outputFipresvLog(std::map<std::string, double>& miscSummaryData,
 
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-addRftDataToWells(data::Wells& wellDatas, size_t reportStepNum)
+addRftDataToWells(data::Wells& wellDatas, std::size_t reportStepNum)
 {
     const auto& rft_config = schedule_[reportStepNum].rft_config();
     for (const auto& well: schedule_.getWells(reportStepNum)) {
@@ -320,13 +320,13 @@ addRftDataToWells(data::Wells& wellDatas, size_t reportStepNum)
                 continue;
 
             wellData.connections.resize(well.getConnections().size());
-            size_t count = 0;
+            std::size_t count = 0;
             for (const auto& connection: well.getConnections()) {
-                const size_t i = size_t(connection.getI());
-                const size_t j = size_t(connection.getJ());
-                const size_t k = size_t(connection.getK());
+                const std::size_t i = std::size_t(connection.getI());
+                const std::size_t j = std::size_t(connection.getJ());
+                const std::size_t k = std::size_t(connection.getK());
 
-                const size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
+                const std::size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
                 auto& connectionData = wellData.connections[count];
                 connectionData.index = index;
                 count++;
@@ -617,7 +617,7 @@ typename EclGenericOutputBlackoilModule<FluidSystem,Scalar>::ScalarBuffer
 EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 regionSum(const ScalarBuffer& property,
           const std::vector<int>& regionId,
-          size_t maxNumberOfRegions,
+          std::size_t maxNumberOfRegions,
           const Parallel::Communication& comm)
 {
         ScalarBuffer totals(maxNumberOfRegions, 0.0);
@@ -626,7 +626,7 @@ regionSum(const ScalarBuffer& property,
             return totals;
 
         assert(regionId.size() == property.size());
-        for (size_t j = 0; j < regionId.size(); ++j) {
+        for (std::size_t j = 0; j < regionId.size(); ++j) {
             const int regionIdx = regionId[j] - 1;
             // the cell is not attributed to any region. ignore it!
             if (regionIdx < 0)
@@ -636,7 +636,7 @@ regionSum(const ScalarBuffer& property,
             totals[regionIdx] += property[j];
         }
 
-        for (size_t i = 0; i < maxNumberOfRegions; ++i)
+        for (std::size_t i = 0; i < maxNumberOfRegions; ++i)
             totals[i] = comm.sum(totals[i]);
 
         return totals;
@@ -721,10 +721,10 @@ doAllocBuffers(unsigned bufferSize,
                 continue;
 
             for (const auto& connection: well.getConnections()) {
-                const size_t i = size_t(connection.getI());
-                const size_t j = size_t(connection.getJ());
-                const size_t k = size_t(connection.getK());
-                const size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
+                const std::size_t i = std::size_t(connection.getI());
+                const std::size_t j = std::size_t(connection.getJ());
+                const std::size_t k = std::size_t(connection.getK());
+                const std::size_t index = eclState_.gridDims().getGlobalIndex(i, j, k);
 
                 if (FluidSystem::phaseIsActive(oilPhaseIdx))
                     oilConnectionPressures_.emplace(std::make_pair(index, 0.0));

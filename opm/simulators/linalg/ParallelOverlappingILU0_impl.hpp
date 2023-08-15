@@ -38,7 +38,7 @@ namespace detail
 
 //! Compute Blocked ILU0 decomposition, when we know junk ghost rows are located at the end of A
 template<class M>
-void ghost_last_bilu0_decomposition (M& A, size_t interiorSize)
+void ghost_last_bilu0_decomposition (M& A, std::size_t interiorSize)
 {
     // iterator types
     using rowiterator = typename M::RowIterator;
@@ -419,7 +419,7 @@ update()
                     // The ILU_ matrix is already a copy with the same
                     // sparse structure as A_, but the values of A_ may
                     // have changed, so we must copy all elements.
-                    for (size_t row = 0; row < A_->N(); ++row) {
+                    for (std::size_t row = 0; row < A_->N(); ++row) {
                         const auto& Arow = (*A_)[row];
                         auto& ILUrow = (*ILU_)[row];
                         auto Ait = Arow.begin();

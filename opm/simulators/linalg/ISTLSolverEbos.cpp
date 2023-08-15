@@ -49,7 +49,7 @@ namespace Opm {
 namespace detail {
 
 #ifdef HAVE_MPI
-void copyParValues(std::any& parallelInformation, size_t size,
+void copyParValues(std::any& parallelInformation, std::size_t size,
                    Dune::OwnerOverlapCopyCommunication<int,int>& comm)
 {
   if (parallelInformation.type() == typeid(ParallelISTLInformation)) {
@@ -85,7 +85,7 @@ void makeOverlapRowsInvalid(Matrix& matrix,
 template<class Vector, class Matrix>
 std::function<Vector()> getWeightsCalculator(const PropertyTree& prm,
                                              const Matrix& matrix,
-                                             size_t pressureIndex,
+                                             std::size_t pressureIndex,
                                              std::function<Vector()> trueFunc)
 {
     std::function<Vector()> weightsCalculator;
@@ -122,7 +122,7 @@ template<class Matrix, class Vector, class Comm>
 void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
                                                     bool parallel,
                                                     const PropertyTree& prm,
-                                                    size_t pressureIndex,
+                                                    std::size_t pressureIndex,
                                                     std::function<Vector()> trueFunc,
                                                     [[maybe_unused]] Comm& comm)
 

@@ -23,6 +23,7 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <cstddef>
 #include <iomanip>
 #include <ostream>
 #include <fmt/format.h>
@@ -247,7 +248,7 @@ namespace Opm
     void SimulatorReport::fullReports(std::ostream& os) const
     {
         os << "  Time(day)  TStep(day)  Assembly    LSetup    LSolve    Update    Output WellIt Lins NewtIt LinIt Conv\n";
-        for (size_t i = 0; i < this->stepreports.size(); ++i) {
+        for (std::size_t i = 0; i < this->stepreports.size(); ++i) {
             const SimulatorReportSingle& sr = this->stepreports[i];
             os.precision(10);
             os << std::defaultfloat;

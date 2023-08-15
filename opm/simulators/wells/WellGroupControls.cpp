@@ -37,6 +37,7 @@
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <algorithm>
+#include <cstddef>
 #include <cassert>
 
 namespace Opm
@@ -164,9 +165,9 @@ getGroupInjectionControl(const Group& group,
     const auto chain = WellGroupHelpers::groupChainTopBot(well_.name(), group.name(),
                                                           schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const size_t num_ancestors = chain.size() - 1;
+    const std::size_t num_ancestors = chain.size() - 1;
     double target = orig_target;
-    for (size_t ii = 0; ii < num_ancestors; ++ii) {
+    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || well_.guideRate()->has(chain[ii], injectionPhase)) {
             // Apply local reductions only at the control level
             // (top) and for levels where we have a specified
@@ -284,9 +285,9 @@ getGroupInjectionTargetRate(const Group& group,
 
     const auto chain = WellGroupHelpers::groupChainTopBot(well_.name(), group.name(), schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const size_t num_ancestors = chain.size() - 1;
+    const std::size_t num_ancestors = chain.size() - 1;
     double target = orig_target;
-    for (size_t ii = 0; ii < num_ancestors; ++ii) {
+    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || well_.guideRate()->has(chain[ii], injectionPhase)) {
             // Apply local reductions only at the control level
             // (top) and for levels where we have a specified
@@ -388,9 +389,9 @@ void WellGroupControls::getGroupProductionControl(const Group& group,
     const auto chain = WellGroupHelpers::groupChainTopBot(well_.name(), group.name(),
                                                           schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const size_t num_ancestors = chain.size() - 1;
+    const std::size_t num_ancestors = chain.size() - 1;
     double target = orig_target;
-    for (size_t ii = 0; ii < num_ancestors; ++ii) {
+    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
             // Apply local reductions only at the control level
             // (top) and for levels where we have a specified
@@ -474,9 +475,9 @@ getGroupProductionTargetRate(const Group& group,
     const auto chain = WellGroupHelpers::groupChainTopBot(well_.name(), group.name(),
                                                           schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-    const size_t num_ancestors = chain.size() - 1;
+    const std::size_t num_ancestors = chain.size() - 1;
     double target = orig_target;
-    for (size_t ii = 0; ii < num_ancestors; ++ii) {
+    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
             // Apply local reductions only at the control level
             // (top) and for levels where we have a specified

@@ -29,11 +29,13 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
-#include <cmath>
-#include <optional>
-#include <string>
 
 #include <fmt/format.h>
+
+#include <cmath>
+#include <cstddef>
+#include <optional>
+#include <string>
 
 namespace Opm {
 
@@ -372,8 +374,8 @@ mpiSyncLocalToGlobalGradVector_(
     using Pair = std::pair<int, double>;
     std::vector<Pair> grads_local_tmp;
     grads_local_tmp.reserve(grads_local.size());
-    for (size_t i = 0; i < grads_local.size(); ++i) {
-        if(!this->well_state_.wellIsOwned(grads_local[i].first))
+    for (std::size_t i = 0; i < grads_local.size(); ++i) {
+        if (!this->well_state_.wellIsOwned(grads_local[i].first))
             continue;
         grads_local_tmp.push_back(
            std::make_pair(
@@ -395,7 +397,7 @@ mpiSyncLocalToGlobalGradVector_(
     //   memory is not reallocated here
     grads_global.clear();
 
-    for (size_t i = 0; i < grads_global_tmp.size(); ++i) {
+    for (std::size_t i = 0; i < grads_global_tmp.size(); ++i) {
         grads_global.emplace_back(
             std::make_pair(
                 well_state_.globalIdxToWellName(grads_global_tmp[i].first),

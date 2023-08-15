@@ -43,6 +43,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <set>
 #include <stack>
 #include <stdexcept>
@@ -847,7 +848,7 @@ namespace WellGroupHelpers
                     up = down;
                 } else {
                     assert (up.size() == down.size());
-                    for (size_t ii = 0; ii < up.size(); ++ii) {
+                    for (std::size_t ii = 0; ii < up.size(); ++ii) {
                         up[ii] += down[ii];
                     }
                 }
@@ -1306,10 +1307,10 @@ namespace WellGroupHelpers
             = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
         const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
         // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-        const size_t num_ancestors = chain.size() - 1;
+        const std::size_t num_ancestors = chain.size() - 1;
         // we need to find out the level where the current well is applied to the local reduction 
-        size_t local_reduction_level = 0;
-        for (size_t ii = 1; ii < num_ancestors; ++ii) {
+        std::size_t local_reduction_level = 0;
+        for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
             const int num_gr_ctrl = groupControlledWells(schedule,
                                                          wellState,
                                                          group_state,
@@ -1323,7 +1324,7 @@ namespace WellGroupHelpers
             }
         }
         // check whether guide rate is violated
-        for (size_t ii = 1; ii < num_ancestors; ++ii) {
+        for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
             if (guideRate->has(chain[ii])) {
                 const auto& guided_group = chain[ii];
                 const double grefficiency
@@ -1338,7 +1339,7 @@ namespace WellGroupHelpers
             }
         }
         double target = orig_target;
-        for (size_t ii = 0; ii < num_ancestors; ++ii) {
+        for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
             if ((ii == 0) || guideRate->has(chain[ii])) {
                 // Apply local reductions only at the control level
                 // (top) and for levels where we have a specified
@@ -1453,10 +1454,10 @@ namespace WellGroupHelpers
             = tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
         const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
         // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
-        const size_t num_ancestors = chain.size() - 1;
+        const std::size_t num_ancestors = chain.size() - 1;
         // we need to find out the level where the current well is applied to the local reduction
-        size_t local_reduction_level = 0;
-        for (size_t ii = 1; ii < num_ancestors; ++ii) {
+        std::size_t local_reduction_level = 0;
+        for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
             const int num_gr_ctrl = groupControlledWells(schedule,
                                                          wellState,
                                                                  group_state,
@@ -1471,7 +1472,7 @@ namespace WellGroupHelpers
         }
 
         // check whether guide rate is violated
-        for (size_t ii = 1; ii < num_ancestors; ++ii) {
+        for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
             if (guideRate->has(chain[ii], injectionPhase)) {
                 const auto& guided_group = chain[ii];
                 const double grefficiency
@@ -1487,7 +1488,7 @@ namespace WellGroupHelpers
         }
 
         double target = orig_target;
-        for (size_t ii = 0; ii < num_ancestors; ++ii) {
+        for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
             if ((ii == 0) || guideRate->has(chain[ii], injectionPhase)) {
                 // Apply local reductions only at the control level
                 // (top) and for levels where we have a specified

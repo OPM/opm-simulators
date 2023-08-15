@@ -20,10 +20,12 @@
 #ifndef OPM_FINDOVERLAPROWSANDCOLUMNS_HEADER_INCLUDED
 #define OPM_FINDOVERLAPROWSANDCOLUMNS_HEADER_INCLUDED
 
-#include <vector>
-#include <utility>
 #include <opm/grid/common/WellConnections.hpp>
 #include <opm/grid/common/CartesianIndexMapper.hpp>
+
+#include <cstddef>
+#include <utility>
+#include <vector>
 
 namespace Dune {
 template<class Grid> class CartesianIndexMapper;
@@ -117,9 +119,9 @@ namespace detail
     /// returns the number of interior cells numInterior. In the linear solver only the first numInterior rows of
     /// the matrix are needed.
     template <class Grid>
-    size_t numMatrixRowsToUseInSolver(const Grid& grid, bool ownerFirst)
+    std::size_t numMatrixRowsToUseInSolver(const Grid& grid, bool ownerFirst)
     {
-        size_t numInterior = 0;
+        std::size_t numInterior = 0;
         if (!ownerFirst || grid.comm().size()==1)
             return grid.leafGridView().size(0);
         const auto& gridView = grid.leafGridView();

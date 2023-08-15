@@ -28,6 +28,8 @@
 
 #include <dune/istl/paamg/pinfo.hh>
 
+#include <cstddef>
+
 namespace Opm
 {
     template <class Communication>
@@ -44,22 +46,22 @@ namespace Opm
         const int max_nw = comm.communicator().max(nw);
         const int rank = comm.communicator().rank();
         int glo_max = 0;
-        size_t loc_max = 0;
+        std::size_t loc_max = 0;
         indset_rw.beginResize();
         for (auto ind = indset.begin(), indend = indset.end(); ind != indend; ++ind) {
             indset_rw.add(ind->global(), LocalIndex(ind->local(), ind->local().attribute(), true));
             const int glo = ind->global();
-            const size_t loc = ind->local().local();
+            const std::size_t loc = ind->local().local();
             glo_max = std::max(glo_max, glo);
             loc_max = std::max(loc_max, loc);
         }
         const int global_max = comm.communicator().max(glo_max);
         // used append the welldofs at the end
         assert(loc_max + 1 == indset.size());
-        size_t local_ind = loc_max + 1;
+        std::size_t local_ind = loc_max + 1;
         for (int i = 0; i < nw; ++i) {
             // need to set unique global number
-            const size_t v = global_max + max_nw * rank + i + 1;
+            const std::size_t v = global_max + max_nw * rank + i + 1;
             // set to true to not have problems with higher levels if growing of domains is used
             indset_rw.add(v, LocalIndex(local_ind, Dune::OwnerOverlapCopyAttributeSet::owner, true));
             ++local_ind;
@@ -114,8 +116,8 @@ namespace Opm
             const auto& fineLevelMatrix = fineOperator.getmat();
             const auto& nw = fineOperator.getNumberOfExtraEquations();
             if (prm_.get<bool>("add_wells")) {
-                const size_t average_elements_per_row
-                    = static_cast<size_t>(std::ceil(fineLevelMatrix.nonzeroes() / fineLevelMatrix.N()));
+                const std::size_t average_elements_per_row
+                    = static_cast<std::size_t>(std::ceil(fineLevelMatrix.nonzeroes() / fineLevelMatrix.N()));
                 const double overflow_fraction = 1.2;
                 coarseLevelMatrix_.reset(new CoarseMatrix(fineLevelMatrix.N() + nw,
                                                           fineLevelMatrix.M() + nw,
@@ -176,12 +178,12 @@ namespace Opm
                 double matrix_el = 0;
                 if (transpose) {
                     const auto& bw = weights_[entry.index()];
-                    for (size_t i = 0; i < bw.size(); ++i) {
+                    for (std::size_t i = 0; i < bw.size(); ++i) {
                         matrix_el += (*entry)[pressure_var_index_][i] * bw[i];
                     }
                 } else {
                     const auto& bw = weights_[row.index()];
-                    for (size_t i = 0; i < bw.size(); ++i) {
+                    for (std::size_t i = 0; i < bw.size(); ++i) {
                         matrix_el += (*entry)[i][pressure_var_index_] * bw[i];
                     }
                 }
@@ -216,7 +218,7 @@ namespace Opm
             if (transpose) {
                 rhs_el = (*block)[pressure_var_index_];
             } else {
-                for (size_t i = 0; i < block->size(); ++i) {
+                for (std::size_t i = 0; i < block->size(); ++i) {
                     rhs_el += (*block)[i] * bw[i];
                 }
             }
@@ -235,7 +237,7 @@ namespace Opm
         for (auto block = begin; block != end; ++block) {
             if (transpose) {
                 const auto& bw = weights_[block.index()];
-                for (size_t i = 0; i < block->size(); ++i) {
+                for (std::size_t i = 0; i < block->size(); ++i) {
                     (*block)[i] = this->lhs_[block - begin] * bw[i];
                 }
             } else {

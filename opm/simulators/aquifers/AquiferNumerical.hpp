@@ -225,7 +225,7 @@ private:
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             elem_ctx.updatePrimaryStencil(elem);
 
-            const size_t cell_index = elem_ctx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const std::size_t cell_index = elem_ctx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             const int idx = this->cell_to_aquifer_cell_idx_[cell_index];
             if (idx < 0) {
                 continue;
@@ -300,7 +300,7 @@ private:
                 const std::size_t i = face.interiorIndex();
                 const std::size_t j = face.exteriorIndex();
                 // compressed index
-                // const size_t I = stencil.globalSpaceIndex(i);
+                // const std::size_t I = stencil.globalSpaceIndex(i);
                 const std::size_t J = stencil.globalSpaceIndex(j);
 
                 assert(stencil.globalSpaceIndex(i) == cell_index);

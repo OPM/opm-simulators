@@ -37,6 +37,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
+#include <cstddef>
 #include <memory>
 #include <string_view>
 
@@ -526,7 +527,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 
             // initialize variables
             const auto& initConfig = eclState().getInitConfig();
-            simtimer_->init(schedule, (size_t)initConfig.getRestartStep());
+            simtimer_->init(schedule, static_cast<std::size_t>(initConfig.getRestartStep()));
 
             if (this->output_cout_) {
                 std::ostringstream oss;

@@ -21,12 +21,12 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <cassert>
-#include <iostream>
-#include <vector>
-
 #include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <ostream>
 #include <numeric>
+#include <vector>
 
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
@@ -157,7 +157,7 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
     report(std::ostream& os) const
     {
         os << "Sub steps started at time = " <<  unit::convert::to( start_time_, unit::day ) << " (days)" << std::endl;
-        for( size_t i=0; i<steps_.size(); ++i )
+        for (std::size_t i = 0; i < steps_.size(); ++i)
         {
             os << " step[ " << i << " ] = " << unit::convert::to( steps_[ i ], unit::day ) << " (days)" << std::endl;
         }

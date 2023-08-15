@@ -43,6 +43,7 @@
 #endif // HAVE_UMFPACK
 
 #include <cmath>
+#include <cstddef>
 
 namespace {
 
@@ -118,8 +119,8 @@ applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
 
     // Checking if there is any inf or nan in y
     // it will be the solution before we find a way to catch the singularity of the matrix
-    for (size_t i_block = 0; i_block < y.size(); ++i_block) {
-        for (size_t i_elem = 0; i_elem < y[i_block].size(); ++i_elem) {
+    for (std::size_t i_block = 0; i_block < y.size(); ++i_block) {
+        for (std::size_t i_elem = 0; i_elem < y[i_block].size(); ++i_elem) {
             if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
                 const std::string msg{"nan or inf value found after UMFPack solve due to singular matrix"};
                 OpmLog::debug(msg);

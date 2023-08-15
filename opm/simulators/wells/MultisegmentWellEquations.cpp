@@ -25,7 +25,6 @@
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 #include <dune/istl/umfpack.hh>
 
-
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
 #if COMPILE_BDA_BRIDGE
@@ -40,6 +39,7 @@
 #include <opm/simulators/wells/MultisegmentWellGeneric.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
+#include <cstddef>
 #include <stdexcept>
 
 namespace Opm {
@@ -278,11 +278,11 @@ extract(SparseMatrixAdapter& jacobian) const
     // perforation at cell j connected to segment i.  The code
     // assumes that no cell is connected to more than one segment,
     // i.e. the columns of B/C have no more than one nonzero.
-    for (size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
+    for (std::size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
         for (auto colC = duneC_[rowC].begin(),
                   endC = duneC_[rowC].end(); colC != endC; ++colC) {
             const auto row_index = colC.index();
-            for (size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
+            for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
                 for (auto colB = duneB_[rowB].begin(),
                           endB = duneB_[rowB].end(); colB != endB; ++colB) {
                     const auto col_index = colB.index();
@@ -313,14 +313,14 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     // Add for coupling from well to reservoir
     const int welldof_ind = duneC_.M() + well.indexOfWell();
     if (!well.isPressureControlled(well_state)) {
-        for (size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
+        for (std::size_t rowC = 0; rowC < duneC_.N(); ++rowC) {
             for (auto colC = duneC_[rowC].begin(),
                       endC = duneC_[rowC].end(); colC != endC; ++colC) {
                 const auto row_index = colC.index();
                 const auto& bw = weights[row_index];
                 double matel = 0.0;
 
-                for(size_t i = 0; i< bw.size(); ++i){
+                for (std::size_t i = 0; i< bw.size(); ++i) {
                     matel += bw[i]*(*colC)[seg_pressure_var_ind][i];
                 }
                 jacobian[row_index][welldof_ind] += matel;
@@ -333,7 +333,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
         auto well_weight = weights[0];
         well_weight = 0.0;
         int num_perfs = 0;
-        for (size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
+        for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
             for (auto colB = duneB_[rowB].begin(),
                       endB = duneB_[rowB].end(); colB != endB; ++colB) {
                 const auto col_index = colB.index();
@@ -348,13 +348,13 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
 
         // Add for coupling from reservoir to well and caclulate diag elelement corresping to incompressible standard well
         double diag_ell = 0.0;
-        for (size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
+        for (std::size_t rowB = 0; rowB < duneB_.N(); ++rowB) {
             const auto& bw = well_weight;
             for (auto colB = duneB_[rowB].begin(),
                       endB = duneB_[rowB].end(); colB != endB; ++colB) {
                 const auto col_index = colB.index();
                 double matel = 0.0;
-                for(size_t i = 0; i< bw.size(); ++i){
+                for (std::size_t i = 0; i< bw.size(); ++i) {
                     matel += bw[i] *(*colB)[i][pressureVarIndex];
                 }
                 jacobian[welldof_ind][col_index] += matel;

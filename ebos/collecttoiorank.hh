@@ -36,6 +36,7 @@
 #include <opm/output/data/Wells.hpp>
 
 #include <array>
+#include <cstddef>
 #include <map>
 #include <set>
 #include <string>
@@ -133,7 +134,7 @@ public:
     bool doesNeedReordering() const
     { return needsReordering;}
 
-    size_t numCells () const
+    std::size_t numCells () const
     { return globalCartesianIndex_.size(); }
 
     const std::vector<int>& globalRanks() const

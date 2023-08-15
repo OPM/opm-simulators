@@ -24,6 +24,7 @@
 
 #include <boost/date_time/gregorian/gregorian_types.hpp>
 
+#include <cstddef>
 #include <iosfwd>
 #include <memory>
 #include <vector>
@@ -52,7 +53,7 @@ namespace Opm
         void init(const ParameterGroup& param);
 
         /// Use the SimulatorTimer as a shim around opm-commons Schedule class
-        void init(const Schedule& schedule, size_t report_step = 0);
+        void init(const Schedule& schedule, std::size_t report_step = 0);
 
         /// Whether the current step is the first step.
         bool initialStep() const override;

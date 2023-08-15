@@ -331,7 +331,7 @@ fipResv(const Inplace& inplace) const
         this->outputResvFluidInPlace_(current_values, 0);
     }
 
-    for (size_t reg = 1; reg <= inplace.max_region("FIPNUM"); ++reg) {
+    for (std::size_t reg = 1; reg <= inplace.max_region("FIPNUM"); ++reg) {
         std::unordered_map<Inplace::Phase, Scalar> current_values;
 
         for (const auto& phase : Inplace::phases()) {

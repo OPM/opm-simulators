@@ -106,7 +106,7 @@ std::pair<std::vector<int>, int> partitionCellsFromFile(const std::string& filen
     // Read file into single vector.
     std::ifstream is(filename);
     const std::vector<int> cellpart{std::istream_iterator<int>(is), std::istream_iterator<int>()};
-    if (cellpart.size() != size_t(num_cells)) {
+    if (cellpart.size() != static_cast<std::size_t>(num_cells)) {
         auto msg = fmt::format("Partition file contains {} entries, but there are {} cells.",
                                cellpart.size(), num_cells);
         throw std::runtime_error(msg);

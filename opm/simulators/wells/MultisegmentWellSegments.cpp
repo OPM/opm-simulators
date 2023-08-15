@@ -88,7 +88,7 @@ MultisegmentWellSegments(const int numSegments,
     int i_perf_wells = 0;
     well.perfDepth().resize(well_.numPerfs(), 0.);
     const auto& segment_set = well_.wellEcl().getSegments();
-    for (size_t perf = 0; perf < completion_set.size(); ++perf) {
+    for (std::size_t perf = 0; perf < completion_set.size(); ++perf) {
         const Connection& connection = completion_set.get(perf);
         if (connection.state() == Connection::State::OPEN) {
             const int segment_index = segment_set.segmentNumberToIndex(connection.segment());
@@ -148,7 +148,7 @@ computeFluidProperties(const EvalWell& temperature,
         surf_dens[compIdx] = FluidSystem::referenceDensity( phaseIdx, pvt_region_index);
     }
 
-    for (size_t seg = 0; seg < perforations_.size(); ++seg) {
+    for (std::size_t seg = 0; seg < perforations_.size(); ++seg) {
         // the compostion of the components inside wellbore under surface condition
         std::vector<EvalWell> mix_s(well_.numComponents(), 0.0);
         for (int comp_idx = 0; comp_idx < well_.numComponents(); ++comp_idx) {
@@ -310,7 +310,7 @@ template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 updateUpwindingSegments(const PrimaryVariables& primary_variables)
 {
-    for (size_t seg = 0; seg < perforations_.size(); ++seg) {
+    for (std::size_t seg = 0; seg < perforations_.size(); ++seg) {
         // special treatment is needed for segment 0
         if (seg == 0) {
             // we are not supposed to have injecting producers and producing injectors

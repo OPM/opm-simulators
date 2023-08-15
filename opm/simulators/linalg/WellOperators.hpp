@@ -22,8 +22,15 @@
 #ifndef OPM_WELLOPERATORS_HEADER_INCLUDED
 #define OPM_WELLOPERATORS_HEADER_INCLUDED
 
+#include <dune/common/parallel/communication.hh>
 #include <dune/istl/operators.hh>
+#include <dune/istl/bcrsmatrix.hh>
+
+#include <opm/common/TimingMacros.hpp>
+
 #include <opm/simulators/linalg/matrixblock.hh>
+
+#include <cstddef>
 
 namespace Opm
 {
@@ -237,7 +244,7 @@ public:
     //! constructor: just store a reference to a matrix
     WellModelGhostLastMatrixAdapter (const M& A,
                                      const Opm::LinearOperatorExtra<X, Y>& wellOper,
-                                     const size_t interiorSize )
+                                     const std::size_t interiorSize )
         : A_( A ), wellOper_( wellOper ), interiorSize_(interiorSize)
     {}
 
@@ -294,14 +301,14 @@ public:
 protected:
     void ghostLastProject(Y& y) const
     {
-        size_t end = y.size();
-        for (size_t i = interiorSize_; i < end; ++i)
+        std::size_t end = y.size();
+        for (std::size_t i = interiorSize_; i < end; ++i)
             y[i] = 0;
     }
 
     const matrix_type& A_ ;
     const Opm::LinearOperatorExtra< X, Y>& wellOper_;
-    size_t interiorSize_;
+    std::size_t interiorSize_;
 };
 
 } // namespace Opm

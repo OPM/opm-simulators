@@ -28,6 +28,7 @@
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 
 #include <array>
+#include <cstddef>
 #include <vector>
 
 namespace Opm
@@ -119,7 +120,7 @@ public:
     //! \brief Returns upwinding rate for a component in a segment.
     EvalWell getSegmentRateUpwinding(const int seg,
                                      const int seg_upwind,
-                                     const size_t comp_idx) const;
+                                     const std::size_t comp_idx) const;
 
     //! \brief Get bottomhole pressure.
     EvalWell getBhp() const;

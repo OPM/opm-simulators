@@ -43,6 +43,7 @@
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
 #include <array>
+#include <cstddef>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -503,7 +504,7 @@ protected:
 
     void updateCartesianToCompressedMapping_()
     {
-        size_t num_cells = asImp_().grid().leafGridView().size(0);
+        std::size_t num_cells = asImp_().grid().leafGridView().size(0);
         is_interior_.resize(num_cells);
         
         ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());

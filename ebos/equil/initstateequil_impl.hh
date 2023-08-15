@@ -50,6 +50,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <limits>
 #include <stdexcept>
 
@@ -1336,7 +1337,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     // Create Rs functions.
     rsFunc_.reserve(rec.size());
     if (FluidSystem::enableDissolvedGas()) {
-        for (size_t i = 0; i < rec.size(); ++i) {
+        for (std::size_t i = 0; i < rec.size(); ++i) {
             if (eqlmap.cells(i).empty()) {
                 rsFunc_.push_back(std::shared_ptr<Miscibility::RsVD<FluidSystem>>());
                 continue;
@@ -1377,14 +1378,14 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
         }
     }
     else {
-        for (size_t i = 0; i < rec.size(); ++i) {
+        for (std::size_t i = 0; i < rec.size(); ++i) {
             rsFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
         }
     }
 
     rvFunc_.reserve(rec.size());
     if (FluidSystem::enableVaporizedOil()) {
-        for (size_t i = 0; i < rec.size(); ++i) {
+        for (std::size_t i = 0; i < rec.size(); ++i) {
             if (eqlmap.cells(i).empty()) {
                 rvFunc_.push_back(std::shared_ptr<Miscibility::RvVD<FluidSystem>>());
                 continue;
@@ -1424,14 +1425,14 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
         }
     }
     else {
-        for (size_t i = 0; i < rec.size(); ++i) {
+        for (std::size_t i = 0; i < rec.size(); ++i) {
             rvFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
         }
     }
 
  rvwFunc_.reserve(rec.size());
     if (FluidSystem::enableVaporizedWater()) {
-        for (size_t i = 0; i < rec.size(); ++i) {
+        for (std::size_t i = 0; i < rec.size(); ++i) {
             if (eqlmap.cells(i).empty()) {
                 rvwFunc_.push_back(std::shared_ptr<Miscibility::RvwVD<FluidSystem>>());
                 continue;
@@ -1487,7 +1488,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
         }
     }
     else {
-        for (size_t i = 0; i < rec.size(); ++i) {
+        for (std::size_t i = 0; i < rec.size(); ++i) {
             rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
         }
     }
@@ -1554,7 +1555,7 @@ updateInitialSaltConcentration_(const EclipseState& eclState, const RMap& reg)
             table.setXYContainers(x, y);
         }
     } else {
-        for (size_t i = 0; i < saltvdTables.size(); ++i) {
+        for (std::size_t i = 0; i < saltvdTables.size(); ++i) {
             const SaltvdTable& saltvdTable = saltvdTables.getTable<SaltvdTable>(i);
             saltVdTable_[i].setXYContainers(saltvdTable.getDepthColumn(), saltvdTable.getSaltColumn());
 
@@ -1585,7 +1586,7 @@ updateInitialSaltSaturation_(const EclipseState& eclState, const RMap& reg)
     const auto& tables = eclState.getTableManager();
     const TableContainer& saltpvdTables = tables.getSaltpvdTables();
 
-    for (size_t i = 0; i < saltpvdTables.size(); ++i) {
+    for (std::size_t i = 0; i < saltpvdTables.size(); ++i) {
         const SaltpvdTable& saltpvdTable = saltpvdTables.getTable<SaltpvdTable>(i);
         saltpVdTable_[i].setXYContainers(saltpvdTable.getDepthColumn(), saltpvdTable.getSaltpColumn());
 
@@ -1756,7 +1757,7 @@ calcPressSatRsRv(const RMap& reg,
     auto vspan  = std::array<double, 2>{};
 
     std::vector<int> regionIsEmpty(rec.size(), 0);
-    for (size_t r = 0; r < rec.size(); ++r) {
+    for (std::size_t r = 0; r < rec.size(); ++r) {
         const auto& cells = reg.cells(r);
 
         Details::verticalExtent(cells, cellZMinMax_, comm, vspan);
@@ -1802,7 +1803,7 @@ calcPressSatRsRv(const RMap& reg,
     }
     comm.min(regionIsEmpty.data(),regionIsEmpty.size());
     if (comm.rank() == 0) {
-        for (size_t r = 0; r < rec.size(); ++r) {
+        for (std::size_t r = 0; r < rec.size(); ++r) {
             if (regionIsEmpty[r]) //region is empty on all partitions
                 OpmLog::warning("Equilibration region " + std::to_string(r + 1)
                                  + " has no active cells");

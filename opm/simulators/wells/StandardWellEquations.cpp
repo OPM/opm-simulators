@@ -35,6 +35,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 
 namespace Opm
 {
@@ -164,7 +165,7 @@ void StandardWellEquations<Scalar,numEq>::invert()
     } catch (NumericalProblem&) {
         // for singular matrices, use identity as the inverse
         invDuneD_[0][0] = 0.0;
-        for (size_t i = 0; i < invDuneD_[0][0].rows(); ++i) {
+        for (std::size_t i = 0; i < invDuneD_[0][0].rows(); ++i) {
             invDuneD_[0][0][i][i] = 1.0;
         }
     }
@@ -316,7 +317,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             const auto& bw = weights[row_ind];
             double matel = 0;
             assert((*colC).M() == bw.size());
-            for (size_t i = 0; i < bw.size(); ++i) {
+            for (std::size_t i = 0; i < bw.size(); ++i) {
                 matel += (*colC)[bhp_var_index][i] * bw[i];
             }
 
@@ -328,7 +329,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     cell_weights /= nperf;
 
     BVectorWell  bweights(1);
-    size_t blockSz = duneD_[0][0].N();
+    std::size_t blockSz = duneD_[0][0].N();
     bweights[0].resize(blockSz);
     bweights[0] = 0.0;
     double diagElem = 0;
@@ -343,15 +344,15 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
         DiagMatrixBlockWellType inv_diag_block = invDuneD_[0][0];
         DiagMatrixBlockWellType inv_diag_block_transpose =
             Opm::wellhelpers::transposeDenseDynMatrix(inv_diag_block);
-        for (size_t i = 0; i < blockSz; ++i) {
+        for (std::size_t i = 0; i < blockSz; ++i) {
             bweights[0][i] = 0;
-            for (size_t j = 0; j < blockSz; ++j) {
+            for (std::size_t j = 0; j < blockSz; ++j) {
                 bweights[0][i] += inv_diag_block_transpose[i][j] * rhs[0][j];
             }
             abs_max = std::max(abs_max, std::fabs(bweights[0][i]));
         }
         assert(abs_max > 0.0);
-        for (size_t i = 0; i < blockSz; ++i) {
+        for (std::size_t i = 0; i < blockSz; ++i) {
             bweights[0][i] /= abs_max;
         }
         diagElem = 1.0 / abs_max;
@@ -361,13 +362,13 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             bweights[0][blockSz-1] = 1.0;
             diagElem = 1.0; // better scaling could have used the calculation below if weights were calculated
         } else {
-            for (size_t i = 0; i < cell_weights.size(); ++i) {
+            for (std::size_t i = 0; i < cell_weights.size(); ++i) {
                 bweights[0][i] = cell_weights[i];
             }
             bweights[0][blockSz-1] = 0.0;
             diagElem = 0.0;
             const auto& locmat = duneD_[0][0];
-            for (size_t i = 0; i < cell_weights.size(); ++i) {
+            for (std::size_t i = 0; i < cell_weights.size(); ++i) {
                 diagElem += locmat[i][bhp_var_index] * cell_weights[i];
             }
 
@@ -382,7 +383,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
             const auto col_index = colB.index();
             const auto& bw = bweights[0];
             double matel = 0;
-            for (size_t i = 0; i < bw.size(); ++i) {
+            for (std::size_t i = 0; i < bw.size(); ++i) {
                  matel += (*colB)[i][pressureVarIndex] * bw[i];
             }
             jacobian[welldof_ind][col_index] = matel;

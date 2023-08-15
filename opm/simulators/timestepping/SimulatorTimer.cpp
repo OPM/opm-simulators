@@ -22,11 +22,13 @@
 #include <opm/common/utility/parameters/ParameterGroup.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
-#include <ostream>
-#include <numeric>
 
 #include <boost/date_time/gregorian/gregorian_types.hpp>
 #include <boost/date_time/posix_time/conversion.hpp>
+
+#include <cstddef>
+#include <numeric>
+#include <ostream>
 
 namespace Opm
 {
@@ -65,11 +67,11 @@ namespace Opm
     }
 
     /// Use the SimulatorTimer as a shim around opm-parser's Opm::TimeMap
-    void SimulatorTimer::init(const Schedule& schedule, size_t report_step)
+    void SimulatorTimer::init(const Schedule& schedule, std::size_t report_step)
     {
         total_time_ = schedule.seconds( schedule.size() - 1 );
         timesteps_.resize(schedule.size() - 1);
-        for ( size_t i = 0; i < schedule.size() - 1; ++i ) {
+        for (std::size_t i = 0; i < schedule.size() - 1; ++i) {
             timesteps_[i] = schedule.stepLength(i);
         }
 

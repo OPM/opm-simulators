@@ -109,7 +109,7 @@ namespace Opm {
             if (eclTracerConcentrationOutput_()){
                 const auto& tracerModel = this->simulator_.problem().tracerModel();
                 eclTracerConcentration_.resize(tracerModel.numTracers());
-                for(size_t tracerIdx=0; tracerIdx<eclTracerConcentration_.size();++tracerIdx){
+                for (std::size_t tracerIdx = 0; tracerIdx < eclTracerConcentration_.size(); ++tracerIdx) {
 
                     this->resizeScalarBuffer_(eclTracerConcentration_[tracerIdx]);
                 }
@@ -132,7 +132,7 @@ namespace Opm {
                 unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
                 if (eclTracerConcentrationOutput_()){
-                    for(size_t tracerIdx=0; tracerIdx<eclTracerConcentration_.size();++tracerIdx){
+                    for (std::size_t tracerIdx  = 0; tracerIdx < eclTracerConcentration_.size(); ++tracerIdx) {
                         eclTracerConcentration_[tracerIdx][globalDofIdx] = tracerModel.tracerConcentration(tracerIdx, globalDofIdx);
                     }
                 }
@@ -150,7 +150,7 @@ namespace Opm {
 
             if (eclTracerConcentrationOutput_()){
                 const auto& tracerModel = this->simulator_.problem().tracerModel();
-                for(size_t tracerIdx=0; tracerIdx<eclTracerConcentration_.size();++tracerIdx){
+                for (std::size_t tracerIdx = 0; tracerIdx < eclTracerConcentration_.size(); ++tracerIdx) {
                     const std::string tmp = "tracerConcentration_" + tracerModel.name(tracerIdx);
                     this->commitScalarBuffer_(baseWriter,tmp.c_str(), eclTracerConcentration_[tracerIdx]);
                 }

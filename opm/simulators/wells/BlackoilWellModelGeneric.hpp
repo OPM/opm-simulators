@@ -146,11 +146,11 @@ public:
 
     void initFromRestartFile(const RestartValue& restartValues,
                              WellTestState wtestState,
-                             const size_t numCells,
+                             const std::size_t numCells,
                              bool handle_ms_well);
 
     void prepareDeserialize(int report_step,
-                            const size_t numCells,
+                            const std::size_t numCells,
                             bool handle_ms_well);
 
     /*
@@ -386,7 +386,7 @@ protected:
     void updateInjMult(DeferredLogger& deferred_logger);
     void updateInjFCMult(DeferredLogger& deferred_logger);
 
-    void updateFiltrationParticleVolume(const double dt, const size_t water_index);
+    void updateFiltrationParticleVolume(const double dt, const std::size_t water_index);
 
     // create the well container
     virtual void createWellContainer(const int time_step) = 0;

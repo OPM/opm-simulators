@@ -42,6 +42,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <cstddef>
 #include <sstream>
 #include <stdexcept>
 
@@ -499,7 +500,7 @@ extractPermeability_()
         else
             permzData = permxData;
 
-        for (size_t dofIdx = 0; dofIdx < numElem; ++ dofIdx) {
+        for (std::size_t dofIdx = 0; dofIdx < numElem; ++ dofIdx) {
             permeability_[dofIdx] = 0.0;
             permeability_[dofIdx][0][0] = permxData[dofIdx];
             permeability_[dofIdx][1][1] = permyData[dofIdx];
@@ -541,9 +542,9 @@ extractPermeability_(const std::function<unsigned int(unsigned int)>& map)
         else
             permzData = permxData;
 
-        for (size_t dofIdx = 0; dofIdx < numElem; ++ dofIdx) {
+        for (std::size_t dofIdx = 0; dofIdx < numElem; ++ dofIdx) {
             permeability_[dofIdx] = 0.0;
-            size_t inputDofIdx = map(dofIdx);
+            std::size_t inputDofIdx = map(dofIdx);
             permeability_[dofIdx][0][0] = permxData[inputDofIdx];
             permeability_[dofIdx][1][1] = permyData[inputDofIdx];
             permeability_[dofIdx][2][2] = permzData[inputDofIdx];

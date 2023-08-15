@@ -24,6 +24,8 @@
 
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
+#include <cstddef>
+
 namespace Opm {
 
 class Well;
@@ -54,7 +56,7 @@ struct BdaSolverInfo
                const Dune::CartesianIndexMapper<Grid>& cartMapper,
                const std::vector<Well>& wellsForConn,
                const std::vector<int>& cellPartition,
-               const size_t nonzeroes,
+               const std::size_t nonzeroes,
                const bool useWellConn);
 
   bool apply(Vector& rhs,
@@ -75,7 +77,7 @@ private:
   template<class Grid>
   void blockJacobiAdjacency(const Grid& grid,
                             const std::vector<int>& cell_part,
-                            size_t nonzeroes);
+                            std::size_t nonzeroes);
 
   void copyMatToBlockJac(const Matrix& mat, Matrix& blockJac);
 
