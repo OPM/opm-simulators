@@ -247,12 +247,15 @@ endif()
 
 
 macro (config_hook)
-  opm_need_version_of ("dune-common")
-  opm_need_version_of ("dune-istl")
+  opm_need_version_of("dune-alugrid")
+  opm_need_version_of("dune-common")
+  opm_need_version_of("dune-geometry")
+  opm_need_version_of("dune-grid")
+  opm_need_version_of("dune-istl")
+  opm_need_version_of("dune-localfunctions")
   if(dune-fem_FOUND)
       opm_need_version_of ("dune-fem")
   endif()
-  opm_need_version_of ("opm-models")
 
   if(NOT fmt_FOUND)
     add_definitions(-DFMT_HEADER_ONLY)
@@ -610,6 +613,8 @@ if(dune-alugrid_FOUND)
     $<TARGET_OBJECTS:moduleVersion>)
 endif()
 
+include(modelTests.cmake)
+
 if (BUILD_FLOW)
   install(TARGETS flow DESTINATION bin)
   opm_add_bash_completion(flow)
@@ -618,6 +623,20 @@ if (BUILD_FLOW)
     COMMAND flow --version)
   set_tests_properties(flow__version PROPERTIES
     PASS_REGULAR_EXPRESSION "${${project}_LABEL}")
+endif()
+
+if(QuadMath_FOUND)
+  foreach(tapp co2injection_flash_ni_ecfv
+               co2injection_flash_ni_vcfv
+               co2injection_flash_ecfv
+               co2injection_flash_vcfv)
+    opm_add_test(${tapp}_quad
+                 ONLY_COMPILE
+                 EXE_NAME ${tapp}_quad
+                 SOURCES
+                 examples/${tapp}.cc)
+    target_link_libraries(${tapp}_quad QuadMath::QuadMath)
+  endforeach()
 endif()
 
 if (OPM_ENABLE_PYTHON)

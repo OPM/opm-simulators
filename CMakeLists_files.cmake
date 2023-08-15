@@ -360,6 +360,27 @@ list (APPEND TEST_DATA_FILES
   tests/options_flexiblesolver.json
   tests/options_flexiblesolver_simple.json
   tests/GLIFT1.DATA
+  tests/data/co2injection.dgf
+  tests/data/cuvette_11x4.dgf
+  tests/data/cuvette_44x24.dgf
+  tests/data/fracture.art.dgf
+  tests/data/fracture-raw.art
+  tests/data/groundwater_1d.dgf
+  tests/data/groundwater_2d.dgf
+  tests/data/groundwater_3d.dgf
+  tests/data/infiltration_250x20.dgf
+  tests/data/infiltration_50x3.dgf
+  tests/data/obstacle_24x16.dgf
+  tests/data/obstacle_48x32.dgf
+  tests/data/outflow.dgf
+  tests/data/reservoir.dgf
+  tests/data/richardslens_24x16.dgf
+  tests/data/richardslens_48x32.dgf
+  tests/data/richardslens_96x64.dgf
+  tests/data/test_stokes2c.dgf
+  tests/data/test_stokes2cni.dgf
+  tests/data/test_stokes.dgf
+  tests/data/waterair.dgf
   tests/include/flowl_b_vfp.ecl
   tests/include/flowl_c_vfp.ecl
   tests/include/permx_model5.grdecl
@@ -592,10 +613,62 @@ if(HDF5_FOUND)
 endif()
 
 list (APPEND EXAMPLE_SOURCE_FILES
+  examples/art2dgf.cc
+  examples/co2injection_flash_ni_vcfv.cc
+  examples/co2injection_flash_ni_ecfv.cc
+  examples/co2injection_flash_vcfv.cc
+  examples/co2injection_flash_ecfv.cc
+  examples/co2injection_ncp_ni_vcfv.cc
+  examples/co2injection_pvs_ni_vcfv.cc
+  examples/co2injection_ncp_vcfv.cc
+  examples/co2injection_pvs_vcfv.cc
+  examples/co2injection_immiscible_ni_vcfv.cc
+  examples/co2injection_immiscible_vcfv.cc
+  examples/co2injection_immiscible_ecfv.cc
+  examples/co2injection_ncp_ecfv.cc
+  examples/co2injection_pvs_ecfv.cc
+  examples/co2injection_immiscible_ni_ecfv.cc
+  examples/co2injection_ncp_ni_ecfv.cc
+  examples/co2injection_pvs_ni_ecfv.cc
+  examples/cuvette_pvs.cc
+  examples/diffusion_flash.cc
+  examples/diffusion_ncp.cc
+  examples/diffusion_pvs.cc
+  examples/groundwater_immiscible.cc
+  examples/infiltration_pvs.cc
+  examples/lens_immiscible_vcfv_ad.cc
+  examples/lens_immiscible_vcfv_fd.cc
+  examples/lens_immiscible_ecfv_ad.cc
+  examples/lens_immiscible_ecfv_ad_23.cc
+  examples/lens_immiscible_ecfv_ad_trans.cc
+  examples/lens_richards_vcfv.cc
+  examples/lens_richards_ecfv.cc
+  examples/obstacle_immiscible.cc
+  examples/obstacle_ncp.cc
+  examples/obstacle_pvs.cc
+  examples/outflow_pvs.cc
+  examples/powerinjection_forchheimer_fd.cc
+  examples/powerinjection_forchheimer_ad.cc
+  examples/powerinjection_darcy_fd.cc
+  examples/powerinjection_darcy_ad.cc
+  examples/reservoir_blackoil_ecfv.cc
+  examples/reservoir_blackoil_vcfv.cc
+  examples/reservoir_ncp_ecfv.cc
+  examples/reservoir_ncp_vcfv.cc
   examples/printvfp.cpp
+  examples/tutorial1.cc
+  examples/waterair_pvs_ni.cc
 )
 if(HDF5_FOUND)
   list (APPEND EXAMPLE_SOURCE_FILES
     examples/opmrst_inspect.cpp
+  )
+endif()
+
+if(DUNE_ALUGRID_FOUND)
+  list(APPEND EXAMPLE_SOURCE_FILES
+    examples/finger_immiscible_ecfv.cc
+    examples/finger_immiscible_vcfv.cc
+    examples/fracture_discretefracture.cc
   )
 endif()

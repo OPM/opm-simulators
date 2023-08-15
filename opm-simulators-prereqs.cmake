@@ -2,7 +2,6 @@
 set (opm-simulators_CONFIG_VAR
   HAVE_OPM_GRID
   HAVE_PTHREAD
-  HAVE_EWOMS
   HAVE_MPI
   HAVE_PETSC
   COMPILE_BDA_BRIDGE
@@ -14,6 +13,12 @@ set (opm-simulators_CONFIG_VAR
   HAVE_ROCALUTION
   HAVE_ROCSPARSE
   HAVE_SUITESPARSE_UMFPACK_H
+  HAVE_ECL_INPUT
+  HAVE_ECL_OUTPUT
+  HAVE_DUNE_ALUGRID
+  HAVE_DUNE_COMMON
+  HAVE_DUNE_GEOMETRY
+  HAVE_DUNE_GRID
   HAVE_DUNE_ISTL
   DUNE_ISTL_WITH_CHECKING
   DUNE_ISTL_VERSION_MAJOR
@@ -22,6 +27,7 @@ set (opm-simulators_CONFIG_VAR
   HAVE_SUITESPARSE_UMFPACK
   HAVE_DAMARIS
   HAVE_HDF5
+  HAVE_VALGRIND
   )
 
 # dependencies
@@ -32,8 +38,13 @@ set (opm-simulators_DEPS
   "Boost 1.44.0
     COMPONENTS date_time system unit_test_framework REQUIRED"
   # DUNE prerequisites
+  "dune-alugrid"
   "dune-common REQUIRED"
+  "dune-fem"
+  "dune-geometry REQUIRED"
+  "dune-grid REQUIRED"
   "dune-istl REQUIRED"
+  "dune-localfunctions"
   # matrix library
   "BLAS REQUIRED"
   "LAPACK REQUIRED"
@@ -51,9 +62,12 @@ set (opm-simulators_DEPS
   # OPM dependency
   "opm-common REQUIRED"
   "opm-grid REQUIRED"
-  "opm-models REQUIRED"
   "Damaris 1.7"
   "HDF5"
+  # valgrind client requests
+  "Valgrind"
+  # quadruple precision floating point calculations
+  "QuadMath"
   )
 
 find_package_deps(opm-simulators)
