@@ -105,7 +105,9 @@ bool
 WellInterfaceFluidSystem<FluidSystem>::
 checkIndividualConstraints(SingleWellState& ws,
                            const SummaryState& summaryState,
-                           DeferredLogger& deferred_logger) const
+                           DeferredLogger& deferred_logger,
+                           const std::optional<Well::InjectionControls>& inj_controls,
+                           const std::optional<Well::ProductionControls>& prod_controls) const
 {
     auto rRates = [this](const int fipreg,
                          const int pvtRegion,
@@ -119,7 +121,7 @@ checkIndividualConstraints(SingleWellState& ws,
     return WellConstraints(*this).
             checkIndividualConstraints(ws, summaryState, rRates,
                                        this->operability_status_.thp_limit_violated_but_not_switched,
-                                       deferred_logger);
+                                       deferred_logger, inj_controls, prod_controls);
 }
 
 template <typename FluidSystem>
