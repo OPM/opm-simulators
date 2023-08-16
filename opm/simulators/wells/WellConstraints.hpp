@@ -24,9 +24,12 @@
 #ifndef OPM_WELL_CONSTRAINTS_HEADER_INCLUDED
 #define OPM_WELL_CONSTRAINTS_HEADER_INCLUDED
 
+#include <opm/input/eclipse/Schedule/Well/Well.hpp>
+
 #include <functional>
 #include <utility>
 #include <vector>
+#include <optional>
 
 namespace Opm
 {
@@ -55,21 +58,25 @@ public:
                                const SummaryState& summaryState,
                                const RateConvFunc& calcReservoirVoidageRates,
                                bool& thp_limit_violated_but_not_switched,
-                               DeferredLogger& deferred_logger) const;
+                               DeferredLogger& deferred_logger,
+                               const std::optional<Well::InjectionControls>& inj_controls = std::nullopt,
+                               const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
 private:
     WellInjectorCMode
     activeInjectionConstraint(const SingleWellState& ws,
                               const SummaryState& summaryState,
                               bool& thp_limit_violated_but_not_switched,
-                              DeferredLogger& deferred_logger) const;
+                              DeferredLogger& deferred_logger,
+                              const std::optional<Well::InjectionControls>& inj_controls = std::nullopt) const;
 
     WellProducerCMode
     activeProductionConstraint(const SingleWellState& ws,
                                const SummaryState& summaryState,
                                const RateConvFunc& calcReservoirVoidageRates,
                                bool& thp_limit_violated_but_not_switched,
-                               DeferredLogger& deferred_logger) const;
+                               DeferredLogger& deferred_logger,
+                               const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
     const WellInterfaceGeneric& well_; //!< Reference to well interface
 };

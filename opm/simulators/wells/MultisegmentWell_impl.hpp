@@ -1412,7 +1412,174 @@ namespace Opm
     }
 
 
+    template<typename TypeTag>
+    bool
+    MultisegmentWell<TypeTag>::
+    iterateWellEqWithSwitching(const Simulator& ebosSimulator,
+                             const double dt,
+                             const Well::InjectionControls& inj_controls,
+                             const Well::ProductionControls& prod_controls,
+                             WellState& well_state,
+                             const GroupState& group_state,
+                             DeferredLogger& deferred_logger)
+    {
+        //if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
 
+        const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
+
+        {
+            // getWellFiniteResiduals returns false for nan/inf residuals
+            const auto& [isFinite, residuals] = this->getFiniteWellResiduals(Base::B_avg_, deferred_logger);
+            if(!isFinite)
+                return false;
+        }
+
+        std::vector<std::vector<Scalar> > residual_history;
+        std::vector<double> measure_history;
+        int it = 0;
+        // relaxation factor
+        double relaxation_factor = 1.;
+        const double min_relaxation_factor = 0.6;
+        bool converged = false;
+        int stagnate_count = 0;
+        bool relax_convergence = false;
+        this->regularize_ = false;
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+
+        // Max status switch frequency should be 2 to avoid getting stuck in cycle 
+        const int min_its_after_switch = 2;
+        int its_since_last_switch = min_its_after_switch;
+        int switch_count= 0;
+        const auto well_status = this->wellStatus_;
+        const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
+        bool changed = false;
+        bool final_check = false; 
+
+        for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
+            its_since_last_switch++;
+            if (its_since_last_switch >= min_its_after_switch){
+                const double wqTotal = this->primary_variables_.getWQTotal().value();
+                changed = this->updateWellControlAndStatusLocalIteration (ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger); 
+                if (changed){
+                    its_since_last_switch = 0;
+                    switch_count++;
+                }
+                if (!changed && final_check) {
+                    break;
+                } else {
+                    final_check = false;
+                }
+            }
+
+            assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+
+            const BVectorWell dx_well = this->linSys_.solve();
+
+            if (it > this->param_.strict_inner_iter_wells_) {
+                relax_convergence = true;
+                this->regularize_ = true;
+            }
+
+            const auto report = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, relax_convergence);
+            converged = report.converged();
+            if (converged) {
+                // if equations are sufficiently linear they might converge in less than min_its_after_switch
+                // in this case, make sure all constraints are satisfied before returning
+                if (switch_count > 0 && its_since_last_switch < min_its_after_switch) {
+                    final_check = true;
+                    its_since_last_switch = min_its_after_switch;
+                } else {
+                    break;
+                }   
+            }
+
+            {
+                // getFinteWellResiduals returns false for nan/inf residuals
+                const auto& [isFinite, residuals] = this->getFiniteWellResiduals(Base::B_avg_, deferred_logger);
+                if (!isFinite)
+                    return false;
+
+                residual_history.push_back(residuals);
+                measure_history.push_back(this->getResidualMeasureValue(well_state,
+                                                                    residual_history[it],
+                                                                    this->param_.tolerance_wells_,
+                                                                    this->param_.tolerance_pressure_ms_wells_,
+                                                                    deferred_logger) );
+            }
+
+
+            bool is_oscillate = false;
+            bool is_stagnate = false;
+
+            this->detectOscillations(measure_history, it, is_oscillate, is_stagnate);
+            // TODO: maybe we should have more sophisticated strategy to recover the relaxation factor,
+            // for example, to recover it to be bigger
+
+            if (is_oscillate || is_stagnate) {
+                // HACK!
+                std::ostringstream sstr;
+                if (relaxation_factor == min_relaxation_factor) {
+                    // Still stagnating, terminate iterations if 5 iterations pass.
+                    ++stagnate_count;
+                    if (false){//(stagnate_count == 6) {
+                        sstr << " well " << this->name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
+                        const auto reportStag = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, true);
+                        if (reportStag.converged()) {
+                            converged = true;
+                            sstr << " well " << this->name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
+                            deferred_logger.debug(sstr.str());
+                            return converged;
+                        }
+                    }
+                }
+
+                // a factor value to reduce the relaxation_factor
+                const double reduction_mutliplier = 0.9;
+                relaxation_factor = std::max(relaxation_factor * reduction_mutliplier, min_relaxation_factor);
+
+                // debug output
+                if (is_stagnate) {
+                    sstr << " well " << this->name() << " observes stagnation in inner iteration " << it << "\n";
+
+                }
+                if (is_oscillate) {
+                    sstr << " well " << this->name() << " observes oscillation in inner iteration " << it << "\n";
+                }
+                sstr << " relaxation_factor is " << relaxation_factor << " now\n";
+
+                this->regularize_ = true;
+                deferred_logger.debug(sstr.str());
+            }
+            updateWellState(summary_state, dx_well, well_state, deferred_logger, relaxation_factor);
+            initPrimaryVariablesEvaluation();
+        }
+
+        if (converged) {
+            if (allow_switching){
+                // update operability if status change
+                const bool is_stopped = this->wellIsStopped();
+                if (this->wellHasTHPConstraints(summary_state)){
+                    this->operability_status_.can_obtain_bhp_with_thp_limit = !is_stopped;
+                    this->operability_status_.obey_thp_limit_under_bhp_limit = !is_stopped;
+                } else {
+                    this->operability_status_.operable_under_only_bhp_limit = !is_stopped;
+                }
+                // We reset the well status to it's original state. Status is updated 
+                // on the outside based on operability status
+                this->wellStatus_ = well_status; 
+            }     
+            std::ostringstream sstr;
+            sstr << "     Well " << this->name() << " converged in " << it << " inner iterations (" << switch_count << " local control switches).";
+            if (relax_convergence)
+                sstr << "      (A relaxed tolerance was used after "<< this->param_.strict_inner_iter_wells_ << " iterations)";
+            deferred_logger.debug(sstr.str());
+        } else {
+            std::ostringstream sstr;
+            sstr << "     Well " << this->name() << " did not converge in " << it << " inner iterations (" << switch_count << " local control switches).";
+        }
+
+        return converged;
+    }
 
 
     template<typename TypeTag>
