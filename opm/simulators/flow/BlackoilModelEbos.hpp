@@ -51,7 +51,6 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
-#include <opm/simulators/wells/WellConnectionAuxiliaryModule.hpp>
 
 #include <dune/common/timer.hh>
 

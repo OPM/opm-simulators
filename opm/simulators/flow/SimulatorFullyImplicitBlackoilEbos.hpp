@@ -713,7 +713,6 @@ protected:
 
     // Data.
     Simulator& ebosSimulator_;
-    std::unique_ptr<WellConnectionAuxiliaryModule<TypeTag>> wellAuxMod_;
 
     ModelParameters modelParam_;
     SolverParameters solverParam_;
@@ -738,7 +737,7 @@ protected:
     int saveStride_ = -1; //!< Stride to save serialized state at
     int saveStep_ = -1; //!< Specific step to save serialized state at
     int loadStep_ = -1; //!< Step to load serialized state from
-    std::string saveFile_; //!< File to load/save serialized state from/to.
+    std::string saveFile_; //!< File to load/save serialized state from/to
 };
 
 } // namespace Opm
