@@ -67,7 +67,7 @@
 namespace Opm::Properties {
     namespace TTag {
         struct TestGliftTypeTag {
-            using InheritsFrom = std::tuple<EbosTypeTag>;
+            using InheritsFrom = std::tuple<EbosTypeTag, FlowTimeSteppingParameters>;
         };
     }
 }
@@ -86,6 +86,7 @@ initSimulator(const char *filename)
         filename_arg.c_str()
     };
 
+    Opm::AdaptiveTimeSteppingEbos<TypeTag>::registerParameters();
     Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/true);
 
     Opm::EclGenericVanguard::readDeck(filename);

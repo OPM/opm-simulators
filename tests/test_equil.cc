@@ -82,7 +82,7 @@ namespace TTag {
 
 
 struct TestEquilTypeTag {
-    using InheritsFrom = std::tuple<FlowModelParameters, EclBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters, EclBaseProblem, BlackOilModel>;
 };
 struct TestEquilVapwatTypeTag {
     using InheritsFrom = std::tuple<FlowModelParameters, EclBaseProblem, BlackOilModel>;
@@ -239,6 +239,7 @@ struct EquilFixture {
 #endif
         Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
         Opm::BlackoilModelParametersEbos<TypeTag>::registerParameters();
+        Opm::AdaptiveTimeSteppingEbos<TypeTag>::registerParameters();
         Opm::Parameters::registerParam<TypeTag, bool>("EnableTerminalOutput",
                                                       "EnableTerminalOutput",
                                                       Opm::getPropValue<TypeTag, Opm::Properties::EnableTerminalOutput>(),
