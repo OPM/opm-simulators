@@ -823,16 +823,12 @@ computeFaceProperties(const Intersection& intersection,
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-std::tuple<std::vector<NNCdata>, std::vector<NNCdata>>
+void
 EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
 {
     // First scale NNCs with EDITNNC.
-    std::vector<NNCdata> unprocessedNnc;
-    std::vector<NNCdata> processedNnc;
     const auto& nnc_input = eclState_.getInputNNC().input();
-    if (nnc_input.empty())
-        return std::make_tuple(processedNnc, unprocessedNnc);
 
     for (const auto& nncEntry : nnc_input) {
         auto c1 = nncEntry.cell1;
@@ -859,20 +855,13 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
         }
 
         auto candidate = trans_.find(isId(low, high));
-
-        if (candidate == trans_.end())
-            // This NNC is not resembled by the grid. Save it for later
-            // processing with local cell values
-            unprocessedNnc.push_back(nncEntry);
-        else {
+        if (candidate != trans_.end()) {
             // NNC is represented by the grid and might be a neighboring connection
             // In this case the transmissibilty is added to the value already
             // set or computed.
             candidate->second += nncEntry.trans;
-            processedNnc.push_back(nncEntry);
         }
     }
-    return std::make_tuple(processedNnc, unprocessedNnc);
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
