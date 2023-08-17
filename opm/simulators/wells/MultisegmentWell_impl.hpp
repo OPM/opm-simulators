@@ -1452,6 +1452,7 @@ namespace Opm
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             bool control_switched = false;
+            its_since_last_switch++;
             if (its_since_last_switch > switch_frequency){
                 if (!this->wellIsStopped()){
                     const double wqTotal = this->primary_variables_.getWQTotal().value();
@@ -1464,14 +1465,21 @@ namespace Opm
                 } else {
                     // well is stopped, check if current bhp allows reopening
                     double bhp = this->primary_variables_.getBhp().value();
+                    double prod_limit = prod_controls.bhp_limit;
+                    double inj_limit = inj_controls.bhp_limit;
                     const bool has_thp = this->wellHasTHPConstraints(summary_state);
                     if (has_thp){
                         // calculate bhp from thp-limit (using explicit fractions since zero rates)
                         std::vector<double> rates(this->num_components_);
                         const double bhp_thp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state, rates, this->well_ecl_, summary_state, getRefDensity(), deferred_logger);
-                        bhp = std::max(bhp, bhp_thp);
+                        if (this->isInjector()){
+                            inj_limit = std::min(bhp_thp, inj_controls.bhp_limit);
+                        } else {
+                            prod_limit = std::max(bhp_thp, prod_controls.bhp_limit);
+                        }
                     }
-                    const double bhp_diff = (this->isProducer())? bhp - prod_controls.bhp_limit : inj_controls.bhp_limit - bhp;
+                    const double bhp_diff = (this->isInjector())? inj_limit - bhp: bhp - prod_limit;
+
                     if (bhp_diff > 0){
                         this->openWell();
                         control_switched = true; 
