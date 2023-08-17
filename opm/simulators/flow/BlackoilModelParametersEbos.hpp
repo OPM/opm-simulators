@@ -174,6 +174,10 @@ template<class TypeTag, class MyTypeTag>
 struct UseAverageDensityMsWells {
     using type = UndefinedProperty;
 };
+template<class TypeTag, class MyTypeTag>
+struct LocalWellSolveControlSwitching {
+    using type = UndefinedProperty;
+};
 // Network solver parameters
 template<class TypeTag, class MyTypeTag>
 struct NetworkMaxStrictIterations {
@@ -366,6 +370,11 @@ template<class TypeTag>
 struct UseAverageDensityMsWells<TypeTag, TTag::FlowModelParameters> {
     static constexpr bool value = false;
 };
+template<class TypeTag>
+struct LocalWellSolveControlSwitching<TypeTag, TTag::FlowModelParameters> {
+    static constexpr bool value = false;
+};
+
 // Network solver parameters
 template<class TypeTag>
 struct NetworkMaxStrictIterations<TypeTag, TTag::FlowModelParameters> {
@@ -530,6 +539,9 @@ namespace Opm
         /// Whether to approximate segment densities by averaging over segment and its outlet 
         bool use_average_density_ms_wells_;
 
+        /// Whether to allow control switching during local well solutions 
+        bool local_well_solver_control_switching_;
+
         /// Maximum number of iterations in the network solver before relaxing tolerance
         int network_max_strict_iterations_;
         
@@ -586,6 +598,7 @@ namespace Opm
             check_well_operability_iter_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter);
             max_number_of_well_switches_ = EWOMS_GET_PARAM(TypeTag, int, MaximumNumberOfWellSwitches);
             use_average_density_ms_wells_ = EWOMS_GET_PARAM(TypeTag, bool, UseAverageDensityMsWells);
+            local_well_solver_control_switching_ = EWOMS_GET_PARAM(TypeTag, bool, LocalWellSolveControlSwitching);
             nonlinear_solver_ = EWOMS_GET_PARAM(TypeTag, std::string, NonlinearSolver);
             std::string approach = EWOMS_GET_PARAM(TypeTag, std::string, LocalSolveApproach);
             if (approach == "jacobi") {
@@ -651,6 +664,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter, "Enable the well operability checking during iterations");
             EWOMS_REGISTER_PARAM(TypeTag, int, MaximumNumberOfWellSwitches, "Maximum number of times a well can switch to the same control");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseAverageDensityMsWells, "Approximate segment densitities by averaging over segment and its outlet");
+            EWOMS_REGISTER_PARAM(TypeTag, bool, LocalWellSolveControlSwitching, "Allow control switching during local well solutions");
             EWOMS_REGISTER_PARAM(TypeTag, int, NetworkMaxStrictIterations, "Maximum iterations in network solver before relaxing tolerance");
             EWOMS_REGISTER_PARAM(TypeTag, int, NetworkMaxIterations, "Maximum number of iterations in the network solver before giving up");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, NonlinearSolver, "Choose nonlinear solver. Valid choices are newton or nldd.");
