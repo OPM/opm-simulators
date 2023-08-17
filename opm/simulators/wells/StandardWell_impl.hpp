@@ -2148,6 +2148,84 @@ namespace Opm
 
 
     template<typename TypeTag>
+    bool
+    StandardWell<TypeTag>::
+    iterateWellEqWithSwitching(const Simulator& ebosSimulator,
+                               const double dt,
+                               const Well::InjectionControls& inj_controls,
+                               const Well::ProductionControls& prod_controls,
+                               WellState& well_state,
+                               const GroupState& group_state,
+                               DeferredLogger& deferred_logger)
+    {
+        const int max_iter = this->param_.max_inner_iter_wells_;
+        // Minumum open/close frequency must be >= 2 to avoid getting stuck in cycle 
+        const int switch_frequency = 3;
+
+        int it = 0;
+        bool converged;
+        bool relax_convergence = false;
+        this->regularize_ = false;
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+        int its_since_last_switch = 0;
+        int switch_count= 0;
+        do {
+            bool control_switched = false;
+            if (its_since_last_switch > switch_frequency){
+                if (!this->wellIsStopped()){
+                    const double wqTotal = this->primary_variables_.eval(0).value();
+                    if (wqTotal == 0){
+                        this->stopWell();
+                        control_switched = true;
+                    } else {
+                        control_switched = this->updateWellControlLocalIteration(ebosSimulator, well_state, group_state, inj_controls, prod_controls, deferred_logger); 
+                    }
+                } else {
+                    // well is stopped, check current bhp allows reopening
+                    double bhp = this->primary_variables_.eval(Bhp).value();
+                    const bool has_thp = this->wellHasTHPConstraints(summary_state);
+                    if (has_thp){
+                        // calculate bhp from thp-limit (using explicit fractions)
+                        std::vector<double> rates(this->num_components_);
+                        const double bhp_thp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state, rates, this->well_ecl_, summary_state, this->connections_.rho(), deferred_logger);
+                        bhp = std::max(bhp, bhp_thp);
+                    }
+                    const double bhp_diff = (this->isProducer())? bhp - prod_controls.bhp_limit : inj_controls.bhp_limit - bhp;
+                    if (bhp_diff > 0){
+                        this->openWell();
+                        control_switched = true; 
+                    }
+                }
+                if (control_switched){
+                    its_since_last_switch = 0;
+                    switch_count++;
+                } else {
+                    its_since_last_switch++;
+                }
+            }
+            assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+
+            if (it > this->param_.strict_inner_iter_wells_) {
+                relax_convergence = true;
+                this->regularize_ = true;
+            }
+
+            auto report = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, relax_convergence);
+
+            converged = report.converged();
+            if (converged) {
+                break;
+            }
+
+            ++it;
+            solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
+            initPrimaryVariablesEvaluation();
+        } while (it < max_iter);
+
+        return converged;
+    }
+
+    template<typename TypeTag>
     std::vector<double>
     StandardWell<TypeTag>::
     computeCurrentWellRates(const Simulator& ebosSimulator,
