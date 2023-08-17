@@ -254,7 +254,37 @@ namespace Opm
         return changed;
     }
 
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    updateWellControlLocalIteration(const Simulator& ebos_simulator,
+                      WellState& well_state,
+                      const GroupState& group_state,
+                      const Well::InjectionControls& inj_controls,
+                      const Well::ProductionControls& prod_controls,
+                      DeferredLogger& deferred_logger) /* const */
+    {
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
 
+        if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
+           return false;
+        }
+        auto& ws = well_state.well(this->index_of_well_);
+        bool changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+        if (changed) {
+            const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP:
+                                                             ws.production_cmode == Well::ProducerCMode::THP;
+            if (!thp_controlled){
+                // don't call for thp since this might trigger additional local solve
+                updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
+            } else {
+                ws.thp = this->isInjector() ? inj_controls.thp_limit: prod_controls.thp_limit;
+            }  
+            
+            updatePrimaryVariables(summary_state, well_state, deferred_logger);
+        }
+        return changed;
+    }
 
     template<typename TypeTag>
     void
@@ -363,7 +393,12 @@ namespace Opm
         const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         bool converged = false;
         try {
-            converged = this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            if (!this->param_.local_well_solver_control_switching_){
+                converged = this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            } else {
+                converged = this->iterateWellEqWithSwitching(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+            }
+                 
         } catch (NumericalProblem& e ) {
             const std::string msg = "Inner well iterations failed for well " + this->name() + " Treat the well as unconverged. ";
             deferred_logger.warning("INNER_ITERATION_FAILED", msg);
