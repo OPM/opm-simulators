@@ -663,7 +663,7 @@ updateFromEclState_(bool global)
 
     for (auto it = trans.begin(); it != trans.end(); ++it, ++key, ++perform)
     {
-        if(perform)
+        if(*perform)
             fp->apply_tran(*key, *it);
     }
 
