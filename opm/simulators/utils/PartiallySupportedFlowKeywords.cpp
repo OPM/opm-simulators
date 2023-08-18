@@ -117,6 +117,13 @@ partiallySupported()
             },
          },
          {
+            "GRUPNET",
+            {
+               {5,{true, allow_values<std::string> {}, "GRUPNET(SUBSEAMANIFOLD): not supported use default"}}, // SUB_SEA_MANIFOLD
+               {6,{true, allow_values<std::string> {}, "GRUPNET(LIFTGAS): not supported use default"}}, // LIFT_GAS_FLOW_THROUGH
+            }
+         },
+         {
             "GUIDERAT",
             {
                {2,{true, allow_values<std::string> {"OIL", "LIQ", "GAS", "RES", "NONE"}, "GUIDERAT(PHASE): unsupported option must be OIL LIQ GAS RES or NONE"}}, // NOMINATED_PHASE
