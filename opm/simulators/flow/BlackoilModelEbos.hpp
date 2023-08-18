@@ -596,11 +596,10 @@ namespace Opm {
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
 
-            std::cerr<<"Hello there!!!"<<std::to_string(ebosSolver.getSolveCount())<<std::endl;
-            if (ebosSolver.getSolveCount()%100==0) {
+            if ((ebosSolver.numAvailableSolvers() > 1) && (ebosSolver.getSolveCount() % 100 == 0)) {
 
                 if ( terminal_output_ ) {
-                    OpmLog::debug("Running speed test");
+                    OpmLog::debug("Running speed test for comparing available linear solvers.");
                 }
                 Dune::Timer perfTimer;
 

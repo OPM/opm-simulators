@@ -311,7 +311,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         int numAvailableSolvers()
         {
-            return activeSolverNum_;
+            return flexibleSolver_.size();
         }
 
         void prepare(const SparseMatrixAdapter& M, Vector& b)
