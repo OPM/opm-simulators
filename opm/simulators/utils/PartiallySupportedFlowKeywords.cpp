@@ -119,8 +119,8 @@ partiallySupported()
          {
             "GRUPNET",
             {
-               {5,{true, allow_values<std::string> {}, "GRUPNET(SUBSEAMANIFOLD): not supported use default"}}, // SUB_SEA_MANIFOLD
-               {6,{true, allow_values<std::string> {}, "GRUPNET(LIFTGAS): not supported use default"}}, // LIFT_GAS_FLOW_THROUGH
+               {5,{true, allow_values<std::string> {"NO"}, "GRUPNET(SUBSEAMANIFOLD): only option NO is supported"}}, // SUB_SEA_MANIFOLD
+               {6,{true, allow_values<std::string> {"NO"}, "GRUPNET(LIFTGAS): only option NO is supported"}}, // LIFT_GAS_FLOW_THROUGH
             }
          },
          {
