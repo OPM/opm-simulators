@@ -494,8 +494,11 @@ namespace Opm {
                 const bool event = report_step_starts_ && events.hasEvent(well->name(), effective_events_mask);
                 const bool dyn_status_change = this->wellState().well(well->name()).status
                         != this->prevWellState().well(well->name()).status;
-
-                if (event || dyn_status_change) {
+                bool prev_zero_rates = true;
+                for (const double& rate : this->prevWellState().well(well->name()).surface_rates){
+                    prev_zero_rates &= (rate == 0.0);
+                } 
+                if (event || dyn_status_change || prev_zero_rates){
                     try {
                         well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), local_deferredLogger);
                         well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), local_deferredLogger);
