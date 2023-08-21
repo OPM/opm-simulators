@@ -143,7 +143,7 @@ void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar
 update(bool global, const std::function<unsigned int(unsigned int)>& map)
 {
     const auto& cartDims = cartMapper_.cartesianDimensions();
-    auto& transMult = eclState_.getTransMult();
+    const auto& transMult = eclState_.getTransMult();
     const auto& comm = gridView_.comm();
     ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
 
