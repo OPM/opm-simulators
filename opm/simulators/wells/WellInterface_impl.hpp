@@ -257,33 +257,65 @@ namespace Opm
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    updateWellControlLocalIteration(const Simulator& ebos_simulator,
+    updateWellControlAndStatusLocalIteration(const Simulator& ebos_simulator,
                       WellState& well_state,
                       const GroupState& group_state,
                       const Well::InjectionControls& inj_controls,
                       const Well::ProductionControls& prod_controls,
+                      const double& wqTotal, 
                       DeferredLogger& deferred_logger) /* const */
     {
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
-
-        if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
+        
+        if (this->wellUnderZeroRateTarget(summary_state, well_state)) {
            return false;
         }
-        auto& ws = well_state.well(this->index_of_well_);
-        bool changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
-        if (changed) {
-            const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP:
-                                                             ws.production_cmode == Well::ProducerCMode::THP;
-            if (!thp_controlled){
-                // don't call for thp since this might trigger additional local solve
-                updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
+
+        const double sgn = this->isInjector() ? 1.0 : -1.0;
+        if (!this->wellIsStopped()){
+            if (wqTotal*sgn <= 0.0){
+                this->stopWell();
+                return true;
             } else {
-                ws.thp = this->isInjector() ? inj_controls.thp_limit: prod_controls.thp_limit;
-            }  
-            
-            updatePrimaryVariables(summary_state, well_state, deferred_logger);
+                auto& ws = well_state.well(this->index_of_well_);
+                const bool changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                if (changed) {
+                    const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP :
+                                                                     ws.production_cmode == Well::ProducerCMode::THP;
+                    if (!thp_controlled){
+                        // don't call for thp since this might trigger additional local solve
+                        updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
+                    } else {
+                        ws.thp = this->isInjector() ? inj_controls.thp_limit: prod_controls.thp_limit;
+                    }  
+                    updatePrimaryVariables(summary_state, well_state, deferred_logger);
+                }
+                return changed;
+            }
+        } else {
+            // well is stopped, check if current bhp allows reopening
+            const double bhp = well_state.well(this->index_of_well_).bhp;
+            double prod_limit = prod_controls.bhp_limit;
+            double inj_limit = inj_controls.bhp_limit;
+            const bool has_thp = this->wellHasTHPConstraints(summary_state);
+            if (has_thp){
+                // calculate bhp from thp-limit (using explicit fractions zince zero rate)
+                std::vector<double> rates(this->num_components_);
+                const double bhp_thp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state, rates, this->well_ecl_, summary_state, this->getRefDensity(), deferred_logger);
+                if (this->isInjector()){
+                    inj_limit = std::min(bhp_thp, inj_controls.bhp_limit);
+                } else {
+                    prod_limit = std::max(bhp_thp, prod_controls.bhp_limit);
+                }
+            }
+            const double bhp_diff = (this->isInjector())? inj_limit - bhp: bhp - prod_limit;
+            if (bhp_diff > 0){
+                this->openWell();
+                return true;
+            } else {
+                return false;
+            }
         }
-        return changed;
     }
 
     template<typename TypeTag>

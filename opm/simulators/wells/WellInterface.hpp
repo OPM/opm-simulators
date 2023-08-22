@@ -241,12 +241,13 @@ public:
                            const GroupState& group_state,
                            DeferredLogger& deferred_logger) /* const */;
 
-    bool updateWellControlLocalIteration(const Simulator& ebos_simulator,
+    bool updateWellControlAndStatusLocalIteration(const Simulator& ebos_simulator,
                       WellState& well_state,
                       const GroupState& group_state,
                       const Well::InjectionControls& inj_controls,
                       const Well::ProductionControls& prod_controls,
-                      DeferredLogger& deferred_logger) /* const */;                           
+                      const double& WQTotal, 
+                      DeferredLogger& deferred_logger); /* const */                                               
 
     virtual void updatePrimaryVariables(const SummaryState& summary_state,
                                         const WellState& well_state,
