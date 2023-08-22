@@ -119,9 +119,11 @@ public:
         }
 
         // Iterate through grid once, setting the seeds of all partitions.
+        // Note: owned cells only!
         std::vector<int> count(num_domains, 0);
-        const auto beg = grid.template leafbegin<0>();
-        const auto end = grid.template leafend<0>();
+        const auto& gridView = grid.leafGridView();
+        const auto beg = gridView.template begin<0, Dune::Interior_Partition>();
+        const auto end = gridView.template end<0, Dune::Interior_Partition>();
         int cell = 0;
         for (auto it = beg; it != end; ++it, ++cell) {
             const int p = partition_vector[cell];
