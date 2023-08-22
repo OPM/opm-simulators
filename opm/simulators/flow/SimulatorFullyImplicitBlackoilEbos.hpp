@@ -91,6 +91,13 @@ struct SaveFile
     using type = UndefinedProperty;
 };
 
+template <class TypeTag, class MyTypeTag>
+struct LoadFile
+{
+    using type = UndefinedProperty;
+};
+
+
 template<class TypeTag>
 struct EnableTerminalOutput<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = true;
@@ -121,6 +128,13 @@ struct SaveFile<TypeTag, TTag::EclFlowProblem>
 {
     static constexpr auto* value = "";
 };
+
+template <class TypeTag>
+struct LoadFile<TypeTag, TTag::EclFlowProblem>
+{
+    static constexpr auto* value = "";
+};
+
 
 template <class TypeTag>
 struct LoadStep<TypeTag, TTag::EclFlowProblem>
@@ -205,6 +219,8 @@ public:
         const std::string saveSpec = EWOMS_GET_PARAM(TypeTag, std::string, SaveStep);
         if (saveSpec == "all") {
             saveStride_ = 1;
+        } else if (saveSpec == "last") {
+            saveStride_ = -1;
         } else if (!saveSpec.empty() && saveSpec[0] == ':') {
             saveStride_ = std::atoi(saveSpec.c_str()+1);
         } else if (!saveSpec.empty()) {
@@ -214,14 +230,17 @@ public:
         loadStep_ = EWOMS_GET_PARAM(TypeTag, int, LoadStep);
 
         saveFile_ = EWOMS_GET_PARAM(TypeTag, std::string, SaveFile);
-        if (saveFile_.empty()) {
+        loadFile_ = EWOMS_GET_PARAM(TypeTag, std::string, LoadFile);
+        
+        if (loadFile_.empty() || saveFile_.empty()) {
             const auto& ioconfig = ebosSimulator_.vanguard().eclState().getIOConfig();
-            saveFile_ = ioconfig.fullBasePath() + ".OPMRST";
-            if (loadStep_ != -1 && !std::filesystem::exists(saveFile_)) {
+            if (saveFile_.empty()) saveFile_ = ioconfig.fullBasePath() + ".OPMRST";
+            if (loadFile_.empty()) loadFile_ = saveFile_;
+            if (loadStep_ != -1 && !std::filesystem::exists(loadFile_)) {
                 std::filesystem::path path(ioconfig.getInputDir() + "/");
                 path.replace_filename(ioconfig.getBaseName() + ".OPMRST");
-                saveFile_ = path;
-                if (!std::filesystem::exists(saveFile_)) {
+                loadFile_ = path;
+                if (!std::filesystem::exists(loadFile_)) {
                     OPM_THROW(std::runtime_error, "Error locating serialized restart file");
                 }
             }
@@ -264,9 +283,14 @@ public:
                              "Either a specific report step, or 0 to load last "
                              "stored report step.");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, SaveFile,
-                             "FileName for .OPMRST file used for serialized state. "
+                             "FileName for .OPMRST file used for saving serialized state. "
                              "If empty, CASENAME.OPMRST is used.");
         EWOMS_HIDE_PARAM(TypeTag, SaveFile);
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, LoadFile,
+                             "FileName for .OPMRST file used to load serialized state. "
+                             "If empty, CASENAME.OPMRST is used.");
+        EWOMS_HIDE_PARAM(TypeTag, LoadFile);
+        
     }
 
     /// Run the simulation.
@@ -595,7 +619,7 @@ protected:
     //! \brief Serialization of simulator data to .OPMRST files at end of report steps.
     void handleSave(SimulatorTimer& timer)
     {
-        if (saveStride_ == -1 && saveStep_ == -1) {
+        if (saveStride_ == 0 && saveStep_ == -1) {
             return;
         }
 
@@ -603,18 +627,18 @@ protected:
 
         int nextStep = timer.currentStepNum();
         if ((saveStep_ != -1 && nextStep == saveStep_)  ||
-            (saveStride_ != -1 && (nextStep % saveStride_) == 0)) {
+            (saveStride_ != 0 && (nextStep % saveStride_) == 0)) {
 #if !HAVE_HDF5
             OpmLog::error("Saving of serialized state requested, but no HDF5 support available.");
 #else
             const std::string groupName = "/report_step/" + std::to_string(nextStep);
-            if (nextStep == saveStride_ || nextStep == saveStep_) {
+            if (saveStride_ < 0 || nextStep == saveStride_ || nextStep == saveStep_) {
                 std::filesystem::remove(saveFile_);
             }
             HDF5Serializer writer(saveFile_,
                                   HDF5File::OpenMode::APPEND,
                                   EclGenericVanguard::comm());
-            if (nextStep == saveStride_ || nextStep == saveStep_) {
+            if (saveStride_ < 0 || nextStep == saveStride_ || nextStep == saveStep_) {
                 std::ostringstream str;
                 Parameters::printValues<TypeTag>(str);
                 writer.writeHeader("OPM Flow",
@@ -650,7 +674,7 @@ protected:
 #else
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
-        HDF5Serializer reader(saveFile_,
+        HDF5Serializer reader(loadFile_,
                               HDF5File::OpenMode::READ,
                               EclGenericVanguard::comm());
 
@@ -700,7 +724,7 @@ protected:
 #if HAVE_HDF5
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
-        HDF5Serializer reader(saveFile_,
+        HDF5Serializer reader(loadFile_,
                               HDF5File::OpenMode::READ,
                               EclGenericVanguard::comm());
         const std::string groupName = "/report_step/" + std::to_string(loadStep_);
@@ -734,10 +758,11 @@ protected:
     std::optional<ConvergenceOutputThread> convergenceOutputObject_{};
     std::optional<std::thread> convergenceOutputThread_{};
 
-    int saveStride_ = -1; //!< Stride to save serialized state at
+    int saveStride_ = 0; //!< Stride to save serialized state at, negative to only keep last
     int saveStep_ = -1; //!< Specific step to save serialized state at
     int loadStep_ = -1; //!< Step to load serialized state from
-    std::string saveFile_; //!< File to load/save serialized state from/to
+    std::string saveFile_; //!< File to save serialized state to
+    std::string loadFile_; //!< File to load serialized state from
 };
 
 } // namespace Opm
