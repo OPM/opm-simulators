@@ -277,7 +277,10 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, std::string, SaveStep,
                              "Save serialized state to .OPMRST file. "
                              "Either a specific report step, \"all\" to save "
-                             "all report steps or \":x\" to save every x'th step.");
+                             "all report steps or \":x\" to save every x'th step."
+                             "Use negative values of \"x\" to keep only the last "
+                             "written step, or \"last\" to save every step, keeping "
+                             "only the last.");
         EWOMS_REGISTER_PARAM(TypeTag, int, LoadStep,
                              "Load serialized state from .OPMRST file. "
                              "Either a specific report step, or 0 to load last "
@@ -289,8 +292,7 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, std::string, LoadFile,
                              "FileName for .OPMRST file used to load serialized state. "
                              "If empty, CASENAME.OPMRST is used.");
-        EWOMS_HIDE_PARAM(TypeTag, LoadFile);
-        
+        EWOMS_HIDE_PARAM(TypeTag, LoadFile);        
     }
 
     /// Run the simulation.
