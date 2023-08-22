@@ -1426,8 +1426,6 @@ namespace Opm
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
 
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
-        // Minumum open/close frequency must be >= 2 to avoid getting stuck in cycle 
-        const int switch_frequency = 3;
 
         {
             // getWellFiniteResiduals returns false for nan/inf residuals
@@ -1447,51 +1445,25 @@ namespace Opm
         bool relax_convergence = false;
         this->regularize_ = false;
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
-        int its_since_last_switch = 0;
+
+        // Max status switch frequency should be 2 to avoid getting stuck in cycle 
+        const int min_its_after_switch = 2;
+        int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
+        const bool was_stopped = this->wellIsStopped();
+        bool changed = false;
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
-            bool control_switched = false;
             its_since_last_switch++;
-            if (its_since_last_switch > switch_frequency){
-                if (!this->wellIsStopped()){
-                    const double wqTotal = this->primary_variables_.getWQTotal().value();
-                    if (wqTotal == 0){
-                        this->stopWell();
-                        control_switched = true;
-                    } else {
-                        control_switched = this->updateWellControlLocalIteration(ebosSimulator, well_state, group_state, inj_controls, prod_controls, deferred_logger); 
-                    }
-                } else {
-                    // well is stopped, check if current bhp allows reopening
-                    double bhp = this->primary_variables_.getBhp().value();
-                    double prod_limit = prod_controls.bhp_limit;
-                    double inj_limit = inj_controls.bhp_limit;
-                    const bool has_thp = this->wellHasTHPConstraints(summary_state);
-                    if (has_thp){
-                        // calculate bhp from thp-limit (using explicit fractions since zero rates)
-                        std::vector<double> rates(this->num_components_);
-                        const double bhp_thp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state, rates, this->well_ecl_, summary_state, getRefDensity(), deferred_logger);
-                        if (this->isInjector()){
-                            inj_limit = std::min(bhp_thp, inj_controls.bhp_limit);
-                        } else {
-                            prod_limit = std::max(bhp_thp, prod_controls.bhp_limit);
-                        }
-                    }
-                    const double bhp_diff = (this->isInjector())? inj_limit - bhp: bhp - prod_limit;
-
-                    if (bhp_diff > 0){
-                        this->openWell();
-                        control_switched = true; 
-                    }
-                }
-                if (control_switched){
+            if (its_since_last_switch >= min_its_after_switch){
+                const double wqTotal = this->primary_variables_.getWQTotal().value();
+                changed = this->updateWellControlAndStatusLocalIteration (ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger); 
+                if (changed){
                     its_since_last_switch = 0;
                     switch_count++;
-                } else {
-                    its_since_last_switch++;
                 }
             }
+
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
             const BVectorWell dx_well = this->linSys_.solve();
@@ -1535,7 +1507,7 @@ namespace Opm
                 if (relaxation_factor == min_relaxation_factor) {
                     // Still stagnating, terminate iterations if 5 iterations pass.
                     ++stagnate_count;
-                    if (stagnate_count == 6) {
+                    if (false){//(stagnate_count == 6) {
                         sstr << " well " << this->name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
                         const auto reportStag = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, true);
                         if (reportStag.converged()) {
@@ -1569,14 +1541,26 @@ namespace Opm
         }
 
         if (converged) {
+            // update operability if status change
+            const bool is_stopped = this->wellIsStopped();
+            if (is_stopped && !was_stopped){
+                if (this->wellHasTHPConstraints(summary_state)){
+                    this->operability_status_.can_obtain_bhp_with_thp_limit = false;
+                } else {
+                    this->operability_status_.operable_under_only_bhp_limit = false;
+                }
+            } else if (!is_stopped && was_stopped) {
+                this->operability_status_.can_obtain_bhp_with_thp_limit = true;
+                this->operability_status_.operable_under_only_bhp_limit = true;
+            }            
             std::ostringstream sstr;
-            sstr << "     Well " << this->name() << " converged in " << it << " inner iterations.";
+            sstr << "     Well " << this->name() << " converged in " << it << " inner iterations (" << switch_count << " local control switches).";
             if (relax_convergence)
                 sstr << "      (A relaxed tolerance was used after "<< this->param_.strict_inner_iter_wells_ << " iterations)";
             deferred_logger.debug(sstr.str());
         } else {
             std::ostringstream sstr;
-            sstr << "     Well " << this->name() << " did not converge in " << it << " inner iterations.";
+            sstr << "     Well " << this->name() << " did not converge in " << it << " inner iterations (" << switch_count << " local control switches).";
         }
 
         return converged;
