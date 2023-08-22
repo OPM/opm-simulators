@@ -239,33 +239,17 @@ public:
                  const GlobalEqVector& currentResidual,
                  const DofIndices& dofIndices)
     {
-        const auto& comm = this->simulator_.gridView().comm();
-
-        int succeeded;
-        try {
-            auto zero = solutionUpdate[0];
-            zero = 0.0;
-            for (auto dofIdx : dofIndices) {
-                if (solutionUpdate[dofIdx] == zero) {
-                    continue;
-                }
-                updatePrimaryVariables_(dofIdx,
-                                        nextSolution[dofIdx],
-                                        currentSolution[dofIdx],
-                                        solutionUpdate[dofIdx],
-                                        currentResidual[dofIdx]);
+        const auto zero = 0.0 * solutionUpdate[0];
+        for (auto dofIdx : dofIndices) {
+            if (solutionUpdate[dofIdx] == zero) {
+                continue;
             }
-            succeeded = 1;
+            updatePrimaryVariables_(dofIdx,
+                                    nextSolution[dofIdx],
+                                    currentSolution[dofIdx],
+                                    solutionUpdate[dofIdx],
+                                    currentResidual[dofIdx]);
         }
-        catch (...) {
-            succeeded = 0;
-        }
-        succeeded = comm.min(succeeded);
-
-        if (!succeeded)
-            throw NumericalProblem("A process did not succeed in adapting the primary variables");
-
-        numPriVarsSwitched_ = comm.sum(numPriVarsSwitched_);
     }
 
 protected:
