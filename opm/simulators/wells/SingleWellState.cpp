@@ -256,31 +256,28 @@ void SingleWellState::update_injector_targets(const Well& ecl_well, const Summar
         return;
     }
 
-
-    if (inj_controls.cmode == Well::InjectorCMode::GRUP) {
-        this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
-        return;
+    // we initialize all open wells with a rate to avoid singularities
+    double inj_surf_rate = 10.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+    if (inj_controls.cmode == Well::InjectorCMode::RATE) {
+        inj_surf_rate = inj_controls.surface_rate;
     }
 
-    if (inj_controls.cmode == Well::InjectorCMode::RATE) {
-        auto inj_surf_rate = inj_controls.surface_rate;
-        switch (inj_controls.injector_type) {
-        case InjectorType::WATER:
-            assert(pu.phase_used[BlackoilPhases::Aqua]);
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
-            break;
-        case InjectorType::GAS:
-            assert(pu.phase_used[BlackoilPhases::Vapour]);
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
-            break;
-        case InjectorType::OIL:
-            assert(pu.phase_used[BlackoilPhases::Liquid]);
-            this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
-            break;
-        case InjectorType::MULTI:
-            // Not currently handled, keep zero init.
-            break;
-        }
+    switch (inj_controls.injector_type) {
+    case InjectorType::WATER:
+        assert(pu.phase_used[BlackoilPhases::Aqua]);
+        this->surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = inj_surf_rate;
+        break;
+    case InjectorType::GAS:
+        assert(pu.phase_used[BlackoilPhases::Vapour]);
+        this->surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = inj_surf_rate;
+        break;
+    case InjectorType::OIL:
+        assert(pu.phase_used[BlackoilPhases::Liquid]);
+        this->surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] = inj_surf_rate;
+        break;
+    case InjectorType::MULTI:
+        // Not currently handled, keep zero init.
+        break;
     }
 
     if (cmode_is_bhp)
