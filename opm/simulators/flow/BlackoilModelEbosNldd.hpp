@@ -460,7 +460,6 @@ private:
                                                          std::vector<int>& maxCoeffCell)
     {
         const auto& ebosSimulator = model_.ebosSimulator();
-        const auto& grid = model_.ebosSimulator().vanguard().grid();
 
         double pvSumLocal = 0.0;
         double numAquiferPvSumLocal = 0.0;
@@ -474,7 +473,6 @@ private:
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
 
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (auto elemIt = gridView.template begin</*codim=*/0>();
              elemIt != elemEndIt;
              ++elemIt)
@@ -502,7 +500,6 @@ private:
             model_.getMaxCoeff(cell_idx, intQuants, fs, ebosResid, pvValue,
                                B_avg, R_sum, maxCoeff, maxCoeffCell);
         }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ", grid.comm());
 
         // compute local average in terms of global number of elements
         const int bSize = B_avg.size();
