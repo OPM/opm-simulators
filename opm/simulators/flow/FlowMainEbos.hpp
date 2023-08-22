@@ -226,7 +226,6 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             
             // hide average density option 
             EWOMS_HIDE_PARAM(TypeTag, UseAverageDensityMsWells);
-            EWOMS_HIDE_PARAM(TypeTag, LocalWellSolveControlSwitching);
 
             EWOMS_END_PARAM_REGISTRATION(TypeTag);
 
