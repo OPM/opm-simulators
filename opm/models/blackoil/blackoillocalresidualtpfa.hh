@@ -106,6 +106,19 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using Toolbox = MathToolbox<Evaluation>;
 
 public:
+
+    struct LocalNBInfo
+    {
+        double trans;
+        double faceArea;
+        double thpres;
+        double dZg;
+        FaceDir::DirEnum faceDirection;
+        double Vin;
+        double Vex;
+        double inAlpha;
+        double outAlpha;
+    };
     /*!
      * \copydoc FvBaseLocalResidual::computeStorage
      */
@@ -203,55 +216,29 @@ public:
      * one main difference: The darcy flux is calculated here, not
      * read from the extensive quantities of the element context.
      */
+    template<class NaboInfo>
     static void computeFlux(RateVector& flux,
                             RateVector& darcy,
-                            const Problem& problem,
                             const unsigned globalIndexIn,
                             const unsigned globalIndexEx,
                             const IntensiveQuantities& intQuantsIn,
                             const IntensiveQuantities& intQuantsEx,
-                            const Scalar trans,
-                            const Scalar faceArea,
-                            const FaceDir::DirEnum facedir)
+                            const NaboInfo& nbInfo)
     {
         OPM_TIMEBLOCK_LOCAL(computeFlux);
         flux = 0.0;
         darcy = 0.0;
-        Scalar Vin = problem.model().dofTotalVolume(globalIndexIn);
-        Scalar Vex = problem.model().dofTotalVolume(globalIndexEx);
-
-        Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
-
-        // estimate the gravity correction: for performance reasons we use a simplified
-        // approach for this flux module that assumes that gravity is constant and always
-        // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
-        Scalar g = problem.gravity()[dimWorld - 1];
-
-        // this is quite hacky because the dune grid interface does not provide a
-        // cellCenterDepth() method (so we ask the problem to provide it). The "good"
-        // solution would be to take the Z coordinate of the element centroids, but since
-        // ECL seems to like to be inconsistent on that front, it needs to be done like
-        // here...
-        Scalar zIn = problem.dofCenterDepth(globalIndexIn);
-        Scalar zEx = problem.dofCenterDepth(globalIndexEx);
-
-        // the distances from the DOF's depths. (i.e., the additional depth of the
-        // exterior DOF)
-        Scalar distZ = zIn - zEx; // NB could be precalculated
+        const LocalNBInfo local_nbinfo {nbInfo.trans, nbInfo.faceArea,      nbInfo.thpres,
+                                        nbInfo.dZg,   nbInfo.faceDirection, nbInfo.Vin,
+                                        nbInfo.Vex,   nbInfo.inAlpha,       nbInfo.outAlpha};
 
         calculateFluxes_(flux,
                          darcy,
                          intQuantsIn,
                          intQuantsEx,
-                         Vin,
-                         Vex,
                          globalIndexIn,
                          globalIndexEx,
-                         distZ * g,
-                         thpres,
-                         trans,
-                         faceArea,
-                         facedir);
+                         local_nbinfo);
     }
 
     // This function demonstrates compatibility with the ElementContext-based interface.
@@ -262,7 +249,7 @@ public:
                             unsigned scvfIdx,
                             unsigned timeIdx)
     {
-        OPM_TIMEBLOCK_LOCAL(computeFlux);              
+        OPM_TIMEBLOCK_LOCAL(computeFlux);
         assert(timeIdx == 0);
 
         flux = 0.0;
@@ -305,41 +292,43 @@ public:
         // here...
         Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx, timeIdx);
         Scalar zEx = problem.dofCenterDepth(elemCtx, exteriorDofIdx, timeIdx);
-
         // the distances from the DOF's depths. (i.e., the additional depth of the
         // exterior DOF)
         Scalar distZ = zIn - zEx;
+        // for thermal harmonic mean of half trans
+        const Scalar inAlpha = problem.thermalHalfTransmissibility(globalIndexIn, globalIndexEx);
+        const Scalar outAlpha = problem.thermalHalfTransmissibility(globalIndexEx, globalIndexIn);
+
+        const LocalNBInfo localNBInfo {trans, faceArea, thpres, distZ * g, facedir, Vin, Vex, inAlpha, outAlpha};
 
         calculateFluxes_(flux,
                          darcy,
                          intQuantsIn,
                          intQuantsEx,
-                         Vin,
-                         Vex,
                          globalIndexIn,
                          globalIndexEx,
-                         distZ * g,
-                         thpres,
-                         trans,
-                         faceArea,
-                         facedir);
+                         localNBInfo);
     }
 
     static void calculateFluxes_(RateVector& flux,
                                  RateVector& darcy,
                                  const IntensiveQuantities& intQuantsIn,
                                  const IntensiveQuantities& intQuantsEx,
-                                 const Scalar& Vin,
-                                 const Scalar& Vex,
                                  const unsigned& globalIndexIn,
                                  const unsigned& globalIndexEx,
-                                 const Scalar& distZg,
-                                 const Scalar& thpres,
-                                 const Scalar& trans,
-                                 const Scalar& faceArea,
-                                 const FaceDir::DirEnum facedir)
+                                 const LocalNBInfo& localNBInfo)
     {
         OPM_TIMEBLOCK_LOCAL(calculateFluxes);
+        const Scalar Vin = localNBInfo.Vin;
+        const Scalar Vex = localNBInfo.Vex;
+        const Scalar distZg = localNBInfo.dZg;
+        const Scalar thpres = localNBInfo.thpres;
+        const Scalar trans = localNBInfo.trans;
+        const Scalar faceArea = localNBInfo.faceArea;
+        const FaceDir::DirEnum facedir = localNBInfo.faceDirection;
+        const Scalar inAlpha = localNBInfo.inAlpha;
+        const Scalar outAlpha = localNBInfo.outAlpha;
+
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
                 continue;
@@ -358,7 +347,7 @@ public:
                                                              intQuantsEx,
                                                              phaseIdx, // input
                                                              interiorDofIdx, // input
-                                                             exteriorDofIdx, // intput
+                                                             exteriorDofIdx, // input
                                                              Vin,
                                                              Vex,
                                                              globalIndexIn,
@@ -382,7 +371,7 @@ public:
                        (Toolbox::value(up.mobility(phaseIdx, facedir)) * Toolbox::value(transMult) * (-trans / faceArea));
             }
             unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-            darcy[conti0EqIdx + activeCompIdx] = darcyFlux.value() * faceArea; // For the FLORES fluxes
+            darcy[conti0EqIdx + activeCompIdx] = darcyFlux.value() * faceArea; // NB! For the FLORES fluxes without derivatives
 
             unsigned pvtRegionIdx = up.pvtRegionIndex();
             // if (upIdx == globalFocusDofIdx){
@@ -392,12 +381,22 @@ public:
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
                 evalPhaseFluxes_<Evaluation, Evaluation, FluidState>(
                     flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
+                if constexpr (enableEnergy) {
+                    EnergyModule::template addPhaseEnthalpyFluxes_<Evaluation, Evaluation, FluidState>(
+                        flux, phaseIdx, darcyFlux, up.fluidState());
+                }
             } else {
                 const auto& invB = getInvB_<FluidSystem, FluidState, Scalar>(up.fluidState(), phaseIdx, pvtRegionIdx);
                 const auto& surfaceVolumeFlux = invB * darcyFlux;
                 evalPhaseFluxes_<Scalar, Evaluation, FluidState>(
                     flux, phaseIdx, pvtRegionIdx, surfaceVolumeFlux, up.fluidState());
+                if constexpr (enableEnergy) {
+                    EnergyModule::template
+                        addPhaseEnthalpyFluxes_<Scalar, Evaluation, FluidState>
+                        (flux,phaseIdx,darcyFlux, up.fluidState());
+                }
             }
+
         }
 
         // deal with solvents (if present)
@@ -413,7 +412,27 @@ public:
         // PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with energy (if present)
-        static_assert(!enableEnergy, "Relevant computeFlux() method must be implemented for this module before enabling.");
+        if constexpr(enableEnergy){
+            Evaluation heatFlux;
+            {
+                short interiorDofIdx = 0; // NB
+                short exteriorDofIdx = 1; // NB
+
+                EnergyModule::ExtensiveQuantities::template updateEnergy(heatFlux,
+                                                                         interiorDofIdx, // focusDofIndex,
+                                                                         interiorDofIdx,
+                                                                         exteriorDofIdx,
+                                                                         intQuantsIn,
+                                                                         intQuantsEx,
+                                                                         intQuantsIn.fluidState(),
+                                                                         intQuantsEx.fluidState(),
+                                                                         inAlpha,
+                                                                         outAlpha,
+                                                                         faceArea);
+            }
+            EnergyModule::addHeatFlux(flux, heatFlux);
+        }
+        // NB need to be tha last energy call since it does scaling
         // EnergyModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with foam (if present)
@@ -494,36 +513,62 @@ public:
             const unsigned pvtRegionIdx = insideIntQuants.pvtRegionIndex();
 
             RateVector tmp;
-
+            const auto& darcyFlux = volumeFlux[phaseIdx];
             // mass conservation
             if (pBoundary < pInside) {
                 // outflux
                 const auto& invB = getInvB_<FluidSystem, FluidState, Evaluation>(insideIntQuants.fluidState(), phaseIdx, pvtRegionIdx);
-                Evaluation surfaceVolumeFlux = invB * volumeFlux[phaseIdx];
+                Evaluation surfaceVolumeFlux = invB * darcyFlux;
                 evalPhaseFluxes_<Evaluation>(tmp,
                                              phaseIdx,
                                              insideIntQuants.pvtRegionIndex(),
                                              surfaceVolumeFlux,
                                              insideIntQuants.fluidState());
+                if constexpr (enableEnergy) {
+                    EnergyModule::template
+                        addPhaseEnthalpyFluxes_<Evaluation, Evaluation, FluidState>
+                        (tmp, phaseIdx, darcyFlux, insideIntQuants.fluidState());
+                }
             } else if (pBoundary > pInside) {
                 // influx
                 using ScalarFluidState = decltype(bdyInfo.exFluidState);
                 const auto& invB = getInvB_<FluidSystem, ScalarFluidState, Scalar>(bdyInfo.exFluidState, phaseIdx, pvtRegionIdx);
-                Evaluation surfaceVolumeFlux = invB * volumeFlux[phaseIdx];
+                Evaluation surfaceVolumeFlux = invB * darcyFlux;
                 evalPhaseFluxes_<Scalar>(tmp,
                                          phaseIdx,
                                          insideIntQuants.pvtRegionIndex(),
                                          surfaceVolumeFlux,
                                          bdyInfo.exFluidState);
+                if constexpr (enableEnergy) {
+                    EnergyModule::template
+                        addPhaseEnthalpyFluxes_<Scalar, Evaluation, ScalarFluidState>
+                        (tmp,
+                         phaseIdx,
+                         darcyFlux,
+                         bdyInfo.exFluidState);
+                }
             }
 
             for (unsigned i = 0; i < tmp.size(); ++i) {
                 bdyFlux[i] += tmp[i];
             }
-
-            static_assert(!enableEnergy, "Relevant treatment of boundary conditions must be implemented before enabling.");
-            // Add energy flux treatment per phase here.
         }
+
+        // conductive heat flux from boundary
+        Evaluation heatFlux;
+        if constexpr(enableEnergy){
+            // avoid overload of functions with same numeber of elements in eclproblem
+            Scalar alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+            unsigned inIdx = 0;//dummy
+            // always calculated with derivatives of this cell
+            EnergyModule::ExtensiveQuantities::template updateEnergyBoundary(heatFlux,
+                                                                             insideIntQuants,
+                                                                             /*focusDofIndex*/ inIdx,
+                                                                             inIdx,
+                                                                             alpha,
+                                                                             bdyInfo.exFluidState);
+        }
+        EnergyModule::addHeatFlux(bdyFlux, heatFlux);
 
         static_assert(!enableSolvent, "Relevant treatment of boundary conditions must be implemented before enabling.");
         static_assert(!enablePolymer, "Relevant treatment of boundary conditions must be implemented before enabling.");
@@ -531,9 +576,6 @@ public:
 
         // make sure that the right mass conservation quantities are used
         adaptMassConservationQuantities_(bdyFlux, insideIntQuants.pvtRegionIndex());
-
-        // heat conduction
-        static_assert(!enableEnergy, "Relevant treatment of boundary conditions must be implemented before enabling.");
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
@@ -596,8 +638,8 @@ public:
         MICPModule::addSource(source, elemCtx, dofIdx, timeIdx);
 
         // scale the source term of the energy equation
-        if (enableEnergy)
-            source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
+        if constexpr(enableEnergy)
+                        source[Indices::contiEnergyEqIdx] *= getPropValue<TypeTag, Properties::BlackOilEnergyScalingFactor>();
     }
 
     template <class UpEval, class FluidState>

@@ -139,11 +139,9 @@ struct Indices<TypeTag, TTag::BlackOilModel>
 template<class TypeTag>
 struct FluidSystem<TypeTag, TTag::BlackOilModel>
 {
-private:
+public:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-
-public:
     using type = BlackOilFluidSystem<Scalar>;
 };
 
