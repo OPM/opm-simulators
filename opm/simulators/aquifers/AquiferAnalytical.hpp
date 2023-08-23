@@ -22,6 +22,7 @@
 #ifndef OPM_AQUIFERANALYTICAL_HEADER_INCLUDED
 #define OPM_AQUIFERANALYTICAL_HEADER_INCLUDED
 
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/utility/numeric/linearInterpolation.hpp>
 
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>
