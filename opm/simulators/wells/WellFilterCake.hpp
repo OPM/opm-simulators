@@ -36,6 +36,7 @@ public:
     //! \details Used for calculation related to cake filtration due to injection activity.
     void updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
                                         const double dt,
+                                        const double conc,
                                         const std::size_t water_index,
                                         const WellState& well_state);
 
