@@ -247,7 +247,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"GRAVDRM", {true, std::nullopt}},
         {"GRDREACH", {true, std::nullopt}},
         {"GRUPMAST", {true, std::nullopt}},
-        {"GRUPNET", {true, std::nullopt}},
         {"GRUPRIG", {true, std::nullopt}},
         {"GRUPSLAV", {true, std::nullopt}},
         {"GRUPTARG", {true, std::nullopt}},
