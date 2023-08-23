@@ -265,7 +265,9 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 #if HAVE_MPI
             if (firstcall) {
                 const std::size_t size = M.N();
-                detail::copyParValues(parallelInformation_, size, *comm_);
+                if (isParallel()) {
+                    detail::copyParValues(parallelInformation_, size, *comm_);
+                }
             }
 #endif
 
