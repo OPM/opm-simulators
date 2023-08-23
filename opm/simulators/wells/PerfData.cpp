@@ -40,6 +40,7 @@ PerfData::PerfData(std::size_t num_perf, double pressure_first_connection_, bool
     , micp_rates(num_perf)
     , cell_index(num_perf)
     , connection_transmissibility_factor(num_perf)
+    , connection_d_factor(num_perf)
     , satnum_id(num_perf)
     , ecl_index(num_perf)
 {
@@ -65,6 +66,7 @@ PerfData PerfData::serializationTestObject()
     result.micp_rates = {16.0};
     result.cell_index = {17, 18, 19, 20};
     result.connection_transmissibility_factor = {21.0};
+    result.connection_d_factor = {21.5};
     result.satnum_id = {22, 23};
     result.ecl_index = {24};
     result.water_throughput = {25.0, 26.0};
@@ -119,6 +121,7 @@ bool PerfData::operator==(const PerfData& rhs) const
            this->micp_rates == rhs.micp_rates &&
            this->cell_index == rhs.cell_index &&
            this->connection_transmissibility_factor == rhs.connection_transmissibility_factor &&
+           this->connection_d_factor == rhs.connection_d_factor &&
            this->satnum_id == rhs.satnum_id &&
            this->ecl_index == rhs.ecl_index &&
            this->water_throughput == rhs.water_throughput &&

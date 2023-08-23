@@ -853,6 +853,7 @@ assignShutConnections(data::Wells& wsrpt,
 
             xc.effective_Kh = conn.Kh();
             xc.trans_factor = conn.CF();
+            xc.d_factor = conn.dFactor();
         }
 
         ++wellID;

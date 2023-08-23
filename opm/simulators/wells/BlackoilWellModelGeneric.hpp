@@ -133,6 +133,14 @@ public:
         return this->active_wgstate_.well_state;
     }
 
+    /*
+      Will return the currently active nupcolWellState; must initialize
+      the internal nupcol wellstate with initNupcolWellState() first.
+    */
+    const WellState& nupcolWellState() const
+    {
+        return this->nupcol_wgstate_.well_state;
+    }
     GroupState& groupState() { return this->active_wgstate_.group_state; }
 
     WellTestState& wellTestState() { return this->active_wgstate_.well_test_state; }
@@ -276,18 +284,13 @@ protected:
         return this->last_valid_wgstate_.well_state;
     }
 
+
     const WGState& prevWGState() const
     {
         return this->last_valid_wgstate_;
     }
-    /*
-      Will return the currently active nupcolWellState; must initialize
-      the internal nupcol wellstate with initNupcolWellState() first.
-    */
-    const WellState& nupcolWellState() const
-    {
-        return this->nupcol_wgstate_.well_state;
-    }
+
+
 
     /*
       Will store a copy of the input argument well_state in the

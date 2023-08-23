@@ -349,6 +349,13 @@ public:
         return 0;
     }
 
+    double wellIndex(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const SingleWellState& ws) const;
+
+    void updateConnectionDFactor(const Simulator& simulator, SingleWellState& ws) const;
+
+    void updateConnectionTransmissibilityFactor(const Simulator& simulator, SingleWellState& ws) const;
+
+
 protected:
     // simulation parameters
     const ModelParameters& param_;
@@ -439,6 +446,8 @@ protected:
                                 const std::vector<Scalar>& mobility,
                                 double* connII,
                                 DeferredLogger& deferred_logger) const;
+
+
 };
 
 }
