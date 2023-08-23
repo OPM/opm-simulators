@@ -118,6 +118,7 @@ public:
         double Vex;
         double inAlpha;
         double outAlpha;
+	double diffusivity;
     };
     /*!
      * \copydoc FvBaseLocalResidual::computeStorage
@@ -277,7 +278,7 @@ public:
         // estimate the gravity correction: for performance reasons we use a simplified
         // approach for this flux module that assumes that gravity is constant and always
         // acts into the downwards direction. (i.e., no centrifuge experiments, sorry.)
-        Scalar g = problem.gravity()[dimWorld - 1];
+        const Scalar g = problem.gravity()[dimWorld - 1];
         const auto& intQuantsIn = elemCtx.intensiveQuantities(interiorDofIdx, timeIdx);
         const auto& intQuantsEx = elemCtx.intensiveQuantities(exteriorDofIdx, timeIdx);
 
@@ -294,8 +295,9 @@ public:
         // for thermal harmonic mean of half trans
         const Scalar inAlpha = problem.thermalHalfTransmissibility(globalIndexIn, globalIndexEx);
         const Scalar outAlpha = problem.thermalHalfTransmissibility(globalIndexEx, globalIndexIn);
+	const Scalar diffusivity = problem.diffusivity(globalIndexEx, globalIndexIn);
 
-        const ResidualNBInfo res_nbinfo {trans, faceArea, thpres, distZ * g, facedir, Vin, Vex, inAlpha, outAlpha};
+        const ResidualNBInfo res_nbinfo {trans, faceArea, thpres, distZ * g, facedir, Vin, Vex, inAlpha, outAlpha, diffusivity};
 
         calculateFluxes_(flux,
                          darcy,
@@ -324,6 +326,7 @@ public:
         const FaceDir::DirEnum facedir = nbInfo.faceDirection;
         const Scalar inAlpha = nbInfo.inAlpha;
         const Scalar outAlpha = nbInfo.outAlpha;
+        const Scalar diffusivity = nbInfo.diffusivity;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
@@ -440,9 +443,18 @@ public:
         // BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with diffusion (if present)
-        static_assert(!enableDiffusion, "Relevant computeFlux() method must be implemented for this module before enabling.");
-        // DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
+        //static_assert(!enableDiffusion, "Relevant computeFlux() method must be implemented for this module before enabling.");
+        if constexpr(enableDiffusion){
+            typename DiffusionModule::ExtensiveQuantities::EvaluationArray effectiveDiffusionCoefficient;
+            Scalar tmpdiffusivity = diffusivity/faceArea;
+            DiffusionModule::ExtensiveQuantities::update_(tmpdiffusivity,effectiveDiffusionCoefficient,intQuantsIn,intQuantsEx);
+            DiffusionModule::addDiffusiveFlux(flux,
+                                              intQuantsIn.fluidState(),
+                                              intQuantsEx.fluidState(),
+                                              tmpdiffusivity,
+                                              effectiveDiffusionCoefficient);
 
+        }
         // deal with micp (if present)
         static_assert(!enableMICP, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // MICPModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);

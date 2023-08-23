@@ -112,6 +112,7 @@ class TpfaLinearizer
 
     static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
     static const bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
+    static const bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     // copying the linearizer is not a good idea
     TpfaLinearizer(const TpfaLinearizer&);
 //! \endcond
@@ -449,14 +450,19 @@ private:
                         Scalar inAlpha {0.};
                         Scalar outAlpha {0.};
                         FaceDirection dirId = FaceDirection::Unknown;
+                        Scalar diffusivity {0.};
                         if constexpr(enableEnergy){
                             inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
                             outAlpha = problem_().thermalHalfTransmissibility(neighborIdx, myIdx);
                         }
+                        if constexpr(enableDiffusion){
+                            diffusivity = problem_().diffusivity(myIdx, neighborIdx);
+                        }
                         if (materialLawManager->hasDirectionalRelperms()) {
                             dirId = scvf.faceDirFromDirId();
                         }
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres, dZg, dirId, Vin, Vex, inAlpha, outAlpha}, nullptr};
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres, dZg, dirId, Vin, Vex, inAlpha, outAlpha, diffusivity}, nullptr};
+
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
