@@ -55,10 +55,19 @@ public:
                                   /*disabledCompIdx=*/FluidSystem::waterCompIdx,
                                   getPropValue<TypeTag, Properties::EnableMICP>()> type;
 };
+// template<class TypeTag>
+// struct EnableEnergy<TypeTag, TTag::EclFlowGasOilEnergyProblem> {
+//     static constexpr bool value = true;
+// };
+// template<class TypeTag>
+// struct Linearizer<TypeTag, TTag::EclFlowGasOilEnergyProblem> { using type = TpfaLinearizer<TypeTag>; };
+
+// template<class TypeTag>
+// struct LocalResidual<TypeTag, TTag::EclFlowGasOilEnergyProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::EclFlowGasOilEnergyProblem> {
-    static constexpr bool value = true;
-};
+struct EnableDiffusion<TypeTag, TTag::EclFlowGasOilEnergyProblem> { static constexpr bool value = false; };
+
 }}
 
 namespace Opm {

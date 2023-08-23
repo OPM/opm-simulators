@@ -777,6 +777,8 @@ public:
         return transmissibilities_.transmissibility(globalCenterElemIdx, globalElemIdx);
     }
 
+
+
     /*!
      * \copydoc EclTransmissiblity::diffusivity
      */
@@ -788,6 +790,25 @@ public:
         assert(fromDofLocalIdx == 0);
         return *pffDofData_.get(context.element(), toDofLocalIdx).diffusivity;
     }
+
+    /*!
+     * give the transissibility for a face i.e. pair. should be symmetic?
+     */
+    Scalar diffusivity(const unsigned globalCellIn, const unsigned globalCellOut) const{
+        return transmissibilities_.diffusivity(globalCellIn, globalCellOut);
+    }
+
+    /*!
+     * \brief Direct access to a boundary transmissibility.
+     */
+    Scalar thermalTransmissibilityBoundary(const unsigned globalSpaceIdx,
+                                    const unsigned boundaryFaceIdx) const
+    {
+        return transmissibilities_.thermalTransmissibilityBoundary(globalSpaceIdx, boundaryFaceIdx);
+    }
+
+
+
 
     /*!
      * \copydoc EclTransmissiblity::transmissibilityBoundary
@@ -807,6 +828,16 @@ public:
                                     const unsigned boundaryFaceIdx) const
     {
         return transmissibilities_.transmissibilityBoundary(globalSpaceIdx, boundaryFaceIdx);
+    }
+
+
+    /*!
+     * \copydoc EclTransmissiblity::thermalHalfTransmissibility
+     */
+    Scalar thermalHalfTransmissibility(const unsigned globalSpaceIdxIn,
+                                       const unsigned globalSpaceIdxOut) const
+    {
+        return transmissibilities_.thermalHalfTrans(globalSpaceIdxIn,globalSpaceIdxOut);
     }
 
     /*!
