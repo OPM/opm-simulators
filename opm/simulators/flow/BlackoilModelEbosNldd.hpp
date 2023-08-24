@@ -31,6 +31,7 @@
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 
 #include <opm/simulators/flow/partitionCells.hpp>
+#include <opm/simulators/flow/priVarsPacking.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
 
 #include <opm/simulators/linalg/extractMatrix.hpp>
@@ -266,7 +267,22 @@ public:
         const auto& comm = model_.ebosSimulator().vanguard().grid().comm();
         if (comm.size() > 1) {
             const auto& ccomm = model_.ebosSimulator().model().newtonMethod().linearSolver().comm();
+
+            // Copy numerical values from primary vars.
             ccomm->copyOwnerToAll(solution, solution);
+
+            // Copy flags from primary vars.
+            const std::size_t num = solution.size();
+            Dune::BlockVector<std::size_t> allmeanings(num);
+            for (std::size_t ii = 0; ii < num; ++ii) {
+                allmeanings[ii] = PVUtil::pack(solution[ii]);
+            }
+            ccomm->copyOwnerToAll(allmeanings, allmeanings);
+            for (std::size_t ii = 0; ii < num; ++ii) {
+                PVUtil::unPack(solution[ii], allmeanings[ii]);
+            }
+
+            // Update intensive quantities for our overlap values.
             model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantitiesOverlap(/*timeIdx=*/0);
         }
 
