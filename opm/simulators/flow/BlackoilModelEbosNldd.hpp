@@ -256,6 +256,20 @@ public:
             model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         }
 
+        // Communicate solutions:
+        // With multiple processes, this process' overlap (i.e. not
+        // owned) cells' solution values have been modified by local
+        // solves in the owning processes, and remain unchanged
+        // here. We must therefore receive the updated solution on the
+        // overlap cells and update their intensive quantities before
+        // we move on.
+        const auto& comm = model_.ebosSimulator().vanguard().grid().comm();
+        if (comm.size() > 1) {
+            const auto& ccomm = model_.ebosSimulator().model().newtonMethod().linearSolver().comm();
+            ccomm->copyOwnerToAll(solution, solution);
+            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantitiesOverlap(/*timeIdx=*/0);
+        }
+
         // Finish with a Newton step.
         // Note that the "iteration + 100" is a simple way to avoid entering
         // "if (iteration == 0)" and similar blocks, and also makes it a little

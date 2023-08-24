@@ -352,6 +352,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         /// \copydoc NewtonIterationBlackoilInterface::parallelInformation
         const std::any& parallelInformation() const { return parallelInformation_; }
 
+        const CommunicationType* comm() const { return comm_.get(); }
+
     protected:
 #if HAVE_MPI
         using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
