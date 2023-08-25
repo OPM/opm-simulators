@@ -14,8 +14,9 @@ inline bool is_close(double a, double b, double tol = TOLERANCE) {
 }
 
 BOOST_AUTO_TEST_CASE(CheckTSINITAndNEXTSTEP)
-{    
-    //std::string case_name(boost::unit_test::framework::master_test_suite().argv[1]);        std::string case_name("02_TUNING_TSINIT_NEXTSTEP");
+{
+    std::string case_name("02_TUNING_TSINIT_NEXTSTEP");
+
     BOOST_TEST_MESSAGE("---------------------------------------------------------------------------");
     BOOST_TEST_MESSAGE("Checking TSINIT and NEXTSTEP, see file " + case_name + ".DATA");
     BOOST_TEST_MESSAGE("---------------------------------------------------------------------------");
