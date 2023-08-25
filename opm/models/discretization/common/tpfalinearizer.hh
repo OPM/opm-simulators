@@ -191,7 +191,29 @@ public:
      */
     void linearizeDomain()
     {
-        linearizeDomain(fullDomain_);
+        int succeeded;
+        try {
+            linearizeDomain(fullDomain_);
+            succeeded = 1;
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << "rank " << simulator_().gridView().comm().rank()
+                      << " caught an exception while linearizing:" << e.what()
+                      << "\n"  << std::flush;
+            succeeded = 0;
+        }
+        catch (...)
+        {
+            std::cout << "rank " << simulator_().gridView().comm().rank()
+                      << " caught an exception while linearizing"
+                      << "\n"  << std::flush;
+            succeeded = 0;
+        }
+        succeeded = simulator_().gridView().comm().min(succeeded);
+
+        if (!succeeded)
+            throw NumericalProblem("A process did not succeed in linearizing the system");
     }
 
     /*!
@@ -222,29 +244,7 @@ public:
             resetSystem_(domain);
         }
 
-        int succeeded;
-        try {
-            linearize_(domain);
-            succeeded = 1;
-        }
-        catch (const std::exception& e)
-        {
-            std::cout << "rank " << simulator_().gridView().comm().rank()
-                      << " caught an exception while linearizing:" << e.what()
-                      << "\n"  << std::flush;
-            succeeded = 0;
-        }
-        catch (...)
-        {
-            std::cout << "rank " << simulator_().gridView().comm().rank()
-                      << " caught an exception while linearizing"
-                      << "\n"  << std::flush;
-            succeeded = 0;
-        }
-        succeeded = simulator_().gridView().comm().min(succeeded);
-
-        if (!succeeded)
-            throw NumericalProblem("A process did not succeed in linearizing the system");
+        linearize_(domain);
     }
 
     void finalize()
