@@ -435,13 +435,15 @@ namespace Opm {
         // we need the inj_multiplier from the previous time step
         this->initInjMult();
 
+        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         if (alternative_well_rate_init_) {
             // Update the well rates of well_state_, if only single-phase rates, to
             // have proper multi-phase rates proportional to rates at bhp zero.
             // This is done only for producers, as injectors will only have a single
             // nonzero phase anyway.
             for (auto& well : well_container_) {
-                if (well->isProducer()) {
+                const bool zero_target = well->stopppedOrZeroRateTarget(summaryState, this->wellState());
+                if (well->isProducer() && !zero_target) {
                     well->updateWellStateRates(ebosSimulator_, this->wellState(), local_deferredLogger);
                 }
             }
@@ -466,7 +468,6 @@ namespace Opm {
 
         //update guide rates
         const auto& comm = ebosSimulator_.vanguard().grid().comm();
-        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
         std::vector<double> pot(numPhases(), 0.0);
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
         WellGroupHelpers::updateGuideRates(fieldGroup, schedule(), summaryState, this->phase_usage_, reportStepIdx, simulationTime,
