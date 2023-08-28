@@ -325,7 +325,7 @@ struct ShutUnsolvableWells<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct AlternativeWellRateInit<TypeTag, TTag::FlowModelParameters> {
-    static constexpr bool value = true;
+    static constexpr bool value = false;
 };
 template<class TypeTag>
 struct StrictOuterIterWells<TypeTag, TTag::FlowModelParameters> {
