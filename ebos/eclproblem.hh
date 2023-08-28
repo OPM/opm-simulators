@@ -355,7 +355,7 @@ public:
             // if support for the TUNING keyword is enabled, we get the initial time
             // steping parameters from it instead of from command line parameters
             const auto& tuning = schedule[0].tuning();
-            this->initialTimeStepSize_ = tuning.TSINIT;
+            this->initialTimeStepSize_ = tuning.TSINIT.has_value() ? tuning.TSINIT.value() : -1.0;
             this->maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
         }
 
@@ -542,7 +542,8 @@ public:
 
         // set the size of the initial time step of the episode
         Scalar dt = limitNextTimeStepSize_(simulator.episodeLength());
-        if (episodeIdx == 0 || tuningEvent)
+        // negative value of initialTimeStepSize_ indicates no active limit from TSINIT or NEXTSTEP
+        if ( (episodeIdx == 0 || tuningEvent) && this->initialTimeStepSize_ > 0)
             // allow the size of the initial time step to be set via an external parameter
             // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
             dt = std::min(dt, this->initialTimeStepSize_);

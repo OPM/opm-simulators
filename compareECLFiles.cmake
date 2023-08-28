@@ -312,6 +312,14 @@ add_test_runSimulator(CASENAME notuning_xxxmbe
 
 set_tests_properties(runSimulator/notuning_xxxmbe PROPERTIES WILL_FAIL TRUE)
 
+add_test_runSimulator(CASENAME tuning_tsinit_nextstep
+                      FILENAME 02_TUNING_TSINIT_NEXTSTEP
+                      SIMULATOR flow
+											DIR tuning
+                      TEST_ARGS --enable-tuning=true
+                      POST_COMMAND $<TARGET_FILE:test_tuning_tsinit_nextstep>)
+
+
 include (${CMAKE_CURRENT_SOURCE_DIR}/regressionTests.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/restartTests.cmake)
 
