@@ -100,6 +100,14 @@ add_test_compareECLFiles(CASENAME network_balance_01
 		                 DIR network
 		                 TEST_ARGS --enable-tuning=true)
 
+add_test_compareECLFiles(CASENAME network_standard
+		                 FILENAME NETWORK-01_STANDARD
+		                 SIMULATOR flow
+		                 ABS_TOL ${abs_tol}
+		                 REL_TOL ${rel_tol}
+		                 DIR network
+		                 TEST_ARGS --enable-tuning=true)
+
 add_test_compareECLFiles(CASENAME gas_precsalt
                          FILENAME GASWATER_VAPWAT_PRECSALT
                          SIMULATOR flow

@@ -38,6 +38,7 @@ namespace Opm {
 void WellFilterCake::
 updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
                                const double dt,
+                               const double conc,
                                const std::size_t water_index,
                                const WellState& well_state)
 {
@@ -52,11 +53,6 @@ updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
 
     const auto injectorType = well.wellEcl().injectorType();
     if (injectorType != InjectorType::WATER) {
-        return;
-    }
-
-    const double conc = well.wellEcl().getFilterConc();
-    if (conc == 0.) {
         return;
     }
 
