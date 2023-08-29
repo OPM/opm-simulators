@@ -478,17 +478,19 @@ protected:
     std::function<std::array<double,dimensionworld>(int)>
     cellCentroids_(const CartMapper& cartMapper) const
     {
-        auto rank = this->gridView().comm().rank();
-        if (rank == 0)
-        {
-            LookUpCellCentroid<Grid,GridView> lookUpCellCentroid(this->gridView(), cartMapper, &(this ->eclState().getInputGrid()));
-            return lookUpCellCentroid;
-        }
-        else
-        {
-            LookUpCellCentroid<Grid,GridView> lookUpCellCentroid(this->gridView(), cartMapper, nullptr);
-            return lookUpCellCentroid;
-        }
+        return [this, cartMapper](int elemIdx) {
+            std::array<double,dimensionworld> centroid;
+            if (this->gridView().comm().rank() == 0)
+            {
+                centroid =  this->eclState().getInputGrid().getCellCenter(cartMapper.cartesianIndex(elemIdx));
+            }
+            else
+            {
+                LookUpCellCentroid<Grid,GridView> lookUpCellCentroid(this->gridView(), cartMapper, nullptr);
+                centroid = lookUpCellCentroid(elemIdx);
+            }
+            return centroid;
+        };
     }
 
     void callImplementationInit()
