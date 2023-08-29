@@ -374,5 +374,17 @@ private:
 
     void assertHasElements() const;
 };
+
+template <class T>
+std::ostream& operator<<(std::ostream &os, const CuVector<T> &arg)
+{
+    std::vector<T> v = arg.asStdVector();
+    for (int i = 0; i < v.size(); i++){
+        os << v[i] << " ";
+    }
+    os << std::endl;
+    return os;
+}
+
 } // namespace Opm::cuistl
 #endif
