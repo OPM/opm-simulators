@@ -406,6 +406,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclproblem.hh
   ebos/eclproblem_properties.hh
   ebos/eclsolutioncontainers.hh
+  ebos/ecltimesteppingparams.hh
   ebos/eclthresholdpressure.hh
   ebos/ecltracermodel.hh
   ebos/ecltransmissibility.hh

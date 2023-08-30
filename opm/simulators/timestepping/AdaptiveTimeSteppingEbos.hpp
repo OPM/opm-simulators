@@ -10,6 +10,8 @@
 #include <dune/istl/ilu.hh>
 #endif
 
+#include <ebos/ecltimesteppingparams.hh>
+
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -46,29 +48,11 @@
 namespace Opm::Properties {
 
 namespace TTag {
-struct FlowTimeSteppingParameters {};
+struct FlowTimeSteppingParameters {
+  using InheritsFrom = std::tuple<EclTimeSteppingParameters>;
+};
 }
 
-template<class TypeTag, class MyTypeTag>
-struct SolverRestartFactor {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct SolverGrowthFactor {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct SolverMaxGrowth {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct SolverMaxTimeStepInDays {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct SolverMinTimeStep {
-    using type = UndefinedProperty;
-};
 template<class TypeTag, class MyTypeTag>
 struct SolverContinueOnConvergenceFailure {
     using type = UndefinedProperty;
@@ -91,10 +75,6 @@ struct InitialTimeStepInDays {
 };
 template<class TypeTag, class MyTypeTag>
 struct FullTimeStepInitially {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct TimeStepAfterEventInDays {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -143,31 +123,6 @@ struct MinTimeStepBasedOnNewtonIterations {
 };
 
 template<class TypeTag>
-struct SolverRestartFactor<TypeTag, TTag::FlowTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.33;
-};
-template<class TypeTag>
-struct SolverGrowthFactor<TypeTag, TTag::FlowTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 2.0;
-};
-template<class TypeTag>
-struct SolverMaxGrowth<TypeTag, TTag::FlowTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 3.0;
-};
-template<class TypeTag>
-struct SolverMaxTimeStepInDays<TypeTag, TTag::FlowTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 365.0;
-};
-template<class TypeTag>
-struct SolverMinTimeStep<TypeTag, TTag::FlowTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0e-12;
-};
-template<class TypeTag>
 struct SolverContinueOnConvergenceFailure<TypeTag, TTag::FlowTimeSteppingParameters> {
     static constexpr bool value = false;
 };
@@ -191,11 +146,6 @@ struct InitialTimeStepInDays<TypeTag, TTag::FlowTimeSteppingParameters> {
 template<class TypeTag>
 struct FullTimeStepInitially<TypeTag, TTag::FlowTimeSteppingParameters> {
     static constexpr bool value = false;
-};
-template<class TypeTag>
-struct TimeStepAfterEventInDays<TypeTag, TTag::FlowTimeSteppingParameters> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1.0;
 };
 template<class TypeTag>
 struct TimeStepControl<TypeTag, TTag::FlowTimeSteppingParameters> {
@@ -350,17 +300,8 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
 
         static void registerParameters()
         {
+            registerEclTimeSteppingParameters<TypeTag>();
             // TODO: make sure the help messages are correct (and useful)
-            EWOMS_REGISTER_PARAM(TypeTag, double, SolverRestartFactor,
-                                 "The factor time steps are elongated after restarts");
-            EWOMS_REGISTER_PARAM(TypeTag, double, SolverGrowthFactor,
-                                 "The factor time steps are elongated after a successful substep");
-            EWOMS_REGISTER_PARAM(TypeTag, double, SolverMaxGrowth,
-                                 "The maximum factor time steps are elongated after a report step");
-            EWOMS_REGISTER_PARAM(TypeTag, double, SolverMaxTimeStepInDays,
-                                 "The maximum size of a time step in days");
-            EWOMS_REGISTER_PARAM(TypeTag, double, SolverMinTimeStep,
-                                 "The minimum size of a time step in days for field and metric and hours for lab. If a step cannot converge without getting cut below this step size the simulator will stop");
             EWOMS_REGISTER_PARAM(TypeTag, bool, SolverContinueOnConvergenceFailure,
                                  "Continue instead of stop when minimum solver time step is reached");
             EWOMS_REGISTER_PARAM(TypeTag, int, SolverMaxRestarts,
@@ -373,8 +314,6 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                                  "The size of the initial time step in days");
             EWOMS_REGISTER_PARAM(TypeTag, bool, FullTimeStepInitially,
                                  "Always attempt to finish a report step using a single substep");
-            EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepAfterEventInDays,
-                                 "Time step size of the first time step after an event occurs during the simulation in days");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, TimeStepControl,
                                  "The algorithm used to determine time-step sizes. valid options are: 'pid' (default), 'pid+iteration', 'pid+newtoniteration', 'iterationcount', 'newtoniterationcount' and 'hardcoded'");
             EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepControlTolerance,
