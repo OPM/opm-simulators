@@ -343,7 +343,7 @@ assembleAccelerationAndHydroPressureLosses(const int seg,
     if (!use_average_density){
         MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
             assembleHydroPressureLoss(seg, seg, hydro_pressure_drop_seg, linSys_);
-            segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop_seg.value();
+        segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop_seg.value();
     } else {
         const int seg_outlet = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
         const auto hydro_pressure_drop_outlet = segments_.getHydroPressureLoss(seg, seg_outlet);
