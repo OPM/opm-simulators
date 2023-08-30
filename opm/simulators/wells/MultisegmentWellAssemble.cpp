@@ -375,8 +375,8 @@ OutputWellLinearSystem(Equations& eqns1,
                        const std::string name) const
 {
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
-    const std::string matrix_name = "/home/steink/debug_output/matrix_" + name;
-    const std::string residual_name = "/home/steink/debug_output/residual_" + name;
+    const std::string matrix_name = "matrix_" + name; //"/home/steink/debug_output/matrix_" + name;
+    const std::string residual_name = "residual_" + name; //"/home/steink/debug_output/residual_" + name;
     Dune::storeMatrixMarket(eqns.D(), matrix_name);
     Dune::storeMatrixMarket(eqns.residual(), residual_name);
 }

@@ -1310,7 +1310,7 @@ namespace Opm
             const BVectorWell dx_well = this->linSys_.solve();
 
             // --------------------------------------------------------
-            if(it > max_iter_number-10){
+            if (false){ //(it > max_iter_number-10){
                 std::cout << "Writing system for well:" << this->name() << " at local it: " << it << std::endl; 
                 const std::string case_name = this->name() + "_" + std::to_string(it);
                 MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
