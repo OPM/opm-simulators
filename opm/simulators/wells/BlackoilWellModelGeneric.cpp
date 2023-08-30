@@ -1491,7 +1491,7 @@ void BlackoilWellModelGeneric::updateInjFCMult(DeferredLogger& deferred_logger)
         if (well->isInjector()) {
             const auto it = filter_cake_.find(well->name());
             if (it != filter_cake_.end()) {
-                it->second.updateInjFCMult(*well, deferred_logger);
+                it->second.updateInjFCMult(*well, this->wellState(), deferred_logger);
                 well->updateFilterCakeMultipliers(it->second.multipliers());
             }
         }

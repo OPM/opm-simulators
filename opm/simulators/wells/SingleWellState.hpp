@@ -69,6 +69,7 @@ public:
         serializer(events);
         serializer(injection_cmode);
         serializer(production_cmode);
+        serializer(filtrate_conc);
         serializer(perf_data);
     }
 
@@ -83,6 +84,9 @@ public:
     double bhp{0};
     double thp{0};
     double temperature{0};
+
+    // filtration injection concentration
+    double filtrate_conc{0};
 
     std::array<double,4> phase_mixing_rates{};
     enum RateIndices {
@@ -127,6 +131,9 @@ public:
     double sum_solvent_rates() const;
     double sum_polymer_rates() const;
     double sum_brine_rates() const;
+
+    double sum_filtrate_rate() const;
+    double sum_filtrate_total() const;
 
 private:
     double sum_connection_rates(const std::vector<double>& connection_rates) const;

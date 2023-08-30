@@ -166,6 +166,17 @@ double SingleWellState::sum_solvent_rates() const {
     return this->sum_connection_rates(this->perf_data.solvent_rates);
 }
 
+double SingleWellState::sum_filtrate_rate() const {
+    if (this->producer) return 0.;
+
+    return this->sum_connection_rates(this->perf_data.filtrate_data.rates);
+}
+
+double SingleWellState::sum_filtrate_total() const {
+    if (this->producer) return 0.;
+
+    return this->sum_connection_rates(this->perf_data.filtrate_data.total);
+}
 
 void SingleWellState::update_producer_targets(const Well& ecl_well, const SummaryState& st) {
     const double bhp_safety_factor = 0.99;
@@ -300,6 +311,7 @@ bool SingleWellState::operator==(const SingleWellState& rhs) const
            this->reservoir_rates == rhs.reservoir_rates &&
            this->prev_surface_rates == rhs.prev_surface_rates &&
            this->perf_data == rhs.perf_data &&
+           this->filtrate_conc == rhs.filtrate_conc &&
            this->trivial_target == rhs.trivial_target &&
            this->segments == rhs.segments &&
            this->events == rhs.events &&

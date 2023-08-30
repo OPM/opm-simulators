@@ -38,10 +38,11 @@ public:
                                         const double dt,
                                         const double conc,
                                         const std::size_t water_index,
-                                        const WellState& well_state);
+                                        WellState& well_state);
 
     //! \brief Update the multiplier for well transmissbility due to cake filtration.
     void updateInjFCMult(const WellInterfaceGeneric& well,
+                         WellState& well_state,
                          DeferredLogger& deferred_logger);
 
     //! \brief Returns a const-ref to multipliers.
