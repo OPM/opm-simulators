@@ -45,7 +45,6 @@
 
 #include <fmt/format.h>
 
-#include "MultisegmentWellSegments.hpp"
 #include <algorithm>
 #include <array>
 #include <cmath>
