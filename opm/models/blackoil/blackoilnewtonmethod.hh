@@ -55,6 +55,10 @@ template<class TypeTag, class MyTypeTag>
 struct TemperatureMax { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct TemperatureMin { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct MaximumWaterSaturation { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct WaterOnlyThreshold { using type = UndefinedProperty; };
 template<class TypeTag>
 struct DpMaxRel<TypeTag, TTag::NewtonMethod>
 {
@@ -93,6 +97,18 @@ struct TemperatureMin<TypeTag, TTag::NewtonMethod>
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.0; //Kelvin
 };
+template<class TypeTag>
+struct MaximumWaterSaturation<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
+template<class TypeTag>
+struct WaterOnlyThreshold<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1.0;
+};
 } // namespace Opm::Properties
 
 namespace Opm {
@@ -130,7 +146,8 @@ public:
         maxTempChange_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxTemperatureChange);
         tempMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, TemperatureMax);
         tempMin_ = EWOMS_GET_PARAM(TypeTag, Scalar, TemperatureMin);
-
+        waterSaturationMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaximumWaterSaturation);
+        waterOnlyThreshold_ = EWOMS_GET_PARAM(TypeTag, Scalar, WaterOnlyThreshold);
     }
 
     /*!
@@ -159,6 +176,8 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxTemperatureChange, "Maximum absolute change of temperature in a single iteration");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, TemperatureMax, "Maximum absolute temperature");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, TemperatureMin, "Minimum absolute temperature");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaximumWaterSaturation, "Maximum water saturation");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, WaterOnlyThreshold, "Cells with water saturation above or equal is considered one-phase water only");
     }
 
     /*!
@@ -433,9 +452,9 @@ protected:
         // use a threshold value after a switch to make it harder to switch back
         // immediately.
         if (wasSwitched_[globalDofIdx])
-            wasSwitched_[globalDofIdx] = nextValue.adaptPrimaryVariables(this->problem(), globalDofIdx, priVarOscilationThreshold_);
+            wasSwitched_[globalDofIdx] = nextValue.adaptPrimaryVariables(this->problem(), globalDofIdx, waterSaturationMax_, waterOnlyThreshold_, priVarOscilationThreshold_);
         else
-            wasSwitched_[globalDofIdx] = nextValue.adaptPrimaryVariables(this->problem(), globalDofIdx);
+            wasSwitched_[globalDofIdx] = nextValue.adaptPrimaryVariables(this->problem(), globalDofIdx, waterSaturationMax_, waterOnlyThreshold_);
 
         if (wasSwitched_[globalDofIdx])
             ++ numPriVarsSwitched_;
@@ -450,6 +469,9 @@ private:
     int numPriVarsSwitched_;
 
     Scalar priVarOscilationThreshold_;
+    Scalar waterSaturationMax_;
+    Scalar waterOnlyThreshold_;
+
     Scalar dpMaxRel_;
     Scalar dsMax_;
     bool projectSaturations_;

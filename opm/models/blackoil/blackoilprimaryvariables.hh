@@ -493,10 +493,8 @@ public:
      *
      * \return true Iff the interpretation of one of the switching variables was changed
      */
-    bool adaptPrimaryVariables(const Problem& problem, unsigned globalDofIdx, Scalar eps = 0.0)
+    bool adaptPrimaryVariables(const Problem& problem, unsigned globalDofIdx, Scalar swMaximum, Scalar thresholdWaterFilledCell, Scalar eps = 0.0)
     {
-        static const Scalar thresholdWaterFilledCell = 1.0 - eps;
-
         // this function accesses quite a few black-oil specific low-level functions
         // directly for better performance (instead of going the canonical way through
         // the IntensiveQuantities). The reason is that most intensive quantities are not
@@ -546,16 +544,17 @@ public:
         // keep track if any meaning has changed
         bool changed = false;
 
-        // special case cells with almost only water
-        // use both saturations (if the phase is enabled)
-        // if dissolved gas in water is enabled we shouldn't enter
+        // Special case for cells with almost only water
+        // for these cells both saturations (if the phase is enabled) is used
+        // to avoid singular systems.
+        // If dissolved gas in water is enabled we shouldn't enter
         // here but instead switch to Rsw as primary variable
         // as sw >= 1.0 -> gas <= 0 (i.e. gas phase disappears)
         if (sw >= thresholdWaterFilledCell && !FluidSystem::enableDissolvedGasInWater()) {
 
-            // make sure water saturations does not exceed 1.0
+            // make sure water saturations does not exceed sw_maximum. Default to 1.0
             if constexpr (waterEnabled) {
-                (*this)[Indices::waterSwitchIdx] = 1.0;
+                (*this)[Indices::waterSwitchIdx] = std::min(swMaximum, sw);
                 assert(primaryVarsMeaningWater() == WaterMeaning::Sw);
             }
             // the hydrocarbon gas saturation is set to 0.0
