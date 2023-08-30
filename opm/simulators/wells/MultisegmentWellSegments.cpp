@@ -631,7 +631,8 @@ template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 pressureDropAutoICD(const int seg,
-                    const UnitSystem& unit_system) const
+                    const UnitSystem& unit_system, 
+                    const bool return_extra_derivatives) const
 {
     const auto& segment_set = well_.wellEcl().getSegments();
     const AutoICD& aicd = segment_set[seg].autoICD();
@@ -672,20 +673,48 @@ pressureDropAutoICD(const int seg,
     }
 
     EvalWell density = densities_[seg_upwind];
-    // WARNING
-    // We disregard the derivatives from the upwind density to make sure derivatives
-    // wrt. to different segments dont get mixed.
+    // In the reverse flow case, we don't have enough slots for all derivatives, e.g.,
+    // upwind pressure and flow. We amend this by a second function call option, where 
+    // only these remaining derivatives are considered.
+    // For reference: the pressure equation assumes pressure/flow derivatives are given 
+    // at segment node while fraction derivatives are given at upwind node.   
     if (seg != seg_upwind) {
-        water_fraction.clearDerivatives();
-        water_viscosity.clearDerivatives();
-        water_density.clearDerivatives();
-        oil_fraction.clearDerivatives();
-        oil_viscosity.clearDerivatives();
-        oil_density.clearDerivatives();
-        gas_fraction.clearDerivatives();
-        gas_viscosity.clearDerivatives();
-        gas_density.clearDerivatives();
-        density.clearDerivatives();
+        std::vector<bool> zero_mask(FluidSystem::numPhases + 1, false);
+        if (!return_extra_derivatives){
+            //constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
+            //zero_mask[WQTtotal] = true;
+            //constexpr int SPres = Indices::numEq + PrimaryVariables::SPres;
+            //zero_mask[SPres] = true;
+            zero_mask[PrimaryVariables::WQTotal] = true;
+            zero_mask[PrimaryVariables::SPres] = true;
+        } else {
+            if (PrimaryVariables::has_water){
+                //constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
+                //zero_mask[WFrac] = true;
+                zero_mask[PrimaryVariables::WFrac] = true;
+            }
+            if (PrimaryVariables::has_gas){
+                //constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
+                //zero_mask[GFrac] = true;
+                zero_mask[PrimaryVariables::GFrac] = true;
+            }
+            //mass_rate.clearDerivatives();
+        }
+        for (int ii = 0; ii < FluidSystem::numPhases + 1, ++ii) {
+            if (zero_mask[ii]) {
+                water_fraction.setDerivative(Indices::numEq + ii, 0.0);
+                water_viscosity.setDerivative(Indices::numEq + ii, 0.0);
+                water_density.setDerivative(Indices::numEq + ii, 0.0);
+                oil_fraction.setDerivative(Indices::numEq + ii, 0.0);
+                oil_viscosity.setDerivative(Indices::numEq + ii, 0.0);
+                oil_density.setDerivative(Indices::numEq + ii, 0.0);
+                gas_fraction.setDerivative(Indices::numEq + ii, 0.0);
+                gas_viscosity.setDerivative(Indices::numEq + ii, 0.0);
+                gas_density.setDerivative(Indices::numEq + ii, 0.0);
+                density.setDerivative(Indices::numEq + ii, 0.0);
+            }
+        }
+
     }
 
     using MathTool = MathToolbox<EvalWell>;
