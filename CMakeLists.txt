@@ -335,6 +335,13 @@ opm_add_test(test_tuning_xxxMBE
                 ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY}
               ONLY_COMPILE)
 
+opm_add_test(test_tuning_tsinit_nextstep
+              SOURCES
+                tests/test_tuning_TSINIT_NEXTSTEP.cpp
+              LIBRARIES
+                ${Boost_UNIT_TEST_FRAMEWORK_LIBRARY} opmcommon
+              ONLY_COMPILE)
+
 if (HAVE_OPM_TESTS)
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 endif()
