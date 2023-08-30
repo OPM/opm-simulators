@@ -312,13 +312,13 @@ assembleICDPressureEq(const int seg,
         case Segment::SegmentType::SICD :
             icd_pressure_drop = segments_.pressureDropSpiralICD(seg, /*extra derivatives*/false);
             if (reverseFlow){
-                extra_derivatives = segments_.pressureDropSpiralICD(seg, /*extra derivatives*/true);
+                extra_derivatives = -segments_.pressureDropSpiralICD(seg, /*extra derivatives*/true);
             }
             break;
         case Segment::SegmentType::AICD :
             icd_pressure_drop = segments_.pressureDropAutoICD(seg, unit_system, /*extra derivatives*/false);
             if (reverseFlow){
-                extra_derivatives = segments_.pressureDropAutoICD(seg, unit_system, /*extra derivatives*/true);
+                extra_derivatives = -segments_.pressureDropAutoICD(seg, unit_system, /*extra derivatives*/true);
             }
             break;
         case Segment::SegmentType::VALVE :
