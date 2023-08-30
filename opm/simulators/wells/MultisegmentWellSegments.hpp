@@ -74,17 +74,18 @@ public:
     EvalWell getFrictionPressureLoss(const int seg, const bool return_upwind_derivatives) const;
 
     // pressure drop for Spiral ICD segment (WSEGSICD)
-    EvalWell pressureDropSpiralICD(const int seg) const;
+    EvalWell pressureDropSpiralICD(const int seg,
+                                   const bool return_extra_derivatives) const;
 
     // pressure drop for Autonomous ICD segment (WSEGAICD)
     EvalWell pressureDropAutoICD(const int seg,
                                  const UnitSystem& unit_system,
                                  const bool return_extra_derivatives) const;
 
-//typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell pressureDropValve(const int seg, ) const;
 
     // pressure drop for sub-critical valve (WSEGVALV)
-    EvalWell pressureDropValve(const int seg, const bool return_extra_derivatives) const;
+    EvalWell pressureDropValve(const int seg, 
+                               const bool return_extra_derivatives) const;
 
     // pressure loss due to acceleration
     EvalWell accelerationPressureLoss(const int seg) const;
