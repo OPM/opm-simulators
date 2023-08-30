@@ -107,7 +107,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
 
 public:
 
-    struct LocalNBInfo
+    struct ResidualNBInfo
     {
         double trans;
         double faceArea;
@@ -216,21 +216,17 @@ public:
      * one main difference: The darcy flux is calculated here, not
      * read from the extensive quantities of the element context.
      */
-    template<class NaboInfo>
     static void computeFlux(RateVector& flux,
                             RateVector& darcy,
                             const unsigned globalIndexIn,
                             const unsigned globalIndexEx,
                             const IntensiveQuantities& intQuantsIn,
                             const IntensiveQuantities& intQuantsEx,
-                            const NaboInfo& nbInfo)
+                            const ResidualNBInfo& nbInfo)
     {
         OPM_TIMEBLOCK_LOCAL(computeFlux);
         flux = 0.0;
         darcy = 0.0;
-        const LocalNBInfo local_nbinfo {nbInfo.trans, nbInfo.faceArea,      nbInfo.thpres,
-                                        nbInfo.dZg,   nbInfo.faceDirection, nbInfo.Vin,
-                                        nbInfo.Vex,   nbInfo.inAlpha,       nbInfo.outAlpha};
 
         calculateFluxes_(flux,
                          darcy,
@@ -238,7 +234,7 @@ public:
                          intQuantsEx,
                          globalIndexIn,
                          globalIndexEx,
-                         local_nbinfo);
+                         nbInfo);
     }
 
     // This function demonstrates compatibility with the ElementContext-based interface.
@@ -290,16 +286,16 @@ public:
         // solution would be to take the Z coordinate of the element centroids, but since
         // ECL seems to like to be inconsistent on that front, it needs to be done like
         // here...
-        Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx, timeIdx);
-        Scalar zEx = problem.dofCenterDepth(elemCtx, exteriorDofIdx, timeIdx);
+        const Scalar zIn = problem.dofCenterDepth(elemCtx, interiorDofIdx, timeIdx);
+        const Scalar zEx = problem.dofCenterDepth(elemCtx, exteriorDofIdx, timeIdx);
         // the distances from the DOF's depths. (i.e., the additional depth of the
         // exterior DOF)
-        Scalar distZ = zIn - zEx;
+        const Scalar distZ = zIn - zEx;
         // for thermal harmonic mean of half trans
         const Scalar inAlpha = problem.thermalHalfTransmissibility(globalIndexIn, globalIndexEx);
         const Scalar outAlpha = problem.thermalHalfTransmissibility(globalIndexEx, globalIndexIn);
 
-        const LocalNBInfo localNBInfo {trans, faceArea, thpres, distZ * g, facedir, Vin, Vex, inAlpha, outAlpha};
+        const ResidualNBInfo res_nbinfo {trans, faceArea, thpres, distZ * g, facedir, Vin, Vex, inAlpha, outAlpha};
 
         calculateFluxes_(flux,
                          darcy,
@@ -307,7 +303,7 @@ public:
                          intQuantsEx,
                          globalIndexIn,
                          globalIndexEx,
-                         localNBInfo);
+                         res_nbinfo);
     }
 
     static void calculateFluxes_(RateVector& flux,
@@ -316,18 +312,18 @@ public:
                                  const IntensiveQuantities& intQuantsEx,
                                  const unsigned& globalIndexIn,
                                  const unsigned& globalIndexEx,
-                                 const LocalNBInfo& localNBInfo)
+                                 const ResidualNBInfo& nbInfo)
     {
         OPM_TIMEBLOCK_LOCAL(calculateFluxes);
-        const Scalar Vin = localNBInfo.Vin;
-        const Scalar Vex = localNBInfo.Vex;
-        const Scalar distZg = localNBInfo.dZg;
-        const Scalar thpres = localNBInfo.thpres;
-        const Scalar trans = localNBInfo.trans;
-        const Scalar faceArea = localNBInfo.faceArea;
-        const FaceDir::DirEnum facedir = localNBInfo.faceDirection;
-        const Scalar inAlpha = localNBInfo.inAlpha;
-        const Scalar outAlpha = localNBInfo.outAlpha;
+        const Scalar Vin = nbInfo.Vin;
+        const Scalar Vex = nbInfo.Vex;
+        const Scalar distZg = nbInfo.dZg;
+        const Scalar thpres = nbInfo.thpres;
+        const Scalar trans = nbInfo.trans;
+        const Scalar faceArea = nbInfo.faceArea;
+        const FaceDir::DirEnum facedir = nbInfo.faceDirection;
+        const Scalar inAlpha = nbInfo.inAlpha;
+        const Scalar outAlpha = nbInfo.outAlpha;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))

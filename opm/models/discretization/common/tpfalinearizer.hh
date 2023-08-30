@@ -456,7 +456,7 @@ private:
                         if (materialLawManager->hasDirectionalRelperms()) {
                             dirId = scvf.faceDirFromDirId();
                         }
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, trans, area, thpres, dZg, dirId, Vin, Vex, inAlpha, outAlpha, nullptr};
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres, dZg, dirId, Vin, Vex, inAlpha, outAlpha}, nullptr};
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
@@ -651,8 +651,8 @@ private:
                 adres = 0.0;
                 darcyFlux = 0.0;
                 const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-                LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo);
-                adres *= nbInfo.faceArea;
+                LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo);
+                adres *= nbInfo.res_nbinfo.faceArea;
                 if (enableFlows) {
                     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
                         flowsInfo_[globI][loc].flow[phaseIdx] = adres[phaseIdx].value();
@@ -783,7 +783,7 @@ private:
             auto nbInfos = neighborInfo_[globI]; // nbInfos will be a SparseTable<...>::mutable_iterator_range.
             for (auto& nbInfo : nbInfos) {
                 unsigned globJ = nbInfo.neighbor;
-                nbInfo.trans = problem_().transmissibility(globI, globJ);
+                nbInfo.res_nbinfo.trans = problem_().transmissibility(globI, globJ);
             }
         }
     }
@@ -799,18 +799,11 @@ private:
 
     LinearizationType linearizationType_;
 
+    using ResidualNBInfo = typename LocalResidual::ResidualNBInfo;
     struct NeighborInfo
     {
         unsigned int neighbor;
-        double trans;
-        double faceArea;
-        double thpres;
-        double dZg;
-        FaceDir::DirEnum faceDirection;
-        double Vin;
-        double Vex;
-        double inAlpha;
-        double outAlpha;
+        ResidualNBInfo res_nbinfo;
         MatrixBlock* matBlockAddress;
     };
     SparseTable<NeighborInfo> neighborInfo_;
