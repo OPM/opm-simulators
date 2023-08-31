@@ -324,9 +324,6 @@ public:
         const Scalar trans = nbInfo.trans;
         const Scalar faceArea = nbInfo.faceArea;
         const FaceDir::DirEnum facedir = nbInfo.faceDirection;
-        const Scalar inAlpha = nbInfo.inAlpha;
-        const Scalar outAlpha = nbInfo.outAlpha;
-        const Scalar diffusivity = nbInfo.diffusivity;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
@@ -412,6 +409,8 @@ public:
 
         // deal with energy (if present)
         if constexpr(enableEnergy){
+            const Scalar inAlpha = nbInfo.inAlpha;
+            const Scalar outAlpha = nbInfo.outAlpha;
             Evaluation heatFlux;
             {
                 short interiorDofIdx = 0; // NB
@@ -443,11 +442,11 @@ public:
         // BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with diffusion (if present)
-        //static_assert(!enableDiffusion, "Relevant computeFlux() method must be implemented for this module before enabling.");
         if constexpr(enableDiffusion){
             typename DiffusionModule::ExtensiveQuantities::EvaluationArray effectiveDiffusionCoefficient;
-            Scalar tmpdiffusivity = diffusivity/faceArea;
-            DiffusionModule::ExtensiveQuantities::update_(tmpdiffusivity,effectiveDiffusionCoefficient,intQuantsIn,intQuantsEx);
+            DiffusionModule::ExtensiveQuantities::update(effectiveDiffusionCoefficient, intQuantsIn, intQuantsEx);
+            const Scalar diffusivity = nbInfo.diffusivity;
+            const Scalar tmpdiffusivity = diffusivity / faceArea;
             DiffusionModule::addDiffusiveFlux(flux,
                                               intQuantsIn.fluidState(),
                                               intQuantsEx.fluidState(),

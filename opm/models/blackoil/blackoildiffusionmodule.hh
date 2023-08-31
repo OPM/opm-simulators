@@ -50,10 +50,6 @@ class BlackOilDiffusionModule;
 template <class TypeTag, bool enableDiffusion>
 class BlackOilDiffusionExtensiveQuantities;
 
-template <class TypeTag, bool enableDiffusion>
-class NumericalConstants;
-
-
 /*!
  * \copydoc Opm::BlackOilDiffusionModule
  */
@@ -305,7 +301,9 @@ public:
     BlackOilDiffusionIntensiveQuantities&
     operator=(const BlackOilDiffusionIntensiveQuantities& rhs)
     {
-      if (FluidSystem::enableDiffusion()) {
+        if (this == &rhs) return *this;
+
+        if (FluidSystem::enableDiffusion()) {
           std::copy(rhs.tortuosity_, rhs.tortuosity_ + numPhases, tortuosity_);
           for (size_t i = 0; i < numPhases; ++i) {
               std::copy(rhs.diffusionCoefficient_[i],
@@ -360,14 +358,13 @@ protected:
         if(!FluidSystem::enableDiffusion())
             return;
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, timeIdx);
-        update_(fluidState, paramCache, intQuants, timeIdx);
+        update_(fluidState, paramCache, intQuants);
     }
 
     template<class FluidState>
     void update_(FluidState& fluidState,
                  typename FluidSystem::template ParameterCache<typename FluidState::Scalar>& paramCache,
-                 const IntensiveQuantities& intQuants,
-                 unsigned timeIdx){
+                 const IntensiveQuantities& intQuants) {
         using Toolbox = MathToolbox<Evaluation>;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -381,7 +378,8 @@ protected:
             }
 
             // Based on Millington, R. J., & Quirk, J. P. (1961).
-            //constexpr auto& numconst = GetPropValue<TypeTag, Properties::NumericalConstants>;
+            // \Note: it is possible to use NumericalConstants later
+            //  constexpr auto& numconst = GetPropValue<TypeTag, Properties::NumericalConstants>;
             constexpr double myeps = 0.0001; //numconst.blackoildiffusionmoduleeps;
             const Evaluation& base =
                 Toolbox::max(myeps, //0.0001,
@@ -511,16 +509,15 @@ protected:
         const Scalar diffusivity = elemCtx.problem().diffusivity(elemCtx, face.interiorIndex(), face.exteriorIndex());
         const Scalar faceArea = face.area();
         diffusivity_ = diffusivity / faceArea;
-        update_(diffusivity_, effectiveDiffusionCoefficient_, intQuantsInside, intQuantsOutside);
+        update(effectiveDiffusionCoefficient_, intQuantsInside, intQuantsOutside);
         Valgrind::CheckDefined(diffusivity_);
     }
 
 public:
-    static void update_(Scalar& diffusivity,
-                   EvaluationArray& effectiveDiffusionCoefficient,
-                   const IntensiveQuantities& intQuantsInside,
-                   const IntensiveQuantities& intQuantsOutside){
-        //opm-models expects pr area flux
+    static void update(EvaluationArray& effectiveDiffusionCoefficient,
+                       const IntensiveQuantities& intQuantsInside,
+                       const IntensiveQuantities& intQuantsOutside) {
+        // opm-models expects per area flux
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -532,13 +529,10 @@ public:
             for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                 // use the arithmetic average for the effective
                 // diffusion coefficients.
-                effectiveDiffusionCoefficient[phaseIdx][compIdx] =
-                    (intQuantsInside.effectiveDiffusionCoefficient(phaseIdx, compIdx)
-                     +
-                     intQuantsOutside.effectiveDiffusionCoefficient(phaseIdx, compIdx))
-                    / 2;
-
-                //Valgrind::CheckDefined(effectiveDiffusionCoefficient_[phaseIdx][compIdx]);
+                effectiveDiffusionCoefficient[phaseIdx][compIdx] = 0.5 *
+                    ( intQuantsInside.effectiveDiffusionCoefficient(phaseIdx, compIdx) +
+                      intQuantsOutside.effectiveDiffusionCoefficient(phaseIdx, compIdx) );
+                Valgrind::CheckDefined(effectiveDiffusionCoefficient[phaseIdx][compIdx]);
             }
         }
     }
