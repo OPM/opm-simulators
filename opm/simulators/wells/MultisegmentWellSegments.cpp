@@ -584,6 +584,7 @@ pressureDropSpiralICD(const int seg,
     }
 
     EvalWell density = densities_[seg_upwind];
+    EvalWell mass_rate = mass_rates_[seg];
     // In the reverse flow case, we don't have enough slots for all derivatives, e.g.,
     // upwind pressure and flow. We amend this by a second function call option, where 
     // only these remaining derivatives are considered.
@@ -602,6 +603,8 @@ pressureDropSpiralICD(const int seg,
             if (PrimaryVariables::has_gas){
                 zero_mask[PrimaryVariables::GFrac] = true;
             }
+            // mass_rate has no extra derivatives (they are organized as in equations)
+            mass_rate.clearDerivatives();
         }
         for (int ii = 0; ii < nvar; ++ii) {
             if (zero_mask[ii]) {
@@ -625,7 +628,7 @@ pressureDropSpiralICD(const int seg,
 
     const EvalWell mixture_viscosity = liquid_viscosity_fraction + gas_fraction * gas_viscosity;
 
-    const EvalWell reservoir_rate = mass_rates_[seg] / density;
+    const EvalWell reservoir_rate = mass_rate / density;
 
     const EvalWell reservoir_rate_icd = reservoir_rate * sicd.scalingFactor();
 
@@ -693,6 +696,7 @@ pressureDropAutoICD(const int seg,
     }
 
     EvalWell density = densities_[seg_upwind];
+    EvalWell mass_rate = mass_rates_[seg];
     // In the reverse flow case, we don't have enough slots for all derivatives, e.g.,
     // upwind pressure and flow. We amend this by a second function call option, where 
     // only these remaining derivatives are considered.
@@ -711,6 +715,8 @@ pressureDropAutoICD(const int seg,
             if (PrimaryVariables::has_gas){
                 zero_mask[PrimaryVariables::GFrac] = true;
             }
+            // mass_rate has no extra derivatives (they are organized as in equations)
+            mass_rate.clearDerivatives();
         }
         for (int ii = 0; ii < nvar; ++ii) {
             if (zero_mask[ii]) {
@@ -740,7 +746,7 @@ pressureDropAutoICD(const int seg,
 
     const double rho_reference = aicd.densityCalibration();
     const double visc_reference = aicd.viscosityCalibration();
-    const auto volume_rate_icd = mass_rates_[seg] * aicd.scalingFactor() / mixture_density;
+    const auto volume_rate_icd = mass_rate * aicd.scalingFactor() / mixture_density;
     const double sign = volume_rate_icd <= 0. ? 1.0 : -1.0;
     // convert 1 unit volume rate
     using M  = UnitSystem::measure;
