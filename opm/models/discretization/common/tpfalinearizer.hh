@@ -111,7 +111,7 @@ class TpfaLinearizer
     using ADVectorBlock = GetPropType<TypeTag, Properties::RateVector>;
 
     static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
-
+    static const bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
     // copying the linearizer is not a good idea
     TpfaLinearizer(const TpfaLinearizer&);
 //! \endcond
@@ -316,7 +316,7 @@ public:
     const auto& getFlowsInfo() const{
 
         return flowsInfo_;
-    }   
+    }
 
     /*!
      * \brief Return constant reference to the floresInfo.
@@ -419,7 +419,7 @@ private:
         // freedom of each primary degree of freedom
         using NeighborSet = std::set< unsigned >;
         std::vector<NeighborSet> sparsityPattern(model.numTotalDof());
-
+        const Scalar gravity = problem_().gravity()[dimWorld - 1];
         unsigned numCells = model.numTotalDof();
         neighborInfo_.reserve(numCells, 6 * numCells);
         std::vector<NeighborInfo> loc_nbinfo;
@@ -436,15 +436,27 @@ private:
                     unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
                     sparsityPattern[myIdx].insert(neighborIdx);
                     if (dofIdx > 0) {
-                        const double trans = problem_().transmissibility(myIdx, neighborIdx);
+                        const Scalar trans = problem_().transmissibility(myIdx, neighborIdx);
                         const auto scvfIdx = dofIdx - 1;
                         const auto& scvf = stencil.interiorFace(scvfIdx);
-                        const double area = scvf.area();
+                        const Scalar area = scvf.area();
+                        const Scalar Vin = problem_().model().dofTotalVolume(myIdx);
+                        const Scalar Vex = problem_().model().dofTotalVolume(neighborIdx);
+                        const Scalar zIn = problem_().dofCenterDepth(myIdx);
+                        const Scalar zEx = problem_().dofCenterDepth(neighborIdx);
+                        const Scalar dZg = (zIn - zEx)*gravity;
+                        const Scalar thpres = problem_().thresholdPressure(myIdx, neighborIdx);
+                        Scalar inAlpha {0.};
+                        Scalar outAlpha {0.};
                         FaceDirection dirId = FaceDirection::Unknown;
+                        if constexpr(enableEnergy){
+                            inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
+                            outAlpha = problem_().thermalHalfTransmissibility(neighborIdx, myIdx);
+                        }
                         if (materialLawManager->hasDirectionalRelperms()) {
                             dirId = scvf.faceDirFromDirId();
                         }
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, trans, area, dirId, nullptr};
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres, dZg, dirId, Vin, Vex, inAlpha, outAlpha}, nullptr};
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
@@ -551,7 +563,7 @@ private:
                         const int cartMyIdx = simulator_().vanguard().cartesianIndex(myIdx);
                         const int cartNeighborIdx = simulator_().vanguard().cartesianIndex(neighborIdx);
                         const auto& range = nncIndices.equal_range(cartMyIdx);
-                        for (auto it = range.first; it != range.second; ++it) { 
+                        for (auto it = range.first; it != range.second; ++it) {
                             if (it->second.first == cartNeighborIdx){
                                 // -1 gives problem since is used for the nncInput from the deck
                                 faceId = -2;
@@ -628,7 +640,7 @@ private:
 
             // Flux term.
             {
-            OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);    
+            OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);
             short loc = 0;
             for (const auto& nbInfo : nbInfos) {
                 OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
@@ -639,10 +651,8 @@ private:
                 adres = 0.0;
                 darcyFlux = 0.0;
                 const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-                LocalResidual::computeFlux(
-                       adres, darcyFlux, problem_(), globI, globJ, intQuantsIn, intQuantsEx,
-                           nbInfo.trans, nbInfo.faceArea, nbInfo.faceDirection);
-                adres *= nbInfo.faceArea;
+                LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo);
+                adres *= nbInfo.res_nbinfo.faceArea;
                 if (enableFlows) {
                     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
                         flowsInfo_[globI][loc].flow[phaseIdx] = adres[phaseIdx].value();
@@ -773,7 +783,7 @@ private:
             auto nbInfos = neighborInfo_[globI]; // nbInfos will be a SparseTable<...>::mutable_iterator_range.
             for (auto& nbInfo : nbInfos) {
                 unsigned globJ = nbInfo.neighbor;
-                nbInfo.trans = problem_().transmissibility(globI, globJ);
+                nbInfo.res_nbinfo.trans = problem_().transmissibility(globI, globJ);
             }
         }
     }
@@ -789,12 +799,11 @@ private:
 
     LinearizationType linearizationType_;
 
+    using ResidualNBInfo = typename LocalResidual::ResidualNBInfo;
     struct NeighborInfo
     {
         unsigned int neighbor;
-        double trans;
-        double faceArea;
-        FaceDir::DirEnum faceDirection;
+        ResidualNBInfo res_nbinfo;
         MatrixBlock* matBlockAddress;
     };
     SparseTable<NeighborInfo> neighborInfo_;
