@@ -596,65 +596,41 @@ namespace Opm {
             auto& ebosResid = ebosSimulator_.model().linearizer().residual();
             auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
 
-            if ((ebosSolver.numAvailableSolvers() > 1) && (ebosSolver.getSolveCount() % 100 == 0)) {
+            const int numSolvers = ebosSolver.numAvailableSolvers();
+            if ((numSolvers > 1) && (ebosSolver.getSolveCount() % 100 == 0)) {
 
                 if ( terminal_output_ ) {
-                    OpmLog::debug("Running speed test for comparing available linear solvers.");
+                    OpmLog::debug("\nRunning speed test for comparing available linear solvers.");
                 }
+
                 Dune::Timer perfTimer;
+                std::vector<double> times(numSolvers);
+                std::vector<double> setupTimes(numSolvers);
 
-                auto ebosJacCopy = ebosJac;
-                auto ebosResidCopy = ebosResid;
-
-                // solve with linear solver 0
                 x = 0.0;
-                BVector x0(x);
-                ebosSolver.setActiveSolver(0);
-                perfTimer.start();
-                ebosSolver.prepare(ebosJac, ebosResid);
-                auto linear_solve_setup_time0 = perfTimer.stop();
-                perfTimer.reset();
-                ebosSolver.setResidual(ebosResid);
-                perfTimer.start();
-                ebosSolver.solve(x0);
-                auto time0 = perfTimer.stop();
-                perfTimer.reset();
-
-                // reset matrix to the original and Rhs
-                ebosJac = ebosJacCopy;
-                ebosResid = ebosResidCopy;
-
-                // solve with linear solver 1
-                x = 0.0;
-                BVector x1(x);
-                ebosSolver.setActiveSolver(1);
-                perfTimer.start();
-                ebosSolver.prepare(ebosJac, ebosResid);
-                auto linear_solve_setup_time1 = perfTimer.stop();
-                perfTimer.reset();
-                ebosSolver.setResidual(ebosResid);
-                perfTimer.start();
-                ebosSolver.solve(x1);
-                auto time1 = perfTimer.stop();
-                perfTimer.reset();
-
-                if ( terminal_output_ ) {
-                    OpmLog::debug("Solver time 0: " + std::to_string(time0) + "\n");
-                    OpmLog::debug("Solver time 1: " + std::to_string(time1) + "\n");
+                std::vector<BVector> x_trial(numSolvers, x);
+                for (int solver = 0; solver < numSolvers; ++solver) {
+                    BVector x0(x);
+                    ebosSolver.setActiveSolver(solver);
+                    perfTimer.start();
+                    ebosSolver.prepare(ebosJac, ebosResid);
+                    setupTimes[solver] = perfTimer.stop();
+                    perfTimer.reset();
+                    ebosSolver.setResidual(ebosResid);
+                    perfTimer.start();
+                    ebosSolver.solve(x_trial[solver]);
+                    times[solver] = perfTimer.stop();
+                    perfTimer.reset();
+                    if (terminal_output_) {
+                        OpmLog::debug(fmt::format("Solver time {}: {}", solver, times[solver]));
+                    }
                 }
 
-                int fastest_solver = time0 < time1 ? 0 : 1;
+                int fastest_solver = std::min_element(times.begin(), times.end()) - times.begin();
+                // Use timing on rank 0 to determine fastest, must be consistent across ranks.
                 grid_.comm().broadcast(&fastest_solver, 1, 0);
-                if ( terminal_output_ ) {
-                    OpmLog::debug("Using solver " + std::to_string(fastest_solver));
-                }
-                if (fastest_solver == 0) {
-                    linear_solve_setup_time_ = linear_solve_setup_time0;
-                    x=x0;
-                } else {
-                    linear_solve_setup_time_ = linear_solve_setup_time1;
-                    x=x1;
-                }
+                linear_solve_setup_time_ = setupTimes[fastest_solver];
+                x = x_trial[fastest_solver];
                 ebosSolver.setActiveSolver(fastest_solver);
 
             } else {

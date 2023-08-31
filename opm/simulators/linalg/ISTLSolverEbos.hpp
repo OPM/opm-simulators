@@ -211,12 +211,12 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         void initialize(bool have_gpu = false)
         {
             OPM_TIMEBLOCK(IstlSolverEbos);
-            // prm_ = setupPropertyTree(parameters_,
-            //                          EWOMS_PARAM_IS_SET(TypeTag, int, LinearSolverMaxIter),
-            //                          EWOMS_PARAM_IS_SET(TypeTag, double, LinearSolverReduction));
 
             if (parameters_[0].linsolver_ == "hybrid") {
-                // ------------ the following is hard coded for testing purposes!!!
+                // Experimental hybrid configuration.
+                // When chosen, will set up two solvers, one with CPRW
+                // and the other with ILU0 preconditioner. More general
+                // options may be added later.
                 prm_.clear();
                 parameters_.clear();
                 {
@@ -299,13 +299,14 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         void setActiveSolver(const int num)
         {
-            if (num>prm_.size()-1) {
-                OPM_THROW(std::logic_error,"Solver number"+std::to_string(num)+"not available.");
+            if (num > static_cast<int>(prm_.size()) - 1) {
+                OPM_THROW(std::logic_error, "Solver number " + std::to_string(num) + " not available.");
             }
             activeSolverNum_ = num;
             auto cc = Dune::MPIHelper::getCollectiveCommunication();
             if (cc.rank() == 0) {
-                OpmLog::note("Active solver = "+std::to_string(activeSolverNum_)+"\n");
+                OpmLog::debug("Active solver = " + std::to_string(activeSolverNum_)
+                              + " (" + parameters_[activeSolverNum_].linsolver_ + ")");
             }
         }
 
