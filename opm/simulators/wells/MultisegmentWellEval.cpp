@@ -331,8 +331,6 @@ assembleAccelerationAndHydroPressureLosses(const int seg,
                                            WellState& well_state,
                                            const bool use_average_density)
 {
-    auto& ws = well_state.well(baseif_.indexOfWell());
-    auto& segments = ws.segments;
     if (this->accelerationalPressureLossConsidered()) {
         handleAccelerationPressureLoss(seg, well_state);
     }
@@ -340,6 +338,8 @@ assembleAccelerationAndHydroPressureLosses(const int seg,
     // Since density derivatives are organized differently than what is required for assemblePressureEq,
     // this part needs to be assembled separately. Optionally use average density variant.
     const auto hydro_pressure_drop_seg = segments_.getHydroPressureLoss(seg, seg);
+    auto& ws = well_state.well(baseif_.indexOfWell());
+    auto& segments = ws.segments;    
     if (!use_average_density){
         MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
             assembleHydroPressureLoss(seg, seg, hydro_pressure_drop_seg, linSys_);
