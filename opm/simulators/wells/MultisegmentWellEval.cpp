@@ -253,26 +253,7 @@ assembleDefaultPressureEq(const int seg,
         assemblePressureEq(seg, seg_upwind, outlet_segment_index,
                            pressure_equation, outlet_pressure, linSys_);
 
-    if (this->accelerationalPressureLossConsidered()) {
-        handleAccelerationPressureLoss(seg, well_state);
-    }
-
-    // Since density derivatives are organized differently than what is required for assemblePressureEq, 
-    // this part needs to be assembled separately. Optionally use average density variant.  
-    const auto hydro_pressure_drop_seg = segments_.getHydroPressureLoss(seg, seg);
-    if (!use_average_density){
-        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
-            assembleHydroPressureLoss(seg, seg, hydro_pressure_drop_seg, linSys_);
-            segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop_seg.value();
-    } else {
-        const int seg_outlet = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
-        const auto hydro_pressure_drop_outlet = segments_.getHydroPressureLoss(seg, seg_outlet);
-        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
-            assembleHydroPressureLoss(seg, seg, 0.5*hydro_pressure_drop_seg, linSys_);
-        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
-            assembleHydroPressureLoss(seg, seg_outlet, 0.5*hydro_pressure_drop_outlet, linSys_);
-        segments.pressure_drop_hydrostatic[seg] = 0.5*hydro_pressure_drop_seg.value() + 0.5*hydro_pressure_drop_outlet.value();
-    }
+    assembleAccelerationAndHydroPressureLosses(seg, well_state, use_average_density);
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -281,6 +262,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assembleICDPressureEq(const int seg,
                       const UnitSystem& unit_system,
                       WellState& well_state,
+                      const bool use_average_density,
                       DeferredLogger& deferred_logger)
 {
     // TODO: upwinding needs to be taken care of
@@ -338,6 +320,39 @@ assembleICDPressureEq(const int seg,
                            linSys_,
                            FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
                            FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx));
+
+    assembleAccelerationAndHydroPressureLosses(seg, well_state, use_average_density);
+}
+
+template<typename FluidSystem, typename Indices, typename Scalar>
+void
+MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+assembleAccelerationAndHydroPressureLosses(const int seg,
+                                           WellState& well_state,
+                                           const bool use_average_density)
+{
+    if (this->accelerationalPressureLossConsidered()) {
+        handleAccelerationPressureLoss(seg, well_state);
+    }
+
+    // Since density derivatives are organized differently than what is required for assemblePressureEq,
+    // this part needs to be assembled separately. Optionally use average density variant.
+    const auto hydro_pressure_drop_seg = segments_.getHydroPressureLoss(seg, seg);
+    auto& ws = well_state.well(baseif_.indexOfWell());
+    auto& segments = ws.segments;    
+    if (!use_average_density){
+        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+            assembleHydroPressureLoss(seg, seg, hydro_pressure_drop_seg, linSys_);
+        segments.pressure_drop_hydrostatic[seg] = hydro_pressure_drop_seg.value();
+    } else {
+        const int seg_outlet = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
+        const auto hydro_pressure_drop_outlet = segments_.getHydroPressureLoss(seg, seg_outlet);
+        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+            assembleHydroPressureLoss(seg, seg, 0.5*hydro_pressure_drop_seg, linSys_);
+        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+            assembleHydroPressureLoss(seg, seg_outlet, 0.5*hydro_pressure_drop_outlet, linSys_);
+        segments.pressure_drop_hydrostatic[seg] = 0.5*hydro_pressure_drop_seg.value() + 0.5*hydro_pressure_drop_outlet.value();
+    }
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
@@ -353,7 +368,7 @@ assemblePressureEq(const int seg,
         case Segment::SegmentType::SICD :
         case Segment::SegmentType::AICD :
         case Segment::SegmentType::VALVE : {
-            assembleICDPressureEq(seg, unit_system, well_state,deferred_logger);
+            assembleICDPressureEq(seg, unit_system, well_state, use_average_density, deferred_logger);
             break;
         }
         default :
