@@ -124,11 +124,12 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
                                                     const PropertyTree& prm,
                                                     std::size_t pressureIndex,
                                                     std::function<Vector()> trueFunc,
+                                                    const bool forceSerial,
                                                     [[maybe_unused]] Comm& comm)
 
 {
     // Write sizes of linear systems on all ranks to debug log.
-    {
+    if (!forceSerial) {
 #if HAVE_MPI
         auto basic_comm = comm.communicator();
 #else

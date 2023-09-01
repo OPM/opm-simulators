@@ -31,6 +31,7 @@
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 
 #include <opm/simulators/flow/partitionCells.hpp>
+#include <opm/simulators/flow/priVarsPacking.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
 
 #include <opm/simulators/linalg/extractMatrix.hpp>
@@ -119,9 +120,11 @@ public:
         }
 
         // Iterate through grid once, setting the seeds of all partitions.
+        // Note: owned cells only!
         std::vector<int> count(num_domains, 0);
-        const auto beg = grid.template leafbegin<0>();
-        const auto end = grid.template leafend<0>();
+        const auto& gridView = grid.leafGridView();
+        const auto beg = gridView.template begin<0, Dune::Interior_Partition>();
+        const auto end = gridView.template end<0, Dune::Interior_Partition>();
         int cell = 0;
         for (auto it = beg; it != end; ++it, ++cell) {
             const int p = partition_vector[cell];
@@ -166,7 +169,8 @@ public:
                 loc_param.linear_solver_reduction_ = 1e-2;
             }
             loc_param.linear_solver_print_json_definition_ = false;
-            domain_linsolvers_.emplace_back(model_.ebosSimulator(), loc_param);
+            const bool force_serial = true;
+            domain_linsolvers_.emplace_back(model_.ebosSimulator(), loc_param, force_serial);
         }
 
         assert(int(domains_.size()) == num_domains);
@@ -251,6 +255,35 @@ public:
         if (model_.param().local_solve_approach_ == DomainSolveApproach::Jacobi) {
             solution = locally_solved;
             model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+        }
+
+        // Communicate solutions:
+        // With multiple processes, this process' overlap (i.e. not
+        // owned) cells' solution values have been modified by local
+        // solves in the owning processes, and remain unchanged
+        // here. We must therefore receive the updated solution on the
+        // overlap cells and update their intensive quantities before
+        // we move on.
+        const auto& comm = model_.ebosSimulator().vanguard().grid().comm();
+        if (comm.size() > 1) {
+            const auto* ccomm = model_.ebosSimulator().model().newtonMethod().linearSolver().comm();
+
+            // Copy numerical values from primary vars.
+            ccomm->copyOwnerToAll(solution, solution);
+
+            // Copy flags from primary vars.
+            const std::size_t num = solution.size();
+            Dune::BlockVector<std::size_t> allmeanings(num);
+            for (std::size_t ii = 0; ii < num; ++ii) {
+                allmeanings[ii] = PVUtil::pack(solution[ii]);
+            }
+            ccomm->copyOwnerToAll(allmeanings, allmeanings);
+            for (std::size_t ii = 0; ii < num; ++ii) {
+                PVUtil::unPack(solution[ii], allmeanings[ii]);
+            }
+
+            // Update intensive quantities for our overlap values.
+            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantitiesOverlap(/*timeIdx=*/0);
         }
 
         // Finish with a Newton step.
@@ -458,7 +491,6 @@ private:
                                                          std::vector<int>& maxCoeffCell)
     {
         const auto& ebosSimulator = model_.ebosSimulator();
-        const auto& grid = model_.ebosSimulator().vanguard().grid();
 
         double pvSumLocal = 0.0;
         double numAquiferPvSumLocal = 0.0;
@@ -472,7 +504,6 @@ private:
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
 
-        OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (auto elemIt = gridView.template begin</*codim=*/0>();
              elemIt != elemEndIt;
              ++elemIt)
@@ -500,7 +531,6 @@ private:
             model_.getMaxCoeff(cell_idx, intQuants, fs, ebosResid, pvValue,
                                B_avg, R_sum, maxCoeff, maxCoeffCell);
         }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ", grid.comm());
 
         // compute local average in terms of global number of elements
         const int bSize = B_avg.size();
