@@ -55,9 +55,9 @@ namespace Opm
 
         static constexpr int NUM_PHASES = 3;
     private:
-        void displayDebugMessage(const std::string &msg);
+        void displayDebugMessage(const std::string &msg) const;
         void closeWellsRecursive(Group group);
-
+        void throwNotImplementedError(const std::string &error) const;
         const BlackoilWellModelGeneric &well_model_;
         const Group &group_;
         const double simulation_time_;

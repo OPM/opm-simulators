@@ -18,7 +18,9 @@
 */
 
 #include <config.h>
+#include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/simulators/wells/GroupEconomicLimitsChecker.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 #include <fmt/format.h>
 
@@ -63,14 +65,13 @@ void
 GroupEconomicLimitsChecker::
 activateEndRun()
 {
-
+    displayDebugMessage("activate end run");
 }
 
 void
 GroupEconomicLimitsChecker::
 closeWells()
 {
-    displayDebugMessage("closing wells..");
     closeWellsRecursive(this->group_);
 }
 
@@ -78,13 +79,18 @@ void
 GroupEconomicLimitsChecker::
 doWorkOver()
 {
-    displayDebugMessage("do work over..");
+    if (this->gecon_props_.workover() != GroupEconProductionLimits::EconWorkover::NONE) {
+        throwNotImplementedError("workover procedure");
+    }
 }
 
 bool
 GroupEconomicLimitsChecker::
 endRun()
 {
+    if (this->gecon_props_.endRun()) {
+        throwNotImplementedError("end run flag YES");
+    }
     return false;
 }
 
@@ -260,7 +266,7 @@ WGR()
 
 void
 GroupEconomicLimitsChecker::
-displayDebugMessage(const std::string &msg)
+displayDebugMessage(const std::string &msg) const
 {
     if (this->debug_) {
         const std::string msg2 = fmt::format(
@@ -308,4 +314,11 @@ closeWellsRecursive(Group group)
     }
 }
 
+void
+GroupEconomicLimitsChecker::
+throwNotImplementedError(const std::string &error) const
+{
+    const std::string msg = fmt::format("Group: {} : GECON : {} not implemented", this->group_.name(), error);
+    OPM_DEFLOG_THROW(std::runtime_error, msg, this->deferred_logger_);
+}
 } // namespace Opm
