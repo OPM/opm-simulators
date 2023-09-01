@@ -34,47 +34,6 @@
 namespace Opm {
 namespace detail {
 
-
-    std::vector<int> buildAllCells(const int nc);
-
-
-
-    template <class PU>
-    std::vector<bool>
-    activePhases(const PU& pu)
-    {
-        const int maxnp = BlackoilPhases::MaxNumPhases;
-        std::vector<bool> active(maxnp, false);
-
-        for (int p = 0; p < pu.MaxNumPhases; ++p) {
-            active[ p ] = pu.phase_used[ p ] != 0;
-        }
-
-        return active;
-    }
-
-
-
-    template <class PU>
-    std::vector<int>
-    active2Canonical(const PU& pu)
-    {
-        const int maxnp = BlackoilPhases::MaxNumPhases;
-        std::vector<int> act2can(maxnp, -1);
-
-        for (int phase = 0; phase < maxnp; ++phase) {
-            if (pu.phase_used[ phase ]) {
-                act2can[ pu.phase_pos[ phase ] ] = phase;
-            }
-        }
-
-        return act2can;
-    }
-
-
-
-    double getGravity(const double* g, const int dim);
-
         /// \brief Get the number of local interior cells in a grid.
         /// \tparam The type of the DUNE grid.
         /// \param grid The grid which cells we count
