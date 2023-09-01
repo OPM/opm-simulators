@@ -30,6 +30,7 @@ struct EclFlowEnergyProblem {
     using InheritsFrom = std::tuple<EclFlowProblem>;
 };
 }
+
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::EclFlowEnergyProblem> {
     static constexpr bool value = true;

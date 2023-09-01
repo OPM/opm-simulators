@@ -103,6 +103,7 @@ struct FlexibleSolverInfo
                 const PropertyTree& prm,
                 std::size_t pressureIndex,
                 std::function<Vector()> trueFunc,
+                const bool forceSerial,
                 Comm& comm);
 
     std::unique_ptr<AbstractSolverType> solver_;
@@ -177,13 +178,17 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         /// \param[in] simulator   The opm-models simulator object
         /// \param[in] parameters  Explicit parameters for solver setup, do not
         ///                        read them from command line parameters.
-        ISTLSolverEbos(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
+        /// \param[in] forceSerial If true, will set up a serial linear solver only,
+        ///                        local to the current rank, instead of creating a
+        ///                        parallel (MPI distributed) linear solver.
+        ISTLSolverEbos(const Simulator& simulator, const FlowLinearSolverParameters& parameters, bool forceSerial = false)
             : simulator_(simulator),
               iterations_( 0 ),
               calls_( 0 ),
               converged_(false),
               matrix_(nullptr),
-              parameters_(parameters)
+              parameters_(parameters),
+              forceSerial_(forceSerial)
         {
             initialize();
         }
@@ -261,7 +266,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             OPM_TIMEBLOCK(istlSolverEbosPrepare);
             const bool firstcall = (matrix_ == nullptr);
 #if HAVE_MPI
-            if (firstcall) {
+            if (firstcall && isParallel()) {
                 const std::size_t size = M.N();
                 detail::copyParValues(parallelInformation_, size, *comm_);
             }
@@ -348,6 +353,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         /// \copydoc NewtonIterationBlackoilInterface::parallelInformation
         const std::any& parallelInformation() const { return parallelInformation_; }
 
+        const CommunicationType* comm() const { return comm_.get(); }
+
     protected:
 #if HAVE_MPI
         using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
@@ -377,7 +384,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         bool isParallel() const {
 #if HAVE_MPI
-            return comm_->communicator().size() > 1;
+            return !forceSerial_ && comm_->communicator().size() > 1;
 #else
             return false;
 #endif
@@ -403,6 +410,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                                        prm_,
                                        pressureIndex,
                                        trueFunc,
+                                       forceSerial_,
                                        *comm_);
             }
             else
@@ -502,6 +510,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         bool useWellConn_;
 
         FlowLinearSolverParameters parameters_;
+        bool forceSerial_ = false;
         PropertyTree prm_;
 
         std::shared_ptr< CommunicationType > comm_;

@@ -83,7 +83,12 @@ protected:
     void assembleICDPressureEq(const int seg,
                                const UnitSystem& unit_system,
                                WellState& well_state,
+                               const bool use_average_density,
                                DeferredLogger& deferred_logger);
+
+    void assembleAccelerationAndHydroPressureLosses(const int seg,
+                                                    WellState& well_state,
+                                                    const bool use_average_density);
 
 
     void assemblePressureEq(const int seg,

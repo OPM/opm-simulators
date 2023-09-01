@@ -24,6 +24,8 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/Main.hpp>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
 
 namespace Opm {
 namespace Properties {
@@ -59,6 +61,15 @@ template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::EclFlowGasOilEnergyProblem> {
     static constexpr bool value = true;
 };
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::EclFlowGasOilEnergyProblem> { using type = TpfaLinearizer<TypeTag>; };
+
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::EclFlowGasOilEnergyProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+template<class TypeTag>
+struct EnableDiffusion<TypeTag, TTag::EclFlowGasOilEnergyProblem> { static constexpr bool value = false; };
+
 }}
 
 namespace Opm {

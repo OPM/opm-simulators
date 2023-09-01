@@ -263,6 +263,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_parallelwellinfo.cpp
   tests/test_partitionCells.cpp
   tests/test_preconditionerfactory.cpp
+  tests/test_privarspacking.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_RestartSerialization.cpp
   tests/test_stoppedwells.cpp
@@ -416,6 +417,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/hdf5serializer.hh
   ebos/vtkecltracermodule.hh
   opm/simulators/flow/countGlobalCells.hpp
+  opm/simulators/flow/priVarsPacking.hpp
   opm/simulators/flow/BlackoilModelEbos.hpp
   opm/simulators/flow/BlackoilModelEbosNldd.hpp
   opm/simulators/flow/BlackoilModelParametersEbos.hpp

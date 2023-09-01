@@ -791,6 +791,25 @@ public:
     }
 
     /*!
+     * give the transmissibility for a face i.e. pair. should be symmetric?
+     */
+    Scalar diffusivity(const unsigned globalCellIn, const unsigned globalCellOut) const{
+        return transmissibilities_.diffusivity(globalCellIn, globalCellOut);
+    }
+
+    /*!
+     * \brief Direct access to a boundary transmissibility.
+     */
+    Scalar thermalTransmissibilityBoundary(const unsigned globalSpaceIdx,
+                                    const unsigned boundaryFaceIdx) const
+    {
+        return transmissibilities_.thermalTransmissibilityBoundary(globalSpaceIdx, boundaryFaceIdx);
+    }
+
+
+
+
+    /*!
      * \copydoc EclTransmissiblity::transmissibilityBoundary
      */
     template <class Context>
@@ -808,6 +827,16 @@ public:
                                     const unsigned boundaryFaceIdx) const
     {
         return transmissibilities_.transmissibilityBoundary(globalSpaceIdx, boundaryFaceIdx);
+    }
+
+
+    /*!
+     * \copydoc EclTransmissiblity::thermalHalfTransmissibility
+     */
+    Scalar thermalHalfTransmissibility(const unsigned globalSpaceIdxIn,
+                                       const unsigned globalSpaceIdxOut) const
+    {
+        return transmissibilities_.thermalHalfTrans(globalSpaceIdxIn,globalSpaceIdxOut);
     }
 
     /*!
@@ -1076,6 +1105,27 @@ public:
         // variable
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+    }
+
+
+    Scalar temperature(unsigned globalDofIdx, unsigned timeIdx) const
+    {
+        // use the initial temperature of the DOF if temperature is not a primary
+        // variable
+         return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+    }
+
+    const SolidEnergyLawParams&
+    solidEnergyLawParams(unsigned globalSpaceIdx,
+                         unsigned /*timeIdx*/) const
+    {
+        return this->thermalLawManager_->solidEnergyLawParams(globalSpaceIdx);
+    }
+    const ThermalConductionLawParams &
+    thermalConductionLawParams(unsigned globalSpaceIdx,
+                               unsigned /*timeIdx*/)const
+    {
+        return this->thermalLawManager_->thermalConductionLawParams(globalSpaceIdx);
     }
 
     /*!
