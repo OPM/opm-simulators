@@ -657,6 +657,8 @@ namespace Opm {
 
         // check group sales limits at the end of the timestep
         const Group& fieldGroup = schedule_.getGroup("FIELD", reportStepIdx);
+        checkGEconLimits(
+            fieldGroup, simulationTime, ebosSimulator_.episodeIndex(), local_deferredLogger);
         checkGconsaleLimits(fieldGroup, this->wellState(),
                             ebosSimulator_.episodeIndex(), local_deferredLogger);
 

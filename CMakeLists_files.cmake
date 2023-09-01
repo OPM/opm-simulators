@@ -100,6 +100,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/GasLiftSingleWellGeneric.cpp
   opm/simulators/wells/GasLiftStage2.cpp
   opm/simulators/wells/GlobalWellInfo.cpp
+  opm/simulators/wells/GroupEconomicLimitsChecker.cpp
   opm/simulators/wells/GroupState.cpp
   opm/simulators/wells/MSWellHelpers.cpp
   opm/simulators/wells/MultisegmentWellAssemble.cpp
@@ -537,6 +538,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/GasLiftStage2.hpp
   opm/simulators/wells/GasLiftWellState.hpp
   opm/simulators/wells/GlobalWellInfo.hpp
+  opm/simulators/wells/GroupEconomicLimitsChecker.hpp
   opm/simulators/wells/GroupState.hpp
   opm/simulators/wells/MSWellHelpers.hpp
   opm/simulators/wells/MultisegmentWell.hpp

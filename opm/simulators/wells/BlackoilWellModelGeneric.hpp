@@ -191,6 +191,10 @@ public:
     bool shouldBalanceNetwork(const int reportStepIndex,
                               const int iterationIdx) const;
 
+    void updateClosedWellsThisStep(const std::string& well_name) const {
+        this->closed_this_step_.insert(well_name);
+    }
+
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
@@ -344,6 +348,11 @@ protected:
                              WellState& well_state,
                              const int reportStepIdx,
                              DeferredLogger& deferred_logger);
+
+    void checkGEconLimits(const Group& group,
+                          const double simulation_time,
+                          const int report_step_idx,
+                          DeferredLogger& deferred_logger);
 
     bool checkGroupHigherConstraints(const Group& group,
                                      DeferredLogger& deferred_logger,

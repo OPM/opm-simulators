@@ -105,6 +105,13 @@ partiallySupported()
             },
          },
          {
+            "GECON",
+            {
+               {7,{true, allow_values<std::string> {"NONE"}, "GECON(WORKOVER): Workover procedures not implemented"}},
+               {8,{true, allow_values<std::string> {"NO"}, "GECON(ENDRUN): End run not implemented"}},
+            },
+         },
+         {
             "GEFAC",
             {
                {3,{true, allow_values<std::string> {"YES"}, "GEFAC(GRPNETWK): Extended Network Model efficiency NO option not implemented"}}, // TRANSFER_EXT_NET
