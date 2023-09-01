@@ -266,7 +266,8 @@ namespace Opm
                       DeferredLogger& deferred_logger) /* const */
     {
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
-        
+        const auto& schedule = ebos_simulator.vanguard().schedule();
+
         if (this->wellUnderZeroRateTarget(summary_state, well_state)) {
            return false;
         }
@@ -277,8 +278,16 @@ namespace Opm
                 this->stopWell();
                 return true;
             } else {
+                bool changed = false;
                 auto& ws = well_state.well(this->index_of_well_);
-                const bool changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
+                                                                  prod_controls.hasControl(Well::ProducerCMode::GRUP);
+
+                changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                if (hasGroupControl && !changed) {
+                    changed = this->checkGroupConstraints(well_state, group_state, schedule, summary_state, deferred_logger);
+                }
+
                 if (changed) {
                     const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP :
                                                                      ws.production_cmode == Well::ProducerCMode::THP;
