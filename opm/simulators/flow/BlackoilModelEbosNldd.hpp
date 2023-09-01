@@ -266,7 +266,7 @@ public:
         // we move on.
         const auto& comm = model_.ebosSimulator().vanguard().grid().comm();
         if (comm.size() > 1) {
-            const auto& ccomm = model_.ebosSimulator().model().newtonMethod().linearSolver().comm();
+            const auto* ccomm = model_.ebosSimulator().model().newtonMethod().linearSolver().comm();
 
             // Copy numerical values from primary vars.
             ccomm->copyOwnerToAll(solution, solution);

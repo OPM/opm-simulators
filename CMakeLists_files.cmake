@@ -417,6 +417,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/hdf5serializer.hh
   ebos/vtkecltracermodule.hh
   opm/simulators/flow/countGlobalCells.hpp
+  opm/simulators/flow/priVarsPacking.hpp
   opm/simulators/flow/BlackoilModelEbos.hpp
   opm/simulators/flow/BlackoilModelEbosNldd.hpp
   opm/simulators/flow/BlackoilModelParametersEbos.hpp

@@ -263,11 +263,9 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             OPM_TIMEBLOCK(istlSolverEbosPrepare);
             const bool firstcall = (matrix_ == nullptr);
 #if HAVE_MPI
-            if (firstcall) {
+            if (firstcall && isParallel()) {
                 const std::size_t size = M.N();
-                if (isParallel()) {
-                    detail::copyParValues(parallelInformation_, size, *comm_);
-                }
+                detail::copyParValues(parallelInformation_, size, *comm_);
             }
 #endif
 
