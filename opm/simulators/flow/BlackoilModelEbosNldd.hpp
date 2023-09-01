@@ -257,6 +257,7 @@ public:
             model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         }
 
+#if HAVE_MPI
         // Communicate solutions:
         // With multiple processes, this process' overlap (i.e. not
         // owned) cells' solution values have been modified by local
@@ -285,6 +286,7 @@ public:
             // Update intensive quantities for our overlap values.
             model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantitiesOverlap(/*timeIdx=*/0);
         }
+#endif // HAVE_MPI
 
         // Finish with a Newton step.
         // Note that the "iteration + 100" is a simple way to avoid entering
