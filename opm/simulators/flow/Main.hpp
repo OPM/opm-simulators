@@ -329,8 +329,8 @@ private:
         // Reset to false as we cannot use Damaris if there is only one rank.
         if ((enableDamarisOutput_ == true) && (EclGenericVanguard::comm().size() == 1)) {
             std::string msg ;
-            msg = "\nUse of Damaris (command line argument --enable-damaris-output=true) has been dissabled for run with only one rank.\n" ;
-            OpmLog::info(msg);
+            msg = "\nUse of Damaris (command line argument --enable-damaris-output=true) has been disabled for run with only one rank.\n" ;
+            OpmLog::warning(msg);
             enableDamarisOutput_ = false ;
         }
         
@@ -342,73 +342,75 @@ private:
 
         // Guard for when the Damaris core(s) return from damaris_start() 
         // which happens when damaris_stop() is called in main simulation
-        if (isSimulationRank_) {
-            int mpiRank = EclGenericVanguard::comm().rank();
-            outputCout_ = false;
-            if (mpiRank == 0)
-                outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
+        if (!isSimulationRank_) {
+            exitCode = EXIT_SUCCESS;
+            return true;
+        }
+        
+        int mpiRank = EclGenericVanguard::comm().rank();
+        outputCout_ = false;
+        if (mpiRank == 0)
+            outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
 
-
-            if (deckFilename.empty()) {
-                if (mpiRank == 0) {
-                    std::cerr << "No input case given. Try '--help' for a usage description.\n";
-                }
-                exitCode = EXIT_FAILURE;
-                return false;
+        if (deckFilename.empty()) {
+            if (mpiRank == 0) {
+                std::cerr << "No input case given. Try '--help' for a usage description.\n";
             }
+            exitCode = EXIT_FAILURE;
+            return false;
+        }
 
-            using PreVanguard = GetPropType<PreTypeTag, Properties::Vanguard>;
-            try {
-                deckFilename = PreVanguard::canonicalDeckPath(deckFilename);
+        using PreVanguard = GetPropType<PreTypeTag, Properties::Vanguard>;
+        try {
+            deckFilename = PreVanguard::canonicalDeckPath(deckFilename);
+        }
+        catch (const std::exception& e) {
+            if ( mpiRank == 0 ) {
+                std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
             }
-            catch (const std::exception& e) {
-                if ( mpiRank == 0 ) {
-                    std::cerr << "Exception received: " << e.what() << ". Try '--help' for a usage description.\n";
-                }
-    #if HAVE_MPI
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    #endif
-                exitCode = EXIT_FAILURE;
-                return false;
-            }
+#if HAVE_MPI
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+#endif
+            exitCode = EXIT_FAILURE;
+            return false;
+        }
 
-            std::string cmdline_params;
+        std::string cmdline_params;
+        if (outputCout_) {
+            printFlowBanner(EclGenericVanguard::comm().size(),
+                            getNumThreads<PreTypeTag>(),
+                            Opm::moduleVersionName());
+            std::ostringstream str;
+            Parameters::printValues<PreTypeTag>(str);
+            cmdline_params = str.str();
+        }
+
+        // Create Deck and EclipseState.
+        try {
+            this->readDeck(deckFilename,
+                           outputDir,
+                           EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
+                           !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart),
+                           EWOMS_GET_PARAM(PreTypeTag, bool,  EnableLoggingFalloutWarning),
+                           EWOMS_GET_PARAM(PreTypeTag, std::string, ParsingStrictness),
+                           mpiRank,
+                           EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval),
+                           cmdline_params,
+                           Opm::moduleVersion(),
+                           Opm::compileTimestamp());
+            setupTime_ = externalSetupTimer.elapsed();
+        }
+        catch (const std::invalid_argument& e)
+        {
             if (outputCout_) {
-                printFlowBanner(EclGenericVanguard::comm().size(),
-                                getNumThreads<PreTypeTag>(),
-                                Opm::moduleVersionName());
-                std::ostringstream str;
-                Parameters::printValues<PreTypeTag>(str);
-                cmdline_params = str.str();
+                std::cerr << "Failed to create valid EclipseState object." << std::endl;
+                std::cerr << "Exception caught: " << e.what() << std::endl;
             }
-
-            // Create Deck and EclipseState.
-            try {
-                this->readDeck(deckFilename,
-                               outputDir,
-                               EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
-                               !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart),
-                               EWOMS_GET_PARAM(PreTypeTag, bool,  EnableLoggingFalloutWarning),
-                               EWOMS_GET_PARAM(PreTypeTag, std::string, ParsingStrictness),
-                               mpiRank,
-                               EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval),
-                               cmdline_params,
-                               Opm::moduleVersion(),
-                               Opm::compileTimestamp());
-                setupTime_ = externalSetupTimer.elapsed();
-            }
-            catch (const std::invalid_argument& e)
-            {
-                if (outputCout_) {
-                    std::cerr << "Failed to create valid EclipseState object." << std::endl;
-                    std::cerr << "Exception caught: " << e.what() << std::endl;
-                }
-    #if HAVE_MPI
-                MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-    #endif
-                exitCode = EXIT_FAILURE;
-                return false;
-            }
+#if HAVE_MPI
+            MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
+#endif
+            exitCode = EXIT_FAILURE;
+            return false;
         }
 
         exitCode = EXIT_SUCCESS;
