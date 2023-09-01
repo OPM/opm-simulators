@@ -178,6 +178,9 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         /// \param[in] simulator   The opm-models simulator object
         /// \param[in] parameters  Explicit parameters for solver setup, do not
         ///                        read them from command line parameters.
+        /// \param[in] forceSerial If true, will set up a serial linear solver only,
+        ///                        local to the current rank, instead of creating a
+        ///                        parallel (MPI distributed) linear solver.
         ISTLSolverEbos(const Simulator& simulator, const FlowLinearSolverParameters& parameters, bool forceSerial = false)
             : simulator_(simulator),
               iterations_( 0 ),
