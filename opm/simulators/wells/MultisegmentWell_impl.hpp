@@ -286,20 +286,23 @@ namespace Opm
         }
 
         debug_cost_counter_ = 0;
+        bool converged_implicit = false;
         // does the well have a THP related constraint?
         if (true){
-            const bool converged = computeWellPotentialsImplicit(well_state, ebosSimulator, well_potentials, deferred_logger);
-            if (converged){
+            converged_implicit = computeWellPotentialsImplicit(well_state, ebosSimulator, well_potentials, deferred_logger);
+            //if (converged){
                 // add debug info
-                return;
-            }
+             //   return;
+            //}
         }
-        const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
-            computeWellRatesAtBhpLimit(ebosSimulator, well_potentials, deferred_logger);
-        } else {
-            well_potentials = computeWellPotentialWithTHP(
-                well_state, ebosSimulator, deferred_logger);
+        if (!converged_implicit) {
+            const auto& summaryState = ebosSimulator.vanguard().summaryState();
+            if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
+                computeWellRatesAtBhpLimit(ebosSimulator, well_potentials, deferred_logger);
+            } else {
+               well_potentials = computeWellPotentialWithTHP(
+                   well_state, ebosSimulator, deferred_logger);
+        }
         }
         deferred_logger.debug("Cost in iterations of finding well potential for well "
                               + this->name() + ": " + std::to_string(debug_cost_counter_));
