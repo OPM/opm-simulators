@@ -1108,7 +1108,7 @@ public:
     }
 
 
-    Scalar temperature(unsigned globalDofIdx, unsigned timeIdx) const
+    Scalar temperature(unsigned globalDofIdx, unsigned /*timeIdx*/) const
     {
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
