@@ -868,6 +868,13 @@ add_test_compareECLFiles(CASENAME wsegvalv
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol})
 
+add_test_compareECLFiles(CASENAME wsegvalv_2d_vert
+                         FILENAME  MSW-2D-VERT-02
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR msw)
+
 add_test_compareECLFiles(CASENAME nnc
                          FILENAME NNC_AND_EDITNNC
                          SIMULATOR flow
