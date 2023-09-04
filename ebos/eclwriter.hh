@@ -123,6 +123,7 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableMech = getPropValue<TypeTag, Properties::EnableMech>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
@@ -574,6 +575,17 @@ private:
             }
         }
 
+        if constexpr (enableMech) {
+            if (simulator_.vanguard().eclState().runspec().mech()) {
+                OPM_TIMEBLOCK(prepareMechData);
+                for (const auto& elem : elements(gridView)) {
+                    elemCtx.updatePrimaryStencil(elem);
+                    elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+                    eclOutputModule_->processElementMech(elemCtx);
+                }
+            }
+        }
+
         if (! this->simulator_.model().linearizer().getFlowsInfo().empty()) {
             OPM_TIMEBLOCK(prepareFlowsData);
             for (const auto& elem : elements(gridView)) {
@@ -660,6 +672,7 @@ private:
     bool damarisUpdate_ = false;  ///< Whenever this is true writeOutput() will set up Damaris offsets of model fields
 #endif
 };
+
 } // namespace Opm
 
 #endif
