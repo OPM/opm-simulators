@@ -226,7 +226,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"GDIMS", {true, std::nullopt}},
         {"GDORIENT", {false, std::nullopt}},
         {"GDRILPOT", {true, std::nullopt}},
-        {"GECON", {true, std::nullopt}},
         {"GECONT", {true, std::nullopt}},
         {"GETGLOB", {true, std::nullopt}},
         {"GI", {true, std::nullopt}},

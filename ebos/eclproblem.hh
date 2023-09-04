@@ -2436,10 +2436,18 @@ private:
     {
         if constexpr (enableExperiments) {
             const auto& simulator = this->simulator();
+            const auto& schedule = simulator.vanguard().schedule();
             int episodeIdx = simulator.episodeIndex();
 
             // first thing in the morning, limit the time step size to the maximum size
-            dtNext = std::min(dtNext, this->maxTimeStepSize_);
+            Scalar maxTimeStepSize = EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60;
+            int reportStepIdx = std::max(episodeIdx, 0);
+            if (this->enableTuning_) {
+                const auto& tuning = schedule[reportStepIdx].tuning();
+                maxTimeStepSize = tuning.TSMAXZ;
+            }
+
+            dtNext = std::min(dtNext, maxTimeStepSize);
 
             Scalar remainingEpisodeTime =
                 simulator.episodeStartTime() + simulator.episodeLength()
@@ -2451,12 +2459,11 @@ private:
             if (remainingEpisodeTime/2.0 < dtNext && dtNext < remainingEpisodeTime*(1.0 - 1e-5))
                 // note: limiting to the maximum time step size here is probably not strictly
                 // necessary, but it should not hurt and is more fool-proof
-                dtNext = std::min(this->maxTimeStepSize_, remainingEpisodeTime/2.0);
+                dtNext = std::min(maxTimeStepSize, remainingEpisodeTime/2.0);
 
             if (simulator.episodeStarts()) {
                 // if a well event occurred, respect the limit for the maximum time step after
                 // that, too
-                int reportStepIdx = std::max(episodeIdx, 0);
                 const auto& events = simulator.vanguard().schedule()[reportStepIdx].events();
                 bool wellEventOccured =
                         events.hasEvent(ScheduleEvents::NEW_WELL)

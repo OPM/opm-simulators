@@ -53,7 +53,7 @@ set (opm-simulators_DEPS
   "opm-common REQUIRED"
   "opm-grid REQUIRED"
   "opm-models REQUIRED"
-  "Damaris 1.7"
+  "Damaris 1.9"
   "HDF5"
   "Tracy"
   )
