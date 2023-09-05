@@ -30,8 +30,8 @@ namespace Opm
 struct FlowLinearSolverParameters;
 
 PropertyTree setupPropertyTree(FlowLinearSolverParameters p,
-                               bool LinearSolverMaxIterSet,
-                               bool CprMaxEllIterSet);
+                               bool linearSolverMaxIterSet,
+                               bool linearSolverReductionSet);
 
 PropertyTree setupCPRW(const std::string& conf, const FlowLinearSolverParameters& p);
 PropertyTree setupCPR(const std::string& conf, const FlowLinearSolverParameters& p);
