@@ -499,6 +499,12 @@ volumeFraction(const int seg,
     /* if (has_solvent) {
         oil_fraction -= evaluation_[seg][SFrac];
     } */
+
+    // oil_fraction may turn out negative due to round-off, in that case
+    // set to zero (but keep derivatives)
+    if (oil_fraction.value() < 0.0) {
+        oil_fraction.setValue(0.0); 
+    }
     return oil_fraction;
 }
 
