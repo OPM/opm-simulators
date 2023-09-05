@@ -26,8 +26,6 @@
 
 #include <fmt/format.h>
 
-#include <ebos/eclproblem.hh>
-
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -39,6 +37,7 @@
 
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+#include <opm/simulators/flow/BlackoilModelEbosHelpers.hpp>
 #include <opm/simulators/flow/BlackoilModelEbosNldd.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
@@ -680,66 +679,6 @@ namespace Opm {
             return terminal_output_;
         }
 
-        std::tuple<double,double> convergenceReduction(Parallel::Communication comm,
-                                                       const double pvSumLocal,
-                                                       const double numAquiferPvSumLocal,
-                                                       std::vector< Scalar >& R_sum,
-                                                       std::vector< Scalar >& maxCoeff,
-                                                       std::vector< Scalar >& B_avg)
-        {
-            OPM_TIMEBLOCK(convergenceReduction);
-            // Compute total pore volume (use only owned entries)
-            double pvSum = pvSumLocal;
-            double numAquiferPvSum = numAquiferPvSumLocal;
-
-            if( comm.size() > 1 )
-            {
-                // global reduction
-                std::vector< Scalar > sumBuffer;
-                std::vector< Scalar > maxBuffer;
-                const int numComp = B_avg.size();
-                sumBuffer.reserve( 2*numComp + 2 ); // +2 for (numAquifer)pvSum
-                maxBuffer.reserve( numComp );
-                for( int compIdx = 0; compIdx < numComp; ++compIdx )
-                {
-                    sumBuffer.push_back( B_avg[ compIdx ] );
-                    sumBuffer.push_back( R_sum[ compIdx ] );
-                    maxBuffer.push_back( maxCoeff[ compIdx ] );
-                }
-
-                // Compute total pore volume
-                sumBuffer.push_back( pvSum );
-                sumBuffer.push_back( numAquiferPvSum );
-
-                // compute global sum
-                comm.sum( sumBuffer.data(), sumBuffer.size() );
-
-                // compute global max
-                comm.max( maxBuffer.data(), maxBuffer.size() );
-
-                // restore values to local variables
-                for( int compIdx = 0, buffIdx = 0; compIdx < numComp; ++compIdx, ++buffIdx )
-                {
-                    B_avg[ compIdx ]    = sumBuffer[ buffIdx ];
-                    ++buffIdx;
-
-                    R_sum[ compIdx ]       = sumBuffer[ buffIdx ];
-                }
-
-                for( int compIdx = 0; compIdx < numComp; ++compIdx )
-                {
-                    maxCoeff[ compIdx ] = maxBuffer[ compIdx ];
-                }
-
-                // restore global pore volume
-                pvSum = sumBuffer[sumBuffer.size()-2];
-                numAquiferPvSum = sumBuffer.back();
-            }
-
-            // return global pore volume
-            return {pvSum, numAquiferPvSum};
-        }
-
         /// \brief Get reservoir quantities on this process needed for convergence calculations.
         /// \return A pair of the local pore volume of interior cells and the pore volumes
         ///         of the cells associated with a numerical aquifer.
@@ -841,7 +780,8 @@ namespace Opm {
         }
 
 
-        void updateTUNING(const Tuning& tuning) {          
+        void updateTUNING(const Tuning& tuning)
+        {
             param_.tolerance_mb_ = tuning.XXXMBE;
             if ( terminal_output_ ) {
                 OpmLog::debug(fmt::format("Setting BlackoilModelEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
@@ -865,10 +805,10 @@ namespace Opm {
             const auto [ pvSumLocal, numAquiferPvSumLocal] = localConvergenceData(R_sum, maxCoeff, B_avg, maxCoeffCell);
 
             // compute global sum and max of quantities
-            const auto [ pvSum, numAquiferPvSum ] =
-                convergenceReduction(grid_.comm(), pvSumLocal,
-                                     numAquiferPvSumLocal,
-                                     R_sum, maxCoeff, B_avg);
+            const auto [pvSum, numAquiferPvSum] =
+                detail::convergenceReduction(grid_.comm(), pvSumLocal,
+                                             numAquiferPvSumLocal,
+                                             R_sum, maxCoeff, B_avg);
 
             auto cnvErrorPvFraction = computeCnvErrorPv(B_avg, dt);
             cnvErrorPvFraction /= (pvSum - numAquiferPvSum);
@@ -891,70 +831,15 @@ namespace Opm {
             }
 
             // Create convergence report.
-            ConvergenceReport report{reportTime};
-            using CR = ConvergenceReport;
-            for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
-                CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
-                                                        CR::ReservoirFailure::Type::Cnv };
-                double tol[2] = { tol_mb, tol_cnv };
-                for (int ii : {0, 1}) {
-                    if (std::isnan(res[ii])) {
-                        report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
-                        if ( terminal_output_ ) {
-                            OpmLog::debug("NaN residual for " + this->compNames_.name(compIdx) + " equation.");
-                        }
-                    } else if (res[ii] > maxResidualAllowed()) {
-                        report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
-                        if ( terminal_output_ ) {
-                            OpmLog::debug("Too large residual for " + this->compNames_.name(compIdx) + " equation.");
-                        }
-                    } else if (res[ii] < 0.0) {
-                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                        if ( terminal_output_ ) {
-                            OpmLog::debug("Negative residual for " + this->compNames_.name(compIdx) + " equation.");
-                        }
-                    } else if (res[ii] > tol[ii]) {
-                        report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                    }
-                    report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
-                }
-            }
-
-            // Output of residuals.
-            if ( terminal_output_ )
-            {
-                // Only rank 0 does print to std::cout
-                if (iteration == 0) {
-                    std::string msg = "Iter";
-                    for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                        msg += "    MB(";
-                        msg += this->compNames_.name(compIdx)[0];
-                        msg += ")  ";
-                    }
-                    for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                        msg += "    CNV(";
-                        msg += this->compNames_.name(compIdx)[0];
-                        msg += ") ";
-                    }
-                    OpmLog::debug(msg);
-                }
-                std::ostringstream ss;
-                const std::streamsize oprec = ss.precision(3);
-                const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
-                ss << std::setw(4) << iteration;
-                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                    ss << std::setw(11) << mass_balance_residual[compIdx];
-                }
-                for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                    ss << std::setw(11) << CNV[compIdx];
-                }
-                ss.precision(oprec);
-                ss.flags(oflags);
-                OpmLog::debug(ss.str());
-            }
-
-            return report;
+            return detail::createConvergenceReport(iteration,
+                                                   reportTime,
+                                                   tol_mb,
+                                                   tol_cnv,
+                                                   this->maxResidualAllowed(),
+                                                   this->terminal_output_,
+                                                   this->compNames_.names(),
+                                                   CNV,
+                                                   mass_balance_residual, "");
         }
 
         /// Compute convergence based on total mass balance (tol_mb) and maximum
