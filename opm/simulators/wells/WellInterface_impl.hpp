@@ -875,7 +875,7 @@ namespace Opm
             // initial guess for the zero rate target.
             ws.surface_rates[phasePos] = std::max(1.e-7, ws.surface_rates[phasePos]);
 
-            if (ws.bhp == 0.) {
+            if (std::abs(ws.bhp) <= 1.e-7) {
                 ws.bhp = controls.bhp_limit;
             }
         }
@@ -1102,7 +1102,7 @@ namespace Opm
                 break;
             } // end of switch
 
-            if (ws.bhp == 0.) {
+            if (std::abs(ws.bhp) <= 1.e-7) {
                 ws.bhp = controls.bhp_limit;
             }
         }
