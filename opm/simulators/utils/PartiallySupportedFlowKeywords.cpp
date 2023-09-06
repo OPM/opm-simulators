@@ -127,7 +127,7 @@ partiallySupported()
             "GRUPNET",
             {
                {5,{true, allow_values<std::string> {"NO"}, "GRUPNET(SUBSEAMANIFOLD): only option NO is supported"}}, // SUB_SEA_MANIFOLD
-               {6,{true, allow_values<std::string> {"NO"}, "GRUPNET(LIFTGAS): only option NO is supported"}}, // LIFT_GAS_FLOW_THROUGH
+               {6,{true, allow_values<std::string> {"NO", "FLO"}, "GRUPNET(LIFTGAS): only option NO and FLO are supported"}}, // ADD_GAS_LIFT_GAS
                {7,{true, allow_values<std::string> {"NONE"}, "GRUPNET(ALQ-DEN): only option NONE is supported"}}, // ALQ_SURFACE_DENSITY
             }
          },
