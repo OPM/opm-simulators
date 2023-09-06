@@ -758,6 +758,8 @@ namespace Opm
         {
             const auto& controls = well.injectionControls(summaryState);
 
+            ws.bhp = controls.bhp_limit;
+
             InjectorType injectorType = controls.injector_type;
             int phasePos;
             switch (injectorType) {
@@ -880,6 +882,9 @@ namespace Opm
         {
             const auto current = ws.production_cmode;
             const auto& controls = well.productionControls(summaryState);
+
+            ws.bhp = controls.bhp_limit;
+
             switch (current) {
             case Well::ProducerCMode::ORAT:
             {
