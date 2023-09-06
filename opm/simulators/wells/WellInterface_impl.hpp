@@ -1200,10 +1200,10 @@ namespace Opm
     {
         if constexpr (Indices::oilEnabled) {
             return fs.pressure(FluidSystem::oilPhaseIdx);
-        } else if constexpr (Indices::waterEnabled) {
-            return fs.pressure(FluidSystem::waterPhaseIdx);
-        } else {
+        } else if constexpr (Indices::gasEnabled) {
             return fs.pressure(FluidSystem::gasPhaseIdx);
+        } else {
+            return fs.pressure(FluidSystem::waterPhaseIdx);
         }
     }
 
