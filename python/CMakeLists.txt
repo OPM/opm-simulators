@@ -1,9 +1,7 @@
 find_package(pybind11 2.2 CONFIG)
 
 if(NOT pybind11_FOUND)
-  add_subdirectory( pybind11 )
-  # SYSTEM is supported for embedded pybind source (>= 2.3.0)
-  set(PYBIND11_SYSTEM "SYSTEM")
+  include(DownloadPyBind11)
 elseif(pybind11_VERSION VERSION_GREATER_EQUAL "2.3.0")
   if(CMAKE_VERSION VERSION_LESS 3.12)
     # SYSTEM is only support for pybind >= 2.3.0 and cmake <= 3.12.0 (Unfortunately querying the
