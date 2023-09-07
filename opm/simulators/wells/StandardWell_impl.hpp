@@ -742,7 +742,6 @@ namespace Opm
     StandardWell<TypeTag>::
     updateIPR(const Simulator& ebos_simulator, DeferredLogger& deferred_logger) const
     {
-        // TODO: not handling solvent related here for now
 
         // initialize all the values to be zero to begin with
         std::fill(this->ipr_a_.begin(), this->ipr_a_.end(), 0.);
@@ -824,6 +823,58 @@ namespace Opm
         }
         this->parallel_well_info_.communication().sum(this->ipr_a_.data(), this->ipr_a_.size());
         this->parallel_well_info_.communication().sum(this->ipr_b_.data(), this->ipr_b_.size());
+    }
+
+template<typename TypeTag>
+    void
+    StandardWell<TypeTag>::
+    updateIPRImplicit(const Simulator& ebosSimulator,
+                      const WellState& well_state, 
+                      DeferredLogger& deferred_logger)
+    {   
+        // Compute IPR based on well-equation:
+        // For a component rate r the derivative dr/dbhp is obtained by 
+        // dr/dbhp = - (partial r/partial x) * inv(partial Eq/partial x) * (partial Eq/partial control_value)
+        // where Eq(x)=0 is the well equation setup with bhp control and primary varables x 
+
+        //WellState well_state = ebosSimulator.problem().wellModel().wellState();
+        const auto& group_state  = ebosSimulator.problem().wellModel().groupState();
+
+        WellState well_state_copy = well_state;    
+        auto inj_controls = Well::InjectionControls(0);
+        auto prod_controls = Well::ProductionControls(0);
+        prod_controls.addControl(Well::ProducerCMode::BHP);
+        prod_controls.bhp_limit = well_state.well(this->index_of_well_).bhp;
+
+        //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
+        auto& ws = well_state_copy.well(this->index_of_well_);
+        const auto cmode = ws.production_cmode;
+        ws.production_cmode = Well::ProducerCMode::BHP;
+        const double dt = ebosSimulator.timeStepSize();
+        assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state_copy, group_state, deferred_logger);
+
+        const double nEq = this->primary_variables_.numWellEq();
+        BVectorWell rhs(1);
+        rhs[0].resize(nEq);
+        // rhs = 0 except -1 for control eq
+        for (size_t i=0; i < nEq; ++i){
+            rhs[0][i] = 0.0;            
+        }
+        rhs[0][Bhp] = -1.0;
+
+        BVectorWell x_well(1);
+        x_well[0].resize(nEq);
+        this->linSys_.solve(rhs, x_well);
+
+        for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx){
+            EvalWell comp_rate = this->primary_variables_.getQs(comp_idx);
+            for (size_t pvIdx = 0; pvIdx < nEq; ++pvIdx) {
+                this->ipr_b_[comp_idx] -= x_well[0][pvIdx]*comp_rate.derivative(pvIdx+Indices::numEq);
+            }
+            this->ipr_a_[comp_idx] = this->ipr_b_[comp_idx]*ws.bhp - comp_rate.value();
+        }
+        // reset cmode
+        ws.production_cmode = cmode;
     }
 
 

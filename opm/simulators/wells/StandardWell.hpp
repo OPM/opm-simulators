@@ -246,6 +246,11 @@ namespace Opm
             std::vector<double>& well_flux,
             DeferredLogger& deferred_logger) const override;
 
+        void updateIPRImplicit(const Simulator& ebosSimulator, 
+                               const WellState& well_state, 
+                               DeferredLogger& deferred_logger);  
+
+
         // NOTE: These cannot be protected since they are used by GasLiftRuntime
         using Base::phaseUsage;
         using Base::vfp_properties_;

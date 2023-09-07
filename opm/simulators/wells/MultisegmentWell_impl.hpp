@@ -1221,6 +1221,15 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
+    updateIPRImplicit(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger)
+    {
+        // not yet implemented
+        updateIPR(ebos_simulator, deferred_logger);
+    }
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
     checkOperabilityUnderTHPLimit(
              const Simulator& ebos_simulator,
              const WellState& well_state,

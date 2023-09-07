@@ -381,6 +381,10 @@ protected:
 
     virtual void updateIPR(const Simulator& ebos_simulator, DeferredLogger& deferred_logger) const=0;
 
+    virtual void updateIPRImplicit(const Simulator& ebosSimulator, 
+                                   const WellState& well_state, 
+                                   DeferredLogger& deferred_logger) = 0; 
+
     virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                                 const double dt,
                                                 const WellInjectionControls& inj_controls,

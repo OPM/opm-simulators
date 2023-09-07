@@ -793,7 +793,9 @@ namespace Opm
         // Only check wells under BHP and THP control
         bool check_thp = thp_controlled || this->operability_status_.thp_limit_violated_but_not_switched;
         if (check_thp || bhp_controlled) {
-            updateIPR(ebos_simulator, deferred_logger);
+            //updateIPR(ebos_simulator, deferred_logger);
+            // testing implicit version
+            updateIPRImplicit(ebos_simulator, well_state, deferred_logger);
             checkOperabilityUnderBHPLimit(well_state, ebos_simulator, deferred_logger);
         }
         // we do some extra checking for wells under THP control.

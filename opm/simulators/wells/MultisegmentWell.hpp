@@ -309,6 +309,8 @@ namespace Opm
 
         // updating the inflow based on the current reservoir condition
         virtual void updateIPR(const Simulator& ebos_simulator, DeferredLogger& deferred_logger) const override;
+
+        void updateIPRImplicit(const Simulator& ebos_simulator, const WellState& well_state, DeferredLogger& deferred_logger);
     };
 
 }
