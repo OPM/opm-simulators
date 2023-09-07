@@ -1439,29 +1439,6 @@ public:
             const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
             fluidState.setPvtRegionIndex(pvtRegionIdx);
 
-            double pressure = initialFluidStates_[globalDofIdx].pressure(oilPhaseIdx);
-            const auto pressure_input = bc.pressure;
-            if (pressure_input) {
-                pressure = *pressure_input;
-            }
-
-            std::array<Scalar, numPhases> pc = {0};
-            const auto& matParams = materialLawParams(globalDofIdx);
-            MaterialLaw::capillaryPressures(pc, matParams, fluidState);
-            Valgrind::CheckDefined(pressure);
-            Valgrind::CheckDefined(pc);
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
-                    continue;
-
-                if (Indices::oilEnabled)
-                    fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
-                else if (Indices::gasEnabled)
-                    fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
-                else if (Indices::waterEnabled)
-                    //single (water) phase
-                    fluidState.setPressure(phaseIdx, pressure);
-            }
             switch (bc.component) {
                 case BCComponent::OIL:
                     if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
@@ -1487,14 +1464,53 @@ public:
                     throw std::logic_error("you need to specify a valid component (OIL, WATER or GAS) when DIRICHLET type is set in BC");
                     break;
             }
-            double temperature = initialFluidStates_[globalDofIdx].temperature(oilPhaseIdx);
+            int phaseIndex;
+            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                phaseIndex = oilPhaseIdx;
+            }
+            else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                phaseIndex = gasPhaseIdx;
+            }
+            else {
+                phaseIndex = waterPhaseIdx;
+            }
+            double pressure = initialFluidStates_[globalDofIdx].pressure(phaseIndex);
+            const auto pressure_input = bc.pressure;
+            if (pressure_input) {
+                pressure = *pressure_input;
+            }
+
+            std::array<Scalar, numPhases> pc = {0};
+            const auto& matParams = materialLawParams(globalDofIdx);
+            MaterialLaw::capillaryPressures(pc, matParams, fluidState);
+            Valgrind::CheckDefined(pressure);
+            Valgrind::CheckDefined(pc);
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
+                if (!FluidSystem::phaseIsActive(phaseIdx))
+                    continue;
+
+                if (Indices::oilEnabled)
+                    fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
+                else if (Indices::gasEnabled)
+                    fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
+                else if (Indices::waterEnabled)
+                    //single (water) phase
+                    fluidState.setPressure(phaseIdx, pressure);
+            }
+            
+            double temperature = initialFluidStates_[globalDofIdx].temperature(phaseIndex);
             const auto temperature_input = bc.temperature;
             if(temperature_input)
                 temperature = *temperature_input;
             fluidState.setTemperature(temperature);
-            fluidState.setRs(0.0);
-            fluidState.setRv(0.0);
 
+            if (FluidSystem::enableDissolvedGas()) {
+                fluidState.setRs(0.0);
+                fluidState.setRv(0.0);
+            }
+            if (FluidSystem::enableDissolvedGasInWater()) {
+                fluidState.setRsw(0.0);
+            }
             if (FluidSystem::enableVaporizedWater())
                 fluidState.setRvw(0.0);
 
@@ -1509,6 +1525,7 @@ public:
                 fluidState.setDensity(phaseIdx, rho);
 
             }
+            fluidState.checkDefined();
             return fluidState;
         }
         return initialFluidStates_[globalDofIdx];
@@ -1629,6 +1646,9 @@ public:
         FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
         const auto& schedule = this->simulator().vanguard().schedule();
         if (bcindex_(dir)[globalSpaceIdx] == 0) {
+            return { BCType::NONE, RateVector(0.0) };
+        }
+        if (schedule[this->episodeIndex()].bcprop.size() == 0) {
             return { BCType::NONE, RateVector(0.0) };
         }
         const auto& bc = schedule[this->episodeIndex()].bcprop[bcindex_(dir)[globalSpaceIdx]];
