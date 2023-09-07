@@ -284,17 +284,17 @@ updateNewton(const BVectorWell& dwells,
 
     // updating the total rates Q_t
     value_[WQTotal] = value_[WQTotal] - dwells[0][WQTotal] * relaxation_factor_rate;
+    // here, we make sure it is zero for zero rated wells
     if (stop_or_zero_rate_target) {
         value_[WQTotal] = 0.;
     }
-    // TODO: here, we make sure it is zero for zero rated wells
 
     // updating the bottom hole pressure
     const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
     const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]),
                                                 std::abs(value_[Bhp]) * dBHPLimit);
-    // 1e5 to make sure bhp will not be below 1bar
-    value_[Bhp] = std::max(value_[Bhp] - dx1_limited, 1e5);
+    // we make sure bhp will not go below 0.
+    value_[Bhp] = std::max(value_[Bhp] - dx1_limited, 0.);
 }
 
 template<class FluidSystem, class Indices, class Scalar>
