@@ -476,6 +476,11 @@ bool WellInterfaceGeneric::isOperableAndSolvable() const
     return operability_status_.isOperableAndSolvable();
 }
 
+bool WellInterfaceGeneric::isSolvable() const
+{
+    return operability_status_.isSolvable();
+}
+
 bool WellInterfaceGeneric::useVfpExplicit() const
 {
     const auto& wvfpexp = well_ecl_.getWVFPEXP();

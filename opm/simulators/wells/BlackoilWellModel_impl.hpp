@@ -1775,7 +1775,7 @@ namespace Opm {
                 local_report += well->getWellConvergence(
                         summary_state, this->wellState(), B_avg, local_deferredLogger,
                         iterationIdx > param_.strict_outer_iter_wells_);
-            } else {
+            } else if (!well->isSolvable()) {
                 ConvergenceReport report;
                 using CR = ConvergenceReport;
                 report.setWellFailed({CR::WellFailure::Type::Unsolvable, CR::Severity::Normal, -1, well->name()});
