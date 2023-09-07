@@ -832,6 +832,8 @@ template<typename TypeTag>
                       const WellState& well_state, 
                       DeferredLogger& deferred_logger)
     {   
+        std::fill(this->ipr_a_.begin(), this->ipr_a_.end(), 0.);
+        std::fill(this->ipr_b_.begin(), this->ipr_b_.end(), 0.);
         // Compute IPR based on well-equation:
         // For a component rate r the derivative dr/dbhp is obtained by 
         // dr/dbhp = - (partial r/partial x) * inv(partial Eq/partial x) * (partial Eq/partial control_value)
