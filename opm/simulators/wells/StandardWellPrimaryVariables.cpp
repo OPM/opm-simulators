@@ -291,8 +291,13 @@ updateNewton(const BVectorWell& dwells,
 
     // updating the bottom hole pressure
     const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
-    const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]),
-                                                std::abs(value_[Bhp]) * dBHPLimit);
+    double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]),
+                                          std::abs(value_[Bhp]) * dBHPLimit);
+    if (sign1 > 0) {
+        if (std::abs(dwells[0][Bhp] >= std::abs(value_[Bhp]))) {
+            dx1_limited *= 0.99; // avoid to get zero Bhp
+        }
+    }
     // we make sure bhp will not go below 0.
     value_[Bhp] = std::max(value_[Bhp] - dx1_limited, 0.);
 }
