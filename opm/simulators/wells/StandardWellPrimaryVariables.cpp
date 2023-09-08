@@ -85,7 +85,7 @@ Scalar relaxationFactorRate(const Scalar old_value,
     // if the original rate is zero or possible_update_total_rate is zero, relaxation_factor will
     // always be 1.0, more thoughts might be needed.
     if (original_total_rate * possible_update_total_rate < 0.) { // sign changed
-        relaxation_factor = std::abs(original_total_rate / newton_update) * 0.8;
+        relaxation_factor = std::abs(original_total_rate / newton_update) * 0.95;
     }
 
     assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
