@@ -594,8 +594,8 @@ namespace Opm {
                         Scalar tmpSat = saturationsNew[phaseIdx] - saturationsOld[phaseIdx];
                         resultDeltaSaturation += tmpSat*tmpSat;
                         resultDenomSaturation += saturationsNew[phaseIdx]*saturationsNew[phaseIdx];
-                        assert(std::isfinite(resultDelta));
-                        assert(std::isfinite(resultDenom));
+                        assert(std::isfinite(resultDeltaSaturation));
+                        assert(std::isfinite(resultDenomSaturation));
                     }
                 }
             }
