@@ -55,33 +55,46 @@ PyBlackOilSimulator::PyBlackOilSimulator(
 {
 }
 
-bool PyBlackOilSimulator::checkSimulationFinished()
+// Public methods alphabetically sorted
+// ------------------------------------
+
+void PyBlackOilSimulator::advance(int report_step)
 {
-    return this->main_ebos_->getSimTimer()->done();
+    while (currentStep() < report_step) {
+        step();
+    }
 }
 
-const Opm::FlowMainEbos<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
-         PyBlackOilSimulator::getFlowMainEbos() const
+bool PyBlackOilSimulator::checkSimulationFinished()
 {
-    if (this->main_ebos_) {
-        return *this->main_ebos_;
-    }
-    else {
-        throw std::runtime_error("BlackOilSimulator not initialized: "
-            "Cannot get reference to FlowMainEbos object" );
-    }
+    return getFlowMainEbos().getSimTimer()->done();
+}
+
+// This returns the report step number that will be executed next time step()
+//   is called.
+int PyBlackOilSimulator::currentStep()
+{
+    return getFlowMainEbos().getSimTimer()->currentStepNum();
+    // NOTE: this->ebos_simulator_->episodeIndex() would also return the current
+    // report step number, but this number is always delayed by 1 step relative
+    // to this->main_ebos_->getSimTimer()->currentStepNum()
+    // See details in runStep() in file SimulatorFullyImplicitBlackoilEbos.hpp
+}
+
+py::array_t<double> PyBlackOilSimulator::getCellVolumes() {
+    std::size_t len;
+    auto array = getMaterialState().getCellVolumes(&len);
+    return py::array(len, array.get());
+}
+
+double PyBlackOilSimulator::getDT() {
+    return getFlowMainEbos().getPreviousReportStepSize();
 }
 
 py::array_t<double> PyBlackOilSimulator::getPorosity()
 {
     std::size_t len;
-    auto array = this->material_state_->getPorosity(&len);
-    return py::array(len, array.get());
-}
-
-py::array_t<double> PyBlackOilSimulator::getCellVolumes() {
-    std::size_t len;
-    auto array = this->material_state_->getCellVolumes(&len);
+    auto array = getMaterialState().getPorosity(&len);
     return py::array(len, array.get());
 }
 
@@ -96,14 +109,7 @@ void PyBlackOilSimulator::setPorosity( py::array_t<double,
 {
     std::size_t size_ = array.size();
     const double *poro = array.data();
-    this->material_state_->setPorosity(poro, size_);
-}
-
-void PyBlackOilSimulator::advance(int report_step)
-{
-    while (currentStep() < report_step) {
-        step();
-    }
+    getMaterialState().setPorosity(poro, size_);
 }
 
 int PyBlackOilSimulator::step()
@@ -119,26 +125,14 @@ int PyBlackOilSimulator::step()
     }
     //if (this->debug_)
     //    this->mainEbos_->getSimTimer()->report(std::cout);
-    auto result = this->main_ebos_->executeStep();
+    auto result = getFlowMainEbos().executeStep();
     return result;
 }
-
-// This returns the report step number that will be executed next time step()
-//   is called.
-int PyBlackOilSimulator::currentStep()
-{
-    return this->main_ebos_->getSimTimer()->currentStepNum();
-    // NOTE: this->ebos_simulator_->episodeIndex() would also return the current
-    // report step number, but this number is always delayed by 1 step relative
-    // to this->main_ebos_->getSimTimer()->currentStepNum()
-    // See details in runStep() in file SimulatorFullyImplicitBlackoilEbos.hpp
-}
-
 
 int PyBlackOilSimulator::stepCleanup()
 {
     this->has_run_cleanup_ = true;
-    return this->main_ebos_->executeStepsCleanup();
+    return getFlowMainEbos().executeStepsCleanup();
 }
 
 int PyBlackOilSimulator::stepInit()
@@ -178,6 +172,34 @@ int PyBlackOilSimulator::stepInit()
     }
 }
 
+// Private methods alphabetically sorted
+// ------------------------------------
+
+Opm::FlowMainEbos<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
+         PyBlackOilSimulator::getFlowMainEbos() const
+{
+    if (this->main_ebos_) {
+        return *this->main_ebos_;
+    }
+    else {
+        throw std::runtime_error("BlackOilSimulator not initialized: "
+            "Cannot get reference to FlowMainEbos object" );
+    }
+}
+
+PyMaterialState<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
+PyBlackOilSimulator::getMaterialState() const
+{
+    if (this->material_state_) {
+        return *this->material_state_;
+    }
+    else {
+        throw std::runtime_error("BlackOilSimulator not initialized: "
+            "Cannot get reference to FlowMainEbos object" );
+    }
+}
+
+// Exported functions
 void export_PyBlackOilSimulator(py::module& m)
 {
     py::class_<PyBlackOilSimulator>(m, "BlackOilSimulator")
@@ -189,6 +211,7 @@ void export_PyBlackOilSimulator(py::module& m)
             std::shared_ptr<Opm::SummaryConfig> >())
         .def("get_cell_volumes", &PyBlackOilSimulator::getCellVolumes,
             py::return_value_policy::copy)
+        .def("get_dt", &PyBlackOilSimulator::getDT)
         .def("get_porosity", &PyBlackOilSimulator::getPorosity,
             py::return_value_policy::copy)
         .def("run", &PyBlackOilSimulator::run)

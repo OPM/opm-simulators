@@ -3,16 +3,7 @@ import unittest
 from contextlib import contextmanager
 from pathlib import Path
 from opm.simulators import BlackOilSimulator
-
-@contextmanager
-def pushd(path):
-    cwd = os.getcwd()
-    if not os.path.isdir(path):
-        os.makedirs(path)
-    os.chdir(path)
-    yield
-    os.chdir(cwd)
-
+from .pytest_common import pushd
 
 class TestBasic(unittest.TestCase):
     @classmethod
@@ -63,6 +54,10 @@ class TestBasic(unittest.TestCase):
             sim = BlackOilSimulator("SPE1CASE1.DATA")
             sim.step_init()
             sim.step()
+            dt = sim.get_dt()
+            # NOTE: The timestep should be 1 month = 31 days
+            #  = 31 * 24 * 60 * 60 seconds = 2678400 seconds
+            self.assertAlmostEqual(dt, 2678400.0, places=7, msg='value of timestep')
             vol = sim.get_cell_volumes()
             self.assertEqual(len(vol), 300, 'length of volume vector')
             # NOTE: The volume should be 1000 ft x 1000 ft x 20 ft * 0.3 (porosity) 
