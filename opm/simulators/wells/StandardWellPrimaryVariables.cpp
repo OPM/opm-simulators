@@ -294,7 +294,7 @@ updateNewton(const BVectorWell& dwells,
     const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]),
                                                 std::abs(value_[Bhp]) * dBHPLimit);
     // 1e5 to make sure bhp will not be below 1bar
-    value_[Bhp] = std::max(value_[Bhp] - dx1_limited, 1e5);
+    value_[Bhp] = std::max(value_[Bhp] - dx1_limited, std::abs(value_[Bhp]) * 0.01);
 }
 
 template<class FluidSystem, class Indices, class Scalar>
