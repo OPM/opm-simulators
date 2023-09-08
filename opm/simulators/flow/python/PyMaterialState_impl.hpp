@@ -17,6 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <fmt/format.h>
+
 namespace Opm::Pybind {
 
 template <class TypeTag>
@@ -24,11 +26,11 @@ std::unique_ptr<double []>
 PyMaterialState<TypeTag>::
 getCellVolumes( std::size_t *size)
 {
-    Model &model = ebosSimulator_->model();
+    Model &model = this->ebos_simulator_->model();
     *size = model.numGridDof();
     auto array = std::make_unique<double []>(*size);
-    for (unsigned dofIdx = 0; dofIdx < *size; ++dofIdx) {
-        array[dofIdx] = model.dofTotalVolume(dofIdx);
+    for (unsigned dof_idx = 0; dof_idx < *size; ++dof_idx) {
+        array[dof_idx] = model.dofTotalVolume(dof_idx);
     }
     return array;
 }
@@ -38,12 +40,12 @@ std::unique_ptr<double []>
 PyMaterialState<TypeTag>::
 getPorosity( std::size_t *size)
 {
-    Problem &problem = ebosSimulator_->problem();
-    Model &model = ebosSimulator_->model();
+    Problem &problem = this->ebos_simulator_->problem();
+    Model &model = this->ebos_simulator_->model();
     *size = model.numGridDof();
     auto array = std::make_unique<double []>(*size);
-    for (unsigned dofIdx = 0; dofIdx < *size; ++dofIdx) {
-        array[dofIdx] = problem.referencePorosity(dofIdx, /*timeIdx*/0);
+    for (unsigned dof_idx = 0; dof_idx < *size; ++dof_idx) {
+        array[dof_idx] = problem.referencePorosity(dof_idx, /*timeIdx*/0);
     }
     return array;
 }
@@ -53,17 +55,17 @@ void
 PyMaterialState<TypeTag>::
 setPorosity(const double *poro, std::size_t size)
 {
-    Problem &problem = ebosSimulator_->problem();
-    Model &model = ebosSimulator_->model();
+    Problem &problem = this->ebos_simulator_->problem();
+    Model &model = this->ebos_simulator_->model();
     auto model_size = model.numGridDof();
     if (model_size != size) {
-        std::ostringstream message;
-        message << "Cannot set porosity. Expected array of size: "
-                << model_size << ", got array of size: " << size;
-        throw std::runtime_error(message.str());
+        const std::string msg = fmt::format(
+            "Cannot set porosity. Expected array of size: {}, got array of size: ",
+            model_size, size);
+        throw std::runtime_error(msg);
     }
-    for (unsigned dofIdx = 0; dofIdx < size; ++dofIdx) {
-        problem.setPorosity(poro[dofIdx], dofIdx);
+    for (unsigned dof_idx = 0; dof_idx < size; ++dof_idx) {
+        problem.setPorosity(poro[dof_idx], dof_idx);
     }
 }
 } //namespace Opm::Pybind

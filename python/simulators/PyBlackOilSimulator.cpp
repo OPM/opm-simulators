@@ -24,19 +24,21 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
+//#include <opm/simulators/flow/python/PyFluidState.hpp>
+#include <opm/simulators/flow/python/PyMaterialState.hpp>
+#include <opm/simulators/flow/python/PyBlackOilSimulator.hpp>
 #include <flow/flow_ebos_blackoil.hpp>
 // NOTE: EXIT_SUCCESS, EXIT_FAILURE is defined in cstdlib
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
 #include <string>
-#include <opm/simulators/flow/python/PyBlackOilSimulator.hpp>
 
 namespace py = pybind11;
 
 namespace Opm::Pybind {
-PyBlackOilSimulator::PyBlackOilSimulator( const std::string &deckFilename)
-    : deckFilename_{deckFilename}
+PyBlackOilSimulator::PyBlackOilSimulator( const std::string &deck_filename)
+    : deck_filename_{deck_filename}
 {
 }
 
@@ -55,14 +57,14 @@ PyBlackOilSimulator::PyBlackOilSimulator(
 
 bool PyBlackOilSimulator::checkSimulationFinished()
 {
-    return this->mainEbos_->getSimTimer()->done();
+    return this->main_ebos_->getSimTimer()->done();
 }
 
 const Opm::FlowMainEbos<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
          PyBlackOilSimulator::getFlowMainEbos() const
 {
-    if (this->mainEbos_) {
-        return *this->mainEbos_;
+    if (this->main_ebos_) {
+        return *this->main_ebos_;
     }
     else {
         throw std::runtime_error("BlackOilSimulator not initialized: "
@@ -73,14 +75,20 @@ const Opm::FlowMainEbos<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
 py::array_t<double> PyBlackOilSimulator::getPorosity()
 {
     std::size_t len;
-    auto array = materialState_->getPorosity(&len);
+    auto array = this->material_state_->getPorosity(&len);
+    return py::array(len, array.get());
+}
+
+py::array_t<double> PyBlackOilSimulator::getCellVolumes() {
+    std::size_t len;
+    auto array = this->material_state_->getCellVolumes(&len);
     return py::array(len, array.get());
 }
 
 int PyBlackOilSimulator::run()
 {
-    auto mainObject = Opm::Main( deckFilename_ );
-    return mainObject.runStatic<Opm::Properties::TTag::EclFlowProblemTPFA>();
+    auto main_object = Opm::Main( this->deck_filename_ );
+    return main_object.runStatic<Opm::Properties::TTag::EclFlowProblemTPFA>();
 }
 
 void PyBlackOilSimulator::setPorosity( py::array_t<double,
@@ -88,7 +96,7 @@ void PyBlackOilSimulator::setPorosity( py::array_t<double,
 {
     std::size_t size_ = array.size();
     const double *poro = array.data();
-    materialState_->setPorosity(poro, size_);
+    this->material_state_->setPorosity(poro, size_);
 }
 
 void PyBlackOilSimulator::advance(int report_step)
@@ -100,10 +108,10 @@ void PyBlackOilSimulator::advance(int report_step)
 
 int PyBlackOilSimulator::step()
 {
-    if (!hasRunInit_) {
+    if (!this->has_run_init_) {
         throw std::logic_error("step() called before step_init()");
     }
-    if (hasRunCleanup_) {
+    if (this->has_run_cleanup_) {
         throw std::logic_error("step() called after step_cleanup()");
     }
     if(checkSimulationFinished()) {
@@ -111,7 +119,7 @@ int PyBlackOilSimulator::step()
     }
     //if (this->debug_)
     //    this->mainEbos_->getSimTimer()->report(std::cout);
-    auto result = mainEbos_->executeStep();
+    auto result = this->main_ebos_->executeStep();
     return result;
 }
 
@@ -119,26 +127,26 @@ int PyBlackOilSimulator::step()
 //   is called.
 int PyBlackOilSimulator::currentStep()
 {
-    return this->mainEbos_->getSimTimer()->currentStepNum();
-    // NOTE: this->ebosSimulator_->episodeIndex() would also return the current
+    return this->main_ebos_->getSimTimer()->currentStepNum();
+    // NOTE: this->ebos_simulator_->episodeIndex() would also return the current
     // report step number, but this number is always delayed by 1 step relative
-    // to this->mainEbos_->getSimTimer()->currentStepNum()
+    // to this->main_ebos_->getSimTimer()->currentStepNum()
     // See details in runStep() in file SimulatorFullyImplicitBlackoilEbos.hpp
 }
 
 
 int PyBlackOilSimulator::stepCleanup()
 {
-    hasRunCleanup_ = true;
-    return mainEbos_->executeStepsCleanup();
+    this->has_run_cleanup_ = true;
+    return this->main_ebos_->executeStepsCleanup();
 }
 
 int PyBlackOilSimulator::stepInit()
 {
 
-    if (hasRunInit_) {
+    if (this->has_run_init_) {
         // Running step_init() multiple times is not implemented yet,
-        if (hasRunCleanup_) {
+        if (this->has_run_cleanup_) {
             throw std::logic_error("step_init() called again");
         }
         else {
@@ -146,7 +154,7 @@ int PyBlackOilSimulator::stepInit()
         }
     }
     if (this->deck_) {
-        main_ = std::make_unique<Opm::Main>(
+        this->main_ = std::make_unique<Opm::Main>(
             this->deck_->getDataFile(),
             this->eclipse_state_,
             this->schedule_,
@@ -154,20 +162,19 @@ int PyBlackOilSimulator::stepInit()
         );
     }
     else {
-        main_ = std::make_unique<Opm::Main>( deckFilename_ );
+        this->main_ = std::make_unique<Opm::Main>( this->deck_filename_ );
     }
-    int exitCode = EXIT_SUCCESS;
-    mainEbos_ = main_->initFlowEbosBlackoil(exitCode);
-    if (mainEbos_) {
-        int result = mainEbos_->executeInitStep();
-        hasRunInit_ = true;
-        ebosSimulator_ = mainEbos_->getSimulatorPtr();
-        materialState_ = std::make_unique<PyMaterialState<TypeTag>>(
-            ebosSimulator_);
+    int exit_code = EXIT_SUCCESS;
+    this->main_ebos_ = this->main_->initFlowEbosBlackoil(exit_code);
+    if (this->main_ebos_) {
+        int result = this->main_ebos_->executeInitStep();
+        this->has_run_init_ = true;
+        this->ebos_simulator_ = this->main_ebos_->getSimulatorPtr();
+        this->material_state_ = std::make_unique<PyMaterialState<TypeTag>>(this->ebos_simulator_);
         return result;
     }
     else {
-        return exitCode;
+        return exit_code;
     }
 }
 
@@ -180,6 +187,8 @@ void export_PyBlackOilSimulator(py::module& m)
             std::shared_ptr<Opm::EclipseState>,
             std::shared_ptr<Opm::Schedule>,
             std::shared_ptr<Opm::SummaryConfig> >())
+        .def("get_cell_volumes", &PyBlackOilSimulator::getCellVolumes,
+            py::return_value_policy::copy)
         .def("get_porosity", &PyBlackOilSimulator::getPorosity,
             py::return_value_policy::copy)
         .def("run", &PyBlackOilSimulator::run)
