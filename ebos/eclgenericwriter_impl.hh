@@ -55,6 +55,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
 #include <functional>
 #include <map>
 #include <memory>
@@ -263,17 +264,17 @@ writeInit(const std::function<unsigned int(unsigned int)>& map)
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
-data::Solution EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
+data::Solution
+EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
               const std::function<unsigned int(unsigned int)>& map) const
 {
     const auto& cartMapper = *equilCartMapper_;
     const auto& cartDims = cartMapper.cartesianDimensions();
-    const int globalSize = cartDims[0] * cartDims[1] * cartDims[2];
 
     auto tranx = data::CellData {
         UnitSystem::measure::transmissibility,
-        std::vector<double>(globalSize, 0.0),
+        std::vector<double>(cartDims[0] * cartDims[1] * cartDims[2], 0.0),
         data::TargetType::INIT
     };
 
@@ -281,15 +282,24 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
     auto tranz = tranx;
 
     using GlobalGridView = typename EquilGrid::LeafGridView;
-    const GlobalGridView& globalGridView = equilGrid_->leafGridView();
     using GlobElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView>;
-    GlobElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
+    const GlobalGridView& globalGridView = this->equilGrid_->leafGridView();
+    const GlobElementMapper globalElemMapper { globalGridView, Dune::mcmgElementLayout() };
+
+    auto isNumAquCell = [numAquCell = this->eclState_.aquifer().hasNumericalAquifer()
+                         ? this->eclState_.aquifer().numericalAquifers().allAquiferCellIds()
+                         : std::vector<std::size_t>{}]
+        (const std::size_t cellIdx)
+    {
+        return std::binary_search(numAquCell.begin(), numAquCell.end(), cellIdx);
+    };
 
     for (const auto& elem : elements(globalGridView)) {
         for (const auto& is : intersections(globalGridView, elem)) {
             if (!is.neighbor())
                 continue; // intersection is on the domain boundary
 
+            // Not 'const' because remapped if 'map' is non-null.
             unsigned c1 = globalElemMapper.index(is.inside());
             unsigned c2 = globalElemMapper.index(is.outside());
 
@@ -299,6 +309,15 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
             // Ordering of compressed and uncompressed index should be the same
             const int cartIdx1 = cartMapper.cartesianIndex( c1 );
             const int cartIdx2 = cartMapper.cartesianIndex( c2 );
+
+            if (isNumAquCell(cartIdx1) || isNumAquCell(cartIdx2)) {
+                // Connections involving numerical aquifers are always NNCs
+                // for the purpose of file output.  This holds even for
+                // connections between cells like (I,J,K) and (I+1,J,K)
+                // which are nominally neighbours in the Cartesian grid.
+                continue;
+            }
+
             // Ordering of compressed and uncompressed index should be the same
             assert(cartIdx1 <= cartIdx2);
             int gc1 = std::min(cartIdx1, cartIdx2);
@@ -334,41 +353,105 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
-std::vector<NNCdata> EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const std::function<unsigned int(unsigned int)>& map) const
+std::vector<NNCdata>
+EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
+exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive,
+                    const std::function<unsigned int(unsigned int)>& map) const
 {
-    std::size_t nx = eclState_.getInputGrid().getNX();
-    std::size_t ny = eclState_.getInputGrid().getNY();
-    auto nncData = eclState_.getInputNNC().input();
-    const auto& unitSystem = eclState_.getDeckUnitSystem();
+    auto isNumAquCell = [numAquCell = this->eclState_.aquifer().hasNumericalAquifer()
+                         ? this->eclState_.aquifer().numericalAquifers().allAquiferCellIds()
+                         : std::vector<std::size_t>{}]
+        (const std::size_t cellIdx)
+    {
+        return std::binary_search(numAquCell.begin(), numAquCell.end(), cellIdx);
+    };
 
-    for( const auto& entry : nncData ) {
-        // test whether NNC is not a neighboring connection
-        // cell2>=cell1 holds due to sortNncAndApplyEditnnc
-        assert( entry.cell2 >= entry.cell1 );
-        auto cellDiff = entry.cell2 - entry.cell1;
+    auto isNumAquConn = [&isNumAquCell](const std::size_t cellIdx1,
+                                        const std::size_t cellIdx2)
+    {
+        return isNumAquCell(cellIdx1) || isNumAquCell(cellIdx2);
+    };
 
-        if (cellDiff != 1 && cellDiff != nx && cellDiff != nx*ny) {
-            auto tt = unitSystem.from_si(UnitSystem::measure::transmissibility, entry.trans);
-            // Eclipse ignores NNCs (with EDITNNC applied) that are small. Seems like the threshold is 1.0e-6
-            if ( tt >= 1.0e-6 )
-                outputNnc_.emplace_back(entry.cell1, entry.cell2, entry.trans);
+    auto isCartesianNeighbour = [nx = this->eclState_.getInputGrid().getNX(),
+                                 ny = this->eclState_.getInputGrid().getNY()]
+        (const std::size_t cellIdx1, const std::size_t cellIdx2)
+    {
+        const auto cellDiff = cellIdx2 - cellIdx1;
+
+        return (cellDiff == 1)
+            || (cellDiff == nx)
+            || (cellDiff == nx * ny);
+    };
+
+    auto activeCell = [&cartesianToActive](const std::size_t cellIdx)
+    {
+        auto pos = cartesianToActive.find(cellIdx);
+        return (pos == cartesianToActive.end()) ? -1 : pos->second;
+    };
+
+    const auto& nncData = this->eclState_.getInputNNC().input();
+    const auto& unitSystem = this->eclState_.getDeckUnitSystem();
+
+    for (const auto& entry : nncData) {
+        // Ignore most explicit NNCs between otherwise neighbouring cells.
+        // We keep NNCs that involve cells with numerical aquifers even if
+        // these might be between neighbouring cells in the Cartesian
+        // grid--e.g., between cells (I,J,K) and (I+1,J,K).  All such
+        // connections should be written to NNC output arrays provided the
+        // transmissibility value is sufficiently large.
+        //
+        // The condition cell2 >= cell1 holds by construction of nncData.
+        assert (entry.cell2 >= entry.cell1);
+
+        if (! isCartesianNeighbour(entry.cell1, entry.cell2) ||
+            isNumAquConn(entry.cell1, entry.cell2))
+        {
+            // Pick up transmissibility value from 'globalTrans()' since
+            // multiplier keywords like MULTREGT might have impacted the
+            // values entered in primary sources like NNC/EDITNNC/EDITNNCR.
+            const auto c1 = activeCell(entry.cell1);
+            const auto c2 = activeCell(entry.cell2);
+
+            if ((c1 < 0) || (c2 < 0)) {
+                // Connection between inactive cells?  Unexpected at this
+                // level.  Might consider 'throw'ing if this happens...
+                continue;
+            }
+
+            const auto trans = this->globalTrans().transmissibility(c1, c2);
+            const auto tt = unitSystem
+                .from_si(UnitSystem::measure::transmissibility, trans);
+
+            // ECLIPSE ignores NNCs (with EDITNNC/EDITNNCR applied) with
+            // small transmissibility values.  Seems like the threshold is
+            // 1.0e-6 in output units.
+            if (std::isnormal(tt) && ! (tt < 1.0e-6)) {
+                this->outputNnc_.emplace_back(entry.cell1, entry.cell2, trans);
+            }
         }
     }
 
+    auto isDirectNeighbours = [&isCartesianNeighbour, &cartesianToActive,
+                               cartDims = &this->cartMapper_.cartesianDimensions()]
+        (const std::size_t cellIdx1, const std::size_t cellIdx2)
+    {
+        return isCartesianNeighbour(cellIdx1, cellIdx2)
+            || directVerticalNeighbors(*cartDims, cartesianToActive, cellIdx1, cellIdx2);
+    };
+
     using GlobalGridView = typename EquilGrid::LeafGridView;
-    const GlobalGridView& globalGridView = equilGrid_->leafGridView();
     using GlobElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView>;
-    GlobElementMapper globalElemMapper(globalGridView, Dune::mcmgElementLayout());
+    const GlobalGridView& globalGridView = this->equilGrid_->leafGridView();
+    const GlobElementMapper globalElemMapper { globalGridView, Dune::mcmgElementLayout() };
 
     // Cartesian index mapper for the serial I/O grid
-    const auto& equilCartMapper =  *equilCartMapper_;
-    const auto& cartDims = cartMapper_.cartesianDimensions();
+    const auto& equilCartMapper = *equilCartMapper_;
     for (const auto& elem : elements(globalGridView)) {
         for (const auto& is : intersections(globalGridView, elem)) {
             if (!is.neighbor())
                 continue; // intersection is on the domain boundary
 
+            // Not 'const' because remapped if 'map' is non-null.
             unsigned c1 = globalElemMapper.index(is.inside());
             unsigned c2 = globalElemMapper.index(is.outside());
 
@@ -381,38 +464,43 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive, const 
             if ( cc2 < cc1 )
                 std::swap(cc1, cc2);
 
-            auto cellDiff = cc2 - cc1;
-
             // Re-ordering in case of non-empty mapping between equilGrid to grid
             if (map) {
                 c1 = map(c1); // equilGridToGrid map
                 c2 = map(c2);
             }
 
-            if (cellDiff != 1 &&
-                cellDiff != nx &&
-                cellDiff != nx*ny &&
-                !directVerticalNeighbors(cartDims, cartesianToActive, cc1, cc2)) {
-                // We need to check whether an NNC for this face was also specified
-                // via the NNC keyword in the deck (i.e. in the first origNncSize entries.
-                auto t = globalTrans().transmissibility(c1, c2);
-                auto candidate = std::lower_bound(nncData.begin(), nncData.end(), NNCdata(cc1, cc2, 0.0));
+            if (isNumAquConn(cc1, cc2) || ! isDirectNeighbours(cc1, cc2)) {
+                // We need to check whether an NNC for this face was also
+                // specified via the NNC keyword in the deck.
+                auto t = this->globalTrans().transmissibility(c1, c2);
+                auto candidate = std::lower_bound(nncData.begin(), nncData.end(),
+                                                  NNCdata { cc1, cc2, 0.0 });
 
-                while ( candidate != nncData.end() && candidate->cell1 == cc1
-                     && candidate->cell2 == cc2) {
+                while ((candidate != nncData.end()) &&
+                       (candidate->cell1 == cc1) &&
+                       (candidate->cell2 == cc2))
+                {
                     t -= candidate->trans;
                     ++candidate;
                 }
-                // eclipse ignores NNCs with zero transmissibility (different threshold than for NNC
-                // with corresponding EDITNNC above). In addition we do set small transmissibilties
-                // to zero when setting up the simulator. These will be ignored here, too.
-                auto tt = unitSystem.from_si(UnitSystem::measure::transmissibility, std::abs(t));
-                if ( tt > 1e-12 )
-                    outputNnc_.push_back({cc1, cc2, t});
+
+                // ECLIPSE ignores NNCs with zero transmissibility
+                // (different threshold than for NNC with corresponding
+                // EDITNNC above).  In addition we do set small
+                // transmissibilities to zero when setting up the simulator.
+                // These will be ignored here, too.
+                const auto tt = unitSystem
+                    .from_si(UnitSystem::measure::transmissibility, t);
+
+                if (std::isnormal(tt) && (tt > 1.0e-12)) {
+                    this->outputNnc_.emplace_back(cc1, cc2, t);
+                }
             }
         }
     }
-    return outputNnc_;
+
+    return this->outputNnc_;
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>

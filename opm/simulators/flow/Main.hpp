@@ -3,7 +3,8 @@
   Copyright 2014 Dr. Blatt - HPC-Simulation-Software & Services
   Copyright 2015 IRIS AS
   Copyright 2014 STATOIL ASA.
-
+  Copyright 2023 Inria
+  
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -142,8 +143,8 @@ public:
     int runDynamic()
     {
         int exitCode = EXIT_SUCCESS;
-        if (isSimulationRank_) {
-            if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
+        if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
+            if (isSimulationRank_) {
                 return this->dispatchDynamic_();
             }
         }
@@ -155,8 +156,8 @@ public:
     int runStatic()
     {
         int exitCode = EXIT_SUCCESS;
-        if (isSimulationRank_) {
-            if (initialize_<TypeTag>(exitCode)) {
+        if (initialize_<TypeTag>(exitCode)) {
+            if (isSimulationRank_) {
                 return this->dispatchStatic_<TypeTag>();
             }
         }
@@ -325,17 +326,31 @@ private:
 
 #if HAVE_DAMARIS
         enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
+        // Reset to false as we cannot use Damaris if there is only one rank.
+        if ((enableDamarisOutput_ == true) && (EclGenericVanguard::comm().size() == 1)) {
+            std::string msg ;
+            msg = "\nUse of Damaris (command line argument --enable-damaris-output=true) has been disabled for run with only one rank.\n" ;
+            OpmLog::warning(msg);
+            enableDamarisOutput_ = false ;
+        }
+        
         if (enableDamarisOutput_) {
             this->setupDamaris(outputDir,
                                EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective));
         }
 #endif // HAVE_DAMARIS
 
+        // Guard for when the Damaris core(s) return from damaris_start() 
+        // which happens when damaris_stop() is called in main simulation
+        if (!isSimulationRank_) {
+            exitCode = EXIT_SUCCESS;
+            return true;
+        }
+        
         int mpiRank = EclGenericVanguard::comm().rank();
         outputCout_ = false;
         if (mpiRank == 0)
             outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
-
 
         if (deckFilename.empty()) {
             if (mpiRank == 0) {

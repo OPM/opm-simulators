@@ -533,6 +533,13 @@ add_test_compareECLFiles(CASENAME co2store_gw
                          REL_TOL ${rel_tol}
                          DIR co2store)
 
+add_test_compareECLFiles(CASENAME co2store_gw_dirichlet
+                         FILENAME CO2STORE_GW_DIRICHLET
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR co2store)
+
 add_test_compareECLFiles(CASENAME co2store_gaswat
                          FILENAME CO2STORE_GASWAT
                          SIMULATOR flow
