@@ -255,8 +255,10 @@ updateNewton(const BVectorWell& dwells,
 
     // for injectors, very typical one of the fractions will be one, and it is easy to get zero value
     // fractions. not sure what is the best way to handle it yet, so we just use 1.0 here
+    // The relaxationFactorFractionProducer code does not take into account solvent
+    // so we use 1.0 for cases with solvent.
     [[maybe_unused]] const double relaxation_factor_fractions =
-        well_.isProducer() ? this->relaxationFactorFractionsProducer(dwells) : 1.0;
+        (well_.isProducer() && !Indices::enableSolvent) ? this->relaxationFactorFractionsProducer(dwells) : 1.0;
 
     // update the second and third well variable (The flux fractions)
 

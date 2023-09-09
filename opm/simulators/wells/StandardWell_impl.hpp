@@ -1372,6 +1372,14 @@ namespace Opm
             for(int p = 0; p < np; ++p) {
                 well_flux[this->ebosCompIdxToFlowCompIdx(p)] += cq_s[p];
             }
+
+            // the solvent contribution is added to the gas potentials
+            if constexpr (has_solvent) {
+                const auto& pu = this->phaseUsage();
+                assert(pu.phase_used[Gas]);
+                const int gas_pos = pu.phase_pos[Gas];
+                well_flux[gas_pos] += cq_s[Indices::contiSolventEqIdx];
+            }
         }
         this->parallel_well_info_.communication().sum(well_flux.data(), well_flux.size());
     }
