@@ -35,6 +35,9 @@
 #include <ebos/eclnewtonmethod.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
 #include <ebos/eclwriter.hh>
+#if HAVE_DAMARIS
+#include <ebos/damariswriter.hh>
+#endif
 #include <ebos/FIBlackOilModel.hpp>
 #include <ebos/vtkecltracermodule.hh>
 

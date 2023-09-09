@@ -145,7 +145,7 @@ list (APPEND MAIN_SOURCE_FILES
   )
 
 
-if (DAMARIS_FOUND AND MPI_FOUND)
+if (Damaris_FOUND AND MPI_FOUND)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/DamarisOutputModule.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/DamarisKeywords.cpp)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/initDamarisXmlFile.cpp)
@@ -589,6 +589,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WellTest.hpp
   opm/simulators/wells/WGState.hpp
   )
+
+if (Damaris_FOUND AND MPI_FOUND)
+  list (APPEND PUBLIC_HEADER_FILES ebos/damariswriter.hh)
+endif()
 
 if(HDF5_FOUND)
   list(APPEND PUBLIC_HEADER_FILES
