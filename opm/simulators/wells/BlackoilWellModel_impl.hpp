@@ -2612,22 +2612,30 @@ namespace Opm {
     setupDomains(const std::vector<Domain>& domains)
     {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-        // TODO: This loop nest may be slow for very large numbers
-        // of domains and wells, but that has not been observed on
-        // tests so far. Using the partition vector instead would
-        // be faster if we need to change.
+        // TODO: This loop nest may be slow for very large numbers of
+        // domains and wells, but that has not been observed on tests so
+        // far.  Using the partition vector instead would be faster if we
+        // need to change.
         for (const auto& wellPtr : this->well_container_) {
-            const int first_well_cell = wellPtr->cells()[0];
+            const int first_well_cell = wellPtr->cells().front();
             for (const auto& domain : domains) {
-                const bool found = std::binary_search(domain.cells.begin(), domain.cells.end(), first_well_cell);
-                if (found) {
+                auto cell_present = [&domain](const auto cell)
+                {
+                    return std::binary_search(domain.cells.begin(),
+                                              domain.cells.end(), cell);
+                };
+
+                if (cell_present(first_well_cell)) {
                     // Assuming that if the first well cell is found in a domain,
                     // then all of that well's cells are in that same domain.
                     well_domain_[wellPtr->name()] = domain.index;
+
                     // Verify that all of that well's cells are in that same domain.
                     for (int well_cell : wellPtr->cells()) {
-                        if (!std::binary_search(domain.cells.begin(), domain.cells.end(), well_cell)) {
-                            OPM_THROW(std::runtime_error, "Well found on multiple domains.");
+                        if (! cell_present(well_cell)) {
+                            OPM_THROW(std::runtime_error,
+                                      fmt::format("Well '{}' found on multiple domains.",
+                                                  wellPtr->name()));
                         }
                     }
                 }
