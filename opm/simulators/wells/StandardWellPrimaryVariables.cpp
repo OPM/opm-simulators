@@ -45,9 +45,6 @@
 namespace {
 
     constexpr double EPSILON = 1.0e-14;
-    double safe_fraction(const double fraction) {
-        return std::min(std::max(fraction, 0.0), 1.0);
-    }
     
 //! \brief Relaxation factor considering only one fraction value.
 template<class Scalar>
@@ -55,7 +52,7 @@ Scalar relaxationFactorFraction(const Scalar old_value,
                                 const Scalar dx)
 {
     assert(old_value >= -EPSILON && old_value <= (1.0+EPSILON));
-    const Scalar safe_old_value = safe_fraction(old_value);
+    const Scalar& safe_old_value = std::clamp(old_value, 0.0, 1.0);
 
     Scalar relaxation_factor = 1.;
 
