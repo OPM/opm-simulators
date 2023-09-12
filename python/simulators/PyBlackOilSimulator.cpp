@@ -24,9 +24,9 @@
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
-//#include <opm/simulators/flow/python/PyFluidState.hpp>
-#include <opm/simulators/flow/python/PyMaterialState.hpp>
 #include <opm/simulators/flow/python/PyBlackOilSimulator.hpp>
+#include <opm/simulators/flow/python/PyFluidState.hpp>
+#include <opm/simulators/flow/python/PyMaterialState.hpp>
 #include <flow/flow_ebos_blackoil.hpp>
 // NOTE: EXIT_SUCCESS, EXIT_FAILURE is defined in cstdlib
 #include <cstdlib>
@@ -37,12 +37,14 @@
 namespace py = pybind11;
 
 namespace Opm::Pybind {
-PyBlackOilSimulator::PyBlackOilSimulator( const std::string &deck_filename)
+PyBlackOilSimulator::
+PyBlackOilSimulator( const std::string &deck_filename)
     : deck_filename_{deck_filename}
 {
 }
 
-PyBlackOilSimulator::PyBlackOilSimulator(
+PyBlackOilSimulator::
+PyBlackOilSimulator(
     std::shared_ptr<Opm::Deck> deck,
     std::shared_ptr<Opm::EclipseState> state,
     std::shared_ptr<Opm::Schedule> schedule,
@@ -58,21 +60,27 @@ PyBlackOilSimulator::PyBlackOilSimulator(
 // Public methods alphabetically sorted
 // ------------------------------------
 
-void PyBlackOilSimulator::advance(int report_step)
+void
+PyBlackOilSimulator::
+advance(int report_step)
 {
     while (currentStep() < report_step) {
         step();
     }
 }
 
-bool PyBlackOilSimulator::checkSimulationFinished()
+bool
+PyBlackOilSimulator::
+checkSimulationFinished() const
 {
     return getFlowMainEbos().getSimTimer()->done();
 }
 
 // This returns the report step number that will be executed next time step()
 //   is called.
-int PyBlackOilSimulator::currentStep()
+int
+PyBlackOilSimulator::
+currentStep() const
 {
     return getFlowMainEbos().getSimTimer()->currentStepNum();
     // NOTE: this->ebos_simulator_->episodeIndex() would also return the current
@@ -81,38 +89,99 @@ int PyBlackOilSimulator::currentStep()
     // See details in runStep() in file SimulatorFullyImplicitBlackoilEbos.hpp
 }
 
-py::array_t<double> PyBlackOilSimulator::getCellVolumes() {
+py::array_t<double>
+PyBlackOilSimulator::
+getCellVolumes() const
+{
     std::size_t len;
     auto array = getMaterialState().getCellVolumes(&len);
     return py::array(len, array.get());
 }
 
-double PyBlackOilSimulator::getDT() {
+double
+PyBlackOilSimulator::
+getDT() const
+{
     return getFlowMainEbos().getPreviousReportStepSize();
 }
 
-py::array_t<double> PyBlackOilSimulator::getPorosity()
+py::array_t<double>
+PyBlackOilSimulator::
+getPorosity() const
 {
     std::size_t len;
     auto array = getMaterialState().getPorosity(&len);
     return py::array(len, array.get());
 }
 
-int PyBlackOilSimulator::run()
+py::array_t<double>
+PyBlackOilSimulator::
+getFluidStateVariable(const std::string &name) const
 {
-    auto main_object = Opm::Main( this->deck_filename_ );
-    return main_object.runStatic<Opm::Properties::TTag::EclFlowProblemTPFA>();
+    std::size_t len;
+    auto array = getFluidState().getFluidStateVariable(name, &len);
+    return py::array(len, array.get());
 }
 
-void PyBlackOilSimulator::setPorosity( py::array_t<double,
-    py::array::c_style | py::array::forcecast> array)
+py::array_t<double>
+PyBlackOilSimulator::
+getPrimaryVariable(const std::string &variable) const
+{
+    std::size_t len;
+    auto array = getFluidState().getPrimaryVariable(variable, &len);
+    return py::array(len, array.get());
+}
+
+py::array_t<int>
+PyBlackOilSimulator::
+getPrimaryVarMeaning(const std::string &variable) const
+{
+    std::size_t len;
+    auto array = getFluidState().getPrimaryVarMeaning(variable, &len);
+    return py::array(len, array.get());
+}
+
+std::map<std::string, int>
+PyBlackOilSimulator::
+getPrimaryVarMeaningMap(const std::string &variable) const
+{
+
+    return getFluidState().getPrimaryVarMeaningMap(variable);
+}
+
+int
+PyBlackOilSimulator::
+run()
+{
+    auto main_object = ::Opm::Main( this->deck_filename_ );
+    return main_object.runStatic<::Opm::Properties::TTag::EclFlowProblemTPFA>();
+}
+
+void
+PyBlackOilSimulator::
+setPorosity( py::array_t<double, py::array::c_style | py::array::forcecast> array)
 {
     std::size_t size_ = array.size();
     const double *poro = array.data();
     getMaterialState().setPorosity(poro, size_);
 }
 
-int PyBlackOilSimulator::step()
+void
+PyBlackOilSimulator::
+setPrimaryVariable(
+    const std::string &idx_name,
+    py::array_t<double,
+    py::array::c_style | py::array::forcecast> array
+)
+{
+    std::size_t size_ = array.size();
+    const double *data = array.data();
+    getFluidState().setPrimaryVariable(idx_name, data, size_);
+}
+
+int
+PyBlackOilSimulator::
+step()
 {
     if (!this->has_run_init_) {
         throw std::logic_error("step() called before step_init()");
@@ -129,13 +198,17 @@ int PyBlackOilSimulator::step()
     return result;
 }
 
-int PyBlackOilSimulator::stepCleanup()
+int
+PyBlackOilSimulator::
+stepCleanup()
 {
     this->has_run_cleanup_ = true;
     return getFlowMainEbos().executeStepsCleanup();
 }
 
-int PyBlackOilSimulator::stepInit()
+int
+PyBlackOilSimulator::
+stepInit()
 {
 
     if (this->has_run_init_) {
@@ -148,7 +221,7 @@ int PyBlackOilSimulator::stepInit()
         }
     }
     if (this->deck_) {
-        this->main_ = std::make_unique<Opm::Main>(
+        this->main_ = std::make_unique<::Opm::Main>(
             this->deck_->getDataFile(),
             this->eclipse_state_,
             this->schedule_,
@@ -156,7 +229,7 @@ int PyBlackOilSimulator::stepInit()
         );
     }
     else {
-        this->main_ = std::make_unique<Opm::Main>( this->deck_filename_ );
+        this->main_ = std::make_unique<::Opm::Main>( this->deck_filename_ );
     }
     int exit_code = EXIT_SUCCESS;
     this->main_ebos_ = this->main_->initFlowEbosBlackoil(exit_code);
@@ -164,6 +237,7 @@ int PyBlackOilSimulator::stepInit()
         int result = this->main_ebos_->executeInitStep();
         this->has_run_init_ = true;
         this->ebos_simulator_ = this->main_ebos_->getSimulatorPtr();
+        this->fluid_state_ = std::make_unique<PyFluidState<TypeTag>>(this->ebos_simulator_);
         this->material_state_ = std::make_unique<PyMaterialState<TypeTag>>(this->ebos_simulator_);
         return result;
     }
@@ -175,8 +249,9 @@ int PyBlackOilSimulator::stepInit()
 // Private methods alphabetically sorted
 // ------------------------------------
 
-Opm::FlowMainEbos<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
-         PyBlackOilSimulator::getFlowMainEbos() const
+::Opm::FlowMainEbos<typename PyBlackOilSimulator::TypeTag>&
+PyBlackOilSimulator::
+getFlowMainEbos() const
 {
     if (this->main_ebos_) {
         return *this->main_ebos_;
@@ -187,8 +262,22 @@ Opm::FlowMainEbos<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
     }
 }
 
+PyFluidState<typename PyBlackOilSimulator::TypeTag>&
+PyBlackOilSimulator::
+getFluidState() const
+{
+    if (this->fluid_state_) {
+        return *this->fluid_state_;
+    }
+    else {
+        throw std::runtime_error("BlackOilSimulator not initialized: "
+            "Cannot get reference to FlowMainEbos object" );
+    }
+}
+
 PyMaterialState<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
-PyBlackOilSimulator::getMaterialState() const
+PyBlackOilSimulator::
+getMaterialState() const
 {
     if (this->material_state_) {
         return *this->material_state_;
@@ -209,18 +298,28 @@ void export_PyBlackOilSimulator(py::module& m)
             std::shared_ptr<Opm::EclipseState>,
             std::shared_ptr<Opm::Schedule>,
             std::shared_ptr<Opm::SummaryConfig> >())
+        .def("advance", &PyBlackOilSimulator::advance, py::arg("report_step"))
+        .def("current_step", &PyBlackOilSimulator::currentStep)
         .def("get_cell_volumes", &PyBlackOilSimulator::getCellVolumes,
             py::return_value_policy::copy)
         .def("get_dt", &PyBlackOilSimulator::getDT)
+        .def("get_fluidstate_variable", &PyBlackOilSimulator::getFluidStateVariable,
+            py::return_value_policy::copy, py::arg("name"))
         .def("get_porosity", &PyBlackOilSimulator::getPorosity,
             py::return_value_policy::copy)
+        .def("get_primary_variable_meaning", &PyBlackOilSimulator::getPrimaryVarMeaning,
+            py::return_value_policy::copy, py::arg("variable"))
+        .def("get_primary_variable_meaning_map", &PyBlackOilSimulator::getPrimaryVarMeaningMap,
+            py::return_value_policy::copy, py::arg("variable"))
+        .def("get_primary_variable", &PyBlackOilSimulator::getPrimaryVariable,
+            py::return_value_policy::copy, py::arg("variable"))
         .def("run", &PyBlackOilSimulator::run)
         .def("set_porosity", &PyBlackOilSimulator::setPorosity)
-        .def("current_step", &PyBlackOilSimulator::currentStep)
+        .def("set_primary_variable", &PyBlackOilSimulator::setPrimaryVariable,
+            py::arg("idx_name"), py::arg("value"))
         .def("step", &PyBlackOilSimulator::step)
-        .def("advance", &PyBlackOilSimulator::advance, py::arg("report_step"))
-        .def("step_init", &PyBlackOilSimulator::stepInit)
-        .def("step_cleanup", &PyBlackOilSimulator::stepCleanup);
+        .def("step_cleanup", &PyBlackOilSimulator::stepCleanup)
+        .def("step_init", &PyBlackOilSimulator::stepInit);
 }
 
 } // namespace Opm::Pybind

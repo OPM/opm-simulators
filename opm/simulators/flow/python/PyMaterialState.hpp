@@ -42,9 +42,7 @@ namespace Opm::Pybind
         using GridView = GetPropType<TypeTag, Opm::Properties::GridView>;
 
     public:
-        PyMaterialState(Simulator *ebos_simulator)
-            : ebos_simulator_(ebos_simulator) { }
-
+        PyMaterialState(Simulator *ebos_simulator);
         std::unique_ptr<double []> getCellVolumes( std::size_t *size);
         std::unique_ptr<double []> getPorosity( std::size_t *size);
         void setPorosity(const double *poro, std::size_t size);

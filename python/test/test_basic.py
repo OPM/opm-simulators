@@ -1,6 +1,5 @@
 import os
 import unittest
-from contextlib import contextmanager
 from pathlib import Path
 from opm.simulators import BlackOilSimulator
 from .pytest_common import pushd
