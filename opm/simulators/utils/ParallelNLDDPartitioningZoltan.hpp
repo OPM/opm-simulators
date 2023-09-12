@@ -74,7 +74,7 @@ namespace Opm {
 
         /// Force collection of cells to be in same result domain.
         ///
-        /// Mostly as a way to ensuring wells do not intersect multiple
+        /// Mostly as a means to ensuring wells do not intersect multiple
         /// domains/blocks.
         ///
         /// \param[in] cells Cell collection.  Typically those cells which

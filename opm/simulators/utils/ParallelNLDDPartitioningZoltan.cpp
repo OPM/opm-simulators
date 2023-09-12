@@ -195,7 +195,7 @@ namespace {
             return static_cast<int>(this->graph_.numVertices());
         }
 
-        /// Retrieve globally unqique ID of reachable vertex.
+        /// Retrieve globally unique ID of reachable vertex.
         ///
         /// \param[in] localCell Index of locally reachable cell/vertex.
         int globalId(const int localCell) const
@@ -422,7 +422,7 @@ extern "C" {
         ///
         /// \param[in] comm MPI communicator.
         ///
-        /// \param[in] params Control parameters for Zoltan graph partiitioning procedure.
+        /// \param[in] params Control parameters for Zoltan graph partitioning procedure.
         explicit Partitioner(const Opm::Parallel::Communication                         comm,
                              const Opm::ParallelNLDDPartitioningZoltan::ZoltanParamMap& params);
 

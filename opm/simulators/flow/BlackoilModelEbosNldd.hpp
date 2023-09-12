@@ -54,12 +54,14 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <functional>
 #include <iomanip>
 #include <ios>
 #include <memory>
 #include <numeric>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -93,16 +95,8 @@ public:
     BlackoilModelEbosNldd(BlackoilModelEbos<TypeTag>& model)
         : model_(model)
     {
-        const auto& grid = model_.ebosSimulator().vanguard().grid();
-        const auto& schedule = model_.ebosSimulator().vanguard().schedule();
-
         // Create partitions.
-        const auto& [partition_vector, num_domains] =
-            partitionCells(grid,
-                           schedule.getWellsatEnd(),
-                           model_.param().local_domain_partition_method_,
-                           model_.param().num_local_domains_,
-                           model_.param().local_domain_partition_imbalance_);
+        const auto& [partition_vector, num_domains] = this->partitionCells();
 
         // Scan through partitioning to get correct size for each.
         std::vector<int> sizes(num_domains, 0);
@@ -121,6 +115,8 @@ public:
 
         // Iterate through grid once, setting the seeds of all partitions.
         // Note: owned cells only!
+        const auto& grid = model_.ebosSimulator().vanguard().grid();
+
         std::vector<int> count(num_domains, 0);
         const auto& gridView = grid.leafGridView();
         const auto beg = gridView.template begin<0, Dune::Interior_Partition>();
@@ -833,6 +829,41 @@ private:
             }
         }
         return errorPV;
+    }
+
+    decltype(auto) partitionCells() const
+    {
+        const auto& grid = this->model_.ebosSimulator().vanguard().grid();
+
+        using GridView = std::remove_cv_t<std::remove_reference_t<decltype(grid.leafGridView())>>;
+        using Element = std::remove_cv_t<std::remove_reference_t<typename GridView::template Codim<0>::Entity>>;
+
+        const auto& param = this->model_.param();
+
+        auto zoltan_ctrl = ZoltanPartitioningControl<Element>{};
+        zoltan_ctrl.domain_imbalance = param.local_domain_partition_imbalance_;
+        zoltan_ctrl.index =
+            [elementMapper = &this->model_.ebosSimulator().model().elementMapper()]
+            (const Element& element)
+        {
+            return elementMapper->index(element);
+        };
+        zoltan_ctrl.local_to_global =
+            [cartMapper = &this->model_.ebosSimulator().vanguard().cartesianIndexMapper()]
+            (const int elemIdx)
+        {
+            return cartMapper->cartesianIndex(elemIdx);
+        };
+
+        // Forming the list of wells is expensive, so do this only if needed.
+        const auto need_wells = param.local_domain_partition_method_ == "zoltan";
+        const auto wells = need_wells
+            ? this->model_.ebosSimulator().vanguard().schedule().getWellsatEnd()
+            : std::vector<Well>{};
+
+        return ::Opm::partitionCells(param.local_domain_partition_method_,
+                                     param.num_local_domains_,
+                                     grid.leafGridView(), wells, zoltan_ctrl);
     }
 
     BlackoilModelEbos<TypeTag>& model_; //!< Reference to model
