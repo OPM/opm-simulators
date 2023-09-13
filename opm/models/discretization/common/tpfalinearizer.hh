@@ -527,6 +527,7 @@ private:
     {
         OPM_TIMEBLOCK(createFlows);
         // If FLOWS/FLORES is set in any RPTRST in the schedule, then we initializate the sparse tables
+        // For now, do the same also if any block flows are requested (TODO: only save requested cells...)
         const bool anyFlows = simulator_().problem().eclWriter()->eclOutputModule().anyFlows();
         const bool anyFlores = simulator_().problem().eclWriter()->eclOutputModule().anyFlores();
         if ((!anyFlows || !flowsInfo_.empty())  && (!anyFlores || !floresInfo_.empty())) {
@@ -626,7 +627,8 @@ private:
         // the full system to zero, not just our part.
         // Instead, that must be called before starting the linearization.
 
-        const bool& enableFlows = simulator_().problem().eclWriter()->eclOutputModule().hasFlows();
+        const bool& enableFlows = simulator_().problem().eclWriter()->eclOutputModule().hasFlows() ||
+                                    simulator_().problem().eclWriter()->eclOutputModule().hasBlockFlows();
         const bool& enableFlores = simulator_().problem().eclWriter()->eclOutputModule().hasFlores();
         const unsigned int numCells = domain.cells.size();
         const bool on_full_domain = (numCells == model_().numTotalDof());
