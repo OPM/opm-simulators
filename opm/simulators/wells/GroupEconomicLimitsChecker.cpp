@@ -24,7 +24,24 @@
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 #include <fmt/format.h>
 
+#include <ctime>
+#include <chrono>
+#include <iostream>
+#include <iomanip>
+
 namespace Opm {
+
+std::string simTimeToString(const std::time_t start_time, const double sim_time) {
+    const auto start_timep = std::chrono::system_clock::from_time_t(start_time);
+    const auto sim_duration = std::chrono::duration_cast<std::chrono::system_clock::duration>(
+        std::chrono::duration<double>(sim_time)
+    );
+    const std::time_t cur_time = std::chrono::system_clock::to_time_t(start_timep + sim_duration);
+    std::ostringstream ss;
+    ss << std::put_time(std::localtime(&cur_time), "%d-%b-%Y");
+    return ss.str();
+}
+
 
 GroupEconomicLimitsChecker::
 GroupEconomicLimitsChecker(
@@ -40,6 +57,8 @@ GroupEconomicLimitsChecker(
   , simulation_time_{simulation_time}
   , report_step_idx_{report_step_idx}
   , deferred_logger_{deferred_logger}
+  , date_string_{simTimeToString(well_model.schedule().getStartTime(),simulation_time)}
+  , unit_system_{well_model.eclipseState().getUnits()}
   , well_state_{well_model.wellState()}
   , well_test_state_{well_test_state}
   , schedule_{well_model.schedule()}
@@ -120,6 +139,8 @@ GOR()
                     gor, *max_gor);
                 displayDebugMessage(msg);
             }
+            addPrintMessage("  Gas/oil ratio = {:.2f} {} which is greater than the minimum economic value = {:.2f} {}",
+                                gor, *max_gor, UnitSystem::measure::gas_oil_ratio);
             return true;
         }
     }
@@ -145,6 +166,8 @@ minGasRate()
                     gas_production_rate, *min_gas_rate);
                 displayDebugMessage(msg);
             }
+            addPrintMessage("  Gas rate = {:.2f} {} which is lower than the minimum economic value = {:.2f} {}",
+                                gas_production_rate, *min_gas_rate, UnitSystem::measure::gas_surface_rate);
             return true;
         }
     }
@@ -170,6 +193,8 @@ minOilRate()
                     oil_production_rate, *min_oil_rate);
                 displayDebugMessage(msg);
             }
+            addPrintMessage("  Oil rate = {:.2f} {} which is lower than the minimum economic value = {:.2f} {}",
+                                oil_production_rate, *min_oil_rate, UnitSystem::measure::liquid_surface_rate);
             return true;
         }
     }
@@ -222,6 +247,8 @@ waterCut()
                     water_cut, *max_water_cut);
                 displayDebugMessage(msg);
             }
+            addPrintMessage("  Water cut = {:.2f} {} which is greater than the maximum economic value = {:.2f} {}",
+                                water_cut, *max_water_cut, UnitSystem::measure::water_cut);
             return true;
         }
     }
@@ -254,6 +281,8 @@ WGR()
                     wgr, *max_wgr);
                 displayDebugMessage(msg);
             }
+            addPrintMessage("  Water/gas ratio = {:.2f} {} which is greater than the maximum economic value = {:.2f} {}",
+                                wgr, *max_wgr, UnitSystem::measure::gas_oil_ratio); // Same units
             return true;
         }
     }
@@ -277,16 +306,45 @@ displayDebugMessage(const std::string &msg) const
 
 void
 GroupEconomicLimitsChecker::
-closeWellsRecursive(Group group)
+addPrintMessage(const std::string &msg, const double value, const double limit, const UnitSystem::measure measure)
 {
+    const std::string header = fmt::format(
+        "{}At time = {:.2f} {} (date = {}): Group {} will close because: \n", this->message_separator,
+        this->unit_system_.from_si(UnitSystem::measure::time, this->simulation_time_),
+        this->unit_system_.name(UnitSystem::measure::time),
+        this->date_string_,
+        this->group_.name()
+    );
+    const std::string measure_name(this->unit_system_.name(measure));
+    const std::string message = fmt::format(msg,
+                                         this->unit_system_.from_si(measure, value), measure_name,
+                                         this->unit_system_.from_si(measure, limit), measure_name);
+
+    this->message_ = header;
+    this->message_ += message;
+}
+
+bool
+GroupEconomicLimitsChecker::
+closeWellsRecursive(Group group, int level)
+{
+    bool wells_closed = false;
+
     if (this->debug_) {
         const std::string msg = fmt::format("closing wells recursive : group {} ", group.name());
         displayDebugMessage(msg);
     }
     for (const std::string& group_name : group.groups()) {
         auto next_group = this->schedule_.getGroup(group_name, this->report_step_idx_);
-        closeWellsRecursive(next_group);
+        wells_closed = wells_closed | closeWellsRecursive(next_group, level+1);
     }
+    std::string indent("  ");
+    for (int i=0; i<level; ++i) indent += std::string("  ");
+    if (level > 0) {
+        const std::string msg = fmt::format("\n{}Closing group {}.", indent, group.name());
+        this->message_ += msg;
+    }
+
     if (this->debug_) {
         const std::string msg = fmt::format("closing wells recursive : group {} has {} wells",
                           group.name(), group.wells().size());
@@ -302,16 +360,27 @@ closeWellsRecursive(Group group)
             }
         }
         else {
+            wells_closed = true;
             if (this->debug_) {
                 const std::string msg = fmt::format(
                     "closing well {}", well_name);
                 displayDebugMessage(msg);
             }
+            const std::string msg = fmt::format("\n{} Closing well {}", indent, well_name);
+            this->message_ += msg;
+
             this->well_test_state_.close_well(
                 well_name, WellTestConfig::Reason::GROUP, this->simulation_time_);
             this->well_model_.updateClosedWellsThisStep(well_name);
         }
     }
+
+    // If any wells were closed, output message at top level (group that hit constraint), on rank 0
+    if (level == 0 && wells_closed && this->well_model_.comm().rank()==0) {
+        this->message_ += ("\n" + this->message_separator);
+        this->deferred_logger_.info(this->message_);
+    }
+    return wells_closed;
 }
 
 void
