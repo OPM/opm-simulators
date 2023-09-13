@@ -207,6 +207,11 @@ public:
         return enableFlows_;
     }
 
+    bool hasBlockFlows() const
+    {
+        return blockFlows_;
+    }
+
     bool anyFlows() const
     {
         return anyFlows_;
@@ -365,6 +370,7 @@ protected:
 
     bool anyFlows_;
     bool anyFlores_;
+    bool blockFlows_;
     bool enableFlows_;
     bool enableFlores_;
     bool enableFlowsn_;

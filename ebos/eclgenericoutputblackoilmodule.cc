@@ -191,9 +191,12 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
         this->regionNodes_[phase] = summaryConfig_.keywords(key_pattern);
     }
 
+    // Check for any BFLOW[I|J|K] summary keys
+    blockFlows_ = summaryConfig_.keywords("BFLOW*").size() > 0;
+
     // Check if FLORES/FLOWS is set in any RPTRST in the schedule
     anyFlores_ = false;     // Used for the initialization of the sparse table
-    anyFlows_ = false;
+    anyFlows_ = blockFlows_;
     enableFlores_ = false;  // Used for the output of i+, j+, k+
     enableFloresn_ = false; // Used for the special case of nnc
     enableFlows_ = false;
@@ -376,15 +379,6 @@ assignToSolution(data::Solution& sol)
         DataEntry{"1OVERBG",  UnitSystem::measure::gas_inverse_formation_volume_factor,   invB_[gasPhaseIdx]},
         DataEntry{"1OVERBO",  UnitSystem::measure::oil_inverse_formation_volume_factor,   invB_[oilPhaseIdx]},
         DataEntry{"1OVERBW",  UnitSystem::measure::water_inverse_formation_volume_factor, invB_[waterPhaseIdx]},
-        DataEntry{"FLOGASI+", UnitSystem::measure::gas_surface_rate,                      flowsi_[gasCompIdx]},
-        DataEntry{"FLOGASJ+", UnitSystem::measure::gas_surface_rate,                      flowsj_[gasCompIdx]},
-        DataEntry{"FLOGASK+", UnitSystem::measure::gas_surface_rate,                      flowsk_[gasCompIdx]},
-        DataEntry{"FLOOILI+", UnitSystem::measure::liquid_surface_rate,                   flowsi_[oilCompIdx]},
-        DataEntry{"FLOOILJ+", UnitSystem::measure::liquid_surface_rate,                   flowsj_[oilCompIdx]},
-        DataEntry{"FLOOILK+", UnitSystem::measure::liquid_surface_rate,                   flowsk_[oilCompIdx]},
-        DataEntry{"FLOWATI+", UnitSystem::measure::liquid_surface_rate,                   flowsi_[waterCompIdx]},
-        DataEntry{"FLOWATJ+", UnitSystem::measure::liquid_surface_rate,                   flowsj_[waterCompIdx]},
-        DataEntry{"FLOWATK+", UnitSystem::measure::liquid_surface_rate,                   flowsk_[waterCompIdx]},
         DataEntry{"FLRGASI+", UnitSystem::measure::rate,                                  floresi_[gasCompIdx]},
         DataEntry{"FLRGASJ+", UnitSystem::measure::rate,                                  floresj_[gasCompIdx]},
         DataEntry{"FLRGASK+", UnitSystem::measure::rate,                                  floresk_[gasCompIdx]},
@@ -420,6 +414,19 @@ assignToSolution(data::Solution& sol)
         DataEntry{"WATKR",    UnitSystem::measure::identity,                              relativePermeability_[waterPhaseIdx]},
         DataEntry{"WAT_DEN",  UnitSystem::measure::density,                               density_[waterPhaseIdx]},
         DataEntry{"WAT_VISC", UnitSystem::measure::viscosity,                             viscosity_[waterPhaseIdx]},
+    };
+
+    // Separate these as flows*_ may be defined due to BFLOW[I|J|K] even without FLOWS in RPTRST
+    const auto flowsSolutionArrays = std::array {
+        DataEntry{"FLOGASI+", UnitSystem::measure::gas_surface_rate,                      flowsi_[gasCompIdx]},
+        DataEntry{"FLOGASJ+", UnitSystem::measure::gas_surface_rate,                      flowsj_[gasCompIdx]},
+        DataEntry{"FLOGASK+", UnitSystem::measure::gas_surface_rate,                      flowsk_[gasCompIdx]},
+        DataEntry{"FLOOILI+", UnitSystem::measure::liquid_surface_rate,                   flowsi_[oilCompIdx]},
+        DataEntry{"FLOOILJ+", UnitSystem::measure::liquid_surface_rate,                   flowsj_[oilCompIdx]},
+        DataEntry{"FLOOILK+", UnitSystem::measure::liquid_surface_rate,                   flowsk_[oilCompIdx]},
+        DataEntry{"FLOWATI+", UnitSystem::measure::liquid_surface_rate,                   flowsi_[waterCompIdx]},
+        DataEntry{"FLOWATJ+", UnitSystem::measure::liquid_surface_rate,                   flowsj_[waterCompIdx]},
+        DataEntry{"FLOWATK+", UnitSystem::measure::liquid_surface_rate,                   flowsk_[waterCompIdx]},
     };
 
     const auto extendedSolutionArrays = std::array {
@@ -474,6 +481,12 @@ assignToSolution(data::Solution& sol)
 
     for (const auto& array : baseSolutionArrays) {
         doInsert(array, data::TargetType::RESTART_SOLUTION);
+    }
+
+    if (this->enableFlows_) {
+        for (const auto& array : flowsSolutionArrays) {
+            doInsert(array, data::TargetType::RESTART_SOLUTION);
+        }
     }
 
     for (const auto& array : extendedSolutionArrays) {
@@ -962,9 +975,12 @@ doAllocBuffers(unsigned bufferSize,
 
     enableFlows_ = false;
     enableFlowsn_ = false;
-    if (rstKeywords["FLOWS"] > 0) {
-        rstKeywords["FLOWS"] = 0;
-        enableFlows_ = true;
+    const bool rstFlows = (rstKeywords["FLOWS"] > 0);
+    if (blockFlows_ || rstFlows) {
+        if (rstFlows) {
+            rstKeywords["FLOWS"] = 0;
+            enableFlows_ = true;
+        }
 
         const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
         const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
@@ -976,7 +992,7 @@ doAllocBuffers(unsigned bufferSize,
                 flowsj_[compIdxs[ii]].resize(bufferSize, 0.0);
                 flowsk_[compIdxs[ii]].resize(bufferSize, 0.0);
 
-                if (numOutputNnc > 0) {
+                if (rstFlows && numOutputNnc > 0) {
                     enableFlowsn_ = true;
 
                     flowsn_[compIdxs[ii]].first = rstName[ii];
