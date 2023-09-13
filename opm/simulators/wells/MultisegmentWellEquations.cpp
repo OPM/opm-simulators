@@ -266,8 +266,8 @@ template<class SparseMatrixAdapter>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 extract(SparseMatrixAdapter& jacobian) const
 {
-    const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(numWellEq,
-                                                                        numEq,
+    const auto invDuneD = mswellhelpers::invertWithUMFPack<BVectorWell>(duneD_.M(),
+                                                                        numWellEq,
                                                                         *duneDSolver_);
 
     // We need to change matrix A as follows
