@@ -913,6 +913,12 @@ public:
                         val.second *= elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
                             * getValue(intQuants.porosity());
                     }
+                    else if (key.first == "BFLOWI")
+                        val.second = this->flowsi_[waterCompIdx][globalDofIdx];
+                    else if (key.first == "BFLOWJ")
+                        val.second = this->flowsj_[waterCompIdx][globalDofIdx];
+                    else if (key.first == "BFLOWK")
+                        val.second = this->flowsk_[waterCompIdx][globalDofIdx];
                     else {
                         std::string logstring = "Keyword '";
                         logstring.append(key.first);
