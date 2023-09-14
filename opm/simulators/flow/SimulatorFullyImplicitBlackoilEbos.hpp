@@ -241,7 +241,7 @@ public:
                 path.replace_filename(ioconfig.getBaseName() + ".OPMRST");
                 loadFile_ = path;
                 if (!std::filesystem::exists(loadFile_)) {
-                    OPM_THROW(std::runtime_error, "Error locating serialized restart file");
+                    OPM_THROW(std::runtime_error, "Error locating serialized restart file " + loadFile_);
                 }
             }
         }
