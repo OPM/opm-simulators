@@ -264,6 +264,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assembleICDPressureEq(const int seg,
                       const UnitSystem& unit_system,
                       WellState& well_state,
+                      const SummaryState& summary_state,
                       const bool use_average_density,
                       DeferredLogger& deferred_logger)
 {
@@ -306,9 +307,9 @@ assembleICDPressureEq(const int seg,
             }
             break;
         case Segment::SegmentType::VALVE :
-            icd_pressure_drop = segments_.pressureDropValve(seg);
+            icd_pressure_drop = segments_.pressureDropValve(seg, summary_state);
             if (reverseFlow){
-                extra_derivatives = -segments_.pressureDropValve(seg, /*extra_reverse_flow_derivatives*/ true);
+                extra_derivatives = -segments_.pressureDropValve(seg, summary_state, /*extra_reverse_flow_derivatives*/ true);
             }
             break;
         default: {
@@ -380,6 +381,7 @@ MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assemblePressureEq(const int seg,
                    const UnitSystem& unit_system,
                    WellState& well_state,
+                   const SummaryState& summary_state,
                    const bool use_average_density,
                    DeferredLogger& deferred_logger)
 {
@@ -387,7 +389,7 @@ assemblePressureEq(const int seg,
         case Segment::SegmentType::SICD :
         case Segment::SegmentType::AICD :
         case Segment::SegmentType::VALVE : {
-            assembleICDPressureEq(seg, unit_system, well_state, use_average_density, deferred_logger);
+            assembleICDPressureEq(seg, unit_system, well_state, summary_state, use_average_density, deferred_logger);
             break;
         }
         default :

@@ -174,6 +174,11 @@ const Well& WellInterfaceGeneric::wellEcl() const
     return well_ecl_;
 }
 
+Well& WellInterfaceGeneric::wellEcl()
+{
+    return well_ecl_;
+}
+
 const PhaseUsage& WellInterfaceGeneric::phaseUsage() const
 {
     assert(phase_usage_ != nullptr);
