@@ -44,7 +44,7 @@ public:
     friend class ParallelEclipseState; //!< Friend so props can be setup.
     //! \brief Friend to set up props
     template<class Grid>
-    friend class PropsCentroidsDataHandle;
+    friend class PropsDataHandle;
 
     //! \brief Constructor.
     //! \param manager The field property manager to wrap.
@@ -144,7 +144,7 @@ protected:
 class ParallelEclipseState : public EclipseState {
     //! \brief Friend to set up props
     template<class Grid>
-    friend class PropsCentroidsDataHandle;
+    friend class PropsDataHandle;
 public:
     //! \brief Default constructor.
     ParallelEclipseState(Parallel::Communication comm);
