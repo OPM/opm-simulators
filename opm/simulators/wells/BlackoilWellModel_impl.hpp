@@ -2258,6 +2258,7 @@ namespace Opm {
                     deferred_logger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
                 }
             }
+            well->resetWellOperability();
         }
         updatePrimaryVariables(deferred_logger);
 

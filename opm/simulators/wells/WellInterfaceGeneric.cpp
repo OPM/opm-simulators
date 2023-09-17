@@ -557,6 +557,11 @@ bool WellInterfaceGeneric::stopppedOrZeroRateTarget(const SummaryState& summary_
 
 }
 
+void WellInterfaceGeneric::resetWellOperability()
+{
+    this->operability_status_.resetOperability();
+}
+
 double WellInterfaceGeneric::wmicrobes_() const
 {
     auto injectorType = this->well_ecl_.injectorType();

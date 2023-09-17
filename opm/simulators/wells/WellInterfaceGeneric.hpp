@@ -221,6 +221,8 @@ public:
         inj_fc_multiplier_ = inj_fc_multiplier;
     }
 
+    void resetWellOperability();  
+
 protected:
     bool getAllowCrossFlow() const;
 
