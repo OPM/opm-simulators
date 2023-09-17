@@ -348,8 +348,13 @@ void WellInterfaceGeneric::setPrevSurfaceRates(WellState& well_state,
                                                const WellState& prev_well_state) const
     {
         auto& ws = well_state.well(this->index_of_well_);
-        if (!this->changedToOpenThisStep()){
-            ws.prev_surface_rates = prev_well_state.well(this->index_of_well_).surface_rates;
+        auto& ws_prev = prev_well_state.well(this->index_of_well_);
+        bool prev_zero_rates = true;
+        for (const double& rate : ws_prev.surface_rates){
+            prev_zero_rates &= (rate == 0.0);
+        } 
+        if (prev_zero_rates) {//(!this->changedToOpenThisStep()){
+            ws.prev_surface_rates = ws_prev.surface_rates;
         } else {
             ws.prev_surface_rates = ws.surface_rates;
         }
