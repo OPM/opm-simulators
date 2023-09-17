@@ -781,7 +781,15 @@ namespace Opm
     updateWellOperability(const Simulator& ebos_simulator,
                           const WellState& well_state,
                           DeferredLogger& deferred_logger)
-    {
+    {   
+        if (this->param_.local_well_solver_control_switching_) {
+            bool success = updateWellOperabilityFromWellEq(ebos_simulator, well_state, deferred_logger);
+            if (success) {
+                return;
+            } else {
+                // some info
+            }
+        }
         this->operability_status_.resetOperability();
 
         bool thp_controlled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::THP:
@@ -802,6 +810,32 @@ namespace Opm
         }
     }
 
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    updateWellOperabilityFromWellEq(const Simulator& ebos_simulator,
+                                    const WellState& well_state,
+                                    DeferredLogger& deferred_logger)
+    {
+        assert(this->param_.local_well_solver_control_switching_);
+        this->operability_status_.resetOperability();
+        WellState well_state_copy = well_state;
+        const auto& group_state = ebos_simulator.problem().wellModel().groupState();
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+        const double dt = ebos_simulator.timeStepSize();
+        bool converged = iterateWellEquations(ebos_simulator, dt, well_state_copy, group_state, deferred_logger);
+        if (converged) {
+            if (this->wellIsStopped()) {
+                if (!this->wellHasTHPConstraints(summary_state)) {
+                    this->operability_status_.can_obtain_bhp_with_thp_limit = false;
+                    this->operability_status_.obey_thp_limit_under_bhp_limit = false;
+                } else {
+                    this->operability_status_.obey_thp_limit_under_bhp_limit = false;
+                }
+            }
+        }
+        return converged;
+    }                          
 
     template<typename TypeTag>
     void
