@@ -622,6 +622,8 @@ namespace Opm
         if (!well_operable && old_well_operable) {
             if (this->well_ecl_.getAutomaticShutIn()) {
                 deferred_logger.info(" well " + this->name() + " gets SHUT during iteration ");
+                this->stopWell();
+                changed_to_stopped_this_step_ = true;
             } else {
                 if (!this->wellIsStopped()) {
                     deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
@@ -821,19 +823,8 @@ namespace Opm
         this->operability_status_.resetOperability();
         WellState well_state_copy = well_state;
         const auto& group_state = ebos_simulator.problem().wellModel().groupState();
-        const auto& summary_state = ebos_simulator.vanguard().summaryState();
         const double dt = ebos_simulator.timeStepSize();
         bool converged = iterateWellEquations(ebos_simulator, dt, well_state_copy, group_state, deferred_logger);
-        if (converged) {
-            if (this->wellIsStopped()) {
-                if (!this->wellHasTHPConstraints(summary_state)) {
-                    this->operability_status_.can_obtain_bhp_with_thp_limit = false;
-                    this->operability_status_.obey_thp_limit_under_bhp_limit = false;
-                } else {
-                    this->operability_status_.obey_thp_limit_under_bhp_limit = false;
-                }
-            }
-        }
         return converged;
     }                          
 
