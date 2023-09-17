@@ -2180,6 +2180,7 @@ namespace Opm
         int switch_count= 0;
         const bool was_stopped = this->wellIsStopped();
         bool changed = false;
+        bool final_check = false; 
         do {
             its_since_last_switch++;
             if (its_since_last_switch >= min_its_after_switch){
@@ -2188,6 +2189,11 @@ namespace Opm
                 if (changed){
                     its_since_last_switch = 0;
                     switch_count++;
+                }
+                if (!changed && final_check) {
+                    break;
+                } else {
+                    final_check = false;
                 }
             }
   
@@ -2202,7 +2208,16 @@ namespace Opm
 
             converged = report.converged();
             if (converged) {
-                break;
+                // if equations are sufficiently linear they might converge in less than min_its_after_switch
+                // in this case, make sure all constraints are satisfied before returning
+                if (switch_count > 0 && its_since_last_switch < min_its_after_switch) {
+                    final_check = true;
+                    its_since_last_switch = min_its_after_switch;
+                } else {
+                    break;
+                }
+                    
+                    
             }
 
             ++it;
