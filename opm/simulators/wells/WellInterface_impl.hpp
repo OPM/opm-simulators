@@ -294,7 +294,7 @@ namespace Opm
                         // don't call for thp since this might trigger additional local solve
                         updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
                     } else {
-                        ws.thp = this->isInjector() ? inj_controls.thp_limit: prod_controls.thp_limit;
+                        ws.thp = this->getTHPConstraint(summary_state);
                     }  
                     updatePrimaryVariables(summary_state, well_state, deferred_logger);
                 }
