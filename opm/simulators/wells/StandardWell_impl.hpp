@@ -2178,12 +2178,13 @@ namespace Opm
         const int min_its_after_switch = 2;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
-        const bool was_stopped = this->wellIsStopped();
+        const bool was_operable = this->operability_status_.isOperableAndSolvable() && !this->wellIsStopped();
+        const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
         bool changed = false;
         bool final_check = false; 
         do {
             its_since_last_switch++;
-            if (its_since_last_switch >= min_its_after_switch){
+            if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const double wqTotal = this->primary_variables_.eval(WQTotal).value();
                 changed = this->updateWellControlAndStatusLocalIteration(ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger); 
                 if (changed){
@@ -2226,17 +2227,39 @@ namespace Opm
         } while (it < max_iter);
         
         if (converged) {
-            // update operability if status change
-            const bool is_stopped = this->wellIsStopped();
-            if (is_stopped && !was_stopped){
+            if (allow_switching){
+                // update operability if status change
+                const bool is_stopped = this->wellIsStopped();
                 if (this->wellHasTHPConstraints(summary_state)){
-                    this->operability_status_.can_obtain_bhp_with_thp_limit = false;
+                    this->operability_status_.can_obtain_bhp_with_thp_limit = !is_stopped;
+                    this->operability_status_.obey_thp_limit_under_bhp_limit = !is_stopped;
                 } else {
-                    this->operability_status_.operable_under_only_bhp_limit = false;
+                    this->operability_status_.operable_under_only_bhp_limit = !is_stopped;
                 }
-            } else if (!is_stopped && was_stopped) {
-                this->operability_status_.can_obtain_bhp_with_thp_limit = true;
-                this->operability_status_.operable_under_only_bhp_limit = true;
+
+                if (is_stopped && was_operable){
+                    //deferred_logger.info(" well " + this->name() + " gets STOPPED during local well iterations ");
+                    //well_state.stopWell(this->index_of_well_);
+                    /*
+                    if (this->wellHasTHPConstraints(summary_state)){
+                        this->operability_status_.can_obtain_bhp_with_thp_limit = false;
+                        this->operability_status_.obey_thp_limit_under_bhp_limit = false;
+                    } else {
+                        this->operability_status_.operable_under_only_bhp_limit = false;
+                    }
+                    */
+                    // reopen
+                    this->openWell();
+                } else if (!is_stopped && !was_operable) {
+                    //deferred_logger.info(" well " + this->name() + " gets RE-OPENED during local well iterations ");
+                    //well_state.openWell(this->index_of_well_);
+                    /*
+                    this->operability_status_.can_obtain_bhp_with_thp_limit = true;
+                    this->operability_status_.operable_under_only_bhp_limit = true;
+                    this->operability_status_.obey_thp_limit_under_bhp_limit = true;
+                    */
+                   this->stopWell();
+                }
             }
         } else {
             std::ostringstream sstr;
