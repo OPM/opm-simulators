@@ -268,7 +268,7 @@ namespace Opm
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();
         
-        if (this->wellUnderZeroRateTarget(summary_state, well_state)) {
+        if (this->wellUnderZeroRateTarget(summary_state, well_state) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
@@ -284,7 +284,7 @@ namespace Opm
                                                                   prod_controls.hasControl(Well::ProducerCMode::GRUP);
 
                 changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
-                if (hasGroupControl && !changed) {
+                if (hasGroupControl) {
                     changed = this->checkGroupConstraints(well_state, group_state, schedule, summary_state, deferred_logger);
                 }
                 if (changed) {
