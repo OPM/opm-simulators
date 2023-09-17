@@ -44,51 +44,31 @@
 
 namespace {
 
+    constexpr double EPSILON = 1.0e-14;
+    
 //! \brief Relaxation factor considering only one fraction value.
 template<class Scalar>
 Scalar relaxationFactorFraction(const Scalar old_value,
                                 const Scalar dx)
 {
-    assert(old_value >= 0. && old_value <= 1.0);
+    assert(old_value >= -EPSILON && old_value <= (1.0+EPSILON));
+    const Scalar& safe_old_value = std::clamp(old_value, 0.0, 1.0);
 
     Scalar relaxation_factor = 1.;
 
     // updated values without relaxation factor
-    const Scalar possible_updated_value = old_value - dx;
+    const Scalar possible_updated_value = safe_old_value - dx;
 
     // 0.95 is an experimental value remains to be optimized
     if (possible_updated_value < 0.0) {
-        relaxation_factor = std::abs(old_value / dx) * 0.95;
+        relaxation_factor = std::abs(safe_old_value / dx) * 0.95;
     } else if (possible_updated_value > 1.0) {
-        relaxation_factor = std::abs((1. - old_value) / dx) * 0.95;
+        relaxation_factor = std::abs((1. - safe_old_value) / dx) * 0.95;
     }
     // if possible_updated_value is between 0. and 1.0, then relaxation_factor
     // remains to be one
 
     assert(relaxation_factor >= 0. && relaxation_factor <= 1.);
-
-    return relaxation_factor;
-}
-
-//! \brief Calculate a relaxation factor to avoid overshoot of total rates.
-template<class Scalar>
-Scalar relaxationFactorRate(const Scalar old_value,
-                            const Scalar newton_update)
-{
-    Scalar relaxation_factor = 1.0;
-
-    // For injector, we only check the total rates to avoid sign change of rates
-    const Scalar original_total_rate = old_value;
-    const Scalar possible_update_total_rate = old_value - newton_update;
-
-    // 0.8 here is an experimental value, which remains to be optimized
-    // if the original rate is zero or possible_update_total_rate is zero, relaxation_factor will
-    // always be 1.0, more thoughts might be needed.
-    if (original_total_rate * possible_update_total_rate < 0.) { // sign changed
-        relaxation_factor = std::abs(original_total_rate / newton_update) * 0.8;
-    }
-
-    assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
 
     return relaxation_factor;
 }
@@ -250,9 +230,6 @@ updateNewton(const BVectorWell& dwells,
              [[maybe_unused]] const double dFLimit,
              const double dBHPLimit)
 {
-    const double relaxation_factor_rate = relaxationFactorRate(value_[WQTotal],
-                                                               dwells[0][WQTotal]);
-
     // for injectors, very typical one of the fractions will be one, and it is easy to get zero value
     // fractions. not sure what is the best way to handle it yet, so we just use 1.0 here
     // The relaxationFactorFractionProducer code does not take into account solvent
@@ -261,7 +238,6 @@ updateNewton(const BVectorWell& dwells,
         (well_.isProducer() && !Indices::enableSolvent) ? this->relaxationFactorFractionsProducer(dwells) : 1.0;
 
     // update the second and third well variable (The flux fractions)
-
     if constexpr (has_wfrac_variable) {
         const int sign2 = dwells[0][WFrac] > 0 ? 1: -1;
         const double dx2_limited = sign2 * std::min(std::abs(dwells[0][WFrac] * relaxation_factor_fractions), dFLimit);
@@ -283,11 +259,19 @@ updateNewton(const BVectorWell& dwells,
     this->processFractions();
 
     // updating the total rates Q_t
-    value_[WQTotal] = value_[WQTotal] - dwells[0][WQTotal] * relaxation_factor_rate;
+    value_[WQTotal] -= dwells[0][WQTotal];
+
+    // here, we make sure it is zero for wells with zero rate target(including stopped wells)
     if (stop_or_zero_rate_target) {
         value_[WQTotal] = 0.;
+    } else {
+        // make sure that no injector produce and no producer inject
+        if (well_.isInjector()) {
+            value_[WQTotal] = std::max(value_[WQTotal], 0.0);
+        } else {
+            value_[WQTotal] = std::min(value_[WQTotal], 0.0);
+        }
     }
-    // TODO: here, we make sure it is zero for zero rated wells
 
     // updating the bottom hole pressure
     const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;

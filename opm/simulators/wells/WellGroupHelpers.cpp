@@ -657,12 +657,13 @@ namespace WellGroupHelpers
                              const PhaseUsage& pu,
                              const SummaryState& st,
                              const WellState& wellState,
-                             GroupState& group_state)
+                             GroupState& group_state,
+                             bool sum_rank)
     {
         const int np = wellState.numPhases();
         for (const std::string& groupName : group.groups()) {
             const Group& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            updateREINForGroups(groupTmp, schedule, reportStepIdx, pu, st, wellState, group_state);
+            updateREINForGroups(groupTmp, schedule, reportStepIdx, pu, st, wellState, group_state, sum_rank);
         }
 
         std::vector<double> rein(np, 0.0);
@@ -671,11 +672,13 @@ namespace WellGroupHelpers
         }
 
         // add import rate and subtract consumption rate for group for gas
-        if (schedule[reportStepIdx].gconsump().has(group.name())) {
-            const auto& gconsump = schedule[reportStepIdx].gconsump().get(group.name(), st);
-            if (pu.phase_used[BlackoilPhases::Vapour]) {
-                rein[pu.phase_pos[BlackoilPhases::Vapour]] += gconsump.import_rate;
-                rein[pu.phase_pos[BlackoilPhases::Vapour]] -= gconsump.consumption_rate;
+        if (sum_rank) {
+            if (schedule[reportStepIdx].gconsump().has(group.name())) {
+                const auto& gconsump = schedule[reportStepIdx].gconsump().get(group.name(), st);
+                if (pu.phase_used[BlackoilPhases::Vapour]) {
+                    rein[pu.phase_pos[BlackoilPhases::Vapour]] += gconsump.import_rate;
+                    rein[pu.phase_pos[BlackoilPhases::Vapour]] -= gconsump.consumption_rate;
+                }
             }
         }
 

@@ -31,7 +31,7 @@
 
 #include <opm/grid/common/GridEnums.hpp>
 #include <opm/grid/common/CartesianIndexMapper.hpp>
-
+#include <opm/grid/LookUpCellCentroid.hh>
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
@@ -42,6 +42,8 @@
 
 #include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 
+
+
 #include <array>
 #include <cstddef>
 #include <optional>
@@ -51,6 +53,7 @@
 namespace Opm {
 template <class TypeTag>
 class EclBaseVanguard;
+template<typename Grid, typename GridView> struct LookUpCellCentroid;
 }
 
 namespace Opm::Properties {
@@ -476,20 +479,18 @@ protected:
     cellCentroids_(const CartMapper& cartMapper) const
     {
         return [this, cartMapper](int elemIdx) {
-                   const auto& centroids = this->centroids_;
-                   auto rank = this->gridView().comm().rank();
-                   std::array<double,dimensionworld> centroid;
-                   if (rank == 0) {
-                       unsigned cartesianCellIdx = cartMapper.cartesianIndex(elemIdx);
-                       centroid = this->eclState().getInputGrid().getCellCenter(cartesianCellIdx);
-                   } else
-                   {
-                       std::copy(centroids.begin() + elemIdx * dimensionworld,
-                                 centroids.begin() + (elemIdx + 1) * dimensionworld,
-                                 centroid.begin());
-                   }
-                   return centroid;
-               };
+            std::array<double,dimensionworld> centroid;
+            if (this->gridView().comm().rank() == 0)
+            {
+                centroid =  this->eclState().getInputGrid().getCellCenter(cartMapper.cartesianIndex(elemIdx));
+            }
+            else
+            {
+                LookUpCellCentroid<Grid,GridView> lookUpCellCentroid(this->gridView(), cartMapper, nullptr);
+                centroid = lookUpCellCentroid(elemIdx);
+            }
+            return centroid;
+        };
     }
 
     void callImplementationInit()
@@ -506,7 +507,7 @@ protected:
     {
         std::size_t num_cells = asImp_().grid().leafGridView().size(0);
         is_interior_.resize(num_cells);
-        
+
         ElementMapper elemMapper(this->gridView(), Dune::mcmgElementLayout());
         for (const auto& element : elements(this->gridView()))
         {
@@ -578,7 +579,7 @@ private:
 
         return zz/Scalar(corners);
     }
-    
+
     Scalar computeCellThickness(const typename GridView::template Codim<0>::Entity& element) const
     {
         typedef typename Element::Geometry Geometry;
@@ -609,11 +610,6 @@ private:
     { return *static_cast<const Implementation*>(this); }
 
 protected:
-    /*! \brief The cell centroids after loadbalance was called.
-     * Empty otherwise. Used by EclTransmissibilty.
-     */
-    std::vector<double> centroids_;
-
     /*! \brief Mapping between cartesian and compressed cells.
      *  It is initialized the first time it is called
      */

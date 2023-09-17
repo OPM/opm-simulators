@@ -308,7 +308,7 @@ closeWellsRecursive(Group group)
                 displayDebugMessage(msg);
             }
             this->well_test_state_.close_well(
-                well_name, WellTestConfig::Reason::ECONOMIC, this->simulation_time_);
+                well_name, WellTestConfig::Reason::GROUP, this->simulation_time_);
             this->well_model_.updateClosedWellsThisStep(well_name);
         }
     }

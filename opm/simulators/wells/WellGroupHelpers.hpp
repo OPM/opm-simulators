@@ -179,7 +179,8 @@ namespace WellGroupHelpers
                              const PhaseUsage& pu,
                              const SummaryState& st,
                              const WellState& wellState,
-                             GroupState& group_state);
+                             GroupState& group_state,
+                             bool sum_rank);
 
     template <class RegionalValues>
     void updateGpMaintTargetForGroups(const Group& group,

@@ -40,11 +40,18 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <initializer_list>
 #include <sstream>
 #include <stdexcept>
+#include <type_traits>
+#include <utility>
+#include <vector>
 
 namespace {
 
@@ -140,7 +147,7 @@ diffusivity(unsigned elemIdx1, unsigned elemIdx2) const
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-update(bool global, const std::function<unsigned int(unsigned int)>& map)
+update(bool global, const std::function<unsigned int(unsigned int)>& map, const bool applyNncMultregT)
 {
     const auto& cartDims = cartMapper_.cartesianDimensions();
     const auto& transMult = eclState_.getTransMult();
@@ -453,24 +460,29 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map)
         }
     }
 
-    // potentially overwrite and/or modify  transmissibilities based on input from deck
-    updateFromEclState_(global);
+    // Potentially overwrite and/or modify transmissibilities based on input from deck
+    this->updateFromEclState_(global);
 
     // Create mapping from global to local index
     std::unordered_map<std::size_t,int> globalToLocal;
 
-    // loop over all elements (global grid) and store Cartesian index
+    // Loop over all elements (global grid) and store Cartesian index
     for (const auto& elem : elements(grid_.leafGridView())) {
         int elemIdx = elemMapper.index(elem);
         int cartElemIdx = cartMapper_.cartesianIndex(elemIdx);
         globalToLocal[cartElemIdx] = elemIdx;
     }
-    applyEditNncToGridTrans_(globalToLocal);
-    applyNncToGridTrans_(globalToLocal);
-    applyEditNncrToGridTrans_(globalToLocal);
 
-    //remove very small non-neighbouring transmissibilities
-    removeSmallNonCartesianTransmissibilities_();
+    this->applyEditNncToGridTrans_(globalToLocal);
+    this->applyNncToGridTrans_(globalToLocal);
+    this->applyEditNncrToGridTrans_(globalToLocal);
+
+    if (applyNncMultregT) {
+        this->applyNncMultreg_(globalToLocal);
+    }
+
+    // Remove very small non-neighbouring transmissibilities.
+    this->removeSmallNonCartesianTransmissibilities_();
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -962,6 +974,47 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
         auto warning = fmt::format("Problems with {} keyword\n"
                                    "A total of {} connections not defined in grid", keyword, warning_count);
         OpmLog::warning(warning);
+    }
+}
+
+template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+void
+EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+applyNncMultreg_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
+{
+    const auto& inputNNC = this->eclState_.getInputNNC();
+    const auto& transMult = this->eclState_.getTransMult();
+
+    auto compressedIdx = [&cartesianToCompressed](const std::size_t globIdx)
+    {
+        auto ixPos = cartesianToCompressed.find(globIdx);
+        return (ixPos == cartesianToCompressed.end()) ? -1 : ixPos->second;
+    };
+
+    // Recall: NNC::input() covers NNC keyword and numerical aquifers
+    //         NNC::edit() covers EDITNNC keyword
+    //         NNC::editr() covers EDITNNCR keyword
+    for (const auto& nncList : { &NNC::input, &NNC::edit, &NNC::editr }) {
+        for (const auto& nncEntry : (inputNNC.*nncList)()) {
+            const auto c1 = nncEntry.cell1;
+            const auto c2 = nncEntry.cell2;
+
+            auto low = compressedIdx(c1);
+            auto high = compressedIdx(c2);
+
+            if ((low == -1) || (high == -1)) {
+                continue;
+            }
+
+            if (low > high) {
+                std::swap(low, high);
+            }
+
+            auto candidate = this->trans_.find(isId(low, high));
+            if (candidate != this->trans_.end()) {
+                candidate->second *= transMult.getRegionMultiplierNNC(c1, c2);
+            }
+        }
     }
 }
 
