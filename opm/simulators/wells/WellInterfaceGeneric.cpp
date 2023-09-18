@@ -349,12 +349,19 @@ void WellInterfaceGeneric::setPrevSurfaceRates(WellState& well_state,
     {
         auto& ws = well_state.well(this->index_of_well_);
         auto& ws_prev = prev_well_state.well(this->index_of_well_);
-        bool prev_zero_rates = true;
-        for (const double& rate : ws_prev.surface_rates){
-            prev_zero_rates &= (rate == 0.0);
+        // The logic here is a bit fragile:
+        // We need non-zero prev_surface_rates for the purpose of providing explicit fractions 
+        // (if needed) for vfp interpolation.
+        // We assume that current surface rates either are initialized from previous step
+        // or (if newly opened) from updateWellStateRates. This is fine unless well was 
+        // stopped in previous step in which case it's rates will be zero. In this case, 
+        // we select the previous rates of the previous well state (and hope for the best).
+        bool zero_rates = true;
+        for (const double& rate : ws.surface_rates){
+            zero_rates &= (rate == 0.0);
         } 
-        if (prev_zero_rates) {//(!this->changedToOpenThisStep()){
-            ws.prev_surface_rates = ws_prev.surface_rates;
+        if (zero_rates) {
+            ws.prev_surface_rates = ws_prev.prev_surface_rates;
         } else {
             ws.prev_surface_rates = ws.surface_rates;
         }
