@@ -119,6 +119,12 @@ struct ZoltanParams {
     using type = UndefinedProperty;
 };
 
+template <class TypeTag, class MyTypeTag>
+struct ExternalPartition
+{
+    using type = UndefinedProperty;
+};
+
 template<class TypeTag, class MyTypeTag>
 struct AllowDistributedWells {
     using type = UndefinedProperty;
@@ -177,6 +183,12 @@ struct ZoltanImbalanceTol<TypeTag, TTag::EclBaseVanguard> {
 template<class TypeTag>
 struct ZoltanParams<TypeTag,TTag::EclBaseVanguard> {
     static constexpr auto value = "graph";
+};
+
+template <class TypeTag>
+struct ExternalPartition<TypeTag, TTag::EclBaseVanguard>
+{
+    static constexpr auto* value = "";
 };
 
 template<class TypeTag>
@@ -268,6 +280,12 @@ public:
                              "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
                              "for available Zoltan options.");
         EWOMS_HIDE_PARAM(TypeTag, ZoltanParams);
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, ExternalPartition,
+                             "Name of file from which to load an externally generated "
+                             "partitioning of the model's active cells for MPI "
+                             "distribution purposes. If empty, the built-in partitioning "
+                             "method will be employed.");
+        EWOMS_HIDE_PARAM(TypeTag, ExternalPartition);
 #endif
         EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
                              "Allow the perforations of a well to be distributed to interior of multiple processes");
@@ -297,6 +315,7 @@ public:
         serialPartitioning_ = EWOMS_GET_PARAM(TypeTag, bool, SerialPartitioning);
         zoltanImbalanceTol_ = EWOMS_GET_PARAM(TypeTag, double, ZoltanImbalanceTol);
         zoltanParams_ = EWOMS_GET_PARAM(TypeTag, std::string, ZoltanParams);
+        externalPartitionFile_ = EWOMS_GET_PARAM(TypeTag, std::string, ExternalPartition);
 #endif
         enableDistributedWells_ = EWOMS_GET_PARAM(TypeTag, bool, AllowDistributedWells);
         ignoredKeywords_ = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);

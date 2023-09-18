@@ -52,6 +52,7 @@
 #include <ebos/femcpgridcompat.hh>
 #endif //HAVE_DUNE_FEM
 
+#include <algorithm>
 #include <cassert>
 #include <numeric>
 #include <optional>
