@@ -182,6 +182,8 @@ public:
 
     const Parallel::Communication& comm() const { return comm_; }
 
+    const EclipseState& eclipseState() const { return eclState_; }
+
     const SummaryState& summaryState() const { return summaryState_; }
 
     const GuideRate& guideRate() const { return guideRate_; }

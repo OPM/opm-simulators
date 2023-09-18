@@ -28,6 +28,11 @@
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
+#include <ctime>
+
 namespace Opm
 {
     class GroupEconomicLimitsChecker
@@ -52,17 +57,21 @@ namespace Opm
         int numProducersOpenInitially();
         int numProducersOpen();
         void activateEndRun();
+        std::string message_separator(const char sep_char='*', const size_t sep_length=110) const { return std::string(sep_length, sep_char); }
 
         static constexpr int NUM_PHASES = 3;
     private:
         void displayDebugMessage(const std::string &msg) const;
-        void closeWellsRecursive(Group group);
+        void addPrintMessage(const std::string &msg, const double value, const double limit, const UnitSystem::measure measure);
+        bool closeWellsRecursive(Group group, int level=0);
         void throwNotImplementedError(const std::string &error) const;
         const BlackoilWellModelGeneric &well_model_;
         const Group &group_;
         const double simulation_time_;
         const int report_step_idx_;
         DeferredLogger &deferred_logger_;
+        const std::string date_string_;
+        const UnitSystem& unit_system_;        
         const WellState &well_state_;
         WellTestState &well_test_state_;
         const Schedule &schedule_;
@@ -74,6 +83,7 @@ namespace Opm
             {1, BlackoilPhases::Vapour},
             {2, BlackoilPhases::Aqua}};
         std::map<BlackoilPhases::PhaseIndex, int> phase_idx_reverse_map_;
+        std::string message_;
     };
 
 } // namespace Opm
