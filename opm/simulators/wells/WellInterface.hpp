@@ -310,6 +310,9 @@ public:
                                const WellState& well_state,
                                DeferredLogger& deferred_logger);
 
+    bool updateWellOperabilityFromWellEq(const Simulator& ebos_simulator,
+                                         const WellState& well_state,
+                                         DeferredLogger& deferred_logger);
 
     // update perforation water throughput based on solved water rate
     virtual void updateWaterThroughput(const double dt, WellState& well_state) const = 0;

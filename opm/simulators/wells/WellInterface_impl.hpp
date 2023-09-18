@@ -268,7 +268,7 @@ namespace Opm
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();
         
-        if (this->wellUnderZeroRateTarget(summary_state, well_state)) {
+        if (this->wellUnderZeroRateTarget(summary_state, well_state) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
@@ -284,7 +284,7 @@ namespace Opm
                                                                   prod_controls.hasControl(Well::ProducerCMode::GRUP);
 
                 changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
-                if (hasGroupControl && !changed) {
+                if (hasGroupControl) {
                     changed = this->checkGroupConstraints(well_state, group_state, schedule, summary_state, deferred_logger);
                 }
                 if (changed) {
@@ -294,7 +294,7 @@ namespace Opm
                         // don't call for thp since this might trigger additional local solve
                         updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
                     } else {
-                        ws.thp = this->isInjector() ? inj_controls.thp_limit: prod_controls.thp_limit;
+                        ws.thp = this->getTHPConstraint(summary_state);
                     }  
                     updatePrimaryVariables(summary_state, well_state, deferred_logger);
                 }
@@ -308,6 +308,9 @@ namespace Opm
             const bool has_thp = this->wellHasTHPConstraints(summary_state);
             if (has_thp){
                 // calculate bhp from thp-limit (using explicit fractions zince zero rate)
+                // TODO: this will often be too strict condition for re-opening, a better 
+                // option is probably minimum bhp on current vfp-curve, but some more functionality 
+                // is needed for this option to be robustly implemented. 
                 std::vector<double> rates(this->num_components_);
                 const double bhp_thp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state, rates, this->well_ecl_, summary_state, this->getRefDensity(), deferred_logger);
                 if (this->isInjector()){
@@ -620,14 +623,10 @@ namespace Opm
         const bool well_operable = this->operability_status_.isOperableAndSolvable();
 
         if (!well_operable && old_well_operable) {
-            if (this->well_ecl_.getAutomaticShutIn()) {
-                deferred_logger.info(" well " + this->name() + " gets SHUT during iteration ");
-            } else {
-                if (!this->wellIsStopped()) {
-                    deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
-                    this->stopWell();
-                    changed_to_stopped_this_step_ = true;
-                }
+            if (!this->wellIsStopped()) {
+                deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
+                this->stopWell();
+                changed_to_stopped_this_step_ = true;
             }
         } else if (well_operable && !old_well_operable) {
             deferred_logger.info(" well " + this->name() + " gets REVIVED during iteration ");
@@ -781,7 +780,15 @@ namespace Opm
     updateWellOperability(const Simulator& ebos_simulator,
                           const WellState& well_state,
                           DeferredLogger& deferred_logger)
-    {
+    {   
+        if (this->param_.local_well_solver_control_switching_) {
+            bool success = updateWellOperabilityFromWellEq(ebos_simulator, well_state, deferred_logger);
+            if (success) {
+                return;
+            } else {
+                // some info
+            }
+        }
         this->operability_status_.resetOperability();
 
         bool thp_controlled = this->isInjector() ? well_state.well(this->index_of_well_).injection_cmode == Well::InjectorCMode::THP:
@@ -802,6 +809,23 @@ namespace Opm
         }
     }
 
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    updateWellOperabilityFromWellEq(const Simulator& ebos_simulator,
+                                    const WellState& well_state,
+                                    DeferredLogger& deferred_logger)
+    {
+        // only makes sense if we're using this parameter is true 
+        assert(this->param_.local_well_solver_control_switching_);
+        this->operability_status_.resetOperability();
+        WellState well_state_copy = well_state;
+        const auto& group_state = ebos_simulator.problem().wellModel().groupState();
+        const double dt = ebos_simulator.timeStepSize();
+        // equations should be converged at this stage, so only one it is needed
+        bool converged = iterateWellEquations(ebos_simulator, dt, well_state_copy, group_state, deferred_logger);
+        return converged;
+    }                          
 
     template<typename TypeTag>
     void

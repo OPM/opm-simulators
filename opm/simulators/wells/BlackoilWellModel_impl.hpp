@@ -2258,6 +2258,9 @@ namespace Opm {
                     deferred_logger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
                 }
             }
+            // If we're using local well solves that include control switches, they also update
+            // operability, so reset before main iterations begin
+            well->resetWellOperability();
         }
         updatePrimaryVariables(deferred_logger);
 
