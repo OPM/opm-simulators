@@ -105,6 +105,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { enableEvaporation = getPropValue<TypeTag, Properties::EnableEvaporation>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
+    enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
@@ -511,7 +512,7 @@ public:
         Scalar sw = 0.0;
         Scalar sg = 0.0;
         Scalar saltConcentration = 0.0;
-        const Scalar& T = asImp_().temperature_();
+        const Scalar& T = asImp_().temperature_(problem, globalDofIdx);
         if (primaryVarsMeaningWater() == WaterMeaning::Sw)
             sw = (*this)[waterSwitchIdx];
         if (primaryVarsMeaningGas() == GasMeaning::Sg)
@@ -950,10 +951,13 @@ private:
             return 0.0;
     }
 
-    Scalar temperature_() const
+    Scalar temperature_(const Problem& problem, unsigned globalDofIdx) const
     {
         if constexpr (enableEnergy)
             return (*this)[Indices::temperatureIdx];
+        else if constexpr( enableTemperature)
+            return problem.temperature(globalDofIdx, /*timeIdx*/ 0);
+
         else
             return FluidSystem::reservoirTemperature();
     }
