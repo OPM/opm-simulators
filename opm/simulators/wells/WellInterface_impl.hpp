@@ -308,6 +308,9 @@ namespace Opm
             const bool has_thp = this->wellHasTHPConstraints(summary_state);
             if (has_thp){
                 // calculate bhp from thp-limit (using explicit fractions zince zero rate)
+                // TODO: this will often be too strict condition for re-opening, a better 
+                // option is probably minimum bhp on current vfp-curve, but some more functionality 
+                // is needed for this option to be robustly implemented. 
                 std::vector<double> rates(this->num_components_);
                 const double bhp_thp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state, rates, this->well_ecl_, summary_state, this->getRefDensity(), deferred_logger);
                 if (this->isInjector()){
@@ -620,16 +623,10 @@ namespace Opm
         const bool well_operable = this->operability_status_.isOperableAndSolvable();
 
         if (!well_operable && old_well_operable) {
-            if (this->well_ecl_.getAutomaticShutIn()) {
-                deferred_logger.info(" well " + this->name() + " gets SHUT during iteration ");
+            if (!this->wellIsStopped()) {
+                deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
                 this->stopWell();
                 changed_to_stopped_this_step_ = true;
-            } else {
-                if (!this->wellIsStopped()) {
-                    deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
-                    this->stopWell();
-                    changed_to_stopped_this_step_ = true;
-                }
             }
         } else if (well_operable && !old_well_operable) {
             deferred_logger.info(" well " + this->name() + " gets REVIVED during iteration ");
@@ -819,11 +816,13 @@ namespace Opm
                                     const WellState& well_state,
                                     DeferredLogger& deferred_logger)
     {
+        // only makes sense if we're using this parameter is true 
         assert(this->param_.local_well_solver_control_switching_);
         this->operability_status_.resetOperability();
         WellState well_state_copy = well_state;
         const auto& group_state = ebos_simulator.problem().wellModel().groupState();
         const double dt = ebos_simulator.timeStepSize();
+        // equations should be converged at this stage, so only one it is needed
         bool converged = iterateWellEquations(ebos_simulator, dt, well_state_copy, group_state, deferred_logger);
         return converged;
     }                          
