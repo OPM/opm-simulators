@@ -1423,7 +1423,7 @@ namespace Opm
                              const GroupState& group_state,
                              DeferredLogger& deferred_logger)
     {
-        if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
+        //if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
 
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
 
@@ -1450,8 +1450,10 @@ namespace Opm
         const int min_its_after_switch = 2;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
-        const bool was_stopped = this->wellIsStopped();
+        const auto well_status = this->wellStatus_;
+        const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
         bool changed = false;
+        bool final_check = false; 
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             its_since_last_switch++;
@@ -1461,6 +1463,11 @@ namespace Opm
                 if (changed){
                     its_since_last_switch = 0;
                     switch_count++;
+                }
+                if (!changed && final_check) {
+                    break;
+                } else {
+                    final_check = false;
                 }
             }
 
@@ -1474,9 +1481,16 @@ namespace Opm
             }
 
             const auto report = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, relax_convergence);
-            if (report.converged()) {
-                converged = true;
-                break;
+            converged = report.converged();
+            if (converged) {
+                // if equations are sufficiently linear they might converge in less than min_its_after_switch
+                // in this case, make sure all constraints are satisfied before returning
+                if (switch_count > 0 && its_since_last_switch < min_its_after_switch) {
+                    final_check = true;
+                    its_since_last_switch = min_its_after_switch;
+                } else {
+                    break;
+                }   
             }
 
             {
@@ -1541,18 +1555,19 @@ namespace Opm
         }
 
         if (converged) {
-            // update operability if status change
-            const bool is_stopped = this->wellIsStopped();
-            if (is_stopped && !was_stopped){
+            if (allow_switching){
+                // update operability if status change
+                const bool is_stopped = this->wellIsStopped();
                 if (this->wellHasTHPConstraints(summary_state)){
-                    this->operability_status_.can_obtain_bhp_with_thp_limit = false;
+                    this->operability_status_.can_obtain_bhp_with_thp_limit = !is_stopped;
+                    this->operability_status_.obey_thp_limit_under_bhp_limit = !is_stopped;
                 } else {
-                    this->operability_status_.operable_under_only_bhp_limit = false;
+                    this->operability_status_.operable_under_only_bhp_limit = !is_stopped;
                 }
-            } else if (!is_stopped && was_stopped) {
-                this->operability_status_.can_obtain_bhp_with_thp_limit = true;
-                this->operability_status_.operable_under_only_bhp_limit = true;
-            }            
+                // We reset the well status to it's original state. Status is updated 
+                // on the outside based on operability status
+                this->wellStatus_ = well_status; 
+            }     
             std::ostringstream sstr;
             sstr << "     Well " << this->name() << " converged in " << it << " inner iterations (" << switch_count << " local control switches).";
             if (relax_convergence)
