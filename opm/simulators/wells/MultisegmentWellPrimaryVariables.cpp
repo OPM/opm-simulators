@@ -23,6 +23,7 @@
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
@@ -180,7 +181,12 @@ updateNewton(const BVectorWell& dwells,
         {
             const int sign = dwells[seg][SPres] > 0.? 1 : -1;
             const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
-            value_[seg][SPres] = std::max(old_primary_variables[seg][SPres] - dx_limited, 1e5);
+            // some cases might have defaulted bhp constraint of 1 bar, we use a slightly smaller value as the bhp lower limit for Newton update
+            // so that bhp constaint can be an active control when needed.
+            // TODO: we might need to distinguish SPres of the top segment from the SPres of the other segments, since only the top segment
+            // is involved in the well constraints/control checking
+            constexpr double spres_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
+            value_[seg][SPres] = std::max(old_primary_variables[seg][SPres] - dx_limited, spres_lower_limit);
         }
 
         // update the total rate // TODO: should we have a limitation of the total rate change?
