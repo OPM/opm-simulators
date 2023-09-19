@@ -596,7 +596,8 @@ add_test_compareECLFiles(CASENAME multflt_model2
 			  SIMULATOR flow
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
-			  DIR model2)
+			  DIR model2
+			  TEST_ARGS --solver-max-time-step-in-days=10)
 
 add_test_compareECLFiles(CASENAME multflt_sched_model2
 			  FILENAME 3_A_MPI_MULTFLT_SCHED_MODEL2
@@ -610,7 +611,8 @@ add_test_compareECLFiles(CASENAME multpvv_model2
 			  SIMULATOR flow
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
-			  DIR model2)
+			  DIR model2
+			  TEST_ARGS --solver-max-time-step-in-days=10)
 
 add_test_compareECLFiles(CASENAME swatinit_model2
 			  FILENAME 5_SWATINIT_MODEL2
