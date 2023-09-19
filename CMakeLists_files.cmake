@@ -385,6 +385,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclalugridvanguard.hh
   ebos/eclbaseaquifermodel.hh
   ebos/eclbasevanguard.hh
+  ebos/eclblackoilintensivequantitiestable.hh
   ebos/eclcpgridvanguard.hh
   ebos/ecldummygradientcalculator.hh
   ebos/eclequilinitializer.hh
@@ -417,6 +418,8 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/femcpgridcompat.hh
   ebos/hdf5serializer.hh
   ebos/vtkecltracermodule.hh
+  ebos/EclProblemStandard.hpp
+  ebos/BlackoilModelFv.hpp
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/priVarsPacking.hpp
   opm/simulators/flow/BlackoilModelEbos.hpp
