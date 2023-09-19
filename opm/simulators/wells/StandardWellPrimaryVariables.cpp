@@ -23,6 +23,7 @@
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 
 #include <opm/common/Exceptions.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <dune/common/dynvector.hh>
 #include <dune/istl/bvector.hh>
@@ -277,8 +278,10 @@ updateNewton(const BVectorWell& dwells,
     const int sign1 = dwells[0][Bhp] > 0 ? 1: -1;
     const double dx1_limited = sign1 * std::min(std::abs(dwells[0][Bhp]),
                                                 std::abs(value_[Bhp]) * dBHPLimit);
-    // 1e5 to make sure bhp will not be below 1bar
-    value_[Bhp] = std::max(value_[Bhp] - dx1_limited, 1e5);
+    // some cases might have defaulted bhp constraint of 1 bar, we use a slightly smaller value as the bhp lower limit for Newton update
+    // so that bhp constaint can be an active control when needed.
+    constexpr double bhp_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
+    value_[Bhp] = std::max(value_[Bhp] - dx1_limited, bhp_lower_limit);
 }
 
 template<class FluidSystem, class Indices, class Scalar>
