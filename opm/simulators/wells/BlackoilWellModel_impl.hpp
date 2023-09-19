@@ -1115,14 +1115,14 @@ namespace Opm {
         const std::size_t max_iteration = param_.network_max_iterations_;
         std::size_t network_update_iteration = 0;
         while (do_network_update) {
-            if (network_update_iteration == iteration_to_relax) {
+            if (terminal_output_ && (network_update_iteration == iteration_to_relax) ) {
                 local_deferredLogger.info(" we begin using relaxed tolerance for network update now after " + std::to_string(iteration_to_relax) + " iterations ");
             }
             const bool relax_network_balance = network_update_iteration >= iteration_to_relax;
             std::tie(do_network_update, well_group_control_changed) =
                     updateWellControlsAndNetworkIteration(mandatory_network_balance, relax_network_balance, dt,local_deferredLogger);
             ++network_update_iteration;
-            if (network_update_iteration >= max_iteration) {
+            if (terminal_output_ && (network_update_iteration >= max_iteration) ) {
                 local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " iterations has been used, we stop the network update now, "
                                                                                           "the simulation will continue with unconvergeed network results");
                 break;
