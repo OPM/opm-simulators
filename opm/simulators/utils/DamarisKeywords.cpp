@@ -44,6 +44,10 @@ DamarisKeywords(std::string OutputDir, bool enableDamarisOutputCollective)
             {"_MORE_VARIABLES_REGEX_", ""},
             {"_PATH_REGEX_", OutputDir},
             {"_MYSTORE_OR_EMPTY_REGEX_", "MyStore"},
+            {"_PYTHON_OR_EMPTY_REGEX_", ""},  
+            {"_PYTHON_XML_NAME_", "#"},
+            {"_PARAVIEWPY_OR_EMPTY_REGEX_", ""},  
+            {"_MESHNAME_OR_HASH_", "#"},
         };
         return damaris_keywords;
     } else {
@@ -55,6 +59,10 @@ DamarisKeywords(std::string OutputDir, bool enableDamarisOutputCollective)
             {"_MORE_VARIABLES_REGEX_", ""},
             {"_PATH_REGEX_", OutputDir},
             {"_MYSTORE_OR_EMPTY_REGEX_", "MyStore"},
+            {"_PYTHON_OR_EMPTY_REGEX_", ""},
+            {"_PYTHON_XML_NAME_", "#"},
+            {"_PARAVIEWPY_OR_EMPTY_REGEX_", ""},
+            {"_MESHNAME_OR_HASH_", "#"},
         };
         return damaris_keywords;
     }
