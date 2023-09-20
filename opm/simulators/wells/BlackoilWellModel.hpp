@@ -214,6 +214,7 @@ namespace Opm {
 
             void endTimeStep()
             {
+                updateNetworkPressures(ebosSimulator_.episodeIndex(), true);
                 OPM_TIMEBLOCK(endTimeStep);
                 timeStepSucceeded(ebosSimulator_.time(), ebosSimulator_.timeStepSize());
             }

@@ -991,8 +991,9 @@ needRebalanceNetwork(const int report_step) const
     for (const auto& well : well_container_generic_) {
         const auto& events = this->wellState().well(well->indexOfWell()).events;
         const bool is_partof_network = network.has_node(well->wellEcl().groupName());
+        const bool prediction_mode = well->wellEcl().predictionMode();
         // TODO: we might find more relevant events to be included here
-        if (is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
+        if (prediction_mode && is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
             network_rebalance_necessary = true;
             break;
         }
@@ -1057,7 +1058,7 @@ inferLocalShutWells()
 
 double
 BlackoilWellModelGeneric::
-updateNetworkPressures(const int reportStepIdx)
+updateNetworkPressures(const int reportStepIdx, const bool compute_only)
 {
     // Get the network and return if inactive.
     const auto& network = schedule()[reportStepIdx].network();
@@ -1076,6 +1077,8 @@ updateNetworkPressures(const int reportStepIdx)
 
     // here, the network imbalance is the difference between the previous nodal pressure and the new nodal pressure
     double network_imbalance = 0.;
+    if (compute_only)
+        return network_imbalance;
 
     if (!previous_node_pressures.empty()) {
         for (const auto& [name, pressure]: previous_node_pressures) {

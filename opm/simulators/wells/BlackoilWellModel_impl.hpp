@@ -1853,7 +1853,7 @@ namespace Opm {
             const auto& balance = schedule()[episodeIdx].network_balance();
             constexpr double relaxtion_factor = 10.0;
             const double tolerance = relax_network_tolerance ? relaxtion_factor * balance.pressure_tolerance() : balance.pressure_tolerance();
-            more_network_update = network_imbalance > tolerance;
+            more_network_update = this->needRebalanceNetwork(episodeIdx) && network_imbalance > tolerance;
         }
 
         bool changed_well_group = false;
