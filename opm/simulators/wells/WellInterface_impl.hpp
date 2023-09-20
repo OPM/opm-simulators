@@ -786,7 +786,8 @@ namespace Opm
             if (success) {
                 return;
             } else {
-                // some info
+                deferred_logger.debug("Operability check using well equations did not converge for well "
+                                      + this->name() + ", reverting to classical approach." );
             }
         }
         this->operability_status_.resetOperability();
