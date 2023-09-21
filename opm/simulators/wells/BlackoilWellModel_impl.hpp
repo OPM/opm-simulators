@@ -1853,7 +1853,7 @@ namespace Opm {
             const auto& balance = schedule()[episodeIdx].network_balance();
             constexpr double relaxtion_factor = 10.0;
             const double tolerance = relax_network_tolerance ? relaxtion_factor * balance.pressure_tolerance() : balance.pressure_tolerance();
-            more_network_update = this->needRebalanceNetwork(episodeIdx) && network_imbalance > tolerance;
+            more_network_update = this->networkActive() && network_imbalance > tolerance;
         }
 
         bool changed_well_group = false;
@@ -2239,7 +2239,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
-        const bool network_rebalance_necessary = this->needRebalanceNetwork(ebosSimulator_.episodeIndex());
+        bool network_rebalance_necessary{false};
+        std::tie(this->network_active_, network_rebalance_necessary) = this->needRebalanceNetwork(ebosSimulator_.episodeIndex());
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;

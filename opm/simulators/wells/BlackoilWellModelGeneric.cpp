@@ -141,6 +141,13 @@ wellsActive() const
 
 bool
 BlackoilWellModelGeneric::
+networkActive() const
+{
+    return network_active_;
+}
+
+bool
+BlackoilWellModelGeneric::
 anyMSWellOpenLocal() const
 {
     for (const auto& well : wells_ecl_) {
@@ -978,29 +985,35 @@ hasTHPConstraints() const
     return BlackoilWellModelConstraints(*this).hasTHPConstraints();
 }
 
-bool
+std::pair<bool, bool>
 BlackoilWellModelGeneric::
 needRebalanceNetwork(const int report_step) const
 {
     const auto& network = schedule()[report_step].network();
     if (!network.active()) {
-        return false;
+        return {false, false};
     }
 
+    bool network_active = false;
     bool network_rebalance_necessary = false;
     for (const auto& well : well_container_generic_) {
-        const auto& events = this->wellState().well(well->indexOfWell()).events;
         const bool is_partof_network = network.has_node(well->wellEcl().groupName());
         const bool prediction_mode = well->wellEcl().predictionMode();
-        // TODO: we might find more relevant events to be included here
-        if (prediction_mode && is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
-            network_rebalance_necessary = true;
-            break;
+        if (is_partof_network && prediction_mode) {
+            network_active = true;
         }
+        // TODO: we might find more relevant events to be included here
+        const auto& events = this->wellState().well(well->indexOfWell()).events;
+        if (is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
+            network_rebalance_necessary = true;
+        }
+        if (network_active && network_rebalance_necessary)
+            break;
     }
     network_rebalance_necessary = comm_.max(network_rebalance_necessary);
+    network_active = comm_.max(network_active);
 
-    return network_rebalance_necessary;
+    return {network_active, network_rebalance_necessary};
 }
 
 bool
