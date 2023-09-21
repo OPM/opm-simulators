@@ -815,8 +815,7 @@ pressureDropValve(const int seg,
     const EvalWell friction_pressure_loss =
         mswellhelpers::frictionPressureLoss(additional_length, diameter, area, roughness, density, mass_rate, visc);
 
-    const double udq_default = 0.0; // TODO: Get this from UDQPARAMS
-    ValveUDAEval uda_eval {summary_state, this->well_.name(), seg, udq_default};
+    const ValveUDAEval uda_eval {summary_state, this->well_.name(), static_cast<size_t>(seg)};
     const double area_con = valve.conCrossArea(uda_eval);
     const double cv = valve.conFlowCoefficient();
 
