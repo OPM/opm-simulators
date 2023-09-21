@@ -216,7 +216,7 @@ public:
         OPM_TIMEBLOCK(solve);
         this->calls_ += 1;
         // Write linear system if asked for.
-        const int verbosity = this->prm_.template get<int>("verbosity", 0);
+        const int verbosity = this->prm_[this->activeSolverNum_].template get<int>("verbosity", 0);
         const bool write_matrix = verbosity > 10;
         if (write_matrix) {
             Helper::writeSystem(this->simulator_, //simulator is only used to get names
@@ -242,8 +242,8 @@ public:
                 // bda solve fails use istl solver setup need to be done since it is not setup in prepare
                 ParentType::prepareFlexibleSolver();
             }
-            assert(this->flexibleSolver_.solver_);
-            this->flexibleSolver_.solver_->apply(x, *(this->rhs_), result);
+            assert(this->flexibleSolver_[this->activeSolverNum_].solver_);
+            this->flexibleSolver_[this->activeSolverNum_].solver_->apply(x, *(this->rhs_), result);
         }
 
         // Check convergence, iterations etc.
