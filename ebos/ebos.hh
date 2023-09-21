@@ -34,7 +34,7 @@
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/linalg/ISTLSolverEbos.hpp>
+#include <opm/simulators/linalg/ISTLSolverEbosBda.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 namespace Opm {
