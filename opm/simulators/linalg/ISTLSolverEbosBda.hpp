@@ -131,8 +131,7 @@ public:
     ISTLSolverEbosBda(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
         : ParentType(simulator, parameters)
     {
-        bool have_gpu = true;
-        this->initialize(have_gpu);
+        initializeBda();
     }
 
     /// Construct a system solver.
@@ -140,59 +139,65 @@ public:
     explicit ISTLSolverEbosBda(const Simulator& simulator)
     : ParentType(simulator)
     {
+        initializeBda();
     }
 
-    void initialize()
+    void initializeBda()
     {
-        OPM_TIMEBLOCK(initialize);
-        ParentType::initialize(false);
-        const bool on_io_rank = (this->simulator_.gridView().comm().rank() == 0);
-        {
-            std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
-            if ((this->simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
-                if (on_io_rank) {
-                    OpmLog::warning("Cannot use GPU with MPI, GPU is disabled");
-                }
-                accelerator_mode = "none";
+        OPM_TIMEBLOCK(initializeBda);
+
+        std::string accelerator_mode = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
+        // Force accelerator mode to none if using MPI.
+        if ((this->simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
+            const bool on_io_rank = (this->simulator_.gridView().comm().rank() == 0);
+            if (on_io_rank) {
+                OpmLog::warning("Cannot use AcceleratorMode feature with MPI, setting AcceleratorMode to 'none'.");
             }
-            const int platformID = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
-            const int deviceID = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
-            const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
-            const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
-            const bool opencl_ilu_parallel = EWOMS_GET_PARAM(TypeTag, bool, OpenclIluParallel);
-            const int linear_solver_verbosity = this->parameters_.linear_solver_verbosity_;
-            std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
-            bdaBridge_ = std::make_unique<detail::BdaSolverInfo<Matrix,Vector>>(accelerator_mode,
-                                                                               linear_solver_verbosity,
-                                                                               maxit,
-                                                                               tolerance,
-                                                                               platformID,
-                                                                               deviceID,
-                                                                               opencl_ilu_parallel,
-                                                                               linsolver);
+            accelerator_mode = "none";
         }
+
+        if (accelerator_mode == "none") {
+            return;
+        }
+
+        // Initialize the BdaBridge
+        const int platformID = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
+        const int deviceID = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
+        const int maxit = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
+        const double tolerance = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
+        const bool opencl_ilu_parallel = EWOMS_GET_PARAM(TypeTag, bool, OpenclIluParallel);
+        const int linear_solver_verbosity = this->parameters_[0].linear_solver_verbosity_;
+        std::string linsolver = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
+        bdaBridge_ = std::make_unique<detail::BdaSolverInfo<Matrix,Vector>>(accelerator_mode,
+                                                                            linear_solver_verbosity,
+                                                                            maxit,
+                                                                            tolerance,
+                                                                            platformID,
+                                                                            deviceID,
+                                                                            opencl_ilu_parallel,
+                                                                            linsolver);
     }
 
     void prepare(const Matrix& M, Vector& b)
     {
         OPM_TIMEBLOCK(prepare);
-        ParentType::prepare(M,b);
         const bool firstcall = (this->matrix_ == nullptr);
+        ParentType::prepare(M,b);
+#if HAVE_OPENCL
         // update matrix entries for solvers.
-        if (firstcall) {
+        if (firstcall && bdaBridge_) {
             // ebos will not change the matrix object. Hence simply store a pointer
             // to the original one with a deleter that does nothing.
             // Outch! We need to be able to scale the linear system! Hence const_cast
             // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
-#if HAVE_OPENCL
             bdaBridge_->numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
             bdaBridge_->prepare(this->simulator_.vanguard().grid(),
                                this->simulator_.vanguard().cartesianIndexMapper(),
                                this->simulator_.vanguard().schedule().getWellsatEnd(),
                                this->simulator_.vanguard().cellPartition(),
                                this->getMatrix().nonzeroes(), this->useWellConn_);
-#endif
         }
+#endif
     }
 
 
@@ -213,8 +218,12 @@ public:
 
     bool solve(Vector& x)
     {
-        OPM_TIMEBLOCK(solve);
-        this->calls_ += 1;
+        if (!bdaBridge_) {
+            return ParentType::solve(x);
+        }
+
+        OPM_TIMEBLOCK(istlSolverEbosBdaSolve);
+        this->solveCount_ += 1;
         // Write linear system if asked for.
         const int verbosity = this->prm_[this->activeSolverNum_].template get<int>("verbosity", 0);
         const bool write_matrix = verbosity > 10;
@@ -253,12 +262,6 @@ public:
     }
 
 protected:
-    void prepareFlexibleSolver()
-    {
-        if(bdaBridge_->gpuActive()){
-            ParentType::prepareFlexibleSolver();
-        }
-    }
     std::unique_ptr<detail::BdaSolverInfo<Matrix, Vector>> bdaBridge_;
 }; // end ISTLSolver
 

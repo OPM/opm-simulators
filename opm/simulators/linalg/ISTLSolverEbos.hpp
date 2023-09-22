@@ -184,7 +184,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         ISTLSolverEbos(const Simulator& simulator, const FlowLinearSolverParameters& parameters, bool forceSerial = false)
             : simulator_(simulator),
               iterations_( 0 ),
-              calls_( 0 ),
               converged_(false),
               matrix_(nullptr),
               parameters_{parameters},
@@ -198,7 +197,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         explicit ISTLSolverEbos(const Simulator& simulator)
             : simulator_(simulator),
               iterations_( 0 ),
-              calls_( 0 ),
               solveCount_(0),
               converged_(false),
               matrix_(nullptr)
@@ -208,7 +206,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             initialize();
         }
 
-        void initialize(bool have_gpu = false)
+        void initialize()
         {
             OPM_TIMEBLOCK(IstlSolverEbos);
 
@@ -284,12 +282,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 }
                 OpmLog::note(os.str());
             }
-            if(have_gpu){
-                if (EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode) != "none") {
-                    OPM_THROW(std::logic_error,"Cannot use accelerated solver since CUDA, OpenCL and amgcl were not found by cmake");
-                }
-            }
-
         }
 
         // nothing to clean here
@@ -384,7 +376,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         {
             OPM_TIMEBLOCK(istlSolverEbosSolve);
             ++solveCount_;
-            calls_ += 1;
             // Write linear system if asked for.
             const int verbosity = prm_[activeSolverNum_].get("verbosity", 0);
             const bool write_matrix = verbosity > 10;
@@ -522,7 +513,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 4) {
                 // Recreate solver every 'step' solve calls.
                 const int step = this->parameters_[activeSolverNum_].cpr_reuse_interval_;
-                const bool create = ((calls_ % step) == 0);
+                const bool create = ((solveCount_ % step) == 0);
                 return create;
             }
 
@@ -567,7 +558,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         const Simulator& simulator_;
         mutable int iterations_;
-        mutable int calls_;
         mutable int solveCount_;
         mutable bool converged_;
         std::any parallelInformation_;
