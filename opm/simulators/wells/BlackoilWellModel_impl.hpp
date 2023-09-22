@@ -2456,21 +2456,16 @@ namespace Opm {
             if (well.isInjector())
                 continue;
 
-            int connpos = 0;
-            for (int i = 0; i < wellID; ++i) {
-                connpos += well_perf_data_[i].size();
-            }
-            connpos *= np;
             std::array<double,2> weighted{0.0,0.0};
             auto& [weighted_temperature, total_weight] = weighted;
 
             auto& well_info = local_parallel_well_info_[wellID].get();
-            const int num_perf_this_well = well_info.communication().sum(well_perf_data_[wellID].size());
             auto& ws = this->wellState().well(wellID);
             auto& perf_data = ws.perf_data;
             auto& perf_phase_rate = perf_data.phase_rates;
 
-            for (int perf = 0; perf < num_perf_this_well; ++perf) {
+            using int_type = decltype(well_perf_data_[wellID].size());
+            for (int_type perf = 0, end_perf = well_perf_data_[wellID].size(); perf < end_perf; ++perf) {
                 const int cell_idx = well_perf_data_[wellID][perf].cell_index;
                 const auto& intQuants = ebosSimulator_.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
