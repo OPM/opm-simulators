@@ -22,7 +22,7 @@
 
 #include <string>
 #include <map>
-
+#include <mpi.h>
 /*
     Below is the std::map with the keywords that are supported by Damaris.
 
@@ -34,7 +34,17 @@
 namespace Opm::DamarisOutput
 {
 
-std::map<std::string,std::string> DamarisKeywords(std::string outputDir, bool enableDamarisOutputCollective);
+std::map<std::string, std::string>
+DamarisKeywords(MPI_Comm comm, std::string OutputDir, 
+                    bool enableDamarisOutputCollective, 
+                    bool saveToHDF5, 
+                    int  nDamarisCores,
+                    int  nDamarisNodes,
+                    long shmemSizeBytes,
+                    std::string pythonFilename, 
+                    std::string simName, 
+                    std::string logLevel,
+                    std::string paraviewPythonFilename ) ;
 
 } // namespace Opm::DamarisOutput
 

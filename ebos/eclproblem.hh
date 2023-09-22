@@ -225,6 +225,7 @@ public:
 #if HAVE_DAMARIS
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDamarisOutput,
                              "Write a specific variable using Damaris in a separate core");
+                             
 #endif
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclOutputDoublePrecision,
                              "Tell the output writer to use double precision. Useful for 'perfect' restarts");

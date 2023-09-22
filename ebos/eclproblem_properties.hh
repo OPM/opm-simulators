@@ -392,12 +392,44 @@ template<class TypeTag>
 struct EnableDamarisOutput<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = false;
 };
-
 // If Damaris is available, write specific variable output in parallel
 template<class TypeTag>
 struct EnableDamarisOutputCollective<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = true;
 };
+template<class TypeTag>
+struct DamarisSaveToHdf<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = true;
+};
+template<class TypeTag>
+struct DamarisPythonScript<TypeTag, TTag::EclBaseProblem> {
+    static constexpr auto value = "";
+};
+template<class TypeTag>
+struct DamarisPythonParaviewScript<TypeTag, TTag::EclBaseProblem> {
+    static constexpr auto value = "";
+};
+template<class TypeTag>
+struct DamarisSimName<TypeTag, TTag::EclBaseProblem> {
+    static constexpr auto value = "";
+};
+template<class TypeTag>
+struct DamarisDedicatedCores<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = 1;
+};
+template<class TypeTag>
+struct DamarisDedicatedNodes<TypeTag, TTag::EclBaseProblem> {
+    static constexpr int value = 0;
+};
+template<class TypeTag>
+struct DamarisSharedMemeorySizeBytes<TypeTag, TTag::EclBaseProblem> {
+    static constexpr long value = 536870912;
+};
+template<class TypeTag>
+struct DamarisLogLevel<TypeTag, TTag::EclBaseProblem> {
+    static constexpr auto value = "trace";
+};
+
 #endif
 // If available, write the ECL output in a non-blocking manner
 template<class TypeTag>
