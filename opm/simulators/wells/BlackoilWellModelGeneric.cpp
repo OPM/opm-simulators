@@ -985,35 +985,46 @@ hasTHPConstraints() const
     return BlackoilWellModelConstraints(*this).hasTHPConstraints();
 }
 
-std::pair<bool, bool>
+void
 BlackoilWellModelGeneric::
-needRebalanceNetwork(const int report_step) const
-{
+updateNetworkActiveState(const int report_step) {
     const auto& network = schedule()[report_step].network();
     if (!network.active()) {
-        return {false, false};
+        this->network_active_ = false;
+        return;
     }
 
     bool network_active = false;
-    bool network_rebalance_necessary = false;
     for (const auto& well : well_container_generic_) {
         const bool is_partof_network = network.has_node(well->wellEcl().groupName());
         const bool prediction_mode = well->wellEcl().predictionMode();
         if (is_partof_network && prediction_mode) {
             network_active = true;
+            break;
         }
-        // TODO: we might find more relevant events to be included here
+    }
+    this->network_active_ = comm_.max(network_active);
+}
+
+bool
+BlackoilWellModelGeneric::
+needPreStepNetworkRebalance(const int report_step) const
+{
+    assert(this->networkActive());
+
+    const auto& network = schedule()[report_step].network();
+    bool network_rebalance_necessary = false;
+    for (const auto& well : well_container_generic_) {
+        const bool is_partof_network = network.has_node(well->wellEcl().groupName());
+        // TODO: we might find more relevant events to be included here (including network change events?)
         const auto& events = this->wellState().well(well->indexOfWell()).events;
         if (is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
             network_rebalance_necessary = true;
-        }
-        if (network_active && network_rebalance_necessary)
             break;
+        }
     }
     network_rebalance_necessary = comm_.max(network_rebalance_necessary);
-    network_active = comm_.max(network_active);
-
-    return {network_active, network_rebalance_necessary};
+    return network_rebalance_necessary;
 }
 
 bool
@@ -1383,11 +1394,9 @@ bool
 BlackoilWellModelGeneric::
 shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
 {
-    // if network is not active, we do not need to balance the network
-    const auto& network = schedule()[reportStepIdx].network();
-    if (!network.active()) {
+    // If the network is not active now, we do not need to balance it.
+    if (!this->networkActive())
         return false;
-    }
 
     const auto& balance = schedule()[reportStepIdx].network_balance();
     if (balance.mode() == Network::Balance::CalcMode::TimeStepStart) {

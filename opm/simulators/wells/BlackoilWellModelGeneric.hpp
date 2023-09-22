@@ -172,9 +172,13 @@ public:
     /// Return true if any well has a THP constraint.
     bool hasTHPConstraints() const;
 
-    /// Checks if network is active (at least one network well on prediction),
-    /// and whether it is necessary to re-balance the network
-    std::pair<bool,bool> needRebalanceNetwork(const int report_step) const;
+    /// Checks if network is active (at least one network well on prediction).
+    void updateNetworkActiveState(const int report_step);
+
+    /// Checks if there are reasons to perform a pre-step network re-balance.
+    /// (Currently, the only reasons are network well status changes.)
+    /// (TODO: Consider if adding network change events would be helpful.)
+    bool needPreStepNetworkRebalance(const int report_step) const;
 
     /// Shut down any single well
     /// Returns true if the well was actually found and shut.

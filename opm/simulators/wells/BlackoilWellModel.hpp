@@ -406,9 +406,8 @@ namespace Opm {
 
             SimulatorReportSingle last_report_{};
 
-            // solve to get a good network solution, group and well states might be updated during the process.
-            // the reservoir should stay static during this solution procedure.
-            void balanceNetwork(DeferredLogger& deferred_logger);
+            // Pre-step network solve at static reservoir conditions (group and well states might be updated)
+            void doPreStepNetworkRebalance(DeferredLogger& deferred_logger);
 
             // used to better efficiency of calcuation
             mutable BVector scaleAddRes_{};

@@ -1006,7 +1006,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    balanceNetwork(DeferredLogger& deferred_logger) {
+    doPreStepNetworkRebalance(DeferredLogger& deferred_logger) {
         const double dt = this->ebosSimulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
@@ -2239,8 +2239,14 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
-        bool network_rebalance_necessary{false};
-        std::tie(this->network_active_, network_rebalance_necessary) = this->needRebalanceNetwork(ebosSimulator_.episodeIndex());
+        // Check if there is a network with active prediction wells at this time step.
+        const auto episodeIdx = ebosSimulator_.episodeIndex();
+        this->updateNetworkActiveState(episodeIdx);
+
+        // Rebalance the network initially if any wells in the network have status changes
+        // (Need to check this before clearing events)
+        bool do_prestep_network_rebalance{false};
+        if (this->networkActive()) do_prestep_network_rebalance = this->needPreStepNetworkRebalance(episodeIdx);
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
@@ -2258,7 +2264,7 @@ namespace Opm {
                 try {
                     well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
                 } catch (const std::exception& e) {
-                    const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the privious rates";
+                    const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the previous rates";
                     deferred_logger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
                 }
             }
@@ -2268,10 +2274,8 @@ namespace Opm {
         }
         updatePrimaryVariables(deferred_logger);
 
-        if (network_rebalance_necessary) {
-            // this is to obtain good network solution
-            balanceNetwork(deferred_logger);
-        }
+        // Actually do the pre-step network rebalance, using the updated well states and initial solutions
+        if (do_prestep_network_rebalance) doPreStepNetworkRebalance(deferred_logger);
     }
 
     template<typename TypeTag>
