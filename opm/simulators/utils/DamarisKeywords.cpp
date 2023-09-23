@@ -18,13 +18,16 @@
 */
 
 #include <opm/simulators/utils/DamarisKeywords.hpp>
+#include <damaris/env/Environment.hpp>
 #include <string>
 #include <map>
-#include <random>
+#include <fstream>
+#include <Damaris.h>
+
 #include <mpi.h>
 
 /*
-    Below is the Damaris Keywords supported by Damaris to be filled
+    Below are the Damaris Keywords supported by Damaris to be filled
     in the built-in XML file.
 
     The entries in the map below will be filled by the corresponding
@@ -34,6 +37,41 @@
 
 namespace Opm::DamarisOutput
 {
+
+bool FileExists(const std::string filename_in, const MPI_Comm comm, const int rank) {
+    // From c++17  : std::filesystem::exists(filename_in);
+    
+    int retint = 0 ;
+    std::ifstream filestr ;
+    bool file_exists = false ;
+    
+    if ((filename_in.length() == 0) || (filename_in == "#") ) {
+        return file_exists ;
+    }
+
+    if (rank == 0) {
+        
+        filestr.open(filename_in);
+        file_exists = true ;
+        if(filestr.fail()) {
+            retint = 0 ;
+        } else {
+            retint = 1 ;
+            filestr.close() ;
+        }
+        MPI_Bcast(&retint,1,MPI_INT,0,comm);
+    } else {
+        MPI_Bcast(&retint,1,MPI_INT,0,comm);  // recieve the value from rank 0
+    }
+
+    if (retint == 1) {
+        file_exists = true ;
+    }
+
+    return (file_exists) ;
+}
+
+
 std::map<std::string, std::string>
 DamarisKeywords(MPI_Comm comm, std::string OutputDir, 
                     bool enableDamarisOutputCollective, 
@@ -46,11 +84,53 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir,
                     std::string logLevel,
                     std::string paraviewPythonFilename )
 {
+    int rank ;
+    MPI_Comm_rank(comm, &rank) ;
     std::string saveToHDF5_str("MyStore") ;
-    if (! saveToHDF5 )  saveToHDF5_str = "" ;
+    if (! saveToHDF5 )  saveToHDF5_str = "#" ;
 
+
+    std::string disablePythonXMLstart("!--") ;
+    std::string disablePythonXMLfin("--") ;
+    std::string disableParaviewXMLstart("!--") ;
+    std::string disableParaviewXMLfin("--") ;
+    
+    
+    // Test if input Python file exists and set the name of the script for <variable ...  script="" > )XML elements
     std::string publishToPython_str("") ;
-    if (pythonFilename != "") publishToPython_str="PythonScript" ; // the name of the PyScript XML element
+    if (pythonFilename != ""){
+        if (FileExists(pythonFilename, comm, rank)) {
+             publishToPython_str="PythonScript" ; // the name of the PyScript XML element
+             disablePythonXMLstart = std::string("")  ;
+             disablePythonXMLfin = std::string("")  ;
+        } else {
+            pythonFilename = "" ; // set to empty if it does not exist
+            std::string disablePythonXMLstart("!--") ;
+            std::string disablePythonXMLfin("--") ;
+        }
+    }
+
+     // Test if input Paraview Python file exists 
+    if (paraviewPythonFilename != ""){
+        if (FileExists(paraviewPythonFilename, comm, rank)) {
+            disableParaviewXMLstart = std::string("")  ;
+            disableParaviewXMLfin = std::string("")  ;
+        } else  {
+            paraviewPythonFilename = "" ; // set to empty if it does not exist
+            disableParaviewXMLstart = std::string("!--")  ;
+            disableParaviewXMLfin = std::string("--")  ;
+        }
+    }
+
+    // Flag error if both scripts are enabled 
+    // It would be good to know if Damaris has either one compiled into the library - this is currently not possible
+    if ((pythonFilename.size() > 0) && (paraviewPythonFilename.size() > 0) )
+    {
+        std::cerr << "ERROR: Both the Python (--damaris-python-script command line argument) and Paraview Python " <<
+            "(--damaris-python-paraview-script command line argument) scripts are valid, however only one type "
+            "of analysis is supported in a single simulation. Please choose one. Exiting." << std::endl ;
+        std::exit(-1) ;
+    }
 
     std::string damarisOutputCollective_str("") ;
     if (enableDamarisOutputCollective) {
@@ -64,17 +144,7 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir,
         // Having a different simulation name is important if multiple simulations 
         // are running on the same node, as it is used to name the simulations shmem area
         // and when one sim finishes it removes its shmem file.
-        // simName_str = "opm-sim-" + damaris::Environment::GetMagicNumber(comm) ;
-
-        // We will just add a random value for now as GetMagicNumber(comm) requires latest Damaris
-        // Seed with a real random value, if available
-        std::random_device r;
-
-        // Choose a random number between 0 and MAX_INT
-        std::default_random_engine e1(r());
-        std::uniform_int_distribution<int> uniform_dist(0, std::numeric_limits<int>::max());
-        int rand_int = uniform_dist(e1);
-        simName_str = "opm-sim-" + std::to_string(rand_int) ;
+        simName_str = "opm-sim-" + damaris::Environment::GetMagicNumber() ;
     } else {
         simName_str = simName ;
     }
@@ -123,6 +193,10 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir,
         {"_MAKE_AVAILABLE_IN_PYTHON_",publishToPython_str},  /* must match  <pyscript name="PythonScript" */
         {"_SIM_NAME_",simName_str},
         {"_LOG_LEVEL_",logLevel_str},
+        {"_DISABLEPYTHONSTART_",disablePythonXMLstart},
+        {"_DISABLEPYTHONFIN_",disablePythonXMLfin},
+        {"_DISABLEPARAVIEWSTART_",disableParaviewXMLstart},
+        {"_DISABLEPARAVIEWFIN_",disableParaviewXMLfin},
     };
     return damaris_keywords;
     

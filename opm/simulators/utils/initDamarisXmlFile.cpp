@@ -151,17 +151,17 @@ std::string initDamarisXmlFile()
 </storage>
 
 <scripts>
-    <pyscript name="PythonScript" file="_PYTHON_SCRIPT_" language="python" frequency="1" scheduler-file="" nthreads="0" keep-workers="no" />
+    <_DISABLEPYTHONSTART_pyscript name="PythonScript" file="_PYTHON_SCRIPT_" language="python" frequency="1" scheduler-file="" nthreads="0" keep-workers="no" /_DISABLEPYTHONFIN_>
 </scripts>
 
-<paraview update-frequency="1" write-vtk="0" write-vtk-binary="false" >
+<_DISABLEPARAVIEWSTART_paraview update-frequency="1" write-vtk="0" write-vtk-binary="false" >
         <script>_PARAVIEW_PYTHON_SCRIPT_</script>
-</paraview>
+</paraview _DISABLEPARAVIEWFIN_>
 
 <actions>
 </actions>
 
-<log FileName="_PATH_REGEX_/damaris_log/_SIM_NAME_" RotationSize="5" LogFormat="[%TimeStamp%]: %Message%"  Flush="True"  LogLevel="_LOG_LEVEL_" />
+<log FileName="_PATH_REGEX_/damaris_log/_SIM_NAME_" RotationSize="5" LogFormat="[%TimeStamp%]: %Message%"  Flush="false"  LogLevel="_LOG_LEVEL_" />
 
 </simulation>)V0G0N";
 

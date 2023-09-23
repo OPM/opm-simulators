@@ -342,34 +342,9 @@ private:
             OpmLog::warning(msg);
             enableDamarisOutput_ = false ;
         }
-        
+
         if (enableDamarisOutput_) {
-            enableDamarisOutputCollective_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective) ;
-            saveToDamarisHDF5_             = EWOMS_GET_PARAM(PreTypeTag, bool, DamarisSaveToHdf);
-            damarisPythonFilename_         = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisPythonScript);
-            damarisPythonParaviewFilename_ = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisPythonParaviewScript);
-            damarisSimName_                = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisSimName);
-            
-            nDamarisCores_                 = EWOMS_GET_PARAM(PreTypeTag, int, DamarisDedicatedCores);
-            nDamarisNodes_                 = EWOMS_GET_PARAM(PreTypeTag, int, DamarisDedicatedNodes);
-            shmemSizeBytes_                = EWOMS_GET_PARAM(PreTypeTag, long, DamarisSharedMemeorySizeBytes);
-            
-            damarisLogLevel_                = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisLogLevel);
-            
-            std::map<std::string, std::string> find_replace_map ;
-            find_replace_map = Opm::DamarisOutput::DamarisKeywords(EclGenericVanguard::comm(),
-                                                                   outputDir, 
-                                                                   enableDamarisOutputCollective_, 
-                                                                   saveToDamarisHDF5_, 
-                                                                   nDamarisCores_,
-                                                                   nDamarisNodes_,
-                                                                   shmemSizeBytes_,
-                                                                   damarisPythonFilename_,
-                                                                   damarisSimName_,
-                                                                   damarisLogLevel_,
-                                                                   damarisPythonParaviewFilename_
-                                                                 );
-            this->setupDamaris(outputDir, find_replace_map);
+            this->setupDamaris(outputDir);
         }
 #endif // HAVE_DAMARIS
 
@@ -737,8 +712,7 @@ private:
     }
 
 #if HAVE_DAMARIS
-    void setupDamaris(const std::string& outputDir, 
-                       std::map<std::string, std::string>& find_replace_map);
+    void setupDamaris(const std::string& outputDir);
 #endif
 
     int argc_{0};
@@ -763,16 +737,6 @@ private:
     bool isSimulationRank_ = true;
 #if HAVE_DAMARIS
     bool enableDamarisOutput_ = false;
-    bool enableDamarisOutputCollective_ = true ;
-    bool saveToDamarisHDF5_ = true ;
-    std::string damarisPythonFilename_ = "" ;
-    std::string damarisPythonParaviewFilename_ = "" ;
-    
-    std::string damarisSimName_  = ""       ; // empty defaults to opm-sim-<magic_number>
-    std::string damarisLogLevel_ = "info"   ;
-    int nDamarisCores_   = 1 ;
-    int nDamarisNodes_   = 0 ;
-    long shmemSizeBytes_ = 536870912 ;
 #endif
 };
 

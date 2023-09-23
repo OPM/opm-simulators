@@ -33,7 +33,18 @@
 
 namespace Opm::DamarisOutput
 {
+    
+    /** 
+*   Returns true if the file exists. 
+*     Tests to see if filename string is empty 
+*     or the "#" character and if so returns false.
+*/
+bool FileExists(const std::string filename_in, const MPI_Comm comm, const int rank) ;
 
+
+/** 
+*   Returns true if the file exists. Tests to see if filename string is empty or the "#" character and if so returns false.
+*/
 std::map<std::string, std::string>
 DamarisKeywords(MPI_Comm comm, std::string OutputDir, 
                     bool enableDamarisOutputCollective, 
