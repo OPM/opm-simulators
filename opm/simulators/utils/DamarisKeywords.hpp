@@ -22,7 +22,9 @@
 
 #include <string>
 #include <map>
+
 #include <mpi.h>
+
 /*
     Below is the std::map with the keywords that are supported by Damaris.
 
@@ -38,24 +40,22 @@ namespace Opm::DamarisOutput
 *   Returns true if the file exists. 
 *     Tests to see if filename string is empty 
 *     or the "#" character and if so returns false.
+*     Tests for file existance on ranl 0 and 
+*     passes result via MPI to all other ranks.
 */
 bool FileExists(const std::string filename_in, const MPI_Comm comm, const int rank) ;
 
 
 /** 
-*   Returns true if the file exists. Tests to see if filename string is empty or the "#" character and if so returns false.
+*   Creates the map of search strings and repacement strings that will be used to 
+*   modify a templated Damaris XML file which will be used to intialize Damaris.
+*   This function will access all the OPM flow comand line arguments related to
+*   Damaris and perform checks and logic so as to create a valid XML file. 
+*   N.B. The created XML file can be overridden using an environment variable 
+*   FLOW_DAMARIS_XML_FILE that points to a Damaris XML file. 
 */
 std::map<std::string, std::string>
-DamarisKeywords(MPI_Comm comm, std::string OutputDir, 
-                    bool enableDamarisOutputCollective, 
-                    bool saveToHDF5, 
-                    int  nDamarisCores,
-                    int  nDamarisNodes,
-                    long shmemSizeBytes,
-                    std::string pythonFilename, 
-                    std::string simName, 
-                    std::string logLevel,
-                    std::string paraviewPythonFilename ) ;
+DamarisKeywords(MPI_Comm comm, std::string OutputDir) ;
 
 } // namespace Opm::DamarisOutput
 

@@ -72,9 +72,7 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #endif
 
-#if HAVE_DAMARIS
-#include <opm/simulators/utils/DamarisKeywords.hpp>
-#endif
+
 
 #include <cassert>
 #include <cstdlib>
@@ -97,6 +95,10 @@ struct FlowEarlyBird {
 }
 
 } // namespace Opm::Properties
+
+#if HAVE_DAMARIS
+#include <opm/simulators/utils/DamarisKeywords.hpp>
+#endif
 
 namespace Opm {
 

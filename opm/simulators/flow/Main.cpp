@@ -239,41 +239,9 @@ void Main::setupDamaris(const std::string& outputDir )
     if (!outputDir.empty()) {
         ensureOutputDirExists(outputDir);
     }
-    
-    bool enableDamarisOutputCollective = true ;
-    bool saveToDamarisHDF5 = true ;
-    std::string damarisPythonFilename = "" ;
-    std::string damarisPythonParaviewFilename = "" ;
-    
-    std::string damarisSimName  = ""       ; // empty defaults to opm-sim-<magic_number>
-    std::string damarisLogLevel = "info"   ;
-    int nDamarisCores   = 1 ;
-    int nDamarisNodes   = 0 ;
-    long shmemSizeBytes = 536870912 ;
-    
-    enableDamarisOutputCollective = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective) ;
-    saveToDamarisHDF5             = EWOMS_GET_PARAM(PreTypeTag, bool, DamarisSaveToHdf);
-    damarisPythonFilename         = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisPythonScript);
-    damarisPythonParaviewFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisPythonParaviewScript);
-    damarisSimName                = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisSimName);
-    nDamarisCores                = EWOMS_GET_PARAM(PreTypeTag, int, DamarisDedicatedCores);
-    nDamarisNodes                 = EWOMS_GET_PARAM(PreTypeTag, int, DamarisDedicatedNodes);
-    shmemSizeBytes                = EWOMS_GET_PARAM(PreTypeTag, long, DamarisSharedMemeorySizeBytes);
-    damarisLogLevel                = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisLogLevel);
 
     std::map<std::string, std::string> find_replace_map ;
-    find_replace_map = Opm::DamarisOutput::DamarisKeywords(EclGenericVanguard::comm(),
-                                                           outputDir, 
-                                                           enableDamarisOutputCollective, 
-                                                           saveToDamarisHDF5, 
-                                                           nDamarisCores,
-                                                           nDamarisNodes,
-                                                           shmemSizeBytes,
-                                                           damarisPythonFilename,
-                                                           damarisSimName,
-                                                           damarisLogLevel,
-                                                           damarisPythonParaviewFilename
-                                                         );
+    find_replace_map = Opm::DamarisOutput::DamarisKeywords(EclGenericVanguard::comm(), outputDir);
     
     // By default EnableDamarisOutputCollective is true so all simulation results will
     // be written into one single file for each iteration using Parallel HDF5.

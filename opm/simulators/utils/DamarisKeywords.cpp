@@ -17,22 +17,31 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
+#include <opm/simulators/flow/Main.hpp>
+
+
+
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
+
 #include <opm/simulators/utils/DamarisKeywords.hpp>
 #include <damaris/env/Environment.hpp>
 #include <string>
 #include <map>
+#include <random>
 #include <fstream>
-#include <Damaris.h>
 
-#include <mpi.h>
 
-/*
+/**
     Below are the Damaris Keywords supported by Damaris to be filled
     in the built-in XML file.
 
     The entries in the map below will be filled by the corresponding
-    Damaris Keywords. Yet, only output directory and FileMode are to
-    be chosen by the user
+    Damaris Keywords.
+    
+    The command line arguments are defined in ebos/damariswriter.hh 
+    and defaults are set in ebos/eclproblem_properties.hh
 */
 
 namespace Opm::DamarisOutput
@@ -73,29 +82,43 @@ bool FileExists(const std::string filename_in, const MPI_Comm comm, const int ra
 
 
 std::map<std::string, std::string>
-DamarisKeywords(MPI_Comm comm, std::string OutputDir, 
-                    bool enableDamarisOutputCollective, 
-                    bool saveToHDF5, 
-                    int  nDamarisCores,
-                    int  nDamarisNodes,
-                    long shmemSizeBytes,
-                    std::string pythonFilename, 
-                    std::string simName, 
-                    std::string logLevel,
-                    std::string paraviewPythonFilename )
+DamarisKeywords(MPI_Comm comm, std::string OutputDir)
 {
+    typedef Properties::TTag::FlowEarlyBird PreTypeTag;
+    bool enableDamarisOutputCollective = true ;
+    bool saveToDamarisHDF5 = true ;
+    std::string pythonFilename = "" ;
+    std::string paraviewPythonFilename = "" ;
+
+    std::string damarisSimName  = ""       ; // empty defaults to opm-sim-<magic_number>
+    std::string damarisLogLevel = "info"   ;
+    int nDamarisCores   = 1 ;
+    int nDamarisNodes   = 0 ;
+    long shmemSizeBytes = 536870912 ;
+
+    // Get all of the Damaris keywords (except for --enable-damaris, which is used in simulators/flow/Main.hpp)
+    // These command line arguments are defined in ebos/damariswriter.hh and defaults are set in ebos/eclproblem_properties.hh
+    enableDamarisOutputCollective = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective) ;
+    saveToDamarisHDF5 = EWOMS_GET_PARAM(PreTypeTag, bool, DamarisSaveToHdf);
+    pythonFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisPythonScript);
+    paraviewPythonFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisPythonParaviewScript);
+    damarisSimName = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisSimName);
+    nDamarisCores = EWOMS_GET_PARAM(PreTypeTag, int, DamarisDedicatedCores);
+    nDamarisNodes = EWOMS_GET_PARAM(PreTypeTag, int, DamarisDedicatedNodes);
+    shmemSizeBytes = EWOMS_GET_PARAM(PreTypeTag, long, DamarisSharedMemeorySizeBytes);
+    damarisLogLevel = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisLogLevel);
+    
     int rank ;
     MPI_Comm_rank(comm, &rank) ;
     std::string saveToHDF5_str("MyStore") ;
-    if (! saveToHDF5 )  saveToHDF5_str = "#" ;
+    if (! saveToDamarisHDF5 )  saveToHDF5_str = "#" ;
 
-
+    // These strings are used to comment out an XML element if it is not reqired
     std::string disablePythonXMLstart("!--") ;
     std::string disablePythonXMLfin("--") ;
     std::string disableParaviewXMLstart("!--") ;
     std::string disableParaviewXMLfin("--") ;
-    
-    
+
     // Test if input Python file exists and set the name of the script for <variable ...  script="" > )XML elements
     std::string publishToPython_str("") ;
     if (pythonFilename != ""){
@@ -139,14 +162,26 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir,
         damarisOutputCollective_str="FilePerCore" ;
     }
 
-    std::string  simName_str  ;
-    if (simName == "") {
+    std::string  simName_str("")  ;
+    if (damarisSimName == "") {
         // Having a different simulation name is important if multiple simulations 
         // are running on the same node, as it is used to name the simulations shmem area
         // and when one sim finishes it removes its shmem file.
-        simName_str = "opm-sim-" + damaris::Environment::GetMagicNumber() ;
+        // simName_str =  damaris::Environment::GetMagicNumber(comm) ;
+        if (simName_str == "") {
+            // We will add a random value as GetMagicNumber(comm) requires latest Damaris
+            // Seed with a real random value, if available
+            std::random_device r;
+            // Choose a random number between 0 and MAX_INT
+            std::default_random_engine e1(r());
+            std::uniform_int_distribution<int> uniform_dist(0, std::numeric_limits<int>::max());
+            int rand_int = uniform_dist(e1);
+            simName_str =  std::to_string(rand_int) ;
+        } else {
+            simName_str = "opm-flow-" + simName_str ;
+        }
     } else {
-        simName_str = simName ;
+        simName_str = damarisSimName ;
     }
 
     if ((nDamarisCores > 0) && (nDamarisNodes > 0))
@@ -174,7 +209,7 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir,
         shmemSizeBytes_str = "536870912" ;
     }
 
-    std::string logLevel_str(logLevel) ;
+    std::string logLevel_str(damarisLogLevel) ;
 
    // _MAKE_AVAILABLE_IN_PYTHON_
    // _PYTHON_SCRIPT_

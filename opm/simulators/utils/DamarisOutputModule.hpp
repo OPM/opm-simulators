@@ -41,7 +41,13 @@ namespace Opm::DamarisOutput
 {
  // Initialize an XML file
  std::string initDamarisXmlFile();
- // Initialize Damaris by filling in th XML file and storing it in the chosen directory
+ 
+/**
+*   Initialize Damaris by either:
+*  1/ Filling in a templated XML file and storing it in the chosen directory (output directory)
+*  2/ Reading a file specified by the environment variable FLOW_DAMARIS_XML_FILE 
+*  
+*/
  void initializeDamaris(MPI_Comm comm, int mpiRank, std::map<std::string, std::string>& find_replace_map );
 
 } // namespace Opm::DamarisOutput
