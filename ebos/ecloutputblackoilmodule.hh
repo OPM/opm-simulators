@@ -51,14 +51,17 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cstddef>
 #include <initializer_list>
 #include <numeric>
 #include <optional>
 #include <stdexcept>
+#include <string>
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace Opm::Properties
 {
@@ -1090,7 +1093,9 @@ public:
         }
     }
 
-    void updateFluidInPlace(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume)
+    void updateFluidInPlace(const unsigned             globalDofIdx,
+                            const IntensiveQuantities& intQuants,
+                            const double               totVolume)
     {
         this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
@@ -1106,190 +1111,25 @@ private:
         return candidate == parallelWells.end() || *candidate != value;
     }
 
-    void updateFluidInPlace_(const ElementContext& elemCtx, unsigned dofIdx)
+    void updateFluidInPlace_(const ElementContext& elemCtx, const unsigned dofIdx)
     {
         const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-        unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+        const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
         const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
+
         this->updateFluidInPlace_(globalDofIdx, intQuants, totVolume);
     }
 
-    void updateFluidInPlace_(unsigned globalDofIdx,const IntensiveQuantities& intQuants, double totVolume)
+    void updateFluidInPlace_(const unsigned             globalDofIdx,
+                             const IntensiveQuantities& intQuants,
+                             const double               totVolume)
     {
         OPM_TIMEBLOCK_LOCAL(updateFluidInPlace);
-        //const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-        const auto& fs = intQuants.fluidState();
-        //unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
 
-        // Fluid in Place calculations
-
-        // calculate the pore volume of the current cell. Note that the porosity
-        // returned by the intensive quantities is defined as the ratio of pore
-        // space to total cell volume and includes all pressure dependent (->
-        // rock compressibility) and static modifiers (MULTPV, MULTREGP, NTG,
-        // PORV, MINPV and friends). Also note that because of this, the porosity
-        // returned by the intensive quantities can be outside of the physical
-        // range [0, 1] in pathetic cases.
-        //const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
-        const double pv = totVolume * intQuants.porosity().value();
-
-        if (!this->pressureTimesHydrocarbonVolume_.empty() && !this->pressureTimesPoreVolume_.empty()) {
-            assert(this->hydrocarbonPoreVolume_.size() == this->pressureTimesHydrocarbonVolume_.size());
-            assert(this->fip_[Inplace::Phase::PoreVolume].size() == this->pressureTimesPoreVolume_.size());
-
-            this->fip_[Inplace::Phase::PoreVolume][globalDofIdx] = totVolume * intQuants.referencePorosity();
-
-            this->dynamicPoreVolume_[globalDofIdx] = pv;
-
-            Scalar hydrocarbon = 0.0;
-
-            if (!this->eclState_.runspec().co2Storage()) {
-                // Common case.  Hydrocarbon volume is fraction occupied by actual hydrocarbons.
-                if (FluidSystem::phaseIsActive(oilPhaseIdx))
-                    hydrocarbon += getValue(fs.saturation(oilPhaseIdx));
-                if (FluidSystem::phaseIsActive(gasPhaseIdx))
-                    hydrocarbon += getValue(fs.saturation(gasPhaseIdx));
-            } else {
-                // CO2 storage: Hydrocarbon volume is full pore-volume.
-                hydrocarbon = 1.0;
-            }
-            this->hydrocarbonPoreVolume_[globalDofIdx] = pv * hydrocarbon;
-
-            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                this->pressureTimesPoreVolume_[globalDofIdx] = getValue(fs.pressure(oilPhaseIdx)) * pv;
-                this->pressureTimesHydrocarbonVolume_[globalDofIdx]
-                    = this->pressureTimesPoreVolume_[globalDofIdx] * hydrocarbon;
-            } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                this->pressureTimesPoreVolume_[globalDofIdx] = getValue(fs.pressure(gasPhaseIdx)) * pv;
-                this->pressureTimesHydrocarbonVolume_[globalDofIdx]
-                    = this->pressureTimesPoreVolume_[globalDofIdx] * hydrocarbon;
-            } else if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
-                this->pressureTimesPoreVolume_[globalDofIdx] = getValue(fs.pressure(waterPhaseIdx)) * pv;
-            }
-        }
+        this->updateTotalVolumesAndPressures_(globalDofIdx, intQuants, totVolume);
 
         if (this->computeFip_) {
-            Scalar fip[FluidSystem::numPhases];
-            Scalar fipr[FluidSystem::numPhases]; // at reservoir condition
-
-            for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
-                fip[phaseIdx] = 0.0;
-
-                if (!FluidSystem::phaseIsActive(phaseIdx))
-                    continue;
-
-                const double b = getValue(fs.invB(phaseIdx));
-                const double s = getValue(fs.saturation(phaseIdx));
-                fipr[phaseIdx] = s * pv;
-                fip[phaseIdx] = b * fipr[phaseIdx];
-            }
-
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::OIL].empty())
-                this->fip_[Inplace::Phase::OIL][globalDofIdx] = fip[oilPhaseIdx];
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !this->fip_[Inplace::Phase::GAS].empty())
-                this->fip_[Inplace::Phase::GAS][globalDofIdx] = fip[gasPhaseIdx];
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::WATER].empty())
-                this->fip_[Inplace::Phase::WATER][globalDofIdx] = fip[waterPhaseIdx];
-
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::OilResVolume].empty())
-                this->fip_[Inplace::Phase::OilResVolume][globalDofIdx] = fipr[oilPhaseIdx];
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !this->fip_[Inplace::Phase::GasResVolume].empty())
-                this->fip_[Inplace::Phase::GasResVolume][globalDofIdx] = fipr[gasPhaseIdx];
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::WaterResVolume].empty())
-                this->fip_[Inplace::Phase::WaterResVolume][globalDofIdx] = fipr[waterPhaseIdx];
-
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::SALT].empty())
-                this->fip_[Inplace::Phase::SALT][globalDofIdx] = fipr[waterPhaseIdx] * fs.saltConcentration().value();
-
-            // Store the pure oil and gas Fip
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::OilInLiquidPhase].empty())
-                this->fip_[Inplace::Phase::OilInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
-
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !this->fip_[Inplace::Phase::GasInGasPhase].empty())
-                this->fip_[Inplace::Phase::GasInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
-
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                // Gas dissolved in oil and vaporized oil
-                Scalar gasInPlaceLiquid = getValue(fs.Rs()) * fip[oilPhaseIdx];
-                Scalar oilInPlaceGas = getValue(fs.Rv()) * fip[gasPhaseIdx];
-                if (!this->fip_[Inplace::Phase::GasInLiquidPhase].empty())
-                    this->fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceLiquid;
-                if (!this->fip_[Inplace::Phase::OilInGasPhase].empty())
-                    this->fip_[Inplace::Phase::OilInGasPhase][globalDofIdx] = oilInPlaceGas;
-
-                // Add dissolved gas and vaporized oil to total Fip
-                if (!this->fip_[Inplace::Phase::OIL].empty())
-                    this->fip_[Inplace::Phase::OIL][globalDofIdx] += oilInPlaceGas;
-                if (!this->fip_[Inplace::Phase::GAS].empty())
-                    this->fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceLiquid;
-            }
-
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                // Gas dissolved in water and vaporized water
-                Scalar gasInPlaceWater = getValue(fs.Rsw()) * fip[waterPhaseIdx];
-                Scalar waterInPlaceGas = getValue(fs.Rvw()) * fip[gasPhaseIdx];
-
-                if (!this->fip_[Inplace::Phase::WaterInGasPhase].empty())
-                    this->fip_[Inplace::Phase::WaterInGasPhase][globalDofIdx] = waterInPlaceGas;
-
-                if (!this->fip_[Inplace::Phase::WaterInWaterPhase].empty())
-                    this->fip_[Inplace::Phase::WaterInWaterPhase][globalDofIdx] = fip[waterPhaseIdx];
-
-                // For water+gas cases the gas in water is added to the GIPL value
-                if (!this->fip_[Inplace::Phase::GasInLiquidPhase].empty() && !FluidSystem::phaseIsActive(oilPhaseIdx))
-                    this->fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceWater;
-
-                // Add dissolved gas and vaporized water to total Fip
-                if (!this->fip_[Inplace::Phase::WATER].empty())
-                    this->fip_[Inplace::Phase::WATER][globalDofIdx] += waterInPlaceGas;
-                if (!this->fip_[Inplace::Phase::GAS].empty())
-                    this->fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceWater;
-            }
-
-
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
-             (!this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty() || !this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty())) {
-
-                const auto& scaledDrainageInfo
-                    = simulator_.problem().materialLawManager()->oilWaterScaledEpsInfoDrainage(globalDofIdx);
-                Scalar sgcr = scaledDrainageInfo.Sgcr;
-                if(simulator_.problem().materialLawManager()->enableHysteresis()) {
-                    const MaterialLawParams& matParams = simulator_.problem().materialLawParams(globalDofIdx);
-                    sgcr = MaterialLaw::trappedGasSaturation(matParams);
-                }
-
-                const double sg = getValue(fs.saturation(gasPhaseIdx));
-                const double rhog = getValue(fs.density(gasPhaseIdx));
-                const double xgW = FluidSystem::phaseIsActive(waterPhaseIdx)?
-                            FluidSystem::convertRvwToXgW(getValue(fs.Rvw()), fs.pvtRegionIndex()):
-                            FluidSystem::convertRvToXgO(getValue(fs.Rv()), fs.pvtRegionIndex());
-                Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
-                if (!this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty()) {
-                    Scalar imMobileGas = (1 - xgW) * pv * rhog / mM * std::min(sgcr , sg);
-                    this->fip_[Inplace::Phase::CO2InGasPhaseInMob][globalDofIdx] = imMobileGas;
-                }
-                if (!this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty()) {
-                    Scalar mobileGas = (1 - xgW) * pv * rhog / mM * std::max(0.0, sg - sgcr);
-                    this->fip_[Inplace::Phase::CO2InGasPhaseMob][globalDofIdx] = mobileGas;
-                }
-            }
-
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !this->fip_[Inplace::Phase::CO2InWaterPhase].empty()) {
-                const double rhow = getValue(fs.density(waterPhaseIdx));
-                const double sw = getValue(fs.saturation(waterPhaseIdx));
-                const double xwG = FluidSystem::convertRswToXwG(getValue(fs.Rsw()), fs.pvtRegionIndex());
-                Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
-                Scalar co2inWater = xwG * pv * rhow * sw / mM;
-                this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2inWater;
-            }
-            if (FluidSystem::phaseIsActive(oilPhaseIdx) && !this->fip_[Inplace::Phase::CO2InWaterPhase].empty()) {
-                const double rhoo = getValue(fs.density(oilPhaseIdx));
-                const double so = getValue(fs.saturation(oilPhaseIdx));
-                const double xoG = FluidSystem::convertRsToXoG(getValue(fs.Rs()), fs.pvtRegionIndex());
-                Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
-                Scalar co2inWater = xoG * pv * rhoo * so / mM;
-                this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2inWater;
-            }
+            this->updatePhaseInplaceVolumes_(globalDofIdx, intQuants, totVolume);
         }
     }
 
@@ -1401,6 +1241,312 @@ private:
         }
 
         return rates;
+    }
+
+    template <typename FluidState>
+    Scalar hydroCarbonFraction(const FluidState& fs) const
+    {
+        if (this->eclState_.runspec().co2Storage()) {
+            // CO2 storage: Hydrocarbon volume is full pore-volume.
+            return 1.0;
+        }
+
+        // Common case.  Hydrocarbon volume is fraction occupied by actual
+        // hydrocarbons.
+        auto hydrocarbon = Scalar {0};
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+            hydrocarbon += getValue(fs.saturation(oilPhaseIdx));
+        }
+
+        if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+            hydrocarbon += getValue(fs.saturation(gasPhaseIdx));
+        }
+
+        return hydrocarbon;
+    }
+
+    void updateTotalVolumesAndPressures_(const unsigned             globalDofIdx,
+                                         const IntensiveQuantities& intQuants,
+                                         const double               totVolume)
+    {
+        const auto& fs = intQuants.fluidState();
+
+        const double pv = totVolume * intQuants.porosity().value();
+        const auto hydrocarbon = this->hydroCarbonFraction(fs);
+
+        if (! this->hydrocarbonPoreVolume_.empty()) {
+            this->fip_[Inplace::Phase::PoreVolume][globalDofIdx] =
+                totVolume * intQuants.referencePorosity();
+
+            this->dynamicPoreVolume_[globalDofIdx] = pv;
+            this->hydrocarbonPoreVolume_[globalDofIdx] = pv * hydrocarbon;
+        }
+
+        if (!this->pressureTimesHydrocarbonVolume_.empty() &&
+            !this->pressureTimesPoreVolume_.empty())
+        {
+            assert(this->hydrocarbonPoreVolume_.size() == this->pressureTimesHydrocarbonVolume_.size());
+            assert(this->fip_[Inplace::Phase::PoreVolume].size() == this->pressureTimesPoreVolume_.size());
+
+            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                this->pressureTimesPoreVolume_[globalDofIdx] =
+                    getValue(fs.pressure(oilPhaseIdx)) * pv;
+
+                this->pressureTimesHydrocarbonVolume_[globalDofIdx] =
+                    this->pressureTimesPoreVolume_[globalDofIdx] * hydrocarbon;
+            }
+            else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                this->pressureTimesPoreVolume_[globalDofIdx] =
+                    getValue(fs.pressure(gasPhaseIdx)) * pv;
+
+                this->pressureTimesHydrocarbonVolume_[globalDofIdx] =
+                    this->pressureTimesPoreVolume_[globalDofIdx] * hydrocarbon;
+            }
+            else if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                this->pressureTimesPoreVolume_[globalDofIdx] =
+                    getValue(fs.pressure(waterPhaseIdx)) * pv;
+            }
+        }
+    }
+
+    void updatePhaseInplaceVolumes_(const unsigned             globalDofIdx,
+                                    const IntensiveQuantities& intQuants,
+                                    const double               totVolume)
+    {
+        std::array<Scalar, FluidSystem::numPhases> fip {};
+        std::array<Scalar, FluidSystem::numPhases> fipr{}; // at reservoir condition
+
+        const auto& fs = intQuants.fluidState();
+        const auto  pv = totVolume * intQuants.porosity().value();
+
+        for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx) {
+            if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+
+            const auto b = getValue(fs.invB(phaseIdx));
+            const auto s = getValue(fs.saturation(phaseIdx));
+
+            fipr[phaseIdx] = s * pv;
+            fip [phaseIdx] = b * fipr[phaseIdx];
+        }
+
+        this->updateInplaceVolumesSurface(globalDofIdx, fip);
+        this->updateInplaceVolumesReservoir(globalDofIdx, fs, fipr);
+
+        if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
+            FluidSystem::phaseIsActive(gasPhaseIdx))
+        {
+            this->updateOilGasDistribution(globalDofIdx, fs, fip);
+        }
+
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
+            FluidSystem::phaseIsActive(gasPhaseIdx))
+        {
+            this->updateGasWaterDistribution(globalDofIdx, fs, fip);
+        }
+
+        if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
+            (!this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty() ||
+             !this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty()))
+        {
+            this->updateCO2InGas(globalDofIdx, pv, fs);
+        }
+
+        if (!this->fip_[Inplace::Phase::CO2InWaterPhase].empty() &&
+            (FluidSystem::phaseIsActive(waterPhaseIdx) ||
+             FluidSystem::phaseIsActive(oilPhaseIdx)))
+        {
+            const auto co2InWater = FluidSystem::phaseIsActive(oilPhaseIdx)
+                ? this->co2InWaterFromOil(fs, pv)
+                : this->co2InWaterFromWater(fs, pv);
+
+            this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2InWater;
+        }
+    }
+
+    template <typename FIPArray>
+    void updateInplaceVolumesSurface(const unsigned  globalDofIdx,
+                                     const FIPArray& fip)
+    {
+        if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
+            !this->fip_[Inplace::Phase::OIL].empty())
+        {
+            this->fip_[Inplace::Phase::OIL][globalDofIdx] = fip[oilPhaseIdx];
+        }
+
+        if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
+            !this->fip_[Inplace::Phase::OilInLiquidPhase].empty())
+        {
+            this->fip_[Inplace::Phase::OilInLiquidPhase][globalDofIdx] = fip[oilPhaseIdx];
+        }
+
+        if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
+            !this->fip_[Inplace::Phase::GAS].empty())
+        {
+            this->fip_[Inplace::Phase::GAS][globalDofIdx] = fip[gasPhaseIdx];
+        }
+
+        if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
+            !this->fip_[Inplace::Phase::GasInGasPhase].empty())
+        {
+            this->fip_[Inplace::Phase::GasInGasPhase][globalDofIdx] = fip[gasPhaseIdx];
+        }
+
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
+            !this->fip_[Inplace::Phase::WATER].empty())
+        {
+            this->fip_[Inplace::Phase::WATER][globalDofIdx] = fip[waterPhaseIdx];
+        }
+    }
+
+    template <typename FluidState, typename FIPArray>
+    void updateInplaceVolumesReservoir(const unsigned    globalDofIdx,
+                                       const FluidState& fs,
+                                       const FIPArray&   fipr)
+    {
+        if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
+            !this->fip_[Inplace::Phase::OilResVolume].empty())
+        {
+            this->fip_[Inplace::Phase::OilResVolume][globalDofIdx] = fipr[oilPhaseIdx];
+        }
+
+        if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
+            !this->fip_[Inplace::Phase::GasResVolume].empty())
+        {
+            this->fip_[Inplace::Phase::GasResVolume][globalDofIdx] = fipr[gasPhaseIdx];
+        }
+
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
+            !this->fip_[Inplace::Phase::WaterResVolume].empty())
+        {
+            this->fip_[Inplace::Phase::WaterResVolume][globalDofIdx] = fipr[waterPhaseIdx];
+        }
+
+        if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
+            !this->fip_[Inplace::Phase::SALT].empty())
+        {
+            this->fip_[Inplace::Phase::SALT][globalDofIdx] =
+                fipr[waterPhaseIdx] * fs.saltConcentration().value();
+        }
+    }
+
+    template <typename FluidState, typename FIPArray>
+    void updateOilGasDistribution(const unsigned    globalDofIdx,
+                                  const FluidState& fs,
+                                  const FIPArray&   fip)
+    {
+        // Gas dissolved in oil and vaporized oil
+        const auto gasInPlaceLiquid = getValue(fs.Rs()) * fip[oilPhaseIdx];
+        const auto oilInPlaceGas    = getValue(fs.Rv()) * fip[gasPhaseIdx];
+
+        if (!this->fip_[Inplace::Phase::GasInLiquidPhase].empty()) {
+            this->fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceLiquid;
+        }
+
+        if (!this->fip_[Inplace::Phase::OilInGasPhase].empty()) {
+            this->fip_[Inplace::Phase::OilInGasPhase][globalDofIdx] = oilInPlaceGas;
+        }
+
+        // Add dissolved gas and vaporized oil to total Fip
+        if (!this->fip_[Inplace::Phase::OIL].empty()) {
+            this->fip_[Inplace::Phase::OIL][globalDofIdx] += oilInPlaceGas;
+        }
+
+        if (!this->fip_[Inplace::Phase::GAS].empty()) {
+            this->fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceLiquid;
+        }
+    }
+
+    template <typename FluidState, typename FIPArray>
+    void updateGasWaterDistribution(const unsigned    globalDofIdx,
+                                    const FluidState& fs,
+                                    const FIPArray&   fip)
+    {
+        // Gas dissolved in water and vaporized water
+        const auto gasInPlaceWater = getValue(fs.Rsw()) * fip[waterPhaseIdx];
+        const auto waterInPlaceGas = getValue(fs.Rvw()) * fip[gasPhaseIdx];
+
+        if (!this->fip_[Inplace::Phase::WaterInGasPhase].empty()) {
+            this->fip_[Inplace::Phase::WaterInGasPhase][globalDofIdx] = waterInPlaceGas;
+        }
+
+        if (!this->fip_[Inplace::Phase::WaterInWaterPhase].empty()) {
+            this->fip_[Inplace::Phase::WaterInWaterPhase][globalDofIdx] = fip[waterPhaseIdx];
+        }
+
+        // For water+gas cases the gas in water is added to the GIPL value
+        if (!this->fip_[Inplace::Phase::GasInLiquidPhase].empty() &&
+            !FluidSystem::phaseIsActive(oilPhaseIdx))
+        {
+            this->fip_[Inplace::Phase::GasInLiquidPhase][globalDofIdx] = gasInPlaceWater;
+        }
+
+        // Add dissolved gas and vaporized water to total Fip
+        if (!this->fip_[Inplace::Phase::WATER].empty()) {
+            this->fip_[Inplace::Phase::WATER][globalDofIdx] += waterInPlaceGas;
+        }
+
+        if (!this->fip_[Inplace::Phase::GAS].empty()) {
+            this->fip_[Inplace::Phase::GAS][globalDofIdx] += gasInPlaceWater;
+        }
+    }
+
+    template <typename FluidState>
+    void updateCO2InGas(const unsigned    globalDofIdx,
+                        const double      pv,
+                        const FluidState& fs)
+    {
+        const auto& scaledDrainageInfo = this->simulator_.problem().materialLawManager()
+            ->oilWaterScaledEpsInfoDrainage(globalDofIdx);
+
+        Scalar sgcr = scaledDrainageInfo.Sgcr;
+        if (this->simulator_.problem().materialLawManager()->enableHysteresis()) {
+            const auto& matParams = simulator_.problem().materialLawParams(globalDofIdx);
+            sgcr = MaterialLaw::trappedGasSaturation(matParams);
+        }
+
+        const double sg   = getValue(fs.saturation(gasPhaseIdx));
+        const double rhog = getValue(fs.density(gasPhaseIdx));
+        const double xgW  = FluidSystem::phaseIsActive(waterPhaseIdx)
+            ? FluidSystem::convertRvwToXgW(getValue(fs.Rvw()), fs.pvtRegionIndex())
+            : FluidSystem::convertRvToXgO(getValue(fs.Rv()), fs.pvtRegionIndex());
+
+        const Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+
+        if (!this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty()) {
+            const Scalar imMobileGas = (1 - xgW) * pv * rhog / mM * std::min(sgcr , sg);
+            this->fip_[Inplace::Phase::CO2InGasPhaseInMob][globalDofIdx] = imMobileGas;
+        }
+
+        if (!this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty()) {
+            const Scalar mobileGas = (1 - xgW) * pv * rhog / mM * std::max(0.0, sg - sgcr);
+            this->fip_[Inplace::Phase::CO2InGasPhaseMob][globalDofIdx] = mobileGas;
+        }
+    }
+
+    template <typename FluidState>
+    Scalar co2InWaterFromWater(const FluidState& fs, const double pv) const
+    {
+        const double rhow = getValue(fs.density(waterPhaseIdx));
+        const double sw   = getValue(fs.saturation(waterPhaseIdx));
+        const double xwG  = FluidSystem::convertRswToXwG(getValue(fs.Rsw()), fs.pvtRegionIndex());
+
+        const Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+
+        return xwG * pv * rhow * sw / mM;
+    }
+
+    template <typename FluidState>
+    Scalar co2InWaterFromOil(const FluidState& fs, const double pv) const
+    {
+        const double rhoo = getValue(fs.density(oilPhaseIdx));
+        const double so   = getValue(fs.saturation(oilPhaseIdx));
+        const double xoG  = FluidSystem::convertRsToXoG(getValue(fs.Rs()), fs.pvtRegionIndex());
+
+        const Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+
+        return xoG * pv * rhoo * so / mM;
     }
 
     const Simulator& simulator_;
