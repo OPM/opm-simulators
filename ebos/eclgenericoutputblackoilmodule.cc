@@ -683,15 +683,15 @@ regionSum(const ScalarBuffer& property,
 
 template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-doAllocBuffers(unsigned bufferSize,
-               unsigned reportStepNum,
-               const bool substep,
-               const bool log,
-               const bool isRestart,
-               const bool vapparsActive,
-               const bool enableHysteresis,
-               unsigned numTracers,
-               unsigned numOutputNnc)
+doAllocBuffers(const unsigned bufferSize,
+               const unsigned reportStepNum,
+               const bool     substep,
+               const bool     log,
+               const bool     isRestart,
+               const bool     vapparsActive,
+               const bool     enableHysteresis,
+               const unsigned numTracers,
+               const unsigned numOutputNnc)
 {
     // Output RESTART_OPM_EXTENDED only when explicitly requested by user.
     std::map<std::string, int> rstKeywords = schedule_.rst_keywords(reportStepNum);
@@ -728,20 +728,30 @@ doAllocBuffers(unsigned bufferSize,
         }
     }
 
-    if (!substep ||
+    const auto needAvgPress = !substep         ||
+        !this->RPRNodes_.empty()               ||
         this->summaryConfig_.hasKeyword("FPR") ||
-        this->summaryConfig_.hasKeyword("FPRP") ||
-        !this->RPRNodes_.empty())
-    {
+        this->summaryConfig_.hasKeyword("FPRP");
+
+    const auto needPoreVolume = needAvgPress    ||
+        this->summaryConfig_.hasKeyword("FHPV") ||
+        this->summaryConfig_.match("RHPV*");
+
+    if (needPoreVolume) {
         this->fip_[Inplace::Phase::PoreVolume].resize(bufferSize, 0.0);
         this->dynamicPoreVolume_.resize(bufferSize, 0.0);
         this->hydrocarbonPoreVolume_.resize(bufferSize, 0.0);
-        this->pressureTimesPoreVolume_.resize(bufferSize, 0.0);
-        this->pressureTimesHydrocarbonVolume_.resize(bufferSize, 0.0);
     }
     else {
         this->dynamicPoreVolume_.clear();
         this->hydrocarbonPoreVolume_.clear();
+    }
+
+    if (needAvgPress) {
+        this->pressureTimesPoreVolume_.resize(bufferSize, 0.0);
+        this->pressureTimesHydrocarbonVolume_.resize(bufferSize, 0.0);
+    }
+    else {
         this->pressureTimesPoreVolume_.clear();
         this->pressureTimesHydrocarbonVolume_.clear();
     }
@@ -1284,6 +1294,10 @@ updateSummaryRegionValues(const Inplace& inplace,
             }
         }
 
+        if (this->summaryConfig_.hasKeyword("FHPV")) {
+            miscSummaryData["FHPV"] = inplace.get(Inplace::Phase::HydroCarbonPV);
+        }
+
         if (this->summaryConfig_.hasKeyword("FOE") && this->initialInplace_) {
             miscSummaryData["FOE"] = (this->initialInplace_.value().get(Inplace::Phase::OIL) - inplace.get(Inplace::Phase::OIL))
                 / this->initialInplace_.value().get(Inplace::Phase::OIL);
@@ -1339,6 +1353,11 @@ updateSummaryRegionValues(const Inplace& inplace,
                                         get_vector(node, Inplace::Phase::PressurePV),
                                         get_vector(node, Inplace::Phase::DynamicPoreVolume),
                                         false);
+        }
+
+        for (const auto& node : this->summaryConfig_.keywords("RHPV*")) {
+            regionData[node.keyword()] =
+                get_vector(node, Inplace::Phase::HydroCarbonPV);
         }
     }
 }
