@@ -20,13 +20,9 @@
 #include <config.h>
 #include <opm/simulators/flow/Main.hpp>
 
-
-
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
-
 #include <opm/simulators/utils/DamarisKeywords.hpp>
 #include <damaris/env/Environment.hpp>
+
 #include <string>
 #include <map>
 #include <random>
@@ -169,7 +165,7 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
         // and when one sim finishes it removes its shmem file.
         // simName_str =  damaris::Environment::GetMagicNumber(comm) ;
         if (simName_str == "") {
-            // We will add a random value as GetMagicNumber(comm) requires Damaris v1.9.3
+            // We will add a random value as GetMagicNumber(comm) requires Damaris v1.9.2
             // Seed with a real random value, if available
             std::random_device r;
             // Choose a random number between 0 and MAX_INT
