@@ -34,7 +34,7 @@
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/linalg/ISTLSolverEbosBda.hpp>
+#include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 namespace Opm {
@@ -111,6 +111,11 @@ struct EclAquiferModel<TypeTag, TTag::EbosTypeTag> {
 template<class TypeTag>
 struct LinearSolverSplice<TypeTag, TTag::EbosTypeTag> {
     using type = TTag::FlowIstlSolver;
+};
+
+template<>
+struct LinearSolverBackend<TTag::EbosTypeTag, TTag::FlowIstlSolverParams> {
+    using type = ISTLSolverEbos<TTag::EbosTypeTag>;
 };
 
 // the default for the allowed volumetric error for oil per second
