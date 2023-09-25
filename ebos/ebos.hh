@@ -113,6 +113,11 @@ struct LinearSolverSplice<TypeTag, TTag::EbosTypeTag> {
     using type = TTag::FlowIstlSolver;
 };
 
+template<>
+struct LinearSolverBackend<TTag::EbosTypeTag, TTag::FlowIstlSolverParams> {
+    using type = ISTLSolverEbos<TTag::EbosTypeTag>;
+};
+
 // the default for the allowed volumetric error for oil per second
 template<class TypeTag>
 struct NewtonTolerance<TypeTag, TTag::EbosTypeTag> {

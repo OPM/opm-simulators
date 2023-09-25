@@ -63,6 +63,11 @@ namespace Opm::Properties {
             using InheritsFrom = std::tuple<EbosTypeTag, FlowTimeSteppingParameters>;
         };
     }
+
+    template<>
+    struct LinearSolverBackend<TTag::TestRestartTypeTag, TTag::FlowIstlSolverParams> {
+        using type = ISTLSolverEbos<TTag::TestRestartTypeTag>;
+    };
 }
 
 template<class T>

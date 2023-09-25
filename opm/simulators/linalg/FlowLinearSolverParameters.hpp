@@ -220,7 +220,7 @@ struct OpenclIluParallel<TypeTag, TTag::FlowIstlSolverParams> {
 // Set the backend to be used.
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams> {
-#if COMPLE_BDA_BRIDGE
+#if COMPILE_BDA_BRIDGE
     using type = ISTLSolverEbosBda<TypeTag>;
 #else
     using type = ISTLSolverEbos<TypeTag>;
