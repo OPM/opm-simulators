@@ -2175,7 +2175,7 @@ namespace Opm
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
 
         // Max status switch frequency should be 2 to avoid getting stuck in cycle 
-        const int min_its_after_switch = 2;
+        constexpr int min_its_after_switch = 2;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
         const auto well_status = this->wellStatus_;
@@ -2236,12 +2236,13 @@ namespace Opm
                 }
                 // We reset the well status to it's original state. Status is updated 
                 // on the outside based on operability status
-                this->wellStatus_ = well_status; 
+                // TODO: this looks strange, let us check
+                this->wellStatus_ = well_status;
             }
         } else {
-            std::ostringstream sstr;
-            sstr << "     Well " << this->name() << " did not converge in " << it << " inner iterations (" << switch_count << " control/status switches).";
-            deferred_logger.debug(sstr.str());
+            const std::string message = fmt::format("   Well {} did not converged in {} inner iterations ("
+                                                    "{} control/status switches).", this->name(), it, switch_count);
+            deferred_logger.debug(message);
             // add operability here as well ?
         }
         return converged;

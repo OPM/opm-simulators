@@ -242,12 +242,12 @@ public:
                            DeferredLogger& deferred_logger) /* const */;
 
     bool updateWellControlAndStatusLocalIteration(const Simulator& ebos_simulator,
-                      WellState& well_state,
-                      const GroupState& group_state,
-                      const Well::InjectionControls& inj_controls,
-                      const Well::ProductionControls& prod_controls,
-                      const double& WQTotal, 
-                      DeferredLogger& deferred_logger); /* const */                                               
+                                                  WellState& well_state,
+                                                  const GroupState& group_state,
+                                                  const Well::InjectionControls& inj_controls,
+                                                  const Well::ProductionControls& prod_controls,
+                                                  const double WQTotal,
+                                                  DeferredLogger& deferred_logger);
 
     virtual void updatePrimaryVariables(const SummaryState& summary_state,
                                         const WellState& well_state,
@@ -402,12 +402,12 @@ protected:
                                           DeferredLogger& deferred_logger) = 0;
 
     virtual bool iterateWellEqWithSwitching(const Simulator& ebosSimulator,
-                                          const double dt,
-                                          const WellInjectionControls& inj_controls,
-                                          const WellProductionControls& prod_controls,
-                                          WellState& well_state,
-                                          const GroupState& group_state,
-                                          DeferredLogger& deferred_logger) = 0;                                          
+                                            const double dt,
+                                            const WellInjectionControls& inj_controls,
+                                            const WellProductionControls& prod_controls,
+                                            WellState& well_state,
+                                            const GroupState& group_state,
+                                            DeferredLogger& deferred_logger) = 0;
 
     bool iterateWellEquations(const Simulator& ebosSimulator,
                               const double dt,
