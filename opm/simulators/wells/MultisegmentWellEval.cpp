@@ -523,6 +523,9 @@ getResidualMeasureValue(const WellState& well_state,
         ++count;
     }
 
+    // if (count == 0), it should be converged.
+    assert(count != 0);
+
     return sum;
 }
 

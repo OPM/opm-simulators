@@ -65,7 +65,6 @@ protected:
 
     /// Detect oscillation or stagnation based on the residual measure history
     void detectOscillations(const std::vector<double>& measure_history,
-                            const int it,
                             bool& oscillate,
                             bool& stagnate) const;
 

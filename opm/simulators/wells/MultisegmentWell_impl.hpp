@@ -1339,7 +1339,7 @@ namespace Opm
             bool is_oscillate = false;
             bool is_stagnate = false;
 
-            this->detectOscillations(measure_history, it, is_oscillate, is_stagnate);
+            this->detectOscillations(measure_history, is_oscillate, is_stagnate);
             // TODO: maybe we should have more sophisticated strategy to recover the relaxation factor,
             // for example, to recover it to be bigger
 
@@ -1444,13 +1444,13 @@ namespace Opm
         int stagnate_count = 0;
         bool relax_convergence = false;
         this->regularize_ = false;
-        const auto& summary_state = ebosSimulator.vanguard().summaryState();
 
         // Max status switch frequency should be 2 to avoid getting stuck in cycle 
         const int min_its_after_switch = 2;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
         const auto well_status = this->wellStatus_;
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
         const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
         bool changed = false;
         bool final_check = false; 
@@ -1490,65 +1490,67 @@ namespace Opm
                     its_since_last_switch = min_its_after_switch;
                 } else {
                     break;
-                }   
+                }
             }
 
+            // getFinteWellResiduals returns false for nan/inf residuals
             {
-                // getFinteWellResiduals returns false for nan/inf residuals
                 const auto& [isFinite, residuals] = this->getFiniteWellResiduals(Base::B_avg_, deferred_logger);
                 if (!isFinite)
                     return false;
 
                 residual_history.push_back(residuals);
-                measure_history.push_back(this->getResidualMeasureValue(well_state,
-                                                                    residual_history[it],
-                                                                    this->param_.tolerance_wells_,
-                                                                    this->param_.tolerance_pressure_ms_wells_,
-                                                                    deferred_logger) );
             }
 
+            if (!converged) {
+                measure_history.push_back(this->getResidualMeasureValue(well_state,
+                                                                        residual_history[it],
+                                                                        this->param_.tolerance_wells_,
+                                                                        this->param_.tolerance_pressure_ms_wells_,
+                                                                        deferred_logger));
 
-            bool is_oscillate = false;
-            bool is_stagnate = false;
+                bool is_oscillate = false;
+                bool is_stagnate = false;
 
-            this->detectOscillations(measure_history, it, is_oscillate, is_stagnate);
-            // TODO: maybe we should have more sophisticated strategy to recover the relaxation factor,
-            // for example, to recover it to be bigger
+                this->detectOscillations(measure_history, is_oscillate, is_stagnate);
+                // TODO: maybe we should have more sophisticated strategy to recover the relaxation factor,
+                // for example, to recover it to be bigger
 
-            if (is_oscillate || is_stagnate) {
-                // HACK!
-                std::ostringstream sstr;
-                if (relaxation_factor == min_relaxation_factor) {
-                    // Still stagnating, terminate iterations if 5 iterations pass.
-                    ++stagnate_count;
-                    if (false){//(stagnate_count == 6) {
-                        sstr << " well " << this->name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
-                        const auto reportStag = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, true);
-                        if (reportStag.converged()) {
-                            converged = true;
-                            sstr << " well " << this->name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
-                            deferred_logger.debug(sstr.str());
-                            return converged;
+                if (is_oscillate || is_stagnate) {
+                    // HACK!
+                    std::string message;
+                    if (relaxation_factor == min_relaxation_factor) {
+                        ++stagnate_count;
+                        if (false) { // this disables the usage of the relaxed tolerance
+                            fmt::format_to(std::back_inserter(message), " Well {} observes severe stagnation and/or oscillation."
+                                                                        " We relax the tolerance and check for convergence. \n", this->name());
+                            const auto reportStag = getWellConvergence(summary_state, well_state, Base::B_avg_,
+                                                                       deferred_logger, true);
+                            if (reportStag.converged()) {
+                                converged = true;
+                                fmt::format_to(std::back_inserter(message), " Well {}  manages to get converged with relaxed tolerances in {} inner iterations", this->name(), it);
+                                deferred_logger.debug(message);
+                                return converged;
+                            }
                         }
                     }
+
+                    // a factor value to reduce the relaxation_factor
+                    constexpr double reduction_mutliplier = 0.9;
+                    relaxation_factor = std::max(relaxation_factor * reduction_mutliplier, min_relaxation_factor);
+
+                    // debug output
+                    if (is_stagnate) {
+                        fmt::format_to(std::back_inserter(message), " well {} observes stagnation in inner iteration {}\n", this->name(), it);
+                    }
+                    if (is_oscillate) {
+                        fmt::format_to(std::back_inserter(message), " well {} observes oscillation in inner iteration {}\n", this->name(), it);
+                    }
+                    fmt::format_to(std::back_inserter(message), " relaxation_factor is {} now\n", relaxation_factor);
+
+                    this->regularize_ = true;
+                    deferred_logger.debug(message);
                 }
-
-                // a factor value to reduce the relaxation_factor
-                const double reduction_mutliplier = 0.9;
-                relaxation_factor = std::max(relaxation_factor * reduction_mutliplier, min_relaxation_factor);
-
-                // debug output
-                if (is_stagnate) {
-                    sstr << " well " << this->name() << " observes stagnation in inner iteration " << it << "\n";
-
-                }
-                if (is_oscillate) {
-                    sstr << " well " << this->name() << " observes oscillation in inner iteration " << it << "\n";
-                }
-                sstr << " relaxation_factor is " << relaxation_factor << " now\n";
-
-                this->regularize_ = true;
-                deferred_logger.debug(sstr.str());
             }
             updateWellState(summary_state, dx_well, well_state, deferred_logger, relaxation_factor);
             initPrimaryVariablesEvaluation();
@@ -1566,16 +1568,19 @@ namespace Opm
                 }
                 // We reset the well status to it's original state. Status is updated 
                 // on the outside based on operability status
-                this->wellStatus_ = well_status; 
-            }     
-            std::ostringstream sstr;
-            sstr << "     Well " << this->name() << " converged in " << it << " inner iterations (" << switch_count << " local control switches).";
-            if (relax_convergence)
-                sstr << "      (A relaxed tolerance was used after "<< this->param_.strict_inner_iter_wells_ << " iterations)";
-            deferred_logger.debug(sstr.str());
+                this->wellStatus_ = well_status;
+            }
+            std::string message = fmt::format("   Well {} converged in {} inner iterations ("
+                                                    "{} control/status switches).", this->name(), it, switch_count);
+            if (relax_convergence) {
+                message.append(fmt::format("   (A relaxed tolerance was used after {} iterations)",
+                                           this->param_.strict_inner_iter_wells_));
+            }
+            deferred_logger.debug(message);
         } else {
-            std::ostringstream sstr;
-            sstr << "     Well " << this->name() << " did not converge in " << it << " inner iterations (" << switch_count << " local control switches).";
+            const std::string message = fmt::format("   Well {} did not converged in {} inner iterations ("
+                                                    "{} control/status switches).", this->name(), it, switch_count);
+            deferred_logger.debug(message);
         }
 
         return converged;

@@ -209,9 +209,6 @@ public:
     bool stopppedOrZeroRateTarget(const SummaryState& summary_state,
                                   const WellState& well_state) const;
 
-    bool wellUnderZeroRateTarget(const SummaryState& summary_state,
-                                 const WellState& well_state) const;                                  
-
     double wellEfficiencyFactor() const
     { return well_efficiency_factor_; }
 
@@ -221,7 +218,7 @@ public:
         inj_fc_multiplier_ = inj_fc_multiplier;
     }
 
-    void resetWellOperability();  
+    void resetWellOperability();
 
 protected:
     bool getAllowCrossFlow() const;
@@ -236,6 +233,9 @@ protected:
     int polymerTable_() const;
     int polymerInjTable_() const;
     int polymerWaterTable_() const;
+
+    bool wellUnderZeroRateTarget(const SummaryState& summary_state,
+                                 const WellState& well_state) const;
 
     std::pair<bool,bool>
     computeWellPotentials(std::vector<double>& well_potentials,

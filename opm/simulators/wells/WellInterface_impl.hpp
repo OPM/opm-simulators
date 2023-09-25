@@ -258,12 +258,12 @@ namespace Opm
     bool
     WellInterface<TypeTag>::
     updateWellControlAndStatusLocalIteration(const Simulator& ebos_simulator,
-                      WellState& well_state,
-                      const GroupState& group_state,
-                      const Well::InjectionControls& inj_controls,
-                      const Well::ProductionControls& prod_controls,
-                      const double& wqTotal, 
-                      DeferredLogger& deferred_logger) /* const */
+                                             WellState& well_state,
+                                             const GroupState& group_state,
+                                             const Well::InjectionControls& inj_controls,
+                                             const Well::ProductionControls& prod_controls,
+                                             const double wqTotal,
+                                             DeferredLogger& deferred_logger)
     {
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();
@@ -284,9 +284,11 @@ namespace Opm
                                                                   prod_controls.hasControl(Well::ProducerCMode::GRUP);
 
                 changed = this->checkIndividualConstraints(ws, summary_state, deferred_logger, inj_controls, prod_controls);
+                // TODO: with current way, the checkGroupConstraints might overwrite the result from checkIndividualConstraints, which remains to be investigated
                 if (hasGroupControl) {
-                    changed = this->checkGroupConstraints(well_state, group_state, schedule, summary_state, deferred_logger);
+                    changed = this->checkGroupConstraints(well_state, group_state, schedule, summary_state,deferred_logger);
                 }
+
                 if (changed) {
                     const bool thp_controlled = this->isInjector() ? ws.injection_cmode == Well::InjectorCMode::THP :
                                                                      ws.production_cmode == Well::ProducerCMode::THP;
@@ -436,6 +438,7 @@ namespace Opm
         const auto prod_controls = this->well_ecl_.isProducer() ? this->well_ecl_.productionControls(summary_state) : Well::ProductionControls(0);
         bool converged = false;
         try {
+            // TODO: the following two functions will be refactored to be one to reduce the code duplication
             if (!this->param_.local_well_solver_control_switching_){
                 converged = this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
             } else {
@@ -782,7 +785,7 @@ namespace Opm
                           DeferredLogger& deferred_logger)
     {   
         if (this->param_.local_well_solver_control_switching_) {
-            bool success = updateWellOperabilityFromWellEq(ebos_simulator, well_state, deferred_logger);
+            const bool success = updateWellOperabilityFromWellEq(ebos_simulator, well_state, deferred_logger);
             if (success) {
                 return;
             } else {
@@ -817,7 +820,7 @@ namespace Opm
                                     const WellState& well_state,
                                     DeferredLogger& deferred_logger)
     {
-        // only makes sense if we're using this parameter is true 
+        // only makes sense if we're using this parameter is true
         assert(this->param_.local_well_solver_control_switching_);
         this->operability_status_.resetOperability();
         WellState well_state_copy = well_state;

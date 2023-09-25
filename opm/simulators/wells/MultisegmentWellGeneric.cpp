@@ -140,11 +140,9 @@ segmentNumberToIndex(const int segment_number) const
 template<typename Scalar>
 void
 MultisegmentWellGeneric<Scalar>::
-detectOscillations(const std::vector<double>& measure_history,
-                   const int it,
-                   bool& oscillate,
-                   bool& stagnate) const
+detectOscillations(const std::vector<double>& measure_history, bool& oscillate, bool& stagnate) const
 {
+    const auto it = measure_history.size() - 1;
     if ( it < 2 ) {
         oscillate = false;
         stagnate = false;
