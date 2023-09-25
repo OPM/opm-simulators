@@ -372,7 +372,7 @@ struct UseAverageDensityMsWells<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct LocalWellSolveControlSwitching<TypeTag, TTag::FlowModelParameters> {
-    static constexpr bool value = true;
+    static constexpr bool value = false;
 };
 
 // Network solver parameters
