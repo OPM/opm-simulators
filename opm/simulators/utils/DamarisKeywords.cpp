@@ -120,7 +120,7 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
     std::string disableParaviewXMLfin("--") ;
 
     // Test if input Python file exists and set the name of the script for <variable ...  script="" > )XML elements
-    std::string publishToPython_str("") ;
+    std::string publishToPython_str("#") ;
     if (pythonFilename != ""){
         if (FileExists(pythonFilename, comm, rank)) {
              publishToPython_str="PythonScript" ; // the name of the PyScript XML element
@@ -169,14 +169,14 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
         // and when one sim finishes it removes its shmem file.
         // simName_str =  damaris::Environment::GetMagicNumber(comm) ;
         if (simName_str == "") {
-            // We will add a random value as GetMagicNumber(comm) requires latest Damaris
+            // We will add a random value as GetMagicNumber(comm) requires Damaris v1.9.3
             // Seed with a real random value, if available
             std::random_device r;
             // Choose a random number between 0 and MAX_INT
             std::default_random_engine e1(r());
             std::uniform_int_distribution<int> uniform_dist(0, std::numeric_limits<int>::max());
             int rand_int = uniform_dist(e1);
-            simName_str =  std::to_string(rand_int) ;
+            simName_str = "opm-flow-" + std::to_string(rand_int) ;
         } else {
             simName_str = "opm-flow-" + simName_str ;
         }
@@ -210,9 +210,10 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
     }
 
     std::string logLevel_str(damarisLogLevel) ;
-
-   // _MAKE_AVAILABLE_IN_PYTHON_
-   // _PYTHON_SCRIPT_
+    std::string logFlush_str("false") ;
+    if ((logLevel_str == "debug") || (logLevel_str == "trace") ) {
+        logFlush_str = "true" ;
+    }
 
     std::map<std::string, std::string> damaris_keywords = {
         {"_SHMEM_BUFFER_BYTES_REGEX_", shmemSizeBytes_str},
@@ -228,6 +229,7 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
         {"_MAKE_AVAILABLE_IN_PYTHON_",publishToPython_str},  /* must match  <pyscript name="PythonScript" */
         {"_SIM_NAME_",simName_str},
         {"_LOG_LEVEL_",logLevel_str},
+        {"_LOG_FLUSH_",logFlush_str},
         {"_DISABLEPYTHONSTART_",disablePythonXMLstart},
         {"_DISABLEPYTHONFIN_",disablePythonXMLfin},
         {"_DISABLEPARAVIEWSTART_",disableParaviewXMLstart},

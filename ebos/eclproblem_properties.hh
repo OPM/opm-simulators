@@ -427,7 +427,7 @@ struct DamarisSharedMemeorySizeBytes<TypeTag, TTag::EclBaseProblem> {
 };
 template<class TypeTag>
 struct DamarisLogLevel<TypeTag, TTag::EclBaseProblem> {
-    static constexpr auto value = "trace";
+    static constexpr auto value = "info";
 };
 
 #endif

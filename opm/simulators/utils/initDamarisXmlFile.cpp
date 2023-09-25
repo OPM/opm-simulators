@@ -52,10 +52,10 @@ std::string initDamarisXmlFile()
     <layout   name="zonal_layout_usmesh_integer"             type="int" dimensions="n_elements_local"   global="n_elements_total"   comment="For the field data e.g. Pressure"  />
     <variable name="GLOBAL_CELL_INDEX"    layout="zonal_layout_usmesh_integer"     type="scalar"  visualizable="false"  time-varying="false"  centering="zonal" />
     <layout   name="zonal_layout_usmesh"             type="double" dimensions="n_elements_local"   global="n_elements_total"   comment="For the field data e.g. Pressure"  />
-    <variable name="PRESSURE"    layout="zonal_layout_usmesh"     type="scalar"  visualizable="true"  mesh="us_mesh"   unit="_PRESSURE_UNIT_"   centering="zonal" select-file="GLOBAL_CELL_INDEX" store="_MYSTORE_OR_EMPTY_REGEX_"  script="PythonScript" />
+    <variable name="PRESSURE"    layout="zonal_layout_usmesh"     type="scalar"  visualizable="true"  mesh="us_mesh"   unit="_PRESSURE_UNIT_"   centering="zonal" select-file="GLOBAL_CELL_INDEX" store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
 
     _MORE_VARIABLES_REGEX_
-    <variable name="MPI_RANK"  layout="zonal_layout_usmesh_integer"   type="scalar"  visualizable="true" mesh="us_mesh" unit="rank"  centering="zonal"  store="_MYSTORE_OR_EMPTY_REGEX_" time-varying="false"  select-file="GLOBAL_CELL_INDEX"  script="PythonScript" comment="The MPI rank of each cell"/>
+    <variable name="MPI_RANK"  layout="zonal_layout_usmesh_integer"   type="scalar"  visualizable="true" mesh="us_mesh" unit="rank"  centering="zonal"  store="_MYSTORE_OR_EMPTY_REGEX_" time-varying="false"  select-file="GLOBAL_CELL_INDEX"  script="_MAKE_AVAILABLE_IN_PYTHON_" comment="The MPI rank of each cell"/>
     
     <variable name="KRNSW_GO"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="#"  unit=""  centering="zonal"     time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="#"   script="#" />
     <variable name="KRNSW_OW"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="#"  unit=""  centering="zonal"     time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="#"   script="#" />
@@ -161,7 +161,7 @@ std::string initDamarisXmlFile()
 <actions>
 </actions>
 
-<log FileName="_PATH_REGEX_/damaris_log/_SIM_NAME_" RotationSize="5" LogFormat="[%TimeStamp%]: %Message%"  Flush="false"  LogLevel="_LOG_LEVEL_" />
+<log FileName="_PATH_REGEX_/damaris_log/_SIM_NAME_" RotationSize="5" LogFormat="[%TimeStamp%]: %Message%"  Flush="_LOG_FLUSH_"  LogLevel="_LOG_LEVEL_" />
 
 </simulation>)V0G0N";
 
