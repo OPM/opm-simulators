@@ -81,43 +81,6 @@ void makeOverlapRowsInvalid(Matrix& matrix,
     }
 }
 
-/// Return an appropriate weight function if a cpr preconditioner is asked for.
-template<class Vector, class Matrix>
-std::function<Vector()> getWeightsCalculator(const PropertyTree& prm,
-                                             const Matrix& matrix,
-                                             std::size_t pressureIndex,
-                                             std::function<Vector()> trueFunc)
-{
-    std::function<Vector()> weightsCalculator;
-
-    using namespace std::string_literals;
-
-    auto preconditionerType = prm.get("preconditioner.type"s, "cpr"s);
-    if (preconditionerType == "cpr" || preconditionerType == "cprt"
-        || preconditionerType == "cprw" || preconditionerType == "cprwt") {
-        const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
-        const auto weightsType = prm.get("preconditioner.weight_type"s, "quasiimpes"s);
-        if (weightsType == "quasiimpes") {
-            // weights will be created as default in the solver
-            // assignment p = pressureIndex prevent compiler warning about
-            // capturing variable with non-automatic storage duration
-            weightsCalculator = [matrix, transpose, pressureIndex]() {
-                return Amg::getQuasiImpesWeights<Matrix, Vector>(matrix,
-                                                                 pressureIndex,
-                                                                 transpose);
-            };
-        } else if (weightsType == "trueimpes") {
-            weightsCalculator = trueFunc;
-        } else {
-            OPM_THROW(std::invalid_argument,
-                      "Weights type " + weightsType +
-                      "not implemented for cpr."
-                      " Please use quasiimpes or trueimpes.");
-        }
-    }
-    return weightsCalculator;
-}
-
 template<class Matrix, class Vector, class Comm>
 void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
                                                     bool parallel,
@@ -152,8 +115,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
         }
     }
 
-    std::function<Vector()> weightsCalculator =
-        getWeightsCalculator<Vector>(prm, matrix, pressureIndex, trueFunc);
+    std::function<Vector()> weightsCalculator = trueFunc;
 
     if (parallel) {
 #if HAVE_MPI

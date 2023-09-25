@@ -23,7 +23,7 @@
 #include <dune/common/fvector.hh>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-
+#include <opm/material/common/MathToolbox.hpp>
 #include <algorithm>
 #include <cmath>
 
@@ -126,11 +126,117 @@ namespace Amg
                 bweights.begin(), bweights.end(), [](double a, double b) { return std::fabs(a) < std::fabs(b); });
             // probably a scaling which could give approximately total compressibility would be better
             bweights /=  std::fabs(abs_max); // given normal densities this scales weights to about 1.
-           
+
             weights[index] = bweights;
             ++index;
         }
         OPM_END_PARALLEL_TRY_CATCH("getTrueImpesWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
+    }
+
+    template <class Vector, class GridView, class ElementContext, class Model>
+    void getTrueImpesWeightsAnalytic(int pressureVarIndex,
+                                     Vector& weights,
+                                     const GridView& gridView,
+                                     ElementContext& elemCtx,
+                                     const Model& model,
+                                     std::size_t threadId)
+    {
+        // The sequential residual is a linear combination of the
+        // mass balance residuals, with coefficients equal to (for
+        // water, oil, gas):
+        //    1/bw,
+        //    (1/bo - rs/bg)/(1-rs*rv)
+        //    (1/bg - rv/bo)/(1-rs*rv)
+        // These coefficients must be applied for both the residual and
+        // Jacobian.
+        using FluidSystem = typename Model::FluidSystem;
+        using LhsEval = double;
+        using Indices = typename Model::Indices;
+
+        using PrimaryVariables = typename Model::PrimaryVariables;
+        using VectorBlockType = typename Vector::block_type;
+        constexpr int numEq = VectorBlockType::size();
+        using Evaluation =
+            typename std::decay_t<decltype(model.localLinearizer(threadId).localResidual().residual(0))>::block_type;
+        using Toolbox = MathToolbox<Evaluation>;
+        VectorBlockType rhs(0.0);
+        const auto& solution = model.solution(/*timeIdx*/ 0);
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+         for (const auto& elem : elements(gridView)) {
+            elemCtx.updatePrimaryStencil(elem);
+            elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+            const auto& index = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
+            const auto& fs = intQuants.fluidState();
+            VectorBlockType bweights;
+
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                    FluidSystem::solventComponentIndex(FluidSystem::waterPhaseIdx));
+                bweights[FluidSystem::waterPhaseIdx]
+                    = Toolbox::template decay<LhsEval>(1 / fs.invB(FluidSystem::waterPhaseIdx));
+            }
+
+            double denominator = 1.0;
+            double rs = Toolbox::template decay<double>(fs.Rs());
+            double rv = Toolbox::template decay<double>(fs.Rv());
+            const auto& priVars = solution[index];
+            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
+                rs = 0.0;
+            }
+            if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
+                rv = 0.0;
+            }
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
+                && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                denominator = Toolbox::template decay<LhsEval>(1 - rs * rv);
+            }
+
+            if (not(denominator > 0)) {
+                std::cout << "Probably negative compressibility" << std::endl;
+            }
+            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                    FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
+                bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(
+                    (1 / fs.invB(FluidSystem::oilPhaseIdx) - rs / fs.invB(FluidSystem::gasPhaseIdx))
+                    / denominator);
+            }
+            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                    FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
+                bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(
+                    (1 / fs.invB(FluidSystem::gasPhaseIdx) - rv / fs.invB(FluidSystem::oilPhaseIdx))
+                    / denominator);
+            }
+            if(false){
+                // usure about the best for undersaturated
+
+                if (
+                    (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv)
+                    ||
+                    (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs)
+                    ) {
+                    // Probably not need bweiths may be initialized to zero anyway
+                    unsigned activeCompIdx = -10;
+                    if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
+                        // only water and gas pressent
+                        activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                        FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
+                        bweights[activeCompIdx] = 0.0;
+                                                                                         }
+                    if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
+                        // only water and oil pressent
+                        activeCompIdx = Indices::canonicalToActiveComponentIndex(
+                            FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
+                        bweights[activeCompIdx] = 0.0;
+                }
+
+            }
+            }
+            weights[index] = bweights;
+        }
+        OPM_END_PARALLEL_TRY_CATCH("getTrueImpesAnalyticWeights() failed: ", elemCtx.simulator().vanguard().grid().comm());
     }
 } // namespace Amg
 
