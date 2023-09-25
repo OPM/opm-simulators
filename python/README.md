@@ -50,7 +50,6 @@ deck  = Parser().parse('SPE1CASE1.DATA')
 state = EclipseState(deck)
 schedule = Schedule( deck, state )
 summary_config = SummaryConfig(deck, state, schedule)
-unit_system = deck.active_unit_system()
 
 sim = BlackOilSimulator(deck, state, schedule, summary_config)
 sim.step_init()
