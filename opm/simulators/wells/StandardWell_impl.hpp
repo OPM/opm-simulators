@@ -2234,9 +2234,13 @@ namespace Opm
                 } else {
                     this->operability_status_.operable_under_only_bhp_limit = !is_stopped;
                 }
-                // We reset the well status to it's original state. Status is updated 
+                // We reset the well status to its original state. Status is updated
                 // on the outside based on operability status
-                // TODO: this looks strange, let us check
+                // \Note for future reference: For the well to update its status to stop/shut,
+                // the flag changed_to_stopped_this_step_ in prepareWellBeforeAssembling needs to be set to true.
+                // For this to happen, isOperableAndSolvable() must change from true to false,
+                // and (until the most recent commit) the well needs to be open for this to trigger.
+                // Hence, the resetting of status.
                 this->wellStatus_ = well_status;
             }
         } else {
