@@ -126,6 +126,7 @@ include(Findopm-tests)
 # with the find module
 include ("${project}-prereqs")
 
+macro(prereqs_hook)
 # Make sure we are using the same compiler underneath
 # NVCC as for the rest. In the case that NVCC does not support
 # that compiler it will error out. Unfortunately this will only
@@ -165,7 +166,12 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
     # only easy way to determine the cublas and cusparse libraries.
     # Hence we call it unconditionally
     # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
-    find_package(CUDA)
+    if(CMAKE_VERSION VERSION_LESS 3.10)
+      find_package(CUDA)
+    else()
+      set(CUDA_FOUND ON)
+      set(CUDA_VERSION ${CMAKE_CUDA_COMPILER_VERSION})
+    endif()
   endif()
   if(CUDA_FOUND AND CUDA_VERSION VERSION_LESS "9.0")
     set(CUDA_FOUND OFF)
@@ -176,10 +182,9 @@ endif()
 
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
-  include_directories(${CUDA_INCLUDE_DIRS})
+  list(APPEND EXTRA_INCLUDES ${CUDA_INCLUDE_DIRS} ${CUDA_TOOLKIT_INCLUDE})
+  list(APPEND EXTRA_LIBRARIES ${CUDA_cusparse_LIBRARY} ${CUDA_cublas_LIBRARY})
 endif()
-
-find_package(OpenCL)
 
 if(OpenCL_FOUND)
   # the current OpenCL implementation relies on cl2.hpp, not cl.hpp
@@ -187,7 +192,6 @@ if(OpenCL_FOUND)
   find_file(CL2_HPP CL/cl2.hpp HINTS ${OpenCL_INCLUDE_DIRS})
   if(CL2_HPP)
     set(HAVE_OPENCL 1)
-    include_directories(${OpenCL_INCLUDE_DIRS})
     find_file(OPENCL_HPP CL/opencl.hpp HINTS ${OpenCL_INCLUDE_DIRS})
     if(OPENCL_HPP)
       set(HAVE_OPENCL_HPP 1)
@@ -217,14 +221,8 @@ else()
   endif()
 endif()
 
-find_package(amgcl)
 if(amgcl_FOUND)
   set(HAVE_AMGCL 1)
-  # Linking to target angcl::amgcl drags in OpenMP and -fopenmp as a compile
-  # flag. With that nvcc fails as it does not that flag.
-  # Hence we set AMGCL_INCLUDE_DIRS.
-  get_property(AMGCL_INCLUDE_DIRS TARGET amgcl::amgcl PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-  include_directories(SYSTEM ${AMGCL_INCLUDE_DIRS})
 endif()
 
 if(OpenCL_FOUND)
@@ -232,7 +230,7 @@ if(OpenCL_FOUND)
   if(VexCL_FOUND)
     set(HAVE_VEXCL 1)
     # generator expressions in vexcl do not seem to work and therefore
-    # we cannot use the imported target. Hence we exract the needed info
+    # we cannot use the imported target. Hence we extract the needed info
     # from the targets
     get_property(VEXCL_INCLUDE_DIRS TARGET VexCL::Common PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
     get_property(VEXCL_LINK_LIBRARIES TARGET VexCL::Common PROPERTY INTERFACE_LINK_LIBRARIES)
@@ -243,9 +241,12 @@ if(OpenCL_FOUND)
       INTERFACE_COMPILE_DEFINITIONS "${VEXCL_COMPILE_DEFINITIONS}"
       INTERFACE_LINK_LIBRARIES "${VEXCL_LINK_LIBRARIES}")
     target_include_directories(OPM::VexCL::OpenCL SYSTEM INTERFACE "${VEXCL_INCLUDE_DIRS}")
+    list(APPEND EXTRA_INCLUDES ${VEXCL_INCLUDE_DIRS})
+    list(APPEND EXTRA_LIBRARIES ${VEXCL_LINK_LIBRARIES})
   endif()
 endif()
 
+endmacro()
 
 macro (config_hook)
   opm_need_version_of ("dune-common")
@@ -265,13 +266,11 @@ macro (config_hook)
   else()
     set(USE_TRACY)
   endif()
-  include_directories(${EXTRA_INCLUDES})
+  list(APPEND opm-simulators_INCLUDE_DIRS ${EXTRA_INCLUDES})
+  list(APPEND opm-simulators_LIBRARIES ${EXTRA_LIBRARIES})
 
   include(UseDamaris)
 endmacro (config_hook)
-
-macro (prereqs_hook)
-endmacro (prereqs_hook)
 
 macro (sources_hook)
   if(OPENCL_FOUND)
@@ -643,8 +642,6 @@ add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 # must link libraries after target 'opmsimulators' has been defined
 
 if(CUDA_FOUND)
-  target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
-  target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
   if(USE_BDA_BRIDGE)
     set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
   endif()
@@ -666,19 +663,15 @@ endif()
 
 if(USE_BDA_BRIDGE)
   if(OpenCL_FOUND)
-    target_link_libraries( opmsimulators PUBLIC ${OpenCL_LIBRARIES} )
     set_tests_properties(openclSolver solvetransposed3x3 csrToCscOffsetMap
                          PROPERTIES LABELS gpu_opencl)
   endif()
 
   if(ROCALUTION_FOUND)
-    target_include_directories(opmsimulators PUBLIC ${rocalution_INCLUDE_DIR}/rocalution)
     set_tests_properties(rocalutionSolver PROPERTIES LABELS gpu_rocm)
   endif()
 
   if(rocsparse_FOUND AND rocblas_FOUND)
-    target_link_libraries( opmsimulators PUBLIC roc::rocsparse )
-    target_link_libraries( opmsimulators PUBLIC roc::rocblas )
     set_tests_properties(rocsparseSolver PROPERTIES LABELS gpu_rocm)
   endif()
 
