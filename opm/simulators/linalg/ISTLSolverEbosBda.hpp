@@ -181,8 +181,9 @@ public:
     void prepare(const Matrix& M, Vector& b)
     {
         OPM_TIMEBLOCK(prepare);
-        const bool firstcall = (this->matrix_ == nullptr);
+        [[maybe_unused]] const bool firstcall = (this->matrix_ == nullptr);
         ParentType::prepare(M,b);
+
 #if HAVE_OPENCL
         // update matrix entries for solvers.
         if (firstcall && bdaBridge_) {
