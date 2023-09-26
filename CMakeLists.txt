@@ -684,10 +684,6 @@ if(USE_BDA_BRIDGE)
   if(VexCL_FOUND)
     target_link_libraries( opmsimulators PUBLIC OPM::VexCL::OpenCL )
   endif()
-
-  if(hip_FOUND)
-    target_link_libraries( opmsimulators PUBLIC hip::device )
-  endif()
 endif()
 
 if(Damaris_FOUND)

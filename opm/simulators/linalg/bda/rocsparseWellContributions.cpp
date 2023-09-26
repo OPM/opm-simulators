@@ -143,7 +143,7 @@ void WellContributionsRocsparse::apply_stdwells([[maybe_unused]] double *d_x,
                                                 [[maybe_unused]] double *d_y){
 #ifdef __HIP__
     unsigned gridDim = num_std_wells;
-    unsigned blockDim = 32;
+    unsigned blockDim = 64;
     unsigned shared_mem_size = (blockDim + 2 * dim_wells) * sizeof(double); // shared memory for localSum, z1 and z2
     // dim3(N) will create a vector {N, 1, 1}
     stdwell_apply<<<dim3(gridDim), dim3(blockDim), shared_mem_size, stream>>>(
