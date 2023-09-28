@@ -526,6 +526,9 @@ void rocsparseSolverBackend<block_size>::solve_system(WellContributions &wellCon
     Timer t;
 
     // actually solve
+    gpu_pbicgstab(wellContribs, res);
+    HIP_CHECK(hipStreamSynchronize(stream));
+#if 0
     try {
         gpu_pbicgstab(wellContribs, res);
     } catch (const cl::Error& error) {
@@ -538,9 +541,9 @@ void rocsparseSolverBackend<block_size>::solve_system(WellContributions &wellCon
         // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
         throw error;
     }
+#endif
 
     if (verbosity >= 3) {
-        HIP_CHECK(hipStreamSynchronize(stream));
         std::ostringstream out;
         out << "rocsparseSolver::solve_system(): " << t.stop() << " s";
         OpmLog::info(out.str());

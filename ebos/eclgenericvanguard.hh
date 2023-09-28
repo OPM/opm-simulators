@@ -202,7 +202,7 @@ public:
      */
     int numJacobiBlocks() const
     {
-#if HAVE_OPENCL
+#if HAVE_OPENCL || HAVE_ROCSPARSE
         return numJacobiBlocks_;
 #else
         return 0;
@@ -283,9 +283,9 @@ protected:
     std::string fileName_;
     Dune::EdgeWeightMethod edgeWeightsMethod_;
 
-#if HAVE_OPENCL
+#if HAVE_OPENCL || HAVE_ROCSPARSE
     int numJacobiBlocks_{0};
-#endif  // HAVE_OPENCL
+#endif  // HAVE_OPENCL || HAVE_ROCSPARSE
 
     bool ownersFirst_;
 #if HAVE_MPI
