@@ -78,7 +78,7 @@ bool FileExists(const std::string& filename_in,
 
 
 std::map<std::string, std::string>
-DamarisSettings::getKeywords(const Parallel::Communication& comm,
+DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& comm,
                              const std::string& OutputDir)
 {
     std::string saveToHDF5_str("MyStore") ;
