@@ -154,9 +154,10 @@ namespace Opm {
         if (family3) {
             const auto& phases = eclState.runspec().phases();
             const bool co2store = eclState.runspec().co2Storage();
-            if ( !(co2store && phases.active(Phase::GAS) && phases.active(Phase::WATER))) {
+            const bool h2store = eclState.runspec().h2Storage();
+            if ( !((co2store || h2store) && phases.active(Phase::GAS) && phases.active(Phase::WATER))) {
                 const std::string msg = "Relative permeability input format: Saturation Family III. \n \
-                                         Only valid for CO2STORE case with GAS and WATER.";
+                                         Only valid for CO2STORE or H2STORE cases with GAS and WATER.";
                 OpmLog::info(msg);
             }
             satFamily_ = SaturationFunctionFamily::FamilyIII;
