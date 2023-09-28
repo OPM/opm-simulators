@@ -90,10 +90,9 @@ DamarisSettings::getKeywords(const Parallel::Communication& comm,
     std::string disableParaviewXMLstart("!--") ;
     std::string disableParaviewXMLfin("--") ;
 
-
+    std::string publishToPython_str("#") ; // to be changed to the name of the PyScript XML element
 #ifdef HAVE_PYTHON_ENABLED
     // Test if input Python file exists and set the name of the script for <variable ...  script="" > )XML elements
-    std::string publishToPython_str("#") ;
     if (pythonFilename != ""){
         if (FileExists(pythonFilename, comm)) {
              publishToPython_str="PythonScript" ; // the name of the PyScript XML element
