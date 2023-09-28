@@ -155,8 +155,8 @@ public:
             }
             else {
                 Evaluation tmp =
-                    Toolbox::value(up.fluidState().density(phaseIdx)
-                     * extQuants.volumeFlux(phaseIdx));
+                    Toolbox::value(up.fluidState().density(phaseIdx))
+                     * extQuants.volumeFlux(phaseIdx);
 
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                     flux[conti0EqIdx + compIdx] +=
