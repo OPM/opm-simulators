@@ -361,7 +361,7 @@ private:
         }
         // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
         // ToDo: Do we need to check that n_elements_global_max will fit in a C int type (INT_MAX)
-        if( n_elements_global_max <= INT_MAX ) {
+        if( n_elements_global_max <= std::numeric_limits<int>::max() ) {
             temp_int = static_cast<int>(n_elements_global_max);
             dam_err_ = damaris_parameter_set("n_elements_total", &temp_int, sizeof(int));
             if (dam_err_ != DAMARIS_OK && rank_ == 0) {
@@ -369,8 +369,8 @@ private:
                               "damaris_parameter_set(\"n_elements_total\", &temp_int, sizeof(int));");
             }
         } else {
-            OpmLog::error(fmt::format("The size of the global array ({}) is greater than what a Damaris paramater type supports ({}).  ", n_elements_global_max, INT_MAX ));
-            assert( n_elements_global_max < INT_MAX ) ;
+            OpmLog::error(fmt::format("The size of the global array ({}) is greater than what a Damaris paramater type supports ({}).  ", n_elements_global_max, std::numeric_limits<int>::max() ));
+            assert( n_elements_global_max <= std::numeric_limits<int>::max() ) ;
         }
 
         // Use damaris_set_position to set the offset in the global size of the array.

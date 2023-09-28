@@ -17,12 +17,11 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
 
+#include <Damaris.h>
 #include <opm/simulators/utils/DamarisKeywords.hpp>
 #include <damaris/env/Environment.hpp>
-
-#include <opm/common/OpmLog/OpmLog.hpp>
-#include <fmt/format.h>
 
 #include <string>
 #include <map>
@@ -44,7 +43,9 @@
 namespace Opm::DamarisOutput
 {
 
-bool FileExists(const std::string filename_in, const MPI_Comm comm, const int rank) {
+bool FileExists(const std::string& filename_in,
+                const Parallel::Communication& comm)
+{
     // From c++17  : std::filesystem::exists(filename_in);
     
     int retint = 0 ;
@@ -55,8 +56,7 @@ bool FileExists(const std::string filename_in, const MPI_Comm comm, const int ra
         return file_exists ;
     }
 
-    if (rank == 0) {
-        
+    if (comm.rank() == 0) {
         filestr.open(filename_in);
         file_exists = true ;
         if(filestr.fail()) {
@@ -65,10 +65,9 @@ bool FileExists(const std::string filename_in, const MPI_Comm comm, const int ra
             retint = 1 ;
             filestr.close() ;
         }
-        MPI_Bcast(&retint,1,MPI_INT,0,comm);
-    } else {
-        MPI_Bcast(&retint,1,MPI_INT,0,comm);  // recieve the value from rank 0
     }
+
+    comm.broadcast(&retint,1,0);
 
     if (retint == 1) {
         file_exists = true ;
@@ -79,34 +78,9 @@ bool FileExists(const std::string filename_in, const MPI_Comm comm, const int ra
 
 
 std::map<std::string, std::string>
-DamarisKeywords(MPI_Comm comm, std::string OutputDir)
+DamarisSettings::getKeywords(const Parallel::Communication& comm,
+                             const std::string& OutputDir)
 {
-    typedef Properties::TTag::FlowEarlyBird PreTypeTag;
-    bool enableDamarisOutputCollective = true ;
-    bool saveToDamarisHDF5 = true ;
-    std::string pythonFilename = "" ;
-    std::string paraviewPythonFilename = "" ;
-
-    std::string damarisSimName  = ""       ; // empty defaults to opm-sim-<magic_number>
-    std::string damarisLogLevel = "info"   ;
-    int nDamarisCores   = 1 ;
-    int nDamarisNodes   = 0 ;
-    long shmemSizeBytes = 536870912 ;
-
-    // Get all of the Damaris keywords (except for --enable-damaris, which is used in simulators/flow/Main.hpp)
-    // These command line arguments are defined in ebos/damariswriter.hh and defaults are set in ebos/eclproblem_properties.hh
-    enableDamarisOutputCollective = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective) ;
-    saveToDamarisHDF5 = EWOMS_GET_PARAM(PreTypeTag, bool, DamarisSaveToHdf);
-    pythonFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisPythonScript);
-    paraviewPythonFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisPythonParaviewScript);
-    damarisSimName = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisSimName);
-    nDamarisCores = EWOMS_GET_PARAM(PreTypeTag, int, DamarisDedicatedCores);
-    nDamarisNodes = EWOMS_GET_PARAM(PreTypeTag, int, DamarisDedicatedNodes);
-    shmemSizeBytes = EWOMS_GET_PARAM(PreTypeTag, long, DamarisSharedMemeorySizeBytes);
-    damarisLogLevel = EWOMS_GET_PARAM(PreTypeTag, std::string, DamarisLogLevel);
-    
-    int rank ;
-    MPI_Comm_rank(comm, &rank) ;
     std::string saveToHDF5_str("MyStore") ;
     if (! saveToDamarisHDF5 )  saveToHDF5_str = "#" ;
 
@@ -116,16 +90,17 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
     std::string disableParaviewXMLstart("!--") ;
     std::string disableParaviewXMLfin("--") ;
 
+
 #ifdef HAVE_PYTHON_ENABLED
     // Test if input Python file exists and set the name of the script for <variable ...  script="" > )XML elements
     std::string publishToPython_str("#") ;
     if (pythonFilename != ""){
-        if (FileExists(pythonFilename, comm, rank)) {
+        if (FileExists(pythonFilename, comm)) {
              publishToPython_str="PythonScript" ; // the name of the PyScript XML element
-             disablePythonXMLstart = std::string("")  ;
-             disablePythonXMLfin = std::string("")  ;
+             disablePythonXMLstart.clear() ;
+             disablePythonXMLfin.clear() ;
         } else {
-            pythonFilename = "" ; // set to empty if it does not exist
+            pythonFilename.clear() ; // set to empty if it does not exist
             disablePythonXMLstart = std::string("!--") ;
             disablePythonXMLfin = std::string("--") ;
         }
@@ -139,11 +114,11 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
 #ifdef HAVE_PARAVIEW_ENABLED
      // Test if input Paraview Python file exists 
     if (paraviewPythonFilename != ""){
-        if (FileExists(paraviewPythonFilename, comm, rank)) {
-            disableParaviewXMLstart = std::string("")  ;
-            disableParaviewXMLfin = std::string("")  ;
+        if (FileExists(paraviewPythonFilename, comm)) {
+            disableParaviewXMLstart.clear() ;
+            disableParaviewXMLfin.clear() ;
         } else  {
-            paraviewPythonFilename = "" ; // set to empty if it does not exist
+            paraviewPythonFilename.clear() ; // set to empty if it does not exist
             disableParaviewXMLstart = std::string("!--")  ;
             disableParaviewXMLfin = std::string("--")  ;
         }
@@ -166,20 +141,20 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
         std::exit(-1) ;
     }
 
-    std::string damarisOutputCollective_str("") ;
+    std::string damarisOutputCollective_str;
     if (enableDamarisOutputCollective) {
-        damarisOutputCollective_str="Collective" ;
+        damarisOutputCollective_str = "Collective" ;
     } else {
-        damarisOutputCollective_str="FilePerCore" ;
+        damarisOutputCollective_str = "FilePerCore" ;
     }
 
-    std::string  simName_str("")  ;
-    if (damarisSimName == "") {
+    std::string  simName_str;
+    if (damarisSimName.empty()) {
         // Having a different simulation name is important if multiple simulations 
         // are running on the same node, as it is used to name the simulations shmem area
         // and when one sim finishes it removes its shmem file.
         // simName_str =  damaris::Environment::GetMagicNumber(comm) ;
-        if (simName_str == "") {
+        if (simName_str.empty()) {
             // We will add a random value as GetMagicNumber(comm) requires Damaris v1.9.2
             // Seed with a real random value, if available
             std::random_device r;
@@ -199,22 +174,22 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
     {
         nDamarisNodes = 0 ; // Default is to use Damaris Cores
     }
-    std::string nDamarisCores_str  ;
+    std::string nDamarisCores_str;
     if ( nDamarisCores != 0 ) {
         nDamarisCores_str = std::to_string(nDamarisCores);
     } else {
         nDamarisCores_str = "0" ;
     }
 
-    std::string nDamarisNodes_str  ;
+    std::string nDamarisNodes_str;
     if ( nDamarisNodes != 0 ) {
         nDamarisNodes_str = std::to_string(nDamarisNodes);
     } else {
         nDamarisNodes_str = "0" ;
     }
 
-    std::string shmemSizeBytes_str  ;
-    if ( shmemSizeBytes != 0 ) {
+    std::string shmemSizeBytes_str;
+    if (shmemSizeBytes != 0) {
         shmemSizeBytes_str = std::to_string(shmemSizeBytes);
     } else {
         shmemSizeBytes_str = "536870912" ;
@@ -247,7 +222,6 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
         {"_DISABLEPARAVIEWFIN_",disableParaviewXMLfin},
     };
     return damaris_keywords;
-    
 }
 
 } // namespace Opm::DamarisOutput

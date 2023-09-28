@@ -241,7 +241,7 @@ void Main::setupDamaris(const std::string& outputDir )
     }
 
     std::map<std::string, std::string> find_replace_map ;
-    find_replace_map = Opm::DamarisOutput::DamarisKeywords(EclGenericVanguard::comm(), outputDir);
+    find_replace_map = Opm::DamarisOutput::DamarisKeywords<PreTypeTag>(EclGenericVanguard::comm(), outputDir);
     
     // By default EnableDamarisOutputCollective is true so all simulation results will
     // be written into one single file for each iteration using Parallel HDF5.
