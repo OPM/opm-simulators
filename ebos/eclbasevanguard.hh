@@ -476,11 +476,14 @@ protected:
      */
     template<class CartMapper>
     std::function<std::array<double,dimensionworld>(int)>
-    cellCentroids_(const CartMapper& cartMapper) const
+    cellCentroids_(const CartMapper& cartMapper, const bool& isCpGrid) const
     {
-        return [this, cartMapper](int elemIdx) {
+        return [this, cartMapper, isCpGrid](int elemIdx) {
             std::array<double,dimensionworld> centroid;
-            if (this->gridView().comm().rank() == 0)
+            const auto rank = this->gridView().comm().rank();
+            const auto maxLevel = this->gridView().grid().maxLevel();
+            bool useEclipse = !isCpGrid || (isCpGrid && (rank == 0) && (maxLevel == 0));
+            if (useEclipse)
             {
                 centroid =  this->eclState().getInputGrid().getCellCenter(cartMapper.cartesianIndex(elemIdx));
             }

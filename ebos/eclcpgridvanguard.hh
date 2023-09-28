@@ -239,7 +239,7 @@ public:
     std::function<std::array<double,dimensionworld>(int)>
     cellCentroids() const
     {
-        return this->cellCentroids_(this->cartesianIndexMapper());
+        return this->cellCentroids_(this->cartesianIndexMapper(), true);
     }
 
     const std::vector<int>& globalCell()

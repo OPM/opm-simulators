@@ -222,7 +222,7 @@ public:
     std::function<std::array<double,EclBaseVanguard<TypeTag>::dimensionworld>(int)>
     cellCentroids() const
     {
-        return this->cellCentroids_(this->cartesianIndexMapper());
+        return this->cellCentroids_(this->cartesianIndexMapper(), false);
     }
 
     std::vector<int> cellPartition() const
