@@ -17,11 +17,12 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <config.h>
-#include <opm/simulators/flow/Main.hpp>
 
 #include <opm/simulators/utils/DamarisKeywords.hpp>
 #include <damaris/env/Environment.hpp>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <fmt/format.h>
 
 #include <string>
 #include <map>
@@ -115,6 +116,7 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
     std::string disableParaviewXMLstart("!--") ;
     std::string disableParaviewXMLfin("--") ;
 
+#ifdef HAVE_PYTHON_ENABLED
     // Test if input Python file exists and set the name of the script for <variable ...  script="" > )XML elements
     std::string publishToPython_str("#") ;
     if (pythonFilename != ""){
@@ -124,11 +126,17 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
              disablePythonXMLfin = std::string("")  ;
         } else {
             pythonFilename = "" ; // set to empty if it does not exist
-            std::string disablePythonXMLstart("!--") ;
-            std::string disablePythonXMLfin("--") ;
+            disablePythonXMLstart = std::string("!--") ;
+            disablePythonXMLfin = std::string("--") ;
         }
     }
+#else
+     OpmLog::info(fmt::format("INFO: Opm::DamarisOutput::DamarisKeywords() : Python is not enabled in the Damaris library. "
+                              "The commandline --damaris-python-script={} will be set to empty string", pythonFilename));
+     pythonFilename = std::string("")
+#endif
 
+#ifdef HAVE_PARAVIEW_ENABLED
      // Test if input Paraview Python file exists 
     if (paraviewPythonFilename != ""){
         if (FileExists(paraviewPythonFilename, comm, rank)) {
@@ -140,14 +148,21 @@ DamarisKeywords(MPI_Comm comm, std::string OutputDir)
             disableParaviewXMLfin = std::string("--")  ;
         }
     }
+#else
+     OpmLog::info(fmt::format("INFO: Opm::DamarisOutput::DamarisKeywords() : Paraview is not enabled in the Damaris library. "
+                              "The commandline --damaris-python-paraview-script={} will be set to empty string", paraviewPythonFilename));
+     paraviewPythonFilename = std::string("")
+#endif
 
     // Flag error if both scripts are enabled 
-    // It would be good to know if Damaris has either one compiled into the library - this is currently not possible
     if ((pythonFilename.size() > 0) && (paraviewPythonFilename.size() > 0) )
     {
+        // A work around of this issue is to remove the Paraview mpi4py library (use print(inspect.getfile(mpi4py)))
+        // and then possibly not use mpi4py in the Paraview script code. OR try to install paraview mpi4py with headers.
         std::cerr << "ERROR: Both the Python (--damaris-python-script command line argument) and Paraview Python " <<
             "(--damaris-python-paraview-script command line argument) scripts are valid, however only one type "
-            "of analysis is supported in a single simulation. Please choose one. Exiting." << std::endl ;
+            "of analysis is supported in a single simulation (due to Paraview installing mpi4py library locally and without header files)."
+            " Please choose one or the other method of analysis for now. Exiting." << std::endl ;
         std::exit(-1) ;
     }
 

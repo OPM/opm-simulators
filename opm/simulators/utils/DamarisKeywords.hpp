@@ -20,10 +20,18 @@
 #ifndef OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 #define OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 
+#include <config.h>
+#include <opm/simulators/flow/Main.hpp>
+#include <ebos/eclproblem_properties.hh>
+
+
 #include <string>
 #include <map>
 
+#if HAVE_MPI
 #include <mpi.h>
+#endif
+
 
 /*
     Below is the std::map with the keywords that are supported by Damaris.

@@ -18,6 +18,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
+
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <limits>
@@ -25,7 +27,11 @@
 #include <string>
 
 #include <fmt/format.h>
+
+#if HAVE_MPI
 #include <mpi.h>
+#endif
+
 #include <Damaris.h>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
