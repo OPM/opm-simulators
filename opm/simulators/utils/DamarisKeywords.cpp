@@ -108,7 +108,7 @@ DamarisSettings::getKeywords(const Parallel::Communication& comm,
 #else
      OpmLog::info(fmt::format("INFO: Opm::DamarisOutput::DamarisKeywords() : Python is not enabled in the Damaris library. "
                               "The commandline --damaris-python-script={} will be set to empty string", pythonFilename));
-     pythonFilename = std::string("")
+     pythonFilename.clear() ;
 #endif
 
 #ifdef HAVE_PARAVIEW_ENABLED
@@ -126,7 +126,7 @@ DamarisSettings::getKeywords(const Parallel::Communication& comm,
 #else
      OpmLog::info(fmt::format("INFO: Opm::DamarisOutput::DamarisKeywords() : Paraview is not enabled in the Damaris library. "
                               "The commandline --damaris-python-paraview-script={} will be set to empty string", paraviewPythonFilename));
-     paraviewPythonFilename = std::string("")
+     paraviewPythonFilename.clear() ;
 #endif
 
     // Flag error if both scripts are enabled 
