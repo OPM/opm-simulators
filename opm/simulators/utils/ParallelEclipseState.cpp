@@ -24,6 +24,15 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <cstddef>
+#include <regex>
+#include <string>
+
+namespace {
+    bool is_FIP(const std::string& keyword)
+    {
+        return std::regex_match(keyword, std::regex { "FIP[A-Z0-9]{1,5}" });
+    }
+}
 
 namespace Opm {
 
@@ -108,12 +117,16 @@ std::vector<int> ParallelFieldPropsManager::get_global_int(const std::string& ke
     std::vector<int> result;
     int exceptionThrown{};
 
-    if (m_comm.rank() == 0)
-    {
-        try
-        {
-            result = m_manager.get_global_int(keyword);
-        }catch(std::exception& e) {
+    if (m_comm.rank() == 0) {
+        try {
+            // Recall: FIP* keywords are special.  We care only about the
+            // first three characters of the name following the initial
+            // three-character "FIP" prefix, hence "substr(0, 6)".
+            result = is_FIP(keyword)
+                ? this->m_manager.get_global_int(keyword.substr(0, 6))
+                : this->m_manager.get_global_int(keyword);
+        }
+        catch (std::exception& e) {
             exceptionThrown = 1;
             OpmLog::error("No integer property field: " + keyword + " ("+e.what()+")");
             m_comm.broadcast(&exceptionThrown, 1, 0);
