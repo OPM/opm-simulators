@@ -211,12 +211,15 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
     // Then the smallest multiplier is applied.
     // Default is to apply the top and bottom multiplier
     bool useSmallestMultiplier;
+    bool pinchActive;
     if (comm.rank() == 0) {
         const auto& eclGrid = eclState_.getInputGrid();
+        pinchActive = eclGrid.isPinchActive();
         useSmallestMultiplier = eclGrid.getMultzOption() == PinchMode::ALL;
     }
     if (global && comm.size() > 1) {
         comm.broadcast(&useSmallestMultiplier, 1, 0);
+        comm.broadcast(&pinchActive, 1, 0);
     }
 
     // compute the transmissibilities for all intersections
@@ -353,6 +356,21 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
 
             // apply the full face transmissibility multipliers
             // for the inside ...
+            if(!pinchActive){
+                if (insideFaceIdx > 3){// top or bottom
+                     auto find_layer = [&cartDims](std::size_t cell){
+                        cell /= cartDims[0];
+                        auto k = cell / cartDims[1];
+                        return k;
+                    };
+                    int kup = find_layer(insideCartElemIdx);
+                    int kdown=find_layer(outsideCartElemIdx);
+                    assert(kup != kdown);
+                    if(std::abs(kup -kdown) > 1){
+                        trans = 0.0;
+                    }
+                }
+            }
 
             if (useSmallestMultiplier)
             {
