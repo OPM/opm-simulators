@@ -1,5 +1,5 @@
 /*
-  Copyright 2020 Equinor ASA
+  Copyright 2023 Equinor ASA
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -191,9 +191,9 @@ void WellContributionsRocsparse::setStream(hipStream_t stream_){
 }
 
 void WellContributionsRocsparse::APIaddMatrix(MatrixType type,
-                                        int* colIndices,
-                                        double* values,
-                                        unsigned int val_size)
+                                              int* colIndices,
+                                              double* values,
+                                              unsigned int val_size)
 {
     if (!allocated) {
         OPM_THROW(std::logic_error, "Error cannot add wellcontribution before allocating memory in WellContributions");
