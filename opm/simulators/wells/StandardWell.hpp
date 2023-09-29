@@ -205,6 +205,15 @@ namespace Opm
                                       const GroupState& group_state,
                                       DeferredLogger& deferred_logger) override;
 
+        // iterate well equations including control switching
+        bool iterateWellEqWithSwitching(const Simulator& ebosSimulator,
+                                        const double dt,
+                                        const Well::InjectionControls& inj_controls,
+                                        const Well::ProductionControls& prod_controls,
+                                        WellState& well_state,
+                                        const GroupState& group_state,
+                                        DeferredLogger& deferred_logger) override;
+
         /// \brief Wether the Jacobian will also have well contributions in it.
         virtual bool jacobianContainsWellContributions() const override
         {

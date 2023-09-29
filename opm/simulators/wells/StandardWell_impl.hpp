@@ -2156,6 +2156,103 @@ namespace Opm
 
 
     template<typename TypeTag>
+    bool
+    StandardWell<TypeTag>::
+    iterateWellEqWithSwitching(const Simulator& ebosSimulator,
+                               const double dt,
+                               const Well::InjectionControls& inj_controls,
+                               const Well::ProductionControls& prod_controls,
+                               WellState& well_state,
+                               const GroupState& group_state,
+                               DeferredLogger& deferred_logger)
+    {
+        const int max_iter = this->param_.max_inner_iter_wells_;
+        
+        int it = 0;
+        bool converged;
+        bool relax_convergence = false;
+        this->regularize_ = false;
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
+
+        // Max status switch frequency should be 2 to avoid getting stuck in cycle 
+        constexpr int min_its_after_switch = 2;
+        int its_since_last_switch = min_its_after_switch;
+        int switch_count= 0;
+        const auto well_status = this->wellStatus_;
+        const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
+        bool changed = false;
+        bool final_check = false; 
+        do {
+            its_since_last_switch++;
+            if (allow_switching && its_since_last_switch >= min_its_after_switch){
+                const double wqTotal = this->primary_variables_.eval(WQTotal).value();
+                changed = this->updateWellControlAndStatusLocalIteration(ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger); 
+                if (changed){
+                    its_since_last_switch = 0;
+                    switch_count++;
+                }
+                if (!changed && final_check) {
+                    break;
+                } else {
+                    final_check = false;
+                }
+            }
+  
+            assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+
+            if (it > this->param_.strict_inner_iter_wells_) {
+                relax_convergence = true;
+                this->regularize_ = true;
+            }
+
+            auto report = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, relax_convergence);
+
+            converged = report.converged();
+            if (converged) {
+                // if equations are sufficiently linear they might converge in less than min_its_after_switch
+                // in this case, make sure all constraints are satisfied before returning
+                if (switch_count > 0 && its_since_last_switch < min_its_after_switch) {
+                    final_check = true;
+                    its_since_last_switch = min_its_after_switch;
+                } else {
+                    break;
+                }   
+            }
+
+            ++it;
+            solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
+            initPrimaryVariablesEvaluation();
+        } while (it < max_iter);
+        
+        if (converged) {
+            if (allow_switching){
+                // update operability if status change
+                const bool is_stopped = this->wellIsStopped();
+                if (this->wellHasTHPConstraints(summary_state)){
+                    this->operability_status_.can_obtain_bhp_with_thp_limit = !is_stopped;
+                    this->operability_status_.obey_thp_limit_under_bhp_limit = !is_stopped;
+                } else {
+                    this->operability_status_.operable_under_only_bhp_limit = !is_stopped;
+                }
+                // We reset the well status to its original state. Status is updated
+                // on the outside based on operability status
+                // \Note for future reference: For the well to update its status to stop/shut,
+                // the flag changed_to_stopped_this_step_ in prepareWellBeforeAssembling needs to be set to true.
+                // For this to happen, isOperableAndSolvable() must change from true to false,
+                // and (until the most recent commit) the well needs to be open for this to trigger.
+                // Hence, the resetting of status.
+                this->wellStatus_ = well_status;
+            }
+        } else {
+            const std::string message = fmt::format("   Well {} did not converged in {} inner iterations ("
+                                                    "{} control/status switches).", this->name(), it, switch_count);
+            deferred_logger.debug(message);
+            // add operability here as well ?
+        }
+        return converged;
+    }
+
+    template<typename TypeTag>
     std::vector<double>
     StandardWell<TypeTag>::
     computeCurrentWellRates(const Simulator& ebosSimulator,
