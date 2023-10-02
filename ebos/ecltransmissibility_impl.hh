@@ -301,6 +301,14 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                 // *added to* by applyNncToGridTrans_() later.
                 assert(outsideFaceIdx == -1);
                 trans_[isId(elemIdx, outsideElemIdx)] = 0.0;
+                if (enableEnergy_){
+                    thermalHalfTrans_[directionalIsId(elemIdx, outsideElemIdx)] = 0.0;
+                    thermalHalfTrans_[directionalIsId(outsideElemIdx, elemIdx)] = 0.0;
+                }
+
+                if (updateDiffusivity) {
+                    diffusivity_[isId(elemIdx, outsideElemIdx)] = 0.0;
+                }
                 continue;
             }
 
@@ -866,13 +874,40 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
             continue;
         }
 
-        auto candidate = trans_.find(isId(low, high));
-        if (candidate != trans_.end()) {
-            // NNC is represented by the grid and might be a neighboring connection
-            // In this case the transmissibilty is added to the value already
-            // set or computed.
-            candidate->second += nncEntry.trans;
+        {
+            auto candidate = trans_.find(isId(low, high));
+            if (candidate != trans_.end()) {
+                // NNC is represented by the grid and might be a neighboring connection
+                // In this case the transmissibilty is added to the value already
+                // set or computed.
+                candidate->second += nncEntry.trans;
+            }
         }
+        // if (enableEnergy_) {
+        //     auto candidate = thermalHalfTrans_.find(directionalIsId(low, high));
+        //     if (candidate != trans_.end()) {
+        //         // NNC is represented by the grid and might be a neighboring connection
+        //         // In this case the transmissibilty is added to the value already
+        //         // set or computed.
+        //         candidate->second += nncEntry.transEnergy1;
+        //     }
+        //     auto candidate = thermalHalfTrans_.find(directionalIsId(high, low));
+        //     if (candidate != trans_.end()) {
+        //         // NNC is represented by the grid and might be a neighboring connection
+        //         // In this case the transmissibilty is added to the value already
+        //         // set or computed.
+        //         candidate->second += nncEntry.transEnergy2;
+        //     }
+        // }
+        // if (enableDiffusivity_) {
+        //     auto candidate = diffusivity_.find(isId(low, high));
+        //     if (candidate != trans_.end()) {
+        //         // NNC is represented by the grid and might be a neighboring connection
+        //         // In this case the transmissibilty is added to the value already
+        //         // set or computed.
+        //         candidate->second += nncEntry.transDiffusion;
+        //     }
+        // }
     }
 }
 

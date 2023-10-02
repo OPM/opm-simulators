@@ -101,7 +101,10 @@ public:
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
     static constexpr int dimensionworld = Grid::dimensionworld;
-
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    static constexpr bool waterEnabled = Indices::waterEnabled;
+    static constexpr bool gasEnabled = Indices::gasEnabled;
+    static constexpr bool oilEnabled = Indices::oilEnabled;
 private:
     using Element = typename GridView::template Codim<0>::Entity;
 
@@ -174,6 +177,22 @@ public:
                 throw std::runtime_error("Input specifies Solvent while simulator has it disabled");
             }
         }
+        if(phases.active(Phase::WATER)){
+            if(waterEnabled == false){
+                throw std::runtime_error("Input specifies water while simulator has it disabled");
+            }
+        }
+        if(phases.active(Phase::GAS)){
+            if(gasEnabled == false){
+                throw std::runtime_error("Input specifies gas while simulator has it disabled");
+            }
+        }
+        if(phases.active(Phase::OIL)){
+            if(oilEnabled == false){
+                throw std::runtime_error("Input specifies oil while simulator has it disabled");
+            }
+        }
+
     }
 
     /*!

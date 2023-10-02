@@ -222,9 +222,9 @@ protected:
                                         const std::function<void(double&, const double&)>& apply);
 
     void extractPermeability_();
-        
+
     void extractPermeability_(const std::function<unsigned int(unsigned int)>& map);
-    
+
     void extractPorosity_();
 
     void computeHalfTrans_(Scalar& halfTrans,
@@ -266,7 +266,7 @@ protected:
     std::map<std::pair<unsigned, unsigned>, Scalar> thermalHalfTransBoundary_;
     bool enableEnergy_;
     bool enableDiffusivity_;
-    std::unordered_map<std::uint64_t, Scalar> thermalHalfTrans_;
+    std::unordered_map<std::uint64_t, Scalar> thermalHalfTrans_; //NB this is based on direction map size is ca 2*trans_ (diffusivity_)
     std::unordered_map<std::uint64_t, Scalar> diffusivity_;
 };
 
