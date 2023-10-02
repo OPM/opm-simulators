@@ -787,6 +787,20 @@ doAllocBuffers(const unsigned bufferSize,
         }
     }
 
+    // Flows may need to be allocated even when there is no restart due to BFLOW* summary keywords
+    if (blockFlows_ ) {
+        const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
+        const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
+
+        for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
+            if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
+                flowsi_[compIdxs[ii]].resize(bufferSize, 0.0);
+                flowsj_[compIdxs[ii]].resize(bufferSize, 0.0);
+                flowsk_[compIdxs[ii]].resize(bufferSize, 0.0);
+            }
+        }
+    }
+
     // Field data should be allocated
     // 1) When we want to restart
     // 2) When it is ask for by the user via restartConfig
@@ -986,11 +1000,9 @@ doAllocBuffers(const unsigned bufferSize,
     enableFlows_ = false;
     enableFlowsn_ = false;
     const bool rstFlows = (rstKeywords["FLOWS"] > 0);
-    if (blockFlows_ || rstFlows) {
-        if (rstFlows) {
-            rstKeywords["FLOWS"] = 0;
-            enableFlows_ = true;
-        }
+    if (rstFlows) {
+        rstKeywords["FLOWS"] = 0;
+        enableFlows_ = true;
 
         const std::array<int, 3> phaseIdxs = { gasPhaseIdx, oilPhaseIdx, waterPhaseIdx };
         const std::array<int, 3> compIdxs = { gasCompIdx, oilCompIdx, waterCompIdx };
@@ -998,11 +1010,13 @@ doAllocBuffers(const unsigned bufferSize,
 
         for (unsigned ii = 0; ii < phaseIdxs.size(); ++ii) {
             if (FluidSystem::phaseIsActive(phaseIdxs[ii])) {
-                flowsi_[compIdxs[ii]].resize(bufferSize, 0.0);
-                flowsj_[compIdxs[ii]].resize(bufferSize, 0.0);
-                flowsk_[compIdxs[ii]].resize(bufferSize, 0.0);
+                if (!blockFlows_) { // Already allocated if summary vectors requested
+                    flowsi_[compIdxs[ii]].resize(bufferSize, 0.0);
+                    flowsj_[compIdxs[ii]].resize(bufferSize, 0.0);
+                    flowsk_[compIdxs[ii]].resize(bufferSize, 0.0);
+                }
 
-                if (rstFlows && numOutputNnc > 0) {
+                if (numOutputNnc > 0) {
                     enableFlowsn_ = true;
 
                     flowsn_[compIdxs[ii]].first = rstName[ii];
