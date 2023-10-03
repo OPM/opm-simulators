@@ -1363,7 +1363,6 @@ updateNetworkPressures(const int reportStepIdx)
     }
 
     for (auto& well : well_container_generic_) {
-
         // Producers only, since we so far only support the
         // "extended" network model (properties defined by
         // BRANPROP and NODEPROP) which only applies to producers.
@@ -1380,6 +1379,9 @@ updateNetworkPressures(const int reportStepIdx)
                 if (thp_is_limit) {
                     ws.thp = well->getTHPConstraint(summaryState_);
                 }
+                //PJPE: Set thp of wells belonging to a subsea manifold equal to the node_pressure
+                if (network.node(well->wellEcl().groupName()).as_choke())
+                    ws.thp = new_limit;
             }
         }
     }

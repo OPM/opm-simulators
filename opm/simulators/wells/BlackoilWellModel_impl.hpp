@@ -28,6 +28,7 @@
 #endif
 
 #include <opm/grid/utility/cartesianToCompressed.hpp>
+#include <opm/common/utility/numeric/RootFinders.hpp>
 
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
@@ -40,6 +41,9 @@
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/WellGroupHelpers.hpp>
+#include <opm/simulators/wells/TargetCalculator.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
@@ -1162,6 +1166,9 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControlsAndNetwork(const bool mandatory_network_balance, const double dt, DeferredLogger& local_deferredLogger)
     {
+        // PJPE: calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
+        computeWellGroupThp(local_deferredLogger);
+
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
         bool well_group_control_changed = false;
@@ -1243,7 +1250,82 @@ namespace Opm {
         return {more_network_update, well_group_control_changed};
     }
 
+    //PJPE: This function is to be used for well groups in an extended network that act as a subsea manifold
+    // The wells of such group should have a common THP and total phase rate(s) obeying (if possible) 
+    // the well group constraint set by GCONPROD
+    // subsea manifolds 
+    template <typename TypeTag>
+    void
+    BlackoilWellModel<TypeTag>::
+    computeWellGroupThp(DeferredLogger& local_deferredLogger)
+    {
+        const int reportStepIdx = this->ebosSimulator_.episodeIndex();
+        const auto& network = schedule()[reportStepIdx].network();
 
+        if (!network.active()) {
+            return;
+        }
+
+        auto& well_state = this->wellState();
+        auto& group_state = this->groupState();
+
+        for (const std::string& nodeName : network.node_names()) {
+            const bool has_choke = network.node(nodeName).as_choke();
+            if (has_choke) {
+                const auto& summary_state = this->ebosSimulator_.vanguard().summaryState();
+                const Group& group = schedule().getGroup(nodeName, reportStepIdx);
+                std::optional<Group::ProductionControls> ctrl = group.productionControls(summary_state);
+                const auto cmode = ctrl->cmode;
+                const auto pu = this->phase_usage_;
+                //PJPE: conversion factor res<-> surface rates TODO: to be calculated
+                std::vector<double> resv_coeff(pu.num_phases, 1.0);
+                double gratTargetFromSales = 0.0; //PJPE: check this
+                WellGroupHelpers::TargetCalculator tcalc(cmode, pu, resv_coeff,
+                                                         gratTargetFromSales, nodeName, group_state,
+                                                         group.has_gpmaint_control(cmode));
+                double orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
+                //PJPE: TODO: include efficiency factor
+                auto mismatch = [&] (auto well_group_thp) {
+                    double well_group_rate(0.0);
+                    for (auto& well : this->well_container_) {
+                        std::string well_name = well->name();
+                        if (group.hasWell(well_name)) {
+                            well->setDynamicThpLimit(well_group_thp);
+                            well->updateWellStateWithTHPTargetProd(this->ebosSimulator_, well_state, local_deferredLogger);
+                            auto& ws = well_state.well(well_name);
+                            well_group_rate += -tcalc.calcModeRateFromRates(ws.surface_rates);
+                        }
+                    }
+                    return well_group_rate - orig_target;
+                };
+
+                // PJPE: TODO what settings to take here?
+                const double tolerance = 1E-4;
+                const int max_iteration_solve = 100;
+                int iteration = 0;
+                const std::array<double, 2> range {20E5, 40E5};
+                double low(range[0]);
+                double high(range[1]);
+
+                // PJPE: TODO use bisectBracket first and use bruteForceBracket as fallback option.
+                // see computeBhpAtThpLimit()
+                WellBhpThpCalculator::bruteForceBracket(mismatch, range, low, high, local_deferredLogger);
+
+                // double aa = mismatch(low);
+                // double bb = mismatch(high);
+                // std::cout << " low = " << aa << ", high = " << bb << std::endl;
+
+                double well_group_thp = RegulaFalsiBisection<ThrowOnError>::
+                solve(mismatch, low, high, max_iteration_solve, tolerance, iteration);
+
+                double check = mismatch(well_group_thp);
+                std::cout << " mismatch = " << check << ", well_group_thp = " << well_group_thp << std::endl;
+
+                //PJPE: use the common THP in computeNetworkPressures
+                group_state.update_well_group_thp(nodeName, well_group_thp);
+            }
+        }
+    }
 
     template<typename TypeTag>
     void
@@ -2374,9 +2456,6 @@ namespace Opm {
                     deferred_logger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
                 }
             }
-            // If we're using local well solves that include control switches, they also update
-            // operability, so reset before main iterations begin
-            well->resetWellOperability();
         }
         updatePrimaryVariables(deferred_logger);
 
