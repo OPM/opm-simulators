@@ -156,9 +156,6 @@ protected:
         bicgstabSolver->setMaxIterations(EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIterations));
         bicgstabSolver->setLinearOperator(&parOperator);
         bicgstabSolver->setRhs(this->overlappingb_);
-        // const auto& matrix = parOperator.getMatrix();
-        // Dune::storeMatrixMarket(matrix, "mymatrix" + ".mm");
-
 
         return bicgstabSolver;
     }

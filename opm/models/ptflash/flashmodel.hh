@@ -25,18 +25,18 @@
  *
  * \copydoc Opm::FlashModel
  */
-#ifndef EWOMS_FLASH_MODEL_HH
-#define EWOMS_FLASH_MODEL_HH
+#ifndef OPM_PTFLASH_MODEL_HH
+#define OPM_PTFLASH_MODEL_HH
 
 #include <opm/material/densead/Math.hpp>
 
 #include "flashproperties.hh"
 #include "flashprimaryvariables.hh"
 #include "flashlocalresidual.hh"
-#include "flashratevector.hh"
-#include "flashboundaryratevector.hh"
+#include <opm/models/flash/flashratevector.hh>
+#include <opm/models/flash/flashboundaryratevector.hh>
 #include "flashintensivequantities.hh"
-#include "flashextensivequantities.hh"
+#include <opm/models/flash/flashextensivequantities.hh>
 #include "flashindices.hh"
 #include "flashnewtonmethod.hh"
 
@@ -45,6 +45,7 @@
 #include <opm/models/io/vtkcompositionmodule.hh>
 #include <opm/models/io/vtkenergymodule.hh>
 #include <opm/models/io/vtkdiffusionmodule.hh>
+#include <opm/models/io/vtkptflashmodule.hh>
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/constraintsolvers/PTFlash.hpp>
@@ -64,6 +65,7 @@ namespace TTag {
 struct FlashModel { using InheritsFrom = std::tuple<VtkDiffusion,
                                                     VtkEnergy,
                                                     VtkComposition,
+                                                    VtkPTFlash,
                                                     MultiPhaseBaseModel>; };
 } // namespace TTag
 
@@ -86,7 +88,7 @@ template<class TypeTag>
 struct FlashTolerance<TypeTag, TTag::FlashModel>
 {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1.0;
+    static constexpr type value = 1.e-12;
 };
 
 // Flash solver verbosity
@@ -184,28 +186,11 @@ struct FluxModule<TypeTag, TTag::MyProblemTypeTag> { using type = Opm::Forchheim
  * To determine the quanties that occur in the equations above, this
  * model uses <i>flash calculations</i>. A flash solver starts with
  * the total mass or molar mass per volume for each component and,
- * calculates the compositions, saturations and pressures of all
+ * calculates the compositions, saturation and pressures of all
  * phases at a given temperature. For this the flash solver has to use
- * some model assumptions internally. (Often these are the same
- * primary variable switching or NCP assumptions as used by the other
- * fully implicit compositional multi-phase models provided by eWoms.)
+ * some model assumptions internally. Here a constant pressure, constant temperature,
+ * two-phase flash calculation method is used.
  *
- * Using flash calculations for the flow model has some disadvantages:
- * - The accuracy of the flash solver needs to be sufficient to
- *   calculate the parital derivatives using numerical differentiation
- *   which are required for the Newton scheme.
- * - Flash calculations tend to be quite computationally expensive and
- *   are often numerically unstable.
- *
- * It is thus adviced to increase the target tolerance of the Newton
- * scheme or a to use type for scalar values which exhibits higher
- * precision than the standard \c double (e.g. \c quad) if this model
- * ought to be used.
- *
- * The model uses the following primary variables:
- * - The total molar concentration of each component:
- *   \f$c^\kappa = \sum_\alpha S_\alpha x_\alpha^\kappa \rho_{mol, \alpha}\f$
- * - The absolute temperature $T$ in Kelvins if the energy equation enabled.
  */
 template <class TypeTag>
 class FlashModel
@@ -227,7 +212,7 @@ class FlashModel
     using EnergyModule = Opm::EnergyModule<TypeTag, enableEnergy>;
 
 public:
-    FlashModel(Simulator& simulator)
+    explicit FlashModel(Simulator& simulator)
         : ParentType(simulator)
     {}
 
@@ -240,6 +225,7 @@ public:
 
         // register runtime parameters of the VTK output modules
         Opm::VtkCompositionModule<TypeTag>::registerParameters();
+        Opm::VtkPTFlashModule<TypeTag>::registerParameters();
 
         if (enableDiffusion)
             Opm::VtkDiffusionModule<TypeTag>::registerParameters();
@@ -253,14 +239,9 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, int, FlashVerbosity,
                              "Flash solver verbosity level");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, FlashTwoPhaseMethod, 
-                             "Method for solving vapor-liquid composition");
+                             "Method for solving vapor-liquid composition. Available options include:"
+                             "ssi, newton, ssi+newton");
     }
-
-    /*!
-     * \copydoc FvBaseDiscretization::name
-     */
-    static std::string name()
-    { return "flash"; }
 
     /*!
      * \copydoc FvBaseDiscretization::primaryVarName
@@ -268,7 +249,7 @@ public:
     std::string primaryVarName(unsigned pvIdx) const
     {
         const std::string& tmp = EnergyModule::primaryVarName(pvIdx);
-        if (tmp != "")
+        if (!tmp.empty())
             return tmp;
 
         std::ostringstream oss;
@@ -288,7 +269,7 @@ public:
     std::string eqName(unsigned eqIdx) const
     {
         const std::string& tmp = EnergyModule::eqName(eqIdx);
-        if (tmp != "")
+        if (!tmp.empty())
             return tmp;
 
         std::ostringstream oss;
@@ -343,6 +324,7 @@ public:
 
         // add the VTK output modules which are meaningful for the model
         this->addOutputModule(new Opm::VtkCompositionModule<TypeTag>(this->simulator_));
+        this->addOutputModule(new Opm::VtkPTFlashModule<TypeTag>(this->simulator_));
         if (enableDiffusion)
             this->addOutputModule(new Opm::VtkDiffusionModule<TypeTag>(this->simulator_));
         if (enableEnergy)

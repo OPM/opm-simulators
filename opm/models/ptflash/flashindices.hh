@@ -25,10 +25,9 @@
  *
  * \copydoc Opm::FlashIndices
  */
-#ifndef EWOMS_FLASH_INDICES_HH
-#define EWOMS_FLASH_INDICES_HH
+#ifndef OPM_PTFLASH_INDICES_HH
+#define OPM_PTFLASH_INDICES_HH
 
-#include "flashproperties.hh"
 #include <opm/models/common/energymodule.hh>
 
 namespace Opm {
@@ -37,7 +36,7 @@ namespace Opm {
  * \ingroup FlashModel
  *
  * \brief Defines the primary variable and equation indices for the
- *        compositional multi-phase model based on flash calculations.
+ *        compositional multi-phase model based on PT flash calculations.
  *
  * \tparam PVOffset The first index in a primary variable vector.
  */
@@ -56,10 +55,11 @@ public:
 
     // Primary variable indices
 
-    //! Index of the total concentration of the first component in the
-    //! pore space.
-    static const int pressure0Idx = PVOffset;
-    static const int z0Idx = pressure0Idx+1; // numcomponents-1 variables follow
+    //! Index of the pressure
+    static constexpr int pressure0Idx = PVOffset;
+
+    //! Index of the molefraction of the first component
+    static constexpr int z0Idx = pressure0Idx + 1;
     
     // equation indices
 

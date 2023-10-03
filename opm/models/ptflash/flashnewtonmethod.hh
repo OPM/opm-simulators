@@ -25,10 +25,8 @@
  *
  * \copydoc Opm::FlashNewtonMethod
  */
-#ifndef EWOMS_FLASH_NEWTON_METHOD_HH
-#define EWOMS_FLASH_NEWTON_METHOD_HH
-
-#include "flashproperties.hh"
+#ifndef OPM_FLASH_NEWTON_METHOD_HH
+#define OPM_FLASH_NEWTON_METHOD_HH
 
 #include <opm/models/nonlinear/newtonmethod.hh>
 
@@ -47,7 +45,7 @@ namespace Opm {
 /*!
  * \ingroup FlashModel
  *
- * \brief A Newton solver specific to the NCP model.
+ * \brief A Newton solver specific to the PTFlash model.
  */
 
 template <class TypeTag>
@@ -79,11 +77,11 @@ protected:
     /*!
      * \copydoc FvBaseNewtonMethod::updatePrimaryVariables_
      */
-    void updatePrimaryVariables_(unsigned globalDofIdx,
+    void updatePrimaryVariables_(unsigned /* globalDofIdx */,
                                  PrimaryVariables& nextValue,
                                  const PrimaryVariables& currentValue,
                                  const EqVector& update,
-                                 const EqVector& currentResidual)
+                                 const EqVector& /* currentResidual */)
     {
         // normal Newton-Raphson update
         nextValue = currentValue;
@@ -107,13 +105,15 @@ protected:
             maxDeltaZ = std::max(std::abs(update[z0Idx + compIdx]), maxDeltaZ);
             sumDeltaZ += update[z0Idx + compIdx];
         }
-        maxDeltaZ = std::max(std::abs(-sumDeltaZ), maxDeltaZ);
+        maxDeltaZ = std::max(std::abs(sumDeltaZ), maxDeltaZ);
 
-        // if max. update is above 0.1, restrict that one to 0.1 and adjust the rest accordingly (s.t. last comp. update is sum of the changes in update vector)
-        if (maxDeltaZ > 0.1) {
-            Scalar alpha = 0.2/maxDeltaZ;
+        // if max. update is above 0.2, restrict that one to 0.2 and adjust the rest accordingly (s.t. last comp. update is sum of the changes in update vector)
+        // \Note: original code uses 0.1, while 0.1 looks like having problem make it converged. So there is some more to investigate here
+        constexpr Scalar deltaz_limit = 0.2;
+        if (maxDeltaZ > deltaz_limit) {
+            Scalar alpha = deltaz_limit / maxDeltaZ;
             for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
-                nextValue[z0Idx + compIdx] = currentValue[z0Idx + compIdx] - alpha*update[z0Idx + compIdx];
+                nextValue[z0Idx + compIdx] = currentValue[z0Idx + compIdx] - alpha * update[z0Idx + compIdx];
             }
         }
 
@@ -122,22 +122,12 @@ protected:
         for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
             clampValue_(nextValue[z0Idx + compIdx], tol, 1-tol);
         }
-
-        // normalize s.t. z sums to 1.0
-        // Scalar lastZ = 1.0;
-        // Scalar sumZ = 0.0;
-        // for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
-        //     lastZ -= nextValue[z0Idx + compIdx];
-        //     sumZ += nextValue[z0Idx + compIdx];
-        // }
-        // sumZ += lastZ;
-        // for (unsigned compIdx = 0; compIdx < numComponents - 1; ++compIdx) {
-        //     nextValue[z0Idx + compIdx] /= sumZ;
-        // }
     }
 private:
     void clampValue_(Scalar& val, Scalar minVal, Scalar maxVal) const
-    { val = std::max(minVal, std::min(val, maxVal)); }
+    {
+        val = std::clamp(val, minVal, maxVal);
+    }
 
 };  // class FlashNewtonMethod
 } // namespace Opm

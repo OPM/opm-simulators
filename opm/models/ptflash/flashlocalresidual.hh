@@ -25,10 +25,8 @@
  *
  * \copydoc Opm::FlashLocalResidual
  */
-#ifndef EWOMS_FLASH_LOCAL_RESIDUAL_HH
-#define EWOMS_FLASH_LOCAL_RESIDUAL_HH
-
-#include "flashproperties.hh"
+#ifndef OPM_PTFLASH_LOCAL_RESIDUAL_HH
+#define OPM_PTFLASH_LOCAL_RESIDUAL_HH
 
 #include <opm/models/common/diffusionmodule.hh>
 #include <opm/models/common/energymodule.hh>
@@ -40,7 +38,7 @@ namespace Opm {
  * \ingroup FlashModel
  *
  * \brief Calculates the local residual of the compositional multi-phase
- *        model based on flash calculations.
+ *        model based on PTFlash calculations.
  */
 template <class TypeTag>
 class FlashLocalResidual: public GetPropType<TypeTag, Properties::DiscLocalResidual>
@@ -88,7 +86,7 @@ public:
                 * Toolbox::template decay<LhsEval>(fs.saturation(phaseIdx))
                 * Toolbox::template decay<LhsEval>(intQuants.porosity());
         }
-        
+
         EnergyModule::addPhaseStorage(storage, elemCtx.intensiveQuantities(dofIdx, timeIdx), phaseIdx);
     }
 
@@ -137,7 +135,7 @@ public:
         unsigned focusDofIdx = elemCtx.focusDofIndex();
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             // data attached to upstream and the finite volume of the current phase
-            unsigned upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
+            auto upIdx = static_cast<unsigned>(extQuants.upstreamIndex(phaseIdx));
             const IntensiveQuantities& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
 
             // this is a bit hacky because it is specific to the element-centered

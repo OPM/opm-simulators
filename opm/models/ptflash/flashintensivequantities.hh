@@ -25,8 +25,8 @@
  *
  * \copydoc Opm::FlashIntensiveQuantities
  */
-#ifndef EWOMS_FLASH_INTENSIVE_QUANTITIES_HH
-#define EWOMS_FLASH_INTENSIVE_QUANTITIES_HH
+#ifndef OPM_FLASH_INTENSIVE_QUANTITIES_HH
+#define OPM_FLASH_INTENSIVE_QUANTITIES_HH
 
 #include "flashproperties.hh"
 #include "flashindices.hh"
@@ -46,7 +46,7 @@ namespace Opm {
  * \ingroup FlashModel
  * \ingroup IntensiveQuantities
  *
- * \brief Contains the intensive quantities of the flash-based compositional multi-phase model
+ * \brief Contains the intensive quantities of the ptflash-based compositional multi-phase model
  */
 template <class TypeTag>
 class FlashIntensiveQuantities
@@ -78,7 +78,7 @@ class FlashIntensiveQuantities
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using FlashSolver = GetPropType<TypeTag, Properties::FlashSolver>;
-    using Problem = GetPropType<TypeTag, Properties::Problem>;
+
     using ComponentVector = Dune::FieldVector<Evaluation, numComponents>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
@@ -90,8 +90,7 @@ public:
     //! The type of the object returned by the fluidState() method
     using FluidState = Opm::CompositionalFluidState<Evaluation, FluidSystem, enableEnergy>;
 
-    FlashIntensiveQuantities()
-    { }
+    FlashIntensiveQuantities() = default;
 
     FlashIntensiveQuantities(const FlashIntensiveQuantities& other) = default;
 
@@ -107,11 +106,11 @@ public:
 
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const auto& problem = elemCtx.problem();
-        
-        Scalar flashTolerance = 1.e-12;//EWOMS_GET_PARAM(TypeTag, Scalar, FlashTolerance);
-        int flashVerbosity = 0;//EWOMS_GET_PARAM(TypeTag, int, FlashVerbosity);
-        std::string flashTwoPhaseMethod = EWOMS_GET_PARAM(TypeTag, std::string, FlashTwoPhaseMethod);
-        
+
+        constexpr Scalar flashTolerance = getPropValue<TypeTag, Properties::FlashTolerance>();
+        constexpr int flashVerbosity = getPropValue<TypeTag, Properties::FlashVerbosity>();
+        const std::string flashTwoPhaseMethod = getPropValue<TypeTag, Properties::FlashTwoPhaseMethod>();
+
         // extract the total molar densities of the components
         ComponentVector z(0.);
         {
@@ -128,7 +127,6 @@ public:
                 sumz +=z[compIdx];
             }
             z /= sumz;
-
         }
 
         Evaluation p = priVars.makeEvaluation(pressure0Idx, timeIdx);
@@ -164,45 +162,40 @@ public:
          }
 
         /////////////
-        // Compute the phase compositions and densities 
+        // Compute the phase compositions and densities
         /////////////
-        int spatialIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
-        //FlashSolver::solve(fluidState_, z, spatialIdx, flashVerbosity, flashTwoPhaseMethod, flashTolerance);
-        //Flash::solve(fluidState_, z, spatialIdx, flashVerbosity, flashTwoPhaseMethod, flashTolerance);
+        if (flashVerbosity >= 1) {
+            const int spatialIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+            std::cout << " updating the intensive quantities for Cell " << spatialIdx << std::endl;
+        }
+        FlashSolver::solve(fluidState_, z, flashTwoPhaseMethod, flashTolerance, flashVerbosity);
 
-        
-        using Flash = Opm::PTFlash<double, FluidSystem>;
-        FlashSolver::solve(fluidState_, z, spatialIdx, flashTwoPhaseMethod, flashTolerance, flashVerbosity);
+        if (flashVerbosity >= 5) {
+            // printing of flash result after solve
+            const int spatialIdx = elemCtx.globalSpaceIndex(dofIdx, timeIdx);
+            std::cout << " \n After flash solve for cell " << spatialIdx << std::endl;
+            ComponentVector x, y;
+            for (unsigned comp_idx = 0; comp_idx < numComponents; ++comp_idx) {
+                x[comp_idx] = fluidState_.moleFraction(FluidSystem::oilPhaseIdx, comp_idx);
+                y[comp_idx] = fluidState_.moleFraction(FluidSystem::gasPhaseIdx, comp_idx);
+            }
+            for (unsigned comp_idx = 0; comp_idx < numComponents; ++comp_idx) {
+                std::cout << " x for component: " << comp_idx << " is:" << std::endl;
+                std::cout << x[comp_idx] << std::endl;
 
-//printing of flashresult after solve
-    // std::cout << " \n After flashsolve for cell " << spatialIdx << std::endl;
-    // ComponentVector x, y;
-    // Evaluation L0 = fluidState_.L();
-    // for (unsigned comp_idx = 0; comp_idx < numComponents; ++comp_idx) {
-    //     x[comp_idx] = fluidState_.moleFraction(FluidSystem::oilPhaseIdx, comp_idx);
-    //     y[comp_idx] = fluidState_.moleFraction(FluidSystem::gasPhaseIdx, comp_idx);
-    // }
-    //         for (unsigned comp_idx = 0; comp_idx < numComponents; ++comp_idx) {
-    //     std::cout << " x for component: " << comp_idx << " is " << x[comp_idx] << std::endl;
-    //      for (int i = 0; i < 3; ++i) {
-    //          std::cout << " x deriv " << i << " is: " << x[comp_idx].derivative(i) << std::endl;
-    //      }
+                std::cout << " y for component: " << comp_idx << "is:" << std::endl;
+                std::cout << y[comp_idx] << std::endl;
+            }
+            const Evaluation& L = fluidState_.L();
+            std::cout << " L is:" << std::endl;
+            std::cout << L << std::endl;
+        }
 
-    //     std::cout << " y for component: " << comp_idx << "is " << y[comp_idx] << std::endl;
-    //      for (int i = 0; i < 3; ++i) {
-    //          std::cout << " y deriv " << i << " is: " << y[comp_idx].derivative(i) << std::endl;
-    //      }
-    // }
-    // std::cout << " L is " << L0 << std::endl;
-    //  for (int i = 0; i < L0.size(); ++i) {
-    //          std::cout << " L deriv " << i << " is: " << L0.derivative(i) << std::endl;
-    //  }
-    //  //end printinting 1
 
-        // Update phases        
+        // Update phases
         typename FluidSystem::template ParameterCache<Evaluation> paramCache;
         paramCache.updatePhase(fluidState_, FluidSystem::oilPhaseIdx);
-        
+
         const Scalar R = Opm::Constants<Scalar>::R;
         Evaluation Z_L = (paramCache.molarVolume(FluidSystem::oilPhaseIdx) * fluidState_.pressure(FluidSystem::oilPhaseIdx) )/
         (R * fluidState_.temperature(FluidSystem::oilPhaseIdx));
@@ -213,12 +206,12 @@ public:
 
         // Update saturation
         Evaluation L = fluidState_.L();
-        Evaluation So = Opm::max((L*Z_L/(L*Z_L+(1-L)*Z_V)), 0.0);
-        Evaluation Sg = Opm::max(1-So, 0.0);
+        Evaluation So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
+        Evaluation Sg = Opm::max(1 - So, 0.0);
         Scalar sumS = Opm::getValue(So) + Opm::getValue(Sg);
         So /= sumS;
         Sg /= sumS;
-        
+
         fluidState_.setSaturation(0, So);
         fluidState_.setSaturation(1, Sg);
 
@@ -226,37 +219,36 @@ public:
         fluidState_.setCompressFactor(1, Z_V);
 
         // Print saturation
-         if (flashVerbosity == 5) {
+         if (flashVerbosity >= 5) {
              std::cout << "So = " << So <<std::endl;
              std::cout << "Sg = " << Sg <<std::endl;
            }
 
         // Print saturation
-         if (flashVerbosity == 5) {
+         if (flashVerbosity >= 5) {
              std::cout << "So = " << So <<std::endl;
              std::cout << "Sg = " << Sg <<std::endl;
              std::cout << "Z_L = " << Z_L <<std::endl;
              std::cout << "Z_V = " << Z_V <<std::endl;
          }
-   
+
         /////////////
-        // Compute rel. perm and viscosities and densities
+        // Compute rel. perm and viscosity and densities
         /////////////
         const MaterialLawParams& materialParams = problem.materialLawParams(elemCtx, dofIdx, timeIdx);
 
-        // calculate relative permeabilities
+        // calculate relative permeability
         MaterialLaw::relativePermeabilities(relativePermeability_,
                                             materialParams, fluidState_);
         Opm::Valgrind::CheckDefined(relativePermeability_);
 
-        // set the phase viscosities and density
+        // set the phase viscosity and density
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             paramCache.updatePhase(fluidState_, phaseIdx);
 
             const Evaluation& mu = FluidSystem::viscosity(fluidState_, paramCache, phaseIdx);
-            
+
             fluidState_.setViscosity(phaseIdx, mu);
-            //fluidState_.setViscosity(phaseIdx, newmu);
 
             mobility_[phaseIdx] = relativePermeability_[phaseIdx] / mu;
             Opm::Valgrind::CheckDefined(mobility_[phaseIdx]);
@@ -322,8 +314,8 @@ private:
     DimMatrix intrinsicPerm_;
     FluidState fluidState_;
     Evaluation porosity_;
-    Evaluation relativePermeability_[numPhases];
-    Evaluation mobility_[numPhases];
+    std::array<Evaluation,numPhases> relativePermeability_;
+    std::array<Evaluation,numPhases> mobility_;
 };
 
 } // namespace Opm

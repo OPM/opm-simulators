@@ -59,10 +59,6 @@ template<class TypeTag, class MyTypeTag>
 struct VtkWriteFugacities { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct VtkWriteFugacityCoeffs { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteLiquidMoleFractions { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteEquilibriumConstants { using type = UndefinedProperty; };
 
 // set default values for what quantities to output
 template<class TypeTag>
@@ -79,10 +75,6 @@ template<class TypeTag>
 struct VtkWriteFugacities<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
 template<class TypeTag>
 struct VtkWriteFugacityCoeffs<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
-template<class TypeTag>
-struct VtkWriteLiquidMoleFractions<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
-template<class TypeTag>
-struct VtkWriteEquilibriumConstants<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
 
 } // namespace Opm::Properties
 
@@ -120,7 +112,6 @@ class VtkCompositionModule : public BaseOutputModule<TypeTag>
 
     using ComponentBuffer = typename ParentType::ComponentBuffer;
     using PhaseComponentBuffer = typename ParentType::PhaseComponentBuffer;
-    using ScalarBuffer = typename ParentType::ScalarBuffer;
 
 public:
     VtkCompositionModule(const Simulator& simulator)
@@ -146,10 +137,6 @@ public:
                              "Include component fugacities in the VTK output files");
         EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFugacityCoeffs,
                              "Include component fugacity coefficients in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteLiquidMoleFractions,
-                             "Include liquid mole fractions (L) in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteEquilibriumConstants,
-                             "Include equilibrium constants (K) in the VTK output files");
     }
 
     /*!
@@ -168,10 +155,7 @@ public:
             this->resizeComponentBuffer_(totalMoleFrac_);
         if (molarityOutput_())
             this->resizePhaseComponentBuffer_(molarity_);
-        if (LOutput_())
-            this->resizeScalarBuffer_(L_);
-        if (equilConstOutput_())
-            this->resizeComponentBuffer_(K_);
+
         if (fugacityOutput_())
             this->resizeComponentBuffer_(fugacity_);
         if (fugacityCoeffOutput_())
@@ -193,9 +177,6 @@ public:
             unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);
             const auto& intQuants = elemCtx.intensiveQuantities(i, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
-
-            if (LOutput_()) 
-                L_[I] = Toolbox::value(fs.L());
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
@@ -241,10 +222,6 @@ public:
                 }
                 if (fugacityOutput_())
                     fugacity_[compIdx][I] = Toolbox::value(intQuants.fluidState().fugacity(/*phaseIdx=*/0, compIdx));
-                
-                if (equilConstOutput_())
-                    K_[compIdx][I] = Toolbox::value(fs.K(compIdx));
-
             }
         }
     }
@@ -259,7 +236,7 @@ public:
             return;
         }
 
-         if (moleFracOutput_())
+        if (moleFracOutput_())
             this->commitPhaseComponentBuffer_(baseWriter, "moleFrac_%s^%s", moleFrac_);
         if (massFracOutput_())
             this->commitPhaseComponentBuffer_(baseWriter, "massFrac_%s^%s", massFrac_);
@@ -269,15 +246,11 @@ public:
             this->commitComponentBuffer_(baseWriter, "totalMassFrac^%s", totalMassFrac_);
         if (totalMoleFracOutput_())
             this->commitComponentBuffer_(baseWriter, "totalMoleFrac^%s", totalMoleFrac_);
-        if (equilConstOutput_())
-            this->commitComponentBuffer_(baseWriter, "K^%s", K_);
 
         if (fugacityOutput_())
             this->commitComponentBuffer_(baseWriter, "fugacity^%s", fugacity_);
         if (fugacityCoeffOutput_())
             this->commitPhaseComponentBuffer_(baseWriter, "fugacityCoeff_%s^%s", fugacityCoeff_);
-        if (LOutput_())
-            this->commitScalarBuffer_(baseWriter, "L", L_); 
     }
 
 private:
@@ -322,30 +295,15 @@ private:
         static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFugacityCoeffs);
         return val;
     }
-    
-    static bool LOutput_()
-    {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteLiquidMoleFractions);
-        return val;
-    }
-
-    static bool equilConstOutput_()
-    {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteEquilibriumConstants);
-        return val;
-    }
 
     PhaseComponentBuffer moleFrac_;
     PhaseComponentBuffer massFrac_;
     PhaseComponentBuffer molarity_;
     ComponentBuffer totalMassFrac_;
     ComponentBuffer totalMoleFrac_;
-    ComponentBuffer K_;
 
     ComponentBuffer fugacity_;
     PhaseComponentBuffer fugacityCoeff_;
-
-    ScalarBuffer L_;
 };
 
 } // namespace Opm

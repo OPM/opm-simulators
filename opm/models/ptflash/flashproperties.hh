@@ -27,8 +27,8 @@
  * \brief Declares the properties required by the compositional
  *        multi-phase model based on flash calculations.
  */
-#ifndef EWOMS_FLASH_PROPERTIES_HH
-#define EWOMS_FLASH_PROPERTIES_HH
+#ifndef OPM_PTFLASH_PROPERTIES_HH
+#define OPM_PTFLASH_PROPERTIES_HH
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/io/vtkcompositionmodule.hh>

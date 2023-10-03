@@ -25,11 +25,10 @@
  *
  * \copydoc Opm::FlashPrimaryVariables
  */
-#ifndef EWOMS_FLASH_PRIMARY_VARIABLES_HH
-#define EWOMS_FLASH_PRIMARY_VARIABLES_HH
+#ifndef OPM_PTFLASH_PRIMARY_VARIABLES_HH
+#define OPM_PTFLASH_PRIMARY_VARIABLES_HH
 
 #include "flashindices.hh"
-#include "flashproperties.hh"
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/common/energymodule.hh>
@@ -121,7 +120,7 @@ public:
         // the energy module
         EnergyModule::setPriVarTemperatures(*this, fluidState);
 
-        // determine the phase presence.
+        // determine the component fractions
         Dune::FieldVector<Scalar, numComponents> z(0.0);
         Scalar sumMoles = 0.0;
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
@@ -135,6 +134,7 @@ public:
 
         for (int i = 0; i < numComponents - 1; ++i)
             (*this)[z0Idx + i] = z[i];
+
         (*this)[pressure0Idx] = Opm::getValue(fluidState.pressure(0));
     }
 

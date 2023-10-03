@@ -23,33 +23,31 @@
 /*!
  * \file
  *
- * \brief Box problem with two phases and multiple components
+ * \brief Box problem with two phases and multiple components.
+ *        Solved with a PTFlash two phase solver.
  */
 #include "config.h"
 
 #include <opm/models/utils/start.hh>
-//#include <opm/models/immiscible/immisciblemodel.hh>
-//#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
-#include "problems/simpletestproblem.hh"
+#include "problems/co2ptflashproblem.hh"
 
 
 namespace Opm::Properties {
 
 namespace TTag {
-    struct SimpleTestEcfvProblem 
-{
-    using InheritsFrom = std::tuple<SimpleTest, FlashModel>;
+    struct CO2PTEcfvProblem {
+    using InheritsFrom = std::tuple<CO2PTBaseProblem, FlashModel>;
 };
 }
 
 template <class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::SimpleTestEcfvProblem>
+struct SpatialDiscretizationSplice<TypeTag, TTag::CO2PTEcfvProblem>
 {
     using type = TTag::EcfvDiscretization;
 };
-//TESTAD
+
 template <class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::SimpleTestEcfvProblem>
+struct LocalLinearizerSplice<TypeTag, TTag::CO2PTEcfvProblem>
 {
     using type = TTag::AutoDiffLocalLinearizer;
 };
@@ -59,6 +57,6 @@ struct LocalLinearizerSplice<TypeTag, TTag::SimpleTestEcfvProblem>
 
 int main(int argc, char **argv)
 {
-    using EcfvProblemTypeTag = Opm::Properties::TTag::SimpleTestEcfvProblem;
+    using EcfvProblemTypeTag = Opm::Properties::TTag::CO2PTEcfvProblem;
     return Opm::start<EcfvProblemTypeTag>(argc, argv);
 }

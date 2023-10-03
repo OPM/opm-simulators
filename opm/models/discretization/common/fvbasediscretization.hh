@@ -274,12 +274,12 @@ struct EnableConstraints<TypeTag, TTag::FvBaseDiscretization> { static constexpr
 // impact because of the intensive quantity cache will cause additional pressure on the
 // CPU caches...
 template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
+struct EnableIntensiveQuantityCache<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
 // do not use thermodynamic hints by default. If you enable this, make sure to also
 // enable the intensive quantity cache above to avoid getting an exception...
 template<class TypeTag>
-struct EnableThermodynamicHints<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
+struct EnableThermodynamicHints<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
 // if the deflection of the newton method is large, we do not need to solve the linear
 // approximation accurately. Assuming that the value for the current solution is quite
@@ -309,9 +309,9 @@ struct TimeDiscHistorySize<TypeTag, TTag::FvBaseDiscretization> { static constex
 template<class TypeTag>
 struct ExtensiveStorageTerm<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
-// use volumetric residuals is not default
+// use volumetric residuals is default
 template<class TypeTag>
-struct UseVolumetricResidual<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
+struct UseVolumetricResidual<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
 
 //! eWoms is mainly targeted at research, so experimental features are enabled by
 //! default.
