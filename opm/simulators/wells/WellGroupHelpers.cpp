@@ -41,6 +41,9 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
+// #include <opm/simulators/wells/WellInterface.hpp>
+// #include <opm/simulators/wells/StandardWell.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -905,7 +908,12 @@ namespace WellGroupHelpers
     #endif
                     } else {
                         // Table number specified as 9999 in the deck, no pressure loss.
-                        node_pressures[node] = up_press;
+                        if (network.node(node).as_choke()){
+                        // PJPE: Node pressure is set to the common THP of the wells
+                        node_pressures[node] = group_state.well_group_thp(node);
+                        } else {
+                             node_pressures[node] = up_press;
+                        }
                     }
                 }
             }

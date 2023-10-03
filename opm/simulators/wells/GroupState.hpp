@@ -44,6 +44,9 @@ public:
     void update_production_rates(const std::string& gname, const std::vector<double>& rates);
     const std::vector<double>& production_rates(const std::string& gname) const;
 
+    void update_well_group_thp(const std::string& gname, const double& thp);
+    double well_group_thp(const std::string& gname) const;
+
     bool has_production_reduction_rates(const std::string& gname) const;
     void update_production_reduction_rates(const std::string& gname, const std::vector<double>& rates);
     const std::vector<double>& production_reduction_rates(const std::string& gname) const;
@@ -169,6 +172,7 @@ public:
         serializer(num_phases);
         serializer(m_production_rates);
         serializer(production_controls);
+        serializer(group_thp);
         serializer(prod_red_rates);
         serializer(inj_red_rates);
         serializer(inj_surface_rates);
@@ -185,6 +189,7 @@ private:
     std::size_t num_phases{};
     std::map<std::string, std::vector<double>> m_production_rates;
     std::map<std::string, Group::ProductionCMode> production_controls;
+    std::map<std::string, double> group_thp; //PJPE: Common thp associated to subsea manifold nodes
     std::map<std::string, std::vector<double>> prod_red_rates;
     std::map<std::string, std::vector<double>> inj_red_rates;
     std::map<std::string, std::vector<double>> inj_surface_rates;

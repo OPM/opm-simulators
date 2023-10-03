@@ -443,6 +443,8 @@ namespace Opm {
                                               const double dt,
                                               DeferredLogger& local_deferredLogger);
 
+           void computeWellGroupThp(DeferredLogger& local_deferredLogger);
+
             /// Update rank's notion of intersecting wells and their
             /// associate solution variables.
             ///

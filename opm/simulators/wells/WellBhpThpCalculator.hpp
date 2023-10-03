@@ -119,6 +119,11 @@ public:
   getFloIPR(const WellState& well_state,
             const Well& well, 
             const SummaryState& summary_state) const;                                                                                              
+    //! \brief Find limits using brute-force solver.
+    static bool bruteForceBracket(const std::function<double(const double)>& eq,
+                                  const std::array<double, 2>& range,
+                                  double& low, double& high,
+                                  DeferredLogger& deferred_logger);
 
 private:
     //! \brief Compute BHP from THP limit for an injector - implementation.
@@ -156,11 +161,7 @@ private:
                        std::optional<double>& approximate_solution,
                        DeferredLogger& deferred_logger) const;
 
-    //! \brief Find limits using brute-force solver.
-    static bool bruteForceBracket(const std::function<double(const double)>& eq,
-                                  const std::array<double, 2>& range,
-                                  double& low, double& high,
-                                  DeferredLogger& deferred_logger);
+   
 
     double findThpFromBhpIteratively(const std::function<double(const double, const double)>& thp_func,
                                      const double bhp,
