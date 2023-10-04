@@ -1125,8 +1125,8 @@ namespace Opm {
 
             if (network_update_iteration >= max_iteration ) {
                 if (terminal_output_) {
-                    local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " iterations has been used, we stop the network update now, "
-                                              "the simulation will continue with unconvergeed network results");
+                    local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " iterations has been used, we stop the network update now. "
+                                              "The simulation will continue with unconverged network results");
                 }
                 break;
             }
