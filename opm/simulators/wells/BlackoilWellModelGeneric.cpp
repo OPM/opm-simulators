@@ -1139,13 +1139,16 @@ updateNetworkPressures(const int reportStepIdx)
                 // The well belongs to a group with has a network pressure constraint,
                 // set the dynamic THP constraint of the well accordingly.
                 const double new_limit = it->second;
-                well->setDynamicThpLimit(new_limit);
-                SingleWellState& ws = this->wellState()[well->indexOfWell()];
-                const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
-                // TODO: not sure why the thp is NOT updated properly elsewhere
-                if (thp_is_limit) {
-                    ws.thp = well->getTHPConstraint(summaryState_);
+                if (well->wellEcl().predictionMode()) {
+                    well->setDynamicThpLimit(new_limit);
+                    SingleWellState& ws = this->wellState()[well->indexOfWell()];
+                    const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
+                    // TODO: not sure why the thp is NOT updated properly elsewhere
+                    if (thp_is_limit) {
+                        ws.thp = well->getTHPConstraint(summaryState_);
+                    }
                 }
+                // \Note: does not handle the situaiton that the well swithces from prediciton mode to history matching mode
             }
         }
     }
