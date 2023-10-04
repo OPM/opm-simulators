@@ -169,6 +169,9 @@ public:
     /// Return true if any well has a THP constraint.
     bool hasTHPConstraints() const;
 
+    /// Checks if network is active (at least one network well on prediction).
+    void updateNetworkActiveState(const int report_step);
+
     /// Whether it is necessary to re-balance network
     bool needRebalanceNetwork(const int report_step) const;
 
@@ -431,6 +434,7 @@ protected:
     PhaseUsage phase_usage_;
     bool terminal_output_{false};
     bool wells_active_{false};
+    bool network_active_{false}; // TODO: maybe better name is prediction_network_active
     bool initial_step_{};
     bool report_step_starts_{};
 

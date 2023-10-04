@@ -978,6 +978,27 @@ hasTHPConstraints() const
     return BlackoilWellModelConstraints(*this).hasTHPConstraints();
 }
 
+void
+BlackoilWellModelGeneric::
+updateNetworkActiveState(const int report_step) {
+    const auto& network = schedule()[report_step].network();
+    if (!network.active()) {
+        this->network_active_ = false;
+        return;
+    }
+
+    bool network_active = false;
+    for (const auto& well : well_container_generic_) {
+        const bool is_partof_network = network.has_node(well->wellEcl().groupName());
+        const bool prediction_mode = well->wellEcl().predictionMode();
+        if (is_partof_network && prediction_mode) {
+            network_active = true;
+            break;
+        }
+    }
+    this->network_active_ = comm_.max(network_active);
+}
+
 bool
 BlackoilWellModelGeneric::
 needRebalanceNetwork(const int report_step) const
@@ -1076,6 +1097,7 @@ updateNetworkPressures(const int reportStepIdx)
 
     // here, the network imbalance is the difference between the previous nodal pressure and the new nodal pressure
     double network_imbalance = 0.;
+    if (!this->network_active_) return network_imbalance;
 
     if (!previous_node_pressures.empty()) {
         for (const auto& [name, pressure]: previous_node_pressures) {

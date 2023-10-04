@@ -2239,7 +2239,11 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
-        const bool network_rebalance_necessary = this->needRebalanceNetwork(ebosSimulator_.episodeIndex());
+
+        const auto episodeIdx = ebosSimulator_.episodeIndex();
+        this->updateNetworkActiveState(episodeIdx);
+
+        const bool network_rebalance_necessary = this->needRebalanceNetwork(episodeIdx);
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
@@ -2257,7 +2261,7 @@ namespace Opm {
                 try {
                     well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
                 } catch (const std::exception& e) {
-                    const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the privious rates";
+                    const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the previous rates";
                     deferred_logger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
                 }
             }
