@@ -1122,9 +1122,12 @@ namespace Opm {
             std::tie(do_network_update, well_group_control_changed) =
                     updateWellControlsAndNetworkIteration(mandatory_network_balance, relax_network_balance, dt,local_deferredLogger);
             ++network_update_iteration;
-            if (terminal_output_ && (network_update_iteration >= max_iteration) ) {
-                local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " iterations has been used, we stop the network update now, "
-                                                                                          "the simulation will continue with unconvergeed network results");
+
+            if (network_update_iteration >= max_iteration ) {
+                if (terminal_output_) {
+                    local_deferredLogger.info("maximum of " + std::to_string(max_iteration) + " iterations has been used, we stop the network update now. "
+                                              "The simulation will continue with unconverged network results");
+                }
                 break;
             }
         }
