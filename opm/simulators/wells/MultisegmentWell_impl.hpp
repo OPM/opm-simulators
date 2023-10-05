@@ -1441,7 +1441,7 @@ namespace Opm
         double relaxation_factor = 1.;
         const double min_relaxation_factor = 0.6;
         bool converged = false;
-        int stagnate_count = 0;
+        [[maybe_unused]] int stagnate_count = 0;
         bool relax_convergence = false;
         this->regularize_ = false;
 
