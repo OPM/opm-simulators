@@ -1010,7 +1010,7 @@ namespace Opm {
         const double dt = this->ebosSimulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
-        constexpr std::size_t max_iter = 100;
+        const std::size_t max_iter = param_.network_max_iterations_;
         bool converged = false;
         std::size_t iter = 0;
         bool changed_well_group = false;
@@ -1030,11 +1030,11 @@ namespace Opm {
         } while (iter < max_iter);
 
         if (!converged) {
-            const std::string msg = fmt::format("balanceNetwork did not get converged with {} iterations, and unconverged "
-                                                "network balance result will be used", max_iter);
+            const std::string msg = fmt::format("Initial (pre-step) network balance did not get converged with {} iterations, "
+                                                "unconverged network balance result will be used", max_iter);
             deferred_logger.warning(msg);
         } else {
-            const std::string msg = fmt::format("balanceNetwork get converged with {} iterations", iter);
+            const std::string msg = fmt::format("Initial (pre-step) network balance converged with {} iterations", iter);
             deferred_logger.debug(msg);
         }
     }
@@ -2245,8 +2245,7 @@ namespace Opm {
 
         // Rebalance the network initially if any wells in the network have status changes
         // (Need to check this before clearing events)
-        bool do_prestep_network_rebalance{false};
-        if (this->networkActive()) do_prestep_network_rebalance = this->needPreStepNetworkRebalance(episodeIdx);
+        const bool do_prestep_network_rebalance = this->needPreStepNetworkRebalance(episodeIdx);
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;

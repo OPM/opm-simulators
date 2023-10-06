@@ -1010,8 +1010,6 @@ bool
 BlackoilWellModelGeneric::
 needPreStepNetworkRebalance(const int report_step) const
 {
-    assert(this->networkActive());
-
     const auto& network = schedule()[report_step].network();
     bool network_rebalance_necessary = false;
     for (const auto& well : well_container_generic_) {
@@ -1082,9 +1080,9 @@ inferLocalShutWells()
 
 double
 BlackoilWellModelGeneric::
-updateNetworkPressures(const int reportStepIdx, const bool compute_only)
+updateNetworkPressures(const int reportStepIdx)
 {
-    // Get the network and return if inactive.
+    // Get the network and return if inactive (no wells in network at this time)
     const auto& network = schedule()[reportStepIdx].network();
     if (!network.active()) {
         return 0.0;
@@ -1101,7 +1099,7 @@ updateNetworkPressures(const int reportStepIdx, const bool compute_only)
 
     // here, the network imbalance is the difference between the previous nodal pressure and the new nodal pressure
     double network_imbalance = 0.;
-    if (compute_only)
+    if (!this->networkActive())
         return network_imbalance;
 
     if (!previous_node_pressures.empty()) {
@@ -1138,7 +1136,7 @@ updateNetworkPressures(const int reportStepIdx, const bool compute_only)
         // Producers only, since we so far only support the
         // "extended" network model (properties defined by
         // BRANPROP and NODEPROP) which only applies to producers.
-        if (well->isProducer()) {
+        if (well->isProducer() && well->wellEcl().predictionMode()) {
             const auto it = node_pressures_.find(well->wellEcl().groupName());
             if (it != node_pressures_.end()) {
                 // The well belongs to a group with has a network pressure constraint,
@@ -1394,10 +1392,6 @@ bool
 BlackoilWellModelGeneric::
 shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
 {
-    // If the network is not active now, we do not need to balance it.
-    if (!this->networkActive())
-        return false;
-
     const auto& balance = schedule()[reportStepIdx].network_balance();
     if (balance.mode() == Network::Balance::CalcMode::TimeStepStart) {
         return iterationIdx == 0;
