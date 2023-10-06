@@ -538,9 +538,9 @@ void rocsparseSolverBackend<block_size>::solve_system(WellContributions &wellCon
 
     // actually solve
     gpu_pbicgstab(wellContribs, res);
-    HIP_CHECK(hipStreamSynchronize(stream));
 
     if (verbosity >= 3) {
+        HIP_CHECK(hipStreamSynchronize(stream));
         std::ostringstream out;
         out << "rocsparseSolver::solve_system(): " << t.stop() << " s";
         OpmLog::info(out.str());
