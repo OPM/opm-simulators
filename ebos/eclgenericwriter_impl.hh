@@ -652,6 +652,7 @@ evalSummary(const int                                            reportStepNum,
             .eval(udq_step,
                   this->schedule_,
                   this->schedule_.wellMatcher(udq_step),
+                  this->schedule_.segmentMatcherFactory(udq_step),
                   summaryState,
                   udqState);
     }
