@@ -48,29 +48,41 @@
 #undef HIP_HAVE_CUDA_DEFINED
 #endif
 
-#define HIP_CHECK(stat)                               \
-    {                                                 \
-        if(stat != hipSuccess)                        \
-        {                                             \
-            OPM_THROW(std::logic_error, "HIP error"); \
-        }                                             \
-    }
+#define HIP_CHECK(STAT)                                  \
+    do {                                                 \
+        const hipError_t stat = (STAT);                  \
+        if(stat != hipSuccess)                           \
+        {                                                \
+            std::ostringstream oss;                      \
+            oss << "rocsparseSolverBackend::hip ";       \
+            oss << "error: " << hipGetErrorString(stat); \
+            OPM_THROW(std::logic_error, oss.str());      \
+        }                                                \
+    } while(0)
 
-#define ROCSPARSE_CHECK(stat)                               \
-    {                                                       \
-        if(stat != rocsparse_status_success)                \
-        {                                                   \
-            OPM_THROW(std::logic_error, "rocsparse error"); \
-        }                                                   \
-    }
+#define ROCSPARSE_CHECK(STAT)                            \
+    do {                                                 \
+        const rocsparse_status stat = (STAT);            \
+        if(stat != rocsparse_status_success)             \
+        {                                                \
+            std::ostringstream oss;                      \
+            oss << "rocsparseSolverBackend::rocsparse "; \
+            oss << "error: " << stat;                    \
+            OPM_THROW(std::logic_error, oss.str());      \
+        }                                                \
+    } while(0)
 
-#define ROCBLAS_CHECK(stat)                               \
-    {                                                     \
-        if(stat != rocblas_status_success)                \
-        {                                                 \
-            OPM_THROW(std::logic_error, "rocblas error"); \
-        }                                                 \
-    }
+#define ROCBLAS_CHECK(STAT)                              \
+    do {                                                 \
+        const rocblas_status stat = (STAT);              \
+        if(stat != rocblas_status_success)               \
+        {                                                \
+            std::ostringstream oss;                      \
+            oss << "rocsparseSolverBackend::rocblas ";   \
+            oss << "error: " << stat;                    \
+            OPM_THROW(std::logic_error, oss.str());      \
+        }                                                \
+    } while(0)
 
 #include <cstddef>
 
@@ -153,7 +165,6 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
                                         d_Avals, d_Arows, d_Acols, block_size,
                                         d_x, &zero, d_r));
 #endif
-
     ROCBLAS_CHECK(rocblas_dscal(blas_handle, N, &mone, d_r, 1));
     ROCBLAS_CHECK(rocblas_daxpy(blas_handle, N, &one, d_b, 1, d_r, 1));
     ROCBLAS_CHECK(rocblas_dcopy(blas_handle, N, d_r, 1, d_rw, 1));
@@ -526,18 +537,7 @@ void rocsparseSolverBackend<block_size>::solve_system(WellContributions &wellCon
     Timer t;
 
     // actually solve
-    try {
-        gpu_pbicgstab(wellContribs, res);
-    } catch (const cl::Error& error) {
-        std::ostringstream oss;
-        oss << "rocsparseSolverBackend::solve_system error: " << error.what() << "(" << error.err() << ")\n";
-        oss << getErrorString(error.err());
-        // rethrow exception
-        OPM_THROW(std::logic_error, oss.str());
-    } catch (const std::logic_error& error) {
-        // rethrow exception by OPM_THROW in the try{}, without this, a segfault occurs
-        throw error;
-    }
+    gpu_pbicgstab(wellContribs, res);
 
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(stream));
