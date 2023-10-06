@@ -909,11 +909,40 @@ assignGroupValues(const int                               reportStepIdx,
 
 void
 BlackoilWellModelGeneric::
-assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const
+assignNodeValues(std::map<std::string, data::NodeData>& nodevalues, const int reportStepIdx) const
 {
     nodevalues.clear();
+    if (reportStepIdx < 0) return;
+
     for (const auto& [node, pressure] : node_pressures_) {
         nodevalues.emplace(node, data::NodeData{pressure});
+        // Assign node values of group to GPR:WELLNAME
+        const auto& group = schedule().getGroup(node, reportStepIdx);
+        for (const std::string& wellname : group.wells()) {
+                nodevalues.emplace(wellname, data::NodeData{pressure});
+        }
+    }
+
+    const auto& network = schedule()[reportStepIdx].network();
+    if (!network.active()) return;
+
+    auto converged_pressures = WellGroupHelpers::computeNetworkPressures(network,
+                                                                this->wellState(),
+                                                                this->groupState(),
+                                                                *(vfp_properties_->getProd()),
+                                                                schedule(),
+                                                                reportStepIdx);
+    for (const auto& [node, converged_pressure] : converged_pressures) {
+        auto it = nodevalues.find(node);
+        assert(it != nodevalues.end() );
+        it->second.converged_pressure = converged_pressure;
+        // Assign node values of group to GPR:WELLNAME
+        const auto& group = schedule().getGroup(node, reportStepIdx);
+        for (const std::string& wellname : group.wells()) {
+                auto it2 = nodevalues.find(wellname);
+                assert(it2 != nodevalues.end());
+                it2->second.converged_pressure = converged_pressure;
+        }
     }
 }
 
@@ -924,7 +953,7 @@ groupAndNetworkData(const int reportStepIdx) const
     auto grp_nwrk_values = data::GroupAndNetworkValues{};
 
     this->assignGroupValues(reportStepIdx, grp_nwrk_values.groupData);
-    this->assignNodeValues(grp_nwrk_values.nodeData);
+    this->assignNodeValues(grp_nwrk_values.nodeData, reportStepIdx-1); // Schedule state info at previous step
 
     return grp_nwrk_values;
 }
