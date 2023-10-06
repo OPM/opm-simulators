@@ -466,16 +466,19 @@ private:
                     }
                 }
                 neighborInfo_.appendRow(loc_nbinfo.begin(), loc_nbinfo.end());
-                for (unsigned bfIndex = 0; bfIndex < stencil.numBoundaryFaces(); ++bfIndex) {
-                    const auto& bf = stencil.boundaryFace(bfIndex);
-                    const int dir_id = bf.dirId();
-                    const auto [type, massrateAD] = problem_().boundaryCondition(myIdx, dir_id);
-                    // Strip the unnecessary (and zero anyway) derivatives off massrate.
-                    VectorBlock massrate(0.0);
-                    for (size_t ii = 0; ii < massrate.size(); ++ii) {
-                        massrate[ii] = massrateAD[ii].value();
-                    }
-                    if (type != BCType::NONE) {
+                if (problem_().nonTrivialBoundaryConditions()) {
+                    for (unsigned bfIndex = 0; bfIndex < stencil.numBoundaryFaces(); ++bfIndex) {
+                        const auto& bf = stencil.boundaryFace(bfIndex);
+                        const int dir_id = bf.dirId();
+                        // not for NNCs
+                        if (dir_id < 0)
+                            continue;
+                        const auto [type, massrateAD] = problem_().boundaryCondition(myIdx, dir_id);
+                        // Strip the unnecessary (and zero anyway) derivatives off massrate.
+                        VectorBlock massrate(0.0);
+                        for (size_t ii = 0; ii < massrate.size(); ++ii) {
+                            massrate[ii] = massrateAD[ii].value();
+                        }
                         const auto& exFluidState = problem_().boundaryFluidState(myIdx, dir_id);
                         BoundaryConditionData bcdata{type,
                                                      massrate,

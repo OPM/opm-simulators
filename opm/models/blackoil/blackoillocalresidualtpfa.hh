@@ -467,7 +467,9 @@ public:
                                     const IntensiveQuantities& insideIntQuants,
                                     unsigned globalSpaceIdx)
     {
-        if (bdyInfo.type == BCType::RATE) {
+        if (bdyInfo.type == BCType::NONE) {
+            bdyFlux = 0.0;
+        } else if (bdyInfo.type == BCType::RATE) {
             computeBoundaryFluxRate(bdyFlux, bdyInfo);
         } else if (bdyInfo.type == BCType::FREE || bdyInfo.type == BCType::DIRICHLET) {
             computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
