@@ -312,6 +312,13 @@ macro (files_hook)
     set(HDF5_FOUND OFF)
     unset(HAVE_HDF5)
   endif()
+  if(HAVE_ROCSPARSE AND HAVE_CUDA)
+    message(WARNING "WARNING! Using CUDA and HIP at the same time is not allowed. Please choose only one of them. Disabling both...\n")
+    set(CUDA_FOUND OFF)
+    set(rocsparse_FOUND OFF)
+    unset(HAVE_CUDA)
+    unset(HAVE_ROCSPARSE)
+  endif()
   # read the list of components from this file (in the project directory);
   # it should set various lists with the names of the files to include
   # include needs to be here to make reset HDF5_FOUND available in
