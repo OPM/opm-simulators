@@ -33,7 +33,6 @@
 #include <opm/models/common/energymodule.hh>
 #include <opm/material/common/Valgrind.hpp>
 
-#include "flashintensivequantities.hh"
 
 namespace Opm {
 
