@@ -42,7 +42,6 @@ setDevice(int mpiRank, [[maybe_unused]] int numberOfMpiRanks)
     // TODO: We need to be more sophistacted here. We have no guarantee this will pick the correct device.
     const auto deviceId = mpiRank % deviceCount;
     OPM_CUDA_SAFE_CALL(cudaDeviceReset());
-    OPM_CUDA_SAFE_CALL(cudaThreadExit());
     OPM_CUDA_SAFE_CALL(cudaSetDevice(deviceId));
     OpmLog::info("Set CUDA device to " + std::to_string(deviceId) + " (out of " + std::to_string(deviceCount)
                  + " devices).");
