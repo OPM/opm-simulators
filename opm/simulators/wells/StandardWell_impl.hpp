@@ -2167,26 +2167,26 @@ namespace Opm
                                DeferredLogger& deferred_logger)
     {
         const int max_iter = this->param_.max_inner_iter_wells_;
-        
+
         int it = 0;
         bool converged;
         bool relax_convergence = false;
         this->regularize_ = false;
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
 
-        // Max status switch frequency should be 2 to avoid getting stuck in cycle 
+        // Max status switch frequency should be 2 to avoid getting stuck in cycle
         constexpr int min_its_after_switch = 2;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
         const auto well_status = this->wellStatus_;
         const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
         bool changed = false;
-        bool final_check = false; 
+        bool final_check = false;
         do {
             its_since_last_switch++;
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const double wqTotal = this->primary_variables_.eval(WQTotal).value();
-                changed = this->updateWellControlAndStatusLocalIteration(ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger); 
+                changed = this->updateWellControlAndStatusLocalIteration(ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger);
                 if (changed){
                     its_since_last_switch = 0;
                     switch_count++;
@@ -2197,7 +2197,7 @@ namespace Opm
                     final_check = false;
                 }
             }
-  
+
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
             if (it > this->param_.strict_inner_iter_wells_) {
@@ -2216,14 +2216,14 @@ namespace Opm
                     its_since_last_switch = min_its_after_switch;
                 } else {
                     break;
-                }   
+                }
             }
 
             ++it;
             solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
             initPrimaryVariablesEvaluation();
         } while (it < max_iter);
-        
+
         if (converged) {
             if (allow_switching){
                 // update operability if status change

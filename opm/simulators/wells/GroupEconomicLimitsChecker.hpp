@@ -71,7 +71,7 @@ namespace Opm
         const int report_step_idx_;
         DeferredLogger &deferred_logger_;
         const std::string date_string_;
-        const UnitSystem& unit_system_;        
+        const UnitSystem& unit_system_;
         const WellState &well_state_;
         WellTestState &well_test_state_;
         const Schedule &schedule_;

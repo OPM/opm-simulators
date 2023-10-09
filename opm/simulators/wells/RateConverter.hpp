@@ -190,7 +190,7 @@ namespace Opm {
                         }
                         attr.saltConcentration += fs.saltConcentration().value() * pv_cell;
                         if (FluidSystem::enableDissolvedGasInWater()) {
-                            attr.rsw += fs.Rsw().value() * pv_cell; 
+                            attr.rsw += fs.Rsw().value() * pv_cell;
                         }
                         if (FluidSystem::enableVaporizedWater()) {
                             attr.rvw += fs.Rvw().value() * pv_cell;
@@ -308,7 +308,7 @@ namespace Opm {
              * \param[in] rs Dissolved gas/oil ratio.
              *
              * \param[in] rv Vaporised oil/gas ratio.
-             *        
+             *
              * \param[in] rsw Dissolved gas/water ratio.
              *
              * \param[in] rwv Vaporised water/gas ratio.

@@ -47,7 +47,7 @@ checkIndividualConstraints(SingleWellState& ws,
         auto new_cmode = this->activeProductionConstraint(ws, summaryState,
                                                           calcReservoirVoidageRates,
                                                           thp_limit_violated_but_not_switched,
-                                                          deferred_logger, 
+                                                          deferred_logger,
                                                           prod_controls);
         if (new_cmode != ws.production_cmode) {
             ws.production_cmode = new_cmode;
@@ -58,7 +58,7 @@ checkIndividualConstraints(SingleWellState& ws,
     if (well_.isInjector()) {
         auto new_cmode = this->activeInjectionConstraint(ws, summaryState,
                                                         thp_limit_violated_but_not_switched,
-                                                        deferred_logger, 
+                                                        deferred_logger,
                                                         inj_controls);
         if (new_cmode != ws.injection_cmode) {
             ws.injection_cmode = new_cmode;

@@ -88,14 +88,14 @@ public:
                               Equations& eqns) const;
 
 
-    void assembleHydroPressureLoss(const int seg, 
-                                   const int seg_density, 
-                                   const EvalWell& hydro_pressure_drop_seg, 
-                                   Equations& eqns1) const;                                   
+    void assembleHydroPressureLoss(const int seg,
+                                   const int seg_density,
+                                   const EvalWell& hydro_pressure_drop_seg,
+                                   Equations& eqns1) const;
 
-    void assemblePressureEqExtraDerivatives(const int seg, 
-                                            const int seg_upwind, 
-                                            const EvalWell& extra_derivatives, 
+    void assemblePressureEqExtraDerivatives(const int seg,
+                                            const int seg_upwind,
+                                            const EvalWell& extra_derivatives,
                                             Equations& eqns1) const;
 
     //! \brief Assemble pressure terms.
