@@ -336,6 +336,11 @@ public:
         return params_.permfactTable_[pvtnumRegionIdx];
     }
 
+    static const TabulatedFunction& permfactTable(unsigned pvtnumRegionIdx)
+    {
+        return params_.permfactTable_[pvtnumRegionIdx];
+    }
+
     static const Scalar saltsolTable(const ElementContext& elemCtx,
                                                   unsigned scvIdx,
                                                   unsigned timeIdx)
@@ -437,6 +442,7 @@ public:
                 fs.setSaltConcentration(saltConcentration_);
                 saltSaturation_ = 0.0;
             }
+            fs.setSaltSaturation(saltSaturation_);
         }
         else {
             saltConcentration_ = priVars.makeEvaluation(saltConcentrationIdx, timeIdx);
