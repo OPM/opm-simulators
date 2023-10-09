@@ -29,7 +29,6 @@
 #define EWOMS_FLASH_PRIMARY_VARIABLES_HH
 
 #include "flashindices.hh"
-#include "flashproperties.hh"
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 #include <opm/models/common/energymodule.hh>

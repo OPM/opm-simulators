@@ -28,8 +28,6 @@
 #ifndef EWOMS_FLASH_BOUNDARY_RATE_VECTOR_HH
 #define EWOMS_FLASH_BOUNDARY_RATE_VECTOR_HH
 
-#include "flashproperties.hh"
-
 #include <opm/models/common/energymodule.hh>
 #include <opm/material/common/Valgrind.hpp>
 
