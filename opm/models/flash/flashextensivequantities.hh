@@ -28,8 +28,6 @@
 #ifndef EWOMS_FLASH_EXTENSIVE_QUANTITIES_HH
 #define EWOMS_FLASH_EXTENSIVE_QUANTITIES_HH
 
-#include "flashproperties.hh"
-
 #include <opm/models/common/multiphasebaseextensivequantities.hh>
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/common/diffusionmodule.hh>

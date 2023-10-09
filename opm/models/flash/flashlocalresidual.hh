@@ -28,7 +28,6 @@
 #ifndef EWOMS_FLASH_LOCAL_RESIDUAL_HH
 #define EWOMS_FLASH_LOCAL_RESIDUAL_HH
 
-#include "flashproperties.hh"
 
 #include <opm/models/common/diffusionmodule.hh>
 #include <opm/models/common/energymodule.hh>
