@@ -140,8 +140,10 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
         if (basic_comm.size() > 1) {
             os << fmt::format("on MPI rank: {} ", basic_comm.rank());
         }
+        // The static_cast of Matrix::block_type::rows is needed for fmt version 10. 
+        // TODO: Check if the cast is still needed in future versions.
         os << fmt::format("blocksize: {} size: {:7d} block nonzeroes: {:9d}",
-                          Matrix::block_type::rows, matrix.N(), matrix.nonzeroes());
+                          static_cast<int>(Matrix::block_type::rows), matrix.N(), matrix.nonzeroes());
         DeferredLogger local_logger;
         local_logger.debug(os.str());
         auto global_logger = gatherDeferredLogger(local_logger, basic_comm);
