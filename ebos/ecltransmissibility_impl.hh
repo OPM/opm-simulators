@@ -1044,10 +1044,18 @@ applyNncMultreg_(const std::unordered_map<std::size_t,int>& cartesianToCompresse
         return (ixPos == cartesianToCompressed.end()) ? -1 : ixPos->second;
     };
 
-    // Recall: NNC::input() covers NNC keyword and numerical aquifers
-    //         NNC::edit() covers EDITNNC keyword
-    //         NNC::editr() covers EDITNNCR keyword
-    for (const auto& nncList : { &NNC::input, &NNC::edit, &NNC::editr }) {
+    // Apply region-based transmissibility multipliers (i.e., the MULTREGT
+    // keyword) to those transmissibilities that are directly assigned from
+    // the input.
+    //
+    //  * NNC::input() covers the NNC keyword and any numerical aquifers
+    //  * NNC::editr() covers the EDITNNCR keyword
+    //
+    // Note: We do not apply MULTREGT to the entries in NNC::edit() since
+    // those act as regular multipliers and have already been fully
+    // accounted for in the multiplier part of the main loop of update() and
+    // the applyEditNncToGridTrans_() member function.
+    for (const auto& nncList : { &NNC::input, &NNC::editr }) {
         for (const auto& nncEntry : (inputNNC.*nncList)()) {
             const auto c1 = nncEntry.cell1;
             const auto c2 = nncEntry.cell2;
