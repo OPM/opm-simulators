@@ -605,7 +605,7 @@ namespace Opm {
             resultDeltaSaturation = gridView.comm().sum(resultDeltaSaturation);
             resultDeltaSaturation = gridView.comm().sum(resultDeltaSaturation);
 
-            if (resultDenomPressure > 0.0 || resultDenomSaturation > 0.0)
+            if (resultDenomPressure > 0.0 && resultDenomSaturation > 0.0)
                 return std::max(resultDeltaPressure/resultDenomPressure, resultDeltaSaturation/resultDenomSaturation);
             return 0.0;
         }
