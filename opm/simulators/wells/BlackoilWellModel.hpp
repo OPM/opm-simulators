@@ -370,11 +370,11 @@ namespace Opm {
             void initializeWellState(const int timeStepIdx);
 
             // create the well container
-            void createWellContainer(const int time_step) override;
+            void createWellContainer(const int report_step) override;
 
             WellInterfacePtr
             createWellPointer(const int wellID,
-                              const int time_step) const;
+                              const int report_step) const;
 
             template <typename WellType>
             std::unique_ptr<WellType>
