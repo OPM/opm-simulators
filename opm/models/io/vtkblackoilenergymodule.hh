@@ -87,6 +87,7 @@ class VtkBlackOilEnergyModule : public BaseOutputModule<TypeTag>
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
     static const int vtkFormat = getPropValue<TypeTag, Properties::VtkOutputFormat>();
     using VtkMultiWriter = ::Opm::VtkMultiWriter<GridView, vtkFormat>;
@@ -172,13 +173,15 @@ public:
                     scalarValue(intQuants.totalThermalConductivity());
 
             for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
-                if (fluidInternalEnergiesOutput_())
-                    fluidInternalEnergies_[phaseIdx][globalDofIdx] =
-                        scalarValue(intQuants.fluidState().internalEnergy(phaseIdx));
+                if (FluidSystem::phaseIsActive(phaseIdx)) {
+                    if (fluidInternalEnergiesOutput_())
+                        fluidInternalEnergies_[phaseIdx][globalDofIdx] =
+                            scalarValue(intQuants.fluidState().internalEnergy(phaseIdx));
 
-                if (fluidEnthalpiesOutput_())
-                    fluidEnthalpies_[phaseIdx][globalDofIdx] =
-                        scalarValue(intQuants.fluidState().enthalpy(phaseIdx));
+                    if (fluidEnthalpiesOutput_())
+                        fluidEnthalpies_[phaseIdx][globalDofIdx] =
+                            scalarValue(intQuants.fluidState().enthalpy(phaseIdx));
+                }
             }
         }
     }
