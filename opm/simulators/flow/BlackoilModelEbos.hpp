@@ -369,13 +369,13 @@ namespace Opm {
                 convergence_reports_.back().report.reserve(11);
             }
 
-            if (iteration == 0) {
-                return nonlinearIterationNewton(iteration, timer, nonlinear_solver);
+            if ((this->param_.nonlinear_solver_ != "nldd") ||
+                (iteration < this->param_.nldd_num_initial_newton_iter_))
+            {
+                return this->nonlinearIterationNewton(iteration, timer, nonlinear_solver);
             }
-            if (param_.nonlinear_solver_ == "nldd") {
-                return nlddSolver_->nonlinearIterationNldd(iteration, timer, nonlinear_solver);
-            } else {
-                return nonlinearIterationNewton(iteration, timer, nonlinear_solver);
+            else {
+                return this->nlddSolver_->nonlinearIterationNldd(iteration, timer, nonlinear_solver);
             }
         }
 

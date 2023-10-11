@@ -208,6 +208,10 @@ struct LocalToleranceScalingCnv {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
+struct NlddNumInitialNewtonIter {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
 struct NumLocalDomains {
     using type = UndefinedProperty;
 };
@@ -407,6 +411,11 @@ struct LocalToleranceScalingCnv<TypeTag, TTag::FlowModelParameters> {
     static constexpr type value = 0.01;
 };
 template<class TypeTag>
+struct NlddNumInitialNewtonIter<TypeTag, TTag::FlowModelParameters> {
+    using type = int;
+    static constexpr auto value = type{1};
+};
+template<class TypeTag>
 struct NumLocalDomains<TypeTag, TTag::FlowModelParameters> {
     using type = int;
     static constexpr auto value = 0;
@@ -558,6 +567,7 @@ namespace Opm
         double local_tolerance_scaling_mb_;
         double local_tolerance_scaling_cnv_;
 
+        int nldd_num_initial_newton_iter_{1};
         int num_local_domains_{0};
         double local_domain_partition_imbalance_{1.03};
         std::string local_domain_partition_method_;
@@ -612,6 +622,7 @@ namespace Opm
             max_local_solve_iterations_ = EWOMS_GET_PARAM(TypeTag, int, MaxLocalSolveIterations);
             local_tolerance_scaling_mb_ = EWOMS_GET_PARAM(TypeTag, double, LocalToleranceScalingMb);
             local_tolerance_scaling_cnv_ = EWOMS_GET_PARAM(TypeTag, double, LocalToleranceScalingCnv);
+            nldd_num_initial_newton_iter_ = EWOMS_GET_PARAM(TypeTag, int, NlddNumInitialNewtonIter);
             num_local_domains_ = EWOMS_GET_PARAM(TypeTag, int, NumLocalDomains);
             local_domain_partition_imbalance_ = std::max(1.0, EWOMS_GET_PARAM(TypeTag, double, LocalDomainsPartitioningImbalance));
             local_domain_partition_method_ = EWOMS_GET_PARAM(TypeTag, std::string, LocalDomainsPartitioningMethod);
@@ -672,6 +683,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, int, MaxLocalSolveIterations, "Max iterations for local solves with NLDD nonlinear solver.");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, LocalToleranceScalingMb, "Set lower than 1.0 to use stricter convergence tolerance for local solves.");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, LocalToleranceScalingCnv, "Set lower than 1.0 to use stricter convergence tolerance for local solves.");
+            EWOMS_REGISTER_PARAM(TypeTag, int, NlddNumInitialNewtonIter, "Number of initial global Newton iterations when running the NLDD nonlinear solver.");
             EWOMS_REGISTER_PARAM(TypeTag, int, NumLocalDomains, "Number of local domains for NLDD nonlinear solver.");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, LocalDomainsPartitioningImbalance, "Subdomain partitioning imbalance tolerance. 1.03 is 3 percent imbalance.");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LocalDomainsPartitioningMethod, "Subdomain partitioning method. "
