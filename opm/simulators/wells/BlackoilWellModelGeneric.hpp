@@ -407,7 +407,7 @@ protected:
                                                            DeferredLogger& deferred_logger) = 0;
     virtual void calculateProductivityIndexValues(DeferredLogger& deferred_logger) = 0;
 
-    void runWellPIScaling(const int timeStepIdx,
+    void runWellPIScaling(const int reportStepIdx,
                           DeferredLogger& local_deferredLogger);
 
     /// \brief get compressed index for interior cells (-1, otherwise

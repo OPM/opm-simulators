@@ -754,7 +754,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    createWellContainer(const int time_step)
+    createWellContainer(const int report_step)
     {
         DeferredLogger local_deferredLogger;
 
@@ -775,7 +775,7 @@ namespace Opm {
 
                 const std::string& well_name = well_ecl.name();
                 const auto well_status = this->schedule()
-                    .getWell(well_name, time_step).getStatus();
+                    .getWell(well_name, report_step).getStatus();
 
                 if ((well_ecl.getStatus() == Well::Status::SHUT) ||
                     (well_status          == Well::Status::SHUT))
@@ -881,7 +881,7 @@ namespace Opm {
                     wellIsStopped = true;
                 }
 
-                well_container_.emplace_back(this->createWellPointer(w, time_step));
+                well_container_.emplace_back(this->createWellPointer(w, report_step));
 
                 if (wellIsStopped)
                     well_container_.back()->stopWell();
@@ -900,7 +900,7 @@ namespace Opm {
         for (auto& w : well_container_)
             well_container_generic_.push_back(w.get());
 
-        const auto& network = schedule()[time_step].network();
+        const auto& network = schedule()[report_step].network();
         if (network.active() && !this->node_pressures_.empty()) {
             for (auto& well: well_container_generic_) {
                 // Producers only, since we so far only support the
@@ -928,15 +928,15 @@ namespace Opm {
     template <typename TypeTag>
     typename BlackoilWellModel<TypeTag>::WellInterfacePtr
     BlackoilWellModel<TypeTag>::
-    createWellPointer(const int wellID, const int time_step) const
+    createWellPointer(const int wellID, const int report_step) const
     {
         const auto is_multiseg = this->wells_ecl_[wellID].isMultiSegment();
 
         if (! (this->param_.use_multisegment_well_ && is_multiseg)) {
-            return this->template createTypedWellPointer<StandardWell<TypeTag>>(wellID, time_step);
+            return this->template createTypedWellPointer<StandardWell<TypeTag>>(wellID, report_step);
         }
         else {
-            return this->template createTypedWellPointer<MultisegmentWell<TypeTag>>(wellID, time_step);
+            return this->template createTypedWellPointer<MultisegmentWell<TypeTag>>(wellID, report_step);
         }
     }
 
