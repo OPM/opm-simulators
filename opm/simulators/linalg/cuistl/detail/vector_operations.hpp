@@ -57,22 +57,22 @@ T innerProductAtIndices(const T* deviceA, const T* deviceB, T* buffer, size_t nu
 
 /**
  * @brief Compue the weighted matrix vector product where the matrix is diagonal, the diagonal is a vector, meaning we
- * compute the hadamard product.
+ * compute the Hadamard product.
  * @param squareBlockVector A CuVector whose elements are NxN matrix blocks
  * @param numberOfRows The number of rows in the vector
  * @param blocksize The sidelength of the square block elements in the vector
  * @param src_vec A pointer to the data of the CuVector we multiply the blockvector with
- * @param dst_vec A pointer to the data of the CuVector we store the result in
+ * @param[out] dst_vec A pointer to the data of the CuVector we store the result in
  *
  * @note This is implemented as a faster way to multiply a diagonal matrix with a blockvector. We need only store the
  * diagonal of the matrix and use this product.
  */
 template <class T>
-void weightedDiagMV(T* squareBlockVector,
+void weightedDiagMV(const T* squareBlockVector,
                     const size_t numberOfRows,
                     const size_t blocksize,
-                    T relaxation_factor,
-                    const T* src_vec,
-                    T* dst_vec);
+                    T relaxationFactor,
+                    const T* srcVec,
+                    T* dstVec);
 } // namespace Opm::cuistl::detail
 #endif

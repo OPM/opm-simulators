@@ -25,9 +25,9 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/cuistl/detail/fix_zero_diagonal.hpp>
-#include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 
 using NumericTypes = boost::mpl::list<double, float>;
 
@@ -66,35 +66,57 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FlattenAndInvertDiagonalWith3By3Blocks, T, Numeric
         }
     }
 
-    B[0][0][0][0]=1.0;
-    B[0][0][0][1]=2.0;
-    B[0][0][0][2]=3.0;
-    B[0][0][1][0]=5.0;
-    B[0][0][1][1]=2.0;
-    B[0][0][1][2]=3.0;
-    B[0][0][2][0]=2.0;
-    B[0][0][2][1]=1.0;
-    B[0][0][2][2]=1.0;
+    B[0][0][0][0] = 1.0;
+    B[0][0][0][1] = 2.0;
+    B[0][0][0][2] = 3.0;
+    B[0][0][1][0] = 5.0;
+    B[0][0][1][1] = 2.0;
+    B[0][0][1][2] = 3.0;
+    B[0][0][2][0] = 2.0;
+    B[0][0][2][1] = 1.0;
+    B[0][0][2][2] = 1.0;
 
-    B[0][1][0][0]=1.0;
-    B[0][1][1][1]=1.0;
-    B[0][1][2][2]=1.0;
+    B[0][1][0][0] = 1.0;
+    B[0][1][1][1] = 1.0;
+    B[0][1][2][2] = 1.0;
 
-    B[1][1][0][0]=-1.0;
-    B[1][1][1][1]=-1.0;
-    B[1][1][2][2]=-1.0;
+    B[1][1][0][0] = -1.0;
+    B[1][1][1][1] = -1.0;
+    B[1][1][2][2] = -1.0;
 
-    Opm::cuistl::CuSparseMatrix<T> m = Opm::cuistl::CuSparseMatrix<T>::fromMatrix(Opm::cuistl::detail::makeMatrixWithNonzeroDiagonal(B));
-    Opm::cuistl::CuVector<T> d_invDiag(blocksize*blocksize*N);
+    Opm::cuistl::CuSparseMatrix<T> m = Opm::cuistl::CuSparseMatrix<T>::fromMatrix(B);
+    Opm::cuistl::CuVector<T> dInvDiag(blocksize * blocksize * N);
 
-    Opm::cuistl::detail::invertDiagonalAndFlatten(m.getNonZeroValues().data(), m.getRowIndices().data(), m.getColumnIndices().data(), N, blocksize, d_invDiag.data());
+    Opm::cuistl::detail::invertDiagonalAndFlatten(m.getNonZeroValues().data(),
+                                                  m.getRowIndices().data(),
+                                                  m.getColumnIndices().data(),
+                                                  N,
+                                                  blocksize,
+                                                  dInvDiag.data());
 
-    std::vector<T> expected_inv_diag{-1.0/4.0,1.0/4.0,0.0,1.0/4.0,-5.0/4.0,3.0,1.0/4.0,3.0/4.0,-2.0,-1.0,0.0,0.0,0.0,-1.0,0.0,0.0,0.0,-1.0};
-    std::vector<T> computed_inv_diag = d_invDiag.asStdVector();
+    std::vector<T> expectedInvDiag {-1.0 / 4.0,
+                                    1.0 / 4.0,
+                                    0.0,
+                                    1.0 / 4.0,
+                                    -5.0 / 4.0,
+                                    3.0,
+                                    1.0 / 4.0,
+                                    3.0 / 4.0,
+                                    -2.0,
+                                    -1.0,
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                    -1.0,
+                                    0.0,
+                                    0.0,
+                                    0.0,
+                                    -1.0};
+    std::vector<T> computedInvDiag = dInvDiag.asStdVector();
 
-    BOOST_REQUIRE_EQUAL(expected_inv_diag.size(), computed_inv_diag.size());
-    for (size_t i = 0; i < expected_inv_diag.size(); ++i){
-        BOOST_CHECK_CLOSE(expected_inv_diag[i], computed_inv_diag[i], 1e-7);
+    BOOST_REQUIRE_EQUAL(expectedInvDiag.size(), computedInvDiag.size());
+    for (size_t i = 0; i < expectedInvDiag.size(); ++i) {
+        BOOST_CHECK_CLOSE(expectedInvDiag[i], computedInvDiag[i], 1e-7);
     }
 }
 
@@ -118,7 +140,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FlattenAndInvertDiagonalWith2By2Blocks, T, Numeric
         | |-1/2   1| |
         |            |
         | |  -1   0| |
-        | |   0  -1| |W
+        | |   0  -1| |
     */
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
@@ -129,27 +151,32 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FlattenAndInvertDiagonalWith2By2Blocks, T, Numeric
         }
     }
 
-    B[0][0][0][0]=1.0;
-    B[0][0][0][1]=2.0;
-    B[0][0][1][0]=1.0/2.0;
-    B[0][0][1][1]=2.0;
+    B[0][0][0][0] = 1.0;
+    B[0][0][0][1] = 2.0;
+    B[0][0][1][0] = 1.0 / 2.0;
+    B[0][0][1][1] = 2.0;
 
-    B[0][1][0][0]=1.0;
-    B[0][1][1][1]=1.0;
+    B[0][1][0][0] = 1.0;
+    B[0][1][1][1] = 1.0;
 
-    B[1][1][0][0]=-1.0;
-    B[1][1][1][1]=-1.0;
+    B[1][1][0][0] = -1.0;
+    B[1][1][1][1] = -1.0;
 
-    Opm::cuistl::CuSparseMatrix<T> m = Opm::cuistl::CuSparseMatrix<T>::fromMatrix(Opm::cuistl::detail::makeMatrixWithNonzeroDiagonal(B));
-    Opm::cuistl::CuVector<T> d_invDiag(blocksize*blocksize*N);
+    Opm::cuistl::CuSparseMatrix<T> m = Opm::cuistl::CuSparseMatrix<T>::fromMatrix(B);
+    Opm::cuistl::CuVector<T> dInvDiag(blocksize * blocksize * N);
 
-    Opm::cuistl::detail::invertDiagonalAndFlatten(m.getNonZeroValues().data(), m.getRowIndices().data(), m.getColumnIndices().data(), N, blocksize, d_invDiag.data());
+    Opm::cuistl::detail::invertDiagonalAndFlatten(m.getNonZeroValues().data(),
+                                                  m.getRowIndices().data(),
+                                                  m.getColumnIndices().data(),
+                                                  N,
+                                                  blocksize,
+                                                  dInvDiag.data());
 
-    std::vector<T> expected_inv_diag{2.0,-2.0,-1.0/2.0,1.0,-1.0,0.0,0.0,-1.0};
-    std::vector<T> computed_inv_diag = d_invDiag.asStdVector();
+    std::vector<T> expectedInvDiag {2.0, -2.0, -1.0 / 2.0, 1.0, -1.0, 0.0, 0.0, -1.0};
+    std::vector<T> computedInvDiag = dInvDiag.asStdVector();
 
-    BOOST_REQUIRE_EQUAL(expected_inv_diag.size(), computed_inv_diag.size());
-    for (size_t i = 0; i < expected_inv_diag.size(); ++i){
-        BOOST_CHECK_CLOSE(expected_inv_diag[i], computed_inv_diag[i], 1e-7);
+    BOOST_REQUIRE_EQUAL(expectedInvDiag.size(), computedInvDiag.size());
+    for (size_t i = 0; i < expectedInvDiag.size(); ++i) {
+        BOOST_CHECK_CLOSE(expectedInvDiag[i], computedInvDiag[i], 1e-7);
     }
 }

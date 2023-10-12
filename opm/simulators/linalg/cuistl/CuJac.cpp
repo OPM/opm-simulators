@@ -45,33 +45,34 @@ namespace Opm::cuistl
 
 template <class M, class X, class Y, int l>
 CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
-    : cpuMatrix(A)
-    , relaxation_factor(w)
-    , cuMatrix(CuSparseMatrix<field_type>::fromMatrix(detail::makeMatrixWithNonzeroDiagonal(A)))
-    , cuVec_diagInvFlattened(cuMatrix.N() * cuMatrix.blockSize() * cuMatrix.blockSize())
+    : m_cpuMatrix(A)
+    , m_relaxationFactor(w)
+    , m_gpuMatrix(CuSparseMatrix<field_type>::fromMatrix(A))
+    , m_diagInvFlattened(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
 {
     // Some sanity check
-    OPM_ERROR_IF(A.N() != cuMatrix.N(),
-                 fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", cuMatrix.N(), A.N()));
-    OPM_ERROR_IF(
-        A[0][0].N() != cuMatrix.blockSize(),
-        fmt::format("CuSparse matrix not same blocksize as DUNE matrix. {} vs {}.", cuMatrix.blockSize(), A[0][0].N()));
-    OPM_ERROR_IF(A.N() * A[0][0].N() != cuMatrix.dim(),
+    OPM_ERROR_IF(A.N() != m_gpuMatrix.N(),
+                 fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_gpuMatrix.N(), A.N()));
+    OPM_ERROR_IF(A[0][0].N() != m_gpuMatrix.blockSize(),
+                 fmt::format("CuSparse matrix not same blocksize as DUNE matrix. {} vs {}.",
+                             m_gpuMatrix.blockSize(),
+                             A[0][0].N()));
+    OPM_ERROR_IF(A.N() * A[0][0].N() != m_gpuMatrix.dim(),
                  fmt::format("CuSparse matrix not same dimension as DUNE matrix. {} vs {}.",
-                             cuMatrix.dim(),
+                             m_gpuMatrix.dim(),
                              A.N() * A[0][0].N()));
-    OPM_ERROR_IF(A.nonzeroes() != cuMatrix.nonzeroes(),
+    OPM_ERROR_IF(A.nonzeroes() != m_gpuMatrix.nonzeroes(),
                  fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
-                             cuMatrix.nonzeroes(),
+                             m_gpuMatrix.nonzeroes(),
                              A.nonzeroes()));
 
-    // Compute the inverted diagonal of A and store it in a vector format in cuVec_diagInvFlattened
-    detail::invertDiagonalAndFlatten(cuMatrix.getNonZeroValues().data(),
-                                     cuMatrix.getRowIndices().data(),
-                                     cuMatrix.getColumnIndices().data(),
-                                     detail::to_int(cuMatrix.N()),
-                                     detail::to_int(cuMatrix.blockSize()),
-                                     cuVec_diagInvFlattened.data());
+    // Compute the inverted diagonal of A and store it in a vector format in m_diagInvFlattened
+    detail::invertDiagonalAndFlatten(m_gpuMatrix.getNonZeroValues().data(),
+                                     m_gpuMatrix.getRowIndices().data(),
+                                     m_gpuMatrix.getColumnIndices().data(),
+                                     m_gpuMatrix.N(),
+                                     m_gpuMatrix.blockSize(),
+                                     m_diagInvFlattened.data());
 }
 
 template <class M, class X, class Y, int l>
@@ -89,10 +90,10 @@ CuJac<M, X, Y, l>::apply(X& v, const Y& d)
 
     // Compute the MV product where the matrix is diagonal and therefore stored as a vector.
     // The product is thus computed as a hadamard product.
-    detail::weightedDiagMV(cuVec_diagInvFlattened.data(),
-                           detail::to_size_t(cuMatrix.N()),
-                           detail::to_size_t(cuMatrix.blockSize()),
-                           relaxation_factor,
+    detail::weightedDiagMV(m_diagInvFlattened.data(),
+                           m_gpuMatrix.N(),
+                           m_gpuMatrix.blockSize(),
+                           m_relaxationFactor,
                            d.data(),
                            v.data());
 }
@@ -114,13 +115,13 @@ template <class M, class X, class Y, int l>
 void
 CuJac<M, X, Y, l>::update()
 {
-    cuMatrix.updateNonzeroValues(detail::makeMatrixWithNonzeroDiagonal(cpuMatrix));
-    detail::invertDiagonalAndFlatten(cuMatrix.getNonZeroValues().data(),
-                                     cuMatrix.getRowIndices().data(),
-                                     cuMatrix.getColumnIndices().data(),
-                                     detail::to_int(cuMatrix.N()),
-                                     detail::to_int(cuMatrix.blockSize()),
-                                     cuVec_diagInvFlattened.data());
+    m_gpuMatrix.updateNonzeroValues(m_cpuMatrix);
+    detail::invertDiagonalAndFlatten(m_gpuMatrix.getNonZeroValues().data(),
+                                     m_gpuMatrix.getRowIndices().data(),
+                                     m_gpuMatrix.getColumnIndices().data(),
+                                     m_gpuMatrix.N(),
+                                     m_gpuMatrix.blockSize(),
+                                     m_diagInvFlattened.data());
 }
 
 } // namespace Opm::cuistl

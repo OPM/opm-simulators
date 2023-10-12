@@ -30,9 +30,9 @@
 
 namespace Opm::cuistl
 {
-//! \brief Sequential Jacobi preconditioner on the GPU.
+//! \brief Jacobi preconditioner on the GPU.
 //!
-//! \note This is not expected to be a fast preconditioner.
+//! \note This is a fast but weak preconditioner
 //!
 //! \tparam M The matrix type to operate on
 //! \tparam X Type of the update
@@ -96,13 +96,13 @@ public:
 
 private:
     //! \brief Reference to the underlying matrix
-    const M& cpuMatrix;
+    const M& m_cpuMatrix;
     //! \brief The relaxation factor to use.
-    const field_type relaxation_factor;
+    const field_type m_relaxationFactor;
     //! \brief The A matrix stored on the gpu
-    CuSparseMatrix<field_type> cuMatrix;
+    CuSparseMatrix<field_type> m_gpuMatrix;
     //! \brief the diagonal of cuMatrix inverted, and then flattened to fit in a vector
-    CuVector<field_type> cuVec_diagInvFlattened;
+    CuVector<field_type> m_diagInvFlattened;
 };
 } // end namespace Opm::cuistl
 

@@ -26,6 +26,7 @@
 #include <opm/simulators/linalg/cuistl/detail/CuBlasHandle.hpp>
 #include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
 #include <vector>
+#include <string>
 
 
 namespace Opm::cuistl
@@ -361,6 +362,18 @@ public:
      */
     void setZeroAtIndexSet(const CuVector<int>& indexSet);
 
+    // Slow method that creates a string representation of a CuVector for debug purposes
+    std::string toDebugString()
+    {
+        std::vector<T> v = asStdVector();
+        std::string res = "";
+        for (int i = 0; i < v.size(); i++){
+            res += std::to_string(v[i]) + " ";
+        }
+        res += std::to_string(v[v.size()-1]);
+        return res;
+    }
+
 private:
     T* m_dataOnDevice = nullptr;
 
@@ -374,17 +387,6 @@ private:
 
     void assertHasElements() const;
 };
-
-template <class T>
-std::ostream& operator<<(std::ostream &os, const CuVector<T> &arg)
-{
-    std::vector<T> v = arg.asStdVector();
-    for (int i = 0; i < v.size(); i++){
-        os << v[i] << " ";
-    }
-    os << std::endl;
-    return os;
-}
 
 } // namespace Opm::cuistl
 #endif

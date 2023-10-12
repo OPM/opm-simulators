@@ -23,96 +23,111 @@ namespace Opm::cuistl::detail
 {
 
 namespace
-{
-    template <class T> __global__ void cuInvertDiagonalAndFlattenBlocksize1(T* matNonZeroValues, int rowIndices[], int colIndices[], size_t numberOfRows, T* vec)
+{   
+    // TODO: combine the three following kernels into one using template arguments so that
+    // no compile time optimization is lost while making the code more compact
+    template <class T>
+    __global__ void cuInvertDiagonalAndFlattenBlocksize1(
+        T* matNonZeroValues, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec)
     {
-        const auto thrIndex = blockDim.x * blockIdx.x + threadIdx.x;
+        const auto row = blockDim.x * blockIdx.x + threadIdx.x;
         const int blocksize = 1;
 
-        if (thrIndex < numberOfRows){
-            size_t nnzIdx = rowIndices[thrIndex];
-            size_t nnzIdxLim = rowIndices[thrIndex+1]; 
+        if (row < numberOfRows) {
+            size_t nnzIdx = rowIndices[row];
+            size_t nnzIdxLim = rowIndices[row + 1];
 
-            // this loop will cause some extra checks that we are within the limit in the case of the diagonal having a zero element
-            for (;colIndices[nnzIdx] != thrIndex && nnzIdx <= nnzIdxLim;) { 
+            // this loop will cause some extra checks that we are within the limit in the case of the diagonal having a
+            // zero element
+            while (colIndices[nnzIdx] != row && nnzIdx <= nnzIdxLim) {
                 ++nnzIdx;
             }
 
-            // pDiagBlock points to the start of where the diagonal block is stored
-            T* pDiagBlock = (matNonZeroValues+(blocksize*blocksize*nnzIdx));
-            // pVecBlock points to the start of the block element in the vector where the inverse of the diagonal block element should be stored
-            T* pVecBlock = (vec + (blocksize*blocksize*thrIndex));
+            // diagBlock points to the start of where the diagonal block is stored
+            T* diagBlock = &matNonZeroValues[blocksize * blocksize * nnzIdx];
+            // vecBlock points to the start of the block element in the vector where the inverse of the diagonal block
+            // element should be stored
+            T* vecBlock = &vec[blocksize * blocksize * row];
 
-            pVecBlock[0] =   1.0/(pDiagBlock[0]);
+            vecBlock[0] = 1.0 / (diagBlock[0]);
         }
     }
 
-    template <class T> __global__ void cuInvertDiagonalAndFlattenBlocksize2(T* matNonZeroValues, int rowIndices[], int colIndices[], size_t numberOfRows, T* vec)
+    template <class T>
+    __global__ void cuInvertDiagonalAndFlattenBlocksize2(
+        T* matNonZeroValues, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec)
     {
-        const auto thrIndex = blockDim.x * blockIdx.x + threadIdx.x;
+        const auto row = blockDim.x * blockIdx.x + threadIdx.x;
         const int blocksize = 2;
 
-        if (thrIndex < numberOfRows){
-            size_t nnzIdx = rowIndices[thrIndex];
-            size_t nnzIdxLim = rowIndices[thrIndex+1];
+        if (row < numberOfRows) {
+            size_t nnzIdx = rowIndices[row];
+            size_t nnzIdxLim = rowIndices[row + 1];
 
-            // this loop will cause some extra checks that we are within the limit in the case of the diagonal having a zero element
-            for (;colIndices[nnzIdx] != thrIndex && nnzIdx <= nnzIdxLim;) {
+            // this loop will cause some extra checks that we are within the limit in the case of the diagonal having a
+            // zero element
+            while (colIndices[nnzIdx] != row && nnzIdx <= nnzIdxLim) {
                 ++nnzIdx;
             }
 
-            // pDiagBlock points to the start of where the diagonal block is stored
-            T* pDiagBlock = (matNonZeroValues+(blocksize*blocksize*nnzIdx));
-            // pVecBlock points to the start of the block element in the vector where the inverse of the diagonal block element should be stored
-            T* pVecBlock = (vec + (blocksize*blocksize*thrIndex));
+            // diagBlock points to the start of where the diagonal block is stored
+            T* diagBlock = &matNonZeroValues[blocksize * blocksize * nnzIdx];
+            // vecBlock points to the start of the block element in the vector where the inverse of the diagonal block
+            // element should be stored
+            T* vecBlock = &vec[blocksize * blocksize * row];
 
             // based on Dune implementation
-            T det_inv = 1.0/(pDiagBlock[0]*pDiagBlock[3] - pDiagBlock[1]*pDiagBlock[2]);
-            pVecBlock[0] =   pDiagBlock[3] * det_inv;
-            pVecBlock[1] = - pDiagBlock[1] * det_inv;
-            pVecBlock[2] = - pDiagBlock[2] * det_inv;
-            pVecBlock[3] =   pDiagBlock[0] * det_inv;
+            T detInv = 1.0 / (diagBlock[0] * diagBlock[3] - diagBlock[1] * diagBlock[2]);
+            vecBlock[0] = diagBlock[3] * detInv;
+            vecBlock[1] = -diagBlock[1] * detInv;
+            vecBlock[2] = -diagBlock[2] * detInv;
+            vecBlock[3] = diagBlock[0] * detInv;
         }
     }
-    template <class T> __global__ void cuInvertDiagonalAndFlattenBlocksize3(T* matNonZeroValues, int rowIndices[], int colIndices[], size_t numberOfRows, T* vec)
+    template <class T>
+    __global__ void cuInvertDiagonalAndFlattenBlocksize3(
+        T* matNonZeroValues, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec)
     {
-        const auto thrIndex = blockDim.x * blockIdx.x + threadIdx.x;
+        const auto row = blockDim.x * blockIdx.x + threadIdx.x;
         const int blocksize = 3;
 
-        if (thrIndex < numberOfRows){
-            size_t nnzIdx = rowIndices[thrIndex];
-            size_t nnzIdxLim = rowIndices[thrIndex+1];
+        if (row < numberOfRows) {
+            size_t nnzIdx = rowIndices[row];
+            size_t nnzIdxLim = rowIndices[row + 1];
 
-            // this loop will cause some extra checks that we are within the limit in the case of the diagonal having a zero element
-            for (;colIndices[nnzIdx] != thrIndex && nnzIdx <= nnzIdxLim;) {
+            // this loop will cause some extra checks that we are within the limit in the case of the diagonal having a
+            // zero element
+            while (colIndices[nnzIdx] != row && nnzIdx <= nnzIdxLim) {
                 ++nnzIdx;
             }
 
-            // pDiagBlock points to the start of where the diagonal block is stored
-            T* pDiagBlock = (matNonZeroValues+(blocksize*blocksize*nnzIdx));
-            // pVecBlock points to the start of the block element in the vector where the inverse of the diagonal block element should be stored
-            T* pVecBlock = (vec + (blocksize*blocksize*thrIndex));
+            // diagBlock points to the start of where the diagonal block is stored
+            T* diagBlock = &matNonZeroValues[blocksize * blocksize * nnzIdx];
+            // vecBlock points to the start of the block element in the vector where the inverse of the diagonal block
+            // element should be stored
+            T* vecBlock = &vec[blocksize * blocksize * row];
 
             // based on Dune implementation
-            T t4  = pDiagBlock[0] * pDiagBlock[4];
-            T t6  = pDiagBlock[0] * pDiagBlock[5];
-            T t8  = pDiagBlock[1] * pDiagBlock[3];
-            T t10 = pDiagBlock[2] * pDiagBlock[3];
-            T t12 = pDiagBlock[1] * pDiagBlock[6];
-            T t14 = pDiagBlock[2] * pDiagBlock[6];
+            T t4 = diagBlock[0] * diagBlock[4];
+            T t6 = diagBlock[0] * diagBlock[5];
+            T t8 = diagBlock[1] * diagBlock[3];
+            T t10 = diagBlock[2] * diagBlock[3];
+            T t12 = diagBlock[1] * diagBlock[6];
+            T t14 = diagBlock[2] * diagBlock[6];
 
-            T t17 = 1.0/(t4*pDiagBlock[8]-t6*pDiagBlock[7]-t8*pDiagBlock[8]+
-                    t10*pDiagBlock[7]+t12*pDiagBlock[5]-t14*pDiagBlock[4]); // t17 is 1/determinant
+            T t17 = 1.0
+                / (t4 * diagBlock[8] - t6 * diagBlock[7] - t8 * diagBlock[8] + t10 * diagBlock[7] + t12 * diagBlock[5]
+                   - t14 * diagBlock[4]); // t17 is 1/determinant
 
-            pVecBlock[0] =  (pDiagBlock[4] * pDiagBlock[8] - pDiagBlock[5] * pDiagBlock[7])*t17;
-            pVecBlock[1] = -(pDiagBlock[1] * pDiagBlock[8] - pDiagBlock[2] * pDiagBlock[7])*t17;
-            pVecBlock[2] =  (pDiagBlock[1] * pDiagBlock[5] - pDiagBlock[2] * pDiagBlock[4])*t17;
-            pVecBlock[3] = -(pDiagBlock[3] * pDiagBlock[8] - pDiagBlock[5] * pDiagBlock[6])*t17;
-            pVecBlock[4] =  (pDiagBlock[0] * pDiagBlock[8] - t14) * t17;
-            pVecBlock[5] = -(t6-t10) * t17;
-            pVecBlock[6] =  (pDiagBlock[3] * pDiagBlock[7] - pDiagBlock[4] * pDiagBlock[6]) * t17;
-            pVecBlock[7] = -(pDiagBlock[0] * pDiagBlock[7] - t12) * t17;
-            pVecBlock[8] =  (t4-t8) * t17;
+            vecBlock[0] = (diagBlock[4] * diagBlock[8] - diagBlock[5] * diagBlock[7]) * t17;
+            vecBlock[1] = -(diagBlock[1] * diagBlock[8] - diagBlock[2] * diagBlock[7]) * t17;
+            vecBlock[2] = (diagBlock[1] * diagBlock[5] - diagBlock[2] * diagBlock[4]) * t17;
+            vecBlock[3] = -(diagBlock[3] * diagBlock[8] - diagBlock[5] * diagBlock[6]) * t17;
+            vecBlock[4] = (diagBlock[0] * diagBlock[8] - t14) * t17;
+            vecBlock[5] = -(t6 - t10) * t17;
+            vecBlock[6] = (diagBlock[3] * diagBlock[7] - diagBlock[4] * diagBlock[6]) * t17;
+            vecBlock[7] = -(diagBlock[0] * diagBlock[7] - t12) * t17;
+            vecBlock[8] = (t4 - t8) * t17;
         }
     }
 
@@ -130,21 +145,25 @@ namespace
 
 template <class T>
 void
-invertDiagonalAndFlatten(T* d_mat, int rowIndices[], int colIndices[], size_t numberOfRows, size_t blocksize, T* d_vec)
+invertDiagonalAndFlatten(T* mat, int* rowIndices, int* colIndices, size_t numberOfRows, size_t blocksize, T* vec)
 {
     switch (blocksize) {
     case 1:
-        cuInvertDiagonalAndFlattenBlocksize1<<<getBlocks(numberOfRows), getThreads(numberOfRows)>>>(d_mat, rowIndices, colIndices, numberOfRows, d_vec);
+        cuInvertDiagonalAndFlattenBlocksize1<<<getBlocks(numberOfRows), getThreads(numberOfRows)>>>(
+            mat, rowIndices, colIndices, numberOfRows, vec);
         break;
     case 2:
-        cuInvertDiagonalAndFlattenBlocksize2<<<getBlocks(numberOfRows), getThreads(numberOfRows)>>>(d_mat, rowIndices, colIndices, numberOfRows, d_vec);
+        cuInvertDiagonalAndFlattenBlocksize2<<<getBlocks(numberOfRows), getThreads(numberOfRows)>>>(
+            mat, rowIndices, colIndices, numberOfRows, vec);
         break;
     case 3:
-        cuInvertDiagonalAndFlattenBlocksize3<<<getBlocks(numberOfRows), getThreads(numberOfRows)>>>(d_mat, rowIndices, colIndices, numberOfRows, d_vec);
+        cuInvertDiagonalAndFlattenBlocksize3<<<getBlocks(numberOfRows), getThreads(numberOfRows)>>>(
+            mat, rowIndices, colIndices, numberOfRows, vec);
         break;
     default:
-        // TODO: Figure out what is why it did not produce an error or any output in the output stream or the DBG file when I forced this case to execute
-        OPM_THROW(std::invalid_argument, "Inverting diagonal is not defined for blocksize>3");
+        // TODO: Figure out what is why it did not produce an error or any output in the output stream or the DBG file
+        // when I forced this case to execute
+        OPM_THROW(std::invalid_argument, "Inverting diagonal is not implemented for blocksizes > 3");
         break;
     }
 }

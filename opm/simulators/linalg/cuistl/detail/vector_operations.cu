@@ -47,57 +47,24 @@ namespace
         }
     }
 
-    template <class T>
-    __global__ void weightedDiagMVBlocksize1(
-        T* squareBlockVector, const size_t numberOfElements, const T w, const T* src_vec, T* dst_vec)
+    template <class T, int blocksize>
+    __global__ void weightedDiagMV(
+        const T* squareBlockVector, const size_t numberOfElements, const T w, const T* globalSrcVec, T* globalDstVec)
     {
         const auto globalIndex = blockDim.x * blockIdx.x + threadIdx.x;
-        const int blocksize = 1;
 
         if (globalIndex < numberOfElements) {
-            T* pMat = (squareBlockVector + (blocksize * blocksize * globalIndex));
-            const T* srcVec = (src_vec + (blocksize * globalIndex));
-            T* dstVec = (dst_vec + (blocksize * globalIndex));
+            const T* localBlock = (squareBlockVector + (blocksize * blocksize * globalIndex));
+            const T* localSrcVec = (globalSrcVec + (blocksize * globalIndex));
+            T* localDstVec = (globalDstVec + (blocksize * globalIndex));
 
-            T v0 = srcVec[0];
-            dstVec[0] = (pMat[0] * v0) * w;
-        }
-    }
-
-    template <class T>
-    __global__ void weightedDiagMVBlocksize2(
-        T* squareBlockVector, const size_t numberOfElements, const T w, const T* src_vec, T* dst_vec)
-    {
-        const auto globalIndex = blockDim.x * blockIdx.x + threadIdx.x;
-        const int blocksize = 2;
-
-        if (globalIndex < numberOfElements) {
-            T* pMat = (squareBlockVector + (blocksize * blocksize * globalIndex));
-            const T* srcVec = (src_vec + (blocksize * globalIndex));
-            T* dstVec = (dst_vec + (blocksize * globalIndex));
-
-            T v0 = srcVec[0], v1 = srcVec[1];
-            dstVec[0] = (pMat[0] * v0 + pMat[1] * v1) * w;
-            dstVec[1] = (pMat[2] * v0 + pMat[3] * v1) * w;
-        }
-    }
-
-    template <class T>
-    __global__ void weightedDiagMVBlocksize3(
-        T* squareBlockVector, const size_t numberOfElements, const T w, const T* src_vec, T* dst_vec)
-    {
-        const auto globalIndex = blockDim.x * blockIdx.x + threadIdx.x;
-        const int blocksize = 3;
-
-        if (globalIndex < numberOfElements) {
-            T* pMat = (squareBlockVector + (blocksize * blocksize * globalIndex));
-            const T* srcVec = (src_vec + (blocksize * globalIndex));
-            T* dstVec = (dst_vec + (blocksize * globalIndex));
-
-            T v0 = srcVec[0], v1 = srcVec[1], v2 = srcVec[2];
-            dstVec[0] = (pMat[0] * v0 + pMat[1] * v1 + pMat[2] * v2) * w;
-            dstVec[1] = (pMat[3] * v0 + pMat[4] * v1 + pMat[5] * v2) * w;
-            dstVec[2] = (pMat[6] * v0 + pMat[7] * v1 + pMat[8] * v2) * w;
+            for (int i = 0; i < blocksize; ++i) {
+                T rowResult = 0.0;
+                for (int j = 0; j < blocksize; ++j) {
+                    rowResult += localBlock[i * blocksize + j] * localSrcVec[j];
+                }
+                localDstVec[i] = rowResult * w;
+            }
         }
     }
 
@@ -168,33 +135,33 @@ template int innerProductAtIndices(const int*, const int*, int* buffer, size_t, 
 
 template <class T>
 void
-weightedDiagMV(T* squareBlockVector,
+weightedDiagMV(const T* squareBlockVector,
                const size_t numberOfElements,
                const size_t blocksize,
-               T relaxation_factor,
-               const T* src_vec,
-               T* dst_vec)
+               T relaxationFactor,
+               const T* srcVec,
+               T* dstVec)
 {
     switch (blocksize) {
     case 1:
-        weightedDiagMVBlocksize1<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
-            squareBlockVector, numberOfElements, relaxation_factor, src_vec, dst_vec);
+        weightedDiagMV<T, 1><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+            squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
         break;
     case 2:
-        weightedDiagMVBlocksize2<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
-            squareBlockVector, numberOfElements, relaxation_factor, src_vec, dst_vec);
+        weightedDiagMV<T, 2><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+            squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
         break;
     case 3:
-        weightedDiagMVBlocksize3<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
-            squareBlockVector, numberOfElements, relaxation_factor, src_vec, dst_vec);
+        weightedDiagMV<T, 3><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+            squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
         break;
     default:
-        OPM_THROW(std::invalid_argument, "blockvector hadamard product not defined for blocksize>3");
+        OPM_THROW(std::invalid_argument, "blockvector Hadamard product not implemented for blocksize>3");
         break;
     }
 }
 
-template void weightedDiagMV(double*, const size_t, const size_t, double, const double*, double*);
-template void weightedDiagMV(float*, const size_t, const size_t, float, const float*, float*);
+template void weightedDiagMV(const double*, const size_t, const size_t, double, const double*, double*);
+template void weightedDiagMV(const float*, const size_t, const size_t, float, const float*, float*);
 
 } // namespace Opm::cuistl::detail

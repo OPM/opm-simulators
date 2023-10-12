@@ -25,9 +25,9 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <opm/simulators/linalg/cuistl/CuJac.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/cuistl/detail/vector_operations.hpp>
-#include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 
 using NumericTypes = boost::mpl::list<double, float>;
 
@@ -44,21 +44,22 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ElementWiseMultiplicationOf3By3BlockVectorAndVecto
     const size_t N = 1;
     const T weight = 1.0;
 
-    std::vector<T> h_blockVector({1.0,2.0,3.0,5.0,2.0,3.0,2.0,1.0,2.0});
-    std::vector<T> h_vecVector({3.0,2.0,1.0});
-    std::vector<T> h_dstVector({0, 0, 0});
-    Opm::cuistl::CuVector<T> d_blockVector(h_blockVector);
-    Opm::cuistl::CuVector<T> d_vecVector(h_vecVector);
-    Opm::cuistl::CuVector<T> d_dstVector(h_dstVector);
+    std::vector<T> hostBlockVector({1.0, 2.0, 3.0, 5.0, 2.0, 3.0, 2.0, 1.0, 2.0});
+    std::vector<T> hostVecVector({3.0, 2.0, 1.0});
+    std::vector<T> hostDstVector({0, 0, 0});
+    Opm::cuistl::CuVector<T> deviceBlockVector(hostBlockVector);
+    Opm::cuistl::CuVector<T> deviceVecVector(hostVecVector);
+    Opm::cuistl::CuVector<T> deviceDstVector(hostDstVector);
 
-    Opm::cuistl::detail::weightedDiagMV(d_blockVector.data(), N, blocksize, weight, d_vecVector.data(), d_dstVector.data());
+    Opm::cuistl::detail::weightedDiagMV(
+        deviceBlockVector.data(), N, blocksize, weight, deviceVecVector.data(), deviceDstVector.data());
 
-    std::vector<T> expected_vec{10.0,22.0,10.0};
-    std::vector<T> computed_vec = d_dstVector.asStdVector();
+    std::vector<T> expectedVec {10.0, 22.0, 10.0};
+    std::vector<T> computedVec = deviceDstVector.asStdVector();
 
-    BOOST_REQUIRE_EQUAL(expected_vec.size(), computed_vec.size());
-    for (size_t i = 0; i < expected_vec.size(); i++){
-        BOOST_CHECK_CLOSE(expected_vec[i], computed_vec[i], 1e-7);
+    BOOST_REQUIRE_EQUAL(expectedVec.size(), computedVec.size());
+    for (size_t i = 0; i < expectedVec.size(); i++) {
+        BOOST_CHECK_CLOSE(expectedVec[i], computedVec[i], 1e-7);
     }
 }
 
@@ -77,20 +78,21 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ElementWiseMultiplicationOf2By2BlockVectorAndVecto
     const size_t N = 2;
     const T weight = 0.5;
 
-    std::vector<T> h_blockVector({1.0,2.0,3.0,4.0,4.0,3.0,2.0,1.0});
-    std::vector<T> h_vecVector({1.0,3.0,2.0,4.0});
-    std::vector<T> h_dstVector({0, 0, 0, 0});
-    Opm::cuistl::CuVector<T> d_blockVector(h_blockVector);
-    Opm::cuistl::CuVector<T> d_vecVector(h_vecVector);
-    Opm::cuistl::CuVector<T> d_dstVector(h_dstVector);
+    std::vector<T> hostBlockVector({1.0, 2.0, 3.0, 4.0, 4.0, 3.0, 2.0, 1.0});
+    std::vector<T> hostVecVector({1.0, 3.0, 2.0, 4.0});
+    std::vector<T> hostDstVector({0, 0, 0, 0});
+    Opm::cuistl::CuVector<T> deviceBlockVector(hostBlockVector);
+    Opm::cuistl::CuVector<T> deviceVecVector(hostVecVector);
+    Opm::cuistl::CuVector<T> deviceDstVector(hostDstVector);
 
-    Opm::cuistl::detail::weightedDiagMV(d_blockVector.data(), N, blocksize, weight, d_vecVector.data(), d_dstVector.data());
+    Opm::cuistl::detail::weightedDiagMV(
+        deviceBlockVector.data(), N, blocksize, weight, deviceVecVector.data(), deviceDstVector.data());
 
-    std::vector<T> expected_vec{3.5,7.5,10.0,4.0};
-    std::vector<T> computed_vec = d_dstVector.asStdVector();
+    std::vector<T> expectedVec {3.5, 7.5, 10.0, 4.0};
+    std::vector<T> computedVec = deviceDstVector.asStdVector();
 
-    BOOST_REQUIRE_EQUAL(expected_vec.size(), computed_vec.size());
-    for (size_t i = 0; i < expected_vec.size(); i++){
-        BOOST_CHECK_CLOSE(expected_vec[i], computed_vec[i], 1e-7);
+    BOOST_REQUIRE_EQUAL(expectedVec.size(), computedVec.size());
+    for (size_t i = 0; i < expectedVec.size(); i++) {
+        BOOST_CHECK_CLOSE(expectedVec[i], computedVec[i], 1e-7);
     }
 }
