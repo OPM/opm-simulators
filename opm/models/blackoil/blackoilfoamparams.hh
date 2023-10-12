@@ -28,6 +28,7 @@
 #ifndef EWOMS_BLACK_OIL_FOAM_PARAMS_HH
 #define EWOMS_BLACK_OIL_FOAM_PARAMS_HH
 
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #include <vector>
