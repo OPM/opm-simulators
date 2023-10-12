@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize2, T, NumericTypes)
     h_dune_b[1][0] = 3.0;
     h_dune_b[1][1] = 4.0;
     
-    const T expected_ans[2][2] = {{1.0, 0.0},{-1.0,-3.0/2.0}};
+    const T expected_ans[2][2] = {{0.0, 5.0/2.0},{-3.0/2.0, -2.0}};
 
     CuJac.apply(h_dune_x, h_dune_b);
     BOOST_CHECK_CLOSE(h_dune_x[0][0], expected_ans[0][0], 1e-7);

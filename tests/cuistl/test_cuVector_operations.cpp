@@ -42,16 +42,19 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ElementWiseMultiplicationOf3By3BlockVectorAndVecto
 
     const size_t blocksize = 3;
     const size_t N = 1;
+    const T weight = 1.0;
 
     std::vector<T> h_blockVector({1.0,2.0,3.0,5.0,2.0,3.0,2.0,1.0,2.0});
     std::vector<T> h_vecVector({3.0,2.0,1.0});
+    std::vector<T> h_dstVector({0, 0, 0});
     Opm::cuistl::CuVector<T> d_blockVector(h_blockVector);
     Opm::cuistl::CuVector<T> d_vecVector(h_vecVector);
+    Opm::cuistl::CuVector<T> d_dstVector(h_dstVector);
 
-    Opm::cuistl::detail::blockVectorMultiplicationAtAllIndices(d_blockVector.data(), N, blocksize, d_vecVector.data());
+    Opm::cuistl::detail::weightedDiagMV(d_blockVector.data(), N, blocksize, weight, d_vecVector.data(), d_dstVector.data());
 
     std::vector<T> expected_vec{10.0,22.0,10.0};
-    std::vector<T> computed_vec = d_vecVector.asStdVector();
+    std::vector<T> computed_vec = d_dstVector.asStdVector();
 
     BOOST_REQUIRE_EQUAL(expected_vec.size(), computed_vec.size());
     for (size_t i = 0; i < expected_vec.size(); i++){
@@ -63,25 +66,28 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ElementWiseMultiplicationOf2By2BlockVectorAndVecto
 {
     /*
         Example in the test for multiplying by element a blockvector with a vector of vectors
-        | |1 2| |   | |1| |   | | 7| |
-        | |3 4| | X | |3| | = | |15| |
-        |       |   |     |   |      |
-        | |4 3| |   | |2| |   | |20| |
-        | |2 1| |   | |4| |   | | 8| |
+             | |1 2| |   | |1| |   | | 3.5| |
+       0.5 * | |3 4| | X | |3| | = | | 7.5| |
+             |       |   |     |   |        |
+             | |4 3| |   | |2| |   | |10.0| |
+             | |2 1| |   | |4| |   | | 4.0| |
     */
 
     const size_t blocksize = 2;
     const size_t N = 2;
+    const T weight = 0.5;
 
     std::vector<T> h_blockVector({1.0,2.0,3.0,4.0,4.0,3.0,2.0,1.0});
     std::vector<T> h_vecVector({1.0,3.0,2.0,4.0});
+    std::vector<T> h_dstVector({0, 0, 0, 0});
     Opm::cuistl::CuVector<T> d_blockVector(h_blockVector);
     Opm::cuistl::CuVector<T> d_vecVector(h_vecVector);
+    Opm::cuistl::CuVector<T> d_dstVector(h_dstVector);
 
-    Opm::cuistl::detail::blockVectorMultiplicationAtAllIndices(d_blockVector.data(), N, blocksize, d_vecVector.data());
+    Opm::cuistl::detail::weightedDiagMV(d_blockVector.data(), N, blocksize, weight, d_vecVector.data(), d_dstVector.data());
 
-    std::vector<T> expected_vec{7.0,15.0,20.0,8.0};
-    std::vector<T> computed_vec = d_vecVector.asStdVector();
+    std::vector<T> expected_vec{3.5,7.5,10.0,4.0};
+    std::vector<T> computed_vec = d_dstVector.asStdVector();
 
     BOOST_REQUIRE_EQUAL(expected_vec.size(), computed_vec.size());
     for (size_t i = 0; i < expected_vec.size(); i++){

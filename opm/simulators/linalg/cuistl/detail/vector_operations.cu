@@ -48,50 +48,56 @@ namespace
     }
 
     template <class T>
-    __global__ void elementWiseMultiplyMVKernelBlocksize1(T* squareBlockVector, const size_t numberOfElements, T* vec)
+    __global__ void weightedDiagMVBlocksize1(
+        T* squareBlockVector, const size_t numberOfElements, const T w, const T* src_vec, T* dst_vec)
     {
         const auto globalIndex = blockDim.x * blockIdx.x + threadIdx.x;
         const int blocksize = 1;
 
         if (globalIndex < numberOfElements) {
             T* pMat = (squareBlockVector + (blocksize * blocksize * globalIndex));
-            T* pVec = (vec + (blocksize * globalIndex));
+            const T* srcVec = (src_vec + (blocksize * globalIndex));
+            T* dstVec = (dst_vec + (blocksize * globalIndex));
 
-            T v0 = pVec[0];
-            pVec[0] = pMat[0] * v0;
+            T v0 = srcVec[0];
+            dstVec[0] = (pMat[0] * v0) * w;
         }
     }
 
     template <class T>
-    __global__ void elementWiseMultiplyMVKernelBlocksize2(T* squareBlockVector, const size_t numberOfElements, T* vec)
+    __global__ void weightedDiagMVBlocksize2(
+        T* squareBlockVector, const size_t numberOfElements, const T w, const T* src_vec, T* dst_vec)
     {
         const auto globalIndex = blockDim.x * blockIdx.x + threadIdx.x;
         const int blocksize = 2;
 
         if (globalIndex < numberOfElements) {
             T* pMat = (squareBlockVector + (blocksize * blocksize * globalIndex));
-            T* pVec = (vec + (blocksize * globalIndex));
+            const T* srcVec = (src_vec + (blocksize * globalIndex));
+            T* dstVec = (dst_vec + (blocksize * globalIndex));
 
-            T v0 = pVec[0], v1 = pVec[1];
-            pVec[0] = pMat[0] * v0 + pMat[1] * v1;
-            pVec[1] = pMat[2] * v0 + pMat[3] * v1;
+            T v0 = srcVec[0], v1 = srcVec[1];
+            dstVec[0] = (pMat[0] * v0 + pMat[1] * v1) * w;
+            dstVec[1] = (pMat[2] * v0 + pMat[3] * v1) * w;
         }
     }
 
     template <class T>
-    __global__ void elementWiseMultiplyMVKernelBlocksize3(T* squareBlockVector, const size_t numberOfElements, T* vec)
+    __global__ void weightedDiagMVBlocksize3(
+        T* squareBlockVector, const size_t numberOfElements, const T w, const T* src_vec, T* dst_vec)
     {
         const auto globalIndex = blockDim.x * blockIdx.x + threadIdx.x;
         const int blocksize = 3;
 
         if (globalIndex < numberOfElements) {
             T* pMat = (squareBlockVector + (blocksize * blocksize * globalIndex));
-            T* pVec = (vec + (blocksize * globalIndex));
+            const T* srcVec = (src_vec + (blocksize * globalIndex));
+            T* dstVec = (dst_vec + (blocksize * globalIndex));
 
-            T v0 = pVec[0], v1 = pVec[1], v2 = pVec[2];
-            pVec[0] = pMat[0] * v0 + pMat[1] * v1 + pMat[2] * v2;
-            pVec[1] = pMat[3] * v0 + pMat[4] * v1 + pMat[5] * v2;
-            pVec[2] = pMat[6] * v0 + pMat[7] * v1 + pMat[8] * v2;
+            T v0 = srcVec[0], v1 = srcVec[1], v2 = srcVec[2];
+            dstVec[0] = (pMat[0] * v0 + pMat[1] * v1 + pMat[2] * v2) * w;
+            dstVec[1] = (pMat[3] * v0 + pMat[4] * v1 + pMat[5] * v2) * w;
+            dstVec[2] = (pMat[6] * v0 + pMat[7] * v1 + pMat[8] * v2) * w;
         }
     }
 
@@ -162,23 +168,25 @@ template int innerProductAtIndices(const int*, const int*, int* buffer, size_t, 
 
 template <class T>
 void
-blockVectorMultiplicationAtAllIndices(T* squareBlockVector,
-                                      const size_t numberOfElements,
-                                      const size_t blocksize,
-                                      T* vec)
+weightedDiagMV(T* squareBlockVector,
+               const size_t numberOfElements,
+               const size_t blocksize,
+               T relaxation_factor,
+               const T* src_vec,
+               T* dst_vec)
 {
     switch (blocksize) {
     case 1:
-        elementWiseMultiplyMVKernelBlocksize1<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
-            squareBlockVector, numberOfElements, vec);
+        weightedDiagMVBlocksize1<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+            squareBlockVector, numberOfElements, relaxation_factor, src_vec, dst_vec);
         break;
     case 2:
-        elementWiseMultiplyMVKernelBlocksize2<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
-            squareBlockVector, numberOfElements, vec);
+        weightedDiagMVBlocksize2<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+            squareBlockVector, numberOfElements, relaxation_factor, src_vec, dst_vec);
         break;
     case 3:
-        elementWiseMultiplyMVKernelBlocksize3<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
-            squareBlockVector, numberOfElements, vec);
+        weightedDiagMVBlocksize3<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+            squareBlockVector, numberOfElements, relaxation_factor, src_vec, dst_vec);
         break;
     default:
         OPM_THROW(std::invalid_argument, "blockvector hadamard product not defined for blocksize>3");
@@ -186,7 +194,7 @@ blockVectorMultiplicationAtAllIndices(T* squareBlockVector,
     }
 }
 
-template void blockVectorMultiplicationAtAllIndices(double*, const size_t, const size_t, double*);
-template void blockVectorMultiplicationAtAllIndices(float*, const size_t, const size_t, float*);
+template void weightedDiagMV(double*, const size_t, const size_t, double, const double*, double*);
+template void weightedDiagMV(float*, const size_t, const size_t, float, const float*, float*);
 
 } // namespace Opm::cuistl::detail

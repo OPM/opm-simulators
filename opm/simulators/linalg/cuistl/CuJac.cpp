@@ -83,24 +83,18 @@ CuJac<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
 template <class M, class X, class Y, int l>
 void
 CuJac<M, X, Y, l>::apply(X& v, const Y& d)
-{   
+{
     // Jacobi preconditioner: x_{n+1} = x_n + w * (D^-1 * (b - Ax_n) )
     // Working with defect d and update v it we only need to set v = w*(D^-1)*d
 
-    const auto numberOfRows = detail::to_int(cuMatrix.N());
-    const auto numberOfNonzeroBlocks = detail::to_int(cuMatrix.nonzeroes());
-    const auto blockSize = detail::to_int(cuMatrix.blockSize());
-
-    // Could probably be further optimized a little bit by fusing the copy with the 
-    // following multiplication. To do so add a kernel that does not do the multiplication
-    // in place.
-
-    v = d; // cuda copy
-    detail::blockVectorMultiplicationAtAllIndices(cuVec_diagInvFlattened.data(),
-                                                  detail::to_size_t(numberOfRows),
-                                                  detail::to_size_t(blockSize),
-                                                  v.data());
-    v *= relaxation_factor; // cuBlas axpy
+    // Compute the MV product where the matrix is diagonal and therefore stored as a vector.
+    // The product is thus computed as a hadamard product.
+    detail::weightedDiagMV(cuVec_diagInvFlattened.data(),
+                           detail::to_size_t(cuMatrix.N()),
+                           detail::to_size_t(cuMatrix.blockSize()),
+                           relaxation_factor,
+                           d.data(),
+                           v.data());
 }
 
 template <class M, class X, class Y, int l>

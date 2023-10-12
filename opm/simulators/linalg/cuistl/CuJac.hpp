@@ -30,10 +30,7 @@
 
 namespace Opm::cuistl
 {
-//! \brief Sequential Jacobi preconditioner on the GPU through the CuSparse library.
-//!
-//! This implementation calls the CuSparse functions, which in turn essentially
-//! does a level decomposition to get some parallelism.
+//! \brief Sequential Jacobi preconditioner on the GPU.
 //!
 //! \note This is not expected to be a fast preconditioner.
 //!
@@ -50,7 +47,7 @@ class CuJac : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
     //! \brief The matrix type the preconditioner is for.
-    using matrix_type = typename std::remove_const<M>::type ;
+    using matrix_type = typename std::remove_const<M>::type;
     //! \brief The domain type of the preconditioner.
     using domain_type = X;
     //! \brief The range type of the preconditioner.
@@ -101,7 +98,7 @@ private:
     //! \brief Reference to the underlying matrix
     const M& cpuMatrix;
     //! \brief The relaxation factor to use.
-    field_type relaxation_factor;
+    const field_type relaxation_factor;
     //! \brief The A matrix stored on the gpu
     CuSparseMatrix<field_type> cuMatrix;
     //! \brief the diagonal of cuMatrix inverted, and then flattened to fit in a vector
