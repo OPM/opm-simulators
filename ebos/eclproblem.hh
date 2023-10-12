@@ -202,6 +202,7 @@ public:
     using EclGenericProblem<GridView,FluidSystem,Scalar>::rockCompressibility;
     using EclGenericProblem<GridView,FluidSystem,Scalar>::rockReferencePressure;
     using EclGenericProblem<GridView,FluidSystem,Scalar>::porosity;
+    using EclGenericProblem<GridView,FluidSystem,Scalar>::getLookUpData;
 
     /*!
      * \copydoc FvBaseProblem::registerParameters
@@ -2091,13 +2092,19 @@ protected:
             this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
 
             if constexpr (enablePolymer)
-                 this->polymer_.concentration[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
+                 this->polymer_.concentration[elemIdx] =
+                     eclWriter_->eclOutputModule().getPolymerConcentration(getLookUpData().getOriginIndex(elemIdx));
             if constexpr (enableMICP){
-                 this->micp_.microbialConcentration[elemIdx] = eclWriter_->eclOutputModule().getMicrobialConcentration(elemIdx);
-                 this->micp_.oxygenConcentration[elemIdx] = eclWriter_->eclOutputModule().getOxygenConcentration(elemIdx);
-                 this->micp_.ureaConcentration[elemIdx] = eclWriter_->eclOutputModule().getUreaConcentration(elemIdx);
-                 this->micp_.biofilmConcentration[elemIdx] = eclWriter_->eclOutputModule().getBiofilmConcentration(elemIdx);
-                 this->micp_.calciteConcentration[elemIdx] = eclWriter_->eclOutputModule().getCalciteConcentration(elemIdx);
+                 this->micp_.microbialConcentration[elemIdx] =
+                     eclWriter_->eclOutputModule().getMicrobialConcentration(getLookUpData().getOriginIndex(elemIdx));
+                 this->micp_.oxygenConcentration[elemIdx] =
+                     eclWriter_->eclOutputModule().getOxygenConcentration(getLookUpData().getOriginIndex(elemIdx));
+                 this->micp_.ureaConcentration[elemIdx] =
+                     eclWriter_->eclOutputModule().getUreaConcentration(getLookUpData().getOriginIndex(elemIdx));
+                 this->micp_.biofilmConcentration[elemIdx] =
+                     eclWriter_->eclOutputModule().getBiofilmConcentration(getLookUpData().getOriginIndex(elemIdx));
+                 this->micp_.calciteConcentration[elemIdx]
+                     = eclWriter_->eclOutputModule().getCalciteConcentration(getLookUpData().getOriginIndex(elemIdx));
             }
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }

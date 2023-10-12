@@ -89,6 +89,7 @@ EclGenericProblem(const EclipseState& eclState,
     , schedule_(schedule)
     , gridView_(gridView)
     , mixControls_(schedule)
+    , lookUpData_(gridView)
 {
 }
 
@@ -168,14 +169,15 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
         rockTableIdx_.resize(numElem);
         const auto& num = eclState_.fieldProps().get_int(rock_config.rocknum_property());
         for (std::size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
-            rockTableIdx_[elemIdx] = num[elemIdx] - 1;
+            rockTableIdx_[elemIdx] = num[this->lookUpData_.getOriginIndex(elemIdx)] - 1;
             auto fmtError =
-                [&num,elemIdx,&ijkIndex,&rock_config](const char* type, std::size_t size)
+                [&num,elemIdx,&ijkIndex,&rock_config, this](const char* type, std::size_t size)
                 {
                     return fmt::format("{} table index {} for elem {} read from {}"
                                       " is is out of bounds for number of tables {}",
-                                      type, num[elemIdx], ijkIndex(elemIdx),
-                                      rock_config.rocknum_property(), size);
+                                       type, num[this->lookUpData_.getOriginIndex(elemIdx)],
+                                       ijkIndex(this-> lookUpData_.getOriginIndex(elemIdx)),
+                                       rock_config.rocknum_property(), size);
                 };
             if (!rockCompPoroMult_.empty() &&
                 rockTableIdx_[elemIdx] >= rockCompPoroMult_.size()) {
@@ -210,7 +212,8 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
             if (!rockTableIdx_.empty()) {
                 tableIdx = rockTableIdx_[elemIdx];
             }
-            overburdenPressure_[elemIdx] = overburdenTables[tableIdx].eval(cellCenterDepths[elemIdx], /*extrapolation=*/true);
+            overburdenPressure_[elemIdx] =
+                overburdenTables[tableIdx].eval(cellCenterDepths[this->lookUpData_.getOriginIndex(elemIdx)], /*extrapolation=*/true);
         }
     }
 }
@@ -317,7 +320,7 @@ rockCompressibility(unsigned globalSpaceIdx) const
 
     unsigned tableIdx = 0;
     if (!this->rockTableIdx_.empty()) {
-        tableIdx = this->rockTableIdx_[globalSpaceIdx];
+        tableIdx = this->rockTableIdx_[globalSpaceIdx]; 
     }
     return this->rockParams_[tableIdx].compressibility;
 }
@@ -331,7 +334,7 @@ rockReferencePressure(unsigned globalSpaceIdx) const
 
     unsigned tableIdx = 0;
     if (!this->rockTableIdx_.empty()) {
-        tableIdx = this->rockTableIdx_[globalSpaceIdx];
+        tableIdx = this->rockTableIdx_[globalSpaceIdx]; 
     }
     return this->rockParams_[tableIdx].referencePressure;
 }
@@ -353,7 +356,7 @@ rockFraction(unsigned elementIdx, unsigned timeIdx) const
     // geometric volume of the element. Note that it can
     // be larger than 1.0 if porevolume multipliers are used
     // to for instance implement larger boundary cells
-    Scalar porosity = poro[elementIdx];
+    Scalar porosity = poro[this->lookUpData_.getOriginIndex(elementIdx)]; 
     return referencePorosity(elementIdx, timeIdx) / porosity * (1 - porosity);
 }
 
@@ -370,10 +373,10 @@ updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regi
     unsigned numElems = gridView_.size(/*codim=*/0);
     numbers.resize(numElems);
     for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-        if (numData[elemIdx] > (int)num_regions) {
+        if (numData[this->lookUpData_.getOriginIndex(elemIdx)] > (int)num_regions) {
             throw std::runtime_error("Values larger than maximum number of regions " + std::to_string(num_regions) + " provided in " + name);
-        } else if (numData[elemIdx] > 0) {
-            numbers[elemIdx] = static_cast<T>(numData[elemIdx]) - 1;
+        } else if (numData[this->lookUpData_.getOriginIndex(elemIdx)] > 0) {
+            numbers[elemIdx] = static_cast<T>(numData[this->lookUpData_.getOriginIndex(elemIdx)]) - 1;
         } else {
             throw std::runtime_error("zero or negative values provided for region array: " + name);
         }
