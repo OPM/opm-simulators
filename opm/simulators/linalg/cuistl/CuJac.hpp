@@ -102,17 +102,10 @@ private:
     const M& cpuMatrix;
     //! \brief The relaxation factor to use.
     field_type relaxation_factor;
-
+    //! \brief The A matrix stored on the gpu
     CuSparseMatrix<field_type> cuMatrix;
-    
-    CuVector<field_type> cuVec_diagInvFlattened; // the diagonal of cuMatrix inverted, and then flattened to fit in a vector
-    CuVector<field_type> cuVec_resultBuffer;
-
-    detail::CuSparseMatrixDescriptionPtr cuMatrixDescription;
-    detail::CuSparseHandle& cuSparseHandle;
-    detail::CuBlasHandle& cuBlasHandle;
-    
-    size_t findBufferSize();
+    //! \brief the diagonal of cuMatrix inverted, and then flattened to fit in a vector
+    CuVector<field_type> cuVec_diagInvFlattened;
 };
 } // end namespace Opm::cuistl
 

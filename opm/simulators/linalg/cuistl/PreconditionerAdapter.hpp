@@ -80,10 +80,6 @@ public:
             m_inputBuffer.reset(new CuVector<field_type>(v.dim()));
             m_outputBuffer.reset(new CuVector<field_type>(v.dim()));
         }
-        //TODO: to implement CuJac I added the moving of data from host to the output buffer
-        // This has performance impact for other preconditiners, so figure out how to avoid
-        m_outputBuffer->copyFromHost(v);
-
         m_inputBuffer->copyFromHost(d);
         m_underlyingPreconditioner->apply(*m_outputBuffer, *m_inputBuffer);
         m_outputBuffer->copyToHost(v);

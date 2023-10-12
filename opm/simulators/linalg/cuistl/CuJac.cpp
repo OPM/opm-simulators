@@ -49,10 +49,6 @@ CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
     , relaxation_factor(w)
     , cuMatrix(CuSparseMatrix<field_type>::fromMatrix(detail::makeMatrixWithNonzeroDiagonal(A)))
     , cuVec_diagInvFlattened(cuMatrix.N() * cuMatrix.blockSize() * cuMatrix.blockSize())
-    , cuVec_resultBuffer(cuMatrix.N() * cuMatrix.blockSize())
-    , cuMatrixDescription(detail::createMatrixDescription())
-    , cuSparseHandle(detail::CuSparseHandle::getInstance())
-    , cuBlasHandle(detail::CuBlasHandle::getInstance())
 {
     // Some sanity check
     OPM_ERROR_IF(A.N() != cuMatrix.N(),
@@ -86,53 +82,25 @@ CuJac<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::apply(X& x, const Y& b)
-{
-    // x_{n+1} = x_n + w * (D^-1 * (b - Ax_n) )
-    // cusparseDbsrmv computes -Ax_n + b
-    // cuda kernel computes D^-1 * (b- Ax_n), call this rhs
-    // use an axpy to compute x + w*rhs
-
-    const field_type one = 1.0, neg_one = -1.0;
+CuJac<M, X, Y, l>::apply(X& v, const Y& d)
+{   
+    // Jacobi preconditioner: x_{n+1} = x_n + w * (D^-1 * (b - Ax_n) )
+    // Working with defect d and update v it we only need to set v = w*(D^-1)*d
 
     const auto numberOfRows = detail::to_int(cuMatrix.N());
-    const auto numberOfColumns = detail::to_int(cuMatrix.N());
     const auto numberOfNonzeroBlocks = detail::to_int(cuMatrix.nonzeroes());
     const auto blockSize = detail::to_int(cuMatrix.blockSize());
 
-    auto nonZeroValues = cuMatrix.getNonZeroValues().data();
-    auto rowIndices = cuMatrix.getRowIndices().data();
-    auto columnIndices = cuMatrix.getColumnIndices().data();
+    // Could probably be further optimized a little bit by fusing the copy with the 
+    // following multiplication. To do so add a kernel that does not do the multiplication
+    // in place.
 
-    // TODO: avoid making this copy, currently forced to because parameter is a const
-    cuVec_resultBuffer = b;
-
-    // bsrmv computes b - Ax
-    OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(cuSparseHandle.get(),
-                                                 detail::CUSPARSE_MATRIX_ORDER,
-                                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                                 numberOfRows,
-                                                 numberOfColumns,
-                                                 numberOfNonzeroBlocks,
-                                                 &neg_one,
-                                                 cuMatrixDescription->get(),
-                                                 nonZeroValues,
-                                                 rowIndices,
-                                                 columnIndices,
-                                                 blockSize,
-                                                 x.data(),
-                                                 &one,
-                                                 cuVec_resultBuffer.data()));
-
-    // multiply D^-1 with (b-Ax)
+    v = d; // cuda copy
     detail::blockVectorMultiplicationAtAllIndices(cuVec_diagInvFlattened.data(),
                                                   detail::to_size_t(numberOfRows),
                                                   detail::to_size_t(blockSize),
-                                                  cuVec_resultBuffer.data());
-
-    // Finish adding w*rhs to x
-    OPM_CUBLAS_SAFE_CALL(detail::cublasAxpy(
-        cuBlasHandle.get(), numberOfRows * blockSize, &relaxation_factor, cuVec_resultBuffer.data(), 1, x.data(), 1));
+                                                  v.data());
+    v *= relaxation_factor; // cuBlas axpy
 }
 
 template <class M, class X, class Y, int l>
