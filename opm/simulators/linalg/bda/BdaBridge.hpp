@@ -49,7 +49,7 @@ private:
 
 public:
     /// Construct a BdaBridge
-    /// \param[in] accelerator_mode           to select if an accelerated solver is used, is passed via command-line: '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution]'
+    /// \param[in] accelerator_mode           to select if an accelerated solver is used, is passed via command-line: '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution|rocsparse]'
     /// \param[in] linear_solver_verbosity    verbosity of BdaSolver
     /// \param[in] maxit                      maximum number of iterations for BdaSolver
     /// \param[in] tolerance                  required relative tolerance for BdaSolver

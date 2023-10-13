@@ -311,7 +311,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverPrintJsonDefinition, "Write the JSON definition of the linear solver setup to the DBG file.");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse preconditioner setup. Valid options are 0: recreate the preconditioner for every linear solve, 1: recreate once every timestep, 2: recreate if last linear solve took more than 10 iterations, 3: never recreate, 4: recreated every CprReuseInterval");
             EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseInterval, "Reuse preconditioner interval. Used when CprReuseSetup is set to 4, then the preconditioner will be fully recreated instead of reused every N linear solve, where N is this parameter.");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, AcceleratorMode, "Choose a linear solver, usage: '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution]'");
+            EWOMS_REGISTER_PARAM(TypeTag, std::string, AcceleratorMode, "Choose a linear solver, usage: '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution|rocsparse]'");
             EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
             EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs");
             EWOMS_REGISTER_PARAM(TypeTag, bool, OpenclIluParallel, "Parallelize ILU decomposition and application on GPU");

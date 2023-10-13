@@ -37,6 +37,7 @@
 #undef HAVE_CUDA
 
 #include <opm/simulators/linalg/bda/rocsparseSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/rocsparseWellContributions.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
@@ -96,11 +97,12 @@ using Dune::Timer;
 
 template <unsigned int block_size>
 rocsparseSolverBackend<block_size>::rocsparseSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {
-    hipDevice_t device;
-    if(hipDeviceGet(&device, deviceID) != hipSuccess)
-    {
-        OPM_THROW(std::logic_error, "HIP Error: could not get device");
+    int numDevices = 0;
+    HIP_CHECK(hipGetDeviceCount(&numDevices));
+    if (static_cast<int>(deviceID) >= numDevices) {
+        OPM_THROW(std::runtime_error, "Error chosen too high HIP device ID");
     }
+    HIP_CHECK(hipSetDevice(deviceID));
 
     ROCSPARSE_CHECK(rocsparse_create_handle(&handle));
     ROCBLAS_CHECK(rocblas_create_handle(&blas_handle));
@@ -151,7 +153,13 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
     double one  = 1.0;
     double mone = -1.0;
 
-    Timer t_total, t_prec(false), t_spmv(false), t_rest(false);
+    Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
+
+    // set stream here, the WellContributions object is destroyed every linear solve
+    // the number of wells can change every linear solve
+    if(wellContribs.getNumWells() > 0){
+        static_cast<WellContributionsRocsparse&>(wellContribs).setStream(stream);
+    }
 
 // HIP_VERSION is defined as (HIP_VERSION_MAJOR * 10000000 + HIP_VERSION_MINOR * 100000 + HIP_VERSION_PATCH)
 #if HIP_VERSION >= 50400000
@@ -225,10 +233,18 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
             t_spmv.stop();
-            t_rest.start();
+            t_well.start();
         }
 
         // apply wellContributions
+        if(wellContribs.getNumWells() > 0){
+            static_cast<WellContributionsRocsparse&>(wellContribs).apply(d_pw, d_v);
+        }
+        if (verbosity >= 3) {
+            HIP_CHECK(hipStreamSynchronize(stream));
+            t_well.stop();
+            t_rest.start();
+        }
 
         ROCBLAS_CHECK(rocblas_ddot(blas_handle, N, d_rw, 1, d_v, 1, &tmp1));
         alpha = rho / tmp1;
@@ -278,10 +294,18 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
         if(verbosity >= 3){
             HIP_CHECK(hipStreamSynchronize(stream));
             t_spmv.stop();
-            t_rest.start();
+            t_well.start();
         }
 
         // apply wellContributions
+        if(wellContribs.getNumWells() > 0){
+            static_cast<WellContributionsRocsparse&>(wellContribs).apply(d_s, d_t);
+        }
+        if (verbosity >= 3) {
+            HIP_CHECK(hipStreamSynchronize(stream));
+            t_well.stop();
+            t_rest.start();
+        }
 
         ROCBLAS_CHECK(rocblas_ddot(blas_handle, N, d_t, 1, d_r, 1, &tmp1));
         ROCBLAS_CHECK(rocblas_ddot(blas_handle, N, d_t, 1, d_t, 1, &tmp2));
@@ -323,6 +347,7 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
         std::ostringstream out;
         out << "rocsparseSolver::prec_apply:  " << t_prec.elapsed() << " s\n";
         out << "rocsparseSolver::spmv:        " << t_spmv.elapsed() << " s\n";
+        out << "rocsparseSolver::well:        " << t_well.elapsed() << " s\n";
         out << "rocsparseSolver::rest:        " << t_rest.elapsed() << " s\n";
         out << "rocsparseSolver::total_solve: " << res.elapsed << " s\n";
         OpmLog::info(out.str());
