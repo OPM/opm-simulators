@@ -430,7 +430,7 @@ add_test_compareECLFiles(CASENAME actionx_m1
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR udq_actionx
-                         TEST_ARGS --solver-max-time-step-in-days=1)
+                         TEST_ARGS --solver-max-time-step-in-days=0.2)
 
 add_test_compareECLFiles(CASENAME pinch_multz_all
                          FILENAME PINCH_MULTZ_ALL
