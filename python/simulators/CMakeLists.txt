@@ -17,10 +17,11 @@ pybind11_add_module(simulators ${PYBIND11_SYSTEM}
 set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
 set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
 
-target_sources(simulators
-  PRIVATE
-  $<TARGET_OBJECTS:moduleVersion>
-  $<TARGET_OBJECTS:flow_libblackoil>)
+target_sources(simulators PRIVATE $<TARGET_OBJECTS:moduleVersion> )
+
+foreach (OBJ ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
+    target_sources(simulators PRIVATE $<TARGET_OBJECTS:flow_lib${OBJ}>)
+endforeach()
 
 target_link_libraries( simulators PRIVATE opmsimulators )
 
