@@ -367,8 +367,8 @@ public:
     {
         std::vector<T> v = asStdVector();
         std::string res = "";
-        for (int i = 0; i < v.size(); i++){
-            res += std::to_string(v[i]) + " ";
+        for (T element : v){
+            res += std::to_string(element) + " ";
         }
         res += std::to_string(v[v.size()-1]);
         return res;

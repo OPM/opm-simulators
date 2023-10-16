@@ -31,8 +31,6 @@
 #include <opm/simulators/linalg/cuistl/detail/fix_zero_diagonal.hpp>
 #include <opm/simulators/linalg/cuistl/detail/vector_operations.hpp>
 
-#include <iostream>
-
 using NumericTypes = boost::mpl::list<double, float>;
 
 BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize2, T, NumericTypes)
@@ -82,7 +80,6 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize2, T, NumericTypes)
     dVector[1][1] = 4.0;
 
     const T expectedAns[2][2] = {{1.0 / 2.0, -1.0 / 2.0}, {-3.0 / 2.0, -2.0}};
-
 
     cujac.apply(vVector, dVector);
     BOOST_CHECK_CLOSE(vVector[0][0], expectedAns[0][0], 1e-7);

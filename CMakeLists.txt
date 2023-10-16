@@ -654,7 +654,10 @@ if(CUDA_FOUND)
                        cuda_safe_call
                        cuda_check_last_error
                        cublas_handle
+                       cujac
                        cusparse_handle
+                       cuSparse_matrix_operations
+                       cuVector_operations
                        cuvector
                        cusparsematrix
                        cuseqilu0
