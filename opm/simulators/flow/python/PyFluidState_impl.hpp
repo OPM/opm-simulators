@@ -104,6 +104,7 @@ getPrimaryVarMeaningMap(const std::string &variable) const
    kr_w = Water relperm,
    kr_o = Oil relperm,
    kr_g = Gas relperm,
+      T = temperature,
  */
 template <class TypeTag>
 std::unique_ptr<double []>
@@ -128,7 +129,7 @@ getFluidStateVariable(const std::string &name, std::size_t *size ) const
         const Element& elem = *elem_itr;
         elem_ctx.updatePrimaryStencil(elem);
         elem_ctx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-        for (unsigned dof_idx = 0;dof_idx < elem_ctx.numPrimaryDof(/*timeIdx=*/0); ++dof_idx) {
+        for (unsigned dof_idx = 0;dof_idx < elem_ctx.numPrimaryDof(/*timeIdx=*/0); ++dof_idx) {  //Iterate through all elements
             const auto& int_quants = elem_ctx.intensiveQuantities(dof_idx, /*timeIdx=*/0);
             const auto& fs = int_quants.fluidState();
             unsigned global_dof_idx = elem_ctx.globalSpaceIndex(dof_idx, /*timeIdx=*/0);
@@ -176,6 +177,7 @@ setPrimaryVariable(const std::string &idx_name, const double *data, std::size_t 
     }
 }
 
+
 // Private methods alphabetically sorted
 // -------------------------------------
 
@@ -186,6 +188,9 @@ getPrimaryVarIndex_(const std::string &idx_name) const
 {
     if (idx_name.compare("pressure") == 0) {
         return Indices::pressureSwitchIdx;
+    }
+    else if (idx_name.compare("temperature") == 0) {
+        return Indices::temperatureIdx;
     }
     else if (idx_name.compare("water_saturation") == 0) {
         return Indices::waterSwitchIdx;

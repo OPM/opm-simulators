@@ -166,6 +166,7 @@ public:
     }
 
     using FlowMainEbosType = FlowMainEbos<Properties::TTag::EclFlowProblemTPFA>;
+    using FlowMainEbosType2 = FlowMainEbos<Properties::TTag::EclEnergyProblemTPFA>;
     // To be called from the Python interface code. Only do the
     // initialization and then return a pointer to the FlowEbosMain
     // object that can later be accessed directly from the Python interface
@@ -182,6 +183,21 @@ public:
         } else {
             //NOTE: exitCode was set by initialize_() above;
             return std::unique_ptr<FlowMainEbosType>(); // nullptr
+        }
+    }
+
+       std::unique_ptr<FlowMainEbosType2> initFlowEbosEnergy(int& exitCode)
+    {
+        exitCode = EXIT_SUCCESS;
+        if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
+            
+            // case. E.g. check that number of phases == 3
+            this->setupVanguard();
+            return flowEbosEnergyMainInit(
+                argc_, argv_, outputCout_, outputFiles_);
+        } else {
+            //NOTE: exitCode was set by initialize_() above;
+            return std::unique_ptr<FlowMainEbosType2>(); // nullptr
         }
     }
 

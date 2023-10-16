@@ -60,6 +60,7 @@ PyBlackOilSimulator(
 // Public methods alphabetically sorted
 // ------------------------------------
 
+//used to advance the state of the simulator until the specified reporting step is reached.
 void
 PyBlackOilSimulator::
 advance(int report_step)
@@ -118,7 +119,7 @@ py::array_t<double>
 PyBlackOilSimulator::
 getFluidStateVariable(const std::string &name) const
 {
-    std::size_t len;
+    std::size_t len;  //size_t unsigned int
     auto array = getFluidState().getFluidStateVariable(name, &len);
     return py::array(len, array.get());
 }
@@ -170,8 +171,7 @@ void
 PyBlackOilSimulator::
 setPrimaryVariable(
     const std::string &idx_name,
-    py::array_t<double,
-    py::array::c_style | py::array::forcecast> array
+    py::array_t<double,py::array::c_style | py::array::forcecast> array
 )
 {
     std::size_t size_ = array.size();

@@ -47,6 +47,7 @@ namespace Opm {
             privar.setPrimaryVarsMeaningPressure(typename PV::PressureMeaning(m2));
             privar.setPrimaryVarsMeaningGas(typename PV::GasMeaning(m3));
             privar.setPrimaryVarsMeaningBrine(typename PV::BrineMeaning(m4));
+
         }
     } // namespace PVMeanings
 } // namespace Opm

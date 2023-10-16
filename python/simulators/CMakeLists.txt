@@ -10,6 +10,8 @@
 #
 pybind11_add_module(simulators ${PYBIND11_SYSTEM}
   PyBlackOilSimulator.cpp
+  PyFlowSimulator.cpp
+  PyEnergySimulator.cpp
   Pybind11Exporter.cpp)
 
 set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)

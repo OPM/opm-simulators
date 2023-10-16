@@ -13,17 +13,19 @@
 
 # Mandatory call to project
 
+set(CMAKE_INSTALL_PREFIX "/opt/opm" CACHE PATH "Install prefix" FORCE)
+
 project(opm-simulators C CXX)
 
 cmake_minimum_required (VERSION 3.10)
 
-
+set(CMAKE_PREFIX_PATH "/opt/opm")
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
 option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
 option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
-option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
+option(OPM_ENABLE_PYTHON "Enable python bindings?" ON)
 option(OPM_ENABLE_PYTHON_TESTS "Enable tests for the python bindings?" ON)
 option(OPM_INSTALL_PYTHON "Install python bindings?" ON)
 option(USE_CHOW_PATEL_ILU "Use the iterative ILU by Chow and Patel?" OFF)
@@ -33,6 +35,13 @@ option(BUILD_FLOW_ALU_GRID "Build flow blackoil with alu grid" OFF)
 option(USE_DAMARIS_LIB "Use the Damaris library for asynchronous I/O?" OFF)
 option(USE_BDA_BRIDGE "Enable the BDA bridge (GPU/AMGCL solvers)" ON)
 option(USE_TRACY_PROFILER "Enable tracy profiling" OFF)
+
+# Set the install prefix
+if(NOT DEFINED CMAKE_INSTALL_PREFIX)
+  set(CMAKE_INSTALL_PREFIX "/opt/opm")
+endif()
+
+
 
 # The following was copied from CMakeLists.txt in opm-common.
 # TODO: factor out the common parts in opm-common and opm-simulator as a cmake module
