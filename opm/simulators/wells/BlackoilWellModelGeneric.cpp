@@ -1392,6 +1392,12 @@ bool
 BlackoilWellModelGeneric::
 shouldBalanceNetwork(const int reportStepIdx, const int iterationIdx) const
 {
+    // if network is not active, we do not need to balance the network
+    const auto& network = schedule()[reportStepIdx].network();
+    if (!network.active()) {
+        return false;
+    }
+
     const auto& balance = schedule()[reportStepIdx].network_balance();
     if (balance.mode() == Network::Balance::CalcMode::TimeStepStart) {
         return iterationIdx == 0;
