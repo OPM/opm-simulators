@@ -47,6 +47,7 @@
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerConvertFieldTypeAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp>
+#include <opm/simulators/linalg/cuistl/CuJac.hpp>
 
 #endif
 
@@ -236,6 +237,17 @@ struct StandardPreconditioners
             auto cuILU0 = std::make_shared<CuILU0>(op.getmat(), w);
 
             auto adapted = std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuILU0>>(cuILU0);
+            auto wrapped = std::make_shared<Opm::cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            return wrapped;
+        });
+
+        F::addCreator("CUJac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            using field_type = typename V::field_type;
+            using CuJac = typename Opm::cuistl::CuJac<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
+            auto cuJac = std::make_shared<CuJac>(op.getmat(), w);
+
+            auto adapted = std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuJac>>(cuJac);
             auto wrapped = std::make_shared<Opm::cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
@@ -444,6 +456,13 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
             converted->setUnderlyingPreconditioner(adapted);
             return converted;
 
+        });
+
+        F::addCreator("CUJac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            using field_type = typename V::field_type;
+            using CUJac = typename Opm::cuistl::CuJac<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
+            return std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CUJac>>(std::make_shared<CUJac>(op.getmat(), w));
         });
 #endif
     }
