@@ -574,8 +574,8 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
                EXE_NAME flow_${OBJ}
                DEPENDS opmsimulators
                LIBRARIES opmsimulators)
+   set_property(TARGET flow_lib${OBJ} PROPERTY POSITION_INDEPENDENT_CODE ON)
 endforeach()
-set_property(TARGET flow_libblackoil PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 foreach(OBJ ${FLOW_VARIANT_MODELS})
   set_property(TARGET flow_lib${OBJ} PROPERTY EXCLUDE_FROM_ALL ${FLOW_VARIANTS_DEFAULT_ENABLE_IF})
