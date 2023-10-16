@@ -493,8 +493,9 @@ public:
         OPM_TIMEBLOCK_LOCAL(computeBoundaryFluxFree);
         std::array<short, numPhases> upIdx;
         std::array<short, numPhases> dnIdx;
-        RateVector volumeFlux;
-        RateVector pressureDifference;
+        std::array<Evaluation, numPhases> volumeFlux;
+        std::array<Evaluation, numPhases> pressureDifference;
+
         ExtensiveQuantities::calculateBoundaryGradients_(problem,
                                                          globalSpaceIdx,
                                                          insideIntQuants,
@@ -519,7 +520,7 @@ public:
             const Evaluation& pInside = insideIntQuants.fluidState().pressure(phaseIdx);
             const unsigned pvtRegionIdx = insideIntQuants.pvtRegionIndex();
 
-            RateVector tmp;
+            RateVector tmp(0.0);
             const auto& darcyFlux = volumeFlux[phaseIdx];
             // mass conservation
             if (pBoundary < pInside) {
@@ -562,8 +563,8 @@ public:
         }
 
         // conductive heat flux from boundary
-        Evaluation heatFlux;
         if constexpr(enableEnergy){
+            Evaluation heatFlux;
             // avoid overload of functions with same numeber of elements in eclproblem
             Scalar alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
             unsigned inIdx = 0;//dummy
@@ -574,8 +575,8 @@ public:
                                                                              inIdx,
                                                                              alpha,
                                                                              bdyInfo.exFluidState);
+            EnergyModule::addHeatFlux(bdyFlux, heatFlux);
         }
-        EnergyModule::addHeatFlux(bdyFlux, heatFlux);
 
         static_assert(!enableSolvent, "Relevant treatment of boundary conditions must be implemented before enabling.");
         static_assert(!enablePolymer, "Relevant treatment of boundary conditions must be implemented before enabling.");
