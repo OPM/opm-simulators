@@ -312,6 +312,11 @@ macro (files_hook)
     set(HDF5_FOUND OFF)
     unset(HAVE_HDF5)
   endif()
+  if(HAVE_ROCSPARSE AND HAVE_CUDA)
+    message(WARNING "WARNING! Using CUDA and ROCm at the same time is not allowed. Please choose only one of them by setting CMAKE_DISABLE_FIND_PACKAGE_<rocsparse|CUDA>=<ON|OFF>. Disabling CUDA...\n")
+    set(CUDA_FOUND OFF)
+    unset(HAVE_CUDA)
+  endif()
   # read the list of components from this file (in the project directory);
   # it should set various lists with the names of the files to include
   # include needs to be here to make reset HDF5_FOUND available in
@@ -654,7 +659,10 @@ if(CUDA_FOUND)
                        cuda_safe_call
                        cuda_check_last_error
                        cublas_handle
+                       cujac
                        cusparse_handle
+                       cuSparse_matrix_operations
+                       cuVector_operations
                        cuvector
                        cusparsematrix
                        cuseqilu0

@@ -141,6 +141,13 @@ wellsActive() const
 
 bool
 BlackoilWellModelGeneric::
+networkActive() const
+{
+    return network_active_;
+}
+
+bool
+BlackoilWellModelGeneric::
 anyMSWellOpenLocal() const
 {
     for (const auto& well : wells_ecl_) {
@@ -978,27 +985,43 @@ hasTHPConstraints() const
     return BlackoilWellModelConstraints(*this).hasTHPConstraints();
 }
 
-bool
+void
 BlackoilWellModelGeneric::
-needRebalanceNetwork(const int report_step) const
-{
+updateNetworkActiveState(const int report_step) {
     const auto& network = schedule()[report_step].network();
     if (!network.active()) {
-        return false;
+        this->network_active_ = false;
+        return;
     }
 
+    bool network_active = false;
+    for (const auto& well : well_container_generic_) {
+        const bool is_partof_network = network.has_node(well->wellEcl().groupName());
+        const bool prediction_mode = well->wellEcl().predictionMode();
+        if (is_partof_network && prediction_mode) {
+            network_active = true;
+            break;
+        }
+    }
+    this->network_active_ = comm_.max(network_active);
+}
+
+bool
+BlackoilWellModelGeneric::
+needPreStepNetworkRebalance(const int report_step) const
+{
+    const auto& network = schedule()[report_step].network();
     bool network_rebalance_necessary = false;
     for (const auto& well : well_container_generic_) {
-        const auto& events = this->wellState().well(well->indexOfWell()).events;
         const bool is_partof_network = network.has_node(well->wellEcl().groupName());
-        // TODO: we might find more relevant events to be included here
+        // TODO: we might find more relevant events to be included here (including network change events?)
+        const auto& events = this->wellState().well(well->indexOfWell()).events;
         if (is_partof_network && events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE)) {
             network_rebalance_necessary = true;
             break;
         }
     }
     network_rebalance_necessary = comm_.max(network_rebalance_necessary);
-
     return network_rebalance_necessary;
 }
 
@@ -1059,7 +1082,7 @@ double
 BlackoilWellModelGeneric::
 updateNetworkPressures(const int reportStepIdx)
 {
-    // Get the network and return if inactive.
+    // Get the network and return if inactive (no wells in network at this time)
     const auto& network = schedule()[reportStepIdx].network();
     if (!network.active()) {
         return 0.0;
@@ -1076,6 +1099,8 @@ updateNetworkPressures(const int reportStepIdx)
 
     // here, the network imbalance is the difference between the previous nodal pressure and the new nodal pressure
     double network_imbalance = 0.;
+    if (!this->networkActive())
+        return network_imbalance;
 
     if (!previous_node_pressures.empty()) {
         for (const auto& [name, pressure]: previous_node_pressures) {
@@ -1111,7 +1136,7 @@ updateNetworkPressures(const int reportStepIdx)
         // Producers only, since we so far only support the
         // "extended" network model (properties defined by
         // BRANPROP and NODEPROP) which only applies to producers.
-        if (well->isProducer()) {
+        if (well->isProducer() && well->wellEcl().predictionMode()) {
             const auto it = node_pressures_.find(well->wellEcl().groupName());
             if (it != node_pressures_.end()) {
                 // The well belongs to a group with has a network pressure constraint,

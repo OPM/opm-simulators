@@ -103,6 +103,9 @@ public:
     bool wellsActive() const;
     bool hasWell(const std::string& wname) const;
 
+    /// return true if network is active (at least one network well in prediction mode)
+    bool networkActive() const;
+
     // whether there exists any multisegment well open on this process
     bool anyMSWellOpenLocal() const;
 
@@ -169,8 +172,13 @@ public:
     /// Return true if any well has a THP constraint.
     bool hasTHPConstraints() const;
 
-    /// Whether it is necessary to re-balance network
-    bool needRebalanceNetwork(const int report_step) const;
+    /// Checks if network is active (at least one network well on prediction).
+    void updateNetworkActiveState(const int report_step);
+
+    /// Checks if there are reasons to perform a pre-step network re-balance.
+    /// (Currently, the only reasons are network well status changes.)
+    /// (TODO: Consider if adding network change events would be helpful.)
+    bool needPreStepNetworkRebalance(const int report_step) const;
 
     /// Shut down any single well
     /// Returns true if the well was actually found and shut.
@@ -431,6 +439,7 @@ protected:
     PhaseUsage phase_usage_;
     bool terminal_output_{false};
     bool wells_active_{false};
+    bool network_active_{false};
     bool initial_step_{};
     bool report_step_starts_{};
 

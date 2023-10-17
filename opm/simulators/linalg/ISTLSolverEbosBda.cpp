@@ -100,8 +100,8 @@ apply(Vector& rhs,
         auto wellContribs = WellContributions::create(accelerator_mode_, useWellConn);
         bridge_->initWellContributions(*wellContribs, x.N() * x[0].N());
 
-        // the WellContributions can only be applied separately with CUDA or OpenCL, not with amgcl or rocalution
-#if HAVE_CUDA || HAVE_OPENCL
+         // the WellContributions can only be applied separately with CUDA, OpenCL or rocsparse, not with amgcl or rocalution
+#if HAVE_CUDA || HAVE_OPENCL || HAVE_ROCSPARSE
         if (!useWellConn) {
             getContribs(*wellContribs);
         }
