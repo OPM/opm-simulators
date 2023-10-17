@@ -269,8 +269,11 @@ public:
     int numPressurePointsEquil() const
     { return numPressurePointsEquil_; }
     
-    auto getLookUpData() const
-    { return lookUpData_; }
+    auto getLookUpData(unsigned elemIdx) const
+    {
+        using Grid = std::remove_cv_t< typename std::remove_reference<decltype(gridView_.grid())>::type>;
+        return lookUpData_.template getOriginIndex<Grid>(elemIdx);
+    }
 
     bool operator==(const EclGenericProblem& rhs) const;
 
