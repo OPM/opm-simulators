@@ -397,17 +397,11 @@ void WellState::init(const std::vector<double>& cellPressures,
 
                 // Productivity index.
                 new_well.productivity_index = prev_well.productivity_index;
-            }
 
-            // If in the new step, there is no THP related
-            // target/limit anymore, its thp value should be set to
-            // zero.
-            const bool has_thp = well.isInjector()
-                ? well.injectionControls (summary_state).hasControl(Well::InjectorCMode::THP)
-                : well.productionControls(summary_state).hasControl(Well::ProducerCMode::THP);
-
-            if (!has_thp) {
-                new_well.thp = 0;
+                // if there is no valid VFP table associated, we set the THP value to be 0.
+                if (well.vfp_table_number() == 0) {
+                    new_well.thp = 0.;
+                }
             }
         }
     }
