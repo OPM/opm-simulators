@@ -762,11 +762,8 @@ private:
             MatrixBlock bMat(0.0);
             ADVectorBlock adres(0.0);
             const unsigned globI = bdyInfo.cell;
-            const IntensiveQuantities* insideIntQuants = model_().cachedIntensiveQuantities(globI, /*timeIdx*/ 0);
-            if (insideIntQuants == nullptr) {
-                throw std::logic_error("Missing updated intensive quantities for cell " + std::to_string(globI));
-            }
-            LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, *insideIntQuants, globI);
+            const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+            LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
             adres *= bdyInfo.bcdata.faceArea;
             setResAndJacobi(res, bMat, adres);
             residual_[globI] += res;
