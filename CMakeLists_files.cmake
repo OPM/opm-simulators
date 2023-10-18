@@ -251,6 +251,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_convergenceoutputconfiguration.cpp
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
+  tests/test_dilu.cpp
   tests/test_eclinterregflows.cpp
   tests/test_equil.cc
   tests/test_extractMatrix.cpp
@@ -484,8 +485,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/rocsparseWellContributions.hpp
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/amgcpr.hh
+  opm/simulators/linalg/DILU.hpp
   opm/simulators/linalg/twolevelmethodcpr.hh
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp
+  opm/simulators/linalg/ExtraSmoothers.hpp
   opm/simulators/linalg/FlexibleSolver.hpp
   opm/simulators/linalg/FlexibleSolver_impl.hpp
   opm/simulators/linalg/FlowLinearSolverParameters.hpp
