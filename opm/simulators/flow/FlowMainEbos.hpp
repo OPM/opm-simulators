@@ -212,13 +212,6 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteMobilities);
                 //}
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteAverageMolarMasses);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteFugacities);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteFugacityCoeffs);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteMassFractions);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteMolarities);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteMoleFractions);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteTotalMassFractions);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteTotalMoleFractions);
 
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteTortuosities);
             EWOMS_HIDE_PARAM(TypeTag, VtkWriteDiffusionCoefficients);
