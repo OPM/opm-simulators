@@ -29,6 +29,7 @@
 #include <dune/grid/common/gridview.hh>
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/LookUpData.hh>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 

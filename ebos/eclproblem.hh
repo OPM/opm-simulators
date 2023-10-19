@@ -2026,6 +2026,11 @@ protected:
 
     void readEclRestartSolution_()
     {
+        // Throw an exception if the grid has LGRs. Refined grid are not supported for restart.
+        if(this->simulator().vanguard().grid().maxLevel() > 0) {
+            throw std::invalid_argument("Refined grids are not yet supported for restart ");
+        }
+
         // Set the start time of the simulation
         auto& simulator = this->simulator();
         const auto& schedule = simulator.vanguard().schedule();

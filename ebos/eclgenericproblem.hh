@@ -50,6 +50,7 @@ namespace Opm {
 class Deck;
 class EclipseState;
 class Schedule;
+template<typename Grid, typename GridView> class LookUpData;
 
 int eclPositionalParameter(Dune::ParameterTree& tree,
                            std::set<std::string>& seenParams,
@@ -370,6 +371,17 @@ protected:
     
     // equilibration parameters
     int numPressurePointsEquil_;
+
+    // To lookup origin cell indices
+    using Grid = std::remove_cv_t< typename std::remove_reference<decltype(gridView_.grid())>::type>;
+    using LookUpData = Opm::LookUpData<Grid,GridView>;
+    const LookUpData lookUpData_;
+
+    auto getLookUpData(unsigned elemIdx) const
+    {
+        using GridType = std::remove_cv_t< typename std::remove_reference<decltype(gridView_.grid())>::type>;
+        return lookUpData_.template getOriginIndex<GridType>(elemIdx);
+    }
 
 private:
     template<class T>
