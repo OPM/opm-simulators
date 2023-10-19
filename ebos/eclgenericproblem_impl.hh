@@ -169,14 +169,15 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
         rockTableIdx_.resize(numElem);
         const auto& num = eclState_.fieldProps().get_int(rock_config.rocknum_property());
         for (std::size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
-            rockTableIdx_[elemIdx] = num[this->getLookUpData(elemIdx)] - 1;
+            auto coarseElemIdx = this->getLookUpData(elemIdx);
+            rockTableIdx_[elemIdx] = num[coarseElemIdx] - 1;
             auto fmtError =
-                [&num,elemIdx,&ijkIndex,&rock_config, this](const char* type, std::size_t size)
+                [&num,coarseElemIdx,&ijkIndex,&rock_config](const char* type, std::size_t size)
                 {
                     return fmt::format("{} table index {} for elem {} read from {}"
                                       " is is out of bounds for number of tables {}",
-                                       type, num[this-> getLookUpData(elemIdx)],
-                                       ijkIndex(this-> getLookUpData(elemIdx)),
+                                       type, num[coarseElemIdx],
+                                       ijkIndex(coarseElemIdx),
                                        rock_config.rocknum_property(), size);
                 };
             if (!rockCompPoroMult_.empty() &&
@@ -213,7 +214,7 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
                 tableIdx = rockTableIdx_[elemIdx];
             }
             overburdenPressure_[elemIdx] =
-                overburdenTables[tableIdx].eval(cellCenterDepths[this->getLookUpData(elemIdx)], /*extrapolation=*/true);
+                overburdenTables[tableIdx].eval(cellCenterDepths[elemIdx], /*extrapolation=*/true);
         }
     }
 }
@@ -320,7 +321,7 @@ rockCompressibility(unsigned globalSpaceIdx) const
 
     unsigned tableIdx = 0;
     if (!this->rockTableIdx_.empty()) {
-        tableIdx = this->rockTableIdx_[globalSpaceIdx]; 
+        tableIdx = this->rockTableIdx_[globalSpaceIdx];
     }
     return this->rockParams_[tableIdx].compressibility;
 }
@@ -334,7 +335,7 @@ rockReferencePressure(unsigned globalSpaceIdx) const
 
     unsigned tableIdx = 0;
     if (!this->rockTableIdx_.empty()) {
-        tableIdx = this->rockTableIdx_[globalSpaceIdx]; 
+        tableIdx = this->rockTableIdx_[globalSpaceIdx];
     }
     return this->rockParams_[tableIdx].referencePressure;
 }
@@ -356,7 +357,7 @@ rockFraction(unsigned elementIdx, unsigned timeIdx) const
     // geometric volume of the element. Note that it can
     // be larger than 1.0 if porevolume multipliers are used
     // to for instance implement larger boundary cells
-    Scalar porosity = poro[this->getLookUpData(elementIdx)]; 
+    Scalar porosity = poro[this->getLookUpData(elementIdx)];
     return referencePorosity(elementIdx, timeIdx) / porosity * (1 - porosity);
 }
 

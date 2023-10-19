@@ -202,7 +202,6 @@ public:
     using EclGenericProblem<GridView,FluidSystem,Scalar>::rockCompressibility;
     using EclGenericProblem<GridView,FluidSystem,Scalar>::rockReferencePressure;
     using EclGenericProblem<GridView,FluidSystem,Scalar>::porosity;
-    using EclGenericProblem<GridView,FluidSystem,Scalar>::getLookUpData;
 
     /*!
      * \copydoc FvBaseProblem::registerParameters
@@ -2027,6 +2026,11 @@ protected:
 
     void readEclRestartSolution_()
     {
+        // Throw an exception if the grid has LGRs. Refined grid are not supported for restart.
+        if(this->simulator().vanguard().grid().maxLevel() > 0) {
+            throw std::invalid_argument("Refined grids are not yet supported for restart ");
+        }
+
         // Set the start time of the simulation
         auto& simulator = this->simulator();
         const auto& schedule = simulator.vanguard().schedule();
@@ -2092,19 +2096,13 @@ protected:
             this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
 
             if constexpr (enablePolymer)
-                 this->polymer_.concentration[elemIdx] =
-                     eclWriter_->eclOutputModule().getPolymerConcentration(getLookUpData(elemIdx));
+                 this->polymer_.concentration[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
             if constexpr (enableMICP){
-                 this->micp_.microbialConcentration[elemIdx] =
-                     eclWriter_->eclOutputModule().getMicrobialConcentration(getLookUpData(elemIdx));
-                 this->micp_.oxygenConcentration[elemIdx] =
-                     eclWriter_->eclOutputModule().getOxygenConcentration(getLookUpData(elemIdx));
-                 this->micp_.ureaConcentration[elemIdx] =
-                     eclWriter_->eclOutputModule().getUreaConcentration(getLookUpData(elemIdx));
-                 this->micp_.biofilmConcentration[elemIdx] =
-                     eclWriter_->eclOutputModule().getBiofilmConcentration(getLookUpData(elemIdx));
-                 this->micp_.calciteConcentration[elemIdx]
-                     = eclWriter_->eclOutputModule().getCalciteConcentration(getLookUpData(elemIdx));
+                 this->micp_.microbialConcentration[elemIdx] = eclWriter_->eclOutputModule().getMicrobialConcentration(elemIdx);
+                 this->micp_.oxygenConcentration[elemIdx] = eclWriter_->eclOutputModule().getOxygenConcentration(elemIdx);
+                 this->micp_.ureaConcentration[elemIdx] = eclWriter_->eclOutputModule().getUreaConcentration(elemIdx);
+                 this->micp_.biofilmConcentration[elemIdx] = eclWriter_->eclOutputModule().getBiofilmConcentration(elemIdx);
+                 this->micp_.calciteConcentration[elemIdx] = eclWriter_->eclOutputModule().getCalciteConcentration(elemIdx);
             }
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
