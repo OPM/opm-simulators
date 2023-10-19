@@ -234,10 +234,10 @@ assembleDefaultPressureEq(const int seg,
     auto& segments = ws.segments;
 
     if (this->frictionalPressureLossConsidered()) {
-        const auto friction_pressure_drop = segments_.getFrictionPressureLoss(seg, false);
+        const auto friction_pressure_drop = segments_.getFrictionPressureLoss(seg);
         if (reverseFlow){
             // call function once again to obtain/assemble remaining derivatives
-            extra_derivatives = -segments_.getFrictionPressureLoss(seg, true);
+            extra_derivatives = -segments_.getFrictionPressureLoss(seg, /*extra_reverse_flow_derivatives*/ true);
             MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
                 assemblePressureEqExtraDerivatives(seg, seg_upwind, extra_derivatives, linSys_);
         }
@@ -292,21 +292,21 @@ assembleICDPressureEq(const int seg,
     EvalWell extra_derivatives;
     switch(this->segmentSet()[seg].segmentType()) {
         case Segment::SegmentType::SICD :
-            icd_pressure_drop = segments_.pressureDropSpiralICD(seg, /*extra derivatives*/false);
+            icd_pressure_drop = segments_.pressureDropSpiralICD(seg);
             if (reverseFlow){
-                extra_derivatives = -segments_.pressureDropSpiralICD(seg, /*extra derivatives*/true);
+                extra_derivatives = -segments_.pressureDropSpiralICD(seg, /*extra_reverse_flow_derivatives*/ true);
             }
             break;
         case Segment::SegmentType::AICD :
-            icd_pressure_drop = segments_.pressureDropAutoICD(seg, unit_system, /*extra derivatives*/false);
+            icd_pressure_drop = segments_.pressureDropAutoICD(seg, unit_system);
             if (reverseFlow){
-                extra_derivatives = -segments_.pressureDropAutoICD(seg, unit_system, /*extra derivatives*/true);
+                extra_derivatives = -segments_.pressureDropAutoICD(seg, unit_system, /*extra_reverse_flow_derivatives*/ true);
             }
             break;
         case Segment::SegmentType::VALVE :
-            icd_pressure_drop = segments_.pressureDropValve(seg, /*extra derivatives*/false);
+            icd_pressure_drop = segments_.pressureDropValve(seg);
             if (reverseFlow){
-                extra_derivatives = -segments_.pressureDropValve(seg, /*extra derivatives*/true);
+                extra_derivatives = -segments_.pressureDropValve(seg, /*extra_reverse_flow_derivatives*/ true);
             }
             break;
         default: {

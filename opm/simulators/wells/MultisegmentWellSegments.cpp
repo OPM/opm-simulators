@@ -498,7 +498,8 @@ getSurfaceVolume(const EvalWell& temperature,
 template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
-getFrictionPressureLoss(const int seg, const bool return_extra_derivatives) const
+getFrictionPressureLoss(const int seg, 
+                        const bool extra_reverse_flow_derivatives /*false*/) const
 {
     EvalWell mass_rate = mass_rates_[seg];
     const int seg_upwind = upwinding_segments_[seg];
@@ -511,7 +512,7 @@ getFrictionPressureLoss(const int seg, const bool return_extra_derivatives) cons
     // at segment node while fraction derivatives are given at upwind node.
 
     if (seg != seg_upwind) {
-        if (!return_extra_derivatives){
+        if (!extra_reverse_flow_derivatives){
             constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
             constexpr int SPres = Indices::numEq + PrimaryVariables::SPres;
             density.setDerivative(WQTotal, 0.0);
@@ -550,7 +551,7 @@ template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 pressureDropSpiralICD(const int seg,
-                      const bool return_extra_derivatives) const
+                      const bool extra_reverse_flow_derivatives /*false*/) const
 {
     const auto& segment_set = well_.wellEcl().getSegments();
     const SICD& sicd = segment_set[seg].spiralICD();
@@ -593,14 +594,14 @@ pressureDropSpiralICD(const int seg,
     if (seg != seg_upwind) {
         constexpr int nvar = FluidSystem::numPhases + 1;
         std::vector<bool> zero_mask(nvar, false);
-        if (!return_extra_derivatives){
+        if (!extra_reverse_flow_derivatives){
             zero_mask[PrimaryVariables::WQTotal] = true;
             zero_mask[PrimaryVariables::SPres] = true;
         } else {
-            if (PrimaryVariables::has_water){
+            if constexpr (PrimaryVariables::has_water){
                 zero_mask[PrimaryVariables::WFrac] = true;
             }
-            if (PrimaryVariables::has_gas){
+            if constexpr (PrimaryVariables::has_gas){
                 zero_mask[PrimaryVariables::GFrac] = true;
             }
             // mass_rate has no extra derivatives (they are organized as in equations)
@@ -654,7 +655,7 @@ typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 pressureDropAutoICD(const int seg,
                     const UnitSystem& unit_system, 
-                    const bool return_extra_derivatives) const
+                    const bool extra_reverse_flow_derivatives /*false*/) const
 {
     const auto& segment_set = well_.wellEcl().getSegments();
     const AutoICD& aicd = segment_set[seg].autoICD();
@@ -704,7 +705,7 @@ pressureDropAutoICD(const int seg,
     if (seg != seg_upwind) {
         constexpr int nvar = FluidSystem::numPhases + 1;
         std::vector<bool> zero_mask(nvar, false);
-        if (!return_extra_derivatives){
+        if (!extra_reverse_flow_derivatives){
             zero_mask[PrimaryVariables::WQTotal] = true;
             zero_mask[PrimaryVariables::SPres] = true;
         } else {
@@ -762,7 +763,7 @@ template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 pressureDropValve(const int seg,
-                  const bool return_extra_derivatives) const
+                  const bool extra_reverse_flow_derivatives /*false*/) const
 {
     const auto& segment_set = well_.wellEcl().getSegments();
     const Valve& valve = segment_set[seg].valve();
@@ -777,7 +778,7 @@ pressureDropValve(const int seg,
     // For reference: the pressure equation assumes pressure/flow derivatives are given 
     // at segment node while fraction derivatives are given at upwind node. 
     if (seg != seg_upwind) {
-        if (!return_extra_derivatives){
+        if (!extra_reverse_flow_derivatives){
             constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
             constexpr int SPres = Indices::numEq + PrimaryVariables::SPres;
             density.setDerivative(WQTotal, 0.0);
