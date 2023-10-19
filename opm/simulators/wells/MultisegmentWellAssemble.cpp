@@ -218,9 +218,9 @@ assemblePressureLoss(const int seg,
 
 template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
-assembleHydroPressureLoss(const int seg, 
-                          const int seg_density, 
-                          const EvalWell& hydro_pressure_drop_seg, 
+assembleHydroPressureLoss(const int seg,
+                          const int seg_density,
+                          const EvalWell& hydro_pressure_drop_seg,
                           Equations& eqns1) const
 {
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
@@ -233,9 +233,9 @@ assembleHydroPressureLoss(const int seg,
 
 template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
-assemblePressureEqExtraDerivatives(const int seg, 
-                                   const int seg_upwind, 
-                                   const EvalWell& extra_derivatives, 
+assemblePressureEqExtraDerivatives(const int seg,
+                                   const int seg_upwind,
+                                   const EvalWell& extra_derivatives,
                                    Equations& eqns1) const
 {
     MultisegmentWellEquationAccess<Scalar,numWellEq,Indices::numEq> eqns(eqns1);
@@ -243,7 +243,7 @@ assemblePressureEqExtraDerivatives(const int seg,
     // Frac - derivatives are zero (they belong to upwind^2)
     eqns.D()[seg][seg_upwind][SPres][SPres] += extra_derivatives.derivative(SPres + Indices::numEq);
     eqns.D()[seg][seg_upwind][SPres][WQTotal] += extra_derivatives.derivative(WQTotal + Indices::numEq);
-}                                   
+}
 
 
 template<class FluidSystem, class Indices, class Scalar>

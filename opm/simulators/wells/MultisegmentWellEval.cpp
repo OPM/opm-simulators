@@ -214,7 +214,7 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 assembleDefaultPressureEq(const int seg,
-                          WellState& well_state, 
+                          WellState& well_state,
                           const bool use_average_density)
 {
     assert(seg != 0); // not top segment
@@ -226,7 +226,7 @@ assembleDefaultPressureEq(const int seg,
     EvalWell extra_derivatives;
 
     // we need to handle the pressure difference between the two segments
-    // hydrostatic pressure loss is assembled seperately at the end 
+    // hydrostatic pressure loss is assembled seperately at the end
     // TODO: we might be able to add member variables to store these values, then we update well state
     // after converged
 
@@ -339,7 +339,7 @@ assembleAccelerationAndHydroPressureLosses(const int seg,
     // this part needs to be assembled separately. Optionally use average density variant.
     const auto hydro_pressure_drop_seg = segments_.getHydroPressureLoss(seg, seg);
     auto& ws = well_state.well(baseif_.indexOfWell());
-    auto& segments = ws.segments;    
+    auto& segments = ws.segments;
     if (!use_average_density){
         MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
             assembleHydroPressureLoss(seg, seg, hydro_pressure_drop_seg, linSys_);

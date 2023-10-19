@@ -267,7 +267,7 @@ namespace Opm
     {
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();
-        
+
         if (this->wellUnderZeroRateTarget(summary_state, well_state) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
@@ -297,7 +297,7 @@ namespace Opm
                         updateWellStateWithTarget(ebos_simulator, group_state, well_state, deferred_logger);
                     } else {
                         ws.thp = this->getTHPConstraint(summary_state);
-                    }  
+                    }
                     updatePrimaryVariables(summary_state, well_state, deferred_logger);
                 }
                 return changed;
@@ -310,9 +310,9 @@ namespace Opm
             const bool has_thp = this->wellHasTHPConstraints(summary_state);
             if (has_thp){
                 // calculate bhp from thp-limit (using explicit fractions zince zero rate)
-                // TODO: this will often be too strict condition for re-opening, a better 
-                // option is probably minimum bhp on current vfp-curve, but some more functionality 
-                // is needed for this option to be robustly implemented. 
+                // TODO: this will often be too strict condition for re-opening, a better
+                // option is probably minimum bhp on current vfp-curve, but some more functionality
+                // is needed for this option to be robustly implemented.
                 std::vector<double> rates(this->num_components_);
                 const double bhp_thp = WellBhpThpCalculator(*this).calculateBhpFromThp(well_state, rates, this->well_ecl_, summary_state, this->getRefDensity(), deferred_logger);
                 if (this->isInjector()){
@@ -444,7 +444,7 @@ namespace Opm
             } else {
                 converged = this->iterateWellEqWithSwitching(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
             }
-                 
+
         } catch (NumericalProblem& e ) {
             const std::string msg = "Inner well iterations failed for well " + this->name() + " Treat the well as unconverged. ";
             deferred_logger.warning("INNER_ITERATION_FAILED", msg);
@@ -795,7 +795,7 @@ namespace Opm
     updateWellOperability(const Simulator& ebos_simulator,
                           const WellState& well_state,
                           DeferredLogger& deferred_logger)
-    {   
+    {
         if (this->param_.local_well_solver_control_switching_) {
             const bool success = updateWellOperabilityFromWellEq(ebos_simulator, well_state, deferred_logger);
             if (success) {
@@ -841,7 +841,7 @@ namespace Opm
         // equations should be converged at this stage, so only one it is needed
         bool converged = iterateWellEquations(ebos_simulator, dt, well_state_copy, group_state, deferred_logger);
         return converged;
-    }                          
+    }
 
     template<typename TypeTag>
     void

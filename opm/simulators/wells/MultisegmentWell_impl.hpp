@@ -1032,7 +1032,7 @@ namespace Opm
                       };
 
         WellInterface<TypeTag>::getMobility(ebosSimulator, perf, mob, obtain, deferred_logger);
-	
+
         if (this->isInjector() && this->well_ecl_.getInjMultMode() != Well::InjMultMode::NONE) {
             const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
             const Connection& con = this->well_ecl_.getConnections()[perf_ecl_index];
@@ -1445,7 +1445,7 @@ namespace Opm
         bool relax_convergence = false;
         this->regularize_ = false;
 
-        // Max status switch frequency should be 2 to avoid getting stuck in cycle 
+        // Max status switch frequency should be 2 to avoid getting stuck in cycle
         const int min_its_after_switch = 2;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
@@ -1453,13 +1453,13 @@ namespace Opm
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
         const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
         bool changed = false;
-        bool final_check = false; 
+        bool final_check = false;
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             its_since_last_switch++;
             if (its_since_last_switch >= min_its_after_switch){
                 const double wqTotal = this->primary_variables_.getWQTotal().value();
-                changed = this->updateWellControlAndStatusLocalIteration (ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger); 
+                changed = this->updateWellControlAndStatusLocalIteration (ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger);
                 if (changed){
                     its_since_last_switch = 0;
                     switch_count++;
@@ -1566,7 +1566,7 @@ namespace Opm
                 } else {
                     this->operability_status_.operable_under_only_bhp_limit = !is_stopped;
                 }
-                // We reset the well status to it's original state. Status is updated 
+                // We reset the well status to it's original state. Status is updated
                 // on the outside based on operability status
                 this->wellStatus_ = well_status;
             }

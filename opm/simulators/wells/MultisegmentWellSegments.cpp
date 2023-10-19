@@ -505,11 +505,11 @@ getFrictionPressureLoss(const int seg, const bool return_extra_derivatives) cons
     EvalWell density = densities_[seg_upwind];
     EvalWell visc = viscosities_[seg_upwind];
     // In the reverse flow case, we don't have enough slots for all derivatives, e.g.,
-    // upwind pressure and flow. We amend this by a second function call optioin, where 
+    // upwind pressure and flow. We amend this by a second function call optioin, where
     // only these remaining derivatives are considered.
-    // For reference: the pressure equation assumes pressure/flow derivatives are given 
-    // at segment node while fraction derivatives are given at upwind node.   
-    
+    // For reference: the pressure equation assumes pressure/flow derivatives are given
+    // at segment node while fraction derivatives are given at upwind node.
+
     if (seg != seg_upwind) {
         if (!return_extra_derivatives){
             constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
@@ -532,7 +532,7 @@ getFrictionPressureLoss(const int seg, const bool return_extra_derivatives) cons
             mass_rate.clearDerivatives();
         }
     }
-    
+
     const auto& segment_set = well_.wellEcl().getSegments();
     const int outlet_segment_index = segment_set.segmentNumberToIndex(segment_set[seg].outletSegment());
     const double length = segment_set[seg].totalLength() - segment_set[outlet_segment_index].totalLength();

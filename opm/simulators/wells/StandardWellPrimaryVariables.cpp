@@ -46,7 +46,7 @@
 namespace {
 
     constexpr double EPSILON = 1.0e-14;
-    
+
 //! \brief Relaxation factor considering only one fraction value.
 template<class Scalar>
 Scalar relaxationFactorFraction(const Scalar old_value,

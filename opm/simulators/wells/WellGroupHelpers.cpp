@@ -1311,7 +1311,7 @@ namespace WellGroupHelpers
         const auto chain = groupChainTopBot(name, group.name(), schedule, reportStepIdx);
         // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
         const std::size_t num_ancestors = chain.size() - 1;
-        // we need to find out the level where the current well is applied to the local reduction 
+        // we need to find out the level where the current well is applied to the local reduction
         std::size_t local_reduction_level = 0;
         for (std::size_t ii = 1; ii < num_ancestors; ++ii) {
             const int num_gr_ctrl = groupControlledWells(schedule,
@@ -1522,10 +1522,10 @@ namespace WellGroupHelpers
                                             const int reportStepIdx,
                                             const FieldPropsManager& fp,
                                             const PhaseUsage& pu,
-                                            std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regionalAveragePressureCalculator) 
+                                            std::map<std::string, std::unique_ptr<AverageRegionalPressureType>>& regionalAveragePressureCalculator)
     {
         for (const std::string& groupName : group.groups()) {
-            setRegionAveragePressureCalculator( schedule.getGroup(groupName, reportStepIdx), schedule, 
+            setRegionAveragePressureCalculator( schedule.getGroup(groupName, reportStepIdx), schedule,
                                                 reportStepIdx, fp, pu, regionalAveragePressureCalculator);
         }
         const auto& gpm = group.gpmaint();

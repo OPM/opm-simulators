@@ -421,7 +421,7 @@ actionOnBrokenConstraints(const Group& group,
                                  group.name(),
                                  Group::ProductionCMode2String(oldControl),
                                  Group::ProductionCMode2String(newControl));
-            } 
+            }
             else {
                 ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. Nothing is done.",
                                  Group::ProductionCMode2String(oldControl),
