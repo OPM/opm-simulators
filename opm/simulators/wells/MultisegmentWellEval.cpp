@@ -234,10 +234,10 @@ assembleDefaultPressureEq(const int seg,
     auto& segments = ws.segments;
 
     if (this->frictionalPressureLossConsidered()) {
-        const auto friction_pressure_drop = segments_.getFrictionPressureLoss(seg, false);
+        const auto friction_pressure_drop = segments_.getFrictionPressureLoss(seg);
         if (reverseFlow){
             // call function once again to obtain/assemble remaining derivatives
-            extra_derivatives = -segments_.getFrictionPressureLoss(seg, true);
+            extra_derivatives = -segments_.getFrictionPressureLoss(seg, /*extra_reverse_flow_derivatives*/ true);
             MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
                 assemblePressureEqExtraDerivatives(seg, seg_upwind, extra_derivatives, linSys_);
         }
@@ -283,19 +283,31 @@ assembleICDPressureEq(const int seg,
     // the pressure equation is something like
     // p_seg - deltaP - p_outlet = 0.
     // the major part is how to calculate the deltaP
+    const int seg_upwind = segments_.upwinding_segment(seg);
+    const bool reverseFlow = seg != seg_upwind; // special treatment for reverse flow
 
     EvalWell pressure_equation = primary_variables_.getSegmentPressure(seg);
 
     EvalWell icd_pressure_drop;
+    EvalWell extra_derivatives;
     switch(this->segmentSet()[seg].segmentType()) {
         case Segment::SegmentType::SICD :
             icd_pressure_drop = segments_.pressureDropSpiralICD(seg);
+            if (reverseFlow){
+                extra_derivatives = -segments_.pressureDropSpiralICD(seg, /*extra_reverse_flow_derivatives*/ true);
+            }
             break;
         case Segment::SegmentType::AICD :
             icd_pressure_drop = segments_.pressureDropAutoICD(seg, unit_system);
+            if (reverseFlow){
+                extra_derivatives = -segments_.pressureDropAutoICD(seg, unit_system, /*extra_reverse_flow_derivatives*/ true);
+            }
             break;
         case Segment::SegmentType::VALVE :
             icd_pressure_drop = segments_.pressureDropValve(seg);
+            if (reverseFlow){
+                extra_derivatives = -segments_.pressureDropValve(seg, /*extra_reverse_flow_derivatives*/ true);
+            }
             break;
         default: {
             OPM_DEFLOG_THROW(std::runtime_error,
@@ -305,6 +317,12 @@ assembleICDPressureEq(const int seg,
                              deferred_logger);
         }
     }
+    if (reverseFlow){
+        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+            assemblePressureEqExtraDerivatives(seg, seg_upwind, extra_derivatives, linSys_);
+
+    }
+
     pressure_equation = pressure_equation - icd_pressure_drop;
     auto& ws = well_state.well(baseif_.indexOfWell());
     ws.segments.pressure_drop_friction[seg] = icd_pressure_drop.value();
@@ -313,7 +331,6 @@ assembleICDPressureEq(const int seg,
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
     const EvalWell outlet_pressure = primary_variables_.getSegmentPressure(outlet_segment_index);
 
-    const int seg_upwind = segments_.upwinding_segment(seg);
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
         assemblePressureEq(seg, seg_upwind, outlet_segment_index,
                            pressure_equation, outlet_pressure,
