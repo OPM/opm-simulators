@@ -278,6 +278,7 @@ public:
             return;
 
         const auto& problem = elemCtx.simulator().problem();
+        const auto& ebosResid = elemCtx.simulator().model().linearizer().residual();
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
@@ -624,6 +625,15 @@ public:
 
                     this->tracerConcentrations_[tracerIdx][globalDofIdx] =
                         tracerModel.tracerConcentration(tracerIdx, globalDofIdx);
+                }
+            }
+
+            // output residual
+            for ( int phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx )
+            {
+                if (!this->residual_[phaseIdx].empty()) {
+                    const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
+                    this->residual_[phaseIdx][globalDofIdx] = ebosResid[globalDofIdx][activeCompIdx];
                 }
             }
         }
