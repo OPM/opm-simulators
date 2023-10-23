@@ -34,16 +34,9 @@ namespace {
         return { *mmPos.first, *mmPos.second };
     }
 
-} // Anonymous namespace
-
-std::pair<std::vector<int>, int>
-Opm::util::compressAndCountPartitionIDs(std::vector<int>&& parts0)
-{
-    auto parts = std::pair<std::vector<int>, int> { std::move(parts0), 0 };
-
-    auto& [partition, num_domains] = parts;
-
-    if (! partition.empty()) {
+    void compressAndCountPartitionIDs(std::vector<int>& partition,
+                                      int&              num_domains)
+    {
         const auto& [low, high] = valueRange(partition);
 
         auto seen = std::vector<bool>(high - low + 1, false);
@@ -64,6 +57,16 @@ Opm::util::compressAndCountPartitionIDs(std::vector<int>&& parts0)
             }
         }
     }
+} // Anonymous namespace
+
+std::pair<std::vector<int>, int>
+Opm::util::compressAndCountPartitionIDs(std::vector<int>&& parts0)
+{
+    auto parts = std::pair<std::vector<int>, int> { std::move(parts0), 0 };
+
+    if (! parts.first.empty()) {
+        ::compressAndCountPartitionIDs(parts.first, parts.second);
+    }
 
     return parts;
 }
@@ -71,4 +74,10 @@ Opm::util::compressAndCountPartitionIDs(std::vector<int>&& parts0)
 std::vector<int> Opm::util::compressPartitionIDs(std::vector<int>&& parts0)
 {
     return compressAndCountPartitionIDs(std::move(parts0)).first;
+}
+
+void Opm::util::compressPartitionIDs(std::vector<int>& parts0)
+{
+    [[maybe_unused]] auto num_domains = 0;
+    ::compressAndCountPartitionIDs(parts0, num_domains);
 }

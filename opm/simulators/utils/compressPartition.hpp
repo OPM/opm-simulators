@@ -28,6 +28,7 @@ namespace Opm { namespace util {
     compressAndCountPartitionIDs(std::vector<int>&& parts0);
 
     std::vector<int> compressPartitionIDs(std::vector<int>&& parts0);
+    void compressPartitionIDs(std::vector<int>& parts0);
 }} // namespace Opm::util
 
 #endif // OPM_UTIL_COMPRESS_PARTITION_HPP_INCLUDED
