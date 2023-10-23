@@ -54,6 +54,8 @@
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <filesystem>
+#include <fstream>
 #include <functional>
 #include <iomanip>
 #include <ios>
@@ -301,6 +303,26 @@ public:
     const SimulatorReportSingle& localAccumulatedReports() const
     {
         return local_reports_accumulated_;
+    }
+
+    void writePartitions(const std::filesystem::path& odir) const
+    {
+        const auto& elementMapper = this->model_.ebosSimulator().model().elementMapper();
+        const auto& cartMapper = this->model_.ebosSimulator().vanguard().cartesianIndexMapper();
+
+        const auto& grid = this->model_.ebosSimulator().vanguard().grid();
+        const auto& comm = grid.comm();
+        const auto nDigit = 1 + static_cast<int>(std::floor(std::log10(comm.size())));
+
+        std::ofstream pfile { odir / fmt::format("{1:0>{0}}", nDigit, comm.rank()) };
+
+        const auto p = this->reconstitutePartitionVector();
+        auto i = 0;
+        for (const auto& cell : elements(grid.leafGridView(), Dune::Partitions::interior)) {
+            pfile << comm.rank() << ' '
+                  << cartMapper.cartesianIndex(elementMapper.index(cell)) << ' '
+                  << p[i++] << '\n';
+        }
     }
 
 private:
@@ -864,6 +886,34 @@ private:
         return ::Opm::partitionCells(param.local_domain_partition_method_,
                                      param.num_local_domains_,
                                      grid.leafGridView(), wells, zoltan_ctrl);
+    }
+
+    std::vector<int> reconstitutePartitionVector() const
+    {
+        const auto& grid = this->model_.ebosSimulator().vanguard().grid();
+
+        auto numD = std::vector<int>(grid.comm().size() + 1, 0);
+        numD[grid.comm().rank() + 1] = static_cast<int>(this->domains_.size());
+        grid.comm().sum(numD.data(), numD.size());
+        std::partial_sum(numD.begin(), numD.end(), numD.begin());
+
+        auto p = std::vector<int>(grid.size(0));
+        auto maxCellIdx = std::numeric_limits<int>::min();
+
+        auto d = numD[grid.comm().rank()];
+        for (const auto& domain : this->domains_) {
+            for (const auto& cell : domain.cells) {
+                p[cell] = d;
+                if (cell > maxCellIdx) {
+                    maxCellIdx = cell;
+                }
+            }
+
+            ++d;
+        }
+
+        p.erase(p.begin() + maxCellIdx + 1, p.end());
+        return p;
     }
 
     BlackoilModelEbos<TypeTag>& model_; //!< Reference to model
