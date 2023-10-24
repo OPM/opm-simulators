@@ -44,6 +44,7 @@ public:
         std::shared_ptr<Opm::Schedule> schedule,
         std::shared_ptr<Opm::SummaryConfig> summary_config);
     bool checkSimulationFinished();
+    py::array_t<double> getCellVolumes();
     py::array_t<double> getPorosity();
     int run();
     void setPorosity(
@@ -56,18 +57,18 @@ public:
     const Opm::FlowMainEbos<TypeTag>& getFlowMainEbos() const;
 
 private:
-    const std::string deckFilename_;
-    bool hasRunInit_ = false;
-    bool hasRunCleanup_ = false;
+    const std::string deck_filename_;
+    bool has_run_init_ = false;
+    bool has_run_cleanup_ = false;
     //bool debug_ = false;
     // This *must* be declared before other pointers
     // to simulator objects. This in order to deinitialize
     // MPI at the correct time (ie after the other objects).
     std::unique_ptr<Opm::Main> main_;
 
-    std::unique_ptr<Opm::FlowMainEbos<TypeTag>> mainEbos_;
-    Simulator *ebosSimulator_;
-    std::unique_ptr<PyMaterialState<TypeTag>> materialState_;
+    std::unique_ptr<Opm::FlowMainEbos<TypeTag>> main_ebos_;
+    Simulator *ebos_simulator_;
+    std::unique_ptr<PyMaterialState<TypeTag>> material_state_;
     std::shared_ptr<Opm::Deck> deck_;
     std::shared_ptr<Opm::EclipseState> eclipse_state_;
     std::shared_ptr<Opm::Schedule> schedule_;
