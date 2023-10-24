@@ -498,6 +498,25 @@ foreach(pinch_case ${_pinch_cases})
     DIR pinch)
 endforeach()
 
+set(_udt_cases
+  1D-01B
+  1D-01
+  1D-02
+  1D-03
+)
+
+foreach(udt_case ${_udt_cases})
+  string(TOLOWER ${udt_case} udt_test)
+  add_test_compareECLFiles(CASENAME udt_${udt_test}
+    FILENAME UDT-${udt_case}
+    SIMULATOR flow
+    ABS_TOL ${abs_tol}
+    REL_TOL ${rel_tol}
+    TEST_ARGS --enable-tuning=true
+    DIR udt)
+endforeach()
+
+
 add_test_compareECLFiles(CASENAME udq_uadd
                          FILENAME UDQ_M1
                          SIMULATOR flow
