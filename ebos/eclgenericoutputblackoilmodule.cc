@@ -551,6 +551,28 @@ assignToSolution(data::Solution& sol)
                    data::TargetType::RESTART_OPM_EXTENDED);
     }
 
+    if (FluidSystem::phaseIsActive(waterPhaseIdx) &&
+        ! this->residual_[waterPhaseIdx].empty())
+    {
+        sol.insert("RES_WAT", UnitSystem::measure::liquid_surface_volume,
+                   std::move(this->residual_[waterPhaseIdx]),
+                   data::TargetType::RESTART_OPM_EXTENDED);
+    }
+    if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
+        ! this->residual_[gasPhaseIdx].empty())
+    {
+        sol.insert("RES_GAS", UnitSystem::measure::gas_surface_volume,
+                   std::move(this->residual_[gasPhaseIdx]),
+                   data::TargetType::RESTART_OPM_EXTENDED);
+    }
+    if (FluidSystem::phaseIsActive(oilPhaseIdx) &&
+        ! this->residual_[oilPhaseIdx].empty())
+    {
+        sol.insert("RES_OIL", UnitSystem::measure::liquid_surface_volume,
+                   std::move(this->residual_[oilPhaseIdx]),
+                   data::TargetType::RESTART_OPM_EXTENDED);
+    }
+
     // Fluid in place
     if (this->outputFipRestart_) {
         for (const auto& phase : Inplace::phases()) {
@@ -1132,6 +1154,16 @@ doAllocBuffers(const unsigned bufferSize,
         for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
         {
             tracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
+        }
+    }
+
+    if (rstKeywords["RESIDUAL"] > 0) {
+        rstKeywords["RESIDUAL"] = 0;
+        for (int phaseIdx = 0; phaseIdx <  numPhases; ++phaseIdx)
+        {
+            if (FluidSystem::phaseIsActive(phaseIdx)) {
+                this->residual_[phaseIdx].resize(bufferSize, 0.0);
+            }
         }
     }
 

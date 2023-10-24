@@ -470,6 +470,9 @@ protected:
 
     std::vector<ScalarBuffer> tracerConcentrations_;
 
+    std::array<ScalarBuffer, numPhases> residual_;
+
+
     std::array<ScalarBuffer, numPhases> flowsi_;
     std::array<ScalarBuffer, numPhases> flowsj_;
     std::array<ScalarBuffer, numPhases> flowsk_;
