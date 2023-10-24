@@ -278,7 +278,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 os << "Property tree for linear solvers:\n";
                 for (std::size_t i = 0; i<prm_.size(); i++) {
                     prm_[i].write_json(os, true);
-                    std::cerr<< "debug: ["<<i<<"] : " << os.str() <<std::endl;
                 }
                 OpmLog::note(os.str());
             }
