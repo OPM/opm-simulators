@@ -253,13 +253,6 @@ doInit(bool rst, std::size_t numGridDof,
             tracerMatrix_->addindex(dofIdx, *nIt);
     }
     tracerMatrix_->endindices();
-
-    const int sizeCartGrid = cartMapper_.cartesianSize();
-    cartToGlobal_.resize(sizeCartGrid);
-    for (unsigned i = 0; i < numGridDof; ++i) {
-        int cartIdx = cartMapper_.cartesianIndex(i);
-        cartToGlobal_[cartIdx] = i;
-    }
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>

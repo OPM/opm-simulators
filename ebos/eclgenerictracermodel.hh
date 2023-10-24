@@ -117,7 +117,6 @@ protected:
     std::vector<int> tracerPhaseIdx_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentration_;
     std::unique_ptr<TracerMatrix> tracerMatrix_;
-    std::vector<int> cartToGlobal_;
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> storageOfTimeIndex1_;
 
     // <wellName, tracerIdx> -> wellRate
