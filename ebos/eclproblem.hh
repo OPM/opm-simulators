@@ -145,6 +145,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
     enum { enableThermalFluxBoundaries = getPropValue<TypeTag, Properties::EnableThermalFluxBoundaries>() };
     enum { enableApiTracking = getPropValue<TypeTag, Properties::EnableApiTracking>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
@@ -278,7 +279,8 @@ public:
                               simulator.vanguard().grid(),
                               simulator.vanguard().cellCentroids(),
                               enableEnergy,
-                              enableDiffusion)
+                              enableDiffusion,
+                              enableDispersion)
         , thresholdPressures_(simulator)
         , wellModel_(simulator)
         , aquiferModel_(simulator)
@@ -822,6 +824,13 @@ public:
      */
     Scalar diffusivity(const unsigned globalCellIn, const unsigned globalCellOut) const{
         return transmissibilities_.diffusivity(globalCellIn, globalCellOut);
+    }
+
+    /*!
+     * give the dispersivity for a face i.e. pair.
+     */
+    Scalar dispersivity(const unsigned globalCellIn, const unsigned globalCellOut) const{
+        return transmissibilities_.dispersivity(globalCellIn, globalCellOut);
     }
 
     /*!
@@ -2448,6 +2457,7 @@ private:
         ConditionalStorage<enableEnergy, Scalar> thermalHalfTransIn;
         ConditionalStorage<enableEnergy, Scalar> thermalHalfTransOut;
         ConditionalStorage<enableDiffusion, Scalar> diffusivity;
+        ConditionalStorage<enableDispersion, Scalar> dispersivity;
         Scalar transmissibility;
     };
 
@@ -2473,6 +2483,8 @@ private:
                 }
                 if constexpr (enableDiffusion)
                     *dofData.diffusivity = transmissibilities_.diffusivity(globalCenterElemIdx, globalElemIdx);
+                if (enableDispersion)
+                    dofData.dispersivity = transmissibilities_.dispersivity(globalCenterElemIdx, globalElemIdx);
             }
         };
 

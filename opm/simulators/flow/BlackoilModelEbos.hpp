@@ -133,6 +133,10 @@ template<class TypeTag>
 struct EnableMICP<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = false;
 };
+template<class TypeTag>
+struct EnableDispersion<TypeTag, TTag::EclFlowProblem> {
+    static constexpr bool value = false;
+};
 
 template<class TypeTag>
 struct EclWellModel<TypeTag, TTag::EclFlowProblem> {

@@ -189,7 +189,9 @@ public:
                                                                  getPropValue<TypeTag,
                                                                  Properties::EnableEnergy>(),
                                                                  getPropValue<TypeTag,
-                                                                 Properties::EnableDiffusion>());
+                                                                 Properties::EnableDiffusion>(),
+                                                                 getPropValue<TypeTag,
+                                                                 Properties::EnableDispersion>());
             // Re-ordering  for ALUGrid
             globalTrans_->update(false, [&](unsigned int i) { return gridEquilIdxToGridIdx(i);});
         }
