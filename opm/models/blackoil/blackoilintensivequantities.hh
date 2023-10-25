@@ -36,6 +36,7 @@
 #include "blackoilbrinemodules.hh"
 #include "blackoilenergymodules.hh"
 #include "blackoildiffusionmodule.hh"
+#include "blackoildispersionmodule.hh"
 #include "blackoilmicpmodules.hh"
 
 #include <opm/common/TimingMacros.hpp>
@@ -70,6 +71,7 @@ class BlackOilIntensiveQuantities
     : public GetPropType<TypeTag, Properties::DiscIntensiveQuantities>
     , public GetPropType<TypeTag, Properties::FluxModule>::FluxIntensiveQuantities
     , public BlackOilDiffusionIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>() >
+    , public BlackOilDispersionIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDispersion>() >
     , public BlackOilSolventIntensiveQuantities<TypeTag>
     , public BlackOilExtboIntensiveQuantities<TypeTag>
     , public BlackOilPolymerIntensiveQuantities<TypeTag>
@@ -103,6 +105,7 @@ class BlackOilIntensiveQuantities
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
@@ -124,6 +127,7 @@ class BlackOilIntensiveQuantities
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
     using FluxIntensiveQuantities = typename FluxModule::FluxIntensiveQuantities;
     using DiffusionIntensiveQuantities = BlackOilDiffusionIntensiveQuantities<TypeTag, enableDiffusion>;
+    using DispersionIntensiveQuantities = BlackOilDispersionIntensiveQuantities<TypeTag, enableDispersion>;
 
     using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
 
@@ -472,6 +476,9 @@ public:
 
         // update the diffusion specific quantities of the intensive quantities
         DiffusionIntensiveQuantities::update_(fluidState_, paramCache, elemCtx, dofIdx, timeIdx);
+
+        // update the dispersion specific quantities of the intensive quantities
+        DispersionIntensiveQuantities::update_(elemCtx, dofIdx, timeIdx);
 
 #ifndef NDEBUG
         // some safety checks in debug mode

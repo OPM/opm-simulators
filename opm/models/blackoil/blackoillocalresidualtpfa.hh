@@ -36,6 +36,7 @@
 #include "blackoilfoammodules.hh"
 #include "blackoilbrinemodules.hh"
 #include "blackoildiffusionmodule.hh"
+#include "blackoildispersionmodule.hh"
 #include "blackoilmicpmodules.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
@@ -92,6 +93,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     static constexpr bool enableFoam = getPropValue<TypeTag, Properties::EnableFoam>();
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
+    static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
     static constexpr bool enableMICP = getPropValue<TypeTag, Properties::EnableMICP>();
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
@@ -101,6 +103,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
     using MICPModule = BlackOilMICPModule<TypeTag>;
 
     using Toolbox = MathToolbox<Evaluation>;
@@ -118,7 +121,8 @@ public:
         double Vex;
         double inAlpha;
         double outAlpha;
-	double diffusivity;
+        double diffusivity;
+        double dispersivity;
     };
     /*!
      * \copydoc FvBaseLocalResidual::computeStorage
@@ -295,9 +299,10 @@ public:
         // for thermal harmonic mean of half trans
         const Scalar inAlpha = problem.thermalHalfTransmissibility(globalIndexIn, globalIndexEx);
         const Scalar outAlpha = problem.thermalHalfTransmissibility(globalIndexEx, globalIndexIn);
-	const Scalar diffusivity = problem.diffusivity(globalIndexEx, globalIndexIn);
+        const Scalar diffusivity = problem.diffusivity(globalIndexEx, globalIndexIn);
+        const Scalar dispersivity = problem.dispersivity(globalIndexEx, globalIndexIn);
 
-        const ResidualNBInfo res_nbinfo {trans, faceArea, thpres, distZ * g, facedir, Vin, Vex, inAlpha, outAlpha, diffusivity};
+        const ResidualNBInfo res_nbinfo {trans, faceArea, thpres, distZ * g, facedir, Vin, Vex, inAlpha, outAlpha, diffusivity, dispersivity};
 
         calculateFluxes_(flux,
                          darcy,
@@ -441,7 +446,7 @@ public:
         static_assert(!enableBrine, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with diffusion (if present)
+        // deal with diffusion (if present). opm-models expects per area flux (added in the tmpdiffusivity).
         if constexpr(enableDiffusion){
             typename DiffusionModule::ExtensiveQuantities::EvaluationArray effectiveDiffusionCoefficient;
             DiffusionModule::ExtensiveQuantities::update(effectiveDiffusionCoefficient, intQuantsIn, intQuantsEx);
@@ -452,6 +457,19 @@ public:
                                               intQuantsEx.fluidState(),
                                               tmpdiffusivity,
                                               effectiveDiffusionCoefficient);
+
+        }
+        // deal with dispersion (if present). opm-models expects per area flux (added in the tmpdispersivity).
+        if constexpr(enableDispersion){
+            typename DispersionModule::ExtensiveQuantities::ScalarArray normVelocityAvg;
+            DispersionModule::ExtensiveQuantities::update(normVelocityAvg, intQuantsIn, intQuantsEx);
+            const Scalar dispersivity = nbInfo.dispersivity;
+            const Scalar tmpdispersivity = dispersivity / faceArea;
+            DispersionModule::addDispersiveFlux(flux,
+                                                intQuantsIn.fluidState(),
+                                                intQuantsEx.fluidState(),
+                                                tmpdispersivity,
+                                                normVelocityAvg);
 
         }
         // deal with micp (if present)
