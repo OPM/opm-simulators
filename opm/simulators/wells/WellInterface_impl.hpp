@@ -730,8 +730,8 @@ namespace Opm
         const auto& schedule = ebos_simulator.vanguard().schedule();
         auto report_step_idx = ebos_simulator.episodeIndex();
         const auto& glo = schedule.glo(report_step_idx);
-        if(glo.has_well(well_name)) {
-            auto increment = glo.gaslift_increment();
+        if(glo.active() && glo.has_well(well_name)) {
+            const auto increment = glo.gaslift_increment();
             auto alq = well_state.getALQ(well_name);
             bool converged;
             while (alq > 0) {
