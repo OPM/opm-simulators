@@ -10,7 +10,6 @@
 #
 pybind11_add_module(simulators ${PYBIND11_SYSTEM}
   PyBlackOilSimulator.cpp
-  PyFlowSimulator.cpp
   PyEnergySimulator.cpp
   Pybind11Exporter.cpp)
 

@@ -43,7 +43,7 @@ namespace Opm {
     }
 }
 
-
+// ----------------- Main program -----------------
 namespace Opm {
 
 std::unique_ptr<FlowMainEbos<Properties::TTag::EclEnergyProblemTPFA>>
@@ -57,7 +57,6 @@ flowEbosEnergyMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
         argc, argv, outputCout, outputFiles);
 }
 
-// ----------------- Main program -----------------
 int flowEbosEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble

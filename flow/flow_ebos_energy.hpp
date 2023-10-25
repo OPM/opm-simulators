@@ -18,18 +18,22 @@
 #define FLOW_EBOS_ENERGY_HPP
 
 #include <memory>
-#include <flow/flow_ebos_blackoil.hpp>
+#include <opm/simulators/flow/BlackoilModelEbos.hpp>
 
 namespace Opm {
     namespace Properties {
         namespace TTag {
-
+            
             struct EclEnergyProblemTPFA {
             using InheritsFrom = std::tuple<EclFlowProblem>;
             };
+        };
+        template<class TypeTag>
+        struct EnableEnergy<TypeTag, TTag::EclEnergyProblemTPFA> {
+        static constexpr bool value = true;
 
-        }
-   }
+        };
+    };
 }
 
 

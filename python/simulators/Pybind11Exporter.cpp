@@ -3,7 +3,6 @@
 
 void Opm::Pybind::export_all(py::module& m) {
     export_PyBlackOilSimulator(m);
-    export_PyFlowSimulator(m);
     export_PyEnergySimulator(m);
 }
 
