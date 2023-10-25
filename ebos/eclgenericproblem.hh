@@ -380,7 +380,7 @@ protected:
     auto getLookUpData(unsigned elemIdx) const
     {
         using GridType = std::remove_cv_t< typename std::remove_reference<decltype(gridView_.grid())>::type>;
-        return lookUpData_.template getOriginIndex<GridType>(elemIdx);
+        return lookUpData_.template getFieldPropIdx<GridType>(elemIdx);
     }
 
 private:
