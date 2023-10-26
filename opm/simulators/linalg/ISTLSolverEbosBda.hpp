@@ -183,14 +183,13 @@ public:
         OPM_TIMEBLOCK(prepare);
         [[maybe_unused]] const bool firstcall = (this->matrix_ == nullptr);
 
-        // Avoid performing the decomposition on CPU when we also do it on GPU, but we do
-        // need to initialize the pointers.
-         if(bdaBridge_){
+        // Avoid performing the decomposition on CPU when we also do it on GPU,
+        // but we do need to initialize the pointers.
+        if (bdaBridge_) {
             ParentType::initPrepare(M,b);
-         }
-         else {
-             ParentType::prepare(M,b);
-         }
+        } else {
+            ParentType::prepare(M,b);
+        }
 
 #if HAVE_OPENCL
         // update matrix entries for solvers.
