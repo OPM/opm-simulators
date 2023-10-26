@@ -132,12 +132,8 @@ finishInit()
     }
 
     // internalize the data specified using the EQLNUM keyword
-    const auto& fp = eclState_.fieldProps();
-    const auto& equilRegionData = fp.get_int("EQLNUM");
-    elemEquilRegion_.resize(numElements, 0);
-    for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-        elemEquilRegion_[elemIdx] = equilRegionData[elemIdx] - 1;
-    }
+    elemEquilRegion_ = lookUpData_.template assignFieldPropsIntOnLeaf<short unsigned int>(eclState_.fieldProps(),
+                                                                                          "EQLNUM", numElements, true);
 
     /*
       If this is a restart run the ThresholdPressure object will be active,
@@ -171,8 +167,8 @@ applyExplicitThresholdPressures_()
             const auto& inside = intersection.inside();
             const auto& outside = intersection.outside();
 
-            auto equilRegionInside = lookUpData_(inside, elemEquilRegion_);
-            auto equilRegionOutside = lookUpData_(outside, elemEquilRegion_);
+            auto equilRegionInside = elemEquilRegion_[elementMapper_.index(inside)];
+            auto equilRegionOutside = elemEquilRegion_[elementMapper_.index(outside)];
 
             if (thpres.hasRegionBarrier(equilRegionInside + 1, equilRegionOutside + 1)) {
                 Scalar pth = 0.0;

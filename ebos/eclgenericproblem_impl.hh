@@ -166,31 +166,33 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
 
     unsigned numElem = gridView_.size(0);
     if (eclState_.fieldProps().has_int(rock_config.rocknum_property())) {
-        rockTableIdx_.resize(numElem);
-        const auto& num = eclState_.fieldProps().get_int(rock_config.rocknum_property());
-        for (std::size_t elemIdx = 0; elemIdx < numElem; ++ elemIdx) {
-            auto coarseElemIdx = this->getLookUpData(elemIdx);
-            rockTableIdx_[elemIdx] = num[coarseElemIdx] - 1;
-            auto fmtError =
-                [&num,coarseElemIdx,&ijkIndex,&rock_config](const char* type, std::size_t size)
-                {
-                    return fmt::format("{} table index {} for elem {} read from {}"
-                                      " is is out of bounds for number of tables {}",
-                                       type, num[coarseElemIdx],
-                                       ijkIndex(coarseElemIdx),
-                                       rock_config.rocknum_property(), size);
-                };
+        // Auxiliary function to check rockTableIdx_ values belong to the right range. Otherwise, throws.
+        std::function<void(int, int)> valueCheck = [&ijkIndex,&rock_config,this](int fieldPropValue, int coarseElemIdx)
+        {
+            auto fmtError = [fieldPropValue, coarseElemIdx,&ijkIndex,&rock_config](const char* type, std::size_t size)
+            {
+                return fmt::format("{} table index {} for elem {} read from {}"
+                                   " is out of bounds for number of tables {}",
+                                   type,  fieldPropValue,
+                                   ijkIndex(coarseElemIdx),
+                                   rock_config.rocknum_property(), size);
+            };
             if (!rockCompPoroMult_.empty() &&
-                rockTableIdx_[elemIdx] >= rockCompPoroMult_.size()) {
+                fieldPropValue > static_cast<int>(rockCompPoroMult_.size())) {
                 throw std::runtime_error(fmtError("Rock compaction",
                                                   rockCompPoroMult_.size()));
             }
             if (!rockCompPoroMultWc_.empty() &&
-                rockTableIdx_[elemIdx] >= rockCompPoroMultWc_.size()) {
+                fieldPropValue > static_cast<int>(rockCompPoroMultWc_.size())) {
                 throw std::runtime_error(fmtError("Rock water compaction",
                                                   rockCompPoroMultWc_.size()));
             }
-        }
+        };
+
+        rockTableIdx_ = this->lookUpData_.template assignFieldPropsIntOnLeaf<short unsigned int>(eclState_.fieldProps(),
+                                                                                                 rock_config.rocknum_property(),
+                                                                                                 numElem, true /*needsTranslation*/,
+                                                                                                 valueCheck);
     }
 
     // Store overburden pressure pr element
@@ -367,19 +369,19 @@ updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regi
     if (!eclState_.fieldProps().has_int(name))
         return;
 
-    const auto& numData = eclState_.fieldProps().get_int(name);
-
     unsigned numElems = gridView_.size(/*codim=*/0);
-    numbers.resize(numElems);
-    for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-        if (numData[this->getLookUpData(elemIdx)] > (int)num_regions) {
-            throw std::runtime_error("Values larger than maximum number of regions " + std::to_string(num_regions) + " provided in " + name);
-        } else if (numData[this->getLookUpData(elemIdx)] > 0) {
-            numbers[elemIdx] = static_cast<T>(numData[this->getLookUpData(elemIdx)]) - 1;
-        } else {
+    std::function<void(T, int)> valueCheck = [num_regions,name](T fieldPropValue, [[maybe_unused]] int fieldPropIdx) {
+        if ( fieldPropValue > (int)num_regions) {
+            throw std::runtime_error("Values larger than maximum number of regions "
+                                     + std::to_string(num_regions) + " provided in " + name);
+        }
+        if ( fieldPropValue <= 0) {
             throw std::runtime_error("zero or negative values provided for region array: " + name);
         }
-    }
+    };
+
+    numbers = this->lookUpData_.template assignFieldPropsIntOnLeaf<T>(eclState_.fieldProps(), name, numElems,
+                                                                      true /*needsTranslation*/, valueCheck);
 }
 
 template<class GridView, class FluidSystem, class Scalar>
