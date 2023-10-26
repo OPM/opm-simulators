@@ -137,6 +137,22 @@ bhpwithflo(const std::vector<double>& flos,
     return bhps;
 }
 
+double
+VFPProdProperties::
+minimumBHP(const int table_id,
+           const double thp,
+           const double wfr,
+           const double gfr,
+           const double alq) const
+{
+    // Get the table
+    const VFPProdTable& table = detail::getTable(m_tables, table_id);
+    const auto retval = detail::getMinimumBHPCoordinate(table, thp, wfr, gfr, alq);
+    // returned pair is (flo, bhp)
+    return retval.second;
+}
+
+
 
 void VFPProdProperties::addTable(const VFPProdTable& new_table) {
     this->m_tables.emplace( new_table.getTableNum(), new_table );
@@ -176,7 +192,8 @@ EvalWell VFPProdProperties::bhp(const int table_id,
 
     detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
-    bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (std::max(0.0, bhp_val.dflo) * flo);
+   //bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (std::max(0.0, bhp_val.dflo) * flo);
+   bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo* flo);
 
     bhp.setValue(bhp_val.value);
     return bhp;

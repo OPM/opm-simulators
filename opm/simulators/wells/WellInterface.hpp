@@ -247,7 +247,8 @@ public:
                                                   const Well::InjectionControls& inj_controls,
                                                   const Well::ProductionControls& prod_controls,
                                                   const double WQTotal,
-                                                  DeferredLogger& deferred_logger);
+                                                  DeferredLogger& deferred_logger, 
+                                                  const bool allow_switch=true);
 
     virtual void updatePrimaryVariables(const SummaryState& summary_state,
                                         const WellState& well_state,
@@ -414,13 +415,39 @@ protected:
                                             const WellProductionControls& prod_controls,
                                             WellState& well_state,
                                             const GroupState& group_state,
-                                            DeferredLogger& deferred_logger) = 0;
+                                            DeferredLogger& deferred_logger, 
+                                            const bool allow_switch = true) = 0;
+
+    virtual void updateIPRImplicit(const Simulator& ebosSimulator,
+                                   WellState& well_state,
+                                   DeferredLogger& deferred_logger) = 0;                                            
 
     bool iterateWellEquations(const Simulator& ebosSimulator,
                               const double dt,
                               WellState& well_state,
                               const GroupState& group_state,
                               DeferredLogger& deferred_logger);
+
+    bool robustWellSolveWithTHP(const Simulator& ebos_simulator,
+                                const double dt,
+                                const Well::InjectionControls& inj_controls,
+                                const Well::ProductionControls& prod_controls,                                
+                                WellState& well_state,
+                                const GroupState& group_state,
+                                DeferredLogger& deferred_logger);
+
+    std::optional<double> estimateOperableBhp(const Simulator& ebos_simulator,
+                                              const double dt,
+                                              WellState& well_state,
+                                              const GroupState& group_state,
+                                              const SummaryState& summary_state,
+                                              DeferredLogger& deferred_logger);        
+
+    bool solveWellWithBhp(const Simulator& ebos_simulator,
+                          const double dt,
+                          const double bhp,
+                          WellState& well_state,
+                          DeferredLogger& deferred_logger);                                                                                       
 
     bool solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
                              DeferredLogger& deferred_logger);

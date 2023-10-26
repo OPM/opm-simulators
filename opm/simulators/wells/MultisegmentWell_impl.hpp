@@ -286,13 +286,23 @@ namespace Opm
         }
 
         debug_cost_counter_ = 0;
-        // does the well have a THP related constraint?
-        const auto& summaryState = ebosSimulator.vanguard().summaryState();
-        if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
-            computeWellRatesAtBhpLimit(ebosSimulator, well_potentials, deferred_logger);
-        } else {
-            well_potentials = computeWellPotentialWithTHP(
-                well_state, ebosSimulator, deferred_logger);
+        bool converged_implicit = false;
+        if (this->param_.local_well_solver_control_switching_) {
+            converged_implicit = computeWellPotentialsImplicit(ebosSimulator, well_potentials, deferred_logger);
+            if (!converged_implicit) {
+                deferred_logger.debug("Implicit potential calculations failed for well "
+                                       + this->name() + ",  reverting to original aproach.");
+            }
+        }
+        if (!converged_implicit) {
+            // does the well have a THP related constraint?
+            const auto& summaryState = ebosSimulator.vanguard().summaryState();
+            if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
+                computeWellRatesAtBhpLimit(ebosSimulator, well_potentials, deferred_logger);
+            } else {
+                well_potentials = computeWellPotentialWithTHP(
+                    well_state, ebosSimulator, deferred_logger);
+            }
         }
         deferred_logger.debug("Cost in iterations of finding well potential for well "
                               + this->name() + ": " + std::to_string(debug_cost_counter_));
@@ -488,7 +498,70 @@ namespace Opm
         return potentials;
     }
 
+    template<typename TypeTag>
+    bool
+    MultisegmentWell<TypeTag>::
+    computeWellPotentialsImplicit(const Simulator& ebos_simulator,
+                                  std::vector<double>& well_potentials,
+                                  DeferredLogger& deferred_logger) const
+    {
+        // Create a copy of the well.
+        // TODO: check if we can avoid taking multiple copies. Call from updateWellPotentials 
+        // is allready a copy, but not from other calls. 
+        MultisegmentWell<TypeTag> well_copy(*this);
+        well_copy.debug_cost_counter_ = 0;
 
+        // store a copy of the well state, we don't want to update the real well state
+        WellState well_state_copy = ebos_simulator.problem().wellModel().wellState();
+        const auto& group_state = ebos_simulator.problem().wellModel().groupState();
+        auto& ws = well_state_copy.well(this->index_of_well_);
+        
+        // get current controls        
+        const auto& summary_state = ebos_simulator.vanguard().summaryState();
+        auto inj_controls = well_copy.well_ecl_.isInjector()
+            ? well_copy.well_ecl_.injectionControls(summary_state)
+            : Well::InjectionControls(0);
+        auto prod_controls = well_copy.well_ecl_.isProducer()
+            ? well_copy.well_ecl_.productionControls(summary_state)
+            : Well::ProductionControls(0);
+        
+        // prepare/modify well state and control
+        well_copy.prepareForPotentialCalculations(summary_state, well_state_copy, inj_controls, prod_controls);
+        
+        well_copy.scaleSegmentPressuresWithBhp(well_state_copy);
+
+        // initialize rates from previous potentials
+        const int np = this->number_of_phases_;
+        bool trivial = true;
+        for (int phase = 0; phase < np; ++phase){
+            trivial = trivial && (ws.well_potentials[phase] == 0.0) ;
+        }
+        if (!trivial) {
+            const double sign = well_copy.well_ecl_.isInjector() ? 1.0 : -1.0;
+            for (int phase = 0; phase < np; ++phase) {
+                ws.surface_rates[phase] = sign * ws.well_potentials[phase];
+            }
+        }
+        well_copy.scaleSegmentRatesWithWellRates(this->segments_.inlets(),
+                                                 this->segments_.perforations(),
+                                                 well_state_copy);
+
+        well_copy.calculateExplicitQuantities(ebos_simulator, well_state_copy, deferred_logger);
+        const double dt = ebos_simulator.timeStepSize();
+        // solve equations
+        const bool converged = well_copy.iterateWellEqWithSwitching(ebos_simulator, dt, inj_controls, prod_controls, well_state_copy, group_state,
+                                                                    deferred_logger);
+
+        // fetch potentials (sign is updated on the outside).
+        well_potentials.clear();
+        well_potentials.resize(np, 0.0);
+        for (int compIdx = 0; compIdx < this->num_components_; ++compIdx) {
+            const EvalWell rate = well_copy.primary_variables_.getQs(compIdx);
+            well_potentials[this->ebosCompIdxToFlowCompIdx(compIdx)] = rate.value();
+        }
+        debug_cost_counter_ += well_copy.debug_cost_counter_;
+        return converged;
+    }
 
     template <typename TypeTag>
     void
@@ -1230,6 +1303,13 @@ namespace Opm
     template<typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
+    updateIPRImplicit(const Simulator& ebos_simulator, WellState& well_state, DeferredLogger& deferred_logger)
+    {
+    }    
+
+    template<typename TypeTag>
+    void
+    MultisegmentWell<TypeTag>::
     checkOperabilityUnderTHPLimit(
              const Simulator& ebos_simulator,
              const WellState& well_state,
@@ -1441,7 +1521,8 @@ namespace Opm
                              const Well::ProductionControls& prod_controls,
                              WellState& well_state,
                              const GroupState& group_state,
-                             DeferredLogger& deferred_logger)
+                             DeferredLogger& deferred_logger, 
+                             const bool allow_switch /*true*/)
     {
         //if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
 
@@ -1586,9 +1667,9 @@ namespace Opm
                 } else {
                     this->operability_status_.operable_under_only_bhp_limit = !is_stopped;
                 }
-                // We reset the well status to it's original state. Status is updated
+                // We reset the well status to it's original state. Status is updated 
                 // on the outside based on operability status
-                this->wellStatus_ = well_status;
+                // this->wellStatus_ = well_status;
             }
             std::string message = fmt::format("   Well {} converged in {} inner iterations ("
                                                     "{} control/status switches).", this->name(), it, switch_count);

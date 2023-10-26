@@ -25,6 +25,7 @@
 #include <functional>
 #include <map>
 #include <vector>
+#include <optional>
 
 /**
  * This file contains a set of helper functions used by VFPProd / VFPInj.
@@ -181,6 +182,28 @@ double findTHP(const std::vector<double>& bhp_array,
                const std::vector<double>& thp_array,
                double bhp);
 
+/**
+* Get (flo, bhp) at minimum bhp for given thp,wfr,gfr,alq
+*/
+std::pair<double, double> 
+getMinimumBHPCoordinate(const VFPProdTable& table,
+                        const double thp,
+                        const double wfr,
+                        const double gfr,
+                        const double alq);
+
+/**
+* Get (flo, bhp) at largest occuring stable vfp/ipr-intersection
+* if it exists
+*/  
+std::optional<std::pair<double, double>> 
+intersectWithIPR(const VFPProdTable& table,
+                 const double thp,
+                 const double wfr,
+                 const double gfr,
+                 const double alq, 
+                 const double ipr_a,
+                 const double ipr_b);                        
 
 } // namespace detail
 

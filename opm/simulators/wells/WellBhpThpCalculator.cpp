@@ -387,6 +387,32 @@ calculateBhpFromThp(const WellState& well_state,
     return bhp_tab - dp_hydro + bhp_adjustment;
 }
 
+double
+WellBhpThpCalculator::
+calculateMinimumBhpFromThp(const WellState& well_state,
+                           const Well& well,
+                           const SummaryState& summaryState,
+                           const double rho) const
+{
+    assert(well_.isProducer()); // only producers can go here for now
+
+    const double thp_limit = well_.getTHPConstraint(summaryState);
+    
+    const auto& controls = well.productionControls(summaryState);
+    const auto& wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
+    const auto& gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
+
+    const double bhp_min = well_.vfpProperties()->getProd()->minimumBHP(controls.vfp_table_number,
+                                                                        thp_limit, wfr, gfr, 
+                                                                        well_.getALQ(well_state));
+ 
+    const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
+    const auto bhp_adjustment = getVfpBhpAdjustment(bhp_min, thp_limit);
+    const double dp_hydro = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, 
+                                                                      rho, well_.gravity());
+    return bhp_min - dp_hydro + bhp_adjustment;
+}
+
 double WellBhpThpCalculator::getVfpBhpAdjustment(const double bhp_tab, const double thp_limit) const
 {
     return well_.wellEcl().getWVFPDP().getPressureLoss(bhp_tab, thp_limit);
@@ -838,6 +864,96 @@ bruteForceBracket(const std::function<double(const double)>& eq,
     }
     return bracket_found;
 }
+
+bool WellBhpThpCalculator::
+isStableSolution(const WellState& well_state,
+                 const Well& well,
+                 const std::vector<double>& rates,
+                 const SummaryState& summaryState,
+                 DeferredLogger& deferred_logger) const
+{
+    assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
+    assert(well_.isProducer()); // only valid for producers 
+
+    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Water = BlackoilPhases::Aqua;
+
+    const double aqua = rates[Water];
+    const double liquid = rates[Oil];
+    const double vapour = rates[Gas];
+    const double thp = well_.getTHPConstraint(summaryState);
+
+    const auto& controls = well.productionControls(summaryState);
+    const auto& wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
+    const auto& gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
+
+    const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
+    const bool use_vfpexplicit = well_.useVfpExplicit();
+
+    const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
+    const auto bhp_adjustment = getVfpBhpAdjustment(well_state.well(well_.indexOfWell()).bhp, thp);
+    // XXX this needs to be fixed 
+    //assert(bhp_adjustment == 0.0);
+
+    const detail::VFPEvaluation bhp = detail::bhp(table, aqua, liquid, vapour, thp, well_.getALQ(well_state), wfr, gfr, use_vfpexplicit);
+
+    if (bhp.dflo >= 0) {
+        return true;
+    } else {    // maybe check if ipr is available
+        const auto ipr = well_.vfpProperties()->getFloIPR(controls.vfp_table_number, well_.indexOfWell());
+        return bhp.dflo + 1/ipr.second >= 0; 
+    }                  
+}
+
+std::optional<double> WellBhpThpCalculator::
+estimateStableBhp(const WellState& well_state,
+                  const Well& well,
+                  const std::vector<double>& rates,
+                  const double rho,
+                  const SummaryState& summaryState,
+                  DeferredLogger& deferred_logger) const
+{   
+    // Given a *converged* well_state with ipr, estimate bhp of the stable solution 
+    const auto& controls = well.productionControls(summaryState);
+    const double thp = well_.getTHPConstraint(summaryState);
+    const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
+
+    const double aqua = rates[BlackoilPhases::Aqua];
+    const double liquid = rates[BlackoilPhases::Liquid];
+    const double vapour = rates[BlackoilPhases::Vapour];
+    double flo = detail::getFlo(table, aqua, liquid, vapour);
+    double wfr, gfr;
+    if (well_.useVfpExplicit() || -flo < table.getFloAxis().front()) {
+        wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
+        gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
+    } else {
+        wfr = detail::getWFR(table, aqua, liquid, vapour);  
+        gfr = detail::getGFR(table, aqua, liquid, vapour);   
+    }
+    if (wfr <= 0.0 && gfr <= 0.0) {
+        // warning message
+    }
+    auto ipr = well_.vfpProperties()->getFloIPR(controls.vfp_table_number, well_.indexOfWell());
+    
+    const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
+    const auto bhp_adjustment = getVfpBhpAdjustment(well_state.well(well_.indexOfWell()).bhp, thp);
+    // XXX this needs to be fixed 
+    //assert(bhp_adjustment == 0.0);
+
+    const double dp_hydro = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, 
+                                                                      rho, well_.gravity());
+    if (ipr.first <= 0.0) {
+        // error message
+    }
+    const auto retval = detail::intersectWithIPR(table, thp, wfr, gfr, well_.getALQ(well_state), ipr.first+ipr.second*dp_hydro, ipr.second);
+    if (retval.has_value()) {
+        // returned pair is (flo, bhp)
+        return retval.value().second - dp_hydro;
+    } else {
+        return std::nullopt;
+    }
+}        
 
 #define INSTANCE(...) \
 template __VA_ARGS__ WellBhpThpCalculator:: \

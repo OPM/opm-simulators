@@ -61,6 +61,8 @@ public:
         serializer(phase_mixing_rates);
         serializer(well_potentials);
         serializer(productivity_index);
+        serializer(ipr_a);
+        serializer(ipr_b);        
         serializer(surface_rates);
         serializer(reservoir_rates);
         serializer(prev_surface_rates);
@@ -98,6 +100,8 @@ public:
 
     std::vector<double> well_potentials;
     std::vector<double> productivity_index;
+    std::vector<double> ipr_a;
+    std::vector<double> ipr_b;    
     std::vector<double> surface_rates;
     std::vector<double> reservoir_rates;
     std::vector<double> prev_surface_rates;

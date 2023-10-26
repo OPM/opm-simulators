@@ -245,6 +245,11 @@ protected:
                                      const bool checkOperability,
                                      DeferredLogger& deferred_logger);
 
+    void prepareForPotentialCalculations(const SummaryState& summary_state,
+                                         WellState& well_state, 
+                                         Well::InjectionControls& inj_controls,
+                                         Well::ProductionControls& prod_controls);                                  
+
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {
         bool isOperableAndSolvable() const {

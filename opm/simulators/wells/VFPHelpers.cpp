@@ -499,6 +499,90 @@ double findTHP(const std::vector<double>& bhp_array,
     return thp;
 }
 
+std::pair<double, double> 
+getMinimumBHPCoordinate(const VFPProdTable& table,
+                        const double thp,
+                        const double wfr,
+                        const double gfr,
+                        const double alq)
+{   
+    double flo_at_bhp_min = 0.0; // start by checking flo=0
+    auto flo_i = detail::findInterpData(flo_at_bhp_min, table.getFloAxis());
+    auto thp_i = detail::findInterpData( thp, table.getTHPAxis());
+    auto wfr_i = detail::findInterpData( wfr, table.getWFRAxis());
+    auto gfr_i = detail::findInterpData( gfr, table.getGFRAxis());
+    auto alq_i = detail::findInterpData( alq, table.getALQAxis());
+
+    detail::VFPEvaluation bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    double bhp_min = bhp_i.value;
+    std::vector<double> flos = table.getFloAxis();
+    for (size_t i = 0; i < flos.size(); ++i) {
+        flo_i = detail::findInterpData(flos[i], table.getFloAxis());
+        bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+        if (bhp_i.value < bhp_min){
+            bhp_min = bhp_i.value;
+            flo_at_bhp_min = flos[i];
+        }
+    }
+    // return negative flo
+    return std::make_pair(-flo_at_bhp_min, bhp_min); 
+}      
+
+std::optional<std::pair<double, double>> 
+intersectWithIPR(const VFPProdTable& table,
+                 const double thp,
+                 const double wfr,
+                 const double gfr,
+                 const double alq, 
+                 const double ipr_a,
+                 const double ipr_b)
+{   
+    // NOTE: ipr-line is q=b*bhp - a!
+    // ipr is given for negative flo, so
+    // flo = -b*bhp + a, i.e., bhp = -(flo-a)/b  
+    auto thp_i = detail::findInterpData( thp, table.getTHPAxis());
+    auto wfr_i = detail::findInterpData( wfr, table.getWFRAxis());
+    auto gfr_i = detail::findInterpData( gfr, table.getGFRAxis());
+    auto alq_i = detail::findInterpData( alq, table.getALQAxis());
+
+    if (ipr_b == 0.0) {
+        // this shouldn't happen, but deal with it to be safe
+        auto flo_i = detail::findInterpData(-ipr_a, table.getFloAxis());
+        detail::VFPEvaluation bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+        return std::make_pair(ipr_b, bhp_i.value);
+    }
+    // find largest flo (flo_x) for which y = bhp(flo) + (flo-a)/b = 0 and dy/dflo > 0
+    double flo_x = -1.0;
+    double flo0, flo1;
+    double y0, y1;
+    flo0 = 0.0; // start by checking flo=0
+    auto flo_i = detail::findInterpData(flo0, table.getFloAxis());
+    detail::VFPEvaluation bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    y0 = bhp_i.value - ipr_a/ipr_b; // +0.0/ipr_b
+
+    std::vector<double> flos = table.getFloAxis();
+    for (size_t i = 0; i < flos.size(); ++i) {
+        flo1 = flos[i];
+        flo_i = detail::findInterpData(flo1, table.getFloAxis());
+        bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+        y1 = bhp_i.value + (flo1 - ipr_a)/ipr_b;
+        if (y0 < 0 && y1 >= 0){
+            // crossing with positive slope
+            double w = -y0/(y1-y0);
+            w = std::clamp(w, 0.0, 1.0); // just to be safe (if y0~y1)
+            flo_x = flo0 + w*(flo1 - flo0);
+        }
+        flo0 = flo1;
+        y0 = y1;
+    }
+    // return (last) intersection if found (negative flo)
+    if (flo_x >= 0) {
+        return std::make_pair(-flo_x, -(flo_x - ipr_a)/ipr_b);
+    } else {
+        return std::nullopt;
+    }
+} 
+
 template <typename T>
 T getFlo(const VFPProdTable& table,
          const T& aqua,

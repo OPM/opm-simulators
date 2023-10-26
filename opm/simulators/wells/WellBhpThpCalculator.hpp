@@ -98,6 +98,25 @@ public:
                                const double rho,
                                DeferredLogger& deferred_logger) const;
 
+  double calculateMinimumBhpFromThp(const WellState& well_state,
+                                    const Well& well,
+                                    const SummaryState& summaryState,
+                                    const double rho) const;      
+
+  bool isStableSolution(const WellState& well_state,
+                        const Well& well,
+                        const std::vector<double>& rates,
+                        const SummaryState& summaryState,
+                        DeferredLogger& deferred_logger) const;   
+
+  std::optional<double>
+  estimateStableBhp (const WellState& well_state,
+                    const Well& well,
+                    const std::vector<double>& rates,
+                    const double rho,
+                    const SummaryState& summaryState,
+                    DeferredLogger& deferred_logger) const;                                                                             
+
 private:
     //! \brief Compute BHP from THP limit for an injector - implementation.
     template<class ErrorPolicy>

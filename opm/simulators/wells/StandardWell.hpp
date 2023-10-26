@@ -212,7 +212,8 @@ namespace Opm
                                         const Well::ProductionControls& prod_controls,
                                         WellState& well_state,
                                         const GroupState& group_state,
-                                        DeferredLogger& deferred_logger) override;
+                                        DeferredLogger& deferred_logger, 
+                                        const bool allow_switch = true) override;
 
         /// \brief Wether the Jacobian will also have well contributions in it.
         virtual bool jacobianContainsWellContributions() const override
@@ -239,6 +240,8 @@ namespace Opm
             const SummaryState& summary_state,
             const double alq_value,
             DeferredLogger& deferred_logger) const override;
+
+        void updateIPRImplicit(const Simulator& ebosSimulator, WellState& well_state, DeferredLogger& deferred_logger);                
 
         virtual void computeWellRatesWithBhp(
             const Simulator& ebosSimulator,
@@ -320,6 +323,10 @@ namespace Opm
             const Simulator& ebosSimulator,
             DeferredLogger& deferred_logger,
             const WellState &well_state) const;
+
+        bool computeWellPotentialsImplicit(const Simulator& ebos_simulator,
+                                           std::vector<double>& well_potentials,
+                                           DeferredLogger& deferred_logger) const;               
 
         virtual double getRefDensity() const override;
 

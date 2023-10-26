@@ -744,4 +744,47 @@ checkNegativeWellPotentials(std::vector<double>& well_potentials,
     }
 }
 
+void WellInterfaceGeneric::
+prepareForPotentialCalculations(const SummaryState& summary_state,
+                                WellState& well_state, 
+                                Well::InjectionControls& inj_controls,
+                                Well::ProductionControls& prod_controls)
+{
+    const bool has_thp = this->wellHasTHPConstraints(summary_state);
+    auto& ws = well_state.well(this->index_of_well_);
+    // Modify control (only pressure constraints) and set new target if needed.
+    // Also set value for current target in state
+    if (this->isInjector()) {
+        inj_controls.clearControls();
+        inj_controls.addControl(Well::InjectorCMode::BHP);
+        if (has_thp){
+            inj_controls.addControl(Well::InjectorCMode::THP);
+        }
+        if (!(ws.injection_cmode == Well::InjectorCMode::BHP)){
+            if (has_thp){
+                ws.injection_cmode = Well::InjectorCMode::THP;
+                ws.thp = this->getTHPConstraint(summary_state);
+            } else {
+                ws.injection_cmode = Well::InjectorCMode::BHP;
+                ws.bhp = inj_controls.bhp_limit;
+            }
+        } 
+    } else { // producer
+        prod_controls.clearControls();
+        prod_controls.addControl(Well::ProducerCMode::BHP);
+        if (has_thp){
+            prod_controls.addControl(Well::ProducerCMode::THP);
+        }
+        if (!(ws.production_cmode == Well::ProducerCMode::BHP)){
+            if (has_thp){
+                ws.production_cmode = Well::ProducerCMode::THP;
+                ws.thp = this->getTHPConstraint(summary_state);
+            } else {
+                ws.production_cmode = Well::ProducerCMode::BHP;
+                ws.bhp = prod_controls.bhp_limit;
+            }
+        } 
+    }    
+}
+
 } // namespace Opm
