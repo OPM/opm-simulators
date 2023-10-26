@@ -89,6 +89,9 @@ public:
     //! \brief Apply inverted D matrix to residual and store in vector.
     void solve(BVectorWell& dx_well) const;
 
+    //! \brief Apply inverted D matrix to rhs and store in vector.
+    void solve(BVectorWell& rhs_well, BVectorWell& x_well) const;
+    
     //! \brief Invert D matrix.
     void invert();
 
