@@ -306,14 +306,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             return flexibleSolver_.size();
         }
 
-        void prepare(const SparseMatrixAdapter& M, Vector& b)
+        void initPrepare(const Matrix& M, Vector& b)
         {
-            prepare(M.istlMatrix(), b);
-        }
-
-        void prepare(const Matrix& M, Vector& b)
-        {
-            OPM_TIMEBLOCK(istlSolverEbosPrepare);
             const bool firstcall = (matrix_ == nullptr);
 #if HAVE_MPI
             if (firstcall && isParallel()) {
@@ -344,6 +338,19 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if (isParallel() && prm_[activeSolverNum_].template get<std::string>("preconditioner.type") != "ParOverILU0") {
                 detail::makeOverlapRowsInvalid(getMatrix(), overlapRows_);
             }
+        }
+
+        void prepare(const SparseMatrixAdapter& M, Vector& b)
+        {
+            prepare(M.istlMatrix(), b);
+        }
+
+        void prepare(const Matrix& M, Vector& b)
+        {
+            OPM_TIMEBLOCK(istlSolverEbosPrepare);
+
+            initPrepare(M,b);
+
             prepareFlexibleSolver();
         }
 
