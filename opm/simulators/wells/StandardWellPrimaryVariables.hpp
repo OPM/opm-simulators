@@ -112,7 +112,8 @@ public:
     void updateNewton(const BVectorWell& dwells,
                       const bool stop_or_zero_rate_target,
                       const double dFLimit,
-                      const double dBHPLimit);
+                      const double dBHPLimit,
+                      DeferredLogger& deferred_logger);
 
     //! \brief Update polymer molecular weight values from newton update vector.
     void updateNewtonPolyMW(const BVectorWell& dwells);
@@ -150,7 +151,7 @@ public:
 private:
     //! \brief Calculate a relaxation factor for producers.
     //! \details To avoid overshoot of the fractions which might result in negative rates.
-    double relaxationFactorFractionsProducer(const BVectorWell& dwells) const;
+    double relaxationFactorFractionsProducer(const BVectorWell& dwells, DeferredLogger& deferred_logger) const;
 
     //! \brief Returns volume fraction for a component.
     EvalWell volumeFraction(const unsigned compIdx) const;

@@ -40,19 +40,36 @@
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <cassert>
+#include <limits>
+#include <string>
 
 namespace {
 
-    constexpr double EPSILON = 1.0e-14;
-
-//! \brief Relaxation factor considering only one fraction value.
+/**
+    * @brief Relaxation factor considering only one fraction value.
+    * @param old_value The previous value before the change.
+    * @param dx The solved newton update for the value.
+    * @param well_name The name of the well that calls this function
+    * @param value_name The name/meaning of the old_value.
+    * @param deferred_logger The deferred logger used for logging results and messages.
+    * @return The calculated relaxation factor.
+ */
 template<class Scalar>
 Scalar relaxationFactorFraction(const Scalar old_value,
-                                const Scalar dx)
+                                const Scalar dx,
+                                const std::string& well_name,
+                                const std::string& value_name,
+                                Opm::DeferredLogger& deferred_logger)
 {
-    assert(old_value >= -EPSILON && old_value <= (1.0+EPSILON));
+    constexpr double epislon = std::numeric_limits<Scalar>::epsilon();
+    if (old_value < -epislon ||  old_value > 1.0 + epislon) {
+        const std::string msg = fmt::format(" illegal fraction value {} {} is found for well {}", value_name, old_value, well_name);
+        OPM_DEFLOG_THROW(Opm::NumericalProblem, msg, deferred_logger);
+    }
     const Scalar& safe_old_value = std::clamp(old_value, 0.0, 1.0);
 
     Scalar relaxation_factor = 1.;
@@ -228,15 +245,17 @@ template<class FluidSystem, class Indices, class Scalar>
 void StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 updateNewton(const BVectorWell& dwells,
              const bool stop_or_zero_rate_target,
-             [[maybe_unused]] const double dFLimit,
-             const double dBHPLimit)
+             const double dFLimit,
+             const double dBHPLimit,
+             DeferredLogger& deferred_logger)
 {
     // for injectors, very typical one of the fractions will be one, and it is easy to get zero value
     // fractions. not sure what is the best way to handle it yet, so we just use 1.0 here
     // The relaxationFactorFractionProducer code does not take into account solvent
     // so we use 1.0 for cases with solvent.
     [[maybe_unused]] const double relaxation_factor_fractions =
-        (well_.isProducer() && !Indices::enableSolvent) ? this->relaxationFactorFractionsProducer(dwells) : 1.0;
+            (well_.isProducer() && !Indices::enableSolvent) ? this->relaxationFactorFractionsProducer(dwells, deferred_logger)
+                                                            : 1.0;
 
     // update the second and third well variable (The flux fractions)
     if constexpr (has_wfrac_variable) {
@@ -642,7 +661,7 @@ processFractions()
 
 template<class FluidSystem, class Indices, class Scalar>
 double StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
-relaxationFactorFractionsProducer(const BVectorWell& dwells) const
+relaxationFactorFractionsProducer(const BVectorWell& dwells, DeferredLogger& deferred_logger) const
 {
     // TODO: not considering solvent yet
     // 0.95 is a experimental value, which remains to be optimized
@@ -651,13 +670,19 @@ relaxationFactorFractionsProducer(const BVectorWell& dwells) const
     if (FluidSystem::numActivePhases() > 1) {
         if constexpr (has_wfrac_variable) {
             const double relaxation_factor_w = relaxationFactorFraction(value_[WFrac],
-                                                                        dwells[0][WFrac]);
+                                                                        dwells[0][WFrac],
+                                                                        this->well_.name(),
+                                                                        "WFrac",
+                                                                        deferred_logger);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_w);
         }
 
         if constexpr (has_gfrac_variable) {
             const double relaxation_factor_g = relaxationFactorFraction(value_[GFrac],
-                                                                        dwells[0][GFrac]);
+                                                                        dwells[0][GFrac],
+                                                                        this->well_.name(),
+                                                                        "GFrac",
+                                                                        deferred_logger);
             relaxation_factor = std::min(relaxation_factor, relaxation_factor_g);
         }
 
@@ -670,7 +695,7 @@ relaxationFactorFractionsProducer(const BVectorWell& dwells) const
             const double possible_updated_sum = original_sum - relaxed_update;
             // We only relax if fraction is above 1.
             // The newton solver should handle the rest
-            const double epsilon = 0.001;
+            constexpr double epsilon = 0.001;
             if (possible_updated_sum > 1.0 + epsilon) {
                 // since the orignal sum <= 1.0 the epsilon asserts that
                 // the relaxed_update is non trivial.
@@ -680,7 +705,10 @@ relaxationFactorFractionsProducer(const BVectorWell& dwells) const
                 relaxation_factor *= further_relaxation_factor;
             }
         }
-        assert(relaxation_factor >= 0.0 && relaxation_factor <= 1.0);
+        if (relaxation_factor < 0.0 || relaxation_factor > 1.0) {
+            const std::string msg = fmt::format(" illegal relaxation factor {} is obtained for well {}", relaxation_factor, this->well_.name());
+            OPM_DEFLOG_THROW(NumericalProblem, msg, deferred_logger);
+        }
     }
     return relaxation_factor;
 }
