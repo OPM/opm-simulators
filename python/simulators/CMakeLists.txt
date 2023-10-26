@@ -54,6 +54,11 @@ if(OPM_ENABLE_PYTHON_TESTS)
       COMMAND ${CMAKE_COMMAND}
       -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
       -m unittest test/test_schedule.py)
+  add_test(NAME python_throw
+      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
+      COMMAND ${CMAKE_COMMAND}
+      -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
+      -m unittest test/test_throw.py)
 endif()
 
 find_file(PYTHON_INSTALL_PY install.py

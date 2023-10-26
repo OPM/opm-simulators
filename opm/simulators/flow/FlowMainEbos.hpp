@@ -321,6 +321,12 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             return simtimer_.get();
         }
 
+        /// Get the size of the previous report step
+        double getPreviousReportStepSize()
+        {
+            return simtimer_->stepLengthTaken();
+        }
+
     private:
         // called by execute() or executeInitStep()
         int execute_(int (FlowMainEbos::* runOrInitFunc)(), bool cleanup)
