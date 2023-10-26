@@ -912,12 +912,13 @@ BlackoilWellModelGeneric::
 assignNodeValues(std::map<std::string, data::NodeData>& nodevalues, const int reportStepIdx) const
 {
     nodevalues.clear();
-    if (reportStepIdx < 0) return;
 
     for (const auto& [node, pressure] : node_pressures_) {
         nodevalues.emplace(node, data::NodeData{pressure});
-        // Assign node values of group to GPR:WELLNAME
-        const auto& group = schedule().getGroup(node, reportStepIdx);
+        // Assign node values of well groups to GPR:WELLNAME
+        const auto& sched = schedule();
+        if (!sched.hasGroup(node, reportStepIdx)) continue;
+        const auto& group = sched.getGroup(node, reportStepIdx);
         for (const std::string& wellname : group.wells()) {
                 nodevalues.emplace(wellname, data::NodeData{pressure});
         }
