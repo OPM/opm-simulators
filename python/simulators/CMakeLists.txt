@@ -44,21 +44,13 @@ if(OPM_ENABLE_PYTHON_TESTS)
   #   splitting the python tests into multiple add_test() tests instead
   #   of having a single "python -m unittest" test call that will run all
   #   the tests in the "test" sub directory.
-  add_test(NAME python_basic
-      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
-      COMMAND ${CMAKE_COMMAND}
-      -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
-      -m unittest test/test_basic.py)
-  add_test(NAME python_schedule
-      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
-      COMMAND ${CMAKE_COMMAND}
-      -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
-      -m unittest test/test_schedule.py)
-  add_test(NAME python_throw
-      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
-      COMMAND ${CMAKE_COMMAND}
-      -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
-      -m unittest test/test_throw.py)
+  foreach(case_name IN ITEMS basic fluidstate_variables primary_variables schedule throw)
+    add_test(NAME python_${case_name}
+        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
+        COMMAND ${CMAKE_COMMAND}
+        -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
+        -m unittest test/test_${case_name}.py)
+  endforeach()
 endif()
 
 find_file(PYTHON_INSTALL_PY install.py
