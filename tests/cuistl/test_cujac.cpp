@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize2, T, NumericTypes)
            | |0 0|  | 0 -1| |     | |4| |       | |-2.0| |
    */
     const int N = 2;
-    const int blocksize = 2;
+    constexpr int blocksize = 2;
     const int nonZeroes = 3;
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
     using SpMatrix = Dune::BCRSMatrix<M>;
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize1, T, NumericTypes)
            | 0  0  0 -1|       |1|       |  -2|
    */
     const int N = 4;
-    const int blocksize = 1;
+    constexpr int blocksize = 1;
     const int nonZeroes = 8;
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
     using SpMatrix = Dune::BCRSMatrix<M>;
