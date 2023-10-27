@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUDiagIsCorrect2x2NoZeros, T, NumericTypes)
     */
 
     const int N = 2;
-    const int bz = 2;
+    constexpr int bz = 2;
     const int nonZeroes = 4;
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUDiagIsCorrect2x2, T, NumericTypes)
     */
 
     const int N = 2;
-    const int bz = 2;
+    constexpr int bz = 2;
     const int nonZeroes = 3;
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
