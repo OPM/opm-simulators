@@ -353,7 +353,12 @@ namespace Opm
         initPrimaryVariablesEvaluation();
 
         if (this->isProducer()) {
-            gliftBeginTimeStepWellTestUpdateALQ(simulator, well_state_copy, deferred_logger);
+            const auto& schedule = simulator.vanguard().schedule();
+            const auto report_step = simulator.episodeIndex();
+            const auto& glo = schedule.glo(report_step);
+            if (glo.active()) {
+                gliftBeginTimeStepWellTestUpdateALQ(simulator, well_state_copy, deferred_logger);
+            }
         }
 
         WellTestState welltest_state_temp;
@@ -725,8 +730,8 @@ namespace Opm
         const auto& schedule = ebos_simulator.vanguard().schedule();
         auto report_step_idx = ebos_simulator.episodeIndex();
         const auto& glo = schedule.glo(report_step_idx);
-        if(glo.has_well(well_name)) {
-            auto increment = glo.gaslift_increment();
+        if(glo.active() && glo.has_well(well_name)) {
+            const auto increment = glo.gaslift_increment();
             auto alq = well_state.getALQ(well_name);
             bool converged;
             while (alq > 0) {
@@ -759,9 +764,8 @@ namespace Opm
             deferred_logger.info(msg);
             return;
         }
-        const auto& well_ecl = this->wellEcl();
         const auto& schedule = ebos_simulator.vanguard().schedule();
-        auto report_step_idx = ebos_simulator.episodeIndex();
+        const auto report_step_idx = ebos_simulator.episodeIndex();
         const auto& glo = schedule.glo(report_step_idx);
         if (!glo.has_well(well_name)) {
             const std::string msg = fmt::format(
@@ -777,6 +781,7 @@ namespace Opm
             max_alq = *max_alq_optional;
         }
         else {
+            const auto& well_ecl = this->wellEcl();
             const auto& controls = well_ecl.productionControls(summary_state);
             const auto& table = this->vfpProperties()->getProd()->getTable(controls.vfp_table_number);
             const auto& alq_values = table.getALQAxis();
