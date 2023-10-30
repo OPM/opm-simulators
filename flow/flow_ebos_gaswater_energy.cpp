@@ -39,11 +39,11 @@ struct EclFlowGasWaterEnergyProblem {
 };
 }
 
-//template<class TypeTag>
-//struct Linearizer<TypeTag, TTag::EclFlowGasWaterProblem> { using type = TpfaLinearizer<TypeTag>; };
+template<class TypeTag>
+struct Linearizer<TypeTag, TTag::EclFlowGasWaterEnergyProblem> { using type = TpfaLinearizer<TypeTag>; };
 
-//template<class TypeTag>
-//struct LocalResidual<TypeTag, TTag::EclFlowGasWaterProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+template<class TypeTag>
+struct LocalResidual<TypeTag, TTag::EclFlowGasWaterEnergyProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::EclFlowGasWaterEnergyProblem> { static constexpr bool value = false; };
