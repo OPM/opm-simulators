@@ -83,6 +83,7 @@ double WellBhpThpCalculator::getTHPConstraint(const SummaryState& summaryState) 
         return controls.thp_limit;
     }
 
+    assert(false);
     return 0.0;
 }
 
