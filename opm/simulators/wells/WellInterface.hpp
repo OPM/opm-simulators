@@ -248,7 +248,8 @@ public:
                                                   const Well::ProductionControls& prod_controls,
                                                   const double WQTotal,
                                                   DeferredLogger& deferred_logger, 
-                                                  const bool allow_switch=true);
+                                                  const bool fixed_control = false, 
+                                                  const bool fixed_status = false);
 
     virtual void updatePrimaryVariables(const SummaryState& summary_state,
                                         const WellState& well_state,
@@ -416,7 +417,8 @@ protected:
                                             WellState& well_state,
                                             const GroupState& group_state,
                                             DeferredLogger& deferred_logger, 
-                                            const bool allow_switch = true) = 0;
+                                            const bool fixed_control = false, 
+                                            const bool fixed_status = false) = 0;
 
     virtual void updateIPRImplicit(const Simulator& ebosSimulator,
                                    WellState& well_state,
@@ -447,7 +449,12 @@ protected:
                           const double dt,
                           const double bhp,
                           WellState& well_state,
-                          DeferredLogger& deferred_logger);                                                                                       
+                          DeferredLogger& deferred_logger);         
+
+    bool solveWellWithZeroRate(const Simulator& ebos_simulator,
+                               const double dt,
+                               WellState& well_state,
+                               DeferredLogger& deferred_logger);                                                                                                       
 
     bool solveWellForTesting(const Simulator& ebosSimulator, WellState& well_state, const GroupState& group_state,
                              DeferredLogger& deferred_logger);

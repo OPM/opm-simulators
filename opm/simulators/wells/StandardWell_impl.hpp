@@ -2321,7 +2321,8 @@ namespace Opm
                                WellState& well_state,
                                const GroupState& group_state,
                                DeferredLogger& deferred_logger, 
-                               const bool allow_switch /*true*/)
+                               const bool fixed_control /*false*/, 
+                               const bool fixed_status /*false*/)
     {
         const int max_iter = this->param_.max_inner_iter_wells_;
         
@@ -2339,14 +2340,21 @@ namespace Opm
         const auto well_status_orig = this->wellStatus_;
         auto well_status_cur = well_status_orig;
         int status_switch_count = 0;
-        const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
+        bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
+        allow_switching = allow_switching && (!fixed_control && !fixed_status);
         bool changed = false;
         bool final_check = false; 
+
+        if (allow_switching) {
+            this->operability_status_.can_obtain_bhp_with_thp_limit = true;
+            this->operability_status_.obey_thp_limit_under_bhp_limit = true;
+            this->operability_status_.operable_under_only_bhp_limit = true;
+        }
         do {
             its_since_last_switch++;
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const double wqTotal = this->primary_variables_.eval(WQTotal).value();
-                changed = this->updateWellControlAndStatusLocalIteration(ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger, allow_switch); 
+                changed = this->updateWellControlAndStatusLocalIteration(ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger, fixed_control, fixed_status); 
                 if (changed){
                     its_since_last_switch = 0;
                     switch_count++;

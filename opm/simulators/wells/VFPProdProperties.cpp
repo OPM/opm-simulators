@@ -90,7 +90,8 @@ double VFPProdProperties::bhp(int table_id,
                               const double& alq,
                               const double& explicit_wfr,
                               const double& explicit_gfr,
-                              const bool    use_expvfp) const {
+                              const bool    use_expvfp, 
+                              const double ipr_slope) const {
     const VFPProdTable& table = detail::getTable(m_tables, table_id);
 
     detail::VFPEvaluation retval = detail::bhp(table, aqua, liquid, vapour, thp_arg, alq, explicit_wfr,explicit_gfr, use_expvfp);
@@ -167,7 +168,8 @@ EvalWell VFPProdProperties::bhp(const int table_id,
                                 const double& alq,
                                 const double& explicit_wfr,
                                 const double& explicit_gfr,
-                                const bool use_expvfp) const
+                                const bool use_expvfp,
+                                const double ipr_slope /*=0*/) const
 {
     //Get the table
     const VFPProdTable& table = detail::getTable(m_tables, table_id);
@@ -192,8 +194,12 @@ EvalWell VFPProdProperties::bhp(const int table_id,
 
     detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
-   //bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (std::max(0.0, bhp_val.dflo) * flo);
-   bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo* flo);
+   
+   //if (bhp_val.dflo < ipr_slope) {
+   //     bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (std::max(0.0, bhp_val.dflo) * flo);
+   //} else {
+    bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo* flo);
+   //}
 
     bhp.setValue(bhp_val.value);
     return bhp;
@@ -202,7 +208,7 @@ EvalWell VFPProdProperties::bhp(const int table_id,
 #define INSTANCE(...) \
     template __VA_ARGS__ VFPProdProperties::bhp<__VA_ARGS__>(const int, \
                                                              const __VA_ARGS__&, const __VA_ARGS__&, const __VA_ARGS__&, \
-                                                             const double&, const double&, const double&, const double&, const bool) const;
+                                                             const double&, const double&, const double&, const double&, const bool, const double) const;
 
 INSTANCE(DenseAd::Evaluation<double, -1, 4u>)
 INSTANCE(DenseAd::Evaluation<double, -1, 5u>)

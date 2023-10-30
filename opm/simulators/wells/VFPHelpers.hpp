@@ -203,7 +203,8 @@ intersectWithIPR(const VFPProdTable& table,
                  const double gfr,
                  const double alq, 
                  const double ipr_a,
-                 const double ipr_b);                        
+                 const double ipr_b,
+                 const std::function<double(const double)>& adjust_bhp);                        
 
 } // namespace detail
 

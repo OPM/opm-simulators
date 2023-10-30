@@ -213,7 +213,8 @@ namespace Opm
                                         WellState& well_state,
                                         const GroupState& group_state,
                                         DeferredLogger& deferred_logger, 
-                                        const bool allow_switch = true) override;
+                                        const bool fixed_control = false,
+                                        const bool fixed_status = false) override;
 
         /// \brief Wether the Jacobian will also have well contributions in it.
         virtual bool jacobianContainsWellContributions() const override

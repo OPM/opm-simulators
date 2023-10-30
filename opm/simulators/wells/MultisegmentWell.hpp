@@ -269,7 +269,8 @@ namespace Opm
                                                 WellState& well_state,
                                                 const GroupState& group_state,
                                                 DeferredLogger& deferred_logger, 
-                                                const bool allow_switch = true) override;
+                                                const bool fixed_control = false, 
+                                                const bool fixed_status = false) override;
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                                     const double dt,
