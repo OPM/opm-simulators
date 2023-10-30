@@ -91,20 +91,27 @@ BlackoilWellModelGeneric(Schedule& schedule,
     , nupcol_wgstate_(phase_usage)
 {
 
-  const auto numProcs = comm_.size();
-  this->not_on_process_ = [this, numProcs](const Well& well) {
-      if (numProcs == decltype(numProcs){1})
-          return false;
+    const auto numProcs = comm_.size();
+    this->not_on_process_ = [this, numProcs](const Well& well) {
+        if (numProcs == decltype(numProcs){1})
+            return false;
 
-      // Recall: false indicates NOT active!
-      const auto value = std::make_pair(well.name(), true);
-      auto candidate = std::lower_bound(this->parallel_well_info_.begin(),
-                                        this->parallel_well_info_.end(),
-                                        value);
+        // Recall: false indicates NOT active!
+        const auto value = std::make_pair(well.name(), true);
+        auto candidate = std::lower_bound(this->parallel_well_info_.begin(),
+                                          this->parallel_well_info_.end(),
+                                          value);
 
-      return (candidate == this->parallel_well_info_.end())
-              || (*candidate != value);
-  };
+        return (candidate == this->parallel_well_info_.end())
+                || (*candidate != value);
+    };
+
+    const auto& node_pressures = eclState.getRestartNetworkPressures();
+    if (node_pressures.has_value()) {
+        for (const auto& it: node_pressures.value()) {
+            this->node_pressures_[it.first] = it.second;
+        }
+    }
 }
 
 int

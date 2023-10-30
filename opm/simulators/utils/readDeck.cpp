@@ -154,6 +154,11 @@ namespace {
                  std::move(python), outputInterval, init_state);
         }
 
+        // Read network pressures from restart
+        if (rst_state.network.isActive()) {
+            eclipseState.loadRestartNetworkPressures(rst_state.network);
+        }
+
         udqState = std::make_unique<Opm::UDQState>
             ((*schedule)[0].udq().params().undefinedValue());
         udqState->load_rst(rst_state);
