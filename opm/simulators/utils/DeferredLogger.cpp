@@ -82,10 +82,18 @@ namespace Opm
         messages_.push_back({Log::MessageType::Note, "", message});
     }
 
-    void DeferredLogger::logMessages()
+    void DeferredLogger::logMessages(bool convert_error_to_warning)
     {
-        for (const auto& m : messages_) {
-            OpmLog::addTaggedMessage(m.flag, m.tag, m.text);
+        if(convert_error_to_warning) {
+            for (const auto& m : messages_) {
+                OpmLog::addTaggedMessage((m.flag==Log::MessageType::Error)?
+                                         Log::MessageType::Warning : m.flag, m.tag, m.text);
+            }
+        }
+        else {
+            for (const auto& m : messages_) {
+                OpmLog::addTaggedMessage(m.flag, m.tag, m.text);
+            }
         }
         messages_.clear();
     }

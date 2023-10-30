@@ -82,7 +82,7 @@ enum ExcEnum {
 
         /// Log all messages to the OpmLog backends,
         /// and clear the message container.
-        void logMessages();
+        void logMessages(bool convert_eror_to_warning=false);
 
         /// Clear the message container without logging them.
         void clearMessages();

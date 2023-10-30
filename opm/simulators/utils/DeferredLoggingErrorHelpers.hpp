@@ -100,7 +100,7 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
     Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger, comm);
 
     if (terminal_output) {
-        global_deferredLogger.logMessages();
+        global_deferredLogger.logMessages(/* convert_error_to_warning= */ true);
     }
     // Now that all messages have been logged, they are automatically
     // cleared from the global logger, but we must also clear them
