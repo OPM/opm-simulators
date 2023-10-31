@@ -255,7 +255,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
             , growthFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverGrowthFactor)) // 2.0
             , maxGrowth_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxGrowth)) // 3.0
             , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.0
-            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep))) // 1e-12 seconds;
+            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep))) // 1e-12 (all unit systems, days in metric)
             , ignoreConvergenceFailure_(EWOMS_GET_PARAM(TypeTag, bool, SolverContinueOnConvergenceFailure)) // false;
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
@@ -284,7 +284,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
             , growthFactor_(tuning.TFDIFF) // 2.0 (NB! used to be 1.25)
             , maxGrowth_(tuning.TSFMAX)    // 3.0
             , maxTimeStep_(tuning.TSMAXZ) // 365.0
-            , minTimeStep_(tuning.TSMINZ) // 1.0e-12 seconds (NB! used to be 0.1 in each unit set time measure);
+            , minTimeStep_(tuning.TSMINZ) // 1.0e-12 in unit set time measure (NB! used to be 0.1)
             , ignoreConvergenceFailure_(true)
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
