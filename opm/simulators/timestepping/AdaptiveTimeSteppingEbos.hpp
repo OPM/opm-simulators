@@ -254,8 +254,8 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
             , restartFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverRestartFactor)) // 0.33
             , growthFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverGrowthFactor)) // 2.0
             , maxGrowth_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxGrowth)) // 3.0
-            , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.25
-            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep))) // 1e-12;
+            , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.0
+            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep))) // 1e-12 seconds;
             , ignoreConvergenceFailure_(EWOMS_GET_PARAM(TypeTag, bool, SolverContinueOnConvergenceFailure)) // false;
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
@@ -280,11 +280,11 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                                  const UnitSystem& unitSystem,
                                  const bool terminalOutput = true)
             : timeStepControl_()
-            , restartFactor_(tuning.TSFCNV)
-            , growthFactor_(tuning.TFDIFF)
-            , maxGrowth_(tuning.TSFMAX)
-            , maxTimeStep_(tuning.TSMAXZ) // 365.25
-            , minTimeStep_(tuning.TSFMIN) // 0.1;
+            , restartFactor_(tuning.TSFCNV) // 0.33 (NB! used to be 0.1)
+            , growthFactor_(tuning.TFDIFF) // 2.0 (NB! used to be 1.25)
+            , maxGrowth_(tuning.TSFMAX)    // 3.0
+            , maxTimeStep_(tuning.TSMAXZ) // 365.0
+            , minTimeStep_(tuning.TSMINZ) // 1.0e-12 seconds (NB! used to be 0.1 in each unit set time measure);
             , ignoreConvergenceFailure_(true)
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
@@ -625,6 +625,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
             growthFactor_ = tuning.TFDIFF;
             maxGrowth_ = tuning.TSFMAX;
             maxTimeStep_ = tuning.TSMAXZ;
+            minTimeStep_ = tuning.TSMINZ;
              // \Note Only update next suggested step if TSINIT was explicitly set in TUNING or NEXTSTEP is active. 
             if (max_next_tstep > 0) {
                 suggestedNextTimestep_ = max_next_tstep;
