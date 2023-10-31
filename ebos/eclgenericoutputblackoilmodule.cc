@@ -515,7 +515,7 @@ assignToSolution(data::Solution& sol)
                    data::TargetType::RESTART_SOLUTION);
     }
 
-    if (eclState_.runspec().co2Storage() && !rsw_.empty()) {
+    if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rsw_.empty()) {
         auto mfrac = std::vector<double>(this->rsw_.size(), 0.0);
 
         std::transform(this->rsw_.begin(), this->rsw_.end(),
@@ -527,13 +527,14 @@ assignToSolution(data::Solution& sol)
             return FluidSystem::convertXwGToxwG(xwg, pvtReg - 1);
         });
 
-        sol.insert("XMFCO2",
+        std::string moleFracName = eclState_.runspec().co2Storage() ? "XMFCO2" : "XMFH2";
+        sol.insert(moleFracName,
                    UnitSystem::measure::identity,
                    std::move(mfrac),
                    data::TargetType::RESTART_OPM_EXTENDED);
     }
 
-    if (eclState_.runspec().co2Storage() && !rvw_.empty()) {
+    if ((eclState_.runspec().co2Storage() || eclState_.runspec().h2Storage()) && !rvw_.empty()) {
         auto mfrac = std::vector<double>(this->rvw_.size(), 0.0);
 
         std::transform(this->rvw_.begin(), this->rvw_.end(),
