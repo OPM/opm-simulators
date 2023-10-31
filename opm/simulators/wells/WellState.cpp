@@ -592,6 +592,7 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
         connection.pressure = perf_pressure[i];
         connection.reservoir_rate = perf_rates[i];
         connection.trans_factor = perf_data.connection_transmissibility_factor[i];
+        connection.d_factor = perf_data.connection_d_factor[i];
         if (!ws.producer) {
             const auto& filtrate_data = perf_data.filtrate_data;
             auto& filtrate = connection.filtrate;

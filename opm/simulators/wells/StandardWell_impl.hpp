@@ -369,9 +369,11 @@ namespace Opm
         auto& ws = well_state.well(this->index_of_well_);
         ws.phase_mixing_rates.fill(0.0);
 
+
         const int np = this->number_of_phases_;
 
         std::vector<RateVector> connectionRates = this->connectionRates_; // Copy to get right size.
+
         auto& perf_data = ws.perf_data;
         auto& perf_rates = perf_data.phase_rates;
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
@@ -493,7 +495,8 @@ namespace Opm
 
         PerforationRates perf_rates;
         double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
-        const double Tw = this->well_index_[perf] * trans_mult;
+        const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
+        const double Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
         computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
                         cq_s, perf_rates, deferred_logger);
 
@@ -1362,7 +1365,8 @@ namespace Opm
             std::vector<Scalar> mob(this->num_components_, 0.);
             getMobility(ebosSimulator, perf, mob, deferred_logger);
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
-            const double Tw = this->well_index_[perf] * trans_mult;
+            const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
+            const double Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
 
             std::vector<Scalar> cq_s(this->num_components_, 0.);
             PerforationRates perf_rates;
@@ -2269,7 +2273,8 @@ namespace Opm
             getMobility(ebosSimulator, perf, mob, deferred_logger);
             std::vector<Scalar> cq_s(this->num_components_, 0.);
             double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
-            const double Tw = this->well_index_[perf] * trans_mult;
+            const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
+            const double Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
             PerforationRates perf_rates;
             computePerfRate(intQuants, mob, bhp.value(), Tw, perf, allow_cf,
                             cq_s, perf_rates, deferred_logger);

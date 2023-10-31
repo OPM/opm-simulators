@@ -51,6 +51,7 @@ SingleWellState::SingleWellState(const std::string& name_,
     for (std::size_t perf = 0; perf < perf_input.size(); perf++) {
         this->perf_data.cell_index[perf] = perf_input[perf].cell_index;
         this->perf_data.connection_transmissibility_factor[perf] = perf_input[perf].connection_transmissibility_factor;
+        this->perf_data.connection_d_factor[perf] = perf_input[perf].connection_d_factor;
         this->perf_data.satnum_id[perf] = perf_input[perf].satnum_id;
         this->perf_data.ecl_index[perf] = perf_input[perf].ecl_index;
     }

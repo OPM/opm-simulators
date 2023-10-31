@@ -22,6 +22,7 @@
 #include <opm/common/Exceptions.hpp>
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
+#include <opm/input/eclipse/Schedule/Well/WDFAC.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
@@ -1321,6 +1322,88 @@ namespace Opm
             }
         }
     }
+
+    template <typename TypeTag>
+    double
+    WellInterface<TypeTag>::
+    wellIndex(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const SingleWellState& ws) const {
+
+        const auto& wdfac = this->well_ecl_.getWDFAC();
+        if (!wdfac.useDFactor()) {
+            return this->well_index_[perf] * trans_mult;
+        }
+
+        if constexpr (! Indices::gasEnabled) {
+            return this->well_index_[perf] * trans_mult;
+        }
+
+        // closed connection are still closed
+        if (this->well_index_[perf] == 0)
+            return 0.0;
+
+        // for gas wells we may want to add a Forchheimer term if the WDFAC or WDFACCOR keyword is used
+        const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
+        // viscosity is evaluated at connection pressure
+        const double connection_pressure = ws.perf_data.pressure[perf];
+        const double mu = FluidSystem::gasPvt().viscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure, getValue(intQuants.fluidState().Rv()), getValue(intQuants.fluidState().Rvw()));
+        const double phi = getValue(intQuants.porosity());
+        //double k = connection.Kh()/h * trans_mult;
+        double Kh = connection.Kh()* trans_mult;
+        double Ke = connection.Ke()* trans_mult;
+        double h = Kh / Ke;
+        double rw = connection.rw();
+        double rho = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, this->pvtRegionIdx());
+        double scaling = 3.141592653589 * Kh;
+        double d = wdfac.useConnectionDFactor()? connection.dFactor() : wdfac.getDFactor(rho, mu, Ke, phi, rw, h);
+        const PhaseUsage& pu = this->phaseUsage();
+        double Q = std::abs(ws.perf_data.phase_rates[perf*pu.num_phases + pu.phase_pos[Gas]]);
+        return 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (Q/2 * d / scaling));
+    }
+
+    template <typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateConnectionDFactor(const Simulator& simulator, SingleWellState& ws) const {
+
+        const auto& wdfac = this->well_ecl_.getWDFAC();
+        if (!wdfac.useDFactor()) {
+            return;
+        }
+        double rho = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, this->pvtRegionIdx());
+        auto& perf_data = ws.perf_data;
+
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+            const int cell_idx = this->well_cells_[perf];
+            const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
+            const double trans_mult = simulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
+            // viscosity is evaluated at connection pressure
+            const double connection_pressure = ws.perf_data.pressure[perf];
+            const double mu = FluidSystem::gasPvt().viscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure, getValue(intQuants.fluidState().Rv()), getValue(intQuants.fluidState().Rvw()));
+            const double phi = getValue(intQuants.porosity());
+            const auto& connection = this->well_ecl_.getConnections()[perf_data.ecl_index[perf]];
+            double Kh = connection.Kh()* trans_mult;
+            double Ke = connection.Ke()* trans_mult;
+            double h = Kh / Ke;
+            double rw = connection.rw();
+            double d = wdfac.useConnectionDFactor()? connection.dFactor() : wdfac.getDFactor(rho, mu, Ke, phi, rw, h);
+            perf_data.connection_d_factor[perf] = d;
+        }
+    }
+
+    template <typename TypeTag>
+    void
+    WellInterface<TypeTag>::
+    updateConnectionTransmissibilityFactor(const Simulator& simulator, SingleWellState& ws) const {
+        auto& perf_data = ws.perf_data;
+        for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+            const int cell_idx = this->well_cells_[perf];
+            const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
+            const double trans_mult = simulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
+            const auto& connection = this->well_ecl_.getConnections()[perf_data.ecl_index[perf]];
+            perf_data.connection_transmissibility_factor[perf] = connection.CF() * trans_mult;
+        }
+    }
+
 
     template<typename TypeTag>
     typename WellInterface<TypeTag>::Eval

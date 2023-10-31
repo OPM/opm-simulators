@@ -420,7 +420,7 @@ namespace {
                                // 0.03, 0.0, 0.01, 0.02, 0.03, ...
                                ((k + 3 - topConn) % 4) / 100.0,
 
-                               1.0, 1.0, 0.5, 0.5, 1.0, 0.0, 0,
+                               1.0, 1.0, 0.5, 0.5, 1.0, 0.0, 0, 0.0, 0.0,
                                Opm::Connection::Direction::Z,
                                Opm::Connection::CTFKind::DeckValue, k - topConn, false);
         }

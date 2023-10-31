@@ -109,6 +109,7 @@ struct Setup
                         Opm::PerforationData pd;
                         pd.cell_index = active_index;
                         pd.connection_transmissibility_factor = completion.CF();
+                        pd.connection_d_factor = completion.dFactor();
                         pd.satnum_id = completion.satTableId();
                         well_perf_data[well_index].push_back(pd);
                     }
@@ -580,7 +581,7 @@ BOOST_AUTO_TEST_CASE(TESTPerfData) {
 
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
     Opm::ParallelWellInfo pinfo;
-    std::vector<Opm::PerforationData> connections = {{0,1,1,0},{1,1,1,1},{2,1,1,2}};
+    std::vector<Opm::PerforationData> connections = {{0,1,1,0,0},{1,1,1,0,1},{2,1,1,0,2}};
     Opm::PhaseUsage pu;
 
     // This is totally bonkers, but the pu needs a complete deck to initialize properly

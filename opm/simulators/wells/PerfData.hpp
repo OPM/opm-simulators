@@ -57,6 +57,7 @@ public:
         serializer(micp_rates);
         serializer(cell_index);
         serializer(connection_transmissibility_factor);
+        serializer(connection_d_factor);
         serializer(satnum_id);
         serializer(ecl_index);
         serializer(water_throughput);
@@ -78,6 +79,7 @@ public:
     std::vector<double> micp_rates;
     std::vector<std::size_t> cell_index;
     std::vector<double> connection_transmissibility_factor;
+    std::vector<double> connection_d_factor;
     std::vector<int> satnum_id;
     std::vector<std::size_t> ecl_index;
 
