@@ -294,8 +294,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 OPM_THROW(std::logic_error, "Solver number " + std::to_string(num) + " not available.");
             }
             activeSolverNum_ = num;
-            auto cc = Dune::MPIHelper::getCollectiveCommunication();
-            if (cc.rank() == 0) {
+            if (simulator_.gridView().comm().rank() == 0) {
                 OpmLog::debug("Active solver = " + std::to_string(activeSolverNum_)
                               + " (" + parameters_[activeSolverNum_].linsolver_ + ")");
             }
