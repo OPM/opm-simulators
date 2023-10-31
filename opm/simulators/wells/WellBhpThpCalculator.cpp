@@ -75,11 +75,15 @@ double WellBhpThpCalculator::getTHPConstraint(const SummaryState& summaryState) 
     const auto& well_ecl = well_.wellEcl();
     if (well_ecl.isInjector()) {
         const auto& controls = well_ecl.injectionControls(summaryState);
+        assert(controls.hasControl(Well::InjectorCMode::THP));
+        assert(controls.thp_limit != 0);
         return controls.thp_limit;
     }
 
     if (well_ecl.isProducer( )) {
         const auto& controls = well_ecl.productionControls(summaryState);
+        assert(controls.hasControl(Well::ProducerCMode::THP));
+        assert(controls.thp_limit != 0);
         return controls.thp_limit;
     }
 
