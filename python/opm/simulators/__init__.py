@@ -9,4 +9,4 @@
 #  where FoamSimulator and PurePythonUtils does not currently exists,
 #  but could be possible future extensions..
 #
-from .simulators import BlackOilSimulator, FlowSimulator, EnergySimulator
+from .simulators import BlackOilSimulator, EnergySimulator
