@@ -108,6 +108,22 @@ add_test_compareECLFiles(CASENAME network_standard
 		                 DIR network
 		                 TEST_ARGS --enable-tuning=true)
 
+add_test_compareECLFiles(CASENAME network_01_reroute
+		                 FILENAME NETWORK-01-REROUTE
+		                 SIMULATOR flow
+		                 ABS_TOL ${abs_tol}
+		                 REL_TOL ${rel_tol}
+		                 DIR network
+		                 TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+
+add_test_compareECLFiles(CASENAME network_01_reroute_std
+		                 FILENAME NETWORK-01-REROUTE_STD
+		                 SIMULATOR flow
+		                 ABS_TOL ${abs_tol}
+		                 REL_TOL ${rel_tol}
+		                 DIR network
+		                 TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+
 add_test_compareECLFiles(CASENAME gas_precsalt
                          FILENAME GASWATER_VAPWAT_PRECSALT
                          SIMULATOR flow
