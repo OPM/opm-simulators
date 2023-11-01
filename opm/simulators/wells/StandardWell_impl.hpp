@@ -494,7 +494,7 @@ namespace Opm
         getMobility(ebosSimulator, perf, mob, deferred_logger);
 
         PerforationRates perf_rates;
-        double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
+        double trans_mult = ebosSimulator.problem().template wellTransMultiplier<double>(intQuants,  cell_idx);
         const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
         const double Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
         computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
@@ -790,7 +790,7 @@ namespace Opm
             }
 
             // the well index associated with the connection
-            const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quantities, cell_idx);
+            const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template wellTransMultiplier<double>(int_quantities, cell_idx);
 
             std::vector<double> ipr_a_perf(this->ipr_a_.size());
             std::vector<double> ipr_b_perf(this->ipr_b_.size());
@@ -1364,7 +1364,7 @@ namespace Opm
             // flux for each perforation
             std::vector<Scalar> mob(this->num_components_, 0.);
             getMobility(ebosSimulator, perf, mob, deferred_logger);
-            double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
+            double trans_mult = ebosSimulator.problem().template wellTransMultiplier<double>(intQuants, cell_idx);
             const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
             const double Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
 
@@ -1668,7 +1668,7 @@ namespace Opm
 
             std::vector<EvalWell> cq_s(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
             PerforationRates perf_rates;
-            double trans_mult = ebos_simulator.problem().template rockCompTransMultiplier<double>(int_quant, cell_idx);
+            double trans_mult = ebos_simulator.problem().template wellTransMultiplier<double>(int_quant, cell_idx);
             const double Tw = this->well_index_[perf] * trans_mult;
             computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf, cq_s,
                             perf_rates, deferred_logger);
@@ -2272,7 +2272,7 @@ namespace Opm
             std::vector<Scalar> mob(this->num_components_, 0.);
             getMobility(ebosSimulator, perf, mob, deferred_logger);
             std::vector<Scalar> cq_s(this->num_components_, 0.);
-            double trans_mult = ebosSimulator.problem().template rockCompTransMultiplier<double>(intQuants,  cell_idx);
+            double trans_mult = ebosSimulator.problem().template wellTransMultiplier<double>(intQuants,  cell_idx);
             const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
             const double Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
             PerforationRates perf_rates;
