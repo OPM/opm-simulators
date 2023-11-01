@@ -799,17 +799,17 @@ namespace Opm {
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
-                    if (events.hasEvent(WellState::event_mask)) {
+                    if (events.hasEvent(ScheduleEvents::REQUEST_OPEN_WELL)) {
                         if (wellTestState().lastTestTime(well_name) == ebosSimulator_.time()) {
                             // The well was shut this timestep, we are most likely retrying
                             // a timestep without the well in question, after it caused
                             // repeated timestep cuts. It should therefore not be opened,
                             // even if it was new or received new targets this report step.
-                            events.clearEvent(WellState::event_mask);
                         } else {
                             wellTestState().open_well(well_name);
                             wellTestState().open_completions(well_name);
                         }
+                        events.clearEvent(ScheduleEvents::REQUEST_OPEN_WELL);
                     }
                 }
 
@@ -2262,6 +2262,10 @@ namespace Opm {
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
                 events.clearEvent(WellState::event_mask);
+            }
+            // these events only work for the first time step within the report step
+            if (events.hasEvent(ScheduleEvents::REQUEST_OPEN_WELL)) {
+                events.clearEvent(ScheduleEvents::REQUEST_OPEN_WELL);
             }
             // solve the well equation initially to improve the initial solution of the well model
             if (param_.solve_welleq_initially_ && well->isOperableAndSolvable()) {
