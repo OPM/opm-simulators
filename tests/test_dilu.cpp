@@ -177,7 +177,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrectNoZeros, T, NumericTypes)
     */
 
     const int N = 2;
-    const int bz = 2;
+    constexpr int bz = 2;
     const int nonZeroes = 4;
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
@@ -286,7 +286,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrect1, T, NumericTypes)
 
 
     const int N = 2;
-    const int bz = 2;
+    constexpr int bz = 2;
     const int nonZeroes = 3;
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
@@ -389,7 +389,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrect2, T, NumericTypes)
         | | 0  2| | 0 -1| |   | |1| |     | |4| |
     */
     const int N = 2;
-    const int bz = 2;
+    constexpr int bz = 2;
     const int nonZeroes = 3;
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
@@ -495,7 +495,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUDiagIsCorrect3x3, T, NumericTypes)
 
 
     const int N = 3;
-    const int bz = 3;
+    constexpr int bz = 3;
     const int nonZeroes = 5;
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
@@ -593,7 +593,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrect3, T, NumericTypes)
     */
 
     const int N = 3;
-    const int bz = 3;
+    constexpr int bz = 3;
     const int nonZeroes = 5;
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
@@ -731,7 +731,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsEqualToDuneSeqILUApply, T, NumericTy
     */
 
     const int N = 2;
-    const int bz = 2;
+    constexpr int bz = 2;
     const int nonZeroes = 2;
     using Matrix = Dune::BCRSMatrix<Dune::FieldMatrix<double, bz, bz>>;
     using Vector = Dune::BlockVector<Dune::FieldVector<double, bz>>;
