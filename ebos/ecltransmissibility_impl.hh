@@ -101,6 +101,8 @@ EclTransmissibility(const EclipseState& eclState,
       , centroids_(centroids)
       , enableEnergy_(enableEnergy)
       , enableDiffusivity_(enableDiffusivity)
+      , lookUpData_(gridView)
+      , lookUpCartesianData_(gridView, cartMapper)
 {
     const UnitSystem& unitSystem = eclState_.getDeckUnitSystem();
     transmissibilityThreshold_  = unitSystem.parse("Transmissibility").getSIScaling() * 1e-6;
@@ -350,8 +352,11 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                                               axisCentroids),
                               permeability_[outsideElemIdx]);
 
-            applyNtg_(halfTrans1, insideFaceIdx, elemIdx, ntg);
-            applyNtg_(halfTrans2, outsideFaceIdx, outsideElemIdx, ntg);
+            auto coarseElemIdx = lookUpData_.template getFieldPropIdx<Grid>(elemIdx);;
+            auto coarseOutsideElemIdx = lookUpData_.template getFieldPropIdx<Grid>(outsideElemIdx);
+            
+            applyNtg_(halfTrans1, insideFaceIdx, coarseElemIdx, ntg);
+            applyNtg_(halfTrans2, outsideFaceIdx, coarseOutsideElemIdx, ntg);
 
             // convert half transmissibilities to full face
             // transmissibilities using the harmonic mean
@@ -469,8 +474,11 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                                                         axisCentroids),
                                         porosity_[outsideElemIdx]);
 
-                applyNtg_(halfDiffusivity1, insideFaceIdx, elemIdx, ntg);
-                applyNtg_(halfDiffusivity2, outsideFaceIdx, outsideElemIdx, ntg);
+                auto coarseElemIdx = this->lookUpData_.template getFieldPropIdx<Grid>(elemIdx);
+                auto coarseOutsideElemIdx = this-> lookUpData_.template getFieldPropIdx<Grid>(outsideElemIdx);
+
+                applyNtg_(halfDiffusivity1, insideFaceIdx, coarseElemIdx, ntg);
+                applyNtg_(halfDiffusivity2, outsideFaceIdx, coarseOutsideElemIdx, ntg);
 
                 //TODO Add support for multipliers
                 Scalar diffusivity;
@@ -495,7 +503,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
     // Loop over all elements (global grid) and store Cartesian index
     for (const auto& elem : elements(grid_.leafGridView())) {
         int elemIdx = elemMapper.index(elem);
-        int cartElemIdx = cartMapper_.cartesianIndex(elemIdx);
+        int cartElemIdx =  this->lookUpCartesianData_.template getFieldPropCartesianIdx<Grid>(elemIdx);
         globalToLocal[cartElemIdx] = elemIdx;
     }
 
@@ -1038,7 +1046,7 @@ applyNncMultreg_(const std::unordered_map<std::size_t,int>& cartesianToCompresse
     const auto& inputNNC = this->eclState_.getInputNNC();
     const auto& transMult = this->eclState_.getTransMult();
 
-    auto compressedIdx = [&cartesianToCompressed](const std::size_t globIdx)
+    auto compressedIdx = [&cartesianToCompressed, this](const std::size_t globIdx)
     {
         auto ixPos = cartesianToCompressed.find(globIdx);
         return (ixPos == cartesianToCompressed.end()) ? -1 : ixPos->second;
