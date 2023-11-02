@@ -1473,19 +1473,16 @@ namespace Opm
                                                                   efficiencyFactor,
                                                                   deferred_logger);
 
-                    // we don't want to scale with zero and get zero rates.
-                    if (scale > 0) {
-                        for (int p = 0; p<np; ++p) {
-                            ws.surface_rates[p] *= scale;
-                        }
-                        ws.trivial_target = false;
-                    } else {
-                         ws.trivial_target = true;
+                // we don't want to scale with zero and get zero rates.
+                if (scale > 0) {
+                    for (int p = 0; p<np; ++p) {
+                        ws.surface_rates[p] *= scale;
                     }
+                    ws.trivial_target = false;
                 } else {
-                    // PJPE: the group is a subsea manifold.Guide rates to be ignored. 
-                    // The wells of the group are to be operated on a common THP (= manifold node pressure)
-                } 
+                        ws.trivial_target = true;
+                }
+                    
                 break;
             }   
             case Well::ProducerCMode::CMODE_UNDEFINED:

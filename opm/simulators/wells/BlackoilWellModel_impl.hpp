@@ -2686,6 +2686,9 @@ namespace Opm {
                     const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the previous rates";
                     deferred_logger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
                 }
+                // If we're using local well solves that include control switches, they also update
+                // operability, so reset before main iterations begin
+                well->resetWellOperability();
             }
         }
         updatePrimaryVariables(deferred_logger);
