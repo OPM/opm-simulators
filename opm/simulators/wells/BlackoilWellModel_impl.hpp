@@ -1253,7 +1253,6 @@ namespace Opm {
     //PJPE: This function is to be used for well groups in an extended network that act as a subsea manifold
     // The wells of such group should have a common THP and total phase rate(s) obeying (if possible) 
     // the well group constraint set by GCONPROD
-    // subsea manifolds 
     template <typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -1299,27 +1298,55 @@ namespace Opm {
                     return well_group_rate - orig_target;
                 };
 
+                const std::array<double, 2> range {20E5, 40E5};
+                double low, high;
+
+                // // // trying to use bisect way to locate a bracket 
+                // std::optional<double> approximate_solution;
+                // bool finding_bracket = WellBhpThpCalculator::bisectBracketModified(mismatch, range, low, high, approximate_solution, local_deferredLogger);
+                // if (approximate_solution.has_value()) 
+                //     std::cout << "Approximate solution: " << *approximate_solution << std::endl;
+
+                bool finding_bracket = false;
+                if (!finding_bracket) {
+                    local_deferredLogger.debug(" Trying the brute force search to bracket the bhp for last attempt ");
+                    finding_bracket = WellBhpThpCalculator::bruteForceBracket(mismatch, range, low, high, local_deferredLogger);
+                }
+
+                if (!finding_bracket) {
+                    local_deferredLogger.warning("Bracketing THP calculation failed");
+                    // return std::nullopt;
+                }
+
                 // PJPE: TODO what settings to take here?
                 const double tolerance = 1E-4;
                 const int max_iteration_solve = 100;
                 int iteration = 0;
-                const std::array<double, 2> range {20E5, 40E5};
-                double low(range[0]);
-                double high(range[1]);
-
-                // PJPE: TODO use bisectBracket first and use bruteForceBracket as fallback option.
-                // see computeBhpAtThpLimit()
-                WellBhpThpCalculator::bruteForceBracket(mismatch, range, low, high, local_deferredLogger);
-
-                // double aa = mismatch(low);
-                // double bb = mismatch(high);
-                // std::cout << " low = " << aa << ", high = " << bb << std::endl;
-
                 double well_group_thp = RegulaFalsiBisection<ThrowOnError>::
                 solve(mismatch, low, high, max_iteration_solve, tolerance, iteration);
 
+                // std::cout << "Bracket = [" << low << ", " << high <<"]" << std::endl;
+                // if (low < 2.5E6){
+                //     double pr(0);
+                //     for (int i = 0; i < 1000; ++i){
+                //         pr = (i/10.0 + 1) * 1.0E5 ;
+                //         // std::cout << " thp = " << pr[i] << ", mismatch = " << mismatch(pr[i]) << std::endl;
+                //         std::cout <<  pr << ", " << mismatch(pr) << std::endl;
+                //     }
+                //     return;
+                // }
+
+                for (auto& well : this->well_container_) {
+                        std::string well_name = well->name();
+                        if (group.hasWell(well_name)) {
+                            well->setDynamicThpLimit(well_group_thp);
+                            auto& ws = well_state.well(well_name);
+                            ws.thp = well_group_thp;
+                        }
+                    }
+
                 double check = mismatch(well_group_thp);
-                std::cout << " mismatch = " << check << ", well_group_thp = " << well_group_thp << std::endl;
+                std::cout << "mismatch = " << check << ", well_group_thp = " << well_group_thp << ", iteration = " << iteration << std::endl;
 
                 //PJPE: use the common THP in computeNetworkPressures
                 group_state.update_well_group_thp(nodeName, well_group_thp);

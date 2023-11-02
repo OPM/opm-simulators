@@ -1428,6 +1428,7 @@ namespace Opm
                 } else {
                     // PJPE: the group is a subsea manifold.Guide rates to be ignored. 
                     // The wells of the group are to be operated on a common THP (= manifold node pressure)
+                    ws.production_cmode = Well::ProducerCMode::THP;
                 } 
                 break;
             }   
