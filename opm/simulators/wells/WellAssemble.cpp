@@ -163,27 +163,27 @@ assembleControlEqProd(const WellState& well_state,
 
         };
       
-        bool has_choke(false);
-        const std::size_t report_step = well_.currentStep();
-        auto& network = schedule[report_step].network(); 
-        if (network.active()) 
-             has_choke = network.node(group.name()).as_choke();
+        // bool has_choke(false);
+        // const std::size_t report_step = well_.currentStep();
+        // auto& network = schedule[report_step].network(); 
+        // if (network.active()) 
+        //      has_choke = network.node(group.name()).as_choke();
 
-        if(!has_choke) {
-             WellGroupControls(well_).getGroupProductionControl(group, well_state,
-                                                             group_state,
-                                                             schedule,
-                                                             summaryState,
-                                                             bhp, active_rates,
-                                                             rCoeff,
-                                                             efficiencyFactor,
-                                                             control_eq,
-                                                             deferred_logger);
+        // if(!has_choke) {
+        //      WellGroupControls(well_).getGroupProductionControl(group, well_state,
+        //                                                      group_state,
+        //                                                      schedule,
+        //                                                      summaryState,
+        //                                                      bhp, active_rates,
+        //                                                      rCoeff,
+        //                                                      efficiencyFactor,
+        //                                                      control_eq,
+        //                                                      deferred_logger);
             
-        } else {
-            //PJPE: the group is a subsea manifold: wells are operated on a common THP
-           control_eq = bhp - bhp_from_thp();
-        }
+        // } else {
+        //     //PJPE: the group is a subsea manifold: wells are operated on a common THP
+        //    control_eq = bhp - bhp_from_thp();
+        // }
         break;
     }
     case Well::ProducerCMode::CMODE_UNDEFINED: {

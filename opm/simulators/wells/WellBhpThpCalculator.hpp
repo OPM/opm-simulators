@@ -161,8 +161,6 @@ private:
                        std::optional<double>& approximate_solution,
                        DeferredLogger& deferred_logger) const;
 
-   
-
     double findThpFromBhpIteratively(const std::function<double(const double, const double)>& thp_func,
                                      const double bhp,
                                      const double thp_limit,
