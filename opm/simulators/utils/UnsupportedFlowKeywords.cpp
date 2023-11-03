@@ -181,7 +181,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"EXTHOST", {true, std::nullopt}},
         {"EXTRAPMS", {false, std::nullopt}},
         {"EXTREPGL", {true, std::nullopt}},
-        {"FBHPDEF", {true, std::nullopt}},
         {"FHERCHBL", {true, std::nullopt}},
         {"FRICTION", {true, std::nullopt}},
         {"FIELDSEP", {false, std::nullopt}},
