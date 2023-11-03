@@ -649,8 +649,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"TUNINGL", {false, std::nullopt}},
         {"TUNINGS", {false, std::nullopt}},
         {"TZONE", {true, std::nullopt}},
-        {"UDT", {true, std::nullopt}},
-        {"UDTDIMS", {true, std::nullopt}},
         {"UNCODHMD", {true, std::nullopt}},
         {"UNIFOUTS", {false, std::nullopt}},
         {"UNIFSAVE", {false, std::nullopt}},
