@@ -63,10 +63,11 @@ do
   failed_test=`echo $failed_test | sed -e 's/.*://g' -e 's/\+/./g'`
   # Extract test properties
   dir=`dirname "$0"`
-  binary=$(awk -v search="set_tests_properties\\\($failed_test" -v prop="SIMULATOR" -f $dir/getprop.awk $BUILD_DIR/CTestTestfile.cmake)
-  dir_name=$(awk -v search="set_tests_properties\\\($failed_test" -v prop="DIRNAME" -f $dir/getprop.awk $BUILD_DIR/CTestTestfile.cmake)
-  file_name=$(awk -v search="set_tests_properties\\\($failed_test" -v prop="FILENAME" -f $dir/getprop.awk $BUILD_DIR/CTestTestfile.cmake)
-  test_name=$(awk -v search="set_tests_properties\\\($failed_test" -v prop="TESTNAME" -f $dir/getprop.awk $BUILD_DIR/CTestTestfile.cmake)
+  binary=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="SIMULATOR" -f $dir/getprop.awk $BUILD_DIR/CTestTestfile.cmake)
+  dir_name=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="DIRNAME" -f $dir/getprop.awk $BUILD_DIR/CTestTestfile.cmake)
+  file_name=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="FILENAME" -f $dir/getprop.awk $BUILD_DIR/CTestTestfile.cmake)
+  test_name=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="TESTNAME" -f $dir/getprop.awk $BUILD_DIR/CTestTestfile.cmake)
+  echo "$failed_test ${binary} ${dirname} ${file_name} ${test_name}"
   copyToReferenceDir \
           $BUILD_DIR/tests/results/$binary+$test_name \
           $OPM_TESTS_ROOT/$dir_name/opm-simulation-reference/$binary \
