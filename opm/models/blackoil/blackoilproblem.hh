@@ -102,6 +102,9 @@ public:
                                unsigned,
                                unsigned) const
     { return 0; }
+    
+    Scalar satnumRegionIndex(unsigned) const
+    { return 0; }
 
     /*!
      * \brief Returns the index of the relevant region for solvent mixing functions

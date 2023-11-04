@@ -617,6 +617,17 @@ public:
             return changed;
         }
 
+        if (BrineModule::hasPcfactTables() && primaryVarsMeaningBrine() == BrineMeaning::Sp) {
+            unsigned satnumRegionIdx = problem.satnumRegionIndex(globalDofIdx);
+            Scalar Sp = saltConcentration_();
+            Scalar porosityFactor  = min(1.0 - Sp, 1.0); //phi/phi_0
+            const auto& pcfactTable = BrineModule::pcfactTable(satnumRegionIdx);
+            pcFactor_ = pcfactTable.eval(porosityFactor, /*extrapolation=*/true);
+        }
+        else {
+            pcFactor_ = 1.0;
+        }
+
         switch(primaryVarsMeaningWater()) {
             case WaterMeaning::Sw:
             {
@@ -628,7 +639,7 @@ public:
                         const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                         Scalar so = 1.0 - sg - solventSaturation_();
                         computeCapillaryPressures_(pC, so, sg + solventSaturation_(), /*sw=*/ 0.0, matParams);
-                        p += (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
+                        p += pcFactor_ * (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
                     }
                     Scalar rvwSat = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_,
                                                                                    T,
@@ -648,7 +659,7 @@ public:
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     Scalar so = 1.0 - sw - solventSaturation_();
                     computeCapillaryPressures_(pC, so,  /*sg=*/ 0.0, sw, matParams);
-                    Scalar pw = pg + (pC[waterPhaseIdx] - pC[gasPhaseIdx]);
+                    Scalar pw = pg + pcFactor_ * (pC[waterPhaseIdx] - pC[gasPhaseIdx]);
                     Scalar rswSat = FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIdx_,
                                                                                    T,
                                                                                    pw,
@@ -671,7 +682,7 @@ public:
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     Scalar so = 1.0 - sg - solventSaturation_();
                     computeCapillaryPressures_(pC, so, sg + solventSaturation_(), /*sw=*/ 0.0, matParams);
-                    p += (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
+                    p += pcFactor_ * (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
                 }
                 Scalar rvwSat = FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_,
                                                                                    T,
@@ -706,7 +717,7 @@ public:
                     std::array<Scalar, numPhases> pC = { 0.0 };
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     computeCapillaryPressures_(pC, /*so=*/ 0.0,  /*sg=*/ 0.0, /*sw=*/ 1.0, matParams);
-                    Scalar pg = pw + (pC[gasPhaseIdx] - pC[waterPhaseIdx]);
+                    Scalar pg = pw + pcFactor_ * (pC[gasPhaseIdx] - pC[waterPhaseIdx]);
                     (*this)[Indices::pressureSwitchIdx] = pg;
                     changed = true;
                 }
@@ -758,7 +769,7 @@ public:
                     std::array<Scalar, numPhases> pC = { 0.0 };
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     computeCapillaryPressures_(pC, /*so=*/0.0, sg + solventSaturation_(), sw, matParams);
-                    Scalar pg = po + (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
+                    Scalar pg = po + pcFactor_ * (pC[gasPhaseIdx] - pC[oilPhaseIdx]);
 
                     // we start at the GasMeaning::Rv value that corresponds to that of oil-saturated
                     // hydrocarbon gas
@@ -838,7 +849,7 @@ public:
                                             /*sg=*/sg2 + solventSaturation_(),
                                             sw,
                                             matParams);
-                    Scalar po = pg + (pC[oilPhaseIdx] - pC[gasPhaseIdx]);
+                    Scalar po = pg + pcFactor_ * (pC[oilPhaseIdx] - pC[gasPhaseIdx]);
 
                     setPrimaryVarsMeaningGas(GasMeaning::Sg);
                     setPrimaryVarsMeaningPressure(PressureMeaning::Po);
@@ -1084,6 +1095,7 @@ private:
     BrineMeaning primaryVarsMeaningBrine_;
     SolventMeaning primaryVarsMeaningSolvent_;
     unsigned short pvtRegionIdx_;
+    Scalar pcFactor_;
 };
 
 
