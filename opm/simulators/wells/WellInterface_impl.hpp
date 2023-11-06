@@ -490,7 +490,20 @@ namespace Opm
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
         bool is_operable = true;
         bool converged;
-        converged = this->iterateWellEqWithSwitching(ebos_simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+        if (this->wellIsStopped()) {
+            this->openWell();
+            auto bhp_target = estimateOperableBhp(ebos_simulator, dt, well_state, group_state, summary_state, deferred_logger);
+            if (!bhp_target.has_value()) {
+                // well can't operate using explicit fractions
+                is_operable = false;
+                // XXX convereged = true - iterate with closed well!
+                converged = solveWellWithZeroRate(ebos_simulator, dt, well_state, deferred_logger);
+            } else {
+                converged = solveWellWithBhp(ebos_simulator, dt, bhp_target.value(), well_state, deferred_logger);
+            }
+        } else {
+            converged = this->iterateWellEqWithSwitching(ebos_simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+        }
         if (converged && !this->stopppedOrZeroRateTarget(summary_state, well_state) && well_state.well(this->index_of_well_).production_cmode == Well::ProducerCMode::THP) {
             auto rates = well_state.well(this->index_of_well_).surface_rates;
             this->adaptRatesForVFP(rates);
