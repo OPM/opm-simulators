@@ -560,12 +560,6 @@ partiallySupported()
             },
          },
          {
-            "COMPDAT",
-            {
-               {12,{false, allow_values<double> {}, "COMPDAT(DFACT): non-Darcy D factor not supported and should be defaulted (1*) – value ignored"}}, // D_FACTOR
-            },
-         },
-         {
             "DIFFC",
             {
                {7,{false, allow_values<double> {0}, "DIFFC(ISATNUM1): only default value of 0 supported – will continue"}}, // GAS_OIL_CROSS_DIFF_COEFF
