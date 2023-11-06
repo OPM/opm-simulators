@@ -111,14 +111,19 @@ public:
     void receive([[maybe_unused]] unsigned peerRank)
     {
 #if HAVE_MPI
-        MPI_Recv(data_,
-                 static_cast<int>(mpiDataSize_),
-                 mpiDataType_,
-                 static_cast<int>(peerRank),
-                 0, // tag
-                 MPI_COMM_WORLD,
-                 &mpiStatus_);
-        assert(!mpiStatus_.MPI_ERROR);
+        // Use return code for error detection
+        // According to MPI standard the ERROR field
+        // might not be initialized unless for operations
+        // that return multiple statuses, see  Section 3.7.5
+        // of the standard
+        [[maybe_unused]] auto result = MPI_Recv(data_,
+                                                static_cast<int>(mpiDataSize_),
+                                                mpiDataType_,
+                                                static_cast<int>(peerRank),
+                                                0, // tag
+                                                MPI_COMM_WORLD,
+                                                MPI_STATUS_IGNORE);
+        assert(!result);
 #endif // HAVE_MPI
     }
 
