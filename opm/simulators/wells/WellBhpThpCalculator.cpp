@@ -814,7 +814,7 @@ bruteForceBracket(const std::function<double(const double)>& eq,
                   double& low, double& high,
                   DeferredLogger& deferred_logger)
 {
-    bool finding_bracket = false;
+    bool bracket_found = false;
     low = range[0];
     high = range[1];
     const int sample_number = 200;
@@ -825,18 +825,18 @@ bruteForceBracket(const std::function<double(const double)>& eq,
         high = range[0] + interval * i;
         eq_high = eq(high);
         if (eq_high * eq_low <= 0.) {
-            finding_bracket = true;
+            bracket_found = true;
             break;
         }
         low = high;
         eq_low = eq_high;
     }
-    if (finding_bracket) {
+    if (bracket_found) {
         deferred_logger.debug(
                 " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
                 " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
     }
-    return finding_bracket;
+    return bracket_found;
 }
 
 #define INSTANCE(...) \
