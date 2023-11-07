@@ -63,7 +63,7 @@ template<class TypeTag, class MyTypeTag>
 struct EnableSaltPrecipitation { using type = UndefinedProperty; };
 //! Enable the ECL-blackoil extension for water evaporation
 template<class TypeTag, class MyTypeTag>
-struct EnableEvaporation { using type = UndefinedProperty; };
+struct EnableVapwat { using type = UndefinedProperty; };
 //! Enable the ECL-blackoil extension for disolution of gas into water
 template<class TypeTag, class MyTypeTag>
 struct EnableDisgasInWater { using type = UndefinedProperty; };

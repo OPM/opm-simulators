@@ -103,7 +103,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { enableFoam = getPropValue<TypeTag, Properties::EnableFoam>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
-    enum { enableEvaporation = getPropValue<TypeTag, Properties::EnableEvaporation>() };
+    enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
