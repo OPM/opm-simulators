@@ -345,7 +345,7 @@ computePropertiesForPressures(const WellState& well_state,
                 if (waterrate > 0) {
                     const double gasrate = std::abs(ws.surface_rates[pu.phase_pos[Gas]]) - (Indices::enableSolvent ? ws.sum_solvent_rates() : 0.0);
                     if (gasrate > 0) {
-                        rsw = waterrate / gasrate;
+                        rsw = gasrate / waterrate;
                     }
                     rsw = std::min(rsw, props.rswmax_perf[perf]);
                 }
