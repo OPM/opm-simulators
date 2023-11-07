@@ -1305,6 +1305,65 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updateIPRImplicit(const Simulator& ebos_simulator, WellState& well_state, DeferredLogger& deferred_logger)
     {
+        // Compute IPR based on *converged* well-equation:
+        // For a component rate r the derivative dr/dbhp is obtained by 
+        // dr/dbhp = - (partial r/partial x) * inv(partial Eq/partial x) * (partial Eq/partial control_value)
+        // where Eq(x)=0 is the well equation setup with bhp control and primary varables x 
+
+        // We shouldn't have zero rates at this stage, but check
+        bool zero_rates;
+        auto rates = well_state.well(this->index_of_well_).surface_rates;
+        zero_rates = true;
+        for (std::size_t p = 0; p < rates.size(); ++p) {
+            zero_rates &= rates[p] == 0.0;
+        }
+        auto& ws = well_state.well(this->index_of_well_);
+        if (zero_rates) {
+            const auto msg = fmt::format("updateIPRImplicit: Well {} has zero rate, IPRs might be problematic", this->name());
+            deferred_logger.debug(msg);
+            /*
+            // could revert to standard approach here    
+            updateIPR(ebos_simulator, deferred_logger);
+            for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx){
+                const int idx = this->ebosCompIdxToFlowCompIdx(comp_idx);
+                ws.ipr_a[idx] = this->ipr_a_[comp_idx];
+                ws.ipr_b[idx] = this->ipr_b_[comp_idx];
+            }
+            return;
+            */
+        }
+        const auto& group_state  = ebos_simulator.problem().wellModel().groupState();
+
+        std::fill(ws.ipr_a.begin(), ws.ipr_a.end(), 0.);
+        std::fill(ws.ipr_b.begin(), ws.ipr_b.end(), 0.);
+        //WellState well_state_copy = well_state;    
+        auto inj_controls = Well::InjectionControls(0);
+        auto prod_controls = Well::ProductionControls(0);
+        prod_controls.addControl(Well::ProducerCMode::BHP);
+        prod_controls.bhp_limit = well_state.well(this->index_of_well_).bhp;
+
+        //  Set current control to bhp, and bhp value in state, modify bhp limit in control object.
+        const auto cmode = ws.production_cmode;
+        ws.production_cmode = Well::ProducerCMode::BHP;
+        const double dt = ebos_simulator.timeStepSize();
+        assembleWellEqWithoutIteration(ebos_simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+
+        BVectorWell rhs(this->numberOfSegments());
+        rhs = 0.0;
+        rhs[0][SPres] = -1.0;
+
+        const BVectorWell x_well = this->linSys_.solve(rhs);
+        constexpr int num_eq = MSWEval::numWellEq;
+        for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx){
+            const EvalWell comp_rate = this->primary_variables_.getQs(comp_idx);
+            const int idx = this->ebosCompIdxToFlowCompIdx(comp_idx);
+            for (size_t pvIdx = 0; pvIdx < num_eq; ++pvIdx) {
+                ws.ipr_b[idx] -= x_well[0][pvIdx]*comp_rate.derivative(pvIdx+Indices::numEq);
+            }
+            ws.ipr_a[idx] = ws.ipr_b[idx]*ws.bhp - comp_rate.value();
+        }
+        // reset cmode
+        ws.production_cmode = cmode;
     }    
 
     template<typename TypeTag>
