@@ -370,9 +370,16 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     beginTimeStep()
     {
+
         OPM_TIMEBLOCK(beginTimeStep);
         updateAverageFormationFactor();
         DeferredLogger local_deferredLogger;
+        {
+            const std::string msg = " in THE FUNCTION beginTimeStep: \n";
+            local_deferredLogger.debug(msg);
+            std::cout << msg << std::endl;
+            // OpmLog::debug(msg);
+        }
         switched_prod_groups_.clear();
         switched_inj_groups_.clear();
 
@@ -510,6 +517,13 @@ namespace Opm {
         }
         // Catch clauses for all errors setting exc_type and exc_msg
         OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
+
+        {
+            const std::string msg = " in THE FUNCTION beginTimeStep after updateWellStateWithTarget : \n";
+            local_deferredLogger.debug(msg);
+            std::cout << msg << std::endl;
+            // OpmLog::debug(msg);
+        }
 
         if (exc_type != ExceptionType::NONE) {
             const std::string msg = "Compute initial well solution for new wells failed. Continue with zero initial rates";
@@ -1020,6 +1034,12 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     doPreStepNetworkRebalance(DeferredLogger& deferred_logger) {
+         {
+            const std::string msg = " beginning of THE FUNCTION doPreStepNetworkRebalance : \n";
+            deferred_logger.debug(msg);
+            std::cout << msg << std::endl;
+            // OpmLog::debug(msg);
+        }
         const double dt = this->ebosSimulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
@@ -1049,6 +1069,12 @@ namespace Opm {
         } else {
             const std::string msg = fmt::format("Initial (pre-step) network balance converged with {} iterations", iter);
             deferred_logger.debug(msg);
+        }
+        {
+            const std::string msg = " end of THE FUNCTION doPreStepNetworkRebalance : \n";
+            deferred_logger.debug(msg);
+            std::cout << msg << std::endl;
+            // OpmLog::debug(msg);
         }
     }
 
@@ -1119,6 +1145,12 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControlsAndNetwork(const bool mandatory_network_balance, const double dt, DeferredLogger& local_deferredLogger)
     {
+        {
+            const std::string msg = " beginning of THE FUNCTION updateWellControlsAndNetwork : \n";
+            local_deferredLogger.debug(msg);
+            std::cout << msg << std::endl;
+            // OpmLog::debug(msg);
+        }
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
         bool well_group_control_changed = false;
@@ -1144,6 +1176,12 @@ namespace Opm {
                 break;
             }
         }
+        {
+            const std::string msg = " end of THE FUNCTION updateWellControlsAndNetwork : \n";
+            local_deferredLogger.debug(msg);
+            std::cout << msg << std::endl;
+            // OpmLog::debug(msg);
+        }
         return well_group_control_changed;
     }
 
@@ -1158,6 +1196,12 @@ namespace Opm {
                                           const double dt,
                                           DeferredLogger& local_deferredLogger)
     {
+        {
+            const std::string msg = " beginning of THE FUNCTION updateWellControlsAndNetworkIteration : \n";
+            local_deferredLogger.debug(msg);
+            std::cout << msg << std::endl;
+            // OpmLog::debug(msg);
+        }
         auto [well_group_control_changed, more_network_update] =
                 updateWellControls(mandatory_network_balance, local_deferredLogger, relax_network_tolerance);
 
@@ -1185,6 +1229,12 @@ namespace Opm {
             const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
             WellGroupHelpers::updateGuideRates(fieldGroup, schedule(), summaryState, this->phase_usage_, reportStepIdx, simulationTime,
                                                this->wellState(), this->groupState(), comm, &this->guideRate_, pot, local_deferredLogger);
+        }
+        {
+            const std::string msg = " end of THE FUNCTION updateWellControlsAndNetworkIteration : \n";
+            local_deferredLogger.debug(msg);
+            std::cout << msg << std::endl;
+            // OpmLog::debug(msg);
         }
 
 
@@ -1848,6 +1898,12 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance)
     {
+        {
+            const std::string msg = " beginning of THE FUNCTION updateWellControl : \n";
+            deferred_logger.debug(msg);
+            std::cout << msg << std::endl;
+            // OpmLog::debug(msg);
+        }
         const int episodeIdx = ebosSimulator_.episodeIndex();
         const auto& network = schedule()[episodeIdx].network();
         if (!wellsActive() && !network.active()) {
@@ -1912,6 +1968,12 @@ namespace Opm {
         // update wsolvent fraction for REIN wells
         const Group& fieldGroup = schedule().getGroup("FIELD", episodeIdx);
         updateWsolvent(fieldGroup, episodeIdx,  this->nupcolWellState());
+        {
+            const std::string msg = " end of THE FUNCTION updateWellControl : \n";
+            deferred_logger.debug(msg);
+            std::cout << msg << std::endl;
+            // OpmLog::debug(msg);
+        }
 
         return { changed_well_group, more_network_update };
     }
