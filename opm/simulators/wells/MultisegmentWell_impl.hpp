@@ -549,8 +549,12 @@ namespace Opm
         well_copy.calculateExplicitQuantities(ebos_simulator, well_state_copy, deferred_logger);
         const double dt = ebos_simulator.timeStepSize();
         // solve equations
-        const bool converged = well_copy.iterateWellEqWithSwitching(ebos_simulator, dt, inj_controls, prod_controls, well_state_copy, group_state,
-                                                                    deferred_logger);
+        bool converged = false;
+        if (this->well_ecl_.isProducer() && this->wellHasTHPConstraints(summary_state)) {
+            converged = well_copy.solveWellWithTHPConstraint(ebos_simulator, dt, inj_controls, prod_controls, well_state_copy, group_state, deferred_logger);
+        } else {
+            converged = well_copy.iterateWellEqWithSwitching(ebos_simulator, dt, inj_controls, prod_controls, well_state_copy, group_state, deferred_logger);
+        }
 
         // fetch potentials (sign is updated on the outside).
         well_potentials.clear();
