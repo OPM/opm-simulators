@@ -544,6 +544,14 @@ namespace Opm {
             well->setVFPProperties(vfp_properties_.get());
             well->setGuideRate(&guideRate_);
 
+            // initialize rates/previous rates to prevent zero fractions in vfp-interpolation
+            if (well->isProducer()) {
+                well->updateWellStateRates(ebosSimulator_, this->wellState(), deferred_logger);
+            }
+            if (well->isVFPActive(deferred_logger)) {
+                well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
+            }
+
             well->wellTesting(ebosSimulator_, simulationTime, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
         }
     }
