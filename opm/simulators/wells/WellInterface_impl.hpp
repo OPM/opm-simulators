@@ -462,10 +462,11 @@ namespace Opm
                 converged = this->iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
             } else {
                 if (this->well_ecl_.isProducer() && this->wellHasTHPConstraints(summary_state)) {
-                    converged = robustWellSolveWithTHP(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+                    converged = solveWellWithTHPConstraint(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
                 } else {
                     converged = this->iterateWellEqWithSwitching(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
                 }
+                this->updateIPRImplicit(ebosSimulator, well_state, deferred_logger);
             }
                  
         } catch (NumericalProblem& e ) {
@@ -479,99 +480,97 @@ namespace Opm
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    robustWellSolveWithTHP(const Simulator& ebos_simulator,
-                           const double dt,
-                           const Well::InjectionControls& inj_controls,
-                           const Well::ProductionControls& prod_controls,                           
-                           WellState& well_state,
-                           const GroupState& group_state,
-                           DeferredLogger& deferred_logger)
+    solveWellWithTHPConstraint(const Simulator& ebos_simulator,
+                               const double dt,
+                               const Well::InjectionControls& inj_controls,
+                               const Well::ProductionControls& prod_controls,                           
+                               WellState& well_state,
+                               const GroupState& group_state,
+                               DeferredLogger& deferred_logger)
     {
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
         bool is_operable = true;
-        bool converged;
+        bool converged = true;
+        auto& ws = well_state.well(this->index_of_well_);
+        // if well is stopped, check if we can reopen
         if (this->wellIsStopped()) {
             this->openWell();
             auto bhp_target = estimateOperableBhp(ebos_simulator, dt, well_state, group_state, summary_state, deferred_logger);
             if (!bhp_target.has_value()) {
-                // well can't operate using explicit fractions
+                // no intersection with ipr    
                 is_operable = false;
-                // XXX convereged = true - iterate with closed well!
+                // solve with zero rates
                 converged = solveWellWithZeroRate(ebos_simulator, dt, well_state, deferred_logger);
+                this->stopWell();
             } else {
-                converged = solveWellWithBhp(ebos_simulator, dt, bhp_target.value(), well_state, deferred_logger);
+                // solve well with the estimated target bhp (or limit)
+                const double bhp = std::max(bhp_target.value(), prod_controls.bhp_limit);
+                converged = solveWellWithBhp(ebos_simulator, dt, bhp, well_state, deferred_logger);
             }
-        } else {
+        }
+        // solve well-equation
+        if (is_operable) {
             converged = this->iterateWellEqWithSwitching(ebos_simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
         }
-        if (converged && !this->stopppedOrZeroRateTarget(summary_state, well_state) && well_state.well(this->index_of_well_).production_cmode == Well::ProducerCMode::THP) {
-            auto rates = well_state.well(this->index_of_well_).surface_rates;
-            this->adaptRatesForVFP(rates);
-            // FIX !!!!!!!!!!
-            // first, check just dbhp/dflo
 
-            // update ipr for stability-check
-            this->updateIPRImplicit(ebos_simulator, well_state, deferred_logger);
-            bool is_stable =  WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state, deferred_logger);
-            if (!is_stable) {
-                // solution converged to an unstable point! 
-                this->operability_status_.use_vfpexplicit = true;
-                auto bhp_stable = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state, deferred_logger);
-                if (!bhp_stable.has_value()) {
-                    // well is not operable (no intersection)
-                    // XXX convereged = true - iterate with closed well!
-                    //is_operable = false;
-                    //converged = solveWellWithZeroRate(ebos_simulator, dt, well_state, deferred_logger);
-                } else {
-                    // solve equations for bhp_stable (in attempt to get closer to actual solution)
-                    const bool converged_bhp = solveWellWithBhp(ebos_simulator, dt, bhp_stable.value(), well_state, deferred_logger);
-                    this->updateIPRImplicit(ebos_simulator, well_state, deferred_logger);
-                    auto bhp_stable1 = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state, deferred_logger);
-                    const bool converged_bhp1 = solveWellWithBhp(ebos_simulator, dt, bhp_stable.value(), well_state, deferred_logger);
-                    if (!converged_bhp) {
-                        // 
-                    } else {
-                        // re-solve well equations
-                        // XXX reset thp
-                        well_state.well(this->index_of_well_).thp = this->getTHPConstraint(summary_state);
+        const bool isThp = ws.production_cmode == Well::ProducerCMode::THP;
+        // check stability of solution under thp-control
+        if (true) { 
+            if (converged && !this->stopppedOrZeroRateTarget(summary_state, well_state) && isThp) {
+                auto rates = well_state.well(this->index_of_well_).surface_rates;
+                this->adaptRatesForVFP(rates);
+                this->updateIPRImplicit(ebos_simulator, well_state, deferred_logger);
+                bool is_stable = WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state, deferred_logger);
+                if (!is_stable) {
+                    // solution converged to an unstable point! 
+                    this->operability_status_.use_vfpexplicit = true;
+                    // msg = ...
+                    auto bhp_stable = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state, deferred_logger);
+                    // if we find an intersection with a sufficiently lower bhp, re-solve equations
+                    const bool reltol = 1e-3;
+                    const double cur_bhp = ws.bhp;
+                    if (bhp_stable.has_value() && cur_bhp - bhp_stable.value() > cur_bhp*reltol){
+                        const bool converged_bhp = solveWellWithBhp(ebos_simulator, dt, bhp_stable.value(), well_state, deferred_logger);
+                        // re-solve with hopefully good initial guess
+                        ws.thp = this->getTHPConstraint(summary_state);
                         converged = this->iterateWellEqWithSwitching(ebos_simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
                     }
-                }
-            }            
-        } else if (!converged) {
+                }          
+            }  
+        }
+        
+        if (!converged) {
             // Well did not converge, switch to explicit fractions
             this->operability_status_.use_vfpexplicit = true;
-            //auto well_state_copy = well_state;
-            // 
             this->openWell();
             auto bhp_target = estimateOperableBhp(ebos_simulator, dt, well_state, group_state, summary_state, deferred_logger);
             if (!bhp_target.has_value()) {
                 // well can't operate using explicit fractions
                 is_operable = false;
-                // XXX convereged = true - iterate with closed well!
+                // solve with zero rate 
                 converged = solveWellWithZeroRate(ebos_simulator, dt, well_state, deferred_logger);
+                this->stopWell();
             } else {      
-                // first solve well equations for bhp = bhp_target which should give solution close to actual
-                converged = solveWellWithBhp(ebos_simulator, dt, bhp_target.value(), well_state, deferred_logger);
+                // solve well with the estimated target bhp (or limit)
+                const double bhp = std::max(bhp_target.value(), prod_controls.bhp_limit);
+                const bool converged_bhp = solveWellWithBhp(ebos_simulator, dt, bhp, well_state, deferred_logger);
+                ws.thp = this->getTHPConstraint(summary_state);
+                converged = this->iterateWellEqWithSwitching(ebos_simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+                /*
                 if (!converged) {
                     // debug
                 } else {
                     // re-solve well equations
                     // XXX reset thp
                     well_state.well(this->index_of_well_).thp = this->getTHPConstraint(summary_state);
-                    converged = this->iterateWellEqWithSwitching(ebos_simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+                    
                 }
+                */
             }
         }
-        if (!is_operable) {
-            this->stopWell();
-            if (this->wellHasTHPConstraints(summary_state)){
-                this->operability_status_.can_obtain_bhp_with_thp_limit = false;
-                this->operability_status_.obey_thp_limit_under_bhp_limit = false;
-            } else {
-                this->operability_status_.operable_under_only_bhp_limit = false;
-            }
-        }
+        // update operability
+        this->operability_status_.can_obtain_bhp_with_thp_limit = is_operable;
+        this->operability_status_.obey_thp_limit_under_bhp_limit = is_operable;
         return converged;
     }
 
