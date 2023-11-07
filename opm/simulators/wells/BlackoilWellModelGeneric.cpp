@@ -32,6 +32,9 @@
 #include <opm/output/eclipse/RestartValue.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
+#include <opm/input/eclipse/Schedule/Action/SimulatorUpdate.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSale.hpp>
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Schedule/Group/GConSump.hpp>
@@ -42,7 +45,7 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
-#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
@@ -669,10 +672,10 @@ checkGroupHigherConstraints(const Group& group,
 void
 BlackoilWellModelGeneric::
 updateEclWells(const int timeStepIdx,
-               const std::unordered_set<std::string>& wells,
+               const SimulatorUpdate& sim_update,
                const SummaryState& st)
 {
-    for (const auto& wname : wells) {
+    for (const auto& wname : sim_update.affected_wells) {
         auto well_iter = std::find_if(this->wells_ecl_.begin(), this->wells_ecl_.end(),
             [&wname] (const auto& well) -> bool
         {
@@ -683,25 +686,36 @@ updateEclWells(const int timeStepIdx,
             continue;
         }
 
-        auto well_index = std::distance(this->wells_ecl_.begin(), well_iter);
-        this->wells_ecl_[well_index] = schedule_.getWell(wname, timeStepIdx);
+        const auto well_index = std::distance(this->wells_ecl_.begin(), well_iter);
 
-        const auto& well = this->wells_ecl_[well_index];
-        auto& pd     = this->well_perf_data_[well_index];
-        auto  pdIter = pd.begin();
-        for (const auto& conn : well.getConnections()) {
-            if (conn.state() != Connection::State::SHUT) {
-                pdIter->connection_transmissibility_factor = conn.CF();
-                ++pdIter;
+        const auto& well = this->wells_ecl_[well_index] =
+            this->schedule_.getWell(wname, timeStepIdx);
+
+        auto& pd = this->well_perf_data_[well_index];
+
+        {
+            auto pdIter = pd.begin();
+
+            for (const auto& conn : well.getConnections()) {
+                if (conn.state() != Connection::State::SHUT) {
+                    pdIter->connection_transmissibility_factor = conn.CF();
+                    ++pdIter;
+                }
             }
         }
-        auto& ws = this->wellState().well(well_index);
 
-        ws.updateStatus( well.getStatus() );
-        ws.reset_connection_factors(pd);
-        ws.update_targets(well, st);
+        {
+            auto& ws = this->wellState().well(well_index);
+
+            ws.updateStatus(well.getStatus());
+            ws.reset_connection_factors(pd);
+            ws.update_targets(well, st);
+        }
+
         this->prod_index_calc_[well_index].reInit(well);
     }
+
+    this->wellStructureChangedDynamically_ = sim_update.well_structure_changed;
 }
 
 double

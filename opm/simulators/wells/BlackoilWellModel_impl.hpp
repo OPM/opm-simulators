@@ -272,6 +272,8 @@ namespace Opm {
         // Store the current well and group states in order to recover in
         // the case of failed iterations
         this->commitWGState();
+
+        this->wellStructureChangedDynamically_ = false;
     }
 
 
@@ -371,16 +373,46 @@ namespace Opm {
     beginTimeStep()
     {
         OPM_TIMEBLOCK(beginTimeStep);
-        updateAverageFormationFactor();
+
+        this->updateAverageFormationFactor();
+
         DeferredLogger local_deferredLogger;
-        switched_prod_groups_.clear();
-        switched_inj_groups_.clear();
+
+        this->switched_prod_groups_.clear();
+        this->switched_inj_groups_.clear();
+
+        if (this->wellStructureChangedDynamically_) {
+            // Something altered the well structure/topology.  Possibly
+            // WELSPECS/COMPDAT and/or WELOPEN run from an ACTIONX block.
+            // Reconstruct the local wells to account for the new well
+            // structure.
+            const auto reportStepIdx =
+                this->ebosSimulator_.episodeIndex();
+
+            // Disable WELPI scaling when well structure is updated in the
+            // middle of a report step.
+            const auto enableWellPIScaling = false;
+
+            this->initializeLocalWellStructure(reportStepIdx, enableWellPIScaling);
+            this->initializeGroupStructure(reportStepIdx);
+
+            this->commitWGState();
+
+            // Reset topology flag to signal that we've handled this
+            // structure change.  That way we don't end up here in
+            // subsequent calls to beginTimeStep() unless there's a new
+            // dynamic change to the well structure during a report step.
+            this->wellStructureChangedDynamically_ = false;
+        }
 
         this->resetWGState();
+
         const int reportStepIdx = ebosSimulator_.episodeIndex();
         updateAndCommunicateGroupData(reportStepIdx,
                                       ebosSimulator_.model().newtonMethod().numIterations());
+
         this->wellState().gliftTimeStepInit();
+
         const double simulationTime = ebosSimulator_.time();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {

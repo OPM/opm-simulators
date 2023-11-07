@@ -54,14 +54,15 @@
 namespace Opm {
     class DeferredLogger;
     class EclipseState;
+    class GasLiftGroupInfo;
     class GasLiftSingleWellGeneric;
     class GasLiftWellState;
-    class GasLiftGroupInfo;
     class Group;
     class GuideRateConfig;
     class ParallelWellInfo;
     class RestartValue;
     class Schedule;
+    struct SimulatorUpdate;
     class SummaryConfig;
     class VFPProperties;
     class WellInterfaceGeneric;
@@ -152,7 +153,7 @@ public:
     double wellPI(const std::string& well_name) const;
 
     void updateEclWells(const int timeStepIdx,
-                        const std::unordered_set<std::string>& wells,
+                        const SimulatorUpdate& sim_update,
                         const SummaryState& st);
 
     void initFromRestartFile(const RestartValue& restartValues,
@@ -578,6 +579,8 @@ protected:
     bool glift_debug = false;
 
     double last_glift_opt_time_ = -1.0;
+
+    bool wellStructureChangedDynamically_{false};
 
     std::map<std::string, std::string> switched_prod_groups_;
     std::map<std::pair<std::string, Opm::Phase>, std::string> switched_inj_groups_;
