@@ -59,7 +59,7 @@ struct EnableDisgasInWater<TypeTag, TTag::EclFlowGasWaterEnergyProblem> {
 };
 
 template<class TypeTag>
-struct EnableEvaporation<TypeTag, TTag::EclFlowGasWaterEnergyProblem> {
+struct EnableVapwat<TypeTag, TTag::EclFlowGasWaterEnergyProblem> {
     static constexpr bool value = true;
 };
 

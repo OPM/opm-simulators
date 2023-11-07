@@ -65,7 +65,7 @@ public:
     enum { enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
-    enum { enableEvaporation = getPropValue<TypeTag, Properties::EnableEvaporation>() };
+    enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
 
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
@@ -80,7 +80,7 @@ public:
                                           enableTemperature,
                                           enableEnergy,
                                           BlackoilIndices::gasEnabled,
-                                          enableEvaporation,
+                                          enableVapwat,
                                           enableBrine,
                                           enableSaltPrecipitation,
                                           has_disgas_in_water,

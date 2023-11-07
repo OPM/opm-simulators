@@ -94,7 +94,7 @@ struct EclWellModel<TypeTag, TTag::TestEquilTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 };
 template<class TypeTag>
-struct EnableEvaporation<TypeTag, TTag::TestEquilTypeTag> {
+struct EnableVapwat<TypeTag, TTag::TestEquilTypeTag> {
     static constexpr bool value = true;
 };
 template<class TypeTag>
@@ -102,7 +102,7 @@ struct EclWellModel<TypeTag, TTag::TestEquilVapwatTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 };
 template<class TypeTag>
-struct EnableEvaporation<TypeTag, TTag::TestEquilVapwatTypeTag> {
+struct EnableVapwat<TypeTag, TTag::TestEquilVapwatTypeTag> {
     static constexpr bool value = true;
 };
 } // namespace Opm::Properties
