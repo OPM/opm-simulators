@@ -119,7 +119,7 @@ add_test_compareECLFiles(CASENAME gasoil_precsalt
                          FILENAME GASCONDENSATE_VAPWAT_PRECSALT_REGRESSION
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}                         
+                         REL_TOL ${rel_tol}
                          DIR spe1_precsalt
                          TEST_ARGS --solver-max-time-step-in-days=0.05)
 
@@ -733,6 +733,13 @@ add_test_compareECLFiles(CASENAME multiply_tranxyz_model2
 
 add_test_compareECLFiles(CASENAME editnnc_model2
 			  FILENAME 9_EDITNNC_MODEL2
+			  SIMULATOR flow
+			  ABS_TOL ${abs_tol}
+			  REL_TOL ${rel_tol}
+			  DIR model2)
+
+add_test_compareECLFiles(CASENAME fbhpdef_model2
+			  FILENAME 0C_BASE_FBHPDEF
 			  SIMULATOR flow
 			  ABS_TOL ${abs_tol}
 			  REL_TOL ${rel_tol}
