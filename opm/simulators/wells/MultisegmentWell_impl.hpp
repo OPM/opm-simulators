@@ -1326,16 +1326,16 @@ namespace Opm
             updateIPR(ebos_simulator, deferred_logger);
             for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx){
                 const int idx = this->ebosCompIdxToFlowCompIdx(comp_idx);
-                ws.ipr_a[idx] = this->ipr_a_[comp_idx];
-                ws.ipr_b[idx] = this->ipr_b_[comp_idx];
+                ws.implicit_ipr_a[idx] = this->ipr_a_[comp_idx];
+                ws.implicit_ipr_b[idx] = this->ipr_b_[comp_idx];
             }
             return;
             */
         }
         const auto& group_state  = ebos_simulator.problem().wellModel().groupState();
 
-        std::fill(ws.ipr_a.begin(), ws.ipr_a.end(), 0.);
-        std::fill(ws.ipr_b.begin(), ws.ipr_b.end(), 0.);
+        std::fill(ws.implicit_ipr_a.begin(), ws.implicit_ipr_a.end(), 0.);
+        std::fill(ws.implicit_ipr_b.begin(), ws.implicit_ipr_b.end(), 0.);
         //WellState well_state_copy = well_state;    
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0);
@@ -1358,9 +1358,9 @@ namespace Opm
             const EvalWell comp_rate = this->primary_variables_.getQs(comp_idx);
             const int idx = this->ebosCompIdxToFlowCompIdx(comp_idx);
             for (size_t pvIdx = 0; pvIdx < num_eq; ++pvIdx) {
-                ws.ipr_b[idx] -= x_well[0][pvIdx]*comp_rate.derivative(pvIdx+Indices::numEq);
+                ws.implicit_ipr_b[idx] -= x_well[0][pvIdx]*comp_rate.derivative(pvIdx+Indices::numEq);
             }
-            ws.ipr_a[idx] = ws.ipr_b[idx]*ws.bhp - comp_rate.value();
+            ws.implicit_ipr_a[idx] = ws.implicit_ipr_b[idx]*ws.bhp - comp_rate.value();
         }
         // reset cmode
         ws.production_cmode = cmode;
