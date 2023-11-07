@@ -1401,35 +1401,23 @@ namespace Opm
                 assert(well.isAvailableForGroupControl());
                 const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
                 const Scalar efficiencyFactor = well.getEfficiencyFactor();
+                Scalar scale = this->getGroupProductionTargetRate(group,
+                                                                  well_state,
+                                                                  group_state,
+                                                                  schedule,
+                                                                  summaryState,
+                                                                  efficiencyFactor,
+                                                                  deferred_logger);
 
-                bool has_choke(false);
-                const std::size_t  report_step = this->currentStep();
-                auto& network = schedule[report_step].network();
-                if (network.active()) 
-                    has_choke = network.node(group.name()).as_choke();
-                if (!has_choke) {
-                    Scalar scale = this->getGroupProductionTargetRate(group,
-                                                                      well_state,
-                                                                      group_state,
-                                                                      schedule,
-                                                                      summaryState,
-                                                                      efficiencyFactor,
-                                                                      deferred_logger);
-
-                    // we don't want to scale with zero and get zero rates.
-                    if (scale > 0) {
-                        for (int p = 0; p<np; ++p) {
-                            ws.surface_rates[p] *= scale;
-                        }
-                        ws.trivial_target = false;
-                    } else {
-                         ws.trivial_target = true;
+                // we don't want to scale with zero and get zero rates.
+                if (scale > 0) {
+                    for (int p = 0; p<np; ++p) {
+                        ws.surface_rates[p] *= scale;
                     }
+                    ws.trivial_target = false;
                 } else {
-                    // PJPE: the group is a subsea manifold.Guide rates to be ignored. 
-                    // The wells of the group are to be operated on a common THP (= manifold node pressure)
-                    ws.production_cmode = Well::ProducerCMode::THP;
-                } 
+                        ws.trivial_target = true;
+                }
                 break;
             }   
             case Well::ProducerCMode::CMODE_UNDEFINED:

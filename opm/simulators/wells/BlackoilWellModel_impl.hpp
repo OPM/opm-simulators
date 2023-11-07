@@ -1298,24 +1298,15 @@ namespace Opm {
                     return well_group_rate - orig_target;
                 };
 
-                const std::array<double, 2> range {20E5, 40E5};
+                const std::array<double, 2> range {1E5, 150E5}; //PJPE what lower/upper bound to be taken here?
                 double low, high;
 
-                // // // trying to use bisect way to locate a bracket 
-                // std::optional<double> approximate_solution;
-                // bool finding_bracket = WellBhpThpCalculator::bisectBracketModified(mismatch, range, low, high, approximate_solution, local_deferredLogger);
-                // if (approximate_solution.has_value()) 
-                //     std::cout << "Approximate solution: " << *approximate_solution << std::endl;
-
-                bool finding_bracket = false;
-                if (!finding_bracket) {
-                    local_deferredLogger.debug(" Trying the brute force search to bracket the bhp for last attempt ");
-                    finding_bracket = WellBhpThpCalculator::bruteForceBracket(mismatch, range, low, high, local_deferredLogger);
-                }
-
-                if (!finding_bracket) {
+                local_deferredLogger.debug(" Trying the brute force search to bracket the bhp for last attempt ");
+                const bool finding_bracket = WellBhpThpCalculator::bruteForceBracket(mismatch, range, low, high, local_deferredLogger);
+                if (finding_bracket) {
+                    std::cout << "low: " << low << " high: " << high << std::endl;
+                } else {
                     local_deferredLogger.warning("Bracketing THP calculation failed");
-                    // return std::nullopt;
                 }
 
                 // PJPE: TODO what settings to take here?
@@ -2482,6 +2473,9 @@ namespace Opm {
                     const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the previous rates";
                     deferred_logger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
                 }
+                // If we're using local well solves that include control switches, they also update
+                // operability, so reset before main iterations begin
+                well->resetWellOperability();
             }
         }
         updatePrimaryVariables(deferred_logger);

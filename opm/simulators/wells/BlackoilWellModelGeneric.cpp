@@ -1379,9 +1379,6 @@ updateNetworkPressures(const int reportStepIdx)
                 if (thp_is_limit) {
                     ws.thp = well->getTHPConstraint(summaryState_);
                 }
-                //PJPE: Set thp of wells belonging to a subsea manifold equal to the node_pressure
-                if (network.node(well->wellEcl().groupName()).as_choke())
-                    ws.thp = new_limit;
             }
         }
     }
