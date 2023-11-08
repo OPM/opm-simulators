@@ -86,7 +86,8 @@ getWellConvergence(const WellState& well_state,
                    const double relaxed_inner_tolerance_flow_ms_well,
                    const double tolerance_pressure_ms_wells,
                    const double relaxed_inner_tolerance_pressure_ms_well,
-                   const bool relax_tolerance) const
+                   const bool relax_tolerance, 
+                   const bool well_is_stopped) const
 {
     assert(int(B_avg.size()) == baseif_.numComponents());
 
@@ -160,13 +161,14 @@ getWellConvergence(const WellState& well_state,
                                    tolerance_wells,
                                    tolerance_wells,
                                    max_residual_allowed},
+                                  well_is_stopped,  
                                   std::abs(linSys_.residual()[0][SPres]),
                                   report,
                                   deferred_logger);
 
     // for stopped well, we do not enforce the following checking to avoid dealing with sign of near-zero values
     // for BHP or THP controlled wells, we need to make sure the flow direction is correct
-    if (!baseif_.wellIsStopped() && baseif_.isPressureControlled(well_state)) {
+    if (!well_is_stopped && baseif_.isPressureControlled(well_state)) {
         // checking the flow direction
         const double sign = baseif_.isProducer() ? -1. : 1.;
         const auto weight_total_flux = this->primary_variables_.getWQTotal() * sign;
@@ -541,7 +543,7 @@ getResidualMeasureValue(const WellState& well_state,
     }
 
     // if (count == 0), it should be converged.
-    assert(count != 0);
+    //assert(count != 0);
 
     return sum;
 }

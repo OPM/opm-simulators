@@ -1181,6 +1181,7 @@ namespace Opm
                                                                          tol_wells,
                                                                          this->param_.relaxed_tolerance_flow_well_,
                                                                          relax_tolerance,
+                                                                         this->wellIsStopped(),
                                                                          res,
                                                                          deferred_logger);
 
@@ -2335,16 +2336,19 @@ namespace Opm
         const auto well_status_orig = this->wellStatus_;
         auto well_status_cur = well_status_orig;
         int status_switch_count = 0;
+        // only allow switcing if well is not under zero-rate target and is open from schedule
         bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
-        allow_switching = allow_switching && (!fixed_control && !fixed_status);
+        allow_switching = allow_switching && (!fixed_control || !fixed_status);
         bool changed = false;
         bool final_check = false; 
-
+        /*
         if (allow_switching) {
+            // ??????????????????????????????????????????
             this->operability_status_.can_obtain_bhp_with_thp_limit = true;
             this->operability_status_.obey_thp_limit_under_bhp_limit = true;
             this->operability_status_.operable_under_only_bhp_limit = true;
         }
+        */
         do {
             its_since_last_switch++;
             if (allow_switching && its_since_last_switch >= min_its_after_switch){

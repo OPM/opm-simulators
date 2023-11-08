@@ -206,7 +206,8 @@ namespace Opm
                                                  this->param_.relaxed_tolerance_flow_well_,
                                                  this->param_.tolerance_pressure_ms_wells_,
                                                  this->param_.relaxed_tolerance_pressure_ms_well_,
-                                                 relax_tolerance);
+                                                 relax_tolerance, 
+                                                 this->wellIsStopped());
 
     }
 
@@ -1609,25 +1610,34 @@ namespace Opm
         [[maybe_unused]] int stagnate_count = 0;
         bool relax_convergence = false;
         this->regularize_ = false;
+        const auto& summary_state = ebosSimulator.vanguard().summaryState();
 
         // Max status switch frequency should be 2 to avoid getting stuck in cycle
-        const int min_its_after_switch = 2;
+        const int min_its_after_switch = 3;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
-        const auto well_status = this->wellStatus_;
-        const auto& summary_state = ebosSimulator.vanguard().summaryState();
-        const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
+        // if we fail to solve eqs, we reset status/control before leaving
+        const auto well_status_orig = this->wellStatus_;
+        auto well_status_cur = well_status_orig;
+        int status_switch_count = 0;
+        // only allow switcing if well is not under zero-rate target and is open from schedule
+        bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
+        allow_switching = allow_switching && (!fixed_control || !fixed_status);
         bool changed = false;
         bool final_check = false;
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             its_since_last_switch++;
-            if (its_since_last_switch >= min_its_after_switch){
+            if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const double wqTotal = this->primary_variables_.getWQTotal().value();
-                changed = this->updateWellControlAndStatusLocalIteration (ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger);
+                changed = this->updateWellControlAndStatusLocalIteration(ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger, fixed_control, fixed_status);
                 if (changed){
                     its_since_last_switch = 0;
                     switch_count++;
+                    if (well_status_cur != this->wellStatus_) {
+                        well_status_cur = this->wellStatus_;
+                        status_switch_count++;
+                    }
                 }
                 if (!changed && final_check) {
                     break;
@@ -1743,6 +1753,7 @@ namespace Opm
             }
             deferred_logger.debug(message);
         } else {
+            this->wellStatus_ = well_status_orig;
             const std::string message = fmt::format("   Well {} did not converged in {} inner iterations ("
                                                     "{} control/status switches).", this->name(), it, switch_count);
             deferred_logger.debug(message);
