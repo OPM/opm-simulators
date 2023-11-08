@@ -1118,8 +1118,14 @@ updateNetworkPressures(const int reportStepIdx)
         return network_imbalance;
 
     if (!previous_node_pressures.empty()) {
-        for (const auto& [name, pressure]: previous_node_pressures) {
-            const auto new_pressure = node_pressures_.at(name);
+        for (const auto& [name, new_pressure]: node_pressures_) {
+            if (previous_node_pressures.count(name) <= 0) {
+                if (std::abs(new_pressure) > network_imbalance) {
+                    network_imbalance = std::abs(new_pressure);
+                }
+                continue;
+            }
+            const auto pressure = previous_node_pressures.at(name);
             const double change = (new_pressure - pressure);
             if (std::abs(change) > network_imbalance) {
                 network_imbalance = std::abs(change);
