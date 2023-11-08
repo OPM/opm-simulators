@@ -269,7 +269,8 @@ FIPNUM report region 1 pressure dependent pore volume = 50 RB
     current.add("FIPNUM", Opm::Inplace::Phase::PressurePV, 1, 6.0);
     current.add("FIPNUM", Opm::Inplace::Phase::DynamicPoreVolume, 1, 8.0);
 
-    helper.fip(current, initial);
+    helper.fip(current, initial, "");
+    helper.fip(current, initial, "FIPNUM");
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
 }

@@ -259,61 +259,47 @@ error(const std::vector<int>& failedCellsPbub,
 template<class Scalar>
 void LogOutputHelper<Scalar>::
 fip(const Inplace& inplace,
-    const Inplace& initialInplace) const
+    const Inplace& initialInplace,
+    const std::string& name) const
 {
+    auto iget = [&name](const Inplace& ip,
+                        Inplace::Phase phase,
+                        std::size_t idx)
     {
-        Scalar fieldHydroCarbonPoreVolumeAveragedPressure =
-            detail::pressureAverage(inplace.get(Inplace::Phase::PressureHydroCarbonPV),
-                                    inplace.get(Inplace::Phase::HydroCarbonPV),
-                                    inplace.get(Inplace::Phase::PressurePV),
-                                    inplace.get(Inplace::Phase::DynamicPoreVolume),
-                                    true);
+        if (name.empty()) {
+            return ip.get(phase);
+        }
 
+        return ip.get(name, phase, idx);
+    };
+
+    for (std::size_t reg = 1; reg <= (name.empty() ? 1 : inplace.max_region(name)); ++reg) {
         std::unordered_map<Inplace::Phase, Scalar> initial_values;
         std::unordered_map<Inplace::Phase, Scalar> current_values;
 
         for (const auto& phase : Inplace::phases()) {
-            initial_values[phase] = initialInplace.get(phase);
-            current_values[phase] = inplace.get(phase);
+            initial_values[phase] = iget(initialInplace, phase, reg);
+            current_values[phase] = iget(inplace, phase, reg);
         }
 
         current_values[Inplace::Phase::DynamicPoreVolume] =
-            inplace.get(Inplace::Phase::DynamicPoreVolume);
-
-        this->fipUnitConvert_(initial_values);
-        this->fipUnitConvert_(current_values);
-
-        this->pressureUnitConvert_(fieldHydroCarbonPoreVolumeAveragedPressure);
-        this->outputRegionFluidInPlace_(std::move(initial_values),
-                                        std::move(current_values),
-                                        fieldHydroCarbonPoreVolumeAveragedPressure, 0);
-    }
-
-    for (std::size_t reg = 1; reg <= inplace.max_region("FIPNUM"); ++reg) {
-        std::unordered_map<Inplace::Phase, Scalar> initial_values;
-        std::unordered_map<Inplace::Phase, Scalar> current_values;
-
-        for (const auto& phase : Inplace::phases()) {
-            initial_values[phase] = initialInplace.get("FIPNUM", phase, reg);
-            current_values[phase] = inplace.get("FIPNUM", phase, reg);
-        }
-
-        current_values[Inplace::Phase::DynamicPoreVolume] =
-            inplace.get("FIPNUM", Inplace::Phase::DynamicPoreVolume, reg);
+            iget(inplace, Inplace::Phase::DynamicPoreVolume, reg);
 
         this->fipUnitConvert_(initial_values);
         this->fipUnitConvert_(current_values);
 
         Scalar regHydroCarbonPoreVolumeAveragedPressure =
-            detail::pressureAverage(inplace.get("FIPNUM", Inplace::Phase::PressureHydroCarbonPV, reg),
-                                    inplace.get("FIPNUM", Inplace::Phase::HydroCarbonPV, reg),
-                                    inplace.get("FIPNUM", Inplace::Phase::PressurePV, reg),
-                                    inplace.get("FIPNUM", Inplace::Phase::DynamicPoreVolume, reg),
+            detail::pressureAverage(iget(inplace, Inplace::Phase::PressureHydroCarbonPV, reg),
+                                    iget(inplace, Inplace::Phase::HydroCarbonPV, reg),
+                                    iget(inplace, Inplace::Phase::PressurePV, reg),
+                                    iget(inplace, Inplace::Phase::DynamicPoreVolume, reg),
                                     true);
         this->pressureUnitConvert_(regHydroCarbonPoreVolumeAveragedPressure);
         this->outputRegionFluidInPlace_(std::move(initial_values),
                                         std::move(current_values),
-                                        regHydroCarbonPoreVolumeAveragedPressure, reg);
+                                        regHydroCarbonPoreVolumeAveragedPressure,
+                                        name,
+                                        name.empty() ? 0 : reg);
     }
 }
 
@@ -754,6 +740,7 @@ void LogOutputHelper<Scalar>::
 outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
                           std::unordered_map<Inplace::Phase, Scalar> cip,
                           const Scalar pav,
+                          const std::string& name,
                           const int reg) const
 {
     // don't output FIPNUM report if the region has no porv.
@@ -768,7 +755,7 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
     if (reg == 0) {
         ss << "Field total";
     } else {
-        ss << "FIPNUM report region " << reg;
+        ss << name << " report region " << reg;
     }
 
     ss << " pressure dependent pore volume = "
@@ -782,8 +769,8 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
     }
     else {
         ss << "                                                  ===================================================\n"
-           << "                                                  :        FIPNUM report region  "
-           << std::setw(2) << reg << "                 :\n";
+           << "                                                  :        " << name << " report region  "
+           << std::setw(8 - name.size()) << reg << "                 :\n";
     }
     if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
         ss << "                                                  :      PAV  =" << std::setw(14) << pav << " BARSA                 :\n"

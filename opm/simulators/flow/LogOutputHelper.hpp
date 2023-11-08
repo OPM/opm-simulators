@@ -54,7 +54,8 @@ public:
 
     //! \brief Write fluid-in-place reports to output.
     void fip(const Inplace& inplace,
-             const Inplace& initialInplace) const;
+             const Inplace& initialInplace,
+             const std::string& name) const;
 
     //! \brief Write fluid-in-place reservoir reports to output.
     void fipResv(const Inplace& inplace) const;
@@ -74,6 +75,7 @@ private:
     void outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
                                    std::unordered_map<Inplace::Phase, Scalar> cip,
                                    const Scalar pav,
+                                   const std::string& name,
                                    const int reg) const;
 
     void outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
