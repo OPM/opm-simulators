@@ -37,6 +37,7 @@ void WellConvergence::
 checkConvergenceControlEq(const WellState& well_state,
                           const Tolerances& tolerances,
                           const double well_control_residual,
+                          const bool well_is_stopped, 
                           ConvergenceReport& report,
                           DeferredLogger& deferred_logger) const
 {
@@ -46,7 +47,7 @@ checkConvergenceControlEq(const WellState& well_state,
 
     const int well_index = well_.indexOfWell();
     const auto& ws = well_state.well(well_index);
-    if (well_.wellIsStopped()) {
+    if (well_is_stopped) {
         ctrltype = CR::WellFailure::Type::ControlRate;
         control_tolerance = tolerances.rates; // use smaller tolerance for zero control?
     }
