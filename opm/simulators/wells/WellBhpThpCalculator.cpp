@@ -367,7 +367,7 @@ calculateBhpFromThp(const WellState& well_state,
         const bool use_vfpexplicit = well_.useVfpExplicit();
         double ipr_slope = 0.0;
         if (use_vfpexplicit) {
-            const auto ipr = well_.vfpProperties()->getFloIPR(controls.vfp_table_number, well_.indexOfWell());
+            const auto ipr = getFloIPR(well_state, well, summaryState);
             ipr_slope = -1/ipr.second;
         }
         bhp_tab = well_.vfpProperties()->getProd()->bhp(controls.vfp_table_number,
@@ -908,7 +908,7 @@ isStableSolution(const WellState& well_state,
     if (bhp.dflo >= 0) {
         return true;
     } else {    // maybe check if ipr is available
-        const auto ipr = well_.vfpProperties()->getFloIPR(controls.vfp_table_number, well_.indexOfWell());
+        const auto ipr = getFloIPR(well_state, well, summaryState);
         return bhp.dflo + 1/ipr.second >= 0; 
     }                  
 }
@@ -941,7 +941,7 @@ estimateStableBhp(const WellState& well_state,
     if (wfr <= 0.0 && gfr <= 0.0) {
         // warning message
     }
-    auto ipr = well_.vfpProperties()->getFloIPR(controls.vfp_table_number, well_.indexOfWell());
+    auto ipr = getFloIPR(well_state, well, summaryState);
     
     const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
 
@@ -961,7 +961,28 @@ estimateStableBhp(const WellState& well_state,
     } else {
         return std::nullopt;
     }
-}        
+}    
+
+std::pair<double, double> WellBhpThpCalculator::
+getFloIPR(const WellState& well_state,
+          const Well& well, 
+          const SummaryState& summary_state) const 
+{
+    std::pair<double,double>retval(0.0, 0.0);
+    const auto& controls = well.productionControls(summary_state);
+    const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
+    const auto& pu = well_.phaseUsage();
+    const auto& ipr_a= well_state.well(well_.indexOfWell()).implicit_ipr_a;
+    const auto& aqua_a = pu.phase_used[BlackoilPhases::Aqua]? ipr_a[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
+    const auto& liquid_a = pu.phase_used[BlackoilPhases::Liquid]? ipr_a[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;
+    const auto& vapour_a = pu.phase_used[BlackoilPhases::Vapour]? ipr_a[pu.phase_pos[BlackoilPhases::Vapour]]:0.0;
+    const auto& ipr_b= well_state.well(well_.indexOfWell()).implicit_ipr_b;
+    const auto& aqua_b = pu.phase_used[BlackoilPhases::Aqua]? ipr_b[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
+    const auto& liquid_b = pu.phase_used[BlackoilPhases::Liquid]? ipr_b[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;
+    const auto& vapour_b = pu.phase_used[BlackoilPhases::Vapour]? ipr_b[pu.phase_pos[BlackoilPhases::Vapour]]:0.0;
+    return std::make_pair(detail::getFlo(table, aqua_a, liquid_a, vapour_a), 
+                          detail::getFlo(table, aqua_b, liquid_b, vapour_b));
+}
 
 #define INSTANCE(...) \
 template __VA_ARGS__ WellBhpThpCalculator:: \

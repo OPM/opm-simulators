@@ -92,23 +92,6 @@ public:
         return detail::getGFR(table, aqua, liquid, vapour);
     }
 
-    std::pair<double, double> 
-    getFloIPR(const int table_id, const std::size_t well_index) const {
-        std::pair<double,double>retval(0.0, 0.0);
-        const VFPProdTable& table = this->m_prod.getTable(table_id);
-        const auto& pu = well_state_.phaseUsage();
-        const auto& ipr_a= well_state_.well(well_index).implicit_ipr_a;
-        const auto& aqua_a = pu.phase_used[BlackoilPhases::Aqua]? ipr_a[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
-        const auto& liquid_a = pu.phase_used[BlackoilPhases::Liquid]? ipr_a[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;
-        const auto& vapour_a = pu.phase_used[BlackoilPhases::Vapour]? ipr_a[pu.phase_pos[BlackoilPhases::Vapour]]:0.0;
-        const auto& ipr_b= well_state_.well(well_index).implicit_ipr_b;
-        const auto& aqua_b = pu.phase_used[BlackoilPhases::Aqua]? ipr_b[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
-        const auto& liquid_b = pu.phase_used[BlackoilPhases::Liquid]? ipr_b[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;
-        const auto& vapour_b = pu.phase_used[BlackoilPhases::Vapour]? ipr_b[pu.phase_pos[BlackoilPhases::Vapour]]:0.0;
-        return std::make_pair(detail::getFlo(table, aqua_a, liquid_a, vapour_a), 
-                                detail::getFlo(table, aqua_b, liquid_b, vapour_b));
-    }
-
 private:
     VFPInjProperties m_inj;
     VFPProdProperties m_prod;

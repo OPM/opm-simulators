@@ -115,7 +115,12 @@ public:
                     const std::vector<double>& rates,
                     const double rho,
                     const SummaryState& summaryState,
-                    DeferredLogger& deferred_logger) const;                                                                             
+                    DeferredLogger& deferred_logger) const;    
+
+  std::pair<double, double>
+  getFloIPR(const WellState& well_state,
+            const Well& well, 
+            const SummaryState& summary_state) const;                                                                                              
 
 private:
     //! \brief Compute BHP from THP limit for an injector - implementation.
