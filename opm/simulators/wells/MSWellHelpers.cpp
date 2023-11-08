@@ -206,7 +206,7 @@ invDX(const MatrixType& D, VectorType x, DeferredLogger& deferred_logger)
     linsolver.apply(y, x, res);
 
     if ( !res.converged ) {
-        OPM_DEFLOG_THROW(NumericalProblem, "the invDX did not converge ", deferred_logger);
+        OPM_DEFLOG_PROBLEM(NumericalProblem, "the invDX did not converge ", deferred_logger);
     }
 
     return y;

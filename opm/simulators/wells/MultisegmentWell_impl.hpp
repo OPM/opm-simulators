@@ -848,11 +848,11 @@ namespace Opm
                 const Value d = 1.0 - rv * rs;
 
                 if (getValue(d) == 0.0) {
-                    OPM_DEFLOG_THROW(NumericalProblem,
-                                     fmt::format("Zero d value obtained for well {} "
-                                                 "during flux calculation with rs {} and rv {}",
-                                                 this->name(), rs, rv),
-                                     deferred_logger);
+                    OPM_DEFLOG_PROBLEM(NumericalProblem,
+                                       fmt::format("Zero d value obtained for well {} "
+                                                   "during flux calculation with rs {} and rv {}",
+                                                   this->name(), rs, rv),
+                                       deferred_logger);
                 }
 
                 const Value tmp_oil = (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d;
