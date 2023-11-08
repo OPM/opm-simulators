@@ -856,7 +856,7 @@ namespace Opm
             const auto msg = fmt::format("updateIPRImplicit: Well {} has zero rate, IPRs might be probelmatic", this->name());
             deferred_logger.debug(msg);
             /*
-            // could revert to standard approach here    
+            // could revert to standard approach here:    
             updateIPR(ebos_simulator, deferred_logger);
             for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx){
                 const int idx = this->ebosCompIdxToFlowCompIdx(comp_idx);
@@ -2341,14 +2341,7 @@ namespace Opm
         allow_switching = allow_switching && (!fixed_control || !fixed_status);
         bool changed = false;
         bool final_check = false; 
-        /*
-        if (allow_switching) {
-            // ??????????????????????????????????????????
-            this->operability_status_.can_obtain_bhp_with_thp_limit = true;
-            this->operability_status_.obey_thp_limit_under_bhp_limit = true;
-            this->operability_status_.operable_under_only_bhp_limit = true;
-        }
-        */
+
         do {
             its_since_last_switch++;
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
@@ -2411,14 +2404,6 @@ namespace Opm
                 } else {
                     this->operability_status_.operable_under_only_bhp_limit = !is_stopped;
                 }
-                // We reset the well status to its original state. Status is updated
-                // on the outside based on operability status
-                // \Note for future reference: For the well to update its status to stop/shut,
-                // the flag changed_to_stopped_this_step_ in prepareWellBeforeAssembling needs to be set to true.
-                // For this to happen, isOperableAndSolvable() must change from true to false,
-                // and (until the most recent commit) the well needs to be open for this to trigger.
-                // Hence, the resetting of status.
-                //this->wellStatus_ = well_status;
             }
         } else {
             this->wellStatus_ = well_status_orig;

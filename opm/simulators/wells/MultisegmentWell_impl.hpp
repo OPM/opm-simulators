@@ -1327,7 +1327,7 @@ namespace Opm
             const auto msg = fmt::format("updateIPRImplicit: Well {} has zero rate, IPRs might be problematic", this->name());
             deferred_logger.debug(msg);
             /*
-            // could revert to standard approach here    
+            // could revert to standard approach here:    
             updateIPR(ebos_simulator, deferred_logger);
             for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx){
                 const int idx = this->ebosCompIdxToFlowCompIdx(comp_idx);
@@ -1589,8 +1589,6 @@ namespace Opm
                              const bool fixed_control /*false*/, 
                              const bool fixed_status /*false*/)
     {
-        //if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return true;
-
         const int max_iter_number = this->param_.max_inner_iter_ms_wells_;
 
         {
@@ -1741,9 +1739,6 @@ namespace Opm
                 } else {
                     this->operability_status_.operable_under_only_bhp_limit = !is_stopped;
                 }
-                // We reset the well status to it's original state. Status is updated 
-                // on the outside based on operability status
-                // this->wellStatus_ = well_status;
             }
             std::string message = fmt::format("   Well {} converged in {} inner iterations ("
                                                     "{} control/status switches).", this->name(), it, switch_count);

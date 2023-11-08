@@ -441,7 +441,6 @@ protected:
     std::optional<double> estimateOperableBhp(const Simulator& ebos_simulator,
                                               const double dt,
                                               WellState& well_state,
-                                              const GroupState& group_state,
                                               const SummaryState& summary_state,
                                               DeferredLogger& deferred_logger);        
 

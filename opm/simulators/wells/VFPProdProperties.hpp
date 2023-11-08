@@ -68,8 +68,7 @@ public:
                  const double& alq,
                  const double& explicit_wfr,
                  const double& explicit_gfr,
-                 const bool    use_expvfp, 
-                 const double ipr_slope = 0.0) const;
+                 const bool    use_expvfp) const;
 
     /**
      * Linear interpolation of bhp as a function of the input parameters
@@ -91,8 +90,7 @@ public:
             const double& alq,
             const double& explicit_wfr,
             const double& explicit_gfr,
-            const bool    use_expvfp, 
-            const double ipr_slope = 0.0) const;
+            const bool    use_expvfp) const;
 
     /**
      * Linear interpolation of thp as a function of the input parameters

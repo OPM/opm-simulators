@@ -365,16 +365,12 @@ calculateBhpFromThp(const WellState& well_state,
         const auto& wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
         const auto& gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
         const bool use_vfpexplicit = well_.useVfpExplicit();
-        double ipr_slope = 0.0;
-        if (use_vfpexplicit) {
-            const auto ipr = getFloIPR(well_state, well, summaryState);
-            ipr_slope = -1/ipr.second;
-        }
+
         bhp_tab = well_.vfpProperties()->getProd()->bhp(controls.vfp_table_number,
                                                       aqua, liquid, vapour,
                                                       thp_limit,
                                                       well_.getALQ(well_state),
-                                                      wfr, gfr, use_vfpexplicit, ipr_slope);
+                                                      wfr, gfr, use_vfpexplicit);
     }
     else {
         OPM_DEFLOG_THROW(std::logic_error, "Expected INJECTOR or PRODUCER for well " + well_.name(), deferred_logger);
@@ -896,11 +892,6 @@ isStableSolution(const WellState& well_state,
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
     const bool use_vfpexplicit = well_.useVfpExplicit();
 
-    //const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
-    //const auto bhp_adjustment = getVfpBhpAdjustment(well_state.well(well_.indexOfWell()).bhp, thp);
-    // XXX this needs to be fixed 
-    //assert(bhp_adjustment == 0.0);
-
     detail::VFPEvaluation bhp = detail::bhp(table, aqua, liquid, vapour, thp, well_.getALQ(well_state), wfr, gfr, use_vfpexplicit);
 
     bhp.value = bhp.value + getVfpBhpAdjustment(bhp.value, thp);
@@ -953,7 +944,6 @@ estimateStableBhp(const WellState& well_state,
     auto bhp_adjusted = [this, &thp, &dp_hydro](const double bhp) {
            return bhp - dp_hydro + getVfpBhpAdjustment(bhp, thp);
        };
-    //const auto retval = detail::intersectWithIPR(table, thp, wfr, gfr, well_.getALQ(well_state), ipr.first+ipr.second*dp_hydro, ipr.second);
     const auto retval = detail::intersectWithIPR(table, thp, wfr, gfr, well_.getALQ(well_state), ipr.first, ipr.second, bhp_adjusted);
     if (retval.has_value()) {
         // returned pair is (flo, bhp)
