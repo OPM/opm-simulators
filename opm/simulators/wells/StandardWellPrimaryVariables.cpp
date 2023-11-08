@@ -68,7 +68,7 @@ Scalar relaxationFactorFraction(const Scalar old_value,
     constexpr double epislon = std::numeric_limits<Scalar>::epsilon();
     if (old_value < -epislon ||  old_value > 1.0 + epislon) {
         const std::string msg = fmt::format(" illegal fraction value {} {} is found for well {}", value_name, old_value, well_name);
-        OPM_DEFLOG_THROW(Opm::NumericalProblem, msg, deferred_logger);
+        OPM_DEFLOG_PROBLEM(Opm::NumericalProblem, msg, deferred_logger);
     }
     const Scalar& safe_old_value = std::clamp(old_value, 0.0, 1.0);
 
@@ -707,7 +707,7 @@ relaxationFactorFractionsProducer(const BVectorWell& dwells, DeferredLogger& def
         }
         if (relaxation_factor < 0.0 || relaxation_factor > 1.0) {
             const std::string msg = fmt::format(" illegal relaxation factor {} is obtained for well {}", relaxation_factor, this->well_.name());
-            OPM_DEFLOG_THROW(NumericalProblem, msg, deferred_logger);
+            OPM_DEFLOG_PROBLEM(NumericalProblem, msg, deferred_logger);
         }
     }
     return relaxation_factor;
@@ -719,9 +719,9 @@ checkFinite(DeferredLogger& deferred_logger) const
 {
     for (const Scalar v : value_) {
         if (!isfinite(v))
-            OPM_DEFLOG_THROW(NumericalProblem,
-                             "Infinite primary variable after update from wellState, well: " + well_.name(),
-                             deferred_logger);
+            OPM_DEFLOG_PROBLEM(NumericalProblem,
+                               "Infinite primary variable after update from wellState, well: " + well_.name(),
+                               deferred_logger);
     }
 }
 

@@ -467,7 +467,7 @@ namespace Opm
         try {
             this->linSys_.invert();
         } catch( ... ) {
-            OPM_DEFLOG_THROW(NumericalProblem, "Error when inverting local well equations for well " + name(), deferred_logger);
+            OPM_DEFLOG_PROBLEM(NumericalProblem, "Error when inverting local well equations for well " + name(), deferred_logger);
         }
     }
 
