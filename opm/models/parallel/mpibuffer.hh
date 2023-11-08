@@ -117,8 +117,7 @@ public:
                  static_cast<int>(peerRank),
                  0, // tag
                  MPI_COMM_WORLD,
-                 &mpiStatus_);
-        assert(!mpiStatus_.MPI_ERROR);
+                 MPI_STATUS_IGNORE);
 #endif // HAVE_MPI
     }
 
