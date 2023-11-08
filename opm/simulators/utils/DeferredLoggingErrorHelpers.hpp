@@ -95,12 +95,13 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
                                              Opm::ExceptionType::ExcEnum exc_type,
                                              const std::string& message,
                                              const bool terminal_output,
-                                             Opm::Parallel::Communication comm)
+                                             Opm::Parallel::Communication comm,
+                                             const bool convert_error_to_warning = false)
 {
     Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger, comm);
 
     if (terminal_output) {
-        global_deferredLogger.logMessages(/* convert_error_to_warning= */ true);
+        global_deferredLogger.logMessages(convert_error_to_warning);
     }
     // Now that all messages have been logged, they are automatically
     // cleared from the global logger, but we must also clear them
