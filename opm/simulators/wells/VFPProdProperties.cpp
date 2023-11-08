@@ -194,13 +194,7 @@ EvalWell VFPProdProperties::bhp(const int table_id,
 
     detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
-   
-   //if (bhp_val.dflo < ipr_slope) {
-   //     bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (std::max(0.0, bhp_val.dflo) * flo);
-   //} else {
-    bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (bhp_val.dflo* flo);
-   //}
-
+    bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (std::max(0.0, bhp_val.dflo) * flo);
     bhp.setValue(bhp_val.value);
     return bhp;
 }
