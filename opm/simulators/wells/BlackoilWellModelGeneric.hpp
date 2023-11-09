@@ -354,7 +354,7 @@ protected:
                             data::GroupData& gdata) const;
     void assignGroupValues(const int reportStepIdx,
                            std::map<std::string, data::GroupData>& gvalues) const;
-    void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues) const;
+    void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues, const int reportStepIdx) const;
 
     void calculateEfficiencyFactors(const int reportStepIdx);
 
