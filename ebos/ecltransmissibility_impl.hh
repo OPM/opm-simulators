@@ -156,10 +156,10 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
     const auto& comm = gridView_.comm();
     ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
 
-    // get the ntg values, the ntg values are modified for the cells merged with minpv
-    const std::vector<double>& ntg = eclState_.fieldProps().get_double("NTG");
-    const bool updateDiffusivity = eclState_.getSimulationConfig().isDiffusive() && enableDiffusivity_;
     unsigned numElements = elemMapper.size();
+    // get the ntg values, the ntg values are modified for the cells merged with minpv
+    const std::vector<double>& ntg = this->lookUpData_.assignFieldPropsDoubleOnLeaf(eclState_.fieldProps(), "NTG", numElements);
+    const bool updateDiffusivity = eclState_.getSimulationConfig().isDiffusive() && enableDiffusivity_;
 
     if (map)
         extractPermeability_(map);
@@ -473,9 +473,6 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                                                         outsideElemIdx,
                                                         axisCentroids),
                                         porosity_[outsideElemIdx]);
-
-                auto coarseElemIdx = this->lookUpData_.template getFieldPropIdx<Grid>(elemIdx);
-                auto coarseOutsideElemIdx = this-> lookUpData_.template getFieldPropIdx<Grid>(outsideElemIdx);
 
                 applyNtg_(halfDiffusivity1, insideFaceIdx, coarseElemIdx, ntg);
                 applyNtg_(halfDiffusivity2, outsideFaceIdx, coarseOutsideElemIdx, ntg);
