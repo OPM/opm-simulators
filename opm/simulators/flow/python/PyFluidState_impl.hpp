@@ -31,14 +31,14 @@ PyFluidState(Simulator* ebos_simulator) : ebos_simulator_(ebos_simulator)
 // ------------------------------------
 
 template <class TypeTag>
-std::unique_ptr<int []>
+std::vector<int>
 PyFluidState<TypeTag>::
-getPrimaryVarMeaning(const std::string &variable, std::size_t *size) const {
+getPrimaryVarMeaning(const std::string &variable) const {
     Model &model = this->ebos_simulator_->model();
     auto &sol = model.solution(/*timeIdx*/0);
-    *size = model.numGridDof();
-    auto array = std::make_unique<int []>(*size);
-    for (unsigned dof_idx = 0; dof_idx < *size; ++dof_idx) {
+    auto size = model.numGridDof();
+    std::vector<int> array(size);
+    for (unsigned dof_idx = 0; dof_idx < size; ++dof_idx) {
         auto primary_vars = sol[dof_idx];
         array[dof_idx] = getVariableMeaning_(primary_vars, variable);
     }
@@ -106,20 +106,20 @@ getPrimaryVarMeaningMap(const std::string &variable) const
    kr_g = Gas relperm,
  */
 template <class TypeTag>
-std::unique_ptr<double []>
+std::vector<double>
 PyFluidState<TypeTag>::
-getFluidStateVariable(const std::string &name, std::size_t *size ) const
+getFluidStateVariable(const std::string &name) const
 {
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
     using Element = typename GridView::template Codim<0>::Entity;
 
     Model &model = this->ebos_simulator_->model();
-    *size = model.numGridDof();
+    auto size = model.numGridDof();
+    std::vector<double> array(size);
     const auto& grid_view = this->ebos_simulator_->vanguard().gridView();
     /* NOTE: grid_view.size(0) should give the same value as
      *  model.numGridDof()
      */
-    auto array = std::make_unique<double []>(*size);
     ElementContext elem_ctx(*this->ebos_simulator_);
     ElementIterator elem_itr = grid_view.template begin</*codim=*/0>();
     const ElementIterator& elem_end_itr = grid_view.template end</*codim=*/0>();
@@ -128,7 +128,7 @@ getFluidStateVariable(const std::string &name, std::size_t *size ) const
         const Element& elem = *elem_itr;
         elem_ctx.updatePrimaryStencil(elem);
         elem_ctx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
-        for (unsigned dof_idx = 0;dof_idx < elem_ctx.numPrimaryDof(/*timeIdx=*/0); ++dof_idx) {
+        for (unsigned dof_idx = 0; dof_idx < elem_ctx.numPrimaryDof(/*timeIdx=*/0); ++dof_idx) {
             const auto& int_quants = elem_ctx.intensiveQuantities(dof_idx, /*timeIdx=*/0);
             const auto& fs = int_quants.fluidState();
             unsigned global_dof_idx = elem_ctx.globalSpaceIndex(dof_idx, /*timeIdx=*/0);
@@ -139,16 +139,16 @@ getFluidStateVariable(const std::string &name, std::size_t *size ) const
 }
 
 template <class TypeTag>
-std::unique_ptr<double []>
+std::vector<double>
 PyFluidState<TypeTag>::
-getPrimaryVariable(const std::string &idx_name, std::size_t *size ) const
+getPrimaryVariable(const std::string &idx_name) const
 {
     std::size_t primary_var_idx = getPrimaryVarIndex_(idx_name);
     Model &model = this->ebos_simulator_->model();
     auto &sol = model.solution(/*timeIdx*/0);
-    *size = model.numGridDof();
-    auto array = std::make_unique<double []>(*size);
-    for (unsigned dof_idx = 0; dof_idx < *size; ++dof_idx) {
+    auto size = model.numGridDof();
+    std::vector<double> array(size);
+    for (unsigned dof_idx = 0; dof_idx < size; ++dof_idx) {
         auto primary_vars = sol[dof_idx];
         array[dof_idx] = primary_vars[primary_var_idx];
     }

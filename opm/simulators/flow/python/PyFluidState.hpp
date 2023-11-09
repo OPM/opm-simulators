@@ -48,13 +48,10 @@ namespace Opm::Pybind
         };
     public:
         PyFluidState(Simulator *ebos_simulator);
-        std::unique_ptr<double []> getFluidStateVariable(
-                                   const std::string &name, std::size_t *size ) const;
-        std::unique_ptr<int []> getPrimaryVarMeaning(
-                                   const std::string &variable, std::size_t *size) const;
+        std::vector<double> getFluidStateVariable(const std::string &name) const;
+        std::vector<int> getPrimaryVarMeaning(const std::string &variable) const;
         std::map<std::string, int> getPrimaryVarMeaningMap(const std::string &variable) const;
-        std::unique_ptr<double []> getPrimaryVariable(
-                                   const std::string &idx_name, std::size_t *size ) const;
+        std::vector<double> getPrimaryVariable(const std::string &idx_name) const;
         void setPrimaryVariable(const std::string &idx_name, const double *data, std::size_t size);
 
     private:

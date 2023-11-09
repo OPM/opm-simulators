@@ -84,9 +84,8 @@ int PyBlackOilSimulator::currentStep()
 }
 
 py::array_t<double> PyBlackOilSimulator::getCellVolumes() {
-    std::size_t len;
-    auto array = getMaterialState().getCellVolumes(&len);
-    return py::array(len, array.get());
+    auto vector = getMaterialState().getCellVolumes();
+    return py::array(vector.size(), vector.data());
 }
 
 double PyBlackOilSimulator::getDT() {
@@ -95,36 +94,32 @@ double PyBlackOilSimulator::getDT() {
 
 py::array_t<double> PyBlackOilSimulator::getPorosity()
 {
-    std::size_t len;
-    auto array = getMaterialState().getPorosity(&len);
-    return py::array(len, array.get());
+    auto vector = getMaterialState().getPorosity();
+    return py::array(vector.size(), vector.data());
 }
 
 py::array_t<double>
 PyBlackOilSimulator::
 getFluidStateVariable(const std::string &name) const
 {
-    std::size_t len;
-    auto array = getFluidState().getFluidStateVariable(name, &len);
-    return py::array(len, array.get());
+    auto vector = getFluidState().getFluidStateVariable(name);
+    return py::array(vector.size(), vector.data());
 }
 
 py::array_t<double>
 PyBlackOilSimulator::
 getPrimaryVariable(const std::string &variable) const
 {
-    std::size_t len;
-    auto array = getFluidState().getPrimaryVariable(variable, &len);
-    return py::array(len, array.get());
+    auto vector = getFluidState().getPrimaryVariable(variable);
+    return py::array(vector.size(), vector.data());
 }
 
 py::array_t<int>
 PyBlackOilSimulator::
 getPrimaryVarMeaning(const std::string &variable) const
 {
-    std::size_t len;
-    auto array = getFluidState().getPrimaryVarMeaning(variable, &len);
-    return py::array(len, array.get());
+    auto vector = getFluidState().getPrimaryVarMeaning(variable);
+    return py::array(vector.size(), vector.data());
 }
 
 std::map<std::string, int>

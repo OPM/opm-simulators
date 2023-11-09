@@ -45,8 +45,8 @@ namespace Opm::Pybind
         PyMaterialState(Simulator *ebos_simulator)
             : ebos_simulator_(ebos_simulator) { }
 
-        std::unique_ptr<double []> getCellVolumes( std::size_t *size);
-        std::unique_ptr<double []> getPorosity( std::size_t *size);
+        std::vector<double> getCellVolumes();
+        std::vector<double> getPorosity();
         void setPorosity(const double *poro, std::size_t size);
     private:
         Simulator *ebos_simulator_;
