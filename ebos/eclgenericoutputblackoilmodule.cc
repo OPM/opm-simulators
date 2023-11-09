@@ -1335,10 +1335,7 @@ accumulateRegionSums(const Parallel::Communication& comm)
     }
 
     // The first time the outputFipLog function is run we store the inplace values in
-    // the initialInplace_ member. This has at least two problems:
-    //
-    //   o We really want the *initial* value - now we get the value after
-    //     the first timestep.
+    // the initialInplace_ member. This has a problem:
     //
     //   o For restarted runs this is obviously wrong.
     //

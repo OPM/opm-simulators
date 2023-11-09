@@ -754,8 +754,6 @@ public:
         if (enableEclOutput_){
             eclWriter_->writeOutput(std::move(localCellData), isSubStep);
         }
-        
-
     }
 
     void finalizeOutput() {
@@ -1346,6 +1344,10 @@ public:
 
         if (enableAquifers_)
             aquiferModel_.initialSolutionApplied();
+
+        if (this->simulator().episodeIndex() == 0) {
+            eclWriter_->writeInitialFIPReport();
+        }
     }
 
     /*!

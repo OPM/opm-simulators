@@ -319,6 +319,43 @@ public:
         }
     }
 
+    //! \brief Writes the initial FIP report as configured in RPTSOL.
+    void writeInitialFIPReport()
+    {
+        const auto& fip = simulator_.vanguard().eclState().getEclipseConfig().fip();
+        if (!fip.output(FIPConfig::OutputField::FIELD) &&
+            !fip.output(FIPConfig::OutputField::RESV)) {
+            return;
+        }
+
+        const auto& gridView = simulator_.vanguard().gridView();
+        const int numElements = gridView.size(/*codim=*/0);
+
+        this->eclOutputModule_->
+            allocBuffers(numElements, 0, false, false, /*isRestart*/ false);
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (int dofIdx = 0; dofIdx < numElements; ++dofIdx) {
+            const auto& intQuants = *simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0);
+            const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
+
+            this->eclOutputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
+        }
+
+        std::map<std::string, double> miscSummaryData;
+        std::map<std::string, std::vector<double>> regionData;
+        Inplace inplace;
+        {
+            OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
+            inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, 0,
+                                                     false, simulator_.gridView().comm());
+            eclOutputModule_->outputFipresvLog(miscSummaryData, regionData, 0,
+                                               false, simulator_.gridView().comm());
+        }
+    }
+
     void writeOutput(data::Solution&& localCellData, bool isSubStep)
     {
         OPM_TIMEBLOCK(writeOutput);
