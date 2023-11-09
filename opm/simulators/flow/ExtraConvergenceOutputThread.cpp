@@ -112,6 +112,49 @@ namespace {
         return maxChar;
     }
 
+
+    std::string to_string(const Opm::ConvergenceReport::Severity s)
+    {
+        using S = Opm::ConvergenceReport::Severity;
+        switch (s) {
+        case S::None:
+            return "None";
+        case S::Normal:
+            return "Normal";
+        case S::TooLarge:
+            return "TooLarge";
+        case S::NotANumber:
+            return "NotANumber";
+        }
+        throw std::logic_error("Unknown ConvergenceReport::Severity");
+    }
+
+
+    std::string to_string(const Opm::ConvergenceReport::WellFailure::Type t)
+    {
+        using T = Opm::ConvergenceReport::WellFailure::Type;
+        switch (t) {
+        case T::Invalid:
+            return "Invalid";
+        case T::MassBalance:
+            return "MassBalance";
+        case T::Pressure:
+            return "Pressure";
+        case T::ControlBHP:
+            return "ControlBHP";
+        case T::ControlTHP:
+            return "ControlTHP";
+        case T::ControlRate:
+            return "ControlRate";
+        case T::Unsolvable:
+            return "Unsolvable";
+        case T::WrongFlowDirection:
+            return "WrongFlowDirection";
+        }
+        throw std::logic_error("Unknown ConvergenceReport::WellFailure::Type");
+    }
+
+
     void writeConvergenceRequest(std::ostream&                                           os,
                                  const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
                                  std::string::size_type                                  colSize,
@@ -134,7 +177,19 @@ namespace {
             }
 
             os << std::right << std::setw(colSize + 1)
-               << (report.wellFailed() ? "FAIL" : "CONV") << '\n';
+               << (report.wellFailed() ? "FAIL" : "CONV");
+            if (report.wellFailed()) {
+                for (const auto& wf : report.wellFailures()) {
+                    os << " { "
+                       << wf.wellName() << ' ' << to_string(wf.type());
+                    if (wf.type() == Opm::ConvergenceReport::WellFailure::Type::MassBalance) {
+                        os << " Severity=" << to_string(wf.severity())
+                           << " Phase=" << wf.phase();
+                    }
+                    os << " }";
+                }
+            }
+            os << '\n';
 
             ++iter;
         }
