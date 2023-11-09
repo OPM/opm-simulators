@@ -17,7 +17,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
-#include "MPIPacker.hpp"
+#include <opm/simulators/utils/MPIPacker.hpp>
+
+#include <opm/common/utility/TimeService.hpp>
+#include <opm/input/eclipse/EclipseState/IOConfig/FIPConfig.hpp>
 
 #include <bitset>
 #include <cstdint>
@@ -25,7 +28,6 @@
 #include <string>
 #include <type_traits>
 
-#include <opm/common/utility/TimeService.hpp>
 
 namespace Opm {
 namespace Mpi {
@@ -130,6 +132,8 @@ unpack(time_point& data,
 template struct Packing<false,std::bitset<3>>;
 template struct Packing<false,std::bitset<4>>;
 template struct Packing<false,std::bitset<10>>;
+constexpr int NumFip = static_cast<int>(FIPConfig::OutputField::NUM_FIP_REPORT);
+template struct Packing<false,std::bitset<NumFip>>;
 
 } // end namespace detail
 } // end namespace Mpi
