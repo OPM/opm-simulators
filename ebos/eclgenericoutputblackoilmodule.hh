@@ -79,16 +79,16 @@ public:
     // write Fluid In Place to output log
     Inplace outputFipLog(std::map<std::string, double>& miscSummaryData,
                          std::map<std::string, std::vector<double>>& regionData,
+                         const std::size_t reportStepNum,
                          const bool substep,
                          const Parallel::Communication& comm);
 
     // write Reservoir Volumes to output log
     Inplace outputFipresvLog(std::map<std::string, double>& miscSummaryData,
                          std::map<std::string, std::vector<double>>& regionData,
+                         const std::size_t reportStepNum,
                          const bool substep,
                          const Parallel::Communication& comm);
-
-
 
     void outputErrorLog(const Parallel::Communication& comm) const;
 

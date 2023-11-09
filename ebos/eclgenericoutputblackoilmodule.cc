@@ -265,6 +265,7 @@ template<class FluidSystem,class Scalar>
 Inplace EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 outputFipLog(std::map<std::string, double>& miscSummaryData,
              std::map<std::string, std::vector<double>>& regionData,
+             const std::size_t reportStepNum,
              const bool substep,
              const Parallel::Communication& comm)
 {
@@ -276,9 +277,27 @@ outputFipLog(std::map<std::string, double>& miscSummaryData,
                               miscSummaryData,
                               regionData);
 
-    if (!substep && !forceDisableFipOutput_) {
+    // For report step 0 we use the RPTSOL config, else derive from RPTSCHED
+    std::unique_ptr<FIPConfig> fipSched;
+    if (reportStepNum != 0) {
+        const auto& rpt = this->schedule_[reportStepNum].rpt_config.get();
+        fipSched = std::make_unique<FIPConfig>(rpt);
+    }
+    const FIPConfig& fipc = reportStepNum == 0 ? this->eclState_.getEclipseConfig().fip()
+                                               : *fipSched;
+
+    if (!substep && !forceDisableFipOutput_ && fipc.output(FIPConfig::OutputField::FIELD)) {
         logOutput_.fip(inplace, this->initialInplace(), "");
-        logOutput_.fip(inplace, this->initialInplace(), "FIPNUM");
+        if (fipc.output(FIPConfig::OutputField::FIPNUM)) {
+            logOutput_.fip(inplace, this->initialInplace(), "FIPNUM");
+        }
+        if (fipc.output(FIPConfig::OutputField::FIP)) {
+            for (const auto& reg : this->regions_) {
+                if (reg.first != "FIPNUM") {
+                    logOutput_.fip(inplace, this->initialInplace(), reg.first);
+                }
+            }
+        }
     }
 
     return inplace;
@@ -287,9 +306,10 @@ outputFipLog(std::map<std::string, double>& miscSummaryData,
 template<class FluidSystem,class Scalar>
 Inplace EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 outputFipresvLog(std::map<std::string, double>& miscSummaryData,
-             std::map<std::string, std::vector<double>>& regionData,
-             const bool substep,
-             const Parallel::Communication& comm)
+                 std::map<std::string, std::vector<double>>& regionData,
+                 const std::size_t reportStepNum,
+                 const bool substep,
+                 const Parallel::Communication& comm)
 {
     auto inplace = this->accumulateRegionSums(comm);
     if (comm.rank() != 0)
@@ -299,7 +319,16 @@ outputFipresvLog(std::map<std::string, double>& miscSummaryData,
                               miscSummaryData,
                               regionData);
 
-    if (!substep && !forceDisableFipresvOutput_) {
+    // For report step 0 we use the RPTSOL config, else derive from RPTSCHED
+    std::unique_ptr<FIPConfig> fipSched;
+    if (reportStepNum != 0) {
+        const auto& rpt = this->schedule_[reportStepNum].rpt_config.get();
+        fipSched = std::make_unique<FIPConfig>(rpt);
+    }
+    const FIPConfig& fipc = reportStepNum == 0 ? this->eclState_.getEclipseConfig().fip()
+                                               : *fipSched;
+
+    if (!substep && !forceDisableFipresvOutput_ && fipc.output(FIPConfig::OutputField::RESV)) {
         logOutput_.fipResv(inplace);
     }
 

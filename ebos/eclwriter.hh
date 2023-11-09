@@ -248,9 +248,11 @@ public:
         std::map<std::string, std::vector<double>> regionData;
         Inplace inplace;
         {
-        OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
-        inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, isSubStep, simulator_.gridView().comm());
-        eclOutputModule_->outputFipresvLog(miscSummaryData, regionData, isSubStep, simulator_.gridView().comm());
+            OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
+            inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, reportStepNum,
+                                                     isSubStep, simulator_.gridView().comm());
+            eclOutputModule_->outputFipresvLog(miscSummaryData, regionData, reportStepNum,
+                                               isSubStep, simulator_.gridView().comm());
         }
         bool forceDisableProdOutput = false;
         bool forceDisableInjOutput = false;
