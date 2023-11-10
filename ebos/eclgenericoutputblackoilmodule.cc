@@ -277,7 +277,8 @@ outputFipLog(std::map<std::string, double>& miscSummaryData,
                               regionData);
 
     if (!substep && !forceDisableFipOutput_) {
-        logOutput_.fip(inplace, this->initialInplace());
+        logOutput_.fip(inplace, this->initialInplace(), "");
+        logOutput_.fip(inplace, this->initialInplace(), "FIPNUM");
     }
 
     return inplace;
