@@ -23,7 +23,9 @@
 
 #include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/input/eclipse/Schedule/Well/WDFAC.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
@@ -31,9 +33,10 @@
 
 #include <dune/common/version.hh>
 
-#include <fmt/format.h>
-
 #include <cstddef>
+#include <utility>
+
+#include <fmt/format.h>
 
 namespace Opm
 {
@@ -1491,23 +1494,29 @@ namespace Opm
     template <typename TypeTag>
     std::vector<double>
     WellInterface<TypeTag>::
-    wellIndex(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const SingleWellState& ws) const {
+    wellIndex(const int                  perf,
+              const IntensiveQuantities& intQuants,
+              const double               trans_mult,
+              const SingleWellState&     ws) const
+    {
+        // Add a Forchheimer term to the gas phase CTF if the run uses
+        // either of the WDFAC or the WDFACCOR keywords.
 
-        std::vector<Scalar> wi(this->num_components_, this->well_index_[perf] * trans_mult);
-        const auto& wdfac = this->well_ecl_.getWDFAC();
-        if (!wdfac.useDFactor()) {
-            return wi;
-        }
-        // for gas wells we may want to add a Forchheimer term if the WDFAC or WDFACCOR keyword is used        
+        auto wi = std::vector<Scalar>
+            (this->num_components_, this->well_index_[perf] * trans_mult);
+
         if constexpr (! Indices::gasEnabled) {
             return wi;
         }
-        // closed connection are still closed
-        if (this->well_index_[perf] == 0)
-            return std::vector<Scalar>(this->num_components_, 0.0);
 
-        double d = computeConnectionDFactor(perf, intQuants, ws);
-        if (d < 1.0e-15)  {
+        const auto& wdfac = this->well_ecl_.getWDFAC();
+
+        if (! wdfac.useDFactor() || (this->well_index_[perf] == 0.0)) {
+            return wi;
+        }
+
+        const double d = this->computeConnectionDFactor(perf, intQuants, ws);
+        if (d < 1.0e-15) {
             return wi;
         }
 
@@ -1556,57 +1565,95 @@ namespace Opm
             }
         }
         wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (consistent_Q/2 * d / scaling));
+
         return wi;
     }
 
     template <typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateConnectionDFactor(const Simulator& simulator, SingleWellState& ws) const {
-
-        const auto& wdfac = this->well_ecl_.getWDFAC();
-        if (!wdfac.useDFactor()) {
+    updateConnectionDFactor(const Simulator& simulator, SingleWellState& ws) const
+    {
+        if (! this->well_ecl_.getWDFAC().useDFactor()) {
             return;
         }
-        auto& perf_data = ws.perf_data;
+
+        auto& d_factor = ws.perf_data.connection_d_factor;
+
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-            perf_data.connection_d_factor[perf] = computeConnectionDFactor(perf, intQuants, ws);
+
+            d_factor[perf] = this->computeConnectionDFactor(perf, intQuants, ws);
         }
     }
 
     template <typename TypeTag>
     double 
     WellInterface<TypeTag>::
-    computeConnectionDFactor(const int perf, const IntensiveQuantities& intQuants, const SingleWellState& ws) const {
-        const double connection_pressure = ws.perf_data.pressure[perf];
-        // viscosity is evaluated at connection pressure
-        const auto& rv = getValue(intQuants.fluidState().Rv());
-        const double rv_sat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(this->pvtRegionIdx(), ws.temperature, connection_pressure);
-        // note that rv here is from grid block with typically p_block > connection_pressure (so we may very well have rv > rv_sat)
-        const double mu = rv >= rv_sat ?
-                                FluidSystem::gasPvt().saturatedViscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure) :
-                                FluidSystem::gasPvt().viscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure, rv, getValue(intQuants.fluidState().Rvw()));
-        double rho = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, this->pvtRegionIdx());
-        const double phi = getValue(intQuants.porosity());
-        const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
-        const auto& wdfac = this->well_ecl_.getWDFAC();
-        return wdfac.getDFactor(connection, mu, rho, phi);
+    computeConnectionDFactor(const int                  perf,
+                             const IntensiveQuantities& intQuants,
+                             const SingleWellState&     ws) const
+    {
+        auto rhoGS = [regIdx = this->pvtRegionIdx()]() {
+            return FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regIdx);
+        };
+
+        // Viscosity is evaluated at connection pressure.
+        auto gas_visc = [connection_pressure = ws.perf_data.pressure[perf],
+                         temperature = ws.temperature,
+                         regIdx = this->pvtRegionIdx(), &intQuants]()
+        {
+            const auto rv = getValue(intQuants.fluidState().Rv());
+
+            const auto& gasPvt = FluidSystem::gasPvt();
+
+            // Note that rv here is from grid block with typically
+            //    p_block > connection_pressure
+            // so we may very well have rv > rv_sat
+            const double rv_sat = gasPvt.saturatedOilVaporizationFactor
+                (regIdx, temperature, connection_pressure);
+
+            if (! (rv < rv_sat)) {
+                return gasPvt.saturatedViscosity(regIdx, temperature,
+                                                 connection_pressure);
+            }
+
+            return gasPvt.viscosity(regIdx, temperature, connection_pressure,
+                                    rv, getValue(intQuants.fluidState().Rvw()));
+        };
+
+        const auto& connection = this->well_ecl_.getConnections()
+            [ws.perf_data.ecl_index[perf]];
+
+        return this->well_ecl_.getWDFAC().getDFactor(rhoGS, gas_visc, connection);
     }
 
 
     template <typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateConnectionTransmissibilityFactor(const Simulator& simulator, SingleWellState& ws) const {
-        auto& perf_data = ws.perf_data;
+    updateConnectionTransmissibilityFactor(const Simulator& simulator, SingleWellState& ws) const
+    {
+        auto connCF = [&connIx = std::as_const(ws.perf_data.ecl_index),
+                       &conns = this->well_ecl_.getConnections()]
+            (const int perf)
+        {
+            return conns[connIx[perf]].CF();
+        };
+
+        auto& ctf = ws.perf_data.connection_transmissibility_factor;
+
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
-            const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-            const double trans_mult = simulator.problem().template wellTransMultiplier<double>(intQuants, cell_idx);
-            const auto& connection = this->well_ecl_.getConnections()[perf_data.ecl_index[perf]];
-            perf_data.connection_transmissibility_factor[perf] = connection.CF() * trans_mult;
+
+            const auto& intQuants = simulator.model()
+                .intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
+
+            const auto tmult = simulator.problem()
+                .template wellTransMultiplier<double>(intQuants, cell_idx);
+
+            ctf[perf] = connCF(perf) * tmult;
         }
     }
 

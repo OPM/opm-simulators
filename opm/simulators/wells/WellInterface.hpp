@@ -20,9 +20,16 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef OPM_WELLINTERFACE_HEADER_INCLUDED
 #define OPM_WELLINTERFACE_HEADER_INCLUDED
+
+// NOTE: GasLiftSingleWell.hpp includes StandardWell.hpp which includes ourself
+//   (WellInterface.hpp), so we need to forward declare GasLiftSingleWell
+//   for it to be defined in this file. Similar for BlackoilWellModel
+namespace Opm {
+    template<typename TypeTag> class GasLiftSingleWell;
+    template<typename TypeTag> class BlackoilWellModel;
+}
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -32,31 +39,26 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
-#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
-#include <opm/simulators/wells/WellState.hpp>
-// NOTE: GasLiftSingleWell.hpp includes StandardWell.hpp which includes ourself
-//   (WellInterface.hpp), so we need to forward declare GasLiftSingleWell
-//   for it to be defined in this file. Similar for BlackoilWellModel
-namespace Opm {
-    template<typename TypeTag> class GasLiftSingleWell;
-    template<typename TypeTag> class BlackoilWellModel;
-}
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
-#include <opm/simulators/wells/BlackoilWellModel.hpp>
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/WellInterfaceIndices.hpp>
+#include <opm/simulators/wells/WellProdIndexCalculator.hpp>
+#include <opm/simulators/wells/WellState.hpp>
+
+#include <opm/simulators/timestepping/ConvergenceReport.hpp>
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-#include<dune/common/fmatrix.hh>
-#include<dune/istl/bcrsmatrix.hh>
-#include<dune/istl/matrixmatrix.hh>
+#include <dune/common/fmatrix.hh>
+#include <dune/istl/bcrsmatrix.hh>
+#include <dune/istl/matrixmatrix.hh>
 
 #include <opm/material/densead/Evaluation.hpp>
-
-#include <opm/simulators/wells/WellInterfaceIndices.hpp>
-#include <opm/simulators/timestepping/ConvergenceReport.hpp>
 
 #include <cassert>
 #include <vector>
@@ -480,12 +482,13 @@ protected:
                                 double* connII,
                                 DeferredLogger& deferred_logger) const;
 
-    double computeConnectionDFactor(const int perf, const IntensiveQuantities& intQuants, const SingleWellState& ws) const;
-
+    double computeConnectionDFactor(const int perf,
+                                    const IntensiveQuantities& intQuants,
+                                    const SingleWellState& ws) const;
 
 };
 
-}
+} // namespace Opm
 
 #include "WellInterface_impl.hpp"
 
