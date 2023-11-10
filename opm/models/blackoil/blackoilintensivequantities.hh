@@ -231,10 +231,12 @@ public:
 
         // deal with solvent
         if constexpr (enableSolvent) {
-            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                So -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
-            } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                Sg -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
+            if(priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
+                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                    So -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
+                } else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+                    Sg -= priVars.makeEvaluation(Indices::solventSaturationIdx, timeIdx);
+                }
             }
         }
 

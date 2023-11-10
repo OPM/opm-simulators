@@ -78,9 +78,12 @@ class BlackOilSolventModule
     using EqVector = GetPropType<TypeTag, Properties::EqVector>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
-
     using Toolbox = MathToolbox<Evaluation>;
     using SolventPvt = typename BlackOilSolventParams<Scalar>::SolventPvt;
+    using Co2GasPvt = typename BlackOilSolventParams<Scalar>::Co2GasPvt;
+    using H2GasPvt = typename BlackOilSolventParams<Scalar>::H2GasPvt;
+    using BrineCo2Pvt = typename BlackOilSolventParams<Scalar>::BrineCo2Pvt;
+    using BrineH2Pvt = typename BlackOilSolventParams<Scalar>::BrineH2Pvt;
 
     using TabulatedFunction = typename BlackOilSolventParams<Scalar>::TabulatedFunction;
 
@@ -90,6 +93,7 @@ class BlackOilSolventModule
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
     static constexpr unsigned numPhases = FluidSystem::numPhases;
     static constexpr bool blackoilConserveSurfaceVolume = getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>();
+    static constexpr int waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
 
 public:
@@ -111,7 +115,26 @@ public:
         if (!eclState.runspec().phases().active(Phase::SOLVENT))
             return; // solvent treatment is supposed to be disabled
 
-        params_.solventPvt_.initFromState(eclState, schedule);
+        params_.co2sol_ = eclState.runspec().co2Sol();
+        params_.h2sol_ = eclState.runspec().h2Sol();
+
+        if (isCO2Sol() && isH2Sol()) {
+             throw std::runtime_error("CO2SOL and H2SOL can not be used together");
+        }
+
+        if (isCO2Sol() || isH2Sol() ) {
+            if (isCO2Sol()) {
+                params_.co2GasPvt_.initFromState(eclState, schedule);
+                params_.brineCo2Pvt_.initFromState(eclState, schedule);
+            } else { 
+                params_.h2GasPvt_.initFromState(eclState, schedule);
+                params_.brineH2Pvt_.initFromState(eclState, schedule);
+            }
+            if (eclState.getSimulationConfig().hasDISGASW()) {
+                params_.rsSolw_active_ = true;
+            }
+        } else 
+            params_.solventPvt_.initFromState(eclState, schedule);
 
         const auto& tableManager = eclState.getTableManager();
         // initialize the objects which deal with the SSFN keyword
@@ -413,12 +436,25 @@ public:
                         Toolbox::template decay<LhsEval>(intQuants.porosity())
                         * Toolbox::template decay<LhsEval>(intQuants.solventSaturation())
                         * Toolbox::template decay<LhsEval>(intQuants.solventInverseFormationVolumeFactor());
+                if (isSolubleInWater()) {
+                    storage[contiSolventEqIdx] += Toolbox::template decay<LhsEval>(intQuants.porosity())
+                        * Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(waterPhaseIdx))
+                        * Toolbox::template decay<LhsEval>(intQuants.fluidState().invB(waterPhaseIdx)) 
+                        * Toolbox::template decay<LhsEval>(intQuants.rsSolw());
+                }
             }
             else {
                 storage[contiSolventEqIdx] +=
                         Toolbox::template decay<LhsEval>(intQuants.porosity())
                         * Toolbox::template decay<LhsEval>(intQuants.solventSaturation())
                         * Toolbox::template decay<LhsEval>(intQuants.solventDensity());
+                if (isSolubleInWater()) {
+                    storage[contiSolventEqIdx] += Toolbox::template decay<LhsEval>(intQuants.porosity())
+                        * Toolbox::template decay<LhsEval>(intQuants.fluidState().saturation(waterPhaseIdx))
+                        * Toolbox::template decay<LhsEval>(intQuants.fluidState().density(waterPhaseIdx))
+                        * Toolbox::template decay<LhsEval>(intQuants.rsSolw());
+                }
+                         
             }
         }
     }
@@ -437,7 +473,7 @@ public:
             const auto& up = elemCtx.intensiveQuantities(upIdx, timeIdx);
 
             if constexpr (blackoilConserveSurfaceVolume) {
-                if (upIdx == inIdx)
+                if (upIdx == inIdx) 
                     flux[contiSolventEqIdx] =
                             extQuants.solventVolumeFlux()
                             *up.solventInverseFormationVolumeFactor();
@@ -445,6 +481,20 @@ public:
                     flux[contiSolventEqIdx] =
                             extQuants.solventVolumeFlux()
                             *decay<Scalar>(up.solventInverseFormationVolumeFactor());
+
+
+                if (isSolubleInWater()) {
+                    if (upIdx == inIdx) 
+                        flux[contiSolventEqIdx] =
+                                extQuants.volumeFlux(waterPhaseIdx)
+                                * up.fluidState().invB(waterPhaseIdx)
+                                * up.rsSolw();
+                    else
+                        flux[contiSolventEqIdx] =
+                                extQuants.volumeFlux(waterPhaseIdx)
+                                *decay<Scalar>(up.fluidState().invB(waterPhaseIdx))
+                                *decay<Scalar>(up.rsSolw());
+                }
             }
             else {
                 if (upIdx == inIdx)
@@ -455,6 +505,20 @@ public:
                     flux[contiSolventEqIdx] =
                             extQuants.solventVolumeFlux()
                             *decay<Scalar>(up.solventDensity());
+
+
+                if (isSolubleInWater()) {
+                    if (upIdx == inIdx) 
+                        flux[contiSolventEqIdx] =
+                                extQuants.volumeFlux(waterPhaseIdx)
+                                * up.fluidState().density(waterPhaseIdx)
+                                * up.rsSolw();
+                    else
+                        flux[contiSolventEqIdx] =
+                                extQuants.volumeFlux(waterPhaseIdx)
+                                *decay<Scalar>(up.fluidState().density(waterPhaseIdx))
+                                *decay<Scalar>(up.rsSolw());
+                }
             }
         }
     }
@@ -463,10 +527,21 @@ public:
      * \brief Assign the solvent specific primary variables to a PrimaryVariables object
      */
     static void assignPrimaryVars(PrimaryVariables& priVars,
-                                  Scalar solventSaturation)
+                                  Scalar solventSaturation,
+                                  Scalar solventRsw)
     {
-        if constexpr (enableSolvent)
+        if constexpr (!enableSolvent) {
+            priVars.setPrimaryVarsMeaningSolvent(PrimaryVariables::SolventMeaning::Disabled);
+            return;
+        }
+        // Determine the meaning of the solvent primary variables
+        if (solventSaturation > 0 || !isSolubleInWater()) {
+            priVars.setPrimaryVarsMeaningSolvent(PrimaryVariables::SolventMeaning::Ss);
             priVars[solventSaturationIdx] = solventSaturation;
+        } else {
+            priVars.setPrimaryVarsMeaningSolvent(PrimaryVariables::SolventMeaning::Rsolw);
+            priVars[solventSaturationIdx] = solventRsw;
+        } 
     }
 
     /*!
@@ -530,7 +605,30 @@ public:
     }
 
     static const SolventPvt& solventPvt()
-    { return params_.solventPvt_; }
+    { 
+        return params_.solventPvt_;    
+    }
+
+
+    static const Co2GasPvt& co2GasPvt()
+    { 
+            return params_.co2GasPvt_;
+    }
+
+    static const H2GasPvt& h2GasPvt()
+    { 
+            return params_.h2GasPvt_;
+    }
+
+    static const BrineCo2Pvt& brineCo2Pvt()
+    { 
+            return params_.brineCo2Pvt_;
+    }
+
+    static const BrineH2Pvt& brineH2Pvt()
+    { 
+            return params_.brineH2Pvt_;
+    }
 
     static const TabulatedFunction& ssfnKrg(const ElementContext& elemCtx,
                                             unsigned scvIdx,
@@ -633,6 +731,34 @@ public:
         return params_.isMiscible_;
     }
 
+    template <class Value>
+    static const Value solubilityLimit(unsigned pvtIdx, const Value& temperature, const Value& pressure, const Value& saltConcentration) 
+    {
+        if (!isSolubleInWater())
+            return 0.0;
+
+        assert(isCO2Sol() || isH2Sol());
+        if (isCO2Sol())
+            return brineCo2Pvt().saturatedGasDissolutionFactor(pvtIdx, temperature, pressure, saltConcentration);
+        else
+            return brineH2Pvt().saturatedGasDissolutionFactor(pvtIdx, temperature, pressure, saltConcentration);
+    }
+
+    static bool isSolubleInWater() 
+    {
+        return params_.rsSolw_active_;
+    } 
+
+    static bool isCO2Sol() 
+    {
+        return params_.co2sol_;
+    }
+
+    static bool isH2Sol() 
+    {
+        return params_.h2sol_;
+    }  
+
 private:
     static BlackOilSolventParams<Scalar> params_; // the krg(Fs) column of the SSFN table
 };
@@ -683,8 +809,13 @@ public:
                                   unsigned timeIdx)
     {
         const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+
         auto& fs = asImp_().fluidState_;
-        solventSaturation_ = priVars.makeEvaluation(solventSaturationIdx, timeIdx, elemCtx.linearizationType());
+        solventSaturation_ = 0.0;
+        if (priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
+            solventSaturation_ = priVars.makeEvaluation(solventSaturationIdx, timeIdx, elemCtx.linearizationType());
+        }
+
         hydrocarbonSaturation_ = fs.saturation(gasPhaseIdx);
 
         // apply a cut-off. Don't waste calculations if no solvent
@@ -712,6 +843,16 @@ public:
         auto& fs = asImp_().fluidState_;
         fs.setSaturation(gasPhaseIdx, hydrocarbonSaturation_);
 
+
+        // update rsSolw. This needs to be done after the pressure is defined in the fluid state. 
+        rsSolw_ = 0.0;
+        const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
+        if (priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
+            rsSolw_ = SolventModule::solubilityLimit(asImp_().pvtRegionIndex(), fs.temperature(waterPhaseIdx), fs.pressure(waterPhaseIdx), fs.saltConcentration());
+        } else if (priVars.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Rsolw) {
+            rsSolw_ = priVars.makeEvaluation(solventSaturationIdx, timeIdx, elemCtx.linearizationType());
+        }
+
         solventMobility_ = 0.0;
 
         // apply a cut-off. Don't waste calculations if no solvent
@@ -726,7 +867,6 @@ public:
 
             // compute capillary pressure for miscible fluid
             const auto& problem = elemCtx.problem();
-            const PrimaryVariables& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
             Evaluation pgMisc = 0.0;
             std::array<Evaluation, numPhases> pC;
             const auto& materialParams = problem.materialLawParams(elemCtx, dofIdx, timeIdx);
@@ -824,18 +964,58 @@ public:
                            unsigned timeIdx)
     {
         const auto& iq = asImp_();
-        const auto& fs = iq.fluidState();
-        const auto& solventPvt = SolventModule::solventPvt();
-
         unsigned pvtRegionIdx = iq.pvtRegionIndex();
-        solventRefDensity_ = solventPvt.referenceDensity(pvtRegionIdx);
-        const Evaluation& T = fs.temperature(gasPhaseIdx);
-        const Evaluation& p = fs.pressure(gasPhaseIdx);
-        solventInvFormationVolumeFactor_ = solventPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+        const Evaluation& T = iq.fluidState().temperature(gasPhaseIdx);
+        const Evaluation& p = iq.fluidState().pressure(gasPhaseIdx);
+
+        const Evaluation rv = 0.0;
+        const Evaluation rvw = 0.0;
+        if (SolventModule::isCO2Sol() || SolventModule::isH2Sol() ){
+            if (SolventModule::isCO2Sol()) {
+                const auto& co2gasPvt = SolventModule::co2GasPvt();
+                solventInvFormationVolumeFactor_ = co2gasPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p, rv, rvw);
+                solventRefDensity_ = co2gasPvt.gasReferenceDensity(pvtRegionIdx);
+                solventViscosity_ = co2gasPvt.viscosity(pvtRegionIdx, T, p, rv, rvw);
+
+                const auto& brineCo2Pvt = SolventModule::brineCo2Pvt();
+                auto& fs = asImp_().fluidState_;
+                const auto& bw = brineCo2Pvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p, rsSolw());
+
+                const auto denw = bw*brineCo2Pvt.waterReferenceDensity(pvtRegionIdx)
+                        + rsSolw()*bw*brineCo2Pvt.gasReferenceDensity(pvtRegionIdx);
+                fs.setDensity(waterPhaseIdx, denw);
+                fs.setInvB(waterPhaseIdx, bw);
+                Evaluation& mobw = asImp_().mobility_[waterPhaseIdx];
+                const auto& muWat = fs.viscosity(waterPhaseIdx);
+                const auto& muWatEff = brineCo2Pvt.viscosity(pvtRegionIdx, T, p, rsSolw());
+                mobw *= muWat / muWatEff;
+            } else { 
+                const auto& h2gasPvt = SolventModule::h2GasPvt();
+                solventInvFormationVolumeFactor_ = h2gasPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p, rv, rvw);
+                solventRefDensity_ = h2gasPvt.gasReferenceDensity(pvtRegionIdx);
+                solventViscosity_ = h2gasPvt.viscosity(pvtRegionIdx, T, p, rv, rvw); 
+            
+                const auto& brineH2Pvt = SolventModule::brineH2Pvt();
+                auto& fs = asImp_().fluidState_;
+                const auto& bw = brineH2Pvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p, rsSolw());
+
+                const auto denw = bw*brineH2Pvt.waterReferenceDensity(pvtRegionIdx)
+                        + rsSolw()*bw*brineH2Pvt.gasReferenceDensity(pvtRegionIdx);
+                fs.setDensity(waterPhaseIdx, denw);
+                fs.setInvB(waterPhaseIdx, bw);
+                Evaluation& mobw = asImp_().mobility_[waterPhaseIdx];
+                const auto& muWat = fs.viscosity(waterPhaseIdx);
+                const auto& muWatEff = brineH2Pvt.viscosity(pvtRegionIdx, T, p, rsSolw());
+                mobw *= muWat / muWatEff;
+            }
+        } else {
+            const auto& solventPvt = SolventModule::solventPvt();
+            solventInvFormationVolumeFactor_ = solventPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+            solventRefDensity_ = solventPvt.referenceDensity(pvtRegionIdx);
+            solventViscosity_ = solventPvt.viscosity(pvtRegionIdx, T, p);
+        }   
 
         solventDensity_ = solventInvFormationVolumeFactor_*solventRefDensity_;
-        solventViscosity_ = solventPvt.viscosity(pvtRegionIdx, T, p);
-
         effectiveProperties(elemCtx, scvIdx, timeIdx);
 
         solventMobility_ /= solventViscosity_;
@@ -845,6 +1025,9 @@ public:
 
     const Evaluation& solventSaturation() const
     { return solventSaturation_; }
+
+    const Evaluation& rsSolw() const
+    { return rsSolw_; }
 
     const Evaluation& solventDensity() const
     { return solventDensity_; }
@@ -1036,6 +1219,7 @@ protected:
 
     Evaluation hydrocarbonSaturation_;
     Evaluation solventSaturation_;
+    Evaluation rsSolw_;
     Evaluation solventDensity_;
     Evaluation solventViscosity_;
     Evaluation solventMobility_;
@@ -1070,6 +1254,9 @@ public:
 
     const Evaluation& solventSaturation() const
     { throw std::runtime_error("solventSaturation() called but solvents are disabled"); }
+
+    const Evaluation& rsSolw() const
+    { throw std::runtime_error("rsSolw() called but solvents are disabled"); }
 
     const Evaluation& solventDensity() const
     { throw std::runtime_error("solventDensity() called but solvents are disabled"); }

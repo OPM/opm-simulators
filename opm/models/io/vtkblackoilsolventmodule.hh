@@ -53,6 +53,8 @@ struct VtkBlackOilSolvent {};
 template<class TypeTag, class MyTypeTag>
 struct VtkWriteSolventSaturation { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
+struct VtkWriteSolventRsw { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
 struct VtkWriteSolventDensity { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct VtkWriteSolventViscosity { using type = UndefinedProperty; };
@@ -62,6 +64,8 @@ struct VtkWriteSolventMobility { using type = UndefinedProperty; };
 // set default values for what quantities to output
 template<class TypeTag>
 struct VtkWriteSolventSaturation<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+template<class TypeTag>
+struct VtkWriteSolventRsw<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
 template<class TypeTag>
 struct VtkWriteSolventDensity<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
 template<class TypeTag>
@@ -112,6 +116,9 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSolventSaturation,
                              "Include the \"saturation\" of the solvent component "
                              "in the VTK output files");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSolventRsw,
+                             "Include the \"dissolved volume in water\" of the solvent component "
+                             "in the VTK output files");
         EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSolventDensity,
                              "Include the \"density\" of the solvent component "
                              "in the VTK output files");
@@ -137,6 +144,8 @@ public:
 
         if (solventSaturationOutput_())
             this->resizeScalarBuffer_(solventSaturation_);
+        if (solventRswOutput_())
+            this->resizeScalarBuffer_(solventRsw_);
         if (solventDensityOutput_())
             this->resizeScalarBuffer_(solventDensity_);
         if (solventViscosityOutput_())
@@ -165,6 +174,10 @@ public:
             if (solventSaturationOutput_())
                 solventSaturation_[globalDofIdx] =
                     Toolbox::scalarValue(intQuants.solventSaturation());
+
+            if (solventRswOutput_())
+                solventRsw_[globalDofIdx] =
+                    Toolbox::scalarValue(intQuants.rsSolw());
 
             if (solventDensityOutput_())
                 solventDensity_[globalDofIdx] =
@@ -195,6 +208,9 @@ public:
         if (solventSaturationOutput_())
             this->commitScalarBuffer_(baseWriter, "saturation_solvent", solventSaturation_);
 
+        if (solventRswOutput_())
+            this->commitScalarBuffer_(baseWriter, "dissolved_solvent", solventRsw_);
+
         if (solventDensityOutput_())
             this->commitScalarBuffer_(baseWriter, "density_solvent", solventDensity_);
 
@@ -209,6 +225,12 @@ private:
     static bool solventSaturationOutput_()
     {
         static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSolventSaturation);
+        return val;
+    }
+
+    static bool solventRswOutput_()
+    {
+        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSolventRsw);
         return val;
     }
 
@@ -231,6 +253,7 @@ private:
     }
 
     ScalarBuffer solventSaturation_;
+    ScalarBuffer solventRsw_;
     ScalarBuffer solventDensity_;
     ScalarBuffer solventViscosity_;
     ScalarBuffer solventMobility_;
