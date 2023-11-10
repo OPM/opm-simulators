@@ -1642,7 +1642,8 @@ namespace Opm
             return conns[connIx[perf]].CF();
         };
 
-        auto& ctf = ws.perf_data.connection_transmissibility_factor;
+        auto& tmult = ws.perf_data.connection_compaction_tmult;
+        auto& ctf   = ws.perf_data.connection_transmissibility_factor;
 
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
@@ -1650,10 +1651,10 @@ namespace Opm
             const auto& intQuants = simulator.model()
                 .intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
 
-            const auto tmult = simulator.problem()
+            tmult[perf] = simulator.problem()
                 .template wellTransMultiplier<double>(intQuants, cell_idx);
 
-            ctf[perf] = connCF(perf) * tmult;
+            ctf[perf] = connCF(perf) * tmult[perf];
         }
     }
 
