@@ -1614,8 +1614,9 @@ namespace Opm
         const int min_its_after_switch = 3;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
-        // if we fail to solve eqs, we reset status/control before leaving
+        // if we fail to solve eqs, we reset status/operability before leaving
         const auto well_status_orig = this->wellStatus_;
+        const auto operability_orig = this->operability_status_;
         auto well_status_cur = well_status_orig;
         int status_switch_count = 0;
         // only allow switcing if well is not under zero-rate target and is open from schedule
@@ -1623,6 +1624,9 @@ namespace Opm
         allow_switching = allow_switching && (!fixed_control || !fixed_status);
         bool changed = false;
         bool final_check = false;
+        // well needs to be set operable or else solving/updating of re-opened wells is skipped
+        this->operability_status_.resetOperability();
+        this->operability_status_.solvable = true;
 
         for (; it < max_iter_number; ++it, ++debug_cost_counter_) {
             its_since_last_switch++;
@@ -1749,6 +1753,7 @@ namespace Opm
             deferred_logger.debug(message);
         } else {
             this->wellStatus_ = well_status_orig;
+            this->operability_status_ = operability_orig;            
             const std::string message = fmt::format("   Well {} did not converged in {} inner iterations ("
                                                     "{} control/status switches).", this->name(), it, switch_count);
             deferred_logger.debug(message);
