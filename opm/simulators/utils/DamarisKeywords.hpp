@@ -56,6 +56,7 @@ struct DamarisSettings {
 
     std::string damarisSimName; // empty defaults to opm-sim-<magic_number>
     std::string damarisLogLevel = "info";
+    std::string damarisDaskFile = "" ;
     int nDamarisCores   = 1 ;
     int nDamarisNodes   = 0 ;
     long shmemSizeBytes = 536870912 ;
@@ -89,7 +90,7 @@ DamarisKeywords(const Parallel::Communication& comm, const std::string& OutputDi
     settings.nDamarisNodes = EWOMS_GET_PARAM(TypeTag, int, DamarisDedicatedNodes);
     settings.shmemSizeBytes = EWOMS_GET_PARAM(TypeTag, long, DamarisSharedMemeorySizeBytes);
     settings.damarisLogLevel = EWOMS_GET_PARAM(TypeTag, std::string, DamarisLogLevel);
-
+    settings.damarisDaskFile = EWOMS_GET_PARAM(TypeTag, std::string, DamarisDaskFile);
     return settings.getKeywords(comm, OutputDir);
 }
 

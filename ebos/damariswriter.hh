@@ -99,7 +99,10 @@ template<class TypeTag, class MyTypeTag>
 struct DamarisLogLevel {
     using type = UndefinedProperty;
 };
-
+template<class TypeTag, class MyTypeTag>
+struct DamarisDaskFile {
+    using type = UndefinedProperty;
+};
 } // namespace Opm::Properties
 
 namespace Opm {
@@ -154,6 +157,9 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisLogLevel,
                              "The log level for the Damaris logging system (boost log based). \n \
                                                  Levels are: [trace, debug, info, warning, error, fatal]. Currently debug and info are useful. ");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisDaskFile,
+                             "The name of a Dask json configuration file (if using Dask for processing).");                                         
+                                                 
         EWOMS_REGISTER_PARAM(TypeTag, int, DamarisDedicatedCores,
                              "Set the number of dedicated cores (MPI processes) that should be used for Damaris processing (per node). \n \
                                                  Must divide evenly into the number of simulation ranks (client ranks).");

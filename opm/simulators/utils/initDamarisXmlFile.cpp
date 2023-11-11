@@ -50,7 +50,7 @@ std::string initDamarisXmlFile()
     <parameter name="n"     type="int" value="1" />
 
     <layout   name="zonal_layout_usmesh_integer"             type="int" dimensions="n_elements_local"   global="n_elements_total"   comment="For the field data e.g. Pressure"  />
-    <variable name="GLOBAL_CELL_INDEX"    layout="zonal_layout_usmesh_integer"     type="scalar"  visualizable="false"  time-varying="false"  centering="zonal" />
+    <variable name="GLOBAL_CELL_INDEX"    layout="zonal_layout_usmesh_integer"     type="scalar"  visualizable="false"  time-varying="false"  centering="zonal" store="_MYSTORE_OR_EMPTY_REGEX_" script="_MAKE_AVAILABLE_IN_PYTHON_" />
     <layout   name="zonal_layout_usmesh"             type="double" dimensions="n_elements_local"   global="n_elements_total"   comment="For the field data e.g. Pressure"  />
     <variable name="PRESSURE"    layout="zonal_layout_usmesh"     type="scalar"  visualizable="true"  mesh="us_mesh"   unit="_PRESSURE_UNIT_"   centering="zonal" select-file="GLOBAL_CELL_INDEX" store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
 
@@ -151,7 +151,7 @@ std::string initDamarisXmlFile()
 </storage>
 
 <scripts>
-    <_DISABLEPYTHONSTART_pyscript name="PythonScript" file="_PYTHON_SCRIPT_" language="python" frequency="1" scheduler-file="" nthreads="0" keep-workers="no" /_DISABLEPYTHONFIN_>
+    <_DISABLEPYTHONSTART_pyscript name="PythonScript" file="_PYTHON_SCRIPT_" language="python" frequency="1" scheduler-file="_DASK_SCHEDULER_FILE_" nthreads="0" keep-workers="no" /_DISABLEPYTHONFIN_>
 </scripts>
 
 <_DISABLEPARAVIEWSTART_paraview update-frequency="1" write-vtk="0" write-vtk-binary="false" >

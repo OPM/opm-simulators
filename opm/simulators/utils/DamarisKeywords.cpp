@@ -219,6 +219,7 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
         {"_DISABLEPYTHONFIN_",disablePythonXMLfin},
         {"_DISABLEPARAVIEWSTART_",disableParaviewXMLstart},
         {"_DISABLEPARAVIEWFIN_",disableParaviewXMLfin},
+        {"_DASK_SCHEDULER_FILE_",damarisDaskFile},
     };
     return damaris_keywords;
 }

@@ -429,7 +429,10 @@ template<class TypeTag>
 struct DamarisLogLevel<TypeTag, TTag::EclBaseProblem> {
     static constexpr auto value = "info";
 };
-
+template<class TypeTag>
+struct DamarisDaskFile<TypeTag, TTag::EclBaseProblem> {
+    static constexpr auto value = "";
+};
 #endif
 // If available, write the ECL output in a non-blocking manner
 template<class TypeTag>
