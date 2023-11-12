@@ -32,6 +32,8 @@
 #include <dune/common/fmatrix.hh>
 
 #include <opm/grid/common/CartesianIndexMapper.hpp>
+#include <opm/grid/LookUpData.hh>
+
 
 #include <array>
 #include <functional>
@@ -47,6 +49,7 @@ class KeywordLocation;
 class EclipseState;
 struct NNCdata;
 class TransMult;
+
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 class EclTransmissibility {
@@ -268,6 +271,9 @@ protected:
     bool enableDiffusivity_;
     std::unordered_map<std::uint64_t, Scalar> thermalHalfTrans_; //NB this is based on direction map size is ca 2*trans_ (diffusivity_)
     std::unordered_map<std::uint64_t, Scalar> diffusivity_;
+
+    const LookUpData<Grid,GridView> lookUpData_;
+    const LookUpCartesianData<Grid,GridView> lookUpCartesianData_;
 };
 
 } // namespace Opm

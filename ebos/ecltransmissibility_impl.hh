@@ -101,6 +101,8 @@ EclTransmissibility(const EclipseState& eclState,
       , centroids_(centroids)
       , enableEnergy_(enableEnergy)
       , enableDiffusivity_(enableDiffusivity)
+      , lookUpData_(gridView)
+      , lookUpCartesianData_(gridView, cartMapper)
 {
     const UnitSystem& unitSystem = eclState_.getDeckUnitSystem();
     transmissibilityThreshold_  = unitSystem.parse("Transmissibility").getSIScaling() * 1e-6;
@@ -154,10 +156,10 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
     const auto& comm = gridView_.comm();
     ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
 
-    // get the ntg values, the ntg values are modified for the cells merged with minpv
-    const std::vector<double>& ntg = eclState_.fieldProps().get_double("NTG");
-    const bool updateDiffusivity = eclState_.getSimulationConfig().isDiffusive() && enableDiffusivity_;
     unsigned numElements = elemMapper.size();
+    // get the ntg values, the ntg values are modified for the cells merged with minpv
+    const std::vector<double>& ntg = this->lookUpData_.assignFieldPropsDoubleOnLeaf(eclState_.fieldProps(), "NTG", numElements);
+    const bool updateDiffusivity = eclState_.getSimulationConfig().isDiffusive() && enableDiffusivity_;
 
     if (map)
         extractPermeability_(map);
@@ -495,7 +497,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
     // Loop over all elements (global grid) and store Cartesian index
     for (const auto& elem : elements(grid_.leafGridView())) {
         int elemIdx = elemMapper.index(elem);
-        int cartElemIdx = cartMapper_.cartesianIndex(elemIdx);
+        int cartElemIdx =  cartMapper_.cartesianIndex(elemIdx);
         globalToLocal[cartElemIdx] = elemIdx;
     }
 
