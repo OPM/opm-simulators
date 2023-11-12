@@ -1534,10 +1534,8 @@ GasLiftSingleWellGeneric::OptimizeState::checkAlqOutsideLimits(double alq, [[may
     } else { // we are decreasing lift gas
         if (alq == 0) {
             ss << "ALQ is zero, cannot decrease further. Stopping iteration. ";
-            result = true;
         } else if (alq < 0) {
             ss << "Negative ALQ: " << alq << ". Stopping iteration. ";
-            result = true;
         }
         // NOTE: A negative min_alq_ means: allocate at least enough lift gas
         //  to enable the well to flow, see WLIFTOPT item 5.

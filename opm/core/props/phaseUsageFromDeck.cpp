@@ -45,15 +45,14 @@ PhaseUsage phaseUsage(const Phases& phases)
     pu.phase_used[BlackoilPhases::Vapour] = phases.active(Phase::GAS);
 
     pu.num_phases = 0;
-    int numActivePhases = 0;
+    int activePhaseIdx = -1;
     for (int phaseIdx = 0; phaseIdx < BlackoilPhases::MaxNumPhases; ++phaseIdx) {
         if (!pu.phase_used[phaseIdx]) {
             pu.phase_pos[phaseIdx] = -1;
         }
         else {
-            pu.phase_pos[phaseIdx] = numActivePhases;
-            ++ numActivePhases;
-            pu.num_phases = numActivePhases;
+            pu.phase_pos[phaseIdx] = ++activePhaseIdx;
+            pu.num_phases = activePhaseIdx+1;
         }
     }
 
@@ -65,8 +64,7 @@ PhaseUsage phaseUsage(const Phases& phases)
         // assumptions in old code, it is nevertheless an index to be translated
         // to. solvent and solvent are even larger hacks because not even this can be
         // done for them.
-        pu.phase_pos[BlackoilPhases::Solvent] = numActivePhases;
-        ++ numActivePhases;
+        pu.phase_pos[BlackoilPhases::Solvent] = ++activePhaseIdx;
     }
     else
         pu.phase_pos[BlackoilPhases::Solvent] = -1;
@@ -79,8 +77,7 @@ PhaseUsage phaseUsage(const Phases& phases)
         // assumptions in old code, it is nevertheless an index to be translated
         // to. polymer and solvent are even larger hacks because not even this can be
         // done for them.
-        pu.phase_pos[BlackoilPhases::Polymer] = numActivePhases;
-        ++ numActivePhases;
+        pu.phase_pos[BlackoilPhases::Polymer] = ++activePhaseIdx;
     }
     else
         pu.phase_pos[BlackoilPhases::Polymer] = -1;
@@ -93,8 +90,7 @@ PhaseUsage phaseUsage(const Phases& phases)
         // assumptions in old code, it is nevertheless an index to be translated
         // to. polymer and solvent are even larger hacks because not even this can be
         // done for them.
-        pu.phase_pos[BlackoilPhases::Energy] = numActivePhases;
-        ++ numActivePhases;
+        pu.phase_pos[BlackoilPhases::Energy] = ++activePhaseIdx;
     }
     else
         pu.phase_pos[BlackoilPhases::Energy] = -1;
@@ -105,8 +101,7 @@ PhaseUsage phaseUsage(const Phases& phases)
         if (!pu.has_polymer) {
             OPM_THROW(std::runtime_error, "pu.has_polymermw is true while pu.has_polymer is false");
         }
-        pu.phase_pos[BlackoilPhases::PolymerMW] = numActivePhases;
-        ++ numActivePhases;
+        pu.phase_pos[BlackoilPhases::PolymerMW] = ++activePhaseIdx;
     }
     else
         pu.phase_pos[BlackoilPhases::PolymerMW] = -1;
@@ -114,8 +109,7 @@ PhaseUsage phaseUsage(const Phases& phases)
     // Add foam info
     pu.has_foam = phases.active(Phase::FOAM);
     if (pu.has_foam) {
-        pu.phase_pos[BlackoilPhases::Foam] = numActivePhases;
-        ++ numActivePhases;
+        pu.phase_pos[BlackoilPhases::Foam] = ++activePhaseIdx;
     }
     else
         pu.phase_pos[BlackoilPhases::Foam] = -1;
@@ -123,8 +117,7 @@ PhaseUsage phaseUsage(const Phases& phases)
     // Add brine info
     pu.has_brine = phases.active(Phase::BRINE);
     if (pu.has_brine) {
-        pu.phase_pos[BlackoilPhases::Brine] = numActivePhases;
-        ++ numActivePhases;
+        pu.phase_pos[BlackoilPhases::Brine] = ++activePhaseIdx;
     }
     else
         pu.phase_pos[BlackoilPhases::Brine] = -1;
@@ -132,8 +125,7 @@ PhaseUsage phaseUsage(const Phases& phases)
     // Add zFraction info
     pu.has_zFraction = phases.active(Phase::ZFRACTION);
     if (pu.has_zFraction) {
-        pu.phase_pos[BlackoilPhases::ZFraction] = numActivePhases;
-        ++ numActivePhases;
+        pu.phase_pos[BlackoilPhases::ZFraction] = ++activePhaseIdx;
     }
     else
         pu.phase_pos[BlackoilPhases::ZFraction] = -1;
