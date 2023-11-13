@@ -78,7 +78,7 @@ class EclEquilInitializer
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDissolution = Indices::compositionSwitchIdx >= 0 };
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
-    enum { enableEvaporation = getPropValue<TypeTag, Properties::EnableEvaporation>() };
+    enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
 
@@ -91,7 +91,7 @@ public:
                                                 enableTemperature,
                                                 enableEnergy,
                                                 enableDissolution,
-                                                enableEvaporation,
+                                                enableVapwat,
                                                 enableBrine,
                                                 enableSaltPrecipitation,
                                                 has_disgas_in_water,
