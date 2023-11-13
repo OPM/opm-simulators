@@ -527,6 +527,9 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
         const bool treatCriticalAsNonCritical = (parsingStrictness == "low");
         try {
             auto parseContext = setupParseContext(exitOnAllErrors);
+            if (treatCriticalAsNonCritical) { // Continue with invalid names if parsing strictness is set to low
+                parseContext->update(ParseContext::SCHEDULE_INVALID_NAME, InputErrorAction::WARN);
+            }
             readOnIORank(comm, deckFilename, parseContext.get(),
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
