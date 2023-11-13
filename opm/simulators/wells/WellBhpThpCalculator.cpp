@@ -844,7 +844,7 @@ bruteForceBracket(const std::function<double(const double)>& eq,
     bool bracket_found = false;
     low = range[0];
     high = range[1];
-    const int sample_number = 200;
+    const int sample_number = 300;
     const double interval = (high - low) / sample_number;
     double eq_low = eq(low);
     double eq_high = 0.0;
