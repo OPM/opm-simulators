@@ -628,7 +628,9 @@ removeSmallNonCartesianTransmissibilities_()
             int gc2 = std::max(cartMapper_.cartesianIndex(elements.first), cartMapper_.cartesianIndex(elements.second));
 
             // only adjust the NNCs
-            if (gc2 - gc1 == 1 || gc2 - gc1 == cartDims[0] || gc2 - gc1 == cartDims[0]*cartDims[1])
+            // When LGRs, all neighbors in the LGR are cartesian neighbours on the level grid representing the LGR.
+            // When elements on the leaf grid view have the same parent cell, gc1 and gc2 coincide.
+            if (gc2 - gc1 == 1 || gc2 - gc1 == cartDims[0] || gc2 - gc1 == cartDims[0]*cartDims[1] || gc2 - gc1 == 0)
                 continue;
 
             //remove transmissibilities less than the threshold (by default 1e-6 in the deck's unit system)
