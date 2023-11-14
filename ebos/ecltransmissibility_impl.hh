@@ -399,25 +399,51 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
 
             // apply the region multipliers (cf. the MULTREGT keyword)
             FaceDir::DirEnum faceDir;
-            switch (insideFaceIdx) {
-            case 0:
-            case 1:
-                faceDir = FaceDir::XPlus;
-                break;
 
-            case 2:
-            case 3:
-                faceDir = FaceDir::YPlus;
-                break;
+            if (std::is_same_v<Grid, Dune::CpGrid>)
+            {
+                enum face_tag insideFaceTag = grid_.getCurrentViewData()->getFaceTag(insideFaceIdx);
+                switch(insideFaceTag)
+                {
+                case face_tag::I_FACE:
+                    faceDir = FaceDir::XPlus;
+                    break;
 
-            case 4:
-            case 5:
-                faceDir = FaceDir::ZPlus;
-                break;
+                case face_tag::J_FACE:
+                    faceDir = FaceDir::YPlus;
+                    break;
 
-            default:
-                throw std::logic_error("Could not determine a face direction");
+                case face_tag::K_FACE:
+                    faceDir = FaceDir::ZPlus;
+                    break;
+
+                default:
+                    throw std::logic_error("Could not determine a face direction");
+                }
             }
+            else
+            {
+                switch (insideFaceIdx) {
+                case 0:
+                case 1:
+                    faceDir = FaceDir::XPlus;
+                    break;
+
+                case 2:
+                case 3:
+                    faceDir = FaceDir::YPlus;
+                    break;
+
+                case 4:
+                case 5:
+                    faceDir = FaceDir::ZPlus;
+                    break;
+
+                default:
+                    throw std::logic_error("Could not determine a face direction");
+                }
+            }
+
 
             trans *= transMult.getRegionMultiplier(insideCartElemIdx,
                                                    outsideCartElemIdx,
