@@ -303,9 +303,10 @@ namespace Opm
             }
 
             // injecting connections total volumerates at standard conditions
-            const Value factor = total_mob_dense / volumeRatio;
             for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
-                cq_s[componentIdx] = - Tw[componentIdx] * cmix_s[componentIdx] * factor * drawdown;
+                const Value cqt_i = - Tw[componentIdx] * (total_mob_dense * drawdown);
+                Value cqt_is = cqt_i / volumeRatio;
+                cq_s[componentIdx] = cmix_s[componentIdx] * cqt_is;
             }
 
             // calculating the perforation solution gas rate and solution oil rates

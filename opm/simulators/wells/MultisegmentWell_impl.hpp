@@ -868,9 +868,10 @@ namespace Opm
                 }
             }
             // injecting connections total volumerates at standard conditions
-            const Value factor = total_mob / volume_ratio;
             for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
-                cq_s[componentIdx] = - Tw[componentIdx] * cmix_s[componentIdx] * factor * drawdown;
+                const Value cqt_i = - Tw[componentIdx] * (total_mob * drawdown);
+                Value cqt_is = cqt_i / volume_ratio;
+                cq_s[componentIdx] = cmix_s[componentIdx] * cqt_is;
             }
         } // end for injection perforations
 
