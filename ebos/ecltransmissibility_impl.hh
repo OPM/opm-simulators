@@ -293,7 +293,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
 
             // we only need to calculate a face's transmissibility
             // once...
-            if (insideCartElemIdx > outsideCartElemIdx)
+            if (elemIdx > outsideElemIdx)
                 continue;
 
             // local indices of the faces of the inside and
@@ -743,7 +743,7 @@ createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
             int gc1 = cartMapper_.cartesianIndex(c1);
             int gc2 = cartMapper_.cartesianIndex(c2);
 
-            if (gc1 > gc2)
+            if (c1 > c2)
                 continue; // we only need to handle each connection once, thank you.
 
             auto isID = isId(c1, c2);
@@ -795,7 +795,7 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
             unsigned c2 = elemMapper.index(intersection.outside());
             int gc1 = cartMapper_.cartesianIndex(c1);
             int gc2 = cartMapper_.cartesianIndex(c2);
-            if (gc1 > gc2)
+            if (c1 > c2)
                 continue; // we only need to handle each connection once, thank you.
 
             auto isID = isId(c1, c2);
