@@ -119,7 +119,7 @@ namespace Opm
     computePerfRate(const IntensiveQuantities& intQuants,
                     const std::vector<Value>& mob,
                     const Value& bhp,
-                    const double Tw,
+                    const std::vector<Scalar>& Tw,
                     const int perf,
                     const bool allow_cf,
                     std::vector<Value>& cq_s,
@@ -224,7 +224,7 @@ namespace Opm
                     const Value& rvw,
                     const Value& rsw,
                     std::vector<Value>& b_perfcells_dense,
-                    const double Tw,
+                    const std::vector<Scalar>& Tw,
                     const int perf,
                     const bool allow_cf,
                     const Value& skin_pressure,
@@ -249,7 +249,7 @@ namespace Opm
 
             // compute component volumetric rates at standard conditions
             for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
-                const Value cq_p = - Tw * (mob[componentIdx] * drawdown);
+                const Value cq_p = - Tw[componentIdx] * (mob[componentIdx] * drawdown);
                 cq_s[componentIdx] = b_perfcells_dense[componentIdx] * cq_p;
             }
 
@@ -269,9 +269,6 @@ namespace Opm
             for (int componentIdx = 1; componentIdx < this->numComponents(); ++componentIdx) {
                 total_mob_dense += mob[componentIdx];
             }
-
-            // injection perforations total volume rates
-            const Value cqt_i = - Tw * (total_mob_dense * drawdown);
 
             // compute volume ratio between connection at standard conditions
             Value volumeRatio = bhp * 0.0; // initialize it with the correct type
@@ -306,9 +303,9 @@ namespace Opm
             }
 
             // injecting connections total volumerates at standard conditions
-            Value cqt_is = cqt_i / volumeRatio;
+            const Value factor = total_mob_dense / volumeRatio;
             for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
-                cq_s[componentIdx] = cmix_s[componentIdx] * cqt_is;
+                cq_s[componentIdx] = - Tw[componentIdx] * cmix_s[componentIdx] * factor * drawdown;
             }
 
             // calculating the perforation solution gas rate and solution oil rates
@@ -496,7 +493,7 @@ namespace Opm
         PerforationRates perf_rates;
         double trans_mult = ebosSimulator.problem().template wellTransMultiplier<double>(intQuants,  cell_idx);
         const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-        const double Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
+        const std::vector<Scalar> Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
         computePerfRate(intQuants, mob, bhp, Tw, perf, allow_cf,
                         cq_s, perf_rates, deferred_logger);
 
@@ -790,12 +787,13 @@ namespace Opm
             }
 
             // the well index associated with the connection
-            const double tw_perf = this->well_index_[perf]*ebos_simulator.problem().template wellTransMultiplier<double>(int_quantities, cell_idx);
-
+            double trans_mult = ebos_simulator.problem().template wellTransMultiplier<double>(int_quantities, cell_idx);
+            const auto& wellstate_nupcol = ebos_simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
+            const std::vector<Scalar> tw_perf = this->wellIndex(perf, int_quantities, trans_mult, wellstate_nupcol);  
             std::vector<double> ipr_a_perf(this->ipr_a_.size());
             std::vector<double> ipr_b_perf(this->ipr_b_.size());
             for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                const double tw_mob = tw_perf * mob[comp_idx] * b_perf[comp_idx];
+                const double tw_mob = tw_perf[comp_idx] * mob[comp_idx] * b_perf[comp_idx];
                 ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
                 ipr_b_perf[comp_idx] += tw_mob;
             }
@@ -1366,7 +1364,7 @@ namespace Opm
             getMobility(ebosSimulator, perf, mob, deferred_logger);
             double trans_mult = ebosSimulator.problem().template wellTransMultiplier<double>(intQuants, cell_idx);
             const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-            const double Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
+            const std::vector<Scalar> Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
 
             std::vector<Scalar> cq_s(this->num_components_, 0.);
             PerforationRates perf_rates;
@@ -1669,7 +1667,8 @@ namespace Opm
             std::vector<EvalWell> cq_s(this->num_components_, {this->primary_variables_.numWellEq() + Indices::numEq, 0.});
             PerforationRates perf_rates;
             double trans_mult = ebos_simulator.problem().template wellTransMultiplier<double>(int_quant, cell_idx);
-            const double Tw = this->well_index_[perf] * trans_mult;
+            const auto& wellstate_nupcol = ebos_simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
+            const std::vector<Scalar> Tw = this->wellIndex(perf, int_quant, trans_mult, wellstate_nupcol);  
             computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf, cq_s,
                             perf_rates, deferred_logger);
             // TODO: make area a member
@@ -2274,7 +2273,7 @@ namespace Opm
             std::vector<Scalar> cq_s(this->num_components_, 0.);
             double trans_mult = ebosSimulator.problem().template wellTransMultiplier<double>(intQuants,  cell_idx);
             const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-            const double Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
+            const std::vector<Scalar> Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
             PerforationRates perf_rates;
             computePerfRate(intQuants, mob, bhp.value(), Tw, perf, allow_cf,
                             cq_s, perf_rates, deferred_logger);

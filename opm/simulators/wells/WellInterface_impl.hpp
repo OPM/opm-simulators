@@ -1324,28 +1324,35 @@ namespace Opm
     }
 
     template <typename TypeTag>
-    double
+    std::vector<double>
     WellInterface<TypeTag>::
     wellIndex(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const SingleWellState& ws) const {
 
+        std::vector<Scalar> wi(this->num_components_, this->well_index_[perf] * trans_mult);
         const auto& wdfac = this->well_ecl_.getWDFAC();
         if (!wdfac.useDFactor()) {
-            return this->well_index_[perf] * trans_mult;
+            return wi;
         }
 
         if constexpr (! Indices::gasEnabled) {
-            return this->well_index_[perf] * trans_mult;
+            return wi;
         }
 
         // closed connection are still closed
         if (this->well_index_[perf] == 0)
-            return 0.0;
+            return std::vector<Scalar>(this->num_components_, 0.0);
 
         // for gas wells we may want to add a Forchheimer term if the WDFAC or WDFACCOR keyword is used
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
         // viscosity is evaluated at connection pressure
         const double connection_pressure = ws.perf_data.pressure[perf];
-        const double mu = FluidSystem::gasPvt().viscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure, getValue(intQuants.fluidState().Rv()), getValue(intQuants.fluidState().Rvw()));
+
+        const auto& rv = getValue(intQuants.fluidState().Rv());
+        const double psat = FluidSystem::gasPvt().saturationPressure(this->pvtRegionIdx(), ws.temperature, rv);
+        const double mu = connection_pressure < psat ?
+                                FluidSystem::gasPvt().saturatedViscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure) :
+                                FluidSystem::gasPvt().viscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure, rv, getValue(intQuants.fluidState().Rvw()));
+
         const double phi = getValue(intQuants.porosity());
         //double k = connection.Kh()/h * trans_mult;
         double Kh = connection.Kh()* trans_mult;
@@ -1357,7 +1364,11 @@ namespace Opm
         double d = wdfac.useConnectionDFactor()? connection.dFactor() : wdfac.getDFactor(rho, mu, Ke, phi, rw, h);
         const PhaseUsage& pu = this->phaseUsage();
         double Q = std::abs(ws.perf_data.phase_rates[perf*pu.num_phases + pu.phase_pos[Gas]]);
-        return 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (Q/2 * d / scaling));
+
+        const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (Q/2 * d / scaling));
+        // solvent???
+        return wi;
     }
 
     template <typename TypeTag>

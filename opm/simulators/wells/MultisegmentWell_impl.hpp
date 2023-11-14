@@ -349,7 +349,7 @@ namespace Opm
                 getMobility(ebosSimulator, perf, mob, deferred_logger);
                 const double trans_mult = ebosSimulator.problem().template wellTransMultiplier<double>(intQuants, cell_idx);
                 const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const double Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
+                const std::vector<Scalar> Tw = this->wellIndex(perf, intQuants, trans_mult, wellstate_nupcol);
                 const Scalar seg_pressure = segment_pressure[seg];
                 std::vector<Scalar> cq_s(this->num_components_, 0.);
                 Scalar perf_press = 0.0;
@@ -768,7 +768,7 @@ namespace Opm
                     const Value& rv,
                     const std::vector<Value>& b_perfcells,
                     const std::vector<Value>& mob_perfcells,
-                    const double Tw,
+                    const std::vector<Scalar>& Tw,
                     const int perf,
                     const Value& segment_pressure,
                     const Value& segment_density,
@@ -804,7 +804,7 @@ namespace Opm
 
             // compute component volumetric rates at standard conditions
             for (int comp_idx = 0; comp_idx < this->numComponents(); ++comp_idx) {
-                const Value cq_p = - Tw * (mob_perfcells[comp_idx] * drawdown);
+                const Value cq_p = - Tw[comp_idx] * (mob_perfcells[comp_idx] * drawdown);
                 cq_s[comp_idx] = b_perfcells[comp_idx] * cq_p;
             }
 
@@ -827,9 +827,6 @@ namespace Opm
             for (int comp_idx = 1; comp_idx < this->numComponents(); ++comp_idx) {
                 total_mob += mob_perfcells[comp_idx];
             }
-
-            // injection perforations total volume rates
-            const Value cqt_i = - Tw * (total_mob * drawdown);
 
             // compute volume ratio between connection and at standard conditions
             Value volume_ratio = 0.0;
@@ -871,9 +868,9 @@ namespace Opm
                 }
             }
             // injecting connections total volumerates at standard conditions
-            Value cqt_is = cqt_i / volume_ratio;
-            for (int comp_idx = 0; comp_idx < this->numComponents(); ++comp_idx) {
-                cq_s[comp_idx] = cmix_s[comp_idx] * cqt_is;
+            const Value factor = total_mob / volume_ratio;
+            for (int componentIdx = 0; componentIdx < this->numComponents(); ++componentIdx) {
+                cq_s[componentIdx] = - Tw[componentIdx] * cmix_s[componentIdx] * factor * drawdown;
             }
         } // end for injection perforations
 
@@ -907,7 +904,7 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     computePerfRate(const IntensiveQuantities& int_quants,
                     const std::vector<Value>& mob_perfcells,
-                    const double Tw,
+                    const std::vector<Scalar>& Tw,
                     const int seg,
                     const int perf,
                     const Value& segment_pressure,
@@ -1182,11 +1179,11 @@ namespace Opm
                 // the well index associated with the connection
                 const double trans_mult = ebos_simulator.problem().template wellTransMultiplier<double>(int_quantities, cell_idx);
                 const auto& wellstate_nupcol = ebos_simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const double tw_perf = this->wellIndex(perf, int_quantities, trans_mult, wellstate_nupcol);  
+                const std::vector<Scalar> tw_perf = this->wellIndex(perf, int_quantities, trans_mult, wellstate_nupcol);  
                 std::vector<double> ipr_a_perf(this->ipr_a_.size());
                 std::vector<double> ipr_b_perf(this->ipr_b_.size());
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
-                    const double tw_mob = tw_perf * mob[comp_idx] * b_perf[comp_idx];
+                    const double tw_mob = tw_perf[comp_idx] * mob[comp_idx] * b_perf[comp_idx];
                     ipr_a_perf[comp_idx] += tw_mob * pressure_diff;
                     ipr_b_perf[comp_idx] += tw_mob;
                 }
@@ -1682,7 +1679,7 @@ namespace Opm
                 getMobility(ebosSimulator, perf, mob, deferred_logger);
                 const double trans_mult = ebosSimulator.problem().template wellTransMultiplier<double>(int_quants, cell_idx);
                 const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const double Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
+                const std::vector<Scalar> Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
                 std::vector<EvalWell> cq_s(this->num_components_, 0.0);
                 EvalWell perf_press;
                 PerforationRates perfRates;
@@ -1995,7 +1992,7 @@ namespace Opm
                 getMobility(ebosSimulator, perf, mob, deferred_logger);
                 const double trans_mult = ebosSimulator.problem().template wellTransMultiplier<double>(int_quants, cell_idx);
                 const auto& wellstate_nupcol = ebosSimulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-                const double Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
+                const std::vector<Scalar> Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
                 std::vector<Scalar> cq_s(this->num_components_, 0.0);
                 Scalar perf_press = 0.0;
                 PerforationRates perf_rates;

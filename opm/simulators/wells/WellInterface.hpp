@@ -349,7 +349,7 @@ public:
         return 0;
     }
 
-    double wellIndex(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const SingleWellState& ws) const;
+    std::vector<double> wellIndex(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const SingleWellState& ws) const;
 
     void updateConnectionDFactor(const Simulator& simulator, SingleWellState& ws) const;
 
