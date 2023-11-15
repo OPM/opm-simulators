@@ -331,7 +331,7 @@ private:
     solveDomain(const Domain& domain,
                 const SimulatorTimerInterface& timer,
                 [[maybe_unused]] const int global_iteration,
-                const bool initial_assembly_required = false)
+                const bool initial_assembly_required)
     {
         auto& ebosSimulator = model_.ebosSimulator();
 
@@ -764,7 +764,7 @@ private:
     {
         auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
-        auto res = solveDomain(domain, timer, iteration);
+        auto res = solveDomain(domain, timer, iteration, false);
         local_report = res.first;
         if (local_report.converged) {
             auto local_solution = Details::extractVector(solution, domain.cells);
@@ -788,7 +788,7 @@ private:
     {
         auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
-        auto res = solveDomain(domain, timer, iteration);
+        auto res = solveDomain(domain, timer, iteration, true);
         local_report = res.first;
         if (!local_report.converged) {
             // We look at the detailed convergence report to evaluate
