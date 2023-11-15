@@ -836,6 +836,10 @@ namespace Opm {
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
                 if (this->wellTestState().well_is_closed(well_name)) {
+                    // Always check if wells on historic controls can be opened
+                    if (!well_ecl.predictionMode()) {
+                        wellTestState().open_well(well_name);
+                    }
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
