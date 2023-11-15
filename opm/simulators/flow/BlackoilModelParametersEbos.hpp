@@ -439,7 +439,7 @@ struct LocalDomainsPartitioningMethod<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct LocalDomainsOrderingMeasure<TypeTag, TTag::FlowModelParameters> {
-    static constexpr auto value = "pressure";
+    static constexpr auto value = "maxpressure";
 };
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
@@ -579,7 +579,7 @@ namespace Opm
         int num_local_domains_{0};
         double local_domain_partition_imbalance_{1.03};
         std::string local_domain_partition_method_;
-        DomainOrderingMeasure local_domain_ordering_{DomainOrderingMeasure::AveragePressure};
+        DomainOrderingMeasure local_domain_ordering_{DomainOrderingMeasure::MaxPressure};
 
         bool write_partitions_{false};
 
@@ -642,7 +642,9 @@ namespace Opm
             std::string measure = EWOMS_GET_PARAM(TypeTag, std::string, LocalDomainsOrderingMeasure);
             if (measure == "residual") {
                 local_domain_ordering_ = DomainOrderingMeasure::Residual;
-            } else if (measure == "pressure") {
+            } else if (measure == "maxpressure") {
+                local_domain_ordering_ = DomainOrderingMeasure::MaxPressure;
+            } else if (measure == "averagepressure") {
                 local_domain_ordering_ = DomainOrderingMeasure::AveragePressure;
             } else {
                 throw std::runtime_error("Invalid domain ordering '" + measure + "' specified.");
@@ -701,7 +703,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LocalDomainsPartitioningMethod, "Subdomain partitioning method. "
                                  "Allowed values are 'zoltan', 'simple', and the name of a partition file ending with '.partition'.");
             EWOMS_REGISTER_PARAM(TypeTag, std::string, LocalDomainsOrderingMeasure, "Subdomain ordering measure. "
-                                 "Allowed values are 'pressure' and  'residual'.");
+                                 "Allowed values are 'maxpressure', 'averagepressure' and  'residual'.");
 
             EWOMS_REGISTER_PARAM(TypeTag, bool, DebugEmitCellPartition, "Whether or not to emit cell partitions as a debugging aid.");
 

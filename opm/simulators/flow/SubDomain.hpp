@@ -36,6 +36,7 @@ namespace Opm
     //! \brief Measure to use for domain ordering.
     enum class DomainOrderingMeasure {
         AveragePressure,
+        MaxPressure,
         Residual
     };
 

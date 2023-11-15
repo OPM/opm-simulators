@@ -695,26 +695,33 @@ private:
         const auto& solution = ebosSimulator.model().solution(0);
 
         std::vector<int> domain_order(domains_.size());
+
         switch (model_.param().local_solve_approach_) {
         case DomainSolveApproach::GaussSeidel: {
+            // Calculate the measure used to order the domains.
+            std::vector<std::pair<double, int>> measure_per_domain(domains_.size());
             switch (model_.param().local_domain_ordering_) {
             case DomainOrderingMeasure::AveragePressure: {
                 // Use average pressures to order domains.
-                std::vector<std::pair<double, int>> avgpress_per_domain(domains_.size());
                 for (const auto& domain : domains_) {
                     double press_sum = 0.0;
                     for (const int c : domain.cells) {
                         press_sum += solution[c][Indices::pressureSwitchIdx];
                     }
                     const double avgpress = press_sum / domain.cells.size();
-                    avgpress_per_domain[domain.index] = std::make_pair(avgpress, domain.index);
+                    measure_per_domain[domain.index] = std::make_pair(avgpress, domain.index);
                 }
-                // Lexicographical sort by pressure, then index.
-                std::sort(avgpress_per_domain.begin(), avgpress_per_domain.end());
-                // Reverse since we want high-pressure regions solved first.
-                std::reverse(avgpress_per_domain.begin(), avgpress_per_domain.end());
-                for (std::size_t ii = 0; ii < domains_.size(); ++ii) {
-                    domain_order[ii] = avgpress_per_domain[ii].second;
+                break;
+            }
+            case DomainOrderingMeasure::MaxPressure: {
+                // Use max pressures to order domains.
+                std::vector<std::pair<double, int>> maxpress_per_domain(domains_.size());
+                for (const auto& domain : domains_) {
+                    double maxpress = 0.0;
+                    for (const int c : domain.cells) {
+                        maxpress = std::max(maxpress, solution[c][Indices::pressureSwitchIdx]);
+                    }
+                    measure_per_domain[domain.index] = std::make_pair(maxpress, domain.index);
                 }
                 break;
             }
@@ -730,20 +737,24 @@ private:
                             maxres = std::max(maxres, std::fabs(residual[c][ii]));
                         }
                     }
-                    maxres_per_domain[domain.index] = std::make_pair(maxres, domain.index);
+                    measure_per_domain[domain.index] = std::make_pair(maxres, domain.index);
                 }
-                // Lexicographical sort by pressure, then index.
-                std::sort(maxres_per_domain.begin(), maxres_per_domain.end());
-                // Reverse since we want high-pressure regions solved first.
-                std::reverse(maxres_per_domain.begin(), maxres_per_domain.end());
-                for (std::size_t ii = 0; ii < domains_.size(); ++ii) {
-                    domain_order[ii] = maxres_per_domain[ii].second;
-                }
+                break;
             }
-            break;
+            } // end of switch (model_.param().local_domain_ordering_)
+
+
+            // Sort by largest measure, keeping index order if equal.
+            std::stable_sort(measure_per_domain.begin(), measure_per_domain.end(),
+                             [](const auto& m1, const auto& m2){ return m1.first > m2.first; });
+
+            // Assign domain order.
+            for (std::size_t ii = 0; ii < domains_.size(); ++ii) {
+                domain_order[ii] = measure_per_domain[ii].second;
             }
+
             break;
-        }
+        } // end of case DomainSolveApproach::GaussSeidel
 
         case DomainSolveApproach::Jacobi:
         default:
