@@ -74,6 +74,24 @@ add_test_compare_restarted_simulation(CASENAME aquflux_02
                                       DIR aquifers
                                       TEST_ARGS --enable-tuning=true)
 
+add_test_compare_restarted_simulation(CASENAME network_01_restart
+                                      FILENAME NETWORK-01-RESTART
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart}
+                                      RESTART_STEP 5
+                                      DIR network
+                                      TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+
+add_test_compare_restarted_simulation(CASENAME network_01_reroute_restart
+                                      FILENAME NETWORK-01-REROUTE-RESTART
+                                      SIMULATOR flow
+                                      ABS_TOL ${abs_tol_restart}
+                                      REL_TOL ${rel_tol_restart}
+                                      RESTART_STEP 5
+                                      DIR network
+                                      TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+
 # The dynamic MSW data is not written to /read from the restart file
 # We therefore accept significant deviation in the results.
 # Note also that we use --sched-restart=true since some necessary
