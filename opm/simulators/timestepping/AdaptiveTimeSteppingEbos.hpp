@@ -532,8 +532,8 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                     // much, we have failed and throw an exception.
                     if (newTimeStep < minTimeStep_) {
                         const auto msg = std::string("Solver failed to converge after cutting timestep to ")
-                                + std::to_string(minTimeStep_) + "\n which is the minimum threshold given"
-                                +  "by option --solver-min-time-step= \n";
+                                + std::to_string(unit::convert::to(minTimeStep_, unit::day)) + " days,\n which is the minimum threshold given"
+                                +  " by the TUNING keyword or cmdline-option --solver-min-time-step. \n";
                         if (solverVerbose_) {
                             OpmLog::error(msg);
                         }
