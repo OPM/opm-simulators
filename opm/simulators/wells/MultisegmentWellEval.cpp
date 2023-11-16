@@ -161,8 +161,8 @@ getWellConvergence(const WellState& well_state,
                                    tolerance_wells,
                                    tolerance_wells,
                                    max_residual_allowed},
-                                  well_is_stopped,  
                                   std::abs(linSys_.residual()[0][SPres]),
+                                  well_is_stopped,  
                                   report,
                                   deferred_logger);
 
