@@ -1324,40 +1324,37 @@ namespace Opm
     }
 
     template <typename TypeTag>
-    double
+    std::vector<double>
     WellInterface<TypeTag>::
     wellIndex(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const SingleWellState& ws) const {
 
+        std::vector<Scalar> wi(this->num_components_, this->well_index_[perf] * trans_mult);
         const auto& wdfac = this->well_ecl_.getWDFAC();
         if (!wdfac.useDFactor()) {
-            return this->well_index_[perf] * trans_mult;
+            return wi;
         }
-
+        // for gas wells we may want to add a Forchheimer term if the WDFAC or WDFACCOR keyword is used        
         if constexpr (! Indices::gasEnabled) {
-            return this->well_index_[perf] * trans_mult;
+            return wi;
         }
-
         // closed connection are still closed
         if (this->well_index_[perf] == 0)
-            return 0.0;
+            return std::vector<Scalar>(this->num_components_, 0.0);
 
-        // for gas wells we may want to add a Forchheimer term if the WDFAC or WDFACCOR keyword is used
-        const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
-        // viscosity is evaluated at connection pressure
-        const double connection_pressure = ws.perf_data.pressure[perf];
-        const double mu = FluidSystem::gasPvt().viscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure, getValue(intQuants.fluidState().Rv()), getValue(intQuants.fluidState().Rvw()));
-        const double phi = getValue(intQuants.porosity());
-        //double k = connection.Kh()/h * trans_mult;
-        double Kh = connection.Kh()* trans_mult;
-        double Ke = connection.Ke()* trans_mult;
-        double h = Kh / Ke;
-        double rw = connection.rw();
-        double rho = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, this->pvtRegionIdx());
-        double scaling = 3.141592653589 * Kh;
-        double d = wdfac.useConnectionDFactor()? connection.dFactor() : wdfac.getDFactor(rho, mu, Ke, phi, rw, h);
+        double tot_tw = 0.0;
+        for (const auto& c : this->well_ecl_.getConnections()) {
+            tot_tw += c.CF();
+        }
+
+        double d = computeConnectionDFactor(perf, intQuants, trans_mult, tot_tw, ws);
         const PhaseUsage& pu = this->phaseUsage();
         double Q = std::abs(ws.perf_data.phase_rates[perf*pu.num_phases + pu.phase_pos[Gas]]);
-        return 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (Q/2 * d / scaling));
+        const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
+        double Kh = connection.Kh()* trans_mult;
+        double scaling = 3.141592653589 * Kh;
+        const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+        wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (Q/2 * d / scaling));
+        return wi;
     }
 
     template <typename TypeTag>
@@ -1369,26 +1366,53 @@ namespace Opm
         if (!wdfac.useDFactor()) {
             return;
         }
-        double rho = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, this->pvtRegionIdx());
         auto& perf_data = ws.perf_data;
-
+        double tot_tw = 0.0;
+        for (const auto& c : this->well_ecl_.getConnections()) {
+            tot_tw += c.CF();
+        }
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
             const double trans_mult = simulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
-            // viscosity is evaluated at connection pressure
-            const double connection_pressure = ws.perf_data.pressure[perf];
-            const double mu = FluidSystem::gasPvt().viscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure, getValue(intQuants.fluidState().Rv()), getValue(intQuants.fluidState().Rvw()));
-            const double phi = getValue(intQuants.porosity());
-            const auto& connection = this->well_ecl_.getConnections()[perf_data.ecl_index[perf]];
-            double Kh = connection.Kh()* trans_mult;
-            double Ke = connection.Ke()* trans_mult;
-            double h = Kh / Ke;
-            double rw = connection.rw();
-            double d = wdfac.useConnectionDFactor()? connection.dFactor() : wdfac.getDFactor(rho, mu, Ke, phi, rw, h);
-            perf_data.connection_d_factor[perf] = d;
+            perf_data.connection_d_factor[perf] = computeConnectionDFactor(perf, intQuants, trans_mult, tot_tw, ws);
         }
     }
+
+    template <typename TypeTag>
+    double 
+    WellInterface<TypeTag>::
+    computeConnectionDFactor(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const double total_tw, const SingleWellState& ws) const {
+        const double connection_pressure = ws.perf_data.pressure[perf];
+        // viscosity is evaluated at connection pressure
+        const auto& rv = getValue(intQuants.fluidState().Rv());
+        const double psat = FluidSystem::gasPvt().saturationPressure(this->pvtRegionIdx(), ws.temperature, rv);
+        const double mu = connection_pressure < psat ?
+                                FluidSystem::gasPvt().saturatedViscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure) :
+                                FluidSystem::gasPvt().viscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure, rv, getValue(intQuants.fluidState().Rvw()));
+        double rho = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, this->pvtRegionIdx());
+        const double phi = getValue(intQuants.porosity());
+        const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
+        double Kh = connection.Kh()* trans_mult;
+        double Ke = connection.Ke()* trans_mult;
+        double h = Kh / Ke;
+        double rw = connection.rw();
+        const auto& wdfac = this->well_ecl_.getWDFAC();
+        if (wdfac.useConnectionDFactor()) {
+            double d =  connection.dFactor();
+            // If a negative d factor is set in COMPDAT individual connection d factors should be used directly.
+            if (d < 0)
+                return -d;
+            // If a positive d factor is set in COMPDAT the connection d factors is treated like a well d factor.
+            // and thus scaled with the well index
+            return d * total_tw / connection.CF();
+        } else {
+
+            double d = wdfac.getDFactor(rho, mu, Ke, phi, rw, h);
+            return d * total_tw / connection.CF();
+        }
+    }
+
 
     template <typename TypeTag>
     void
