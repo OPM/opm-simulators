@@ -80,6 +80,9 @@ struct EnableGravity { using type = UndefinedProperty; };
 //! Enable diffusive fluxes?
 template<class TypeTag, class MyTypeTag>
 struct EnableDiffusion { using type = UndefinedProperty; };
+//! Enable dispersive fluxes?
+template<class TypeTag, class MyTypeTag>
+struct EnableDispersion { using type = UndefinedProperty; };
 
 } // namespace Opm::Properties
 

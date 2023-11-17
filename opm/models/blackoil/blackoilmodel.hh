@@ -53,6 +53,7 @@
 #include <opm/models/io/vtkcompositionmodule.hh>
 #include <opm/models/io/vtkblackoilmodule.hh>
 #include "blackoildiffusionmodule.hh"
+#include "blackoildispersionmodule.hh"
 #include <opm/models/io/vtkdiffusionmodule.hh>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
@@ -177,6 +178,10 @@ struct EnableEnergy<TypeTag, TTag::BlackOilModel> { static constexpr bool value 
 template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
 
+//! disable disperison by default
+template<class TypeTag>
+struct EnableDispersion<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+
 //! by default, scale the energy equation by the inverse of the energy required to heat
 //! up one kg of water by 30 Kelvin. If we conserve surface volumes, this must be divided
 //! by the weight of one cubic meter of water. This is required to make the "dumb" linear
@@ -227,7 +232,7 @@ namespace Opm {
  * \f]
  *
  * Since the gas and water phases are assumed to be immiscible, this
- * is sufficint to calculate their density. For the formation volume
+ * is sufficient to calculate their density. For the formation volume
  * factor of the the oil phase \f$B_o\f$ determines the density of
  * *saturated* oil, i.e. the density of the oil phase if some gas
  * phase is present.
@@ -288,6 +293,7 @@ private:
     enum { numComponents = FluidSystem::numComponents };
     enum { numEq = getPropValue<TypeTag, Properties::NumEq>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
+    enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
 
     static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
     static constexpr bool waterEnabled = Indices::waterEnabled;
@@ -297,6 +303,7 @@ private:
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
     using EnergyModule = BlackOilEnergyModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
     using MICPModule = BlackOilMICPModule<TypeTag>;
 
 public:

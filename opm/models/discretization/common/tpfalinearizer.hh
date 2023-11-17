@@ -329,6 +329,16 @@ public:
         return floresInfo_;
     }
 
+    /*!
+     * \brief Return constant reference to the velocityInfo.
+     *
+     * (This object is only non-empty if the DISPERC keyword is true.)
+     */
+    const auto& getVelocityInfo() const{
+
+        return velocityInfo_;
+    }
+
     void updateDiscretizationParameters()
     {
         updateStoredTransmissibilities();
@@ -451,6 +461,7 @@ private:
                         Scalar outAlpha {0.};
                         FaceDirection dirId = FaceDirection::Unknown;
                         Scalar diffusivity {0.};
+                        Scalar dispersivity {0.};
                         if constexpr(enableEnergy){
                             inAlpha = problem_().thermalHalfTransmissibility(myIdx, neighborIdx);
                             outAlpha = problem_().thermalHalfTransmissibility(neighborIdx, myIdx);
@@ -458,10 +469,13 @@ private:
                         if constexpr(enableDiffusion){
                             diffusivity = problem_().diffusivity(myIdx, neighborIdx);
                         }
+                        if (simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion()) {
+                            dispersivity = problem_().dispersivity(myIdx, neighborIdx);
+                        }
                         if (materialLawManager->hasDirectionalRelperms()) {
                             dirId = scvf.faceDirFromDirId();
                         }
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres, dZg, dirId, Vin, Vex, inAlpha, outAlpha, diffusivity}, nullptr};
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres, dZg, dirId, Vin, Vex, inAlpha, outAlpha, diffusivity, dispersivity}, nullptr};
 
                     }
                 }
@@ -522,15 +536,17 @@ private:
         jacobian_->clear();
     }
 
-    // Initialize the flows and flores sparse tables
+    // Initialize the flows, flores, and velocity sparse tables
     void createFlows_()
     {
         OPM_TIMEBLOCK(createFlows);
         // If FLOWS/FLORES is set in any RPTRST in the schedule, then we initializate the sparse tables
         // For now, do the same also if any block flows are requested (TODO: only save requested cells...)
+        // If DISPERC is in the deck, we initialize the sparse table here as well.
         const bool anyFlows = simulator_().problem().eclWriter()->eclOutputModule().anyFlows();
-        const bool anyFlores = simulator_().problem().eclWriter()->eclOutputModule().anyFlores();
-        if ((!anyFlows || !flowsInfo_.empty())  && (!anyFlores || !floresInfo_.empty())) {
+        const bool anyFlores = simulator_().problem().eclWriter()->eclOutputModule().anyFlores();                         
+        const bool enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
+        if (((!anyFlows || !flowsInfo_.empty()) && (!anyFlores || !floresInfo_.empty())) && !enableDispersion) {
             return;
         }
         const auto& model = model_();
@@ -539,6 +555,7 @@ private:
         unsigned numCells = model.numTotalDof();
         std::unordered_multimap<int, std::pair<int, int>> nncIndices;
         std::vector<FlowInfo> loc_flinfo;
+        std::vector<VelocityInfo> loc_vlinfo;
         unsigned int nncId = 0;
         VectorBlock flow(0.0);
 
@@ -555,12 +572,16 @@ private:
         if (anyFlores) {
             floresInfo_.reserve(numCells, 6 * numCells);
         }
+        if (enableDispersion) {
+            velocityInfo_.reserve(numCells, 6 * numCells);
+        }
 
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
                 unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
                 loc_flinfo.resize(stencil.numDof() - 1);
+                loc_vlinfo.resize(stencil.numDof() - 1);
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
                     unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
                     if (dofIdx > 0) {
@@ -579,6 +600,7 @@ private:
                             }
                         }
                         loc_flinfo[dofIdx - 1] = FlowInfo{faceId, flow, nncId};
+                        loc_vlinfo[dofIdx - 1] = VelocityInfo{flow};
                     }
                 }
                 if (anyFlows) {
@@ -586,6 +608,9 @@ private:
                 }
                 if (anyFlores) {
                     floresInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.end());
+                }
+                if (enableDispersion) {
+                    velocityInfo_.appendRow(loc_vlinfo.begin(), loc_vlinfo.end());
                 }
             }
         }
@@ -626,7 +651,7 @@ private:
         // We do not call resetSystem_() here, since that will set
         // the full system to zero, not just our part.
         // Instead, that must be called before starting the linearization.
-
+        const bool& enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
         const bool& enableFlows = simulator_().problem().eclWriter()->eclOutputModule().hasFlows() ||
                                     simulator_().problem().eclWriter()->eclOutputModule().hasBlockFlows();
         const bool& enableFlores = simulator_().problem().eclWriter()->eclOutputModule().hasFlores();
@@ -661,6 +686,11 @@ private:
                 const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
                 LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo);
                 adres *= nbInfo.res_nbinfo.faceArea;
+                if (enableDispersion) {
+                    for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
+                        velocityInfo_[globI][loc].velocity[phaseIdx] = darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
+                    }
+                }
                 if (enableFlows) {
                     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
                         flowsInfo_[globI][loc].flow[phaseIdx] = adres[phaseIdx].value();
@@ -822,6 +852,12 @@ private:
     };
     SparseTable<FlowInfo> flowsInfo_;
     SparseTable<FlowInfo> floresInfo_;
+
+    struct VelocityInfo
+    {
+        VectorBlock velocity;
+    };
+    SparseTable<VelocityInfo> velocityInfo_;
 
     using ScalarFluidState = typename IntensiveQuantities::ScalarFluidState;
     struct BoundaryConditionData
