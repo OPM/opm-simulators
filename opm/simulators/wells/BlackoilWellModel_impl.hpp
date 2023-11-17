@@ -836,20 +836,20 @@ namespace Opm {
 
                 // A new WCON keywords can re-open a well that was closed/shut due to Physical limit
                 if (this->wellTestState().well_is_closed(well_name)) {
+                    // The well was shut this timestep, we are most likely retrying
+                    // a timestep without the well in question, after it caused
+                    // repeated timestep cuts. It should therefore not be opened,
+                    // even if it was new or received new targets this report step.
+                    const bool closed_this_step = (wellTestState().lastTestTime(well_name) == ebosSimulator_.time());
                     // Always check if wells on historic controls can be opened
-                    if (!well_ecl.predictionMode()) {
+                    if (!closed_this_step && !well_ecl.predictionMode()) {
                         wellTestState().open_well(well_name);
                     }
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
                     if (events.hasEvent(ScheduleEvents::REQUEST_OPEN_WELL)) {
-                        if (wellTestState().lastTestTime(well_name) == ebosSimulator_.time()) {
-                            // The well was shut this timestep, we are most likely retrying
-                            // a timestep without the well in question, after it caused
-                            // repeated timestep cuts. It should therefore not be opened,
-                            // even if it was new or received new targets this report step.
-                        } else {
+                        if (!closed_this_step) {
                             wellTestState().open_well(well_name);
                             wellTestState().open_completions(well_name);
                         }
