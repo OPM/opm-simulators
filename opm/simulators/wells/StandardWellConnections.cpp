@@ -212,7 +212,8 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
                 rv = std::min(mix[oilpos] / mix[gaspos], props.rvmax_perf[perf]);
             }
             const Scalar d = 1.0 - rs*rv;
-            if (d <= 0.0) {
+            constexpr Scalar epsilon = 1.e-5;
+            if (d <= epsilon) {
                 std::ostringstream sstr;
                 sstr << "Problematic d value " << d << " obtained for well " << well_.name()
                      << " during computeConnectionDensities with rs " << rs
