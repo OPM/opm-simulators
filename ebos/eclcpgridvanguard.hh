@@ -334,7 +334,8 @@ protected:
                                                     this->grid(),
                                                     this->cellCentroids(),
                                                     getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                                    getPropValue<TypeTag, Properties::EnableDiffusion>()));
+                                                    getPropValue<TypeTag, Properties::EnableDiffusion>(),
+                                                    getPropValue<TypeTag, Properties::EnableDispersion>()));
         globalTrans_->update(false);
     }
 

@@ -46,7 +46,10 @@ template<class TypeTag>
 struct LocalResidual<TypeTag, TTag::EclFlowGasWaterEnergyProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::EclFlowGasWaterEnergyProblem> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::EclFlowGasWaterEnergyProblem> { static constexpr bool value = true; };
+
+template<class TypeTag>
+struct EnableDispersion<TypeTag, TTag::EclFlowGasWaterEnergyProblem> { static constexpr bool value = true; };
 
 template<class TypeTag>
 struct EnableEnergy<TypeTag, TTag::EclFlowGasWaterEnergyProblem> {

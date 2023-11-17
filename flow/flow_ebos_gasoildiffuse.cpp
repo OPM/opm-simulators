@@ -41,9 +41,11 @@ struct Linearizer<TypeTag, TTag::EclFlowGasOilDiffuseProblem> { using type = Tpf
 template<class TypeTag>
 struct LocalResidual<TypeTag, TTag::EclFlowGasOilDiffuseProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
-
 template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::EclFlowGasOilDiffuseProblem> { static constexpr bool value = true; };
+
+template<class TypeTag>
+struct EnableDispersion<TypeTag, TTag::EclFlowGasOilDiffuseProblem> { static constexpr bool value = true; };
 
 //! The indices required by the model
 template<class TypeTag>

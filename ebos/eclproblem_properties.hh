@@ -269,6 +269,12 @@ struct EnableDiffusion<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = true;
 };
 
+// Enable dispersion
+template<class TypeTag>
+struct EnableDispersion<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
+};
+
 // only write the solutions for the report steps to disk
 template<class TypeTag>
 struct EnableWriteAllSolutions<TypeTag, TTag::EclBaseProblem> {
