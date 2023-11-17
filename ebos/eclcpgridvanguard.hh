@@ -38,10 +38,57 @@
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <array>
+#include <filesystem>
+#include <fstream>
 #include <functional>
+#include <iterator>
 #include <memory>
+#include <stdexcept>
 #include <tuple>
 #include <vector>
+
+#include <fmt/format.h>
+
+#if HAVE_MPI
+
+namespace Opm { namespace details {
+    class MPIPartitionFromFile
+    {
+    public:
+        explicit MPIPartitionFromFile(const std::filesystem::path& partitionFile)
+            : partitionFile_(partitionFile)
+        {}
+
+        std::vector<int> operator()(const Dune::CpGrid& grid) const;
+
+    private:
+        std::filesystem::path partitionFile_{};
+    };
+
+    inline std::vector<int>
+    MPIPartitionFromFile::operator()(const Dune::CpGrid& grid) const
+    {
+        std::ifstream pfile { this->partitionFile_ };
+
+        auto partition = std::vector<int> {
+            std::istream_iterator<int> { pfile },
+            std::istream_iterator<int> {}
+        };
+
+        if (partition.size() != static_cast<std::vector<int>::size_type>(grid.size(0))) {
+            throw std::invalid_argument {
+                fmt::format("Partition file '{}' with {} values does "
+                            "not match CpGrid instance with {} cells",
+                            this->partitionFile_.generic_string(),
+                            partition.size(), grid.size(0))
+            };
+        }
+
+        return partition;
+    }
+}} // namespace Opm::details
+
+#endif // HAVE_MPI
 
 namespace Opm {
 template <class TypeTag>
@@ -224,6 +271,12 @@ public:
     void loadBalance()
     {
 #if HAVE_MPI
+        if (const auto& extPFile = this->externalPartitionFile();
+            !extPFile.empty() && (extPFile != "none"))
+        {
+            this->setExternalLoadBalancer(details::MPIPartitionFromFile { extPFile });
+        }
+
         this->doLoadBalance_(this->edgeWeightsMethod(), this->ownersFirst(),
                              this->serialPartitioning(), this->enableDistributedWells(),
                              this->zoltanImbalanceTol(), this->gridView(),

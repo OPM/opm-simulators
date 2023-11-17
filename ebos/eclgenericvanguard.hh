@@ -228,6 +228,11 @@ public:
      */
     double zoltanImbalanceTol() const
     { return zoltanImbalanceTol_; }
+
+    const std::string& externalPartitionFile() const
+    {
+        return this->externalPartitionFile_;
+    }
 #endif
 
     /*!
@@ -292,6 +297,7 @@ protected:
     bool serialPartitioning_;
     double zoltanImbalanceTol_;
     std::string zoltanParams_;
+    std::string externalPartitionFile_{};
 #endif
     bool enableDistributedWells_;
     std::string ignoredKeywords_;

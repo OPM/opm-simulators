@@ -97,7 +97,6 @@ struct LoadFile
     using type = UndefinedProperty;
 };
 
-
 template<class TypeTag>
 struct EnableTerminalOutput<TypeTag, TTag::EclFlowProblem> {
     static constexpr bool value = true;
@@ -134,7 +133,6 @@ struct LoadFile<TypeTag, TTag::EclFlowProblem>
 {
     static constexpr auto* value = "";
 };
-
 
 template <class TypeTag>
 struct LoadStep<TypeTag, TTag::EclFlowProblem>
