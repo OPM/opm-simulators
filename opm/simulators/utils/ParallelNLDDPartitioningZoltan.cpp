@@ -21,6 +21,7 @@
 
 #include <opm/simulators/utils/ParallelNLDDPartitioningZoltan.hpp>
 
+#include <opm/simulators/utils/compressPartition.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
@@ -546,35 +547,6 @@ extern "C" {
         }
     }
 
-    std::vector<int> compressPartitionIDs(std::vector<int>&& parts0)
-    {
-        auto partition = std::move(parts0);
-
-        if (! partition.empty()) {
-            auto mmPos = std::minmax_element(partition.begin(), partition.end());
-            auto seen = std::vector<bool>(*mmPos.second - *mmPos.first + 1, false);
-            for (const auto& domain : partition) {
-                seen[domain - *mmPos.first] = domain >= 0;
-            }
-
-            auto num_domains = 0;
-            auto compressed = std::vector<int>(*mmPos.second - *mmPos.first + 1, -1);
-            for (auto i = 0*compressed.size(); i < compressed.size(); ++i) {
-                if (seen[i]) {
-                    compressed[i] = num_domains++;
-                }
-            }
-
-            for (auto& domain : partition) {
-                if (domain >= 0) {
-                    domain = compressed[domain - *mmPos.first];
-                }
-            }
-        }
-
-        return partition;
-    }
-
 } // Anonymous namespace
 
 std::vector<int>
@@ -603,5 +575,5 @@ Opm::ParallelNLDDPartitioningZoltan::partitionElements(const ZoltanParamMap& par
         ::forceSameDomain(cells, parts);
     }
 
-    return compressPartitionIDs(std::move(parts));
+    return util::compressPartitionIDs(std::move(parts));
 }
