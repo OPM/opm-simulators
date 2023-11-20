@@ -108,6 +108,11 @@ BOOST_AUTO_TEST_CASE(Cumulative)
 :--------:-----------:--------:----:------------:----------:-----------:-----------:------------:----------:-----------:-----------:
 )";
 
+    std::stringstream str;
+    Opm::OpmLog::addBackend("stream",
+                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
+
+
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
     auto deck = parser.parseString(input);
@@ -157,10 +162,6 @@ BOOST_AUTO_TEST_CASE(Cumulative)
         st.set(p.first, p.second * 1e3);
     }
 
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
-
     Opm::LogOutputHelper<double> helper(eclState, schedule, st);
     helper.cumulative(0, [](const std::string&) { return false; });
     std::string data = trimStream(str);
@@ -173,6 +174,10 @@ BOOST_AUTO_TEST_CASE(Error)
 Finding the dew point pressure failed for 3 cells [(5,1,1), (6,1,1), (7,1,1)]
 )";
 
+    std::stringstream str;
+    Opm::OpmLog::addBackend("stream",
+                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Warning));
+
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
     auto deck = parser.parseString(input);
@@ -183,13 +188,10 @@ Finding the dew point pressure failed for 3 cells [(5,1,1), (6,1,1), (7,1,1)]
     Opm::Schedule schedule(deck,  grid, fp, runspec, python);
     Opm::EclipseState eclState(deck);
 
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Warning));
-
     Opm::SummaryState st;
     Opm::LogOutputHelper<double> helper(eclState, schedule, st);
 
+    str.str(""); // clear out parser errors
     helper.error({1,20,30}, {4,5,6});
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
@@ -225,6 +227,10 @@ FIPNUM report region 1 pressure dependent pore volume = 50 RB
 :========================:==========================================:================:==========================================:
 )";
 
+    std::stringstream str;
+    Opm::OpmLog::addBackend("stream",
+                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
+
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
     auto deck = parser.parseString(input);
@@ -236,10 +242,6 @@ FIPNUM report region 1 pressure dependent pore volume = 50 RB
 
     Opm::EclipseState eclState(deck);
     Opm::SummaryState st;
-
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st);
     Opm::Inplace initial, current;
@@ -288,6 +290,10 @@ BOOST_AUTO_TEST_CASE(FipResv)
 :---------:---------------:---------------:---------------:---------------:---------------:
 )";
 
+    std::stringstream str;
+    Opm::OpmLog::addBackend("stream",
+                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
+
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
     auto deck = parser.parseString(input);
@@ -299,10 +305,6 @@ BOOST_AUTO_TEST_CASE(FipResv)
 
     Opm::EclipseState eclState(deck);
     Opm::SummaryState st;
-
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st);
     Opm::Inplace current;
@@ -340,6 +342,10 @@ BOOST_AUTO_TEST_CASE(Injection)
 :--------:-----------:------:------:------:------------:----------:-----------:-----------:--------:--------:
 )";
 
+    std::stringstream str;
+    Opm::OpmLog::addBackend("stream",
+                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
+
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
     auto deck = parser.parseString(input);
@@ -371,10 +377,6 @@ BOOST_AUTO_TEST_CASE(Injection)
         st.set(p.first, p.second);
     }
 
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
-
     Opm::LogOutputHelper<double> helper(eclState, schedule, st);
     helper.injection(0, [](const std::string&) { return false; });
     std::string data = trimStream(str);
@@ -395,6 +397,10 @@ BOOST_AUTO_TEST_CASE(Production)
 :    PROD:   10,   10:ORAT:       13.0:       14.0:       15.0:       16.0:     17.000:     18.00:      0.9333:    19.0:    20.0:
 :--------:-----------:----:-----------:-----------:-----------:-----------:-----------:----------:------------:--------:--------:
 )";
+
+    std::stringstream str;
+    Opm::OpmLog::addBackend("stream",
+                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
 
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
@@ -432,10 +438,6 @@ BOOST_AUTO_TEST_CASE(Production)
     for (const auto& p : fields) {
         st.set(p.first, p.second);
     }
-
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st);
     helper.production(0, [](const std::string&) { return false; });
