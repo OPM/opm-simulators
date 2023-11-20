@@ -1368,8 +1368,10 @@ namespace Opm
         }
         auto& perf_data = ws.perf_data;
         double tot_tw = 0.0;
-        for (const auto& c : this->well_ecl_.getConnections()) {
-            tot_tw += c.CF();
+        if (wdfac.getType() == WDFACTYPE::CON_DFACTOR || wdfac.getType() == WDFACTYPE::DFACTOR) {
+            for (const auto& c : this->well_ecl_.getConnections()) {
+                tot_tw += c.CF();
+            }
         }
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
@@ -1398,18 +1400,19 @@ namespace Opm
         double h = Kh / Ke;
         double rw = connection.rw();
         const auto& wdfac = this->well_ecl_.getWDFAC();
-        if (wdfac.useConnectionDFactor()) {
+        if (wdfac.getType() == WDFACTYPE::CON_DFACTOR) {
             double d =  connection.dFactor();
             // If a negative d factor is set in COMPDAT individual connection d factors should be used directly.
             if (d < 0)
                 return -d;
             // If a positive d factor is set in COMPDAT the connection d factors is treated like a well d factor.
-            // and thus scaled with the well index
+            // and thus scaled with the connection index
             return d * total_tw / connection.CF();
-        } else {
-
-            double d = wdfac.getDFactor(rho, mu, Ke, phi, rw, h);
-            return d * total_tw / connection.CF();
+        } else if (wdfac.getType() == WDFACTYPE::DFACTOR) {
+            // scale with the connection index
+            return wdfac.getDFactor(rho, mu, Ke, phi, rw, h) * total_tw / connection.CF();
+        } else { // WDFACCOR
+            return wdfac.getDFactor(rho, mu, Ke, phi, rw, h);
         }
     }
 
