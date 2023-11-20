@@ -694,7 +694,7 @@ public:
                              const Scalar& /*inAlpha*/,
                              const Scalar& /*outAlpha*/,
                              const Scalar& /*faceArea*/)
-    {};
+    {}
 
     void updateEnergy(const ElementContext&,
                       unsigned,
