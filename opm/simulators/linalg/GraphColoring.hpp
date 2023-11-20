@@ -19,14 +19,15 @@
 #ifndef OPM_GRAPHCOLORING_HEADER_INCLUDED
 #define OPM_GRAPHCOLORING_HEADER_INCLUDED
 
-#include <vector>
-#include <deque>
-#include <tuple>
 #include <algorithm>
+#include <cstddef>
+#include <deque>
+#include <limits>
 #include <numeric>
 #include <queue>
-#include <cstddef>
-#include <limits>
+#include <string>
+#include <tuple>
+#include <vector>
 
 namespace Opm
 {
