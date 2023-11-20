@@ -197,6 +197,10 @@ public:
     int compressedSize() const
     { return cartesianIndex_.size(); }
 
+    /** \brief return number of cells in the active grid. Only for unifying calls with CpGrid and PolyhedralGrid specializations. */
+    int compressedLevelZeroSize() const
+    { return cartesianIndex_.size(); }
+
     /** \brief return index of the cells in the logical Cartesian grid */
     int cartesianIndex(const int compressedElementIndex) const
     {

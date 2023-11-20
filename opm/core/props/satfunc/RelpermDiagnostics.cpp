@@ -840,7 +840,7 @@ namespace Opm {
     {
         // All end points are subject to round-off errors, checks should account for it
         const float tolerance = 1e-6;
-        const int nc = cartesianIndexMapper.compressedSize();
+        const int nc = cartesianIndexMapper.compressedLevelZeroSize();
         const bool threepoint = eclState.runspec().endpointScaling().threepoint();
         scaledEpsInfo_.resize(nc);
         EclEpsGridProperties epsGridProperties(eclState, false);
