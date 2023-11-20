@@ -19,6 +19,10 @@
 #ifndef OPM_GRAPHCOLORING_HEADER_INCLUDED
 #define OPM_GRAPHCOLORING_HEADER_INCLUDED
 
+#include <opm/common/TimingMacros.hpp>
+
+#include <opm/grid/utility/SparseTable.hpp>
+
 #include <algorithm>
 #include <cstddef>
 #include <deque>
@@ -218,5 +222,94 @@ reorderVerticesSpheres(const std::vector<int>& colors,
     }
     return indices;
 }
+
+/// \brief Specify coloring type.
+/// \details The coloring types have been implemented initially to parallelize DILU
+///          preconditioner and parallel sparse triangular solves.
+///          Symmetric coloring will create a dependency from row i to j if
+///          both element A_ij and A_ji exists.
+///          Lower coloring creates a dependency from row i to j (where i < j) if
+///          A_ij is nonzero.
+///          Upper coloring creates a dependecy from row i to j (where i > j) if A_ij is nonzero.
+enum class ColoringType { SYMMETRIC, LOWER, UPPER };
+
+/// This coloring algorithm interprets the sparsity structure of a matrix as a graph. Each row is given a color
+/// or level where all the rows in the same level only have dependencies from lower levels. The level computation
+/// is done with dynamic programming, and to improve caching the rows in the same level stay in matrix order.
+/// \brief Given a matrix and dependecy type, returns a SparseTable grouping the rows by which
+///        can be executed in parallel without breaking dependencies
+/// \param matrix A dune sparse matrix
+/// \param coloringType The coloringtype determines what constitutes a dependency,
+///        see ColoringType definition above
+/// \return SparseTable with rows of the matrix grouped into least number of groups
+///         while dependencies only come from groups with lower index
+template <class M>
+Opm::SparseTable<std::size_t>
+getMatrixRowColoring(const M& matrix, ColoringType coloringType)
+{
+    OPM_TIMEBLOCK(createMatrix);
+
+    std::vector<std::size_t> color(matrix.N(), 0);
+    std::vector<std::size_t> rowIndices(matrix.N(), 0);
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+    for (std::size_t i = 0; i < matrix.N(); i++) {
+        rowIndices[i] = i;
+    }
+
+    std::vector<std::size_t> colorCnt;
+    // These dynamic programming computations only rely on the following observation:
+    // level[row_i] = 1 + max{level[row_j]} for all j which i depend on
+    // This minimizes the level of each row, and every rows dependencies belong to a lower level set.
+    if (coloringType == ColoringType::SYMMETRIC) {
+        for (auto i = matrix.begin(); i != matrix.end(); ++i) {
+            for (auto a_ij = i->begin(); a_ij.index() != i.index(); ++a_ij) {
+                auto a_ji = matrix[a_ij.index()].find(i.index());
+                if (a_ji != matrix[a_ij.index()].end()) {
+                    color[i.index()] = std::max({color[i.index()], color[a_ij.index()] + 1});
+                }
+            }
+            if (color[i.index()] >= colorCnt.size()) {
+                colorCnt.push_back(1);
+            } else {
+                ++colorCnt[color[i.index()]];
+            }
+        }
+    } else if (coloringType == ColoringType::UPPER) {
+        for (auto i = matrix.beforeEnd(); i != matrix.beforeBegin(); --i) {
+            for (auto a_ij = ++(i->find(i.index())); a_ij != i->end(); ++a_ij) {
+                color[i.index()] = std::max({color[i.index()], color[a_ij.index()] + 1});
+            }
+            if (color[i.index()] >= colorCnt.size()) {
+                colorCnt.push_back(1);
+            } else {
+                ++colorCnt[color[i.index()]];
+            }
+        }
+    } else if (coloringType == ColoringType::LOWER) {
+        for (auto i = matrix.begin(); i != matrix.end(); ++i) {
+            for (auto a_ij = i->begin(); a_ij.index() != i.index(); ++a_ij) {
+                color[i.index()] = std::max({color[i.index()], color[a_ij.index()] + 1});
+            }
+            if (color[i.index()] >= colorCnt.size()) {
+                colorCnt.push_back(1);
+            } else {
+                ++colorCnt[color[i.index()]];
+            }
+        }
+    }
+
+    std::stable_sort(rowIndices.begin(),
+                     rowIndices.end(),
+                     [&color](const std::size_t a, const std::size_t b)
+                     { return color[a] < color[b]; });
+
+    return {rowIndices.data(), rowIndices.data() + rowIndices.size(),
+            colorCnt.data(), colorCnt.data() + colorCnt.size()};
+}
+
 } // end namespace Opm
+
 #endif
