@@ -209,7 +209,7 @@ namespace Opm
             bool output = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) == param_.max_number_of_well_switches_;
             if (output) {
                 std::ostringstream ss;
-                ss << "    The control model for well " << this->name()
+                ss << "    The control mode for well " << this->name()
                    << " is oscillating\n"
                    << "    We don't allow for more than "
                    << param_.max_number_of_well_switches_
