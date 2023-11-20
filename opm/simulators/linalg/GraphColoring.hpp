@@ -29,29 +29,24 @@
 #include <tuple>
 #include <vector>
 
-namespace Opm
-{
-
-namespace Detail
-{
-template<class Graph>
+namespace Opm {
+namespace Detail {
+template <class Graph>
 std::size_t colorGraphWelshPowell(const Graph& graph,
-                           std::deque<typename Graph::VertexDescriptor>& orderedVertices,
-                           std::vector<int>& colors,
-                           int color, int noVertices)
+                                  std::deque<typename Graph::VertexDescriptor>& orderedVertices,
+                                  std::vector<int>& colors,
+                                  int color,
+                                  int noVertices)
 {
     std::vector<int> forbidden(noVertices, false);
     std::size_t noColored = 0;
 
-    for(auto vertex = orderedVertices.begin(),
-            vertexEnd = orderedVertices.end();
-        vertex != vertexEnd; ++vertex)
-    {
+    for (auto vertex = orderedVertices.begin(),
+              vertexEnd = orderedVertices.end(); vertex != vertexEnd; ++vertex) {
         // Skip forbidden vertices
-        while(vertex != vertexEnd && forbidden[*vertex])
+        while (vertex != vertexEnd && forbidden[*vertex])
             ++vertex;
-        if ( vertex == vertexEnd )
-        {
+        if (vertex == vertexEnd) {
             break;
         }
 
@@ -59,25 +54,24 @@ std::size_t colorGraphWelshPowell(const Graph& graph,
         colors[*vertex] = color;
         ++noColored;
         // Forbid neighors
-        for(auto edge = graph.beginEdges(*vertex), endEdge = graph.endEdges(*vertex);
-            edge != endEdge; ++edge)
-        {
+        for (auto edge = graph.beginEdges(*vertex),
+                  endEdge = graph.endEdges(*vertex); edge != endEdge; ++edge) {
             forbidden[edge.target()] = true;
         }
     }
     // forbidden vertices will be colored next for coloring
     using Vertex = typename Graph::VertexDescriptor;
-    auto newEnd = std::remove_if(orderedVertices.begin(), orderedVertices.end(),
-                                 [&forbidden](const Vertex& vertex)
-                                 {
-                                     return !forbidden[vertex];
-                                 });
-    orderedVertices.resize(newEnd-orderedVertices.begin());
+    auto newEnd = std::remove_if(orderedVertices.begin(),
+                                 orderedVertices.end(),
+                                 [&forbidden](const Vertex& vertex) { return !forbidden[vertex]; });
+    orderedVertices.resize(newEnd - orderedVertices.begin());
     return noColored;
 }
-template<class Graph, class Functor>
-std::size_t breadthFirstSearch(const Graph& graph, typename Graph::VertexDescriptor root,
-                        Functor functor)
+
+template <class Graph, class Functor>
+std::size_t breadthFirstSearch(const Graph& graph,
+                               typename Graph::VertexDescriptor root,
+                               Functor functor)
 {
     std::vector<int> visited(graph.maxVertex() + 1, false);
     using Vertex = typename Graph::VertexDescriptor;
@@ -86,15 +80,11 @@ std::size_t breadthFirstSearch(const Graph& graph, typename Graph::VertexDescrip
     nextVertices.push(root);
     visited[root] = true; // We do not visit root.
 
-    while( !nextVertices.empty() )
-    {
+    while (!nextVertices.empty()) {
         auto current = nextVertices.front();
-        for(auto edge = graph.beginEdges(current),
-                endEdge = graph.endEdges(current);
-            edge != endEdge; ++edge)
-        {
-            if ( ! visited[edge.target()] )
-            {
+        for (auto edge = graph.beginEdges(current),
+                  endEdge = graph.endEdges(current); edge != endEdge; ++edge) {
+            if (!visited[edge.target()]) {
                 visited[edge.target()] = true;
                 nextVertices.push(edge.target());
                 functor(edge.target());
@@ -114,44 +104,36 @@ std::size_t breadthFirstSearch(const Graph& graph, typename Graph::VertexDescrip
 /// \param graph The graph to color. Must adhere to the graph interface of dune-istl.
 /// \return A pair of a vector with the colors of the vertices and the number of colors
 ///         assigned
-template<class Graph>
-std::tuple<std::vector<int>, int, std::vector<std::size_t> >
+template <class Graph>
+std::tuple<std::vector<int>, int, std::vector<std::size_t>>
 colorVerticesWelshPowell(const Graph& graph)
 {
     using Vertex = typename Graph::VertexDescriptor;
     std::deque<Vertex> orderedVertices;
-    auto noVertices = graph.maxVertex()+1;
+    auto noVertices = graph.maxVertex() + 1;
     std::vector<int> degrees(noVertices, 0);
     int maxDegree = 0;
     std::ptrdiff_t firstDegreeChange = 0;
 
     // populate deque
-    for( auto vertex = graph.begin(), endVertex = graph.end();
-         vertex != endVertex; ++vertex)
-    {
+    for (auto vertex = graph.begin(),
+              endVertex = graph.end(); vertex != endVertex; ++vertex) {
         auto currentVertex = *vertex;
         auto& degree = degrees[currentVertex];
 
-        for(auto edge = graph.beginEdges(currentVertex),
-                endEdge = graph.endEdges(currentVertex);
-            edge != endEdge; ++edge)
-        {
+        for (auto edge = graph.beginEdges(currentVertex),
+                  endEdge = graph.endEdges(currentVertex); edge != endEdge; ++edge) {
             ++degree;
         }
 
-
-        if( degree >= maxDegree )
-        {
+        if (degree >= maxDegree) {
             orderedVertices.emplace_front(currentVertex);
             ++firstDegreeChange;
-            if(degree > maxDegree)
-            {
+            if (degree > maxDegree) {
                 firstDegreeChange = 1;
                 maxDegree = degree;
             }
-        }
-        else
-        {
+        } else {
             orderedVertices.emplace_back(currentVertex);
         }
     }
@@ -159,10 +141,8 @@ colorVerticesWelshPowell(const Graph& graph)
     // order deque by descending degree
     std::stable_sort(orderedVertices.begin() + firstDegreeChange,
                      orderedVertices.end(),
-              [&degrees](const Vertex& v1, const Vertex& v2)
-              {
-                  return degrees[v1] > degrees[v2];
-              });
+                     [&degrees](const Vertex& v1, const Vertex& v2)
+                     { return degrees[v1] > degrees[v2]; });
 
     // Overwrite degree with color
     auto& colors = degrees;
@@ -172,39 +152,38 @@ colorVerticesWelshPowell(const Graph& graph)
     std::vector<std::size_t> verticesPerColor;
     verticesPerColor.reserve(10);
 
-    while(!orderedVertices.empty())
-    {
-        verticesPerColor
-            .push_back(Detail::colorGraphWelshPowell(graph, orderedVertices, colors,
-                                                     color++, noVertices));
+    while (!orderedVertices.empty()) {
+        verticesPerColor.push_back(Detail::colorGraphWelshPowell(graph, orderedVertices,
+                                                                 colors, color++, noVertices));
     }
     return std::make_tuple(colors, color, verticesPerColor);
 }
 
 /// \! Reorder colored graph preserving order of vertices with the same color.
-template<class Graph>
+template <class Graph>
 std::vector<std::size_t>
-reorderVerticesPreserving(const std::vector<int>& colors, int noColors,
+reorderVerticesPreserving(const std::vector<int>& colors,
+                          int noColors,
                           const std::vector<std::size_t>& verticesPerColor,
                           const Graph& graph)
 {
     std::vector<std::size_t> colorIndex(noColors, 0);
     std::vector<std::size_t> indices(graph.maxVertex() + 1);
     std::partial_sum(verticesPerColor.begin(),
-                     verticesPerColor.begin()+verticesPerColor.size() - 1,
+                     verticesPerColor.begin() + verticesPerColor.size() - 1,
                      colorIndex.begin() + 1);
 
-    for(const auto& vertex: graph)
-    {
+    for (const auto& vertex : graph) {
         indices[vertex] = colorIndex[colors[vertex]]++;
     }
     return indices;
 }
 
 /// \! Reorder Vetrices in spheres
-template<class Graph>
+template <class Graph>
 std::vector<std::size_t>
-reorderVerticesSpheres(const std::vector<int>& colors, int noColors,
+reorderVerticesSpheres(const std::vector<int>& colors,
+                       int noColors,
                        const std::vector<std::size_t>& verticesPerColor,
                        const Graph& graph,
                        typename Graph::VertexDescriptor root)
@@ -214,26 +193,22 @@ reorderVerticesSpheres(const std::vector<int>& colors, int noColors,
     std::vector<std::size_t> indices(graph.maxVertex() + 1, notVisitedTag);
     using Vertex = typename Graph::VertexDescriptor;
     std::partial_sum(verticesPerColor.begin(),
-                     verticesPerColor.begin()+verticesPerColor.size() - 1,
+                     verticesPerColor.begin() + verticesPerColor.size() - 1,
                      colorIndex.begin() + 1);
     std::size_t noVisited = 0;
     auto numberer = [&colorIndex, &colors, &indices](Vertex vertex)
-        {
-            indices[vertex] = colorIndex[colors[vertex]]++;
-        };
-
-    while ( noVisited < graph.maxVertex() + 1 )
     {
+        indices[vertex] = colorIndex[colors[vertex]]++;
+    };
+
+    while (noVisited < graph.maxVertex() + 1) {
         numberer(root);
-        ++noVisited; //root node already visited and not visited in BFS
+        ++noVisited; // root node already visited and not visited in BFS
         noVisited += Detail::breadthFirstSearch(graph, root, numberer);
-        if ( noVisited < graph.maxVertex() + 1 )
-        {
+        if (noVisited < graph.maxVertex() + 1) {
             // Graph is disconnected search for not yet visited node
-            for(auto vertex: graph)
-            {
-                if ( indices[vertex] ==  notVisitedTag )
-                {
+            for (auto vertex : graph) {
+                if (indices[vertex] == notVisitedTag) {
                     // \todo make sure that this is a peripheral node!
                     root = vertex;
                     break;
