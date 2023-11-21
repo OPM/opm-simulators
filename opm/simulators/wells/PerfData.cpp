@@ -33,6 +33,7 @@ PerfData::PerfData(std::size_t num_perf, double pressure_first_connection_, bool
     , pressure(num_perf)
     , rates(num_perf)
     , phase_rates(num_perf * num_phases)
+    , phase_mixing_rates(num_perf)
     , solvent_rates(num_perf)
     , polymer_rates(num_perf)
     , brine_rates(num_perf)
@@ -59,6 +60,7 @@ PerfData PerfData::serializationTestObject()
     result.pressure = {2.0, 3.0, 4.0};
     result.rates = {5.0, 6.0};
     result.phase_rates = {7.0};
+    result.phase_mixing_rates = { {1.0, 2.0, 3.0, 4.0}};
     result.solvent_rates = {8.0, 9.0};
     result.polymer_rates = {10.0, 11.0, 12.0};
     result.brine_rates = {13.0};
@@ -96,6 +98,7 @@ bool PerfData::try_assign(const PerfData& other) {
     this->pressure = other.pressure;
     this->rates = other.rates;
     this->phase_rates = other.phase_rates;
+    this->phase_mixing_rates = other.phase_mixing_rates;
     this->solvent_rates = other.solvent_rates;
     this->polymer_rates = other.polymer_rates;
     this->brine_rates = other.brine_rates;
@@ -114,6 +117,7 @@ bool PerfData::operator==(const PerfData& rhs) const
            this->pressure == rhs.pressure &&
            this->rates == rhs.rates &&
            this->phase_rates == rhs.phase_rates &&
+           this->phase_mixing_rates == rhs.phase_mixing_rates &&
            this->solvent_rates == rhs.solvent_rates &&
            this->polymer_rates == rhs.polymer_rates &&
            this->brine_rates == rhs.brine_rates &&
