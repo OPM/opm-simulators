@@ -411,7 +411,6 @@ BOOST_AUTO_TEST_CASE(TestColoredDiluParallelisms5x5Complex)
 
     coloring = Opm::getMatrixRowColoring(testMatrix, Opm::ColoringType::UPPER);
     correctColor = {{3, 4}, {1, 2}, {0}};
-    coloring.print(std::cout);
 
     for (std::size_t i = 0; i < correctColor.size(); ++i){
         for (std::size_t j = 0; j < correctColor[i].size(); ++j){

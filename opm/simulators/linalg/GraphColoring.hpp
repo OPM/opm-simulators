@@ -252,12 +252,7 @@ getMatrixRowColoring(const M& matrix, ColoringType coloringType)
     std::vector<std::size_t> color(matrix.N(), 0);
     std::vector<std::size_t> rowIndices(matrix.N(), 0);
 
-#ifdef _OPENMP
-#pragma omp parallel for
-#endif
-    for (std::size_t i = 0; i < matrix.N(); i++) {
-        rowIndices[i] = i;
-    }
+    std::iota(rowIndices.begin(), rowIndices.end(), 0);
 
     std::vector<std::size_t> colorCnt;
     // These dynamic programming computations only rely on the following observation:
