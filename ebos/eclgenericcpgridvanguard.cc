@@ -24,6 +24,7 @@
 #include <config.h>
 
 #include <ebos/eclgenericcpgridvanguard.hh>
+#include <ebos/eclcpgridvanguard.hh>
 
 #if HAVE_MPI
 #include <ebos/eclmpiserializer.hh>
@@ -405,7 +406,39 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
     // Inform the aquifer object that we might have removed/deactivated
     // cells as part of minimum pore-volume threshold processing.
     eclState.pruneDeactivatedAquiferConnections(removed_cells);
+
+    // Check if input file contains Lgrs.
+    const auto& lgrs = eclState.getLgrs();
+    const auto lgrsSize = lgrs.size();
+    // If there are lgrs, create the grid with them, and update the leaf grid view.
+    if (lgrsSize)
+    {
+        this->createCpGridWithLgrs(lgrs, lgrsSize);
+    }
 }
+
+template<class ElementMapper, class GridView, class Scalar>
+void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::createCpGridWithLgrs(const LgrCollection& lgrCollection, const int lgrsSize)
+{
+    std::vector<std::array<int,3>> cells_per_dim_vec;
+    std::vector<std::array<int,3>> startIJK_vec;
+    std::vector<std::array<int,3>> endIJK_vec;
+    std::vector<std::string> lgrName_vec;
+    cells_per_dim_vec.reserve(lgrsSize);
+    startIJK_vec.reserve(lgrsSize);
+    endIJK_vec.reserve(lgrsSize);
+    lgrName_vec.reserve(lgrsSize);
+    for (int lgr = 0; lgr < lgrsSize; ++lgr)
+    {
+        const auto lgrCarfin = lgrCollection.getLgr(lgr);
+        cells_per_dim_vec.push_back({lgrCarfin.NX(), lgrCarfin.NY(), lgrCarfin.NZ()});
+        startIJK_vec.push_back({lgrCarfin.I1(), lgrCarfin.J1(), lgrCarfin.K1()});
+        endIJK_vec.push_back({lgrCarfin.I2(), lgrCarfin.J2(), lgrCarfin.K2()});
+        lgrName_vec.emplace_back(lgrCarfin.NAME());
+
+    }
+    this->grid_->addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgrName_vec);
+};
 
 template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doFilterConnections_(Schedule& schedule)
