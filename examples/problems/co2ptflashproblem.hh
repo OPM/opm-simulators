@@ -147,7 +147,7 @@ struct EnableGravity<TypeTag, TTag::CO2PTBaseProblem> { static constexpr bool va
 template <class TypeTag>
 struct Initialpressure<TypeTag, TTag::CO2PTBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e5;
+    static constexpr type value = 75.e5;
 };
 
 template <class TypeTag>
@@ -278,8 +278,6 @@ struct CellsY<TypeTag, TTag::CO2PTBaseProblem> { static constexpr int value = 1;
 template<class TypeTag>
 struct CellsZ<TypeTag, TTag::CO2PTBaseProblem> { static constexpr int value = 1; };
 
-
-// compositional, with diffusion
 template <class TypeTag>
 struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr bool value = false;
@@ -357,7 +355,6 @@ public:
         K_ = this->toDimMatrix_(9.869232667160131e-14);
 
         porosity_ = 0.1;
-    
     }
 
     template <class Context>
@@ -558,9 +555,8 @@ private:
         ComponentVector sat;
         sat[0] = 1.0;
         sat[1] = 1.0 - sat[0];
-        const Scalar temp = 423.25;
 
-        Scalar p0 = 75e5; // CONVERGENCE FAILURE WITH 75
+        Scalar p0 = EWOMS_GET_PARAM(TypeTag, Scalar, Initialpressure);
 
         //\Note, for an AD variable, if we multiply it with 2, the derivative will also be scalced with 2,
         //\Note, so we should not do it.
@@ -587,7 +583,7 @@ private:
         fs.setSaturation(FluidSystem::oilPhaseIdx, sat[0]);
         fs.setSaturation(FluidSystem::gasPhaseIdx, sat[1]);
 
-        fs.setTemperature(temp);
+        fs.setTemperature(temperature_);
 
         // ParameterCache paramCache;
         {

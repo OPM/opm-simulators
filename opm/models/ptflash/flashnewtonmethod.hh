@@ -91,9 +91,12 @@ protected:
         // Pressure updates
         ////
         // limit pressure reference change to 20% of the total value per iteration
+        constexpr Scalar max_percent_change = 0.2;
+        constexpr Scalar upper_bound = 1. + max_percent_change;
+        constexpr Scalar lower_bound = 1. - max_percent_change;
         clampValue_(nextValue[pressure0Idx],
-                    currentValue[pressure0Idx]*0.8,
-                    currentValue[pressure0Idx]*1.2);
+                    currentValue[pressure0Idx] * lower_bound,
+                    currentValue[pressure0Idx] * upper_bound);
 
         ////
         // z updates

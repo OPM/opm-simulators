@@ -284,40 +284,6 @@ public:
         return oss.str();
     }
 
-    /*!
-     * \copydoc FvBaseDiscretization::primaryVarWeight
-     */
-    Scalar primaryVarWeight(unsigned globalDofIdx, unsigned pvIdx) const
-    {
-        Scalar tmp = EnergyModule::primaryVarWeight(*this, globalDofIdx, pvIdx);
-        if (tmp > 0)
-            return tmp;
-
-        unsigned compIdx = pvIdx - Indices::conti0EqIdx;
-
-        // make all kg equal. also, divide the weight of all total
-        // compositions by 100 to make the relative errors more
-        // comparable to the ones of the other models (at 10% porosity
-        // the medium is fully saturated with water at atmospheric
-        // conditions if 100 kg/m^3 are present!)
-        return FluidSystem::molarMass(compIdx) / 100.0;
-    }
-
-    /*!
-     * \copydoc FvBaseDiscretization::eqWeight
-     */
-    Scalar eqWeight(unsigned globalDofIdx, unsigned eqIdx) const
-    {
-        Scalar tmp = EnergyModule::eqWeight(*this, globalDofIdx, eqIdx);
-        if (tmp > 0)
-            return tmp;
-
-        unsigned compIdx = eqIdx - Indices::conti0EqIdx;
-
-        // make all kg equal
-        return FluidSystem::molarMass(compIdx);
-    }
-
     void registerOutputModules_()
     {
         ParentType::registerOutputModules_();

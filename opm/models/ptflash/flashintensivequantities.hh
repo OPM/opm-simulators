@@ -135,7 +135,6 @@ public:
 
         // Get initial K and L from storage initially (if enabled)
         const auto *hint = elemCtx.thermodynamicHint(dofIdx, timeIdx);
-        const auto *hint2 = elemCtx.thermodynamicHint(dofIdx, 1);
         if (hint) {
              for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                  const Evaluation& Ktmp = hint->fluidState().K(compIdx);
@@ -144,7 +143,9 @@ public:
              const Evaluation& Ltmp = hint->fluidState().L();
              fluidState_.setLvalue(Ltmp);
         }
-        else if (hint2) {
+        else if (timeIdx == 0 && elemCtx.thermodynamicHint(dofIdx, 1)) {
+             // checking the storage cache
+             const auto& hint2 = elemCtx.thermodynamicHint(dofIdx, 1);
              for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
                  const Evaluation& Ktmp = hint2->fluidState().K(compIdx);
                  fluidState_.setKvalue(compIdx, Ktmp);
@@ -205,6 +206,7 @@ public:
 
 
         // Update saturation
+        // \Note: the current implementation assume oil-gas system.
         Evaluation L = fluidState_.L();
         Evaluation So = Opm::max((L * Z_L / ( L * Z_L + (1 - L) * Z_V)), 0.0);
         Evaluation Sg = Opm::max(1 - So, 0.0);
