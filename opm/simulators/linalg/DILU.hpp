@@ -90,7 +90,7 @@ public:
 
             for (auto dst_row_it = A_reordered_.createbegin(); dst_row_it != A_reordered_.createend(); ++dst_row_it) {
                 auto src_row = A_.begin() + reordered_to_natural_[dst_row_it.index()];
-                // For eleemnts in A
+                // For elements in A
                 for (auto elem = src_row->begin(); elem != src_row->end(); elem++) {
                     dst_row_it.insert(elem.index());
                 }
