@@ -632,23 +632,9 @@ namespace Opm
         const bool well_operable = this->operability_status_.isOperableAndSolvable();
 
         if (!well_operable && old_well_operable) {
-            if (this->param_.local_well_solver_control_switching_) {
-                deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
-                this->stopWell();
-                changed_to_stopped_this_step_ = true;
-            } else {
-                // \Note: keep the old manner for now for testing checking.
-                // Will be investgiated and fixed in a later PR
-                if (this->well_ecl_.getAutomaticShutIn()) {
-                    deferred_logger.info(" well " + this->name() + " gets SHUT during iteration ");
-                } else {
-                    if (!this->wellIsStopped()) {
-                        deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
-                        this->stopWell();
-                        changed_to_stopped_this_step_ = true;
-                    }
-                }
-            }
+            deferred_logger.info(" well " + this->name() + " gets STOPPED during iteration ");
+            this->stopWell();
+            changed_to_stopped_this_step_ = true;
         } else if (well_operable && !old_well_operable) {
             deferred_logger.info(" well " + this->name() + " gets REVIVED during iteration ");
             this->openWell();
