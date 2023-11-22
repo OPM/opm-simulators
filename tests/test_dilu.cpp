@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUDiagIsCorrect2x2NoZeros, T, NumericTypes)
     // D_11 = A_11 - L_10 D_00_inv U_01
     auto D_11 = A[1][1] - A[1][0] * D_00_inv * A[0][1];
 
-    Dune::SeqDilu<Matrix, Vector, Vector> seqdilu(A);
+    Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
 
     auto Dinv = seqdilu.getDiagonal();
 
@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUDiagIsCorrect2x2, T, NumericTypes)
     // D_11 = A_11 - L_10 D_00_inv U_01 = A_11
     auto D_11 = A[1][1];
 
-    Dune::SeqDilu<Matrix, Vector, Vector> seqdilu(A);
+    Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
 
 
     auto Dinv = seqdilu.getDiagonal();
@@ -258,7 +258,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrectNoZeros, T, NumericTypes)
     Vector new_x = x;
     new_x += z;
     
-    Dune::SeqDilu<Matrix, Vector, Vector> seqdilu(A);
+    Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
     seqdilu.apply(x, b);
 
     for (int i = 0; i < 2; ++i) {
@@ -363,7 +363,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrect1, T, NumericTypes)
     Vector new_x = x;
     new_x += z;
     
-    Dune::SeqDilu<Matrix, Vector, Vector> seqdilu(A);
+    Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
     seqdilu.apply(x, b);
 
     for (int i = 0; i < 2; ++i) {
@@ -462,7 +462,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrect2, T, NumericTypes)
     Vector new_x = x;
     new_x += z;
     
-    Dune::SeqDilu<Matrix, Vector, Vector> seqdilu(A);
+    Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
     seqdilu.apply(x, b);
 
     for (int i = 0; i < 2; ++i) {
@@ -573,7 +573,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUDiagIsCorrect3x3, T, NumericTypes)
     auto D_22_inv = D_22;
     D_22_inv.invert();
 
-    Dune::SeqDilu<Matrix, Vector, Vector> seqdilu(A);
+    Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
     auto Dinv = seqdilu.getDiagonal();
 
     // diagonal stores inverse
@@ -766,7 +766,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsCorrect3, T, NumericTypes)
     Vector new_x = x;
     new_x += z;
     
-    Dune::SeqDilu<Matrix, Vector, Vector> seqdilu(A);
+    Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
     seqdilu.apply(x, b);
 
     for (int i = 0; i < 3; ++i) {
@@ -812,7 +812,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(SeqDILUApplyIsEqualToDuneSeqILUApply, T, NumericTy
     A[1][1][1][1] = -1.0;
 
 
-    Dune::SeqDilu<Matrix, Vector, Vector> seqdilu(A);
+    Dune::MultithreadDILU<Matrix, Vector, Vector> seqdilu(A);
     Dune::SeqILU<Matrix, Vector, Vector> seqilu(A, 1.0);
 
     Vector dilu_x(2);

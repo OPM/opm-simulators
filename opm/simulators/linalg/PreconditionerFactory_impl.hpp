@@ -164,7 +164,7 @@ struct StandardPreconditioners
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
           DUNE_UNUSED_PARAMETER(prm);
-          return wrapBlockPreconditioner<SeqDilu<M, V, V>>(comm, op.getmat());
+          return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
         });
         F::addCreator("Jac", [](const O& op, const P& prm, const std::function<V()>&,
                      std::size_t, const C& comm) {
@@ -204,7 +204,7 @@ struct StandardPreconditioners
               return prec;
             }
             else if (smoother == "DILU") {
-              using SeqSmoother = Dune::SeqDilu<M, V, V>;
+              using SeqSmoother = Dune::MultithreadDILU<M, V, V>;
               using Smoother = Dune::BlockPreconditioner<V, V, C, SeqSmoother>;
               using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
               SmootherArgs sargs;
@@ -350,7 +350,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
-            return std::make_shared<SeqDilu<M, V, V>>(op.getmat());
+            return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat());
         });
         F::addCreator("Jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("repeats", 1);
@@ -385,7 +385,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                     using Smoother = SeqJac<M, V, V>;
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm);
                 } else if (smoother == "DILU") {
-                    using Smoother = SeqDilu<M, V, V>;
+                    using Smoother = MultithreadDILU<M, V, V>;
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm);
                 } else if (smoother == "SOR") {
                     using Smoother = SeqSOR<M, V, V>;
