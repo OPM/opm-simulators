@@ -17,7 +17,6 @@
 #ifndef OPM_DILU_HEADER_INCLUDED
 #define OPM_DILU_HEADER_INCLUDED
 
-#include <config.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
