@@ -29,6 +29,7 @@
 #include <opm/simulators/linalg/GraphColoring.hpp>
 
 #include <cstddef>
+#include <optional>
 #include <vector>
 
 #if HAVE_OPENMP
