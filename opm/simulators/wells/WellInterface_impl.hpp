@@ -1341,12 +1341,7 @@ namespace Opm
         if (this->well_index_[perf] == 0)
             return std::vector<Scalar>(this->num_components_, 0.0);
 
-        double tot_tw = 0.0;
-        for (const auto& c : this->well_ecl_.getConnections()) {
-            tot_tw += c.CF();
-        }
-
-        double d = computeConnectionDFactor(perf, intQuants, trans_mult, tot_tw, ws);
+        double d = computeConnectionDFactor(perf, intQuants, trans_mult, ws);
         const PhaseUsage& pu = this->phaseUsage();
         double Q = std::abs(ws.perf_data.phase_rates[perf*pu.num_phases + pu.phase_pos[Gas]]);
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
@@ -1367,24 +1362,18 @@ namespace Opm
             return;
         }
         auto& perf_data = ws.perf_data;
-        double tot_tw = 0.0;
-        if (wdfac.getType() == WDFACTYPE::CON_DFACTOR || wdfac.getType() == WDFACTYPE::DFACTOR) {
-            for (const auto& c : this->well_ecl_.getConnections()) {
-                tot_tw += c.CF();
-            }
-        }
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
             const double trans_mult = simulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
-            perf_data.connection_d_factor[perf] = computeConnectionDFactor(perf, intQuants, trans_mult, tot_tw, ws);
+            perf_data.connection_d_factor[perf] = computeConnectionDFactor(perf, intQuants, trans_mult, ws);
         }
     }
 
     template <typename TypeTag>
     double 
     WellInterface<TypeTag>::
-    computeConnectionDFactor(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const double total_tw, const SingleWellState& ws) const {
+    computeConnectionDFactor(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const SingleWellState& ws) const {
         const double connection_pressure = ws.perf_data.pressure[perf];
         // viscosity is evaluated at connection pressure
         const auto& rv = getValue(intQuants.fluidState().Rv());
@@ -1395,25 +1384,8 @@ namespace Opm
         double rho = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, this->pvtRegionIdx());
         const double phi = getValue(intQuants.porosity());
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
-        double Kh = connection.Kh()* trans_mult;
-        double Ke = connection.Ke()* trans_mult;
-        double h = Kh / Ke;
-        double rw = connection.rw();
         const auto& wdfac = this->well_ecl_.getWDFAC();
-        if (wdfac.getType() == WDFACTYPE::CON_DFACTOR) {
-            double d =  connection.dFactor();
-            // If a negative d factor is set in COMPDAT individual connection d factors should be used directly.
-            if (d < 0)
-                return -d;
-            // If a positive d factor is set in COMPDAT the connection d factors is treated like a well d factor.
-            // and thus scaled with the connection index
-            return d * total_tw / connection.CF();
-        } else if (wdfac.getType() == WDFACTYPE::DFACTOR) {
-            // scale with the connection index
-            return wdfac.getDFactor(rho, mu, Ke, phi, rw, h) * total_tw / connection.CF();
-        } else { // WDFACCOR
-            return wdfac.getDFactor(rho, mu, Ke, phi, rw, h);
-        }
+        return wdfac.getDFactor(connection, mu, rho, phi, trans_mult);
     }
 
 
