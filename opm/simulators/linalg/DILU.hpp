@@ -66,7 +66,6 @@ public:
     */
     MultithreadDILU(const M& A)
         : A_(A)
-        , A_reordered_(M(A_.N(), A_.N(), A_.nonzeroes(), M::row_wise))
     {
         OPM_TIMEBLOCK(prec_construct);
         // TODO: rewrite so this value is set by an argument to the constructor
@@ -75,6 +74,8 @@ public:
 #endif
 
         if (use_multithreading) {
+            A_reordered_.emplace(A_.N(), A_.N(), A_.nonzeroes(), M::row_wise);
+
             //! Assuming symmetric matrices using a lower triangular coloring to construct
             //! the levels is sufficient
             level_sets_ = Opm::getMatrixRowColoring(A_, Opm::ColoringType::LOWER);
@@ -88,7 +89,7 @@ public:
                 }
             }
 
-            for (auto dst_row_it = A_reordered_.createbegin(); dst_row_it != A_reordered_.createend(); ++dst_row_it) {
+            for (auto dst_row_it = A_reordered_->createbegin(); dst_row_it != A_reordered_->createend(); ++dst_row_it) {
                 auto src_row = A_.begin() + reordered_to_natural_[dst_row_it.index()];
                 // For elements in A
                 for (auto elem = src_row->begin(); elem != src_row->end(); elem++) {
@@ -165,7 +166,7 @@ private:
     const M& A_;
     //! \brief Copy of A_ that is reordered to store rows that can be computed simultaneously next to each other to
     //! increase cache usage when multithreading
-    M A_reordered_;
+    std::optional<M> A_reordered_;
     //! \brief The inverse of the diagnal matrix
     std::vector<typename M::block_type> Dinv_;
     //! \brief SparseTable storing each row by level
@@ -209,10 +210,10 @@ private:
         }
 
         // TODO: is there a better/faster way of copying all values?
-        for (auto dst_row_it = A_reordered_.begin(); dst_row_it != A_reordered_.end(); ++dst_row_it) {
+        for (auto dst_row_it = A_reordered_->begin(); dst_row_it != A_reordered_->end(); ++dst_row_it) {
             auto src_row = A_.begin() + reordered_to_natural_[dst_row_it.index()];
             for (auto elem = src_row->begin(); elem != src_row->end(); elem++) {
-                A_reordered_[dst_row_it.index()][elem.index()] = *elem;
+                (*A_reordered_)[dst_row_it.index()][elem.index()] = *elem;
             }
         }
 
@@ -224,14 +225,14 @@ private:
 #pragma omp parallel for
 #endif
             for (int row_idx_in_level = 0; row_idx_in_level < num_of_rows_in_level; ++row_idx_in_level) {
-                auto row = A_reordered_.begin() + level_start_idx + row_idx_in_level;
+                auto row = A_reordered_->begin() + level_start_idx + row_idx_in_level;
                 const auto row_i = reordered_to_natural_[row.index()];
                 // auto Dinv_temp = Dinv_[row_i];
                 auto Dinv_temp = Dinv_[level_start_idx + row_idx_in_level];
                 for (auto a_ij = row->begin(); a_ij.index() < row_i; ++a_ij) {
                     const auto col_j = natural_to_reorder_[a_ij.index()];
-                    const auto a_ji = A_reordered_[col_j].find(row_i);
-                    if (a_ji != A_reordered_[col_j].end()) {
+                    const auto a_ji = (*A_reordered_)[col_j].find(row_i);
+                    if (a_ji != (*A_reordered_)[col_j].end()) {
                         // Dinv_temp -= A[i, j] * d[j] * A[j, i]
                         Dinv_temp -= (*a_ij) * Dune::FieldMatrix(Dinv_[col_j]) * (*a_ji);
                     }
@@ -310,7 +311,7 @@ private:
 #pragma omp parallel for
 #endif
                 for (int row_idx_in_level = 0; row_idx_in_level < num_of_rows_in_level; ++row_idx_in_level) {
-                    auto row = A_reordered_.begin() + level_start_idx + row_idx_in_level;
+                    auto row = A_reordered_->begin() + level_start_idx + row_idx_in_level;
                     const auto row_i = reordered_to_natural_[row.index()];
                     Yblock rhs = d[row_i];
                     for (auto a_ij = (*row).begin(); a_ij.index() < row_i; ++a_ij) {
@@ -337,7 +338,7 @@ private:
 #pragma omp parallel for
 #endif
                 for (int row_idx_in_level = num_of_rows_in_level - 1; row_idx_in_level >= 0; --row_idx_in_level) {
-                    auto row = A_reordered_.begin() + level_start_idx + row_idx_in_level;
+                    auto row = A_reordered_->begin() + level_start_idx + row_idx_in_level;
                     const auto row_i = reordered_to_natural_[row.index()];
                     Xblock rhs(0.0);
                     for (auto a_ij = (*row).beforeEnd(); a_ij.index() > row_i; --a_ij) {
