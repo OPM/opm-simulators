@@ -518,6 +518,10 @@ namespace Opm
             ws.phase_mixing_rates[ws.dissolved_gas_in_water] += perf_rates.dis_gas_in_water;
             ws.phase_mixing_rates[ws.vaporized_oil] += perf_rates.vap_oil;
             ws.phase_mixing_rates[ws.vaporized_water] += perf_rates.vap_wat;
+            perf_data.phase_mixing_rates[perf][ws.dissolved_gas] = perf_rates.dis_gas;
+            perf_data.phase_mixing_rates[perf][ws.dissolved_gas_in_water] = perf_rates.dis_gas_in_water;
+            perf_data.phase_mixing_rates[perf][ws.vaporized_oil] = perf_rates.vap_oil;
+            perf_data.phase_mixing_rates[perf][ws.vaporized_water] = perf_rates.vap_wat;
         }
 
         if constexpr (has_energy) {

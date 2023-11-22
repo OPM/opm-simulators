@@ -585,6 +585,7 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
     connections.resize(num_perf_well);
     const auto& perf_rates = perf_data.rates;
     const auto& perf_pressure = perf_data.pressure;
+    const auto& perf_mixing_rates = perf_data.phase_mixing_rates;
     for (int i = 0; i < num_perf_well; ++i) {
       const auto active_index = perf_data.cell_index[i];
         auto& connection = connections[ i ];
@@ -593,6 +594,8 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
         connection.reservoir_rate = perf_rates[i];
         connection.trans_factor = perf_data.connection_transmissibility_factor[i];
         connection.d_factor = perf_data.connection_d_factor[i];
+        connection.rates.set(rt::dissolved_gas, perf_mixing_rates[i][ws.dissolved_gas]);
+        connection.rates.set(rt::vaporized_oil, perf_mixing_rates[i][ws.vaporized_oil]);
         if (!ws.producer) {
             const auto& filtrate_data = perf_data.filtrate_data;
             auto& filtrate = connection.filtrate;
@@ -647,7 +650,6 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
             const auto& perf_solvent_rate = perf_data.solvent_rates;
             comp.rates.set( rt::solvent, perf_solvent_rate[local_conn_index] );
         }
-
         ++local_conn_index;
     }
 }

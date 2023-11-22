@@ -25,6 +25,7 @@
 
 #include <cstddef>
 #include <vector>
+#include <array>
 
 namespace Opm {
 
@@ -50,6 +51,7 @@ public:
         serializer(pressure);
         serializer(rates);
         serializer(phase_rates);
+        serializer(phase_mixing_rates);
         serializer(solvent_rates);
         serializer(polymer_rates);
         serializer(brine_rates);
@@ -72,6 +74,7 @@ public:
     std::vector<double> pressure;
     std::vector<double> rates;
     std::vector<double> phase_rates;
+    std::vector<std::array<double,4>> phase_mixing_rates;
     std::vector<double> solvent_rates;
     std::vector<double> polymer_rates;
     std::vector<double> brine_rates;

@@ -1691,6 +1691,8 @@ namespace Opm
                 if (this->isProducer()) {
                     ws.phase_mixing_rates[ws.dissolved_gas] += perfRates.dis_gas;
                     ws.phase_mixing_rates[ws.vaporized_oil] += perfRates.vap_oil;
+                    perf_data.phase_mixing_rates[perf][ws.dissolved_gas] = perfRates.dis_gas;
+                    perf_data.phase_mixing_rates[perf][ws.vaporized_oil] = perfRates.vap_oil;
                 }
 
                 // store the perf pressure and rates
