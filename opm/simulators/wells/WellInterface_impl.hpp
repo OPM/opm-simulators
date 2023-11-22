@@ -1341,11 +1341,11 @@ namespace Opm
         if (this->well_index_[perf] == 0)
             return std::vector<Scalar>(this->num_components_, 0.0);
 
-        double d = computeConnectionDFactor(perf, intQuants, trans_mult, ws);
+        double d = computeConnectionDFactor(perf, intQuants, ws);
         const PhaseUsage& pu = this->phaseUsage();
         double Q = std::abs(ws.perf_data.phase_rates[perf*pu.num_phases + pu.phase_pos[Gas]]);
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
-        double Kh = connection.Kh()* trans_mult;
+        double Kh = connection.Kh();
         double scaling = 3.141592653589 * Kh;
         const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
         wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (Q/2 * d / scaling));
@@ -1365,15 +1365,14 @@ namespace Opm
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-            const double trans_mult = simulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
-            perf_data.connection_d_factor[perf] = computeConnectionDFactor(perf, intQuants, trans_mult, ws);
+            perf_data.connection_d_factor[perf] = computeConnectionDFactor(perf, intQuants, ws);
         }
     }
 
     template <typename TypeTag>
     double 
     WellInterface<TypeTag>::
-    computeConnectionDFactor(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const SingleWellState& ws) const {
+    computeConnectionDFactor(const int perf, const IntensiveQuantities& intQuants, const SingleWellState& ws) const {
         const double connection_pressure = ws.perf_data.pressure[perf];
         // viscosity is evaluated at connection pressure
         const auto& rv = getValue(intQuants.fluidState().Rv());
@@ -1385,7 +1384,7 @@ namespace Opm
         const double phi = getValue(intQuants.porosity());
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
         const auto& wdfac = this->well_ecl_.getWDFAC();
-        return wdfac.getDFactor(connection, mu, rho, phi, trans_mult);
+        return wdfac.getDFactor(connection, mu, rho, phi);
     }
 
 
