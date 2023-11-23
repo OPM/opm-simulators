@@ -1332,7 +1332,7 @@ namespace Opm
         double Q = std::abs(ws.perf_data.phase_rates[perf*pu.num_phases + pu.phase_pos[Gas]]);
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
         double Kh = connection.Kh();
-        double scaling = 3.141592653589 * Kh;
+        double scaling = 3.141592653589 * Kh * connection.wpimult();
         const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
         wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (Q/2 * d / scaling));
         return wi;
