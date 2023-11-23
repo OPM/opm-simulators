@@ -835,7 +835,12 @@ namespace Opm
                 volume_ratio += cmix_s[waterCompIdx] / b_perfcells[waterCompIdx];
             }
 
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            constexpr double epsilon = std::numeric_limits<double>::epsilon();
+            const bool has_oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                                 Opm::abs(cmix_s[Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx)]) > epsilon;
+            const bool has_gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
+                                 Opm::abs(cmix_s[Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)]) > epsilon;
+            if (has_oil && has_gas) {
                 const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
 
@@ -844,11 +849,11 @@ namespace Opm
                 // basically, for injecting perforations, the wellbore is the upstreaming side.
                 const Value d = 1.0 - rv * rs;
 
-                if (getValue(d) == 0.0) {
+                if (getValue(d) <= 0.0) {
                     OPM_DEFLOG_PROBLEM(NumericalProblem,
-                                       fmt::format("Zero d value obtained for well {} "
+                                       fmt::format("Problematic d value {} obtained for well {} "
                                                    "during flux calculation with rs {} and rv {}",
-                                                   this->name(), rs, rv),
+                                                   getValue(d), this->name(), rs, rv),
                                        deferred_logger);
                 }
 
@@ -858,11 +863,11 @@ namespace Opm
                 const Value tmp_gas = (cmix_s[gasCompIdx] - rs * cmix_s[oilCompIdx]) / d;
                 volume_ratio += tmp_gas / b_perfcells[gasCompIdx];
             } else { // not having gas and oil at the same time
-                if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                if (has_oil) {
                     const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                     volume_ratio += cmix_s[oilCompIdx] / b_perfcells[oilCompIdx];
                 }
-                if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                if (has_gas) {
                     const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                     volume_ratio += cmix_s[gasCompIdx] / b_perfcells[gasCompIdx];
                 }
@@ -877,7 +882,12 @@ namespace Opm
 
         // calculating the perforation solution gas rate and solution oil rates
         if (this->isProducer()) {
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+            constexpr double epsilon = std::numeric_limits<double>::epsilon();
+            const bool has_oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                             Opm::abs(cq_s[Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx)]) > epsilon;
+            const bool has_gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
+                             Opm::abs(cq_s[Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)]) > epsilon;
+            if (has_oil && has_gas) {
                 const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
                 // TODO: the formulations here remain to be tested with cases with strong crossflow through production wells
@@ -895,6 +905,9 @@ namespace Opm
                 // dissolved of gas in oil
                 // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
                 perf_rates.dis_gas = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
+            } else {
+                perf_rates.vap_oil = 0.;
+                perf_rates.dis_gas = 0.;
             }
         }
     }

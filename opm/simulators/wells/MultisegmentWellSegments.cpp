@@ -250,7 +250,12 @@ computeFluidProperties(const EvalWell& temperature,
         phase_viscosities_[seg] = visc;
 
         std::vector<EvalWell> mix(mix_s);
-        if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+        constexpr double epsilon = std::numeric_limits<double>::epsilon();
+        const bool has_oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                             Opm::abs(mix_s[Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx)]) > epsilon;
+        const bool has_gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
+                             Opm::abs(mix_s[Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)]) > epsilon;
+        if (has_oil && has_gas) {
             const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
 
@@ -460,7 +465,13 @@ getSurfaceVolume(const EvalWell& temperature,
     }
 
     std::vector<EvalWell> mix(mix_s);
-    if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+    constexpr double epsilon = std::numeric_limits<double>::epsilon();
+    const bool has_oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                         Opm::abs(mix_s[Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx)]) > epsilon;
+    const bool has_gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
+                         Opm::abs(mix_s[Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)]) > epsilon;
+
+    if (has_oil && has_gas) {
         const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
         const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
 
