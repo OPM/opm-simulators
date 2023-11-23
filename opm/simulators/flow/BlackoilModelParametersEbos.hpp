@@ -620,7 +620,7 @@ namespace Opm
             use_average_density_ms_wells_ = EWOMS_GET_PARAM(TypeTag, bool, UseAverageDensityMsWells);
             local_well_solver_control_switching_ = EWOMS_GET_PARAM(TypeTag, bool, LocalWellSolveControlSwitching);
             nonlinear_solver_ = EWOMS_GET_PARAM(TypeTag, std::string, NonlinearSolver);
-            std::string approach = EWOMS_GET_PARAM(TypeTag, std::string, LocalSolveApproach);
+            const auto approach = EWOMS_GET_PARAM(TypeTag, std::string, LocalSolveApproach);
             if (approach == "jacobi") {
                 local_solve_approach_ = DomainSolveApproach::Jacobi;
             } else if (approach == "gauss-seidel") {
@@ -639,17 +639,7 @@ namespace Opm
             deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
             network_max_strict_iterations_ = EWOMS_GET_PARAM(TypeTag, int, NetworkMaxStrictIterations);
             network_max_iterations_ = EWOMS_GET_PARAM(TypeTag, int, NetworkMaxIterations);
-            std::string measure = EWOMS_GET_PARAM(TypeTag, std::string, LocalDomainsOrderingMeasure);
-            if (measure == "residual") {
-                local_domain_ordering_ = DomainOrderingMeasure::Residual;
-            } else if (measure == "maxpressure") {
-                local_domain_ordering_ = DomainOrderingMeasure::MaxPressure;
-            } else if (measure == "averagepressure") {
-                local_domain_ordering_ = DomainOrderingMeasure::AveragePressure;
-            } else {
-                throw std::runtime_error("Invalid domain ordering '" + measure + "' specified.");
-            }
-
+            local_domain_ordering_ = domainOrderingMeasureFromString(EWOMS_GET_PARAM(TypeTag, std::string, LocalDomainsOrderingMeasure));
             write_partitions_ = EWOMS_GET_PARAM(TypeTag, bool, DebugEmitCellPartition);
         }
 
