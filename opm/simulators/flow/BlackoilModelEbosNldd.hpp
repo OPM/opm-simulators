@@ -30,6 +30,7 @@
 
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 
+#include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/partitionCells.hpp>
 #include <opm/simulators/flow/priVarsPacking.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
@@ -894,8 +895,15 @@ private:
             ? this->model_.ebosSimulator().vanguard().schedule().getWellsatEnd()
             : std::vector<Well>{};
 
+        // If defaulted parameter for number of domains, choose a reasonable default.
+        constexpr int default_cells_per_domain = 1000;
+        const int num_cells = Opm::detail::countGlobalCells(grid);
+        const int num_domains = param.num_local_domains_ > 0
+            ? param.num_local_domains_
+            : num_cells / default_cells_per_domain;
+
         return ::Opm::partitionCells(param.local_domain_partition_method_,
-                                     param.num_local_domains_,
+                                     num_domains,
                                      grid.leafGridView(), wells, zoltan_ctrl);
     }
 
