@@ -1438,7 +1438,9 @@ namespace Opm
             well_state_copy.wellRates(this->index_of_well_)[phase]
                     = sign * ws.well_potentials[phase];
         }
-        well_copy.calculateExplicitQuantities(ebosSimulator, well_state_copy, deferred_logger);
+        well_copy.updatePrimaryVariables(summary_state, well_state_copy, deferred_logger);
+        well_copy.initPrimaryVariablesEvaluation();
+        well_copy.computeAccumWell();
 
         const double dt = ebosSimulator.timeStepSize();
         const bool converged = well_copy.iterateWellEqWithControl(ebosSimulator, dt, inj_controls, prod_controls, well_state_copy, group_state, deferred_logger);
