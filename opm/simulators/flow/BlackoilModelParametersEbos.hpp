@@ -402,7 +402,7 @@ struct NonlinearSolver<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct LocalSolveApproach<TypeTag, TTag::FlowModelParameters> {
-    static constexpr auto value = "jacobi";
+    static constexpr auto value = "gauss-seidel";
 };
 template<class TypeTag>
 struct MaxLocalSolveIterations<TypeTag, TTag::FlowModelParameters> {
@@ -416,7 +416,7 @@ struct LocalToleranceScalingMb<TypeTag, TTag::FlowModelParameters> {
 template<class TypeTag>
 struct LocalToleranceScalingCnv<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.01;
+    static constexpr type value = 0.1;
 };
 template<class TypeTag>
 struct NlddNumInitialNewtonIter<TypeTag, TTag::FlowModelParameters> {
