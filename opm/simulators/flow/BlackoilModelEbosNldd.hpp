@@ -696,11 +696,14 @@ private:
         const auto& solution = ebosSimulator.model().solution(0);
 
         std::vector<int> domain_order(domains_.size());
+        std::iota(domain_order.begin(), domain_order.end(), 0);
 
-        switch (model_.param().local_solve_approach_) {
-        case DomainSolveApproach::GaussSeidel: {
+        if (model_.param().local_solve_approach_ == DomainSolveApproach::Jacobi) {
+            // Do nothing, 0..n-1 order is fine.
+            return domain_order;
+        } else if (model_.param().local_solve_approach_ == DomainSolveApproach::GaussSeidel) {
             // Calculate the measure used to order the domains.
-            std::vector<std::pair<double, int>> measure_per_domain(domains_.size());
+            std::vector<double> measure_per_domain(domains_.size());
             switch (model_.param().local_domain_ordering_) {
             case DomainOrderingMeasure::AveragePressure: {
                 // Use average pressures to order domains.
@@ -710,19 +713,18 @@ private:
                         press_sum += solution[c][Indices::pressureSwitchIdx];
                     }
                     const double avgpress = press_sum / domain.cells.size();
-                    measure_per_domain[domain.index] = std::make_pair(avgpress, domain.index);
+                    measure_per_domain[domain.index] = avgpress;
                 }
                 break;
             }
             case DomainOrderingMeasure::MaxPressure: {
                 // Use max pressures to order domains.
-                std::vector<std::pair<double, int>> maxpress_per_domain(domains_.size());
                 for (const auto& domain : domains_) {
                     double maxpress = 0.0;
                     for (const int c : domain.cells) {
                         maxpress = std::max(maxpress, solution[c][Indices::pressureSwitchIdx]);
                     }
-                    measure_per_domain[domain.index] = std::make_pair(maxpress, domain.index);
+                    measure_per_domain[domain.index] = maxpress;
                 }
                 break;
             }
@@ -730,7 +732,6 @@ private:
                 // Use maximum residual to order domains.
                 const auto& residual = ebosSimulator.model().linearizer().residual();
                 const int num_vars = residual[0].size();
-                std::vector<std::pair<double, int>> maxres_per_domain(domains_.size());
                 for (const auto& domain : domains_) {
                     double maxres = 0.0;
                     for (const int c : domain.cells) {
@@ -738,32 +739,20 @@ private:
                             maxres = std::max(maxres, std::fabs(residual[c][ii]));
                         }
                     }
-                    measure_per_domain[domain.index] = std::make_pair(maxres, domain.index);
+                    measure_per_domain[domain.index] = maxres;
                 }
                 break;
             }
             } // end of switch (model_.param().local_domain_ordering_)
 
-
             // Sort by largest measure, keeping index order if equal.
-            std::stable_sort(measure_per_domain.begin(), measure_per_domain.end(),
-                             [](const auto& m1, const auto& m2){ return m1.first > m2.first; });
-
-            // Assign domain order.
-            for (std::size_t ii = 0; ii < domains_.size(); ++ii) {
-                domain_order[ii] = measure_per_domain[ii].second;
-            }
-
-            break;
-        } // end of case DomainSolveApproach::GaussSeidel
-
-        case DomainSolveApproach::Jacobi:
-        default:
-            std::iota(domain_order.begin(), domain_order.end(), 0);
-            break;
+            const auto& m = measure_per_domain;
+            std::stable_sort(domain_order.begin(), domain_order.end(),
+                             [&m](const int i1, const int i2){ return m[i1] > m[i2]; });
+            return domain_order;
+        } else {
+            throw std::logic_error("Domain solve approach must be Jacobi or Gauss-Seidel");
         }
-
-        return domain_order;
     }
 
     template<class GlobalEqVector>
