@@ -22,6 +22,8 @@
 
 #include <opm/grid/common/SubGridPart.hpp>
 
+#include <fmt/format.h>
+
 #include <utility>
 #include <vector>
 
@@ -36,8 +38,22 @@ namespace Opm
     //! \brief Measure to use for domain ordering.
     enum class DomainOrderingMeasure {
         AveragePressure,
+        MaxPressure,
         Residual
     };
+
+    inline DomainOrderingMeasure domainOrderingMeasureFromString(const std::string_view measure)
+    {
+        if (measure == "residual") {
+            return DomainOrderingMeasure::Residual;
+        } else if (measure == "maxpressure") {
+            return DomainOrderingMeasure::MaxPressure;
+        } else if (measure == "averagepressure") {
+            return DomainOrderingMeasure::AveragePressure;
+        } else {
+            throw std::runtime_error(fmt::format("Invalid domain ordering '{}' specified", measure));
+        }
+    }
 
     /// Representing a part of a grid, in a way suitable for performing
     /// local solves.

@@ -30,6 +30,7 @@
 
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 
+#include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/partitionCells.hpp>
 #include <opm/simulators/flow/priVarsPacking.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
@@ -331,7 +332,7 @@ private:
     solveDomain(const Domain& domain,
                 const SimulatorTimerInterface& timer,
                 [[maybe_unused]] const int global_iteration,
-                const bool initial_assembly_required = false)
+                const bool initial_assembly_required)
     {
         auto& ebosSimulator = model_.ebosSimulator();
 
@@ -695,26 +696,35 @@ private:
         const auto& solution = ebosSimulator.model().solution(0);
 
         std::vector<int> domain_order(domains_.size());
-        switch (model_.param().local_solve_approach_) {
-        case DomainSolveApproach::GaussSeidel: {
+        std::iota(domain_order.begin(), domain_order.end(), 0);
+
+        if (model_.param().local_solve_approach_ == DomainSolveApproach::Jacobi) {
+            // Do nothing, 0..n-1 order is fine.
+            return domain_order;
+        } else if (model_.param().local_solve_approach_ == DomainSolveApproach::GaussSeidel) {
+            // Calculate the measure used to order the domains.
+            std::vector<double> measure_per_domain(domains_.size());
             switch (model_.param().local_domain_ordering_) {
             case DomainOrderingMeasure::AveragePressure: {
                 // Use average pressures to order domains.
-                std::vector<std::pair<double, int>> avgpress_per_domain(domains_.size());
                 for (const auto& domain : domains_) {
                     double press_sum = 0.0;
                     for (const int c : domain.cells) {
                         press_sum += solution[c][Indices::pressureSwitchIdx];
                     }
                     const double avgpress = press_sum / domain.cells.size();
-                    avgpress_per_domain[domain.index] = std::make_pair(avgpress, domain.index);
+                    measure_per_domain[domain.index] = avgpress;
                 }
-                // Lexicographical sort by pressure, then index.
-                std::sort(avgpress_per_domain.begin(), avgpress_per_domain.end());
-                // Reverse since we want high-pressure regions solved first.
-                std::reverse(avgpress_per_domain.begin(), avgpress_per_domain.end());
-                for (std::size_t ii = 0; ii < domains_.size(); ++ii) {
-                    domain_order[ii] = avgpress_per_domain[ii].second;
+                break;
+            }
+            case DomainOrderingMeasure::MaxPressure: {
+                // Use max pressures to order domains.
+                for (const auto& domain : domains_) {
+                    double maxpress = 0.0;
+                    for (const int c : domain.cells) {
+                        maxpress = std::max(maxpress, solution[c][Indices::pressureSwitchIdx]);
+                    }
+                    measure_per_domain[domain.index] = maxpress;
                 }
                 break;
             }
@@ -722,7 +732,6 @@ private:
                 // Use maximum residual to order domains.
                 const auto& residual = ebosSimulator.model().linearizer().residual();
                 const int num_vars = residual[0].size();
-                std::vector<std::pair<double, int>> maxres_per_domain(domains_.size());
                 for (const auto& domain : domains_) {
                     double maxres = 0.0;
                     for (const int c : domain.cells) {
@@ -730,28 +739,20 @@ private:
                             maxres = std::max(maxres, std::fabs(residual[c][ii]));
                         }
                     }
-                    maxres_per_domain[domain.index] = std::make_pair(maxres, domain.index);
+                    measure_per_domain[domain.index] = maxres;
                 }
-                // Lexicographical sort by pressure, then index.
-                std::sort(maxres_per_domain.begin(), maxres_per_domain.end());
-                // Reverse since we want high-pressure regions solved first.
-                std::reverse(maxres_per_domain.begin(), maxres_per_domain.end());
-                for (std::size_t ii = 0; ii < domains_.size(); ++ii) {
-                    domain_order[ii] = maxres_per_domain[ii].second;
-                }
+                break;
             }
-            break;
-            }
-            break;
-        }
+            } // end of switch (model_.param().local_domain_ordering_)
 
-        case DomainSolveApproach::Jacobi:
-        default:
-            std::iota(domain_order.begin(), domain_order.end(), 0);
-            break;
+            // Sort by largest measure, keeping index order if equal.
+            const auto& m = measure_per_domain;
+            std::stable_sort(domain_order.begin(), domain_order.end(),
+                             [&m](const int i1, const int i2){ return m[i1] > m[i2]; });
+            return domain_order;
+        } else {
+            throw std::logic_error("Domain solve approach must be Jacobi or Gauss-Seidel");
         }
-
-        return domain_order;
     }
 
     template<class GlobalEqVector>
@@ -764,7 +765,7 @@ private:
     {
         auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
-        auto res = solveDomain(domain, timer, iteration);
+        auto res = solveDomain(domain, timer, iteration, false);
         local_report = res.first;
         if (local_report.converged) {
             auto local_solution = Details::extractVector(solution, domain.cells);
@@ -788,7 +789,7 @@ private:
     {
         auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
-        auto res = solveDomain(domain, timer, iteration);
+        auto res = solveDomain(domain, timer, iteration, true);
         local_report = res.first;
         if (!local_report.converged) {
             // We look at the detailed convergence report to evaluate
@@ -883,8 +884,15 @@ private:
             ? this->model_.ebosSimulator().vanguard().schedule().getWellsatEnd()
             : std::vector<Well>{};
 
+        // If defaulted parameter for number of domains, choose a reasonable default.
+        constexpr int default_cells_per_domain = 1000;
+        const int num_cells = Opm::detail::countGlobalCells(grid);
+        const int num_domains = param.num_local_domains_ > 0
+            ? param.num_local_domains_
+            : num_cells / default_cells_per_domain;
+
         return ::Opm::partitionCells(param.local_domain_partition_method_,
-                                     param.num_local_domains_,
+                                     num_domains,
                                      grid.leafGridView(), wells, zoltan_ctrl);
     }
 
