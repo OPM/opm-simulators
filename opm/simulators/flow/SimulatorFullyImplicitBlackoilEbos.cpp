@@ -76,6 +76,7 @@ void checkSerializedCmdLine(const std::string& current,
                      {
                         return line.compare(0, 11, "EclDeckFile") != 0 &&
                                line.compare(0, 8, "LoadStep") != 0 &&
+                               line.compare(0, 9, "OutputDir") != 0 &&
                                line.compare(0, 8, "SaveFile") != 0 &&
                                line.compare(0, 8, "SaveStep") != 0;
                      });
