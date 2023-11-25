@@ -1932,6 +1932,9 @@ namespace Opm {
 
         // Check individual well constraints and communicate.
         bool changed_well_individual = false;
+        // For MS Wells a linear solve is performed below and the matrix might be singular.
+        // We need to communicate the exception thrown to the others and rethrow.
+        OPM_BEGIN_PARALLEL_TRY_CATCH()
         for (const auto& well : well_container_) {
             const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
             const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
@@ -1939,6 +1942,9 @@ namespace Opm {
                 changed_well_individual = changed_well || changed_well_individual;
             }
         }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel: updating well controls failed: ",
+                                   ebosSimulator_.gridView().comm());
+
         changed_well_individual = comm.sum(static_cast<int>(changed_well_individual));
         if (changed_well_individual) {
             updateAndCommunicate(episodeIdx, iterationIdx, deferred_logger);
