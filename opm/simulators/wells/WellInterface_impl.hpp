@@ -517,12 +517,12 @@ namespace Opm
                 auto rates = well_state.well(this->index_of_well_).surface_rates;
                 this->adaptRatesForVFP(rates);
                 this->updateIPRImplicit(ebos_simulator, well_state, deferred_logger);
-                bool is_stable = WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state, deferred_logger);
+                bool is_stable = WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state);
                 if (!is_stable) {
                     // solution converged to an unstable point! 
                     this->operability_status_.use_vfpexplicit = true;
                     // msg = ...
-                    auto bhp_stable = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state, deferred_logger);
+                    auto bhp_stable = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state);
                     // if we find an intersection with a sufficiently lower bhp, re-solve equations
                     const double reltol = 1e-3;
                     const double cur_bhp = ws.bhp;
@@ -584,7 +584,7 @@ namespace Opm
         this->updateIPRImplicit(ebos_simulator, well_state, deferred_logger);
         auto rates = well_state.well(this->index_of_well_).surface_rates;
         this->adaptRatesForVFP(rates);
-        return WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state, deferred_logger);
+        return WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state);
     } 
 
     template<typename TypeTag>

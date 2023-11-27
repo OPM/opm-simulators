@@ -506,6 +506,9 @@ getMinimumBHPCoordinate(const VFPProdTable& table,
                         const double gfr,
                         const double alq)
 {   
+    // Given fixed thp, wfr, gfr and alq, this function finds the minimum bhp and returns
+    // the corresponding pair (-flo_at_bhp_min, bhp_min). No assumption is taken on the 
+    // shape of the function bhp(flo), so all points in the flo-axis is checked. 
     double flo_at_bhp_min = 0.0; // start by checking flo=0
     auto flo_i = detail::findInterpData(flo_at_bhp_min, table.getFloAxis());
     auto thp_i = detail::findInterpData( thp, table.getTHPAxis());
@@ -515,9 +518,9 @@ getMinimumBHPCoordinate(const VFPProdTable& table,
 
     detail::VFPEvaluation bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
     double bhp_min = bhp_i.value;
-    std::vector<double> flos = table.getFloAxis();
+    const std::vector<double>& flos = table.getFloAxis();
     for (size_t i = 0; i < flos.size(); ++i) {
-        flo_i = detail::findInterpData(flos[i], table.getFloAxis());
+        flo_i = detail::findInterpData(flos[i], flos);
         bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
         if (bhp_i.value < bhp_min){
             bhp_min = bhp_i.value;
@@ -538,6 +541,12 @@ intersectWithIPR(const VFPProdTable& table,
                  const double ipr_b, 
                  const std::function<double(const double)>& adjust_bhp)
 {   
+    // Given fixed thp, wfr, gfr and alq, this function finds a stable (-flo, bhp)-intersection 
+    // between the ipr-line and bhp(flo) if such an intersection exists. For multiple stable 
+    // intersections, the one corresonding the largest flo i returned.
+    // The adjust_bhp-function is used to adjust the vfp-table bhp-values to actual bhp-values due
+    // vfp/well ref-depth differences and/or WVFPDP-related pressure adjustments. 
+
     // NOTE: ipr-line is q=b*bhp - a!
     // ipr is given for negative flo, so
     // flo = -b*bhp + a, i.e., bhp = -(flo-a)/b  

@@ -106,16 +106,14 @@ public:
   bool isStableSolution(const WellState& well_state,
                         const Well& well,
                         const std::vector<double>& rates,
-                        const SummaryState& summaryState,
-                        DeferredLogger& deferred_logger) const;   
+                        const SummaryState& summaryState) const;   
 
   std::optional<double>
   estimateStableBhp (const WellState& well_state,
                     const Well& well,
                     const std::vector<double>& rates,
                     const double rho,
-                    const SummaryState& summaryState,
-                    DeferredLogger& deferred_logger) const;    
+                    const SummaryState& summaryState) const;    
 
   std::pair<double, double>
   getFloIPR(const WellState& well_state,

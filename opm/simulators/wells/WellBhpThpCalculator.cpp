@@ -870,8 +870,7 @@ bool WellBhpThpCalculator::
 isStableSolution(const WellState& well_state,
                  const Well& well,
                  const std::vector<double>& rates,
-                 const SummaryState& summaryState,
-                 DeferredLogger& deferred_logger) const
+                 const SummaryState& summaryState) const
 {
     assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
     assert(well_.isProducer()); // only valid for producers 
@@ -894,8 +893,6 @@ isStableSolution(const WellState& well_state,
 
     detail::VFPEvaluation bhp = detail::bhp(table, aqua, liquid, vapour, thp, well_.getALQ(well_state), wfr, gfr, use_vfpexplicit);
 
-    bhp.value = bhp.value + getVfpBhpAdjustment(bhp.value, thp);
-
     if (bhp.dflo >= 0) {
         return true;
     } else {    // maybe check if ipr is available
@@ -909,8 +906,7 @@ estimateStableBhp(const WellState& well_state,
                   const Well& well,
                   const std::vector<double>& rates,
                   const double rho,
-                  const SummaryState& summaryState,
-                  DeferredLogger& deferred_logger) const
+                  const SummaryState& summaryState) const
 {   
     // Given a *converged* well_state with ipr, estimate bhp of the stable solution 
     const auto& controls = well.productionControls(summaryState);
@@ -929,18 +925,13 @@ estimateStableBhp(const WellState& well_state,
         wfr = detail::getWFR(table, aqua, liquid, vapour);  
         gfr = detail::getGFR(table, aqua, liquid, vapour);   
     }
-    if (wfr <= 0.0 && gfr <= 0.0) {
-        // warning message
-    }
+
     auto ipr = getFloIPR(well_state, well, summaryState);
     
     const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
 
     const double dp_hydro = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, 
                                                                       rho, well_.gravity());
-    if (ipr.first <= 0.0) {
-        // error message
-    }
     auto bhp_adjusted = [this, &thp, &dp_hydro](const double bhp) {
            return bhp - dp_hydro + getVfpBhpAdjustment(bhp, thp);
        };
@@ -958,18 +949,20 @@ getFloIPR(const WellState& well_state,
           const Well& well, 
           const SummaryState& summary_state) const 
 {
-    std::pair<double,double>retval(0.0, 0.0);
+    // Convert ipr_a's and ipr_b's to our particular choice of FLO 
     const auto& controls = well.productionControls(summary_state);
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
     const auto& pu = well_.phaseUsage();
-    const auto& ipr_a= well_state.well(well_.indexOfWell()).implicit_ipr_a;
-    const auto& aqua_a = pu.phase_used[BlackoilPhases::Aqua]? ipr_a[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
-    const auto& liquid_a = pu.phase_used[BlackoilPhases::Liquid]? ipr_a[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;
-    const auto& vapour_a = pu.phase_used[BlackoilPhases::Vapour]? ipr_a[pu.phase_pos[BlackoilPhases::Vapour]]:0.0;
-    const auto& ipr_b= well_state.well(well_.indexOfWell()).implicit_ipr_b;
-    const auto& aqua_b = pu.phase_used[BlackoilPhases::Aqua]? ipr_b[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
-    const auto& liquid_b = pu.phase_used[BlackoilPhases::Liquid]? ipr_b[pu.phase_pos[BlackoilPhases::Liquid]]:0.0;
-    const auto& vapour_b = pu.phase_used[BlackoilPhases::Vapour]? ipr_b[pu.phase_pos[BlackoilPhases::Vapour]]:0.0;
+    const auto& ipr_a = well_state.well(well_.indexOfWell()).implicit_ipr_a;
+    const double& aqua_a = pu.phase_used[BlackoilPhases::Aqua]? ipr_a[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
+    const double& liquid_a = pu.phase_used[BlackoilPhases::Liquid]? ipr_a[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
+    const double& vapour_a = pu.phase_used[BlackoilPhases::Vapour]? ipr_a[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
+    const auto& ipr_b = well_state.well(well_.indexOfWell()).implicit_ipr_b;
+    const double& aqua_b = pu.phase_used[BlackoilPhases::Aqua]? ipr_b[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
+    const double& liquid_b = pu.phase_used[BlackoilPhases::Liquid]? ipr_b[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
+    const double& vapour_b = pu.phase_used[BlackoilPhases::Vapour]? ipr_b[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
+    // The getFlo helper is indended to pick one or add two of the phase rates (depending on FLO-type), 
+    // but we can equally use it to pick/add the corresonding ipr_a, ipr_b  
     return std::make_pair(detail::getFlo(table, aqua_a, liquid_a, vapour_a), 
                           detail::getFlo(table, aqua_b, liquid_b, vapour_b));
 }
