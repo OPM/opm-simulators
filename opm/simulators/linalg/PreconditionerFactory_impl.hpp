@@ -167,6 +167,10 @@ struct StandardPreconditioners
         using M = typename F::Matrix;
         using V = typename F::Vector;
         using P = PropertyTree;
+        // TODO: add DuneILU with correct communicator
+        // F::addCreator("DuneILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        //   return wrapBlockPreconditioner<Dune::Preconditioner::SeqILU<M, V, V>>(comm, op.getmat());
+        // });
         F::addCreator("ILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
           return createParILU(op, prm, comm, 0);
         });
@@ -176,6 +180,12 @@ struct StandardPreconditioners
         F::addCreator("ILUn", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
           return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
         });
+        // F::addCreator("DuneILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        //     const double w = prm.get<double>("relaxation", 1.0);
+        //     const int n = prm.get<int>("ilulevel", 0);
+        //     const bool resort = prm.get<bool>("resort", false);
+        //     return wrapBlockPreconditioner<Dune::SeqILU<M, V, V>>(op.getmat(), n, w, resort);
+        // });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
           DUNE_UNUSED_PARAMETER(prm);
           return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
@@ -359,6 +369,12 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
             const double w = prm.get<double>("relaxation", 1.0);
             return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
                 op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
+        });
+        F::addCreator("DuneILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            const int n = prm.get<int>("ilulevel", 0);
+            const bool resort = prm.get<bool>("resort", false);
+            return wrapPreconditioner<Dune::SeqILU<M, V, V>>(op.getmat(), n, w, resort);
         });
         F::addCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
