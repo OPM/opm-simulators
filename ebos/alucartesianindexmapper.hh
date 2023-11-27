@@ -241,6 +241,15 @@ public:
             throw std::invalid_argument("cartesianCoordinate not implemented for dimension " + std::to_string(dimension));
     }
 
+    /** \brief Only for unifying calls with CartesianIndexMapper<CpGrid> where levels are relevant */
+    void cartesianCoordinateLevel(const int compressedElementIndex, std::array<int, dimension>& coords, int level) const
+    {
+        if (level) {
+            throw std::invalid_argument("Invalid level.\n");
+        }
+        cartesianCoordinate(compressedElementIndex, coords);
+    }
+
     template <class GridView>
     std::unique_ptr<GlobalIndexDataHandle<GridView> > dataHandle(const GridView& gridView)
     {
