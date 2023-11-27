@@ -712,11 +712,13 @@ namespace WellGroupHelpers
         double current_rate = 0.0;
         const auto& pu = well_state.phaseUsage();
         bool injection = true;
+        double sign = 1.0;
         switch (gpm->flow_target()) {
             case GPMaint::FlowTarget::RESV_PROD:
             {
                 current_rate = -group_state.injection_vrep_rate(group.name());
                 injection = false;
+                sign = -1.0;
                 break;
             }
             case GPMaint::FlowTarget::RESV_OINJ:
@@ -768,7 +770,7 @@ namespace WellGroupHelpers
         // (i.e. error > 0) and higher for producers.
         bool activate = (injection && error > 0) || (!injection && error < 0);
         double rate = activate? gpm->rate(gpmaint_state, current_rate, error, dt) : 0.0;
-        group_state.update_gpmaint_target(group.name(), rate);
+        group_state.update_gpmaint_target(group.name(), std::max(0.0, sign * rate));
     }
 
 
