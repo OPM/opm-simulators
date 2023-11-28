@@ -244,6 +244,15 @@ struct StandardPreconditioners
               auto crit = AMGHelper<O,C,M,V>::criterion(prm);
               PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
               return prec;
+            }
+            else if (smoother == "SOR") {
+              using SeqSmoother = SeqSOR<M, V, V>;
+              using Smoother = Dune::BlockPreconditioner<V, V, C, SeqSmoother>;
+              using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
+              SmootherArgs sargs;
+              auto crit = AMGHelper<O,C,M,V>::criterion(prm);
+              PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+              return prec;
             }else {
               OPM_THROW(std::invalid_argument, "Properties: No smoother with name " + smoother + ".");
             }
