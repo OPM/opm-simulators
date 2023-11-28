@@ -180,12 +180,12 @@ struct StandardPreconditioners
         F::addCreator("ILUn", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
           return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
         });
-        // F::addCreator("DuneILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-        //     const double w = prm.get<double>("relaxation", 1.0);
-        //     const int n = prm.get<int>("ilulevel", 0);
-        //     const bool resort = prm.get<bool>("resort", false);
-        //     return wrapBlockPreconditioner<Dune::SeqILU<M, V, V>>(op.getmat(), n, w, resort);
-        // });
+        F::addCreator("DuneILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            const double w = prm.get<double>("relaxation", 1.0);
+            const int n = prm.get<int>("ilulevel", 0);
+            const bool resort = prm.get<bool>("resort", false);
+            return wrapBlockPreconditioner<DummyUpdatePreconditioner<Dune::SeqILU<M, V, V>>>(comm, op.getmat(), n, w, resort);
+        });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
           DUNE_UNUSED_PARAMETER(prm);
           return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
