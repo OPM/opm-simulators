@@ -167,10 +167,6 @@ struct StandardPreconditioners
         using M = typename F::Matrix;
         using V = typename F::Vector;
         using P = PropertyTree;
-        // TODO: add DuneILU with correct communicator
-        // F::addCreator("DuneILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
-        //   return wrapBlockPreconditioner<Dune::Preconditioner::SeqILU<M, V, V>>(comm, op.getmat());
-        // });
         F::addCreator("ILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
           return createParILU(op, prm, comm, 0);
         });
@@ -220,6 +216,7 @@ struct StandardPreconditioners
           F::addCreator("amg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             using PrecPtr = std::shared_ptr<Dune::PreconditionerWithUpdate<V, V>>;
             const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
+            // TODO: merge this with ILUn, and possibly simplify the factory to only work with ILU?
             if (smoother == "ILU0" || smoother == "ParOverILU0") {
               using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
               auto crit = AMGHelper<O,C,M,V>::criterion(prm);
