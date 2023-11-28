@@ -850,7 +850,7 @@ namespace Opm {
             std::string cellIdx;
             {
                 std::array<int, 3> ijk;
-                cartesianIndexMapper.cartesianCoordinate(c, ijk);
+                cartesianIndexMapper.cartesianCoordinateLevel(c, ijk, 0);
                 cellIdx = "(" + std::to_string(ijk[0]) + ", " +
                     std::to_string(ijk[1]) + ", " +
                     std::to_string(ijk[2]) + ")";
