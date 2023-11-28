@@ -235,7 +235,16 @@ struct StandardPreconditioners
               auto crit = AMGHelper<O,C,M,V>::criterion(prm);
               PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
               return prec;
-            } else {
+            }
+            else if (smoother == "GS") {
+              using SeqSmoother = SeqGS<M, V, V>;
+              using Smoother = Dune::BlockPreconditioner<V, V, C, SeqSmoother>;
+              using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
+              SmootherArgs sargs;
+              auto crit = AMGHelper<O,C,M,V>::criterion(prm);
+              PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
+              return prec;
+            }else {
               OPM_THROW(std::invalid_argument, "Properties: No smoother with name " + smoother + ".");
             }
           });
@@ -424,6 +433,9 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                 } else if (smoother == "Jac") {
                     using Smoother = SeqJac<M, V, V>;
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm);
+                } else if (smoother == "GS") {
+                    using Smoother = SeqGS<M, V, V>;
+                    return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm);
                 } else if (smoother == "DILU") {
                     using Smoother = MultithreadDILU<M, V, V>;
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm);
@@ -452,9 +464,9 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                 } else if (smoother == "SOR") {
                     using Smoother = SeqSOR<M, V, V>;
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm, true);
-                    // } else if (smoother == "GS") {
-                    //     using Smoother = SeqGS<M, V, V>;
-                    //     return makeAmgPreconditioner<Smoother>(op, prm, true);
+                } else if (smoother == "GS") {
+                    using Smoother = SeqGS<M, V, V>;
+                    return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm, true);
                 } else if (smoother == "SSOR") {
                     using Smoother = SeqSSOR<M, V, V>;
                     return AMGHelper<O,C,M,V>::template makeAmgPreconditioner<Smoother>(op, prm, true);
