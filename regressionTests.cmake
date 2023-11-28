@@ -499,6 +499,13 @@ add_test_compareECLFiles(CASENAME waghyst2
                          REL_TOL ${rel_tol}
                          DIR waghystr)
 
+add_test_compareECLFiles(CASENAME gpmaint11
+                         FILENAME GPMAINT-11
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR gpmaint)
+
 set(_pinch_cases
   T1A_GAP T1A_NOGAP T1A_NOPINCH
   T1A1_NOGAP
