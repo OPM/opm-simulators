@@ -47,6 +47,8 @@ public:
     using Scalar = typename FluidSystem::Scalar;
     explicit StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices>& well);
 
+    StandardWellConnections(const StandardWellConnections&) = delete;
+
     struct Properties
     {
         std::vector<Scalar> b_perf{};

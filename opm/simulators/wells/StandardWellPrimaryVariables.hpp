@@ -92,6 +92,11 @@ public:
         : well_(well)
     {}
 
+    StandardWellPrimaryVariables(const StandardWellPrimaryVariables&) = delete;
+
+    StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well,
+                                 const StandardWellPrimaryVariables& pv);
+
     //! \brief Initialize evaluations from values.
     void init();
 
