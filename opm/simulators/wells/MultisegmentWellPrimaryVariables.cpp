@@ -403,7 +403,7 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
     // Note: for the ALQ value, in the StandardWell, WellInterfaceGeneric::getALQ(well_state) is used.
     // We might want to unify the way regarding AQL value.
     WellBhpThpCalculator(well_)
-        .updateThp(rho, stop_or_zero_rate_target, [this, summary_state]() { return well_.wellEcl().alq_value(summary_state); },
+        .updateThp(rho, stop_or_zero_rate_target, [this, &summary_state]() { return well_.wellEcl().alq_value(summary_state); },
                    {FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx),
                     FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx),
                     FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)},
