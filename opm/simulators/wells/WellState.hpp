@@ -206,6 +206,12 @@ public:
         this->alq_state.reset_count();
     }
 
+    // If the ALQ has changed since the previous time step,
+    // reset current_alq and update default_alq. ALQ is used for
+    // constant lift gas injection and for gas lift optimization
+    // (THP controlled wells).
+    void updateWellsDefaultALQ(const std::vector<Well>& wells_ecl, const SummaryState& summary_state);
+
     int wellNameToGlobalIdx(const std::string &name) {
         return this->global_well_info.value().well_index(name);
     }
@@ -330,13 +336,6 @@ private:
     reportSegmentResults(const int         well_id,
                          const int         seg_ix,
                          const int         seg_no) const;
-
-    // If the ALQ has changed since the previous report step,
-    // reset current_alq and update default_alq. ALQ is used for
-    // constant lift gas injection and for gas lift optimization
-    // (THP controlled wells).
-
-    void updateWellsDefaultALQ(const std::vector<Well>& wells_ecl, const SummaryState& summary_state);
 
 
     /// Allocate and initialize if wells is non-null.
