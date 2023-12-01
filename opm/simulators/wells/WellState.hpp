@@ -336,7 +336,8 @@ private:
     // constant lift gas injection and for gas lift optimization
     // (THP controlled wells).
 
-    void updateWellsDefaultALQ(const std::vector<Well>& wells_ecl);
+    void updateWellsDefaultALQ(const std::vector<Well>& wells_ecl, const SummaryState& summary_state);
+
 
     /// Allocate and initialize if wells is non-null.
     /// Also tries to give useful initial values to the bhp() and
