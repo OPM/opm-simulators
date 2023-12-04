@@ -91,6 +91,9 @@ public:
     //! \param keyword Name of property
     bool has_double(const std::string& keyword) const override;
 
+    //! \brief Returns a list of registered FIP regions.
+    std::vector<std::string> fip_regions() const override;
+
     //! \brief Resets the underlying cartesian mapper
     //! \detail This has to be the cartesian mapper of the distributed grid.
     //! It will be used to autocreate properties not explicitly stored.

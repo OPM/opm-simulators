@@ -45,9 +45,6 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
-#include <initializer_list>
-#include <iomanip>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -180,8 +177,9 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     const auto& fp = eclState_.fieldProps();
 
     this->regions_["FIPNUM"] = fp.get_int("FIPNUM");
-    for (const auto& region : summaryConfig_.fip_regions())
+    for (const auto& region : fp.fip_regions()) {
         this->regions_[region] = fp.get_int(region);
+    }
 
     this->RPRNodes_  = summaryConfig_.keywords("RPR*");
     this->RPRPNodes_ = summaryConfig_.keywords("RPRP*");
