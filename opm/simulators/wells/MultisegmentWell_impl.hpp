@@ -501,9 +501,19 @@ namespace Opm
 
         // We assemble the well equations, then we check the convergence,
         // which is why we do not put the assembleWellEq here.
-        const BVectorWell dx_well = this->linSys_.solve();
+        try{
+            const BVectorWell dx_well = this->linSys_.solve();
 
-        updateWellState(summary_state, dx_well, well_state, deferred_logger);
+            updateWellState(summary_state, dx_well, well_state, deferred_logger);
+        }
+        catch(const NumericalProblem& exp) {
+            // Add information about the well and log to deferred logger
+            // (Logging done inside of solve() method will only be seen if
+            // this is the process with rank zero)
+            deferred_logger.problem("In MultisegmentWell::solveEqAndUpdateWellState for well "
+                                    + this->name() +": "+exp.what());
+            throw;
+        }
     }
 
 
@@ -1306,7 +1316,18 @@ namespace Opm
 
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
-            const BVectorWell dx_well = this->linSys_.solve();
+            BVectorWell dx_well;
+            try{
+                dx_well = this->linSys_.solve();
+            }
+            catch(const NumericalProblem& exp) {
+                // Add information about the well and log to deferred logger
+                // (Logging done inside of solve() method will only be seen if
+                // this is the process with rank zero)
+                deferred_logger.problem("In MultisegmentWell::iterateWellEqWithControl for well "
+                                        + this->name() +": "+exp.what());
+                throw;
+            }
 
             if (it > this->param_.strict_inner_iter_wells_) {
                 relax_convergence = true;
