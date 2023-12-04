@@ -116,7 +116,7 @@ public:
         double faceArea;
         double thpres;
         double dZg;
-        FaceDir::DirEnum faceDirection;
+        int dirId;
         double Vin;
         double Vex;
         double inAlpha;
@@ -273,10 +273,8 @@ public:
         Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
         Scalar faceArea = scvf.area();
         const auto& materialLawManager = problem.materialLawManager();
-        FaceDir::DirEnum facedir = FaceDir::DirEnum::Unknown; // Use an arbitrary
-        if (materialLawManager->hasDirectionalRelperms()) {
-            facedir = scvf.faceDirFromDirId();
-        }
+
+        const auto dirid = scvf.dirId();
         Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
 
         // estimate the gravity correction: for performance reasons we use a simplified
@@ -302,7 +300,7 @@ public:
         const Scalar diffusivity = problem.diffusivity(globalIndexEx, globalIndexIn);
         const Scalar dispersivity = problem.dispersivity(globalIndexEx, globalIndexIn);
 
-        const ResidualNBInfo res_nbinfo {trans, faceArea, thpres, distZ * g, facedir, Vin, Vex, inAlpha, outAlpha, diffusivity, dispersivity};
+        const ResidualNBInfo res_nbinfo {trans, faceArea, thpres, distZ * g, dirid, Vin, Vex, inAlpha, outAlpha, diffusivity, dispersivity};
 
         calculateFluxes_(flux,
                          darcy,
@@ -328,7 +326,7 @@ public:
         const Scalar thpres = nbInfo.thpres;
         const Scalar trans = nbInfo.trans;
         const Scalar faceArea = nbInfo.faceArea;
-        const FaceDir::DirEnum facedir = nbInfo.faceDirection;
+        FaceDir::DirEnum facedir = faceDirFromDirId(nbInfo.dirId);
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))
@@ -785,6 +783,30 @@ public:
             unsigned activeOilCompIdx = Indices::canonicalToActiveComponentIndex(oilCompIdx);
             container[conti0EqIdx + activeOilCompIdx] *=
                 FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);
+        }
+    }
+
+
+    static FaceDir::DirEnum faceDirFromDirId(const int dirId)
+    {
+        using Dir = FaceDir::DirEnum;
+        // NNC does not have a direction
+        if (dirId < 0 ) {
+            return Dir::Unknown;
+        }
+        switch(dirId) {
+            case 0:
+            case 1:
+                return Dir::XPlus;
+            case 2:
+            case 3:
+                return Dir::YPlus;
+            case 4:
+            case 5:
+                return Dir::ZPlus;
+            default:
+                OPM_THROW(std::runtime_error,
+                            "Unexpected face id" + std::to_string(dirId));
         }
     }
 };

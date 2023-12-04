@@ -459,7 +459,6 @@ private:
                         const Scalar thpres = problem_().thresholdPressure(myIdx, neighborIdx);
                         Scalar inAlpha {0.};
                         Scalar outAlpha {0.};
-                        FaceDirection dirId = FaceDirection::Unknown;
                         Scalar diffusivity {0.};
                         Scalar dispersivity {0.};
                         if constexpr(enableEnergy){
@@ -472,9 +471,7 @@ private:
                         if (simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion()) {
                             dispersivity = problem_().dispersivity(myIdx, neighborIdx);
                         }
-                        if (materialLawManager->hasDirectionalRelperms()) {
-                            dirId = scvf.faceDirFromDirId();
-                        }
+                        auto dirId = scvf.dirId();
                         loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres, dZg, dirId, Vin, Vex, inAlpha, outAlpha, diffusivity, dispersivity}, nullptr};
 
                     }
@@ -583,8 +580,10 @@ private:
             stencil.update(elem);
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
                 unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
-                loc_flinfo.resize(stencil.numDof() - 1);
+                int numFaces = stencil.numBoundaryFaces() + stencil.numInteriorFaces();
+                loc_flinfo.resize(numFaces);
                 loc_vlinfo.resize(stencil.numDof() - 1);
+
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
                     unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
                     if (dofIdx > 0) {
@@ -605,7 +604,15 @@ private:
                         loc_flinfo[dofIdx - 1] = FlowInfo{faceId, flow, nncId};
                         loc_vlinfo[dofIdx - 1] = VelocityInfo{flow};
                     }
+                } 
+
+                for (unsigned bdfIdx = 0; bdfIdx < stencil.numBoundaryFaces(); ++bdfIdx) {
+                    const auto& scvf = stencil.boundaryFace(bdfIdx);
+                    int faceId = scvf.dirId();
+                    loc_flinfo[stencil.numInteriorFaces() + bdfIdx] = FlowInfo{faceId, flow, nncId};
                 }
+
+
                 if (anyFlows) {
                     flowsInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.end());
                 }
@@ -696,12 +703,12 @@ private:
                 }
                 if (enableFlows) {
                     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
-                        flowsInfo_[globI][loc].flow[phaseIdx] = adres[phaseIdx].value();
+                        flowsInfo_[globI][nbInfo.res_nbinfo.dirId].flow[phaseIdx] = adres[phaseIdx].value();
                     }
                 }
                 if (enableFlores) {
                     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
-                        floresInfo_[globI][loc].flow[phaseIdx] = darcyFlux[phaseIdx].value();
+                        floresInfo_[globI][nbInfo.res_nbinfo.dirId].flow[phaseIdx] = darcyFlux[phaseIdx].value();
                     }
                 }
                 setResAndJacobi(res, bMat, adres);
@@ -802,6 +809,23 @@ private:
             residual_[globI] += res;
             ////SparseAdapter syntax: jacobian_->addToBlock(globI, globI, bMat);
             *diagMatAddress_[globI] += bMat;
+
+            if (enableFlows) {
+                for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
+                    if (adres[phaseIdx].value() == 0)
+                        continue;
+
+                    flowsInfo_[globI][bdyInfo.dir].flow[phaseIdx] = adres[phaseIdx].value();
+                }
+            }
+            // if (enableFlores) {
+            //     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
+            //         if (adres[phaseIdx].value() == 0)
+            //             continue;
+
+            //         floresInfo_[globI][bdyInfo.dir].flow[phaseIdx] = adres[phaseIdx].value();
+            //     }
+            // }
         }
     }
 
