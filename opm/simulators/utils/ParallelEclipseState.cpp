@@ -16,6 +16,7 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "opm/input/eclipse/EclipseState/Grid/FieldProps.hpp"
 #include <config.h>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 
@@ -223,6 +224,17 @@ bool ParallelFieldPropsManager::has_double(const std::string& keyword) const
 {
     auto it = m_doubleProps.find(keyword);
     return it != m_doubleProps.end();
+}
+
+std::vector<std::string> ParallelFieldPropsManager::fip_regions() const
+{
+    std::vector<std::string> result;
+    for (const auto& key : m_intProps) {
+        if (Fieldprops::keywords::isFipxxx(key.first)) {
+            result.push_back(key.first);
+        }
+    }
+    return result;
 }
 
 
