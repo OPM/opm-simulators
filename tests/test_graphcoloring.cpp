@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE(TestColoredDiluParallelisms3x3Matrix)
     hence row 1 and 2 should have color 0, row 3 should have color 1
     */
     const int N = 3;
-    const int bz = 3;
+    constexpr int bz = 3;
     const int nonZeroes = 5;
 
     // creating some shorthand typenames
@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(TestColoredDiluParallelisms5x5Simple)
     |   xx|
     */
     const int N = 5;
-    const int bz = 3;
+    constexpr int bz = 3;
     const int nonZeroes = 11;
 
     // creating some shorthand typenames
@@ -246,7 +246,7 @@ BOOST_AUTO_TEST_CASE(TestColoredDiluParallelisms5x5Tridiagonal)
     The tridiagonal structure will force a strictly serial computation stage
     */
     const int N = 5;
-    const int bz = 3;
+    constexpr int bz = 3;
     const int nonZeroes = 13;
 
     // creating some shorthand typenames
@@ -321,7 +321,7 @@ BOOST_AUTO_TEST_CASE(TestColoredDiluParallelisms5x5Complex)
     |x x x|
     */
     const int N = 5;
-    const int bz = 3;
+    constexpr int bz = 3;
     const int nonZeroes = 15;
 
     // creating some shorthand typenames
