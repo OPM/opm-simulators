@@ -64,6 +64,17 @@ SimulatorSerializer::SimulatorSerializer(SerializableSim& simulator,
         saveStep_ = std::atoi(saveSpec.c_str());
     }
 
+#if !HAVE_HDF5
+    if (loadStep_ > -1)  {
+        OPM_THROW(std::runtime_error, "Loading of serialized state requested, "
+                                      "but no HDF5 support available.");
+    }
+    if (saveStep_ > -1)  {
+        OPM_THROW(std::runtime_error, "Saving of serialized state requested, "
+                                      "but no HDF5 support available.");
+    }
+#endif
+
     if (loadFile_.empty() || saveFile_.empty()) {
         if (saveFile_.empty()) saveFile_ = ioconfig.fullBasePath() + ".OPMRST";
         if (loadFile_.empty()) loadFile_ = saveFile_;
@@ -89,9 +100,7 @@ void SimulatorSerializer::save(SimulatorTimer& timer)
     int nextStep = timer.currentStepNum();
     if ((saveStep_ != -1 && nextStep == saveStep_)  ||
         (saveStride_ != 0 && (nextStep % saveStride_) == 0)) {
-#if !HAVE_HDF5
-        OpmLog::error("Saving of serialized state requested, but no HDF5 support available.");
-#else
+#if HAVE_HDF5
         const std::string groupName = "/report_step/" + std::to_string(nextStep);
         if (saveStride_ < 0 || nextStep == saveStride_ || nextStep == saveStep_) {
             std::filesystem::remove(saveFile_);
@@ -120,10 +129,7 @@ void SimulatorSerializer::save(SimulatorTimer& timer)
     //! \brief Load timer info from serialized state.
 void SimulatorSerializer::loadTimerInfo([[maybe_unused]] SimulatorTimer& timer)
 {
-#if !HAVE_HDF5
-    OpmLog::error("Loading of serialized state requested, but no HDF5 support available.");
-    loadStep_ = -1;
-#else
+#if HAVE_HDF5
     OPM_BEGIN_PARALLEL_TRY_CATCH();
 
     HDF5Serializer reader(loadFile_, HDF5File::OpenMode::READ, comm_);
