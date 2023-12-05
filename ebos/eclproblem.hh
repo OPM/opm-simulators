@@ -661,6 +661,10 @@ public:
             aquiferModel_.endTimeStep();
         tracerModel_.endTimeStep();
 
+
+        // Compute flux for output
+        this->model().linearizer().updateFlowsInfo();
+
         // deal with DRSDT and DRVDT
         asImp_().updateCompositionChangeLimits_();
         {
