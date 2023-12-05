@@ -272,8 +272,6 @@ public:
         const auto& globalIndexEx = stencil.globalSpaceIndex(exteriorDofIdx);
         Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
         Scalar faceArea = scvf.area();
-        const auto& materialLawManager = problem.materialLawManager();
-
         const auto dirid = scvf.dirId();
         Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
 
@@ -789,25 +787,11 @@ public:
 
     static FaceDir::DirEnum faceDirFromDirId(const int dirId)
     {
-        using Dir = FaceDir::DirEnum;
         // NNC does not have a direction
         if (dirId < 0 ) {
-            return Dir::Unknown;
+            return FaceDir::DirEnum::Unknown;
         }
-        switch(dirId) {
-            case 0:
-            case 1:
-                return Dir::XPlus;
-            case 2:
-            case 3:
-                return Dir::YPlus;
-            case 4:
-            case 5:
-                return Dir::ZPlus;
-            default:
-                OPM_THROW(std::runtime_error,
-                            "Unexpected face id" + std::to_string(dirId));
-        }
+        return FaceDir::FromIntersectionIndex(dirId);
     }
 };
 

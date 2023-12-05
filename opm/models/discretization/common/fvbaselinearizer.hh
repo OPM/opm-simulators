@@ -311,6 +311,10 @@ public:
         // This linearizer stores no such data.
     }
 
+    void updateFlowsInfo() {
+        // This linearizer stores no such data.
+    }
+
     /*!
      * \brief Returns the map of constraint degrees of freedom.
      *
