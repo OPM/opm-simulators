@@ -41,6 +41,8 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/simulators/flow/countGlobalCells.hpp>
+
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -329,15 +331,16 @@ public:
         }
 
         const auto& gridView = simulator_.vanguard().gridView();
-        const int numElements = gridView.size(/*codim=*/0);
+        const int num_interior = Opm::detail::
+            countLocalInteriorCellsGridView(gridView);
 
         this->eclOutputModule_->
-            allocBuffers(numElements, 0, false, false, /*isRestart*/ false);
+            allocBuffers(num_interior, 0, false, false, /*isRestart*/ false);
 
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (int dofIdx = 0; dofIdx < numElements; ++dofIdx) {
+        for (int dofIdx = 0; dofIdx < num_interior; ++dofIdx) {
             const auto& intQuants = *simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
 
@@ -557,11 +560,12 @@ private:
         }
 
         const auto& gridView = simulator_.vanguard().gridView();
-        const int numElements = gridView.size(/*codim=*/0);
         const bool log = this->collectToIORank_.isIORank();
 
+        const int num_interior = Opm::detail::
+            countLocalInteriorCellsGridView(gridView);
         this->eclOutputModule_->
-            allocBuffers(numElements, reportStepNum,
+            allocBuffers(num_interior, reportStepNum,
                          isSubStep, log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
@@ -570,7 +574,7 @@ private:
 
         {
             OPM_TIMEBLOCK(prepareCellBasedData);
-            for (const auto& elem : elements(gridView)) {
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
@@ -581,7 +585,7 @@ private:
         if constexpr (enableMech) {
             if (simulator_.vanguard().eclState().runspec().mech()) {
                 OPM_TIMEBLOCK(prepareMechData);
-                for (const auto& elem : elements(gridView)) {
+                for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                     elemCtx.updatePrimaryStencil(elem);
                     elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                     eclOutputModule_->processElementMech(elemCtx);
@@ -591,7 +595,7 @@ private:
 
         if (! this->simulator_.model().linearizer().getFlowsInfo().empty()) {
             OPM_TIMEBLOCK(prepareFlowsData);
-            for (const auto& elem : elements(gridView)) {
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
@@ -601,7 +605,7 @@ private:
 
         {
             OPM_TIMEBLOCK(prepareBlockData);
-            for (const auto& elem : elements(gridView)) {
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
@@ -615,7 +619,7 @@ private:
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-            for (int dofIdx = 0; dofIdx < numElements; ++dofIdx) {
+            for (int dofIdx = 0; dofIdx < num_interior; ++dofIdx) {
                 const auto& intQuants = *simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0);
                 const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
 
