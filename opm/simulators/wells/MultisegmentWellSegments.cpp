@@ -637,8 +637,9 @@ pressureDropSpiralICD(const int seg,
     using MathTool = MathToolbox<EvalWell>;
 
     const double density_cali = sicd.densityCalibration();
-    const EvalWell temp_value1 = MathTool::pow(density / density_cali, 0.75);
-    const EvalWell temp_value2 = MathTool::pow(mixture_viscosity / viscosity_cali, 0.25);
+    // make sure we don't pass negative base to powers
+    const EvalWell temp_value1 = density > 0.0 ? MathTool::pow(density / density_cali, 0.75) : 0.0;
+    const EvalWell temp_value2 = mixture_viscosity > 0.0 ? MathTool::pow(mixture_viscosity / viscosity_cali, 0.25) : 0.0;
 
     // formulation before 2016, base_strength is used
     // const double base_strength = sicd.strength() / density_cali;
@@ -735,13 +736,18 @@ pressureDropAutoICD(const int seg,
     }
 
     using MathTool = MathToolbox<EvalWell>;
-    const EvalWell mixture_viscosity = MathTool::pow(water_fraction, aicd.waterViscExponent()) * water_viscosity
-                                     + MathTool::pow(oil_fraction, aicd.oilViscExponent()) * oil_viscosity
-                                     + MathTool::pow(gas_fraction, aicd.gasViscExponent()) * gas_viscosity;
+    // make sure we don't pass negative base to powers
+    auto safe_pow = [](const auto& a, const double b) {
+        return a > 0.0 ? MathTool::pow(a,b) : 0.0;
+    };
 
-    const EvalWell mixture_density = MathTool::pow(water_fraction, aicd.waterDensityExponent()) * water_density
-                                   + MathTool::pow(oil_fraction, aicd.oilDensityExponent()) * oil_density
-                                   + MathTool::pow(gas_fraction, aicd.gasDensityExponent()) * gas_density;
+    const EvalWell mixture_viscosity = safe_pow(water_fraction, aicd.waterViscExponent()) * water_viscosity
+                                     + safe_pow(oil_fraction, aicd.oilViscExponent()) * oil_viscosity
+                                     + safe_pow(gas_fraction, aicd.gasViscExponent()) * gas_viscosity;
+
+    const EvalWell mixture_density = safe_pow(water_fraction, aicd.waterDensityExponent()) * water_density
+                                   + safe_pow(oil_fraction, aicd.oilDensityExponent()) * oil_density
+                                   + safe_pow(gas_fraction, aicd.gasDensityExponent()) * gas_density;
 
     const double rho_reference = aicd.densityCalibration();
     const double visc_reference = aicd.viscosityCalibration();
@@ -753,8 +759,8 @@ pressureDropAutoICD(const int seg,
 
     // TODO: we did not consider the maximum allowed rate here
     const auto result = sign / rho_reference * mixture_density * mixture_density
-                      * MathTool::pow(visc_reference/mixture_viscosity, aicd.viscExponent())
-                      * aicd.strength() * MathTool::pow( -sign * volume_rate_icd, aicd.flowRateExponent())
+                      * safe_pow(visc_reference/mixture_viscosity, aicd.viscExponent())
+                      * aicd.strength() * safe_pow( -sign * volume_rate_icd, aicd.flowRateExponent())
                       * std::pow(unit_volume_rate, (2. - aicd.flowRateExponent())) ;
     return result;
 }
