@@ -51,6 +51,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/Main.cpp
   opm/simulators/flow/NonlinearSolverEbos.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
+  opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/ValidationFunctions.cpp
   opm/simulators/flow/partitionCells.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
@@ -442,6 +443,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/NonlinearSolverEbos.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp
+  opm/simulators/flow/SimulatorSerializer.hpp
   opm/simulators/flow/KeywordValidation.hpp
   opm/simulators/flow/LogOutputHelper.hpp
   opm/simulators/flow/ValidationFunctions.hpp
