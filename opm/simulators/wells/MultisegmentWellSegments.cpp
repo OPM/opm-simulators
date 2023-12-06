@@ -737,7 +737,7 @@ pressureDropAutoICD(const int seg,
 
     using MathTool = MathToolbox<EvalWell>;
     // make sure we don't pass negative base to powers
-    auto safe_pow = [](const auto a, const double b) {
+    auto safe_pow = [](const auto& a, const double b) {
         return a > 0.0 ? MathTool::pow(a,b) : 0.0;
     };
 
