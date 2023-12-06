@@ -374,6 +374,15 @@ public:
     void updateConnectionTransmissibilityFactor(const Simulator& simulator,
                                                 SingleWellState<Scalar>& ws) const;
 
+                                                SingleWellState<double>& ws) const;
+
+    virtual bool iterateWellEqWithSwitching(const Simulator& simulator,
+                                            const double dt,
+                                            const WellInjectionControls& inj_controls,
+                                            const WellProductionControls& prod_controls,
+                                            WellState& well_state,
+                                            const GroupState& group_state,
+                                            DeferredLogger& deferred_logger) = 0;
 protected:
     // simulation parameters
     const ModelParameters& param_;

@@ -1167,8 +1167,7 @@ namespace Opm {
     updateWellControlsAndNetwork(const bool mandatory_network_balance, const double dt, DeferredLogger& local_deferredLogger)
     {
         // PJPE: calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
-        computeWellGroupThp(local_deferredLogger);
-
+        computeWellGroupThp(dt,local_deferredLogger);
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
         bool well_group_control_changed = false;
@@ -1181,6 +1180,7 @@ namespace Opm {
             if (this->terminal_output_ && (network_update_iteration == iteration_to_relax) ) {
                 local_deferredLogger.info(" we begin using relaxed tolerance for network update now after " + std::to_string(iteration_to_relax) + " iterations ");
             }
+           
             const bool relax_network_balance = network_update_iteration >= iteration_to_relax;
             std::tie(do_network_update, well_group_control_changed) =
                     updateWellControlsAndNetworkIteration(mandatory_network_balance, relax_network_balance, dt,local_deferredLogger);
@@ -1256,7 +1256,7 @@ namespace Opm {
     template <typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    computeWellGroupThp(DeferredLogger& local_deferredLogger)
+    computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
     {
         const int reportStepIdx = this->ebosSimulator_.episodeIndex();
         const auto& network = schedule()[reportStepIdx].network();
@@ -1284,61 +1284,111 @@ namespace Opm {
                                                          group.has_gpmaint_control(cmode));
                 double orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
                 //PJPE: TODO: include efficiency factor
+
                 auto mismatch = [&] (auto well_group_thp) {
+                    // auto well_state_copy = this->wellState();
                     double well_group_rate(0.0);
                     for (auto& well : this->well_container_) {
                         std::string well_name = well->name();
                         if (group.hasWell(well_name)) {
                             well->setDynamicThpLimit(well_group_thp);
-                            well->updateWellStateWithTHPTargetProd(this->ebosSimulator_, well_state, local_deferredLogger);
+                            const Well& well_ecl = wells_ecl_[well->indexOfWell()];
+                            const auto inj_controls = Well::InjectionControls(0);
+                            const auto prod_controls = well_ecl.productionControls(summary_state);
+                            well->iterateWellEqWithSwitching(this->ebosSimulator_, dt, inj_controls, prod_controls, well_state, group_state, local_deferredLogger);
+                            // well->updateWellStateWithTHPTargetProd(this->ebosSimulator_, well_state, local_deferredLogger);
                             auto& ws = well_state.well(well_name);
-                            well_group_rate += -tcalc.calcModeRateFromRates(ws.surface_rates);
+                            double rate = -tcalc.calcModeRateFromRates(ws.surface_rates);
+                            std::cout << "well: " << well_name << "rate: " << rate << std::endl;
+                            well_group_rate += rate;
                         }
                     }
+                    // this->wellState() = well_state;
                     return well_group_rate - orig_target;
                 };
 
-                const std::array<double, 2> range {1E5, 150E5}; //PJPE what lower/upper bound to be taken here?
+                const auto upbranch = network.uptree_branch(nodeName);
+                const auto it = node_pressures_.find((*upbranch).uptree_node());
+                const double nodal_pressure = it->second;
+                const std::array<double, 2> range {1.0E5, 150.0E5}; //PJPE what lower/upper bound to be taken here?
                 double low, high;
+        low  = 3527000.0;
+        high = 3576666.7;
+        std::cout << "low: " << low << " high: " << high << std::endl;
+        double low_v = mismatch(low);
+        std::cout << "1: low_value: " << low_v << std::endl;
+        low_v = mismatch(low);
+        high_v = mismatch(high);
+        std::cout << "2: low_value: " << low_v << " high_value: " << high_v << std::endl;
 
-                local_deferredLogger.debug(" Trying the brute force search to bracket the bhp for last attempt ");
+
+                local_deferredLogger.debug(" Trying the brute force search to bracket the common THP ");
                 const bool finding_bracket = WellBhpThpCalculator::bruteForceBracket(mismatch, range, low, high, local_deferredLogger);
-                if (finding_bracket) {
-                    std::cout << "low: " << low << " high: " << high << std::endl;
+                std::cout << "low: " << low << " high: " << high << std::endl;
+                double low_value = mismatch(low);
+                double high_value = mismatch(high);
+                std::cout << "low_value: " << mismatch(low) << " high_value: " << mismatch(high) << std::endl;
+
+                double well_group_thp = 0.0;
+                if ((low_value * high_value >= 0.0)  && (low >= nodal_pressure) ) {
+                    // In case no bracket is found
+                    const double limit = 0.0003; // PJPE what limit to be used?
+                    double abs_low = std::fabs(low_value);
+                    double abs_high = std::fabs(high_value);
+                    if (std::min(abs_low, abs_high) < limit) {
+                        well_group_thp = abs_low < abs_high ? low : high; 
+                        local_deferredLogger.warning("Common THP not solved precisely");
+                    } else {
+                        local_deferredLogger.warning("Common THP solve failed due to bracketing failure");
+                        well_group_thp = nodal_pressure;
+                    }
+                } else if (high <= nodal_pressure) {
+                      local_deferredLogger.warning("Common THP set to nodal pressure");
+                      well_group_thp = nodal_pressure;
                 } else {
-                    local_deferredLogger.warning("Bracketing THP calculation failed");
+                    // PJPE: TODO what settings to take here?
+                    const double tolerance = 1E-4;
+                    const int max_iteration_solve = 20;
+                    int iteration = 0;
+                    well_group_thp = RegulaFalsiBisection<ThrowOnError>::
+                                        solve(mismatch, low, high, max_iteration_solve, tolerance, iteration);
+                    std::cout << "Bracket = [" << low << ", " << high <<"] " << ", iteration = " << iteration << std::endl;
+                    double check = mismatch(well_group_thp);
+                    std::cout << "mismatch = " << check << ", well_group_thp = " << well_group_thp << std::endl;
                 }
 
-                // PJPE: TODO what settings to take here?
-                const double tolerance = 1E-4;
-                const int max_iteration_solve = 100;
-                int iteration = 0;
-                double well_group_thp = RegulaFalsiBisection<ThrowOnError>::
-                solve(mismatch, low, high, max_iteration_solve, tolerance, iteration);
+                // well_group_thp = std::max(well_group_thp, nodal_pressure);
+                std::cout << "well_group_thp = " << well_group_thp << ", nodal_pressure = " << nodal_pressure << std::endl;
 
-                // std::cout << "Bracket = [" << low << ", " << high <<"]" << std::endl;
-                // if (low < 2.5E6){
+                // if (well_group_thp < 2.5E6){
+                //     double min = 24.0E5;
+                //     double max = 34.0E5;
                 //     double pr(0);
                 //     for (int i = 0; i < 1000; ++i){
-                //         pr = (i/10.0 + 1) * 1.0E5 ;
+                //         // pr = (i/10.0 + 1) * 1.0E5 ;
+                //         pr = min + i * (max-min)/1000.0;
                 //         // std::cout << " thp = " << pr[i] << ", mismatch = " << mismatch(pr[i]) << std::endl;
                 //         std::cout <<  pr << ", " << mismatch(pr) << std::endl;
                 //     }
                 //     return;
                 // }
-
                 for (auto& well : this->well_container_) {
-                        std::string well_name = well->name();
-                        if (group.hasWell(well_name)) {
+                    std::string well_name = well->name();
+                    if (group.hasWell(well_name)) {
+                        auto& ws = well_state.well(well_name);
+                        std::cout << "Cmode of Well: " << well_name << " is " <<  ws.production_cmode <<std::endl;
+                        if (ws.production_cmode == Opm::WellProducerCMode::THP){
                             well->setDynamicThpLimit(well_group_thp);
-                            auto& ws = well_state.well(well_name);
                             ws.thp = well_group_thp;
+                            const Well& well_ecl = wells_ecl_[well->indexOfWell()];
+                            const auto inj_controls = Well::InjectionControls(0);
+                            const auto prod_controls = well_ecl.productionControls(summary_state);
+                            // well->updateWellStateWithTHPTargetProd(this->ebosSimulator_, well_state, local_deferredLogger);
+                            well->iterateWellEqWithSwitching(this->ebosSimulator_, dt, inj_controls, prod_controls, well_state, group_state, local_deferredLogger);
                         }
                     }
-
-                double check = mismatch(well_group_thp);
-                std::cout << "mismatch = " << check << ", well_group_thp = " << well_group_thp << ", iteration = " << iteration << std::endl;
-
+                }
+               
                 //PJPE: use the common THP in computeNetworkPressures
                 group_state.update_well_group_thp(nodeName, well_group_thp);
             }

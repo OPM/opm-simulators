@@ -889,6 +889,11 @@ bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
         eq_low = eq_high;
     }
     if (bracket_found) {
+        // std::cout << "BFB: low: " << low << " high: " << high << std::endl;
+        // std::cout << "BFB: low_value: " << eq_low << " high_value: " << eq_high << std::endl;
+        // double low_value = eq(low);
+        // double high_value = eq(high);
+        // std::cout << "CHK: low_value: " << low_value<< " high_value: " << high_value << std::endl;
         deferred_logger.debug(
                 " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
                 " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
