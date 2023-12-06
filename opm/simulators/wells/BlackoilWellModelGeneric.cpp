@@ -1546,6 +1546,7 @@ updateNetworkPressures(const int reportStepIdx, const Scalar damping_factor)
     }
 
     for (auto& well : well_container_generic_) {
+
         // Producers only, since we so far only support the
         // "extended" network model (properties defined by
         // BRANPROP and NODEPROP) which only applies to producers.

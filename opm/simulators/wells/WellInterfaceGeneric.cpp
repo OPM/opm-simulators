@@ -519,6 +519,13 @@ WellInterfaceGeneric<Scalar>::getDynamicThpLimit() const
 }
 
 template<class Scalar>
+void WellInterfaceGeneric::
+setDynamicThpLimit(const std::optional<Scalar> thp_limit)
+{
+    dynamic_thp_limit_ = thp_limit;
+}
+
+template<class Scalar>
 void WellInterfaceGeneric<Scalar>::
 updatePerforatedCell(std::vector<bool>& is_cell_perforated)
 {

@@ -1480,11 +1480,11 @@ namespace Opm
                     }
                     ws.trivial_target = false;
                 } else {
-                        ws.trivial_target = true;
+                    ws.trivial_target = true;
                 }
                     
                 break;
-            }   
+            }
             case Well::ProducerCMode::CMODE_UNDEFINED:
             case Well::ProducerCMode::NONE:
             {

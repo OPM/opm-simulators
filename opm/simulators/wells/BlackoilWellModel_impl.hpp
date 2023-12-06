@@ -55,6 +55,7 @@
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
+
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
 #endif
@@ -1234,9 +1235,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControlsAndNetwork(const bool mandatory_network_balance, const double dt, DeferredLogger& local_deferredLogger)
     {
-        // PJPE: calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
-        computeWellGroupThp(local_deferredLogger);
-
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
         bool well_group_control_changed = false;
@@ -1331,6 +1329,7 @@ namespace Opm {
         const auto& balance = this->schedule()[reportStepIdx].network_balance();
         const Scalar thp_tolerance = balance.thp_tolerance();
 
+
         if (!network.active()) {
             return;
         }
@@ -1346,6 +1345,7 @@ namespace Opm {
                 const auto ctrl = group.productionControls(summary_state);
                 const auto cmode = ctrl.cmode;
                 const auto pu = this->phase_usage_;
+
                 //TODO: Auto choke combined with RESV control is not supported
                 std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
                 Scalar gratTargetFromSales = 0.0;
@@ -1375,6 +1375,31 @@ namespace Opm {
                     }
                     return (group_rate - orig_target)/orig_target;
                 };
+
+                double min_thp, max_thp;
+                std::array<double, 2> range_initial;
+                //Find an initial bracket
+                if (!this->well_group_thp_calc_.has_value()){
+                    // Retrieve the terminal pressure of the associated root of the manifold group
+                    std::string node_name =  nodeName;
+                    while (!network.node(node_name).terminal_pressure().has_value()) {
+                        auto branch = network.uptree_branch(node_name).value();
+                        node_name = branch.uptree_node();
+                    }
+
+                    min_thp = network.node(node_name).terminal_pressure().value();
+                    std::optional<double> approximate_solution0;
+                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp, local_deferredLogger);
+
+                     // Narrow down the bracket
+                    double low1, high1;
+                    std::array<double, 2> range = {0.9*min_thp, 1.1*max_thp};
+                    std::optional<double> appr_sol;
+                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
+                    min_thp = low1;
+                    max_thp = high1;
+                    range_initial = {min_thp, max_thp};
+                }
 
                 const auto upbranch = network.uptree_branch(nodeName);
                 const auto it = this->node_pressures_.find((*upbranch).uptree_node());
@@ -1446,6 +1471,7 @@ namespace Opm {
                 for (auto& well : this->well_container_) {
                     std::string well_name = well->name();
                     if (group.hasWell(well_name)) {
+
                         well->setDynamicThpLimit(well_group_thp);
                     }
                 }
@@ -2686,10 +2712,10 @@ namespace Opm {
                     const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the previous rates";
                     deferred_logger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
                 }
-                // If we're using local well solves that include control switches, they also update
-                // operability, so reset before main iterations begin
-                well->resetWellOperability();
             }
+            // If we're using local well solves that include control switches, they also update
+            // operability, so reset before main iterations begin
+            well->resetWellOperability();
         }
         updatePrimaryVariables(deferred_logger);
 
