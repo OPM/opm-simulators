@@ -2150,10 +2150,16 @@ namespace Opm {
                          DeferredLogger& deferred_logger)
     {
         updateAndCommunicateGroupData(reportStepIdx, iterationIdx);
+
+        // updateWellStateWithTarget might throw for multisegment wells hence we
+        // have a parallel try catch here to thrown on all processes.
+        OPM_BEGIN_PARALLEL_TRY_CATCH()
         // if a well or group change control it affects all wells that are under the same group
         for (const auto& well : well_container_) {
             well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
         }
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAndCommunicate failed: ",
+                                   ebosSimulator_.gridView().comm())
         updateAndCommunicateGroupData(reportStepIdx, iterationIdx);
     }
 
