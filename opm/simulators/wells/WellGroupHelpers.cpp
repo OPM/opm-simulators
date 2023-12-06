@@ -943,7 +943,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                         const auto group_thp = group_state.well_group_thp(node);
                         node_pressures[node] = group_thp >= up_press ? group_thp : up_press;
                     } else {
-                        node_pressures[node] = up_press;
+                            node_pressures[node] = up_press;
                     }
                 }
             }
