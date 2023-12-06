@@ -909,8 +909,16 @@ namespace WellGroupHelpers
                     } else {
                         // Table number specified as 9999 in the deck, no pressure loss.
                         if (network.node(node).as_choke()){
-                        // PJPE: Node pressure is set to the common THP of the wells
-                        node_pressures[node] = group_state.well_group_thp(node);
+                            // PJPE: Node pressure is set to the common THP of the wells
+                            const auto upbranch = network.uptree_branch(node);
+                            assert(upbranch);
+                            const double up_press = node_pressures[(*upbranch).uptree_node()];
+                            const double press = group_state.well_group_thp(node);
+                            if (press >= up_press){
+                                node_pressures[node] = press;
+                            } else {
+                                node_pressures[node] = up_press;
+                            }
                         } else {
                              node_pressures[node] = up_press;
                         }
