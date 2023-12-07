@@ -2392,11 +2392,6 @@ namespace Opm
             solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
             initPrimaryVariablesEvaluation();
 
-            if (status_switch_count > 10) {
-                // constantly changing status, give up (do operability check on the outside)
-                converged = false;
-                break;
-            }
         } while (it < max_iter);
         
         if (converged) {
