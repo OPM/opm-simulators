@@ -200,7 +200,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     enableFlows_ = false;
     enableFlowsn_ = false;
 
-    for (const auto& block : this->schedule_) { // Uses Schedule::begin() and Schedule::end()
+    for (const auto& block : this->schedule_) {
         const auto& rstkw = block.rst_config().keywords;
 
         if (! anyFlores_) {
@@ -226,37 +226,35 @@ EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 
 template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputCumLog(std::size_t reportStepNum, const bool substep, bool forceDisableCumOutput)
+outputCumLog(std::size_t reportStepNum, bool forceDisableCumOutput)
 {
-    if (!substep && !forceDisableCumOutput) {
-        logOutput_.cumulative(reportStepNum,
-                              [this](const std::string& name)
-                              { return this->isDefunctParallelWell(name); });
-    }
+    if (forceDisableCumOutput) { return; }
+
+    logOutput_.cumulative(reportStepNum,
+                          [this](const std::string& name)
+                          { return this->isDefunctParallelWell(name); });
 }
 
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputProdLog(std::size_t reportStepNum,
-              const bool substep,
-              bool forceDisableProdOutput)
+outputProdLog(std::size_t reportStepNum, bool forceDisableProdOutput)
 {
-    if (!substep && !forceDisableProdOutput) {
-        logOutput_.production(reportStepNum,
-                              [this](const std::string& name)
-                              { return this->isDefunctParallelWell(name); });
-    }
+    if (forceDisableProdOutput) { return; }
+
+    logOutput_.production(reportStepNum,
+                          [this](const std::string& name)
+                          { return this->isDefunctParallelWell(name); });
 }
 
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputInjLog(std::size_t reportStepNum, const bool substep, bool forceDisableInjOutput)
+outputInjLog(std::size_t reportStepNum, bool forceDisableInjOutput)
 {
-    if (!substep && !forceDisableInjOutput) {
-        logOutput_.injection(reportStepNum,
-                             [this](const std::string& name)
-                             { return this->isDefunctParallelWell(name); });
-    }
+    if (forceDisableInjOutput) { return; }
+
+    logOutput_.injection(reportStepNum,
+                         [this](const std::string& name)
+                         { return this->isDefunctParallelWell(name); });
 }
 
 template<class FluidSystem,class Scalar>

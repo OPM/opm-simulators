@@ -63,17 +63,14 @@ public:
 
     // write cumulative production and injection reports to output
     void outputCumLog(std::size_t reportStepNum,
-                      const bool substep,
                       bool forceDisableCumOutput);
 
     // write production report to output
     void outputProdLog(std::size_t reportStepNum,
-                       const bool substep,
                        bool forceDisableProdOutput);
 
     // write injection report to output
     void outputInjLog(std::size_t reportStepNum,
-                      const bool substep,
                       bool forceDisableInjOutput);
 
     // write Fluid In Place to output log
