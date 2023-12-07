@@ -318,6 +318,8 @@ public:
             eclOutputModule_->outputProdLog(reportStepNum, forceDisableProdOutput);
             eclOutputModule_->outputInjLog(reportStepNum, forceDisableInjOutput);
             eclOutputModule_->outputCumLog(reportStepNum, forceDisableCumOutput);
+
+            OpmLog::note("");   // Blank line after all reports.
         }
     }
 
