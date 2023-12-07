@@ -248,7 +248,7 @@ protected:
     void prepareForPotentialCalculations(const SummaryState& summary_state,
                                          WellState& well_state, 
                                          Well::InjectionControls& inj_controls,
-                                         Well::ProductionControls& prod_controls);                                  
+                                         Well::ProductionControls& prod_controls) const;
 
     // definition of the struct OperabilityStatus
     struct OperabilityStatus {

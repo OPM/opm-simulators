@@ -748,7 +748,7 @@ void WellInterfaceGeneric::
 prepareForPotentialCalculations(const SummaryState& summary_state,
                                 WellState& well_state, 
                                 Well::InjectionControls& inj_controls,
-                                Well::ProductionControls& prod_controls)
+                                Well::ProductionControls& prod_controls) const
 {
     const bool has_thp = this->wellHasTHPConstraints(summary_state);
     auto& ws = well_state.well(this->index_of_well_);

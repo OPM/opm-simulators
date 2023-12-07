@@ -1312,8 +1312,8 @@ namespace Opm
     {
         // Compute IPR based on *converged* well-equation:
         // For a component rate r the derivative dr/dbhp is obtained by 
-        // dr/dbhp = - (partial r/partial x) * inv(partial Eq/partial x) * (partial Eq/partial control_value)
-        // where Eq(x)=0 is the well equation setup with bhp control and primary varables x 
+        // dr/dbhp = - (partial r/partial x) * inv(partial Eq/partial x) * (partial Eq/partial bhp_target)
+        // where Eq(x)=0 is the well equation setup with bhp control and primary variables x 
 
         // We shouldn't have zero rates at this stage, but check
         bool zero_rates;
@@ -1363,6 +1363,7 @@ namespace Opm
             const EvalWell comp_rate = this->primary_variables_.getQs(comp_idx);
             const int idx = this->ebosCompIdxToFlowCompIdx(comp_idx);
             for (size_t pvIdx = 0; pvIdx < num_eq; ++pvIdx) {
+                // well primary variable derivatives in EvalWell start at position Indices::numEq 
                 ws.implicit_ipr_b[idx] -= x_well[0][pvIdx]*comp_rate.derivative(pvIdx+Indices::numEq);
             }
             ws.implicit_ipr_a[idx] = ws.implicit_ipr_b[idx]*ws.bhp - comp_rate.value();
@@ -1610,7 +1611,9 @@ namespace Opm
         this->regularize_ = false;
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
 
-        // Max status switch frequency should be 2 to avoid getting stuck in cycle
+        // Always take a few (more than one) iterations after a switch before allowing a new switch
+        // The optimal number here is subject to further investigation, but it has been observerved 
+        // that unless this number is >1, we may get stuck in a cycle 
         const int min_its_after_switch = 3;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
@@ -1754,7 +1757,7 @@ namespace Opm
         } else {
             this->wellStatus_ = well_status_orig;
             this->operability_status_ = operability_orig;            
-            const std::string message = fmt::format("   Well {} did not converged in {} inner iterations ("
+            const std::string message = fmt::format("   Well {} did not converge in {} inner iterations ("
                                                     "{} control/status switches).", this->name(), it, switch_count);
             deferred_logger.debug(message);
         }

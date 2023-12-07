@@ -962,7 +962,7 @@ getFloIPR(const WellState& well_state,
     const double& liquid_b = pu.phase_used[BlackoilPhases::Liquid]? ipr_b[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
     const double& vapour_b = pu.phase_used[BlackoilPhases::Vapour]? ipr_b[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
     // The getFlo helper is indended to pick one or add two of the phase rates (depending on FLO-type), 
-    // but we can equally use it to pick/add the corresonding ipr_a, ipr_b  
+    // but we can equally use it to pick/add the corresponding ipr_a, ipr_b  
     return std::make_pair(detail::getFlo(table, aqua_a, liquid_a, vapour_a), 
                           detail::getFlo(table, aqua_b, liquid_b, vapour_b));
 }

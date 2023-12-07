@@ -270,7 +270,7 @@ namespace Opm
     {
         const auto& summary_state = ebos_simulator.vanguard().summaryState();
         const auto& schedule = ebos_simulator.vanguard().schedule();
-        
+
         if (this->wellUnderZeroRateTarget(summary_state, well_state) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
@@ -278,7 +278,6 @@ namespace Opm
         const double sgn = this->isInjector() ? 1.0 : -1.0;
         if (!this->wellIsStopped()){
             if (wqTotal*sgn <= 0.0 && !fixed_status){
-                //std::cout << "Stopping well:" << this->name() << std::endl;
                 this->stopWell();
                 return true;
             } else {
@@ -322,13 +321,10 @@ namespace Opm
                     // if the well can operate, it must at least be able to produce at the lowest bhp of the bhp-curve (explicit fractions)
                     const double bhp_min = WellBhpThpCalculator(*this).calculateMinimumBhpFromThp(well_state, this->well_ecl_, summary_state, this->getRefDensity());
                     prod_limit = std::max(bhp_min, prod_controls.bhp_limit);
-                    //auto prates = well_state.well(this->index_of_well_).prev_surface_rates;
-                    //std::cout << this->name() << ": Min bhp: " << bhp_min << "  prod limit: " << prod_limit << " prev rates: " << prates[0] << " " << prates[1] << " " << prates[2] << std::endl; 
                 }
             }
             const double bhp_diff = (this->isInjector())? inj_limit - bhp: bhp - prod_limit;
             if (bhp_diff > 0){
-                //std::cout << "Re-opening well:" << this->name() << std::endl; 
                 this->openWell();
                 well_state.well(this->index_of_well_).bhp = (this->isInjector())? inj_limit : prod_limit;
                 if (has_thp) {
@@ -357,9 +353,7 @@ namespace Opm
 
         WellState well_state_copy = well_state;
         auto& ws = well_state_copy.well(this->indexOfWell());
-        if (ws.production_cmode == Well::ProducerCMode::GRUP) {
-            ws.production_cmode = Well::ProducerCMode::BHP;
-        }
+
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -367,7 +361,12 @@ namespace Opm
         initPrimaryVariablesEvaluation();
 
         if (this->isProducer()) {
-            gliftBeginTimeStepWellTestUpdateALQ(simulator, well_state_copy, deferred_logger);
+            const auto& schedule = simulator.vanguard().schedule();
+            const auto report_step = simulator.episodeIndex();
+            const auto& glo = schedule.glo(report_step);
+            if (glo.active()) {
+                gliftBeginTimeStepWellTestUpdateALQ(simulator, well_state_copy, deferred_logger);
+            }
         }
 
         WellTestState welltest_state_temp;
@@ -462,7 +461,7 @@ namespace Opm
                     converged = this->iterateWellEqWithSwitching(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
                 }
             }
-                 
+
         } catch (NumericalProblem& e ) {
             const std::string msg = "Inner well iterations failed for well " + this->name() + " Treat the well as unconverged. ";
             deferred_logger.warning("INNER_ITERATION_FAILED", msg);
@@ -512,32 +511,29 @@ namespace Opm
 
         const bool isThp = ws.production_cmode == Well::ProducerCMode::THP;
         // check stability of solution under thp-control
-        if (true) { 
-            if (converged && !this->stopppedOrZeroRateTarget(summary_state, well_state) && isThp) {
-                auto rates = well_state.well(this->index_of_well_).surface_rates;
-                this->adaptRatesForVFP(rates);
-                this->updateIPRImplicit(ebos_simulator, well_state, deferred_logger);
-                bool is_stable = WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state);
-                if (!is_stable) {
-                    // solution converged to an unstable point! 
-                    this->operability_status_.use_vfpexplicit = true;
-                    // msg = ...
-                    auto bhp_stable = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state);
-                    // if we find an intersection with a sufficiently lower bhp, re-solve equations
-                    const double reltol = 1e-3;
-                    const double cur_bhp = ws.bhp;
-                    if (bhp_stable.has_value() && cur_bhp - bhp_stable.value() > cur_bhp*reltol){
-                        const auto msg = fmt::format("isStableSolution: Well {} converged to an unstable solution, re-solving", this->name());
-                        deferred_logger.debug(msg);
-                        solveWellWithBhp(ebos_simulator, dt, bhp_stable.value(), well_state, deferred_logger);
-                        // re-solve with hopefully good initial guess
-                        ws.thp = this->getTHPConstraint(summary_state);
-                        converged = this->iterateWellEqWithSwitching(ebos_simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
-                    }
-                }          
-            }  
+        if (converged && !this->stopppedOrZeroRateTarget(summary_state, well_state) && isThp) {
+            auto rates = well_state.well(this->index_of_well_).surface_rates;
+            this->adaptRatesForVFP(rates);
+            this->updateIPRImplicit(ebos_simulator, well_state, deferred_logger);
+            bool is_stable = WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state);
+            if (!is_stable) {
+                // solution converged to an unstable point! 
+                this->operability_status_.use_vfpexplicit = true;
+                auto bhp_stable = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state);
+                // if we find an intersection with a sufficiently lower bhp, re-solve equations
+                const double reltol = 1e-3;
+                const double cur_bhp = ws.bhp;
+                if (bhp_stable.has_value() && cur_bhp - bhp_stable.value() > cur_bhp*reltol){
+                    const auto msg = fmt::format("Well {} converged to an unstable solution, re-solving", this->name());
+                    deferred_logger.debug(msg);
+                    solveWellWithBhp(ebos_simulator, dt, bhp_stable.value(), well_state, deferred_logger);
+                    // re-solve with hopefully good initial guess
+                    ws.thp = this->getTHPConstraint(summary_state);
+                    converged = this->iterateWellEqWithSwitching(ebos_simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
+                }
+            }
         }
-        
+
         if (!converged) {
             // Well did not converge, switch to explicit fractions
             this->operability_status_.use_vfpexplicit = true;
@@ -900,8 +896,8 @@ namespace Opm
         const auto& schedule = ebos_simulator.vanguard().schedule();
         auto report_step_idx = ebos_simulator.episodeIndex();
         const auto& glo = schedule.glo(report_step_idx);
-        if(glo.has_well(well_name)) {
-            auto increment = glo.gaslift_increment();
+        if(glo.active() && glo.has_well(well_name)) {
+            const auto increment = glo.gaslift_increment();
             auto alq = well_state.getALQ(well_name);
             bool converged;
             while (alq > 0) {
@@ -934,9 +930,8 @@ namespace Opm
             deferred_logger.info(msg);
             return;
         }
-        const auto& well_ecl = this->wellEcl();
         const auto& schedule = ebos_simulator.vanguard().schedule();
-        auto report_step_idx = ebos_simulator.episodeIndex();
+        const auto report_step_idx = ebos_simulator.episodeIndex();
         const auto& glo = schedule.glo(report_step_idx);
         if (!glo.has_well(well_name)) {
             const std::string msg = fmt::format(
@@ -952,6 +947,7 @@ namespace Opm
             max_alq = *max_alq_optional;
         }
         else {
+            const auto& well_ecl = this->wellEcl();
             const auto& controls = well_ecl.productionControls(summary_state);
             const auto& table = this->vfpProperties()->getProd()->getTable(controls.vfp_table_number);
             const auto& alq_values = table.getALQAxis();
@@ -970,7 +966,7 @@ namespace Opm
     updateWellOperability(const Simulator& ebos_simulator,
                           const WellState& well_state,
                           DeferredLogger& deferred_logger)
-    {   
+    {
         if (this->param_.local_well_solver_control_switching_) {
             const bool success = updateWellOperabilityFromWellEq(ebos_simulator, well_state, deferred_logger);
             if (success) {
@@ -1016,7 +1012,7 @@ namespace Opm
         // equations should be converged at this stage, so only one it is needed
         bool converged = iterateWellEquations(ebos_simulator, dt, well_state_copy, group_state, deferred_logger);
         return converged;
-    }                          
+    }
 
     template<typename TypeTag>
     void

@@ -543,7 +543,7 @@ intersectWithIPR(const VFPProdTable& table,
 {   
     // Given fixed thp, wfr, gfr and alq, this function finds a stable (-flo, bhp)-intersection 
     // between the ipr-line and bhp(flo) if such an intersection exists. For multiple stable 
-    // intersections, the one corresonding the largest flo i returned.
+    // intersections, the one corresponding the largest flo is returned.
     // The adjust_bhp-function is used to adjust the vfp-table bhp-values to actual bhp-values due
     // vfp/well ref-depth differences and/or WVFPDP-related pressure adjustments. 
 

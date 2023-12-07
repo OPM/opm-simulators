@@ -841,8 +841,8 @@ namespace Opm
     {   
         // Compute IPR based on *converged* well-equation:
         // For a component rate r the derivative dr/dbhp is obtained by 
-        // dr/dbhp = - (partial r/partial x) * inv(partial Eq/partial x) * (partial Eq/partial control_value)
-        // where Eq(x)=0 is the well equation setup with bhp control and primary varables x 
+        // dr/dbhp = - (partial r/partial x) * inv(partial Eq/partial x) * (partial Eq/partial bhp_target)
+        // where Eq(x)=0 is the well equation setup with bhp control and primary variables x 
 
         // We shouldn't have zero rates at this stage, but check
         bool zero_rates;
@@ -853,7 +853,7 @@ namespace Opm
         }
         auto& ws = well_state.well(this->index_of_well_);
         if (zero_rates) {
-            const auto msg = fmt::format("updateIPRImplicit: Well {} has zero rate, IPRs might be probelmatic", this->name());
+            const auto msg = fmt::format("updateIPRImplicit: Well {} has zero rate, IPRs might be problematic", this->name());
             deferred_logger.debug(msg);
             /*
             // could revert to standard approach here:    
@@ -882,7 +882,7 @@ namespace Opm
         const double dt = ebosSimulator.timeStepSize();
         assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
-        const double nEq = this->primary_variables_.numWellEq();
+        const size_t nEq = this->primary_variables_.numWellEq();
         BVectorWell rhs(1);
         rhs[0].resize(nEq);
         // rhs = 0 except -1 for control eq
@@ -899,6 +899,7 @@ namespace Opm
             EvalWell comp_rate = this->primary_variables_.getQs(comp_idx);
             const int idx = this->ebosCompIdxToFlowCompIdx(comp_idx);
             for (size_t pvIdx = 0; pvIdx < nEq; ++pvIdx) {
+                // well primary variable derivatives in EvalWell start at position Indices::numEq 
                 ws.implicit_ipr_b[idx] -= x_well[0][pvIdx]*comp_rate.derivative(pvIdx+Indices::numEq);
             }
             ws.implicit_ipr_a[idx] = ws.implicit_ipr_b[idx]*ws.bhp - comp_rate.value();
@@ -2321,14 +2322,15 @@ namespace Opm
                                const bool fixed_status /*false*/)
     {
         const int max_iter = this->param_.max_inner_iter_wells_;
-        
         int it = 0;
         bool converged;
         bool relax_convergence = false;
         this->regularize_ = false;
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
 
-        // Max status switch frequency should be 2 to avoid getting stuck in cycle 
+        // Always take a few (more than one) iterations after a switch before allowing a new switch
+        // The optimal number here is subject to further investigation, but it has been observerved 
+        // that unless this number is >1, we may get stuck in a cycle 
         constexpr int min_its_after_switch = 4;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
@@ -2341,7 +2343,7 @@ namespace Opm
         bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
         allow_switching = allow_switching && (!fixed_control || !fixed_status);
         bool changed = false;
-        bool final_check = false; 
+        bool final_check = false;
         // well needs to be set operable or else solving/updating of re-opened wells is skipped
         this->operability_status_.resetOperability();
         this->operability_status_.solvable = true;
@@ -2364,7 +2366,7 @@ namespace Opm
                     final_check = false;
                 }
             }
-  
+
             assembleWellEqWithoutIteration(ebosSimulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
             if (it > this->param_.strict_inner_iter_wells_) {
@@ -2383,7 +2385,7 @@ namespace Opm
                     its_since_last_switch = min_its_after_switch;
                 } else {
                     break;
-                }   
+                }
             }
 
             ++it;
@@ -2411,7 +2413,7 @@ namespace Opm
         } else {
             this->wellStatus_ = well_status_orig;
             this->operability_status_ = operability_orig;
-            const std::string message = fmt::format("   Well {} did not converged in {} inner iterations ("
+            const std::string message = fmt::format("   Well {} did not converge in {} inner iterations ("
                                                     "{} switches, {} status changes).", this->name(), it, switch_count, status_switch_count);
             deferred_logger.debug(message);
             // add operability here as well ?

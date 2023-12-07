@@ -242,7 +242,7 @@ namespace Opm
             const double alq_value,
             DeferredLogger& deferred_logger) const override;
 
-        void updateIPRImplicit(const Simulator& ebosSimulator, WellState& well_state, DeferredLogger& deferred_logger);                
+        void updateIPRImplicit(const Simulator& ebosSimulator, WellState& well_state, DeferredLogger& deferred_logger) override;
 
         virtual void computeWellRatesWithBhp(
             const Simulator& ebosSimulator,
