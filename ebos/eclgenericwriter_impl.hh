@@ -330,18 +330,18 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
             }
 
             if (gc2 - gc1 == 1 && cartDims[0] > 1 ) {
-                tranx.data[gc1] = globalTrans().transmissibility(c1, c2);
+                tranx.data<double>()[gc1] = globalTrans().transmissibility(c1, c2);
                 continue; // skip other if clauses as they are false, last one needs some computation
             }
 
             if (gc2 - gc1 == cartDims[0] && cartDims[1] > 1) {
-                trany.data[gc1] = globalTrans().transmissibility(c1, c2);
+                trany.data<double>()[gc1] = globalTrans().transmissibility(c1, c2);
                 continue; // skipt next if clause as it needs some computation
             }
 
             if ( gc2 - gc1 == cartDims[0]*cartDims[1] ||
                  directVerticalNeighbors(cartDims, cartesianToActive, gc1, gc2))
-                tranz.data[gc1] = globalTrans().transmissibility(c1, c2);
+                tranz.data<double>()[gc1] = globalTrans().transmissibility(c1, c2);
         }
     }
 

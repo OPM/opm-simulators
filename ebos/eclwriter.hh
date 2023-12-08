@@ -487,7 +487,7 @@ public:
             auto& tracer_model = simulator_.problem().tracerModel();
             for (int tracer_index = 0; tracer_index < tracer_model.numTracers(); tracer_index++) {
                 const auto& tracer_name = tracer_model.fname(tracer_index);
-                const auto& tracer_solution = restartValues.solution.data(tracer_name);
+                const auto& tracer_solution = restartValues.solution.template data<double>(tracer_name);
                 for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
                     unsigned globalIdx = this->collectToIORank_.localIdxToGlobalIdx(elemIdx);
                     tracer_model.setTracerConcentration(tracer_index, globalIdx, tracer_solution[globalIdx]);
