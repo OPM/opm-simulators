@@ -278,6 +278,8 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                 // normally there would be two half-transmissibilities that would be
                 // averaged. on the grid boundary there only is the half
                 // transmissibility of the interior element.
+                unsigned insideCartElemIdx = cartMapper_.cartesianIndex(elemIdx);
+                applyMultipliers_(transBoundaryIs, intersection.indexInInside(), insideCartElemIdx, transMult);
                 transBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] = transBoundaryIs;
 
                 // for boundary intersections we also need to compute the thermal
