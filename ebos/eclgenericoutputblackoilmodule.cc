@@ -1204,7 +1204,7 @@ doAllocBuffers(const unsigned bufferSize,
             if (keyValue.second > 0) {
                 std::string logstring = "Keyword '";
                 logstring.append(keyValue.first);
-                logstring.append("' is unhandled for output to file.");
+                logstring.append("' is unhandled for output to restart file.");
                 OpmLog::warning("Unhandled output keyword", logstring);
             }
         }
