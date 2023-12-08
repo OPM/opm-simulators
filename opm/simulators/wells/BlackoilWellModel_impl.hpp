@@ -1516,10 +1516,17 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     assembleWellEqWithoutIteration(const double dt, DeferredLogger& deferred_logger)
     {
+        // We make sure that all processes throw in case there is an exception
+        // on one of them (WetGasPvt::saturationPressure might throw if not converged)
+        OPM_BEGIN_PARALLEL_TRY_CATCH();
+
         for (auto& well: well_container_) {
             well->assembleWellEqWithoutIteration(ebosSimulator_, dt, this->wellState(), this->groupState(),
                                                  deferred_logger);
         }
+        OPM_END_PARALLEL_TRY_CATCH_LOG(deferred_logger, "BlackoilWellModel::assembleWellEqWithoutIteration failed: ",
+                                       terminal_output_, grid().comm());
+
     }
 
 
