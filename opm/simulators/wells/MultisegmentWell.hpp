@@ -132,6 +132,8 @@ namespace Opm
                                                  const WellState& well_state,
                                                  DeferredLogger& deferred_logger) override; // should be const?
 
+        void updateIPRImplicit(const Simulator& ebos_simulator, WellState& well_state, DeferredLogger& deferred_logger);                                                 
+
         virtual void updateProductivityIndex(const Simulator& ebosSimulator,
                                              const WellProdIndexCalculator& wellPICalc,
                                              WellState& well_state,
@@ -246,6 +248,10 @@ namespace Opm
                                  const Simulator& ebos_simulator,
                                  DeferredLogger& deferred_logger) const;
 
+        bool computeWellPotentialsImplicit(const Simulator& ebos_simulator,
+                                           std::vector<double>& well_potentials,
+                                           DeferredLogger& deferred_logger) const;                                      
+
         virtual double getRefDensity() const override;
 
         virtual bool iterateWellEqWithControl(const Simulator& ebosSimulator,
@@ -262,7 +268,9 @@ namespace Opm
                                                 const Well::ProductionControls& prod_controls,
                                                 WellState& well_state,
                                                 const GroupState& group_state,
-                                                DeferredLogger& deferred_logger) override;
+                                                DeferredLogger& deferred_logger, 
+                                                const bool fixed_control = false, 
+                                                const bool fixed_status = false) override;
 
         virtual void assembleWellEqWithoutIteration(const Simulator& ebosSimulator,
                                                     const double dt,

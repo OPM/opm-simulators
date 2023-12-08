@@ -96,6 +96,9 @@ public:
     //! \brief Apply inverted D matrix to residual and return result.
     BVectorWell solve() const;
 
+    //! \brief Apply inverted D matrix to rhs and return result.
+    BVectorWell solve(const BVectorWell& rhs) const;
+
     //! \brief Recover well solution.
     //! \details xw = inv(D)*(rw - C*x)
     void recoverSolutionWell(const BVector& x, BVectorWell& xw) const;

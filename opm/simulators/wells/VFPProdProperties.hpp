@@ -129,7 +129,11 @@ public:
         return m_tables.empty();
     }
 
-
+    /**
+     * Returns minimum bhp for given thp, wfr, gfr and alq 
+     */
+    double minimumBHP(const int table_id, const double thp, 
+                      const double wfr, const double gfr, const double alq) const;
 protected:
     // calculate a group bhp values with a group of flo rate values
     std::vector<double> bhpwithflo(const std::vector<double>& flos,

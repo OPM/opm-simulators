@@ -177,6 +177,11 @@ void StandardWellEquations<Scalar,numEq>::solve(BVectorWell& dx_well) const
     invDuneD_.mv(resWell_, dx_well);
 }
 
+template<class Scalar, int numEq>
+void StandardWellEquations<Scalar,numEq>::solve(const BVectorWell& rhs_well, BVectorWell& x_well) const
+{
+    invDuneD_.mv(rhs_well, x_well);
+}
 
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::

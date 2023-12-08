@@ -85,6 +85,7 @@ protected:
                                          const double tol_wells,
                                          const double relaxed_tolerance_flow,
                                          const bool relax_tolerance,
+                                         const bool well_is_stopped, 
                                          std::vector<double>& res,
                                          DeferredLogger& deferred_logger) const;
 

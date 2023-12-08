@@ -42,6 +42,8 @@ SingleWellState::SingleWellState(const std::string& name_,
     , temperature(temp)
     , well_potentials(pu_.num_phases)
     , productivity_index(pu_.num_phases)
+    , implicit_ipr_a(pu_.num_phases)
+    , implicit_ipr_b(pu_.num_phases)
     , surface_rates(pu_.num_phases)
     , reservoir_rates(pu_.num_phases)
     , prev_surface_rates(pu_.num_phases)
@@ -89,6 +91,8 @@ void SingleWellState::shut() {
     std::fill(this->prev_surface_rates.begin(), this->prev_surface_rates.end(), 0);
     std::fill(this->reservoir_rates.begin(), this->reservoir_rates.end(), 0);
     std::fill(this->productivity_index.begin(), this->productivity_index.end(), 0);
+    std::fill(this->implicit_ipr_a.begin(), this->implicit_ipr_a.end(), 0);
+    std::fill(this->implicit_ipr_b.begin(), this->implicit_ipr_b.end(), 0);
 
     auto& connpi = this->perf_data.prod_index;
     connpi.assign(connpi.size(), 0);
@@ -305,6 +309,8 @@ bool SingleWellState::operator==(const SingleWellState& rhs) const
            this->phase_mixing_rates == rhs.phase_mixing_rates &&
            this->well_potentials == rhs.well_potentials &&
            this->productivity_index == rhs.productivity_index &&
+           this->implicit_ipr_a == rhs.implicit_ipr_a &&
+           this->implicit_ipr_b == rhs.implicit_ipr_b &&
            this->surface_rates == rhs.surface_rates &&
            this->reservoir_rates == rhs.reservoir_rates &&
            this->prev_surface_rates == rhs.prev_surface_rates &&

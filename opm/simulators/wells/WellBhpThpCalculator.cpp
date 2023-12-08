@@ -365,6 +365,7 @@ calculateBhpFromThp(const WellState& well_state,
         const auto& wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
         const auto& gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
         const bool use_vfpexplicit = well_.useVfpExplicit();
+
         bhp_tab = well_.vfpProperties()->getProd()->bhp(controls.vfp_table_number,
                                                       aqua, liquid, vapour,
                                                       thp_limit,
@@ -385,6 +386,32 @@ calculateBhpFromThp(const WellState& well_state,
     const double dp_hydro = wellhelpers::computeHydrostaticCorrection(
             well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
     return bhp_tab - dp_hydro + bhp_adjustment;
+}
+
+double
+WellBhpThpCalculator::
+calculateMinimumBhpFromThp(const WellState& well_state,
+                           const Well& well,
+                           const SummaryState& summaryState,
+                           const double rho) const
+{
+    assert(well_.isProducer()); // only producers can go here for now
+
+    const double thp_limit = well_.getTHPConstraint(summaryState);
+    
+    const auto& controls = well.productionControls(summaryState);
+    const auto& wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
+    const auto& gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
+
+    const double bhp_min = well_.vfpProperties()->getProd()->minimumBHP(controls.vfp_table_number,
+                                                                        thp_limit, wfr, gfr, 
+                                                                        well_.getALQ(well_state));
+ 
+    const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
+    const auto bhp_adjustment = getVfpBhpAdjustment(bhp_min, thp_limit);
+    const double dp_hydro = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, 
+                                                                      rho, well_.gravity());
+    return bhp_min - dp_hydro + bhp_adjustment;
 }
 
 double WellBhpThpCalculator::getVfpBhpAdjustment(const double bhp_tab, const double thp_limit) const
@@ -837,6 +864,107 @@ bruteForceBracket(const std::function<double(const double)>& eq,
                 " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
     }
     return bracket_found;
+}
+
+bool WellBhpThpCalculator::
+isStableSolution(const WellState& well_state,
+                 const Well& well,
+                 const std::vector<double>& rates,
+                 const SummaryState& summaryState) const
+{
+    assert(int(rates.size()) == 3); // the vfp related only supports three phases now.
+    assert(well_.isProducer()); // only valid for producers 
+
+    static constexpr int Gas = BlackoilPhases::Vapour;
+    static constexpr int Oil = BlackoilPhases::Liquid;
+    static constexpr int Water = BlackoilPhases::Aqua;
+
+    const double aqua = rates[Water];
+    const double liquid = rates[Oil];
+    const double vapour = rates[Gas];
+    const double thp = well_.getTHPConstraint(summaryState);
+
+    const auto& controls = well.productionControls(summaryState);
+    const auto& wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
+    const auto& gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
+
+    const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
+    const bool use_vfpexplicit = well_.useVfpExplicit();
+
+    detail::VFPEvaluation bhp = detail::bhp(table, aqua, liquid, vapour, thp, well_.getALQ(well_state), wfr, gfr, use_vfpexplicit);
+
+    if (bhp.dflo >= 0) {
+        return true;
+    } else {    // maybe check if ipr is available
+        const auto ipr = getFloIPR(well_state, well, summaryState);
+        return bhp.dflo + 1/ipr.second >= 0; 
+    }                  
+}
+
+std::optional<double> WellBhpThpCalculator::
+estimateStableBhp(const WellState& well_state,
+                  const Well& well,
+                  const std::vector<double>& rates,
+                  const double rho,
+                  const SummaryState& summaryState) const
+{   
+    // Given a *converged* well_state with ipr, estimate bhp of the stable solution 
+    const auto& controls = well.productionControls(summaryState);
+    const double thp = well_.getTHPConstraint(summaryState);
+    const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
+
+    const double aqua = rates[BlackoilPhases::Aqua];
+    const double liquid = rates[BlackoilPhases::Liquid];
+    const double vapour = rates[BlackoilPhases::Vapour];
+    double flo = detail::getFlo(table, aqua, liquid, vapour);
+    double wfr, gfr;
+    if (well_.useVfpExplicit() || -flo < table.getFloAxis().front()) {
+        wfr =  well_.vfpProperties()->getExplicitWFR(controls.vfp_table_number, well_.indexOfWell());
+        gfr = well_.vfpProperties()->getExplicitGFR(controls.vfp_table_number, well_.indexOfWell());
+    } else {
+        wfr = detail::getWFR(table, aqua, liquid, vapour);  
+        gfr = detail::getGFR(table, aqua, liquid, vapour);   
+    }
+
+    auto ipr = getFloIPR(well_state, well, summaryState);
+    
+    const double vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number).getDatumDepth();
+
+    const double dp_hydro = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, 
+                                                                      rho, well_.gravity());
+    auto bhp_adjusted = [this, &thp, &dp_hydro](const double bhp) {
+           return bhp - dp_hydro + getVfpBhpAdjustment(bhp, thp);
+       };
+    const auto retval = detail::intersectWithIPR(table, thp, wfr, gfr, well_.getALQ(well_state), ipr.first, ipr.second, bhp_adjusted);
+    if (retval.has_value()) {
+        // returned pair is (flo, bhp)
+        return retval.value().second;
+    } else {
+        return std::nullopt;
+    }
+}    
+
+std::pair<double, double> WellBhpThpCalculator::
+getFloIPR(const WellState& well_state,
+          const Well& well, 
+          const SummaryState& summary_state) const 
+{
+    // Convert ipr_a's and ipr_b's to our particular choice of FLO 
+    const auto& controls = well.productionControls(summary_state);
+    const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
+    const auto& pu = well_.phaseUsage();
+    const auto& ipr_a = well_state.well(well_.indexOfWell()).implicit_ipr_a;
+    const double& aqua_a = pu.phase_used[BlackoilPhases::Aqua]? ipr_a[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
+    const double& liquid_a = pu.phase_used[BlackoilPhases::Liquid]? ipr_a[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
+    const double& vapour_a = pu.phase_used[BlackoilPhases::Vapour]? ipr_a[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
+    const auto& ipr_b = well_state.well(well_.indexOfWell()).implicit_ipr_b;
+    const double& aqua_b = pu.phase_used[BlackoilPhases::Aqua]? ipr_b[pu.phase_pos[BlackoilPhases::Aqua]] : 0.0;
+    const double& liquid_b = pu.phase_used[BlackoilPhases::Liquid]? ipr_b[pu.phase_pos[BlackoilPhases::Liquid]] : 0.0;
+    const double& vapour_b = pu.phase_used[BlackoilPhases::Vapour]? ipr_b[pu.phase_pos[BlackoilPhases::Vapour]] : 0.0;
+    // The getFlo helper is indended to pick one or add two of the phase rates (depending on FLO-type), 
+    // but we can equally use it to pick/add the corresponding ipr_a, ipr_b  
+    return std::make_pair(detail::getFlo(table, aqua_a, liquid_a, vapour_a), 
+                          detail::getFlo(table, aqua_b, liquid_b, vapour_b));
 }
 
 #define INSTANCE(...) \

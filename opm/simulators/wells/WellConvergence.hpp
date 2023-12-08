@@ -52,6 +52,7 @@ public:
     void checkConvergenceControlEq(const WellState& well_state,
                                    const Tolerances& tolerances,
                                    const double well_control_residual,
+                                   const bool well_is_stopped, 
                                    ConvergenceReport& report,
                                    DeferredLogger& deferred_logger) const;
 

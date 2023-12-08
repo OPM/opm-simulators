@@ -106,6 +106,7 @@ getWellConvergence(const WellState& well_state,
                    const double tol_wells,
                    const double relaxed_tolerance_flow,
                    const bool relax_tolerance,
+                   const bool well_is_stopped, 
                    std::vector<double>& res,
                    DeferredLogger& deferred_logger) const
 {
@@ -150,12 +151,13 @@ getWellConvergence(const WellState& well_state,
         checkConvergenceControlEq(well_state,
                                   {1.e3, 1.e4, 1.e-4, 1.e-6, maxResidualAllowed},
                                   std::abs(this->linSys_.residual()[0][Bhp]),
+                                  well_is_stopped, 
                                   report,
                                   deferred_logger);
 
     // for stopped well, we do not enforce the following checking to avoid dealing with sign of near-zero values
     // for BHP or THP controlled wells, we need to make sure the flow direction is correct
-    if (!baseif_.wellIsStopped() && baseif_.isPressureControlled(well_state)) {
+    if (!well_is_stopped && baseif_.isPressureControlled(well_state)) {
         // checking the flow direction
         const double sign = baseif_.isProducer() ? -1. : 1.;
         const auto weight_total_flux = this->primary_variables_.value(PrimaryVariables::WQTotal) * sign;
