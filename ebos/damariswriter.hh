@@ -92,7 +92,7 @@ struct DamarisDedicatedNodes {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct DamarisSharedMemeorySizeBytes {
+struct DamarisSharedMemorySizeBytes {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -136,7 +136,9 @@ class DamarisWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::G
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
-    
+    typedef Opm::DamarisOutput::DamarisVar<int> DamarisVarInt ;
+    typedef Opm::DamarisOutput::DamarisVar<double> DamarisVarDbl ;
+
 public:
     static void registerParameters()
     {
@@ -166,7 +168,7 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, int, DamarisDedicatedNodes,
                              "Set the number of dedicated nodes (full nodes) that should be used for Damaris processing (per simulation). \n \
                                                  Must divide evenly into the number of simulation nodes.");
-        EWOMS_REGISTER_PARAM(TypeTag, long, DamarisSharedMemeorySizeBytes,
+        EWOMS_REGISTER_PARAM(TypeTag, long, DamarisSharedMemorySizeBytes,
                              "Set the size of the shared memory buffer used for IPC between the simulation and the Damaris resources. \n \
                                                  Needs to hold all the variables published, possibly over multiple simulation iterations.");
                              
@@ -256,23 +258,23 @@ public:
                 temp_int64_t[0] = static_cast<int64_t>(this->elements_rank_offsets_[rank_]);
                 dam_err_ = damaris_set_position("PRESSURE", temp_int64_t);
                 if (dam_err_ != DAMARIS_OK && rank_ == 0) {
-                    OpmLog::error(fmt::format("ERORR: damariswriter::writeOutput()       : ( rank:{})"
-                                               "damaris_set_position(PRESSURE, ...), Damaris Error: {}  ",
-                                               rank_, damaris_error_string(dam_err_) ));
+                    OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{})"
+                                              "damaris_set_position(PRESSURE, ...), Damaris Error: {}  ",
+                                              rank_, damaris_error_string(dam_err_) ));
                 }
 
                 dam_err_ = damaris_write("PRESSURE", (void*)this->damarisOutputModule_->getPRESSURE_ptr());
                 if (dam_err_ != DAMARIS_OK) {
-                   OpmLog::error(fmt::format("ERORR: damariswriter::writeOutput()       : ( rank:{}) "
-                                               "damaris_write(PRESSURE, ...), Damaris Error: {}  ",
-                                               rank_, damaris_error_string(dam_err_) ));
+                   OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{}) "
+                                             "damaris_write(PRESSURE, ...), Damaris Error: {}  ",
+                                             rank_, damaris_error_string(dam_err_) ));
                 }
 
                 dam_err_ =  damaris_end_iteration();
                 if (dam_err_ != DAMARIS_OK) {
-                    OpmLog::error(fmt::format("ERORR: damariswriter::writeOutput()       : ( rank:{}) "
-                    "damaris_end_iteration(), Damaris Error: {}  ",
-                    rank_, damaris_error_string(dam_err_) ));
+                    OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{}) "
+                                              "damaris_end_iteration(), Damaris Error: {}  ",
+                                              rank_, damaris_error_string(dam_err_) ));
                 }
             }
          } // end of ! isSubstep
@@ -312,18 +314,23 @@ private:
         }
 
         if (dam_err_ != DAMARIS_OK) {
-            OpmLog::error(fmt::format("ERORR: damariswriter::writeOutput()       :"
-                                     "( rank:{}) damaris_write(GLOBAL_CELL_INDEX, ...), Damaris Error: {}  ",  
-                                     rank_, damaris_error_string(dam_err_) ));
+            OpmLog::error(fmt::format("damariswriter::writeOutput()       :"
+                                      "( rank:{}) damaris_write(GLOBAL_CELL_INDEX, ...), Damaris Error: {}  ",  
+                                      rank_, damaris_error_string(dam_err_) ));
         }
 
         // This is an example of writing to the Damaris shared memory directly (i.e. not using damaris_write() to copy data there)
-        // We will add the MPI rank value directly into shared memory using the DamarisVar vrapper C based Damaris API
+        // We will add the MPI rank value directly into shared memory using the DamarisVar wrapper of the C based Damaris API
         // The shared memory is given back to Damaris on object deletion - i.e. when the unique_ptr goes out of scope.
-        std::unique_ptr<Opm::DamarisOutput::DamarisVar<int>>  mpi_rank_var(new Opm::DamarisOutput::DamarisVar<int>(1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)) ; 
-        // N.B. we have not set any offset values, so HDF5 collective nad Dask arrays cannot be used.
+        //auto mpi_rank_var = std::make_unique<Opm::DamarisOutput::DamarisVar<int>>(
+        //    1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)) ; 
+        // std::unique_ptr<Opm::DamarisOutput::DamarisVar<int>>  
+        std::unique_ptr<DamarisVarInt> mpi_rank_var( new DamarisVarInt(1, 
+                                                                       {std::string("n_elements_local")}, 
+                                                                       std::string("MPI_RANK"), rank_) ) ;
+        // N.B. we have not set any offset values, so HDF5 collective and Dask arrays cannot be used.
         mpi_rank_var->SetDamarisParameterAndShmem( {this->numElements_ } ) ;
-        int * shmem_mpi_ptr = mpi_rank_var->data_ptr() ;
+        int* shmem_mpi_ptr = mpi_rank_var->data_ptr() ;
         // Fill the created memory area
         for (int i = 0 ; i < this->numElements_; i++ )
         {
@@ -361,8 +368,8 @@ private:
         // ToDo: Do we need to check that local ranks are 0 based ?
         int temp_int = static_cast<int>(elements_rank_sizes[rank_]);
         dam_err_ = damaris_parameter_set("n_elements_local", &temp_int, sizeof(int));
-        if (dam_err_ != DAMARIS_OK && rank_ == 0) {
-            OpmLog::error("Damaris library produced an error result for "
+        if (dam_err_ != DAMARIS_OK) {
+            OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
                           "damaris_parameter_set(\"n_elements_local\", &temp_int, sizeof(int));");
         }
         // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
@@ -370,13 +377,16 @@ private:
         if( n_elements_global_max <= std::numeric_limits<int>::max() ) {
             temp_int = static_cast<int>(n_elements_global_max);
             dam_err_ = damaris_parameter_set("n_elements_total", &temp_int, sizeof(int));
-            if (dam_err_ != DAMARIS_OK && rank_ == 0) {
-                OpmLog::error("Damaris library produced an error result for "
+            if (dam_err_ != DAMARIS_OK) {
+                OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
                               "damaris_parameter_set(\"n_elements_total\", &temp_int, sizeof(int));");
             }
         } else {
-            OpmLog::error(fmt::format("The size of the global array ({}) is greater than what a Damaris paramater type supports ({}).  ", n_elements_global_max, std::numeric_limits<int>::max() ));
-            assert( n_elements_global_max <= std::numeric_limits<int>::max() ) ;
+            OpmLog::error(fmt::format("( rank:{} ) The size of the global array ({}) is"
+                                      "greater than what a Damaris paramater type supports ({}).  ", 
+                                      rank_, n_elements_global_max, std::numeric_limits<int>::max() ));
+            // assert( n_elements_global_max <= std::numeric_limits<int>::max() ) ;
+            OPM_THROW(std::runtime_error, "setupDamarisWritingPars() n_elements_global_max > std::numeric_limits<int>::max() " + std::to_string(dam_err_));
         }
 
         // Use damaris_set_position to set the offset in the global size of the array.
@@ -384,17 +394,24 @@ private:
         int64_t temp_int64_t[1];
         temp_int64_t[0] = static_cast<int64_t>(elements_rank_offsets[rank_]);
         dam_err_ = damaris_set_position("PRESSURE", temp_int64_t);
-        if (dam_err_ != DAMARIS_OK && rank_ == 0) {
-            OpmLog::error("Damaris library produced an error result for "
+        if (dam_err_ != DAMARIS_OK) {
+            OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
                           "damaris_set_position(\"PRESSURE\", temp_int64_t);");
         }
         dam_err_ = damaris_set_position("GLOBAL_CELL_INDEX", temp_int64_t);
-        if (dam_err_ != DAMARIS_OK && rank_ == 0) {
-            OpmLog::error("Damaris library produced an error result for "
+        if (dam_err_ != DAMARIS_OK) {
+            OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
                           "damaris_set_position(\"GLOBAL_CELL_INDEX\", temp_int64_t);");
         }
 
-        std::unique_ptr<Opm::DamarisOutput::DamarisVar<int>>  mpi_rank_var(new Opm::DamarisOutput::DamarisVar<int>(1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)) ;
+        //auto mpi_rank_var = std::make_unique<Opm::DamarisOutput::DamarisVar<int>>(
+        //    1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)) ; 
+            
+        // std::unique_ptr<Opm::DamarisOutput::DamarisVar<int>>  
+        // mpi_rank_var(new Opm::DamarisOutput::DamarisVar<int>(1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)) ;
+        std::unique_ptr<DamarisVarInt> mpi_rank_var( new DamarisVarInt(1, 
+                                                                       {std::string("n_elements_local")}, 
+                                                                       std::string("MPI_RANK"), rank_) ) ;
         mpi_rank_var->SetDamarisPosition({*temp_int64_t}) ;
 
     }
@@ -455,9 +472,9 @@ private:
             // </group>
 
             std::unique_ptr<Opm::DamarisOutput::DamarisVar<int>>  var_connectivity(new Opm::DamarisOutput::DamarisVar<int>(1, {std::string("n_connectivity_ph")}, std::string("topologies/topo/elements/connectivity"), rank_)) ;
-            var_connectivity->SetDamarisParameterAndShmem( { geomData.getNCorners() } ) ;
+            var_connectivity->SetDamarisParameterAndShmem({ geomData.getNCorners()}) ;
             std::unique_ptr<Opm::DamarisOutput::DamarisVar<int>>  var_offsets(new Opm::DamarisOutput::DamarisVar<int>(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/offsets"), rank_)) ;
-            var_offsets->SetDamarisParameterAndShmem( { geomData.getNCells() } ) ;
+            var_offsets->SetDamarisParameterAndShmem({ geomData.getNCells()}) ;
             std::unique_ptr<Opm::DamarisOutput::DamarisVar<char>>  var_types(new Opm::DamarisOutput::DamarisVar<char>(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/types"), rank_)) ;
             var_types->ParameterIsSet() ;
             var_types->SetPointersToDamarisShmem() ;
@@ -468,19 +485,19 @@ private:
             
             i = geomData.writeConnectivity(var_connectivity->data_ptr(), vtkorder) ;
             if ( i  != geomData.getNCorners())
-                 DUNE_THROW(Dune::IOError, geomData.getError() );
+                 DUNE_THROW(Dune::IOError, geomData.getError());
 
-            i = geomData.writeOffsetsCells(var_offsets->data_ptr()) ;
+            i = geomData.writeOffsetsCells(var_offsets->data_ptr());
             if ( i != geomData.getNCells()+1)
-                 DUNE_THROW(Dune::IOError,geomData.getError() );
+                 DUNE_THROW(Dune::IOError,geomData.getError());
 
             i = geomData.writeCellTypes(var_types->data_ptr()) ;
             if ( i != geomData.getNCells())
-                 DUNE_THROW(Dune::IOError,geomData.getError() );
+                 DUNE_THROW(Dune::IOError,geomData.getError());
         }
         catch (std::exception& e) 
         {
-            std :: cout << e.what() << std::endl;
+            OpmLog::error(e.what());
         }
     }
 

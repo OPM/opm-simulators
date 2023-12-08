@@ -344,7 +344,7 @@ private:
         }
 
         if (enableDamarisOutput_) {
-            this->setupDamaris(outputDir);
+            this->setupDamaris(outputDir); // Damaris server ranks will block here until damaris_stop() is called by client ranks
         }
 #endif // HAVE_DAMARIS
 

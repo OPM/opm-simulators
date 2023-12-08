@@ -19,8 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SIM_MESH_DATA2_HPP
-#define OPM_SIM_MESH_DATA2_HPP
+#ifndef OPM_GRID_DATA_OUTPUT_HPP
+#define OPM_GRID_DATA_OUTPUT_HPP
 
 #include <sstream>
 #include <dune/grid/common/rangegenerators.hh>
@@ -31,7 +31,7 @@
     
     This data extractor provides the full set of vertices (corresponding to Dune::Partition::all) and then 
     allows a user to specify Dune sub-partitions to get the references into the vertex array and element 
-    (aka cell) types for the sub-partition. This allows the full set of verticies to be reused for 
+    (aka cell) types for the sub-partition. This allows the full set of vertices to be reused for 
     visualisation of the various sub-partitions, at the expense of copying all the vertices. Typically
     a user is interested in the interiorBoarder elements which make use of the bulk (~80%) of the vertices.
     This saves having to renumber the indexes to the vertices for the sub-partitions.
@@ -44,30 +44,30 @@
         #include <opm/simulators/utils/GridDataOutput.hpp>
         
         // N.B. does not seem to be able to be allocated with new operator.
-        Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView,  Dune::Partition::interior ) ;
+        Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView,  Dune::Partition::interior );
 
-        geomData.printGridDetails() ;
+        geomData.printGridDetails();
         
         // example using seperate x, y and z arrays
-        int nvert = geomData.getNVertices() ;
-        double * x_vert = new double[nvert] ;
-        double * y_vert = new double[nvert] ;
-        double * z_vert = new double[nvert] ;
-        geomData.writeGridPoints(x_vert,y_vert,z_vert) ;
+        int nvert = geomData.getNVertices();
+        double * x_vert = new double[nvert];
+        double * y_vert = new double[nvert];
+        double * z_vert = new double[nvert];
+        geomData.writeGridPoints(x_vert,y_vert,z_vert);
 
         ... do something with vertex data x_vert, y_vert and z_vert ....
 
-        free [] x_vert;
-        free [] y_vert;
-        free [] z_vert;
+        delete [] x_vert;
+        delete [] y_vert;
+        delete [] z_vert;
         
         // example using AOS 
-        double * xyz_vert_aos = new double[nvert*3] ;
-        geomData.writeGridPoints_SOA(xyz_vert_aos) ;
+        double * xyz_vert_aos = new double[nvert*3];
+        geomData.writeGridPoints_AOS(xyz_vert_aos);
 
         ... do something with vertex data xyz_vert_aos....
 
-        free [] xyz_vert_aos;
+        delete [] xyz_vert_aos;
         
 
 */
@@ -75,9 +75,9 @@
 namespace Opm::GridDataOutput
 {
    /**
-   * Allows selection of order of verticies in writeConnectivity()
+   * Allows selection of order of vertices in writeConnectivity()
    */
-  enum ConnectivityVertexOrder { DUNE = 0 , VTK = 1 } ;
+  enum ConnectivityVertexOrder { DUNE = 0 , VTK = 1 };
 
   template< class GridView, unsigned int partitions >
   class SimMeshDataAccessor {
@@ -115,14 +115,9 @@ namespace Opm::GridDataOutput
         : gridView_( gridView ),
           dunePartition_(dunePartition)
     {
-        dimw_ = GridView::dimension ; // this is an enum
-        partition_value_ = dunePartition.value ;
-        countEntities() ;
-    }
-
-    //! destructor
-    ~SimMeshDataAccessor ()
-    {
+        dimw_ = GridView::dimension; // this is an enum
+        partition_value_ = dunePartition.value;
+        countEntities();
     }
 
      /**
@@ -136,10 +131,10 @@ namespace Opm::GridDataOutput
     {
         for (const auto& cit :  elements(gridView_, dunePartition_))
         {
-            auto  corner_geom = cit.geometry() ;
+            auto  corner_geom = cit.geometry();
             if( Dune::VTK::geometryType( corner_geom.type() ) == Dune::VTK::polyhedron )
             {
-                return true ;
+                return true;
             }
        } 
        return false;
@@ -154,51 +149,50 @@ namespace Opm::GridDataOutput
     void countEntities(  )
     {
         // We include all the vertices for this ranks partition
-        const auto& vert_partition_it = vertices(gridView_, Dune::Partitions::all);
-        nvertices_ = std::distance(vert_partition_it.begin(), vert_partition_it.end());
+        const auto& vert_partition = vertices(gridView_, Dune::Partitions::all);
+        nvertices_ = std::distance(vert_partition.begin(), vert_partition.end());
 
-        const auto& cell_partition_it = elements(gridView_, dunePartition_);
-        ncells_ = std::distance(cell_partition_it.begin(), cell_partition_it.end());
-
-        ncorners_ = 0 ;
-        for (const auto& cit : cell_partition_it)
+        const auto& cell_partition = elements(gridView_, dunePartition_);
+        ncells_ = 0;
+        ncorners_ = 0;
+        for (const auto& cit : cell_partition)
         {
-            auto  corner_geom = cit.geometry() ;
-            ncorners_ += corner_geom.corners() ;
+            auto  corner_geom = cit.geometry();
+            ncorners_ += corner_geom.corners();
+            ++ncells_;
         }
     }
 
      /**
-       Write the positions of vertices - directly to the pointers given in paramaters 
+       Write the positions of vertices - directly to the pointers given in parameters 
 
        Returns the number of vertices written
     */
     template <typename T> 
     long  writeGridPoints( T*  x_inout,  T*  y_inout, T* z_inout )
     {
-        long i = 0 ;
+        long i = 0;
         if (dimw_ == 3) {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all) )
             {
-                // if (i < nvertices_) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
-                auto xyz_local = vit.geometry().corner(0);  // verticies only have one corner
-                x_inout[i] = static_cast<T>(xyz_local[0]) ;
-                y_inout[i] = static_cast<T>(xyz_local[1]) ;
-                z_inout[i] = static_cast<T>(xyz_local[2]) ; 
-                i++ ;
+                auto xyz_local = vit.geometry().corner(0);  // vertices only have one corner
+                x_inout[i] = static_cast<T>(xyz_local[0]);
+                y_inout[i] = static_cast<T>(xyz_local[1]);
+                z_inout[i] = static_cast<T>(xyz_local[2]); 
+                i++;
             }
         } else if (dimw_ == 2)  {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all) )
-            {      
-                // if (i < nvertices_) // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
-                auto xyz_local = vit.geometry().corner(0);  // verticies only have one corner
-                x_inout[i] = static_cast<T>(xyz_local[0]) ;
-                y_inout[i] = static_cast<T>(xyz_local[1]) ;
+            {                     
+                auto xyz_local = vit.geometry().corner(0);  // vertices only have one corner
+                x_inout[i] = static_cast<T>(xyz_local[0]);
+                y_inout[i] = static_cast<T>(xyz_local[1]);
                 z_inout[i] = static_cast<T>(0.0);
-                i++ ;
+                i++;
             }
         }
-        return i ;
+        assert(i == nvertices_); // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+        return i;
     }
 
     /**
@@ -209,23 +203,23 @@ namespace Opm::GridDataOutput
     template <typename T> 
     long writeGridPoints_AOS( T*  xyz_inout )
     {
-        long i = 0 ;
+        long i = 0;
         if (dimw_ == 3) {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
             {
                 auto xyz_local = vit.geometry().corner(0);
-                xyz_inout[i++] = static_cast<T>(xyz_local[0]) ;
-                xyz_inout[i++] = static_cast<T>(xyz_local[1]) ;
-                xyz_inout[i++] = static_cast<T>(xyz_local[2]) ;
+                xyz_inout[i++] = static_cast<T>(xyz_local[0]);
+                xyz_inout[i++] = static_cast<T>(xyz_local[1]);
+                xyz_inout[i++] = static_cast<T>(xyz_local[2]);
                 
             }
         } else if (dimw_ == 2)  {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
             {
                 auto xyz_local = vit.geometry().corner(0);
-                xyz_inout[i++] = static_cast<T>(xyz_local[0]) ;
-                xyz_inout[i++] = static_cast<T>(xyz_local[1]) ;
-                xyz_inout[i++] = static_cast<T>(0.0) ;  
+                xyz_inout[i++] = static_cast<T>(xyz_local[0]);
+                xyz_inout[i++] = static_cast<T>(xyz_local[1]);
+                xyz_inout[i++] = static_cast<T>(0.0);  
             }
         }
         return ( (i) / 3 );
@@ -239,35 +233,35 @@ namespace Opm::GridDataOutput
     template <typename T> 
     long writeGridPoints_SOA( T*  xyz_inout )
     {
-        long i = 0 ;
+        long i = 0;
         // Get offsets into structure
-        T * xyz_inout_y = xyz_inout + nvertices_ ;
-        T * xyz_inout_z = xyz_inout + (2*nvertices_) ;
+        T* xyz_inout_y = xyz_inout + nvertices_;
+        T* xyz_inout_z = xyz_inout + (2*nvertices_);
 
         if (dimw_ == 3) {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
             {     
                 auto xyz_local = vit.geometry().corner(0);
-                xyz_inout[i] = static_cast<T>(xyz_local[0]) ;
-                xyz_inout_y[i]= static_cast<T>(xyz_local[1]) ;
-                xyz_inout_z[i] = static_cast<T>(xyz_local[2]) ;
-                i++ ;
+                xyz_inout[i] = static_cast<T>(xyz_local[0]);
+                xyz_inout_y[i]= static_cast<T>(xyz_local[1]);
+                xyz_inout_z[i] = static_cast<T>(xyz_local[2]);
+                i++;
             }
         } else if (dimw_ == 2)  {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
             {     
                 auto xyz_local = vit.geometry().corner(0);
-                xyz_inout[i] = static_cast<T>(xyz_local[0]) ;
-                xyz_inout_y[i]= static_cast<T>(xyz_local[1]) ;
+                xyz_inout[i] = static_cast<T>(xyz_local[0]);
+                xyz_inout_y[i]= static_cast<T>(xyz_local[1]);
                 xyz_inout_z[i] = static_cast<T>(0.0);  
-                i++ ;
+                i++;
             }
         }
-        return (i) ;
+        return (i);
     }
 
     /**
-    * Write the connectivity array - directly to the pointer given in paramater 1
+    * Write the connectivity array - directly to the pointer given in parameter 1
       Reorders the indecies as selected either in DUNE order or  VTK order.
 
       Returns the number of corner indices written.
@@ -275,160 +269,160 @@ namespace Opm::GridDataOutput
     template <typename I>
     long writeConnectivity(I * connectivity_inout, ConnectivityVertexOrder whichOrder)
     {
-        long i = 0 ;
+        long i = 0;
         if ( whichOrder == DUNE )  {
             // DUNE order
             for (const auto& cit :  elements(gridView_, dunePartition_))
             {  
-              auto cell_corners = cit.geometry().corners() ;
+              auto cell_corners = cit.geometry().corners();
               for( auto vx = 0; vx < cell_corners; ++ vx )  
               {
                   const int vxIdx = gridView_.indexSet().subIndex( cit, vx, 3 );
-                  connectivity_inout[i + vx] = vxIdx ;
+                  connectivity_inout[i + vx] = vxIdx;
               }
-              i += cell_corners ; 
+              i += cell_corners; 
             }
         } else {
             // VTK order
             for (const auto& cit :  elements(gridView_, dunePartition_))
             {
-              auto cell_corners = cit.geometry().corners() ;
+              auto cell_corners = cit.geometry().corners();
               for( auto vx = 0; vx < cell_corners; ++ vx )  
               {
                   const int vxIdx = gridView_.indexSet().subIndex( cit, vx, 3 );
-                  int vtkOrder ; 
-                  vtkOrder = Dune::VTK::renumber(cit.type(), vx) ;
-                  connectivity_inout[i + vtkOrder] = vxIdx ;
+                  int vtkOrder; 
+                  vtkOrder = Dune::VTK::renumber(cit.type(), vx);
+                  connectivity_inout[i + vtkOrder] = vxIdx;
               }
-              i += cell_corners ; 
+              i += cell_corners; 
             }
         }
-        return (i) ;
+        return (i);
     }
 
     /**
-    * Write the offsets values  - directly to the pointer given in paramater 1
+    * Write the offsets values  - directly to the pointer given in parameter 1
       Returns the number of offset values written, which should be 1 greater than ncells_ 
       or -1 if an error was detected
     */
     template <typename I>
     long writeOffsetsCells( I* offsets_inout  )
     {
-        long i = 1 ;
-        offsets_inout[0] = 0 ;
+        long i = 1;
+        offsets_inout[0] = 0;
         for (const auto& cit :  elements(gridView_, dunePartition_))
         {  
-            auto cell_corners = cit.geometry().corners() ;
-            offsets_inout[i] = offsets_inout[i-1] +  cell_corners ;
-            i++ ;
+            auto cell_corners = cit.geometry().corners();
+            offsets_inout[i] = offsets_inout[i-1] +  cell_corners;
+            i++;
         }
-        return (i) ;  // This should be 1 greater than ncells_
+        return (i);  // This should be 1 greater than ncells_
     }
 
     /**
-    * Write the Cell types array - directly to the pointer given in paramater 1
+    * Write the Cell types array - directly to the pointer given in parameter 1
     */
     template <typename I>
     long writeCellTypes( I* types_inout)
     {
-        int i = 0 ;
+        int i = 0;
         for (const auto& cit :  elements(gridView_, dunePartition_))
         {
               I vtktype = static_cast<I>(Dune::VTK::geometryType(cit.type()));
-              types_inout[i++] = vtktype ;
+              types_inout[i++] = vtktype;
         }
-        return (i) ;
+        return (i);
     }
 
     std::string getPartitionTypeString (  )
     {
         if (this->dunePartition_ ==  Dune::Partitions::all)
-            return (std::string("Dune::Partitions::all")) ;
+            return (std::string("Dune::Partitions::all"));
         if (this->dunePartition_ ==  Dune::Partitions::interior)
-            return (std::string("Dune::Partitions::interior")) ;
+            return (std::string("Dune::Partitions::interior"));
         if (this->dunePartition_ ==  Dune::Partitions::interiorBorder)
-            return (std::string("Dune::Partitions::interiorBorder")) ;
+            return (std::string("Dune::Partitions::interiorBorder"));
         if (this->dunePartition_ ==  Dune::Partitions::interiorBorderOverlap)
-            return (std::string("Dune::Partitions::interiorBorderOverlap")) ;
+            return (std::string("Dune::Partitions::interiorBorderOverlap"));
         if (this->dunePartition_ ==  Dune::Partitions::front)
-            return (std::string("Dune::Partitions::front")) ;
+            return (std::string("Dune::Partitions::front"));
         if (this->dunePartition_ ==  Dune::Partitions::interiorBorderOverlapFront)
-            return (std::string("Dune::Partitions::InteriorBorderOverlapFront")) ;
+            return (std::string("Dune::Partitions::InteriorBorderOverlapFront"));
         if (this->dunePartition_ ==  Dune::Partitions::border)
-            return (std::string("Dune::Partitions::border")) ;
+            return (std::string("Dune::Partitions::border"));
         if (this->dunePartition_ ==  Dune::Partitions::ghost)
-            return (std::string("Dune::Partitions::ghost")) ;
+            return (std::string("Dune::Partitions::ghost"));
         
-        return (std::string("Unknown Dune::PartitionSet<>")) ;
+        return (std::string("Unknown Dune::PartitionSet<>"));
     }
 
     Dune::PartitionSet<partitions> getPartition ( void )
     {
-        return ( this->dunePartition_ ) ;
+        return ( this->dunePartition_ );
     }
 
     void   printGridDetails()
     {
-        std::cout << "Dune Partition = " << partition_value_ << ", " << getPartitionTypeString()  << std::endl ;
-        printNCells() ;
-        printNVertices() ;
-        printNCorners() ;
+        std::cout << "Dune Partition = " << partition_value_ << ", " << getPartitionTypeString()  << std::endl;
+        printNCells();
+        printNVertices();
+        printNCorners();
     }
 
     void printNCells()
     {
-        std::cout << "ncells = " << ncells_ << std::endl ;
+        std::cout << "ncells = " << ncells_ << std::endl;
     }
 
     void printNVertices()
     {
-        std::cout << "nvertices = " << nvertices_ << std::endl ;
+        std::cout << "nvertices = " << nvertices_ << std::endl;
     }
 
     void printNCorners()
     {
-        std::cout << "ncorners = " << ncorners_ << std::endl ;
+        std::cout << "ncorners = " << ncorners_ << std::endl;
     }
     
     int getNCells()
     {
-        return(ncells_) ;
+        return(ncells_);
     }
 
     int getNVertices()
     {
-        return(nvertices_) ;
+        return(nvertices_);
     }
 
     int getNCorners()
     {
-        return(ncorners_) ;
+        return(ncorners_);
     }
 
     std::string getError()
     {
-        return error_strm_.str() ;
+        return error_strm_.str();
     }
 
     void clearError()
     {
-         error_strm_.str("") ;
+         error_strm_.str("");
     }
 
     bool hasError()
     {
         if ( error_strm_.str().length() > 0 ) 
-            return true ;
+            return true;
         else 
-            return false ;
+            return false;
     }
 
   protected:
 
     GridView gridView_;  // the grid
     
-    Dune::PartitionSet<partitions>  dunePartition_ ;
-    unsigned int partition_value_ ;
+    Dune::PartitionSet<partitions>  dunePartition_;
+    unsigned int partition_value_;
 
     /**
     Current partition grid information
@@ -443,10 +437,10 @@ namespace Opm::GridDataOutput
     */
     int ncorners_; 
     
-    int dimw_ ;  // dimensions of the input grid
+    int dimw_;  // dimensions of the input grid
     
   private:
-    std::stringstream error_strm_ ;
+    std::stringstream error_strm_;
 
   };
 

@@ -595,6 +595,7 @@ if (Damaris_FOUND AND MPI_FOUND)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/utils/DamarisKeywords.hpp)
   list (APPEND PUBLIC_HEADER_FILES ebos/damariswriter.hh)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/utils/DamarisVar.hpp)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/utils/GridDataOutput.hpp)
 endif()
 
 if(HDF5_FOUND)

@@ -422,8 +422,8 @@ struct DamarisDedicatedNodes<TypeTag, TTag::EclBaseProblem> {
     static constexpr int value = 0;
 };
 template<class TypeTag>
-struct DamarisSharedMemeorySizeBytes<TypeTag, TTag::EclBaseProblem> {
-    static constexpr long value = 536870912;
+struct DamarisSharedMemorySizeBytes<TypeTag, TTag::EclBaseProblem> {
+    static constexpr long value = 536870912;  // 512 MB
 };
 template<class TypeTag>
 struct DamarisLogLevel<TypeTag, TTag::EclBaseProblem> {

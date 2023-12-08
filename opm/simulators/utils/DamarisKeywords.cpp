@@ -1,6 +1,7 @@
 /*
   Copyright 2021 Equinor.
-
+  Copyright 2023 Inria.
+  
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -48,32 +49,32 @@ bool FileExists(const std::string& filename_in,
 {
     // From c++17  : std::filesystem::exists(filename_in);
     
-    int retint = 0 ;
-    std::ifstream filestr ;
-    bool file_exists = false ;
+    int retint = 0;
+    std::ifstream filestr;
+    bool file_exists = false;
     
     if ((filename_in.length() == 0) || (filename_in == "#") ) {
-        return file_exists ;
+        return file_exists;
     }
 
     if (comm.rank() == 0) {
         filestr.open(filename_in);
-        file_exists = true ;
+        file_exists = true;
         if(filestr.fail()) {
-            retint = 0 ;
+            retint = 0;
         } else {
-            retint = 1 ;
-            filestr.close() ;
+            retint = 1;
+            filestr.close();
         }
     }
 
-    comm.broadcast(&retint,1,0);
+    comm.broadcast(&retint, 1, 0);
 
     if (retint == 1) {
-        file_exists = true ;
+        file_exists = true;
     }
 
-    return (file_exists) ;
+    return (file_exists);
 }
 
 
@@ -81,51 +82,53 @@ std::map<std::string, std::string>
 DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& comm,
                              const std::string& OutputDir)
 {
-    std::string saveToHDF5_str("MyStore") ;
-    if (! saveToDamarisHDF5 )  saveToHDF5_str = "#" ;
+    std::string saveToHDF5_str("MyStore");
+    if (! saveToDamarisHDF5 ){
+        saveToHDF5_str = "#";
+    }
 
     // These strings are used to comment out an XML element if it is not reqired
-    std::string disablePythonXMLstart("!--") ;
-    std::string disablePythonXMLfin("--") ;
-    std::string disableParaviewXMLstart("!--") ;
-    std::string disableParaviewXMLfin("--") ;
+    std::string disablePythonXMLstart("!--");
+    std::string disablePythonXMLfin("--");
+    std::string disableParaviewXMLstart("!--");
+    std::string disableParaviewXMLfin("--");
 
-    std::string publishToPython_str("#") ; // to be changed to the name of the PyScript XML element
+    std::string publishToPython_str("#"); // to be changed to the name of the PyScript XML element
 #ifdef HAVE_PYTHON_ENABLED
     // Test if input Python file exists and set the name of the script for <variable ...  script="" > )XML elements
     if (pythonFilename != ""){
         if (FileExists(pythonFilename, comm)) {
-             publishToPython_str="PythonScript" ; // the name of the PyScript XML element
-             disablePythonXMLstart.clear() ;
-             disablePythonXMLfin.clear() ;
+             publishToPython_str="PythonScript"; // the name of the PyScript XML element
+             disablePythonXMLstart.clear();
+             disablePythonXMLfin.clear();
         } else {
-            pythonFilename.clear() ; // set to empty if it does not exist
-            disablePythonXMLstart = std::string("!--") ;
-            disablePythonXMLfin = std::string("--") ;
+            pythonFilename.clear(); // set to empty if it does not exist
+            disablePythonXMLstart = std::string("!--");
+            disablePythonXMLfin = std::string("--");
         }
     }
 #else
      OpmLog::info(fmt::format("INFO: Opm::DamarisOutput::DamarisKeywords() : Python is not enabled in the Damaris library. "
                               "The commandline --damaris-python-script={} will be set to empty string", pythonFilename));
-     pythonFilename.clear() ;
+     pythonFilename.clear();
 #endif
 
 #ifdef HAVE_PARAVIEW_ENABLED
      // Test if input Paraview Python file exists 
     if (paraviewPythonFilename != ""){
         if (FileExists(paraviewPythonFilename, comm)) {
-            disableParaviewXMLstart.clear() ;
-            disableParaviewXMLfin.clear() ;
+            disableParaviewXMLstart.clear();
+            disableParaviewXMLfin.clear();
         } else  {
-            paraviewPythonFilename.clear() ; // set to empty if it does not exist
-            disableParaviewXMLstart = std::string("!--")  ;
-            disableParaviewXMLfin = std::string("--")  ;
+            paraviewPythonFilename.clear(); // set to empty if it does not exist
+            disableParaviewXMLstart = std::string("!--");
+            disableParaviewXMLfin = std::string("--");
         }
     }
 #else
      OpmLog::info(fmt::format("INFO: Opm::DamarisOutput::DamarisKeywords() : Paraview is not enabled in the Damaris library. "
                               "The commandline --damaris-python-paraview-script={} will be set to empty string", paraviewPythonFilename));
-     paraviewPythonFilename.clear() ;
+     paraviewPythonFilename.clear();
 #endif
 
     // Flag error if both scripts are enabled 
@@ -133,18 +136,18 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
     {
         // A work around of this issue is to remove the Paraview mpi4py library (use print(inspect.getfile(mpi4py)))
         // and then possibly not use mpi4py in the Paraview script code. OR try to install paraview mpi4py with headers.
-        std::cerr << "ERROR: Both the Python (--damaris-python-script command line argument) and Paraview Python " <<
-            "(--damaris-python-paraview-script command line argument) scripts are valid, however only one type "
-            "of analysis is supported in a single simulation (due to Paraview installing mpi4py library locally and without header files)."
-            " Please choose one or the other method of analysis for now. Exiting." << std::endl ;
-        std::exit(-1) ;
+        OPM_THROW(std::runtime_error, "ERROR: Both the Python (--damaris-python-script command line argument) and Paraview Python "
+                                      "(--damaris-python-paraview-script command line argument) scripts are valid, however only one "
+                                      "type of analysis is supported in a single simulation (due to Paraview installing mpi4py library "
+                                      "locally and without header files). "
+                                      "Please choose one or the other method of analysis for now. Exiting." )
     }
 
     std::string damarisOutputCollective_str;
     if (enableDamarisOutputCollective) {
-        damarisOutputCollective_str = "Collective" ;
+        damarisOutputCollective_str = "Collective";
     } else {
-        damarisOutputCollective_str = "FilePerCore" ;
+        damarisOutputCollective_str = "FilePerCore";
     }
 
     std::string  simName_str;
@@ -152,7 +155,7 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
         // Having a different simulation name is important if multiple simulations 
         // are running on the same node, as it is used to name the simulations shmem area
         // and when one sim finishes it removes its shmem file.
-        // simName_str =  damaris::Environment::GetMagicNumber(comm) ;
+        // simName_str =  damaris::Environment::GetMagicNumber(comm);
         if (simName_str.empty()) {
             // We will add a random value as GetMagicNumber(comm) requires Damaris v1.9.2
             // Seed with a real random value, if available
@@ -161,43 +164,43 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
             std::default_random_engine e1(r());
             std::uniform_int_distribution<int> uniform_dist(0, std::numeric_limits<int>::max());
             int rand_int = uniform_dist(e1);
-            simName_str = "opm-flow-" + std::to_string(rand_int) ;
+            simName_str = "opm-flow-" + std::to_string(rand_int);
         } else {
-            simName_str = "opm-flow-" + simName_str ;
+            simName_str = "opm-flow-" + simName_str;
         }
     } else {
-        simName_str = damarisSimName ;
+        simName_str = damarisSimName;
     }
 
     if ((nDamarisCores > 0) && (nDamarisNodes > 0))
     {
-        nDamarisNodes = 0 ; // Default is to use Damaris Cores
+        nDamarisNodes = 0; // Default is to use Damaris Cores
     }
     std::string nDamarisCores_str;
     if ( nDamarisCores != 0 ) {
         nDamarisCores_str = std::to_string(nDamarisCores);
     } else {
-        nDamarisCores_str = "0" ;
+        nDamarisCores_str = "0";
     }
 
     std::string nDamarisNodes_str;
     if ( nDamarisNodes != 0 ) {
         nDamarisNodes_str = std::to_string(nDamarisNodes);
     } else {
-        nDamarisNodes_str = "0" ;
+        nDamarisNodes_str = "0";
     }
 
     std::string shmemSizeBytes_str;
     if (shmemSizeBytes != 0) {
         shmemSizeBytes_str = std::to_string(shmemSizeBytes);
     } else {
-        shmemSizeBytes_str = "536870912" ;
+        shmemSizeBytes_str = "536870912";  // 512 MB
     }
 
-    std::string logLevel_str(damarisLogLevel) ;
-    std::string logFlush_str("false") ;
+    std::string logLevel_str(damarisLogLevel);
+    std::string logFlush_str("false");
     if ((logLevel_str == "debug") || (logLevel_str == "trace") ) {
-        logFlush_str = "true" ;
+        logFlush_str = "true";
     }
 
     std::map<std::string, std::string> damaris_keywords = {
