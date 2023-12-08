@@ -571,7 +571,7 @@ outputCumulativeReport_(const std::vector<Scalar>& wellCum,
     const UnitSystem& units = eclState_.getUnits();
     std::ostringstream ss;
     if (wellCumNames[WellCumDataType::WellName].empty()) {
-        ss << "=================================================== CUMULATIVE PRODUCTION/INJECTION REPORT =========================================\n"
+        ss << "\n=================================================== CUMULATIVE PRODUCTION/INJECTION REPORT =========================================\n"
            << ":  WELL  :  LOCATION :  WELL  :CTRL:    OIL    :   WATER   :    GAS    :   Prod    :    OIL    :   WATER   :    GAS    :   INJ     :\n"
            << ":  NAME  :  (I,J,K)  :  TYPE  :MODE:    PROD   :   PROD    :    PROD   :  RES.VOL. :    INJ    :   INJ     :    INJ    :  RES.VOL. :\n";
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
@@ -580,8 +580,9 @@ outputCumulativeReport_(const std::vector<Scalar>& wellCum,
             ss << ":        :           :        :    :    MSTB   :   MSTB    :    MMSCF  :   MRB     :    MSTB   :   MSTB    :    MMSCF  :   MRB     :\n";
         } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
             ss << ":        :           :        :    :     MSCC  :   MSCC    :    MMSCC  :   MRCC    :    MSCC   :   MSCC    :    MMSCC  :   MRCC    :\n";
+            ss << ":--------:-----------:--------:----:-----------:-----------:-----------:-----------:------------:----------:-----------:-----------:";
         }
-        ss << "====================================================================================================================================\n";
+        ss << "====================================================================================================================================";
     } else {
         if (wellCum[WellCumDataType::WellLocationi] < 1) {
             ss << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (8)
@@ -613,7 +614,7 @@ outputCumulativeReport_(const std::vector<Scalar>& wellCum,
                << std::setw(11) << wellCum[WellCumDataType::GasInj] / 1000.0 << ":"
                << std::setw(11) << wellCum[WellCumDataType::FluidResVolInj] / 1000.0 << ": \n";
         }
-        ss << ":--------:-----------:--------:----:------------:----------:-----------:-----------:------------:----------:-----------:-----------: \n";
+        ss << ":--------:-----------:--------:----:-----------:-----------:-----------:-----------:------------:----------:-----------:-----------:";
     }
     OpmLog::note(ss.str());
 }
@@ -626,7 +627,7 @@ outputInjectionReport_(const std::vector<Scalar>& wellInj,
     const UnitSystem& units = eclState_.getUnits();
     std::ostringstream ss;
     if (wellInjNames[WellInjDataType::WellName].empty()) {
-        ss << "=================================================== INJECTION REPORT ========================================\n"//===================== \n"
+        ss << "\n=================================================== INJECTION REPORT ========================================\n"//===================== \n"
            << ":  WELL  :  LOCATION : CTRL : CTRL : CTRL :    OIL    :   WATER   :    GAS    :   FLUID   : BHP OR : THP OR :\n"// STEADY-ST II       :\n"
            << ":  NAME  :  (I,J,K)  : MODE : MODE : MODE :    RATE   :   RATE    :    RATE   :  RES.VOL. : CON.PR.: BLK.PR.:\n";// OR POTENTIAL       :\n";
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
@@ -635,8 +636,9 @@ outputInjectionReport_(const std::vector<Scalar>& wellInj,
             ss << ":        :           : OIL  : WAT  : GAS  :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :  PSIA  :  PSIA  :\n";//                    :\n";
         } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
             ss << ":        :           : OIL  : WAT  : GAS  :   SCC/HR  :  SCC/HR   :  SCC/HR   :  RCC/HR   :  ATMA  :  ATMA  :\n";//                    :\n";
+            ss << ":--------:-----------:------:------:------:-----------:-----------:-----------:-----------:--------:--------:";//--------------------:";
         }
-        ss << "==============================================================================================================\n";//===================== \n";
+        ss << "==============================================================================================================";//=====================";
     } else {
         if (wellInj[WellInjDataType::WellLocationi] < 1) {
             ss << std::right << std::fixed << std::setprecision(0) << ":"
@@ -665,7 +667,7 @@ outputInjectionReport_(const std::vector<Scalar>& wellInj,
                << std::setw(8) << wellInj[WellInjDataType::BHP] << ":"
                << std::setw(8)<< wellInj[WellInjDataType::THP] << ": \n";//wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
         }
-        ss << ":--------:-----------:------:------:------:------------:----------:-----------:-----------:--------:--------: \n";//--------------------:\n";
+        ss << ":--------:-----------:------:------:------:-----------:-----------:-----------:-----------:--------:--------:";//--------------------:";
     }
     OpmLog::note(ss.str());
 }
@@ -678,7 +680,7 @@ outputProductionReport_(const std::vector<Scalar>& wellProd,
     const UnitSystem& units = eclState_.getUnits();
     std::ostringstream ss;
     if (wellProdNames[WellProdDataType::WellName].empty()) {
-        ss << "======================================================= PRODUCTION REPORT =======================================================\n"//=================== \n"
+        ss << "\n======================================================= PRODUCTION REPORT =======================================================\n"//=================== \n"
            << ":  WELL  :  LOCATION :CTRL:    OIL    :   WATER   :    GAS    :   FLUID   :   WATER   : GAS/OIL  :  WAT/GAS   : BHP OR : THP OR :\n"// STEADY-ST PI       :\n"
            << ":  NAME  :  (I,J,K)  :MODE:    RATE   :   RATE    :    RATE   :  RES.VOL. :    CUT    :  RATIO   :   RATIO    : CON.PR.: BLK.PR.:\n";// OR POTN OF PREF. PH:\n";
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
@@ -688,7 +690,7 @@ outputProductionReport_(const std::vector<Scalar>& wellProd,
         } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
             ss << ":        :           :    :  SCC/HR   :  SCC/HR   :  SCC/HR   :    RCC    :  SCC/SCC  :  SCC/SCC :  SCC/SCC   :  ATMA  :  ATMA  :\n";//                    :\n";
         }
-        ss << "=================================================================================================================================\n";//=================== \n";
+        ss << "=================================================================================================================================";//===================";
     } else {
         if (wellProd[WellProdDataType::WellLocationi] < 1) {
             ss << std::right << std::fixed << ":"
@@ -730,7 +732,7 @@ outputProductionReport_(const std::vector<Scalar>& wellProd,
            << std::setfill ('-') << std::setw (11) << ":"
            << std::setfill ('-') << std::setw (13) << ":"
            << std::setfill ('-') << std::setw (9) << ":"
-           << std::setfill ('-') << std::setw (9) << ":" << "\n";
+           << std::setfill ('-') << std::setw (9) << ':';
     }
     OpmLog::note(ss.str());
 }
@@ -808,7 +810,7 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
        << std::setw(14) << oip[Inplace::Phase::GasInGasPhase]
        << std::setw(14) << oip[Inplace::Phase::GasInLiquidPhase]
        << std::setw(14) << oip[Inplace::Phase::GAS] << ":\n"
-       << ":========================:==========================================:================:==========================================:\n";
+       << ":========================:==========================================:================:==========================================:";
     OpmLog::note(ss.str());
 }
 
@@ -825,7 +827,7 @@ outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
     const UnitSystem& units = eclState_.getUnits();
     std::ostringstream ss;
     if (reg == 0) {
-        ss << "                                                     ===================================\n";
+        ss << "\n                                                     ===================================\n";
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
             ss << "                                                     :  RESERVOIR VOLUMES      M3      :\n";
         } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
@@ -835,7 +837,7 @@ outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
            << ": REGION  :  TOTAL PORE   :  PORE VOLUME  :  PORE VOLUME  : PORE VOLUME   :  PORE VOLUME  :\n"
            << ":         :   VOLUME      :  CONTAINING   :  CONTAINING   : CONTAINING    :  CONTAINING   :\n"
            << ":         :               :     OIL       :    WATER      :    GAS        :  HYDRO-CARBON :\n"
-           << ":---------:---------------:---------------:---------------:---------------:---------------\n";
+           << ":---------:---------------:---------------:---------------:---------------:---------------";
     }
     else {
         ss << std::right << std::fixed << std::setprecision(0) << ":"
@@ -846,7 +848,7 @@ outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
            << std::setw(15) << cipr[Inplace::Phase::GasResVolume] << ":"
            << std::setw(15) << cipr[Inplace::Phase::OilResVolume] +
                                cipr[Inplace::Phase::GasResVolume] << ":\n"
-           << ":---------:---------------:---------------:---------------:---------------:---------------:\n";
+           << ":---------:---------------:---------------:---------------:---------------:---------------:";
     }
     OpmLog::note(ss.str());
 }

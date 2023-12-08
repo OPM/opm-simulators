@@ -254,9 +254,6 @@ public:
             eclOutputModule_->outputFipresvLog(miscSummaryData, regionData, reportStepNum,
                                                isSubStep, simulator_.gridView().comm());
         }
-        bool forceDisableProdOutput = false;
-        bool forceDisableInjOutput = false;
-        bool forceDisableCumOutput = false;
 
         // Add TCPU
         if (totalCpuTime != 0.0) {
@@ -311,11 +308,14 @@ public:
                               this->udqState());
         }
 
-        {
-        OPM_TIMEBLOCK(outputXXX);
-        eclOutputModule_->outputProdLog(reportStepNum, isSubStep, forceDisableProdOutput);
-        eclOutputModule_->outputInjLog(reportStepNum, isSubStep, forceDisableInjOutput);
-        eclOutputModule_->outputCumLog(reportStepNum, isSubStep, forceDisableCumOutput);
+        if (! isSubStep) {
+            OPM_TIMEBLOCK(outputProdInjLogs);
+
+            eclOutputModule_->outputProdLog(reportStepNum);
+            eclOutputModule_->outputInjLog(reportStepNum);
+            eclOutputModule_->outputCumLog(reportStepNum);
+
+            OpmLog::note("");   // Blank line after all reports.
         }
     }
 
