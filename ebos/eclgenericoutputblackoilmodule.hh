@@ -62,16 +62,13 @@ public:
     };
 
     // write cumulative production and injection reports to output
-    void outputCumLog(std::size_t reportStepNum,
-                      bool forceDisableCumOutput);
+    void outputCumLog(std::size_t reportStepNum);
 
     // write production report to output
-    void outputProdLog(std::size_t reportStepNum,
-                       bool forceDisableProdOutput);
+    void outputProdLog(std::size_t reportStepNum);
 
     // write injection report to output
-    void outputInjLog(std::size_t reportStepNum,
-                      bool forceDisableInjOutput);
+    void outputInjLog(std::size_t reportStepNum);
 
     // write Fluid In Place to output log
     Inplace outputFipLog(std::map<std::string, double>& miscSummaryData,

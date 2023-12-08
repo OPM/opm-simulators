@@ -311,13 +311,9 @@ public:
         if (! isSubStep) {
             OPM_TIMEBLOCK(outputProdInjLogs);
 
-            const bool forceDisableProdOutput = false;
-            const bool forceDisableInjOutput = false;
-            const bool forceDisableCumOutput = false;
-
-            eclOutputModule_->outputProdLog(reportStepNum, forceDisableProdOutput);
-            eclOutputModule_->outputInjLog(reportStepNum, forceDisableInjOutput);
-            eclOutputModule_->outputCumLog(reportStepNum, forceDisableCumOutput);
+            eclOutputModule_->outputProdLog(reportStepNum);
+            eclOutputModule_->outputInjLog(reportStepNum);
+            eclOutputModule_->outputCumLog(reportStepNum);
 
             OpmLog::note("");   // Blank line after all reports.
         }

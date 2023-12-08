@@ -226,10 +226,8 @@ EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 
 template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputCumLog(std::size_t reportStepNum, bool forceDisableCumOutput)
+outputCumLog(std::size_t reportStepNum)
 {
-    if (forceDisableCumOutput) { return; }
-
     logOutput_.cumulative(reportStepNum,
                           [this](const std::string& name)
                           { return this->isDefunctParallelWell(name); });
@@ -237,10 +235,8 @@ outputCumLog(std::size_t reportStepNum, bool forceDisableCumOutput)
 
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputProdLog(std::size_t reportStepNum, bool forceDisableProdOutput)
+outputProdLog(std::size_t reportStepNum)
 {
-    if (forceDisableProdOutput) { return; }
-
     logOutput_.production(reportStepNum,
                           [this](const std::string& name)
                           { return this->isDefunctParallelWell(name); });
@@ -248,10 +244,8 @@ outputProdLog(std::size_t reportStepNum, bool forceDisableProdOutput)
 
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputInjLog(std::size_t reportStepNum, bool forceDisableInjOutput)
+outputInjLog(std::size_t reportStepNum)
 {
-    if (forceDisableInjOutput) { return; }
-
     logOutput_.injection(reportStepNum,
                          [this](const std::string& name)
                          { return this->isDefunctParallelWell(name); });
