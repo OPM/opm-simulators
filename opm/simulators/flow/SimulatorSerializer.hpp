@@ -34,6 +34,8 @@ class SimulatorTimer;
 
 //! \brief Abstract interface for simulator serialization ops.
 struct SerializableSim {
+    virtual ~SerializableSim() = default;
+
     //! \brief Load simulator state from file.
     virtual void loadState(HDF5Serializer& serializer,
                            const std::string& groupName) = 0;
