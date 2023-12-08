@@ -320,7 +320,7 @@ public:
 
         // write all cell data registered in local state
         for (const auto& pair : localCellData_) {
-            const auto& data = pair.second.data;
+            const auto& data = pair.second.data<double>();
 
             // write all data from local data to buffer
             write(buffer, localIndexMap_, data);
@@ -333,7 +333,7 @@ public:
         // its order governs the order the data got received.
         for (auto& pair : localCellData_) {
             const std::string& key = pair.first;
-            auto& data = globalCellData_.data(key);
+            auto& data = globalCellData_.data<double>(key);
 
             //write all data from local cell data to buffer
             read(buffer, indexMap, data);

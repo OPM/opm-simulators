@@ -633,21 +633,21 @@ setRestart(const data::Solution& sol,
 {
     Scalar so = 1.0;
     if (!saturation_[waterPhaseIdx].empty() && sol.has("SWAT")) {
-        saturation_[waterPhaseIdx][elemIdx] = sol.data("SWAT")[globalDofIndex];
-        so -= sol.data("SWAT")[globalDofIndex];
+        saturation_[waterPhaseIdx][elemIdx] = sol.data<double>("SWAT")[globalDofIndex];
+        so -= sol.data<double>("SWAT")[globalDofIndex];
     }
     if (!saturation_[gasPhaseIdx].empty() && sol.has("SGAS")) {
-        saturation_[gasPhaseIdx][elemIdx] = sol.data("SGAS")[globalDofIndex];
-        so -= sol.data("SGAS")[globalDofIndex];
+        saturation_[gasPhaseIdx][elemIdx] = sol.data<double>("SGAS")[globalDofIndex];
+        so -= sol.data<double>("SGAS")[globalDofIndex];
     }
 
     if (!sSol_.empty()) {
         // keep the SSOL option for backward compatibility
         // should be removed after 10.2018 release
         if (sol.has("SSOL"))
-            sSol_[elemIdx] = sol.data("SSOL")[globalDofIndex];
+            sSol_[elemIdx] = sol.data<double>("SSOL")[globalDofIndex];
         else if (sol.has("SSOLVENT"))
-            sSol_[elemIdx] = sol.data("SSOLVENT")[globalDofIndex];
+            sSol_[elemIdx] = sol.data<double>("SSOLVENT")[globalDofIndex];
 
         so -= sSol_[elemIdx];
     }
@@ -660,7 +660,7 @@ setRestart(const data::Solution& sol,
 
     {
         if (!data.empty() && sol.has(name)) {
-            data[elemIdx] = sol.data(name)[globalDofIndex];
+            data[elemIdx] = sol.data<double>(name)[globalDofIndex];
         }
     };
 
