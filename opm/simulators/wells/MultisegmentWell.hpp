@@ -132,7 +132,9 @@ namespace Opm
                                                  const WellState& well_state,
                                                  DeferredLogger& deferred_logger) override; // should be const?
 
-        void updateIPRImplicit(const Simulator& ebos_simulator, WellState& well_state, DeferredLogger& deferred_logger);                                                 
+        void updateIPRImplicit(const Simulator& ebos_simulator,
+                               WellState& well_state,
+                               DeferredLogger& deferred_logger) override;
 
         virtual void updateProductivityIndex(const Simulator& ebosSimulator,
                                              const WellProdIndexCalculator& wellPICalc,
