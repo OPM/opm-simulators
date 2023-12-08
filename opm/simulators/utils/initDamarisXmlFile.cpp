@@ -39,7 +39,7 @@ std::string initDamarisXmlFile()
 <architecture>
     <domains count="1"/>
     <dedicated cores="_DC_REGEX_" nodes="_DN_REGEX_"/>
-    <buffer name="buffer" size="_SHMEM_BUFFER_BYTES_REGEX_" />
+    <buffer name="_SIM_NAME_" size="_SHMEM_BUFFER_BYTES_REGEX_" />
     <placement />
     <queue  name="queue" size="300" />
 </architecture>
