@@ -935,7 +935,7 @@ public:
                     else {
                         std::string logstring = "Keyword '";
                         logstring.append(key.first);
-                        logstring.append("' is unhandled for output to file.");
+                        logstring.append("' is unhandled for output to summary file.");
                         OpmLog::warning("Unhandled output keyword", logstring);
                     }
                 }
