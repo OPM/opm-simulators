@@ -1298,7 +1298,9 @@ namespace Opm {
                             well->iterateWellEqWithSwitching(this->ebosSimulator_, dt, inj_controls, prod_controls, well_state, group_state, local_deferredLogger);
                             // well->updateWellStateWithTHPTargetProd(this->ebosSimulator_, well_state, local_deferredLogger);
                             auto& ws = well_state.well(well_name);
-                            well_group_rate += -tcalc.calcModeRateFromRates(ws.surface_rates);
+                            double rate = -tcalc.calcModeRateFromRates(ws.surface_rates);
+                            std::cout << "well: " << well_name << "rate: " << rate << std::endl;
+                            well_group_rate += rate;
                         }
                     }
                     // this->wellState() = well_state;
@@ -1310,6 +1312,15 @@ namespace Opm {
                 const double nodal_pressure = it->second;
                 const std::array<double, 2> range {1.0E5, 150.0E5}; //PJPE what lower/upper bound to be taken here?
                 double low, high;
+        low  = 3527000.0;
+        high = 3576666.7;
+        std::cout << "low: " << low << " high: " << high << std::endl;
+        double low_v = mismatch(low);
+        std::cout << "1: low_value: " << low_v << std::endl;
+        low_v = mismatch(low);
+        high_v = mismatch(high);
+        std::cout << "2: low_value: " << low_v << " high_value: " << high_v << std::endl;
+
 
                 local_deferredLogger.debug(" Trying the brute force search to bracket the common THP ");
                 const bool finding_bracket = WellBhpThpCalculator::bruteForceBracket(mismatch, range, low, high, local_deferredLogger);
