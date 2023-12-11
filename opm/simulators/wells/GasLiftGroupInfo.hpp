@@ -20,31 +20,26 @@
 #ifndef OPM_GASLIFT_GROUP_INFO_HEADER_INCLUDED
 #define OPM_GASLIFT_GROUP_INFO_HEADER_INCLUDED
 
-#include <dune/common/version.hh>
-#include <dune/common/parallel/mpihelper.hh>
-
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
-#include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/GroupState.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
 
-#include <algorithm>
 #include <map>
+#include <optional>
 #include <string>
+#include <tuple>
 #include <vector>
-#include <fmt/format.h>
 
 namespace Opm
 {
 
+class DeferredLogger;
 class GasLiftOpt;
+class Group;
+class GroupState;
+class Schedule;
 class SummaryState;
 class Well;
+class WellState;
 
 class GasLiftGroupInfo : public GasLiftCommon
 {
