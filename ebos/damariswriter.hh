@@ -51,6 +51,8 @@
 #include <stdexcept>
 #include <string>
 
+#include <omp.h>
+
 #include <fmt/format.h>
 
 #include <Damaris.h>
@@ -136,8 +138,9 @@ class DamarisWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::G
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
-    typedef Opm::DamarisOutput::DamarisVar<int> DamarisVarInt ;
-    typedef Opm::DamarisOutput::DamarisVar<double> DamarisVarDbl ;
+    using DamarisVarInt = Opm::DamarisOutput::DamarisVar<int> ;
+    using DamarisVarChar = Opm::DamarisOutput::DamarisVar<char> ;
+    using DamarisVarDbl = Opm::DamarisOutput::DamarisVar<double>  ;
 
 public:
     static void registerParameters()
@@ -329,12 +332,11 @@ private:
                                                                        {std::string("n_elements_local")}, 
                                                                        std::string("MPI_RANK"), rank_) ) ;
         // N.B. we have not set any offset values, so HDF5 collective and Dask arrays cannot be used.
-        mpi_rank_var->SetDamarisParameterAndShmem( {this->numElements_ } ) ;
-        int* shmem_mpi_ptr = mpi_rank_var->data_ptr() ;
+        mpi_rank_var->setDamarisParameterAndShmem( {this->numElements_ } ) ;
         // Fill the created memory area
         for (int i = 0 ; i < this->numElements_; i++ )
         {
-            shmem_mpi_ptr[i] = rank_ ;  // write the rank vaue to the shared memory area.
+            mpi_rank_var->data()[i] = rank_ ;  // write the rank vaue to the shared memory area.
         }
     }
 
@@ -412,7 +414,7 @@ private:
         std::unique_ptr<DamarisVarInt> mpi_rank_var( new DamarisVarInt(1, 
                                                                        {std::string("n_elements_local")}, 
                                                                        std::string("MPI_RANK"), rank_) ) ;
-        mpi_rank_var->SetDamarisPosition({*temp_int64_t}) ;
+        mpi_rank_var->setDamarisPosition({*temp_int64_t}) ;
 
     }
     
@@ -444,20 +446,31 @@ private:
             // N.B. We have not set any position/offset values (using DamarisVar::SetDamarisPosition). 
             // They are not needed for mesh data as each process has a local geometric model. 
             // However, HDF5 collective and Dask arrays cannot be used for this data.
-            var_x->SetDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
+            var_x->setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
              
             std::unique_ptr<Opm::DamarisOutput::DamarisVar<double>>  var_y(new Opm::DamarisOutput::DamarisVar<double>(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/y"), rank_)) ; 
-            var_y->ParameterIsSet() ;
-            var_y->SetPointersToDamarisShmem() ;
+            var_y->parameterIsSet() ;
+            var_y->setPointersToDamarisShmem() ;
              
             std::unique_ptr<Opm::DamarisOutput::DamarisVar<double>>  var_z(new Opm::DamarisOutput::DamarisVar<double>(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/z"), rank_)) ; 
-            var_z->ParameterIsSet() ;
-            var_z->SetPointersToDamarisShmem() ;
+            var_z->parameterIsSet() ;
+            var_z->setPointersToDamarisShmem() ;
             
-            // Now we can return the memory that Damaris has allocated in shmem 
-            if ( geomData.writeGridPoints(var_x->data_ptr(),var_y->data_ptr(),var_z->data_ptr()) < 0)
+            // Now we can return the memory that Damaris has allocated in shmem and use it to write the X,y,z coordinates
+            double itime, ftime, exec_time;
+            itime = omp_get_wtime();
+            if ( geomData.writeGridPoints(*var_x,*var_y,*var_z) < 0)
                  DUNE_THROW(Dune::IOError, geomData.getError()  );
+             
+            //if ( geomData.writeGridPoints(var_x->data(),var_y->data(),var_z->data()) < 0)
+            //     DUNE_THROW(Dune::IOError, geomData.getError()  );
 
+            ftime = omp_get_wtime();
+            exec_time = ftime - itime;
+            // OpmLog::info("\n\nTime taken geomData.writeGridPoints(): is  " + std::to_string(exec_time) ) ;
+            std::cout << "\n\n rank_: " << rank_ << " Time taken geomData.writeGridPoints(): is  " + std::to_string(exec_time)  << std::endl ;
+
+            
             //  This is the template XML model for connectivity, offsets and types, as defined in initDamarisXmlFile.cpp which is used to 
             //  build the internally generated Damaris XML configuration file.
             // <parameter name="n_connectivity_ph"        type="int"  value="1" />
@@ -471,27 +484,27 @@ private:
             //     <variable name="types"        layout="n_types_layout_ph"    type="scalar"  visualizable="false"  unit=""   script="PythonConduitTest" time-varying="false" />
             // </group>
 
-            std::unique_ptr<Opm::DamarisOutput::DamarisVar<int>>  var_connectivity(new Opm::DamarisOutput::DamarisVar<int>(1, {std::string("n_connectivity_ph")}, std::string("topologies/topo/elements/connectivity"), rank_)) ;
-            var_connectivity->SetDamarisParameterAndShmem({ geomData.getNCorners()}) ;
-            std::unique_ptr<Opm::DamarisOutput::DamarisVar<int>>  var_offsets(new Opm::DamarisOutput::DamarisVar<int>(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/offsets"), rank_)) ;
-            var_offsets->SetDamarisParameterAndShmem({ geomData.getNCells()}) ;
-            std::unique_ptr<Opm::DamarisOutput::DamarisVar<char>>  var_types(new Opm::DamarisOutput::DamarisVar<char>(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/types"), rank_)) ;
-            var_types->ParameterIsSet() ;
-            var_types->SetPointersToDamarisShmem() ;
+            std::unique_ptr<DamarisVarInt>  var_connectivity(new DamarisVarInt(1, {std::string("n_connectivity_ph")}, std::string("topologies/topo/elements/connectivity"), rank_)) ;
+            var_connectivity->setDamarisParameterAndShmem({ geomData.getNCorners()}) ;
+            std::unique_ptr<DamarisVarInt>  var_offsets(new DamarisVarInt(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/offsets"), rank_)) ;
+            var_offsets->setDamarisParameterAndShmem({ geomData.getNCells()}) ;
+            std::unique_ptr<DamarisVarChar>  var_types(new DamarisVarChar(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/types"), rank_)) ;
+            var_types->parameterIsSet() ;
+            var_types->setPointersToDamarisShmem() ;
 
             // Copy the mesh data from the Durne grid
             long i = 0 ;
             Opm::GridDataOutput::ConnectivityVertexOrder vtkorder = Opm::GridDataOutput::VTK ;
             
-            i = geomData.writeConnectivity(var_connectivity->data_ptr(), vtkorder) ;
+            i = geomData.writeConnectivity(*var_connectivity, vtkorder) ;
             if ( i  != geomData.getNCorners())
                  DUNE_THROW(Dune::IOError, geomData.getError());
 
-            i = geomData.writeOffsetsCells(var_offsets->data_ptr());
+            i = geomData.writeOffsetsCells(*var_offsets);
             if ( i != geomData.getNCells()+1)
                  DUNE_THROW(Dune::IOError,geomData.getError());
 
-            i = geomData.writeCellTypes(var_types->data_ptr()) ;
+            i = geomData.writeCellTypes(*var_types) ;
             if ( i != geomData.getNCells())
                  DUNE_THROW(Dune::IOError,geomData.getError());
         }

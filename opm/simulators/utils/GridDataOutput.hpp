@@ -48,6 +48,7 @@
 
         geomData.printGridDetails();
         
+        int nvert = geomData.getNVertices();
         // example using seperate x, y and z arrays
         int nvert = geomData.getNVertices();
         double * x_vert = new double[nvert];
@@ -163,14 +164,16 @@ namespace Opm::GridDataOutput
         }
     }
 
-     /**
-       Write the positions of vertices - directly to the pointers given in parameters 
-
-       Returns the number of vertices written
-    */
     template <typename T> 
-    long  writeGridPoints( T*  x_inout,  T*  y_inout, T* z_inout )
+    long  writeGridPoints( T*  x_inout,  T*  y_inout, T* z_inout, long max_size=0  )
     {
+        if (max_size < nvertices_) {
+            assert(max_size >= nvertices_);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeGridPoints( T&  x_inout,  T&  y_inout, T& z_inout )  "
+                        + " Input objects max_size (" + std::to_string(max_size) + ") is not sufficient to fit the nvertices_ values (" 
+                        + std::to_string(nvertices_) + ")" );
+        }
+        
         long i = 0;
         if (dimw_ == 3) {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all) )
@@ -194,15 +197,70 @@ namespace Opm::GridDataOutput
         assert(i == nvertices_); // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
         return i;
     }
+    
 
+    
+    
+     /**
+       Write the positions of vertices - directly to the pointers given in parameters 
+
+       Returns the number of vertices written
+    */
+    template <typename T> 
+    long  writeGridPoints( T&  x_inout,  T&  y_inout, T& z_inout )
+    {
+        size_t check_size = x_inout.size() ;
+        
+        using VT = decltype(x_inout.data()[0]);
+        
+        if (check_size < nvertices_) {
+            // assert(check_size >= nvertices_);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeGridPoints( T&  x_inout,  T&  y_inout, T& z_inout )  "
+                        + " Input objects size " + std::to_string(check_size) + " is not sufficient to fit the nvertices_ values( " 
+                        + std::to_string(nvertices_) + " )" );
+        }
+        
+        long i = 0;
+        if (dimw_ == 3) {
+            for (const auto& vit :   vertices(gridView_, Dune::Partitions::all) )
+            {
+                auto xyz_local = vit.geometry().corner(0);  // vertices only have one corner
+                x_inout.data()[i] = static_cast<VT>(xyz_local[0]);
+                y_inout.data()[i] = static_cast<VT>(xyz_local[1]);
+                z_inout.data()[i] = static_cast<VT>(xyz_local[2]); 
+                i++;
+            }
+        } else if (dimw_ == 2)  {
+            double td = 0.0 ;
+            for (const auto& vit :   vertices(gridView_, Dune::Partitions::all) )
+            {                     
+                auto xyz_local = vit.geometry().corner(0);  // vertices only have one corner
+                x_inout.data()[i] = static_cast<VT>(xyz_local[0]);
+                y_inout.data()[i] = static_cast<VT>(xyz_local[1]);
+                z_inout.data()[i] = static_cast<VT>(td);
+                i++;
+            }
+        }
+        assert(i == nvertices_); // As we are templated on the Dune::PartitionSet<partitions>, this cannot change
+        return i;
+    }
+    
+    
     /**
      Write positions of vertices as array of structures : x,y,z,x,y,z,x,y,z,...
 
      Returns the number of vertices written
     */
     template <typename T> 
-    long writeGridPoints_AOS( T*  xyz_inout )
+    long writeGridPoints_AOS( T*  xyz_inout, long max_size=0  )
     {
+        if (max_size < nvertices_ * 3) {
+            assert(max_size >= nvertices_ * 3);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeGridPoints_AOS( T*  xyz_inout )  "
+                        + " Input objects max_size (" + std::to_string(max_size) + ") is not sufficient to fit the nvertices_ * 3 values (" 
+                        + std::to_string(nvertices_ * 3) + ")" );
+        }
+        
         long i = 0;
         if (dimw_ == 3) {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
@@ -224,19 +282,69 @@ namespace Opm::GridDataOutput
         }
         return ( (i) / 3 );
     }
+    
+     /**
+     Write positions of vertices as array of structures : x,y,z,x,y,z,x,y,z,...
 
+     Returns the number of vertices written
+    */
+    template <typename VectType> 
+    long writeGridPoints_AOS( VectType&  xyz_inout )
+    {
+        size_t check_size = xyz_inout.size() ;
+        
+        using VT = decltype(xyz_inout.data()[0]);
+        
+        if (check_size < nvertices_ * 3) {
+            assert(check_size >= nvertices_ * 3);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeGridPoints_AOS( VectType&  xyz_inout )  "
+                        + " Input objects check_size (" + std::to_string(check_size) + ") is not sufficient to fit the nvertices_ * 3 values (" 
+                        + std::to_string(nvertices_ * 3) + ")" );
+        }
+        
+        long i = 0;
+        if (dimw_ == 3) {
+            for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
+            {
+                auto xyz_local = vit.geometry().corner(0);
+                xyz_inout.data()[i++] = static_cast<VT>(xyz_local[0]);
+                xyz_inout[i++] = static_cast<VT>(xyz_local[1]);
+                xyz_inout[i++] = static_cast<VT>(xyz_local[2]);
+                
+            }
+        } else if (dimw_ == 2)  {
+            double td = 0.0 ;
+            for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
+            {
+                auto xyz_local = vit.geometry().corner(0);
+                xyz_inout[i++] = static_cast<VT>(xyz_local[0]);
+                xyz_inout[i++] = static_cast<VT>(xyz_local[1]);
+                xyz_inout[i++] = static_cast<VT>(td);  
+            }
+        }
+        return ( (i) / 3 );
+    }
+    
+    
     /**
      Write positions of vertices as structure of arrays  : x,x,x,...,y,y,y,...,z,z,z,...
 
      Returns the number of vertices written
     */
     template <typename T> 
-    long writeGridPoints_SOA( T*  xyz_inout )
+    long writeGridPoints_SOA( T*  xyz_inout, long max_size=0  )
     {
+         if (max_size < nvertices_ * 3) {
+            assert(max_size >= nvertices_ * 3);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeGridPoints_SOA( T&  xyz_inout )  "
+                        + " Input objects max_size (" + std::to_string(max_size) + ") is not sufficient to fit the nvertices_ * 3 values (" 
+                        + std::to_string(nvertices_ * 3) + ")" );
+        }
+        
         long i = 0;
         // Get offsets into structure
         T* xyz_inout_y = xyz_inout + nvertices_;
-        T* xyz_inout_z = xyz_inout + (2*nvertices_);
+        T* xyz_inout_z = xyz_inout + (2 * nvertices_);
 
         if (dimw_ == 3) {
             for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
@@ -259,6 +367,53 @@ namespace Opm::GridDataOutput
         }
         return (i);
     }
+    
+    /**
+     Write positions of vertices as structure of arrays  : x,x,x,...,y,y,y,...,z,z,z,...
+
+     Returns the number of vertices written
+    */
+    template <typename VectType> 
+    long writeGridPoints_SOA( VectType&  xyz_inout )
+    {
+        size_t check_size = xyz_inout.size() ;
+        
+        if (check_size < nvertices_ * 3) {
+            assert(check_size >= nvertices_ * 3);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeGridPoints_SOA( VectType&  xyz_inout )  "
+                        + " Input objects check_size (" + std::to_string(check_size) + ") is not sufficient to fit the nvertices_ * 3 values (" 
+                        + std::to_string(nvertices_ * 3) + ")" );
+        }
+        
+        using VT = decltype(xyz_inout.data()[0]);
+        
+        long i = 0;
+        // Get offsets into structure
+        VT* xyz_inout_y = xyz_inout.data() + nvertices_;
+        VT* xyz_inout_z = xyz_inout.data() + (2 * nvertices_);
+
+        if (dimw_ == 3) {
+            for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
+            {     
+                auto xyz_local = vit.geometry().corner(0);
+                xyz_inout.data()[i] = static_cast<VT>(xyz_local[0]);
+                xyz_inout_y[i]= static_cast<VT>(xyz_local[1]);
+                xyz_inout_z[i] = static_cast<VT>(xyz_local[2]);
+                i++;
+            }
+        } else if (dimw_ == 2)  {
+            double td = 0.0 ;
+            for (const auto& vit :   vertices(gridView_, Dune::Partitions::all))
+            {     
+                auto xyz_local = vit.geometry().corner(0);
+                xyz_inout.data()[i] = static_cast<VT>(xyz_local[0]);
+                xyz_inout_y[i]= static_cast<VT>(xyz_local[1]);
+                xyz_inout_z[i] = static_cast<VT>(td);  
+                i++;
+            }
+        }
+        return (i);
+    }
 
     /**
     * Write the connectivity array - directly to the pointer given in parameter 1
@@ -266,9 +421,16 @@ namespace Opm::GridDataOutput
 
       Returns the number of corner indices written.
     */
-    template <typename I>
-    long writeConnectivity(I * connectivity_inout, ConnectivityVertexOrder whichOrder)
+    template <typename Integer>
+    long writeConnectivity(Integer * connectivity_inout, ConnectivityVertexOrder whichOrder, long max_size=0 )
     {
+         if (max_size < ncorners_ ) {
+            assert(max_size >= ncorners_);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeConnectivity( T*  connectivity_inout )  "
+                        + " Input objects size (" + std::to_string(max_size) + ") is not sufficient to fit the ncorners_ values (" 
+                        + std::to_string(ncorners_) + ")" );
+        }
+        
         long i = 0;
         if ( whichOrder == DUNE )  {
             // DUNE order
@@ -299,15 +461,72 @@ namespace Opm::GridDataOutput
         }
         return (i);
     }
+    
+     /**
+    * Write the connectivity array - directly to the pointer given in parameter 1
+      Reorders the indecies as selected either in DUNE order or  VTK order.
+
+      Returns the number of corner indices written.
+    */
+    template <typename VectType>
+    long writeConnectivity(VectType & connectivity_inout, ConnectivityVertexOrder whichOrder)
+    {
+         size_t check_size = connectivity_inout.size() ;
+         
+         if (check_size < ncorners_ ) {
+            assert(check_size >= ncorners_);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeConnectivity( VectType&  connectivity_inout )  "
+                        + " Input objects size (" + std::to_string(check_size) + ") is not sufficient to fit the ncorners_ values (" 
+                        + std::to_string(ncorners_) + ")" );
+        }
+        
+        using VT = decltype(connectivity_inout.data()[0]);
+        
+        long i = 0;
+        if ( whichOrder == DUNE )  {
+            // DUNE order
+            for (const auto& cit :  elements(gridView_, dunePartition_))
+            {  
+              auto cell_corners = cit.geometry().corners();
+              for( auto vx = 0; vx < cell_corners; ++ vx )  
+              {
+                  const int vxIdx = gridView_.indexSet().subIndex( cit, vx, 3 );
+                  connectivity_inout.data()[i + vx] = vxIdx;
+              }
+              i += cell_corners; 
+            }
+        } else {
+            // VTK order
+            for (const auto& cit :  elements(gridView_, dunePartition_))
+            {
+              auto cell_corners = cit.geometry().corners();
+              for( auto vx = 0; vx < cell_corners; ++ vx )  
+              {
+                  const int vxIdx = gridView_.indexSet().subIndex( cit, vx, 3 );
+                  int vtkOrder; 
+                  vtkOrder = Dune::VTK::renumber(cit.type(), vx);
+                  connectivity_inout.data()[i + vtkOrder] = vxIdx;
+              }
+              i += cell_corners; 
+            }
+        }
+        return (i);
+    }
+
 
     /**
     * Write the offsets values  - directly to the pointer given in parameter 1
-      Returns the number of offset values written, which should be 1 greater than ncells_ 
-      or -1 if an error was detected
+      Returns the (number of offset values written + 1)
     */
-    template <typename I>
-    long writeOffsetsCells( I* offsets_inout  )
+    template <typename Integer>
+    long writeOffsetsCells( Integer* offsets_inout, long max_size=0 )
     {
+        if (max_size < ncells_ ) {
+            assert(max_size >= ncells_);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeOffsetsCells( T*  offsets_inout )  "
+                        + " Input objects max_size (" + std::to_string(max_size) + ") is not sufficient to fit the ncells_ values (" 
+                        + std::to_string(ncells_) + ")" );
+        }
         long i = 1;
         offsets_inout[0] = 0;
         for (const auto& cit :  elements(gridView_, dunePartition_))
@@ -318,18 +537,77 @@ namespace Opm::GridDataOutput
         }
         return (i);  // This should be 1 greater than ncells_
     }
+    
+    /**
+    * Write the offsets values  - directly to the pointer given in parameter 1
+      Returns the (number of offset values written + 1)
+    */
+    template <typename VectType>
+    long writeOffsetsCells( VectType& offsets_inout )
+    {
+        size_t check_size = offsets_inout.size() ;
+        if (check_size < ncells_ ) {
+            assert(check_size >= ncells_);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeOffsetsCells( VectType& offsets_inout )  "
+                        + " Input objects check_size (" + std::to_string(check_size) + ") is not sufficient to fit the ncells_ values (" 
+                        + std::to_string(ncells_) + ")" );
+        }
+        
+        // using VT = decltype(offsets_inout.data()[0]);
+        
+        long i = 1;
+        offsets_inout.data()[0] = 0;
+        for (const auto& cit :  elements(gridView_, dunePartition_))
+        {  
+            auto cell_corners = cit.geometry().corners();
+            offsets_inout.data()[i] = offsets_inout.data()[i-1] +  cell_corners;
+            i++;
+        }
+        return (i);  // This should be 1 greater than ncells_
+    }
+
 
     /**
     * Write the Cell types array - directly to the pointer given in parameter 1
     */
-    template <typename I>
-    long writeCellTypes( I* types_inout)
+    template <typename Integer>
+    long writeCellTypes( Integer* types_inout, long max_size=0)
     {
+        if (max_size < ncells_ ) {
+            assert(max_size >= ncells_);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeCellTypes( T*  types_inout )  "
+                        + " Input objects max_size (" + std::to_string(max_size) + ") is not sufficient to fit the ncells_ values (" 
+                        + std::to_string(ncells_) + ")" );
+        }
         int i = 0;
         for (const auto& cit :  elements(gridView_, dunePartition_))
         {
-              I vtktype = static_cast<I>(Dune::VTK::geometryType(cit.type()));
+              Integer vtktype = static_cast<Integer>(Dune::VTK::geometryType(cit.type()));
               types_inout[i++] = vtktype;
+        }
+        return (i);
+    }
+    
+     /**
+    * Write the Cell types array - directly to the pointer given in parameter 1
+    */
+    template <typename VectType>
+    long writeCellTypes( VectType& types_inout)
+    {
+        size_t check_size = types_inout.size() ;
+        
+        if (check_size < ncells_ ) {
+            assert(check_size >= ncells_);
+            OPM_THROW(std::runtime_error, "Opm::GridDataOutput::writeCellTypes( VectType&  types_inout )  "
+                        + " Input objects check_size (" + std::to_string(check_size) + ") is not sufficient to fit the ncells_ values (" 
+                        + std::to_string(ncells_) + ")" );
+        }
+        using VT = decltype(types_inout.data()[0]);
+        int i = 0;
+        for (const auto& cit :  elements(gridView_, dunePartition_))
+        {
+              int vtktype = static_cast<int>(Dune::VTK::geometryType(cit.type()));
+              types_inout.data()[i++] = vtktype;
         }
         return (i);
     }
@@ -361,29 +639,15 @@ namespace Opm::GridDataOutput
         return ( this->dunePartition_ );
     }
 
-    void   printGridDetails()
+    void   printGridDetails(std::ostream& outstr )
     {
-        std::cout << "Dune Partition = " << partition_value_ << ", " << getPartitionTypeString()  << std::endl;
-        printNCells();
-        printNVertices();
-        printNCorners();
+        outstr << "Dune Partition = " << partition_value_ << ", " << getPartitionTypeString()  << std::endl;
+        outstr << "ncells_: " << getNCells() << std::endl; 
+        outstr << "nvertices_: " << getNVertices() << std::endl; 
+        outstr << "ncorners_: " << getNCorners() << std::endl; 
     }
 
-    void printNCells()
-    {
-        std::cout << "ncells = " << ncells_ << std::endl;
-    }
 
-    void printNVertices()
-    {
-        std::cout << "nvertices = " << nvertices_ << std::endl;
-    }
-
-    void printNCorners()
-    {
-        std::cout << "ncorners = " << ncorners_ << std::endl;
-    }
-    
     int getNCells()
     {
         return(ncells_);

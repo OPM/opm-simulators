@@ -108,20 +108,20 @@ std::string initDamarisXmlFile()
     <parameter name="n_coords_local"     type="int" value="1" />
     <layout    name="n_coords_layout"    type="double" dimensions="n_coords_local"   comment="For the individual x, y and z coordinates of the mesh vertices, these values are referenced in the topologies/topo/subelements/connectivity_pg data"  />
     <group name="coordset/coords/values"> 
-        <variable name="x"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
-        <variable name="y"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
-        <variable name="z"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
+        <variable name="x"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" store="MyStore" />
+        <variable name="y"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" store="MyStore" />
+        <variable name="z"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" store="MyStore" />
     </group>
 
     <parameter name="n_connectivity_ph"        type="int"  value="1" />
     <layout    name="n_connections_layout_ph"  type="int"  dimensions="n_connectivity_ph"   comment="Layout for connectivities "  />
     <parameter name="n_offsets_types_ph"       type="int"  value="1" />
-    <layout    name="n_offsets_layout_ph"      type="int"  dimensions="n_offsets_types_ph + 1"  comment="Layout for the offsets_ph"  />
+    <layout    name="n_offsets_layout_ph"      type="int"  dimensions="n_offsets_types_ph"  comment="Layout for the offsets_ph"  />
     <layout    name="n_types_layout_ph"        type="char" dimensions="n_offsets_types_ph"  comment="Layout for the types_ph "  />
     <group name="topologies/topo/elements">
-        <variable name="connectivity" layout="n_connections_layout_ph"  type="scalar"  visualizable="false"    script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
-        <variable name="offsets"      layout="n_offsets_layout_ph"    type="scalar"  visualizable="false"     script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
-        <variable name="types"        layout="n_types_layout_ph"    type="scalar"  visualizable="false"    script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" />
+        <variable name="connectivity" layout="n_connections_layout_ph"  type="scalar"  visualizable="false"    script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" store="MyStore" />
+        <variable name="offsets"      layout="n_offsets_layout_ph"    type="scalar"  visualizable="false"     script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" store="MyStore" />
+        <variable name="types"        layout="n_types_layout_ph"    type="scalar"  visualizable="false"    script="_MAKE_AVAILABLE_IN_PYTHON_" time-varying="false" store="MyStore" />
     </group>
 
     <mesh name="us_mesh" type="unstructured" topology="3" time-varying="false" 

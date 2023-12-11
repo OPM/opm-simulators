@@ -140,7 +140,7 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
                                       "(--damaris-python-paraview-script command line argument) scripts are valid, however only one "
                                       "type of analysis is supported in a single simulation (due to Paraview installing mpi4py library "
                                       "locally and without header files). "
-                                      "Please choose one or the other method of analysis for now. Exiting." )
+                                      "Please choose one or the other method of analysis for now. Exiting." );
     }
 
     std::string damarisOutputCollective_str;
