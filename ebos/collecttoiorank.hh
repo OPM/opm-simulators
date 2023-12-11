@@ -91,6 +91,9 @@ public:
     const data::Solution& globalCellData() const
     { return globalCellData_; }
 
+    data::Solution& globalCellData()
+    { return globalCellData_; }
+
     const data::Wells& globalWellData() const
     { return globalWellData_; }
 
