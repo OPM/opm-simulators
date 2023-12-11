@@ -21,7 +21,14 @@
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 
 #include <opm/input/eclipse/Schedule/GasLiftOpt.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+
+#include <opm/simulators/wells/WellState.hpp>
+
+#include <fmt/format.h>
+
+#include <stdexcept>
 
 namespace Opm {
 

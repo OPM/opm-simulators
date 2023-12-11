@@ -20,14 +20,17 @@
 #ifndef OPM_GASLIFT_COMMON_HEADER_INCLUDED
 #define OPM_GASLIFT_COMMON_HEADER_INCLUDED
 
-#include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/GroupState.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <string>
 
 namespace Opm
 {
+
+class DeferredLogger;
+class GroupState;
+class WellState;
+
 class GasLiftCommon
 {
 public:

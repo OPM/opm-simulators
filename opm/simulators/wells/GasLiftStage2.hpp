@@ -22,12 +22,7 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
-#include <opm/simulators/wells/GroupState.hpp>
 
-#include <dune/common/version.hh>
-#include <dune/common/parallel/mpihelper.hh>
-
-#include <iterator>
 #include <map>
 #include <memory>
 #include <optional>
@@ -42,6 +37,7 @@ class DeferredLogger;
 class GasLiftOpt;
 class GasLiftWellState;
 class Group;
+class GroupState;
 class Schedule;
 class WellInterfaceGeneric;
 class WellState;
