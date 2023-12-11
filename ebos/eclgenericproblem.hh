@@ -382,6 +382,20 @@ protected:
         using GridType = std::remove_cv_t< typename std::remove_reference<decltype(gridView_.grid())>::type>;
         return lookUpData_.template getFieldPropIdx<GridType>(elemIdx);
     }
+    
+    std::vector<double> getAssignDoubleOnLeaf(const FieldPropsManager& fieldPropManager,
+                                              const std::string& propString, const unsigned int& numElems) const
+    {
+        return lookUpData_.assignFieldPropsDoubleOnLeaf(fieldPropManager, propString, numElems);
+    }
+
+    std::vector<unsigned int> getAssignIntOnLeaf(const FieldPropsManager& fieldPropManager,
+                                                 const std::string& propString,
+                                                 const unsigned int& numElems, bool needsTranslation) const
+    {
+        return lookUpData_.template assignFieldPropsIntOnLeaf<unsigned int>(fieldPropManager, propString, numElems,
+                                                                            needsTranslation);
+    }
 
 private:
     template<class T>
