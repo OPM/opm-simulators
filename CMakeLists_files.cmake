@@ -50,6 +50,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/LogOutputHelper.cpp
   opm/simulators/flow/Main.cpp
   opm/simulators/flow/NonlinearSolverEbos.cpp
+  opm/simulators/flow/RSTConv.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/ValidationFunctions.cpp
@@ -276,6 +277,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_privarspacking.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_RestartSerialization.cpp
+  tests/test_rstconv.cpp
   tests/test_stoppedwells.cpp
   tests/test_timer.cpp
   tests/test_vfpproperties.cpp
@@ -443,6 +445,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowMainEbos.hpp
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/NonlinearSolverEbos.hpp
+  opm/simulators/flow/RSTConv.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp
   opm/simulators/flow/SimulatorSerializer.hpp
   opm/simulators/flow/KeywordValidation.hpp
