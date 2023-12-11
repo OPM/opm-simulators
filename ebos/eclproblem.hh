@@ -1955,6 +1955,38 @@ protected:
         }
     }
 
+    // \brief Function to assign field properties of type double, on the leaf grid view.
+    //
+    // For CpGrid with local grid refinement, the field property of a cell on the leaf
+    // is inherited from its parent or equivalent (when has no parent) cell on level zero.
+    std::function<std::vector<double>(const FieldPropsManager&, const std::string&, const unsigned int&)>
+    getFieldPropDoubleOnLeafAssigner_()
+    {
+        const auto& lookup = this->lookUpData_;
+        return [&lookup](const FieldPropsManager& fieldPropManager, const std::string& propString,
+                         const unsigned int& numElems)
+        {
+            return lookup.assignFieldPropsDoubleOnLeaf(fieldPropManager, propString, numElems);
+        };
+    }
+
+    // \brief Function to assign field properties of type int, unsigned int, ..., on the leaf grid view.
+    //
+    // For CpGrid with local grid refinement, the field property of a cell on the leaf
+    // is inherited from its parent or equivalent (when has no parent) cell on level zero.
+    template<typename IntType>
+    std::function<std::vector<IntType>(const FieldPropsManager&, const std::string&, const unsigned int&, bool)>
+    getFieldPropIntTypeOnLeafAssigner_()
+    {
+        const auto& lookup = this->lookUpData_;
+        return [&lookup](const FieldPropsManager& fieldPropManager, const std::string& propString,
+                         const unsigned int& numElems, bool needsTranslation)
+        {
+            return lookup.template assignFieldPropsIntOnLeaf<IntType>(fieldPropManager, propString,
+                                                                      numElems, needsTranslation);
+        };
+    }
+
     void readMaterialParameters_()
     {
         OPM_TIMEBLOCK(readMaterialParameters);
@@ -1999,7 +2031,9 @@ protected:
 
             // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
             thermalLawManager_ = std::make_shared<EclThermalLawManager>();
-            thermalLawManager_->initParamsForElements(eclState, this->model().numGridDof());
+            thermalLawManager_->initParamsForElements(eclState, this->model().numGridDof(),
+                                                      this-> getFieldPropDoubleOnLeafAssigner_(),
+                                                      this-> template getFieldPropIntTypeOnLeafAssigner_<unsigned int>());
         }
     }
 
