@@ -51,7 +51,6 @@
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
-#include <opm/simulators/wells/GasLiftStage2.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
 #include <opm/simulators/wells/MultisegmentWell.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>

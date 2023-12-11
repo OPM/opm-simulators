@@ -26,13 +26,13 @@
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/wells/GasLiftSingleWellGeneric.hpp>
 #include <opm/simulators/wells/GasLiftWellState.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 
 #include <fmt/format.h>
 
-#include <cmath>
 #include <cstddef>
 #include <optional>
 #include <string>
