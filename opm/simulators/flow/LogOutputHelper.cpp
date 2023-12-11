@@ -94,9 +94,10 @@ void LogOutputHelper<Scalar>::
 cumulative(const std::size_t reportStepNum,
            std::function<bool(const std::string&)> isDefunct) const
 {
+    this->beginCumulativeReport_();
+
     std::vector<Scalar> tmp_values(WellCumDataType::numWCValues, 0.0);
     std::vector<std::string> tmp_names(WellCumDataType::numWCNames, "");
-    this->outputCumulativeReport_(tmp_values, tmp_names);
 
     const auto& st = summaryState_;
     for (const auto& gname : schedule_.groupNames()) {
@@ -129,7 +130,7 @@ cumulative(const std::size_t reportStepNum,
             tmp_values[9] = get("GVIT"); // WellCumDataType::FluidResVolInj
         }
 
-        this->outputCumulativeReport_(tmp_values, tmp_names);
+        this->outputCumulativeReportRecord_(tmp_values, tmp_names);
     }
 
     for (const auto& wname : schedule_.wellNames(reportStepNum)) {
@@ -225,8 +226,10 @@ cumulative(const std::size_t reportStepNum,
         tmp_values[8] = get("WGIT"); // WellCumDataType::GasInj
         tmp_values[9] = get("WVIT"); // WellCumDataType::FluidResVolInj
 
-        this->outputCumulativeReport_(tmp_values, tmp_names);
+        this->outputCumulativeReportRecord_(tmp_values, tmp_names);
     }
+
+    this->endCumulativeReport_();
 }
 
 template<class Scalar>
@@ -336,9 +339,10 @@ void LogOutputHelper<Scalar>::
 injection(const std::size_t reportStepNum,
           std::function<bool(const std::string&)> isDefunct) const
 {
+    this->beginInjectionReport_();
+
     std::vector<Scalar> tmp_values(WellInjDataType::numWIValues, 0.0);
     std::vector<std::string> tmp_names(WellInjDataType::numWINames, "");
-    this->outputInjectionReport_(tmp_values, tmp_names);
 
     const auto& st = summaryState_;
     for (const auto& gname : schedule_.groupNames()) {
@@ -362,7 +366,7 @@ injection(const std::size_t reportStepNum,
             tmp_values[5] = get("GVIR"); // WellInjDataType::FluidResVol
         }
 
-        this->outputInjectionReport_(tmp_values, tmp_names);
+        this->outputInjectionReportRecord_(tmp_values, tmp_names);
     }
 
     for (const auto& wname : schedule_.wellNames(reportStepNum)) {
@@ -450,8 +454,10 @@ injection(const std::size_t reportStepNum,
         tmp_values[7] = get("WTHP"); // WellInjDataType::THP
         //tmp_values[8] = 0; // WellInjDataType::SteadyStateII
 
-        this->outputInjectionReport_(tmp_values, tmp_names);
+        this->outputInjectionReportRecord_(tmp_values, tmp_names);
     }
+
+    this->endInjectionReport_();
 }
 
 template<class Scalar>
@@ -459,9 +465,10 @@ void LogOutputHelper<Scalar>::
 production(const std::size_t reportStepNum,
            std::function<bool(const std::string&)> isDefunct) const
 {
+    this->beginProductionReport_();
+
     std::vector<Scalar> tmp_values(WellProdDataType::numWPValues, 0.0);
     std::vector<std::string> tmp_names(WellProdDataType::numWPNames, "");
-    this->outputProductionReport_(tmp_values, tmp_names);
 
     const auto& st = summaryState_;
     for (const auto& gname : schedule_.groupNames()) {
@@ -494,7 +501,7 @@ production(const std::size_t reportStepNum,
             tmp_values[8] = 0.0;
         }
 
-        this->outputProductionReport_(tmp_values, tmp_names);
+        this->outputProductionReportRecord_(tmp_values, tmp_names);
     }
 
     for (const auto& wname : schedule_.wellNames(reportStepNum)) {
@@ -559,181 +566,237 @@ production(const std::size_t reportStepNum,
             tmp_values[8] = 0.0;
         }
 
-        this->outputProductionReport_(tmp_values, tmp_names);
+        this->outputProductionReportRecord_(tmp_values, tmp_names);
     }
+
+    this->endProductionReport_();
+}
+
+template <typename Scalar>
+void LogOutputHelper<Scalar>::beginCumulativeReport_() const
+{
+    const auto unitType = this->eclState_.getUnits().getType();
+
+    std::ostringstream ss;
+
+    ss << "\n=================================================== CUMULATIVE PRODUCTION/INJECTION REPORT =========================================\n"
+       << ":  WELL  :  LOCATION :  WELL  :CTRL:    OIL    :   WATER   :    GAS    :   Prod    :    OIL    :   WATER   :    GAS    :   INJ     :\n"
+       << ":  NAME  :  (I,J,K)  :  TYPE  :MODE:    PROD   :   PROD    :    PROD   :  RES.VOL. :    INJ    :   INJ     :    INJ    :  RES.VOL. :\n";
+
+    if (unitType == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+        ss << ":        :           :        :    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :\n";
+    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+        ss << ":        :           :        :    :    MSTB   :   MSTB    :    MMSCF  :   MRB     :    MSTB   :   MSTB    :    MMSCF  :   MRB     :\n";
+    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_LAB) {
+        ss << ":        :           :        :    :     MSCC  :   MSCC    :    MMSCC  :   MRCC    :    MSCC   :   MSCC    :    MMSCC  :   MRCC    :\n";
+    }
+
+    ss << "====================================================================================================================================";
+
+    OpmLog::note(ss.str());
+}
+
+template <typename Scalar>
+void LogOutputHelper<Scalar>::endCumulativeReport_() const
+{
+    const auto ss = std::string { ":--------:-----------:--------:----:-----------:-----------:-----------:-----------:-----------:-----------:-----------:-----------:" };
+
+    OpmLog::note(ss);
 }
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
-outputCumulativeReport_(const std::vector<Scalar>& wellCum,
-                        const std::vector<std::string>& wellCumNames) const
+outputCumulativeReportRecord_(const std::vector<Scalar>& wellCum,
+                              const std::vector<std::string>& wellCumNames) const
 {
-    const UnitSystem& units = eclState_.getUnits();
     std::ostringstream ss;
-    if (wellCumNames[WellCumDataType::WellName].empty()) {
-        ss << "\n=================================================== CUMULATIVE PRODUCTION/INJECTION REPORT =========================================\n"
-           << ":  WELL  :  LOCATION :  WELL  :CTRL:    OIL    :   WATER   :    GAS    :   Prod    :    OIL    :   WATER   :    GAS    :   INJ     :\n"
-           << ":  NAME  :  (I,J,K)  :  TYPE  :MODE:    PROD   :   PROD    :    PROD   :  RES.VOL. :    INJ    :   INJ     :    INJ    :  RES.VOL. :\n";
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            ss << ":        :           :        :    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :    MSCM   :   MSCM    :    MMSCM  :   MRCM    :\n";
-        } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            ss << ":        :           :        :    :    MSTB   :   MSTB    :    MMSCF  :   MRB     :    MSTB   :   MSTB    :    MMSCF  :   MRB     :\n";
-        } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-            ss << ":        :           :        :    :     MSCC  :   MSCC    :    MMSCC  :   MRCC    :    MSCC   :   MSCC    :    MMSCC  :   MRCC    :\n";
-            ss << ":--------:-----------:--------:----:-----------:-----------:-----------:-----------:------------:----------:-----------:-----------:";
-        }
-        ss << "====================================================================================================================================";
+
+    ss << std::right << std::fixed << std::setprecision(0) << ':'
+       << std::setw(8) << wellCumNames[WellCumDataType::WellName] << ':';
+
+    if (wellCum[WellCumDataType::WellLocationi] < 1) {
+        ss << std::setw(11) <<  "" << ':';
     } else {
-        if (wellCum[WellCumDataType::WellLocationi] < 1) {
-            ss << std::right << std::fixed << std::setprecision(0) << ":" << std::setw (8)
-               << wellCumNames[WellCumDataType::WellName] << ":"
-               << std::setw(11) <<  "" << ":"
-               << std::setw(8) << wellCumNames[WellCumDataType::WellType] << ":"
-               << std::setw(4) << wellCumNames[WellCumDataType::WellCTRL] << ":"
-               << std::setprecision(1) << std::setw(11) << wellCum[WellCumDataType::OilProd] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::WaterProd] / 1000.0 << ":"
-               << std::setw(11)<< wellCum[WellCumDataType::GasProd] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::FluidResVolProd] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::OilInj] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::WaterInj] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::GasInj] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::FluidResVolInj] / 1000.0 << ": \n";
-        } else {
-            ss << std::right << std::fixed << std::setprecision(0) << ":"
-               << std::setw (8) << wellCumNames[WellCumDataType::WellName] << ":"
-               << std::setw(5) << wellCum[WellCumDataType::WellLocationi] << ","
-               << std::setw(5) << wellCum[WellCumDataType::WellLocationj] << ":"
-               << std::setw(8) << wellCumNames[WellCumDataType::WellType] << ":"
-               << std::setw(4) << wellCumNames[WellCumDataType::WellCTRL] << ":"
-               << std::setprecision(1) << std::setw(11) << wellCum[WellCumDataType::OilProd] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::WaterProd] / 1000.0 << ":"
-               << std::setw(11)<< wellCum[WellCumDataType::GasProd] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::FluidResVolProd] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::OilInj] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::WaterInj] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::GasInj] / 1000.0 << ":"
-               << std::setw(11) << wellCum[WellCumDataType::FluidResVolInj] / 1000.0 << ": \n";
-        }
-        ss << ":--------:-----------:--------:----:-----------:-----------:-----------:-----------:------------:----------:-----------:-----------:";
+        ss << std::setw( 5) << wellCum[WellCumDataType::WellLocationi] << ','
+           << std::setw( 5) << wellCum[WellCumDataType::WellLocationj] << ':';
     }
+
+    auto scaledValue = [&wellCum](const typename WellCumDataType::WCId quantity)
+    {
+        // Unit M*
+        return wellCum[quantity] / 1000.0;
+    };
+
+    auto scaledGasValue = [&wellCum](const typename WellCumDataType::WCId quantity)
+    {
+        // Unit MM*
+        return wellCum[quantity] / (1000.0 * 1000.0);
+    };
+
+    ss << std::setw( 8) << wellCumNames[WellCumDataType::WCId::WellType]       << ':'
+       << std::setw( 4) << wellCumNames[WellCumDataType::WCId::WellCTRL]       << ':' << std::setprecision(1)
+       << std::setw(11) << scaledValue(WellCumDataType::WCId::OilProd)         << ':'
+       << std::setw(11) << scaledValue(WellCumDataType::WCId::WaterProd)       << ':'
+       << std::setw(11) << scaledGasValue(WellCumDataType::WCId::GasProd)      << ':'
+       << std::setw(11) << scaledValue(WellCumDataType::WCId::FluidResVolProd) << ':'
+       << std::setw(11) << scaledValue(WellCumDataType::WCId::OilInj)          << ':'
+       << std::setw(11) << scaledValue(WellCumDataType::WCId::WaterInj)        << ':'
+       << std::setw(11) << scaledGasValue(WellCumDataType::WCId::GasInj)       << ':'
+       << std::setw(11) << scaledValue(WellCumDataType::WCId::FluidResVolInj)  << ':';
+
+    OpmLog::note(ss.str());
+}
+
+template <typename Scalar>
+void LogOutputHelper<Scalar>::beginInjectionReport_() const
+{
+    const auto unitType = this->eclState_.getUnits().getType();
+
+    std::ostringstream ss;
+    ss << "\n=================================================== INJECTION REPORT ========================================\n"//===================== \n"
+       << ":  WELL  :  LOCATION : CTRL : CTRL : CTRL :    OIL    :   WATER   :    GAS    :   FLUID   : BHP OR : THP OR :\n"// STEADY-ST II       :\n"
+       << ":  NAME  :  (I,J,K)  : MODE : MODE : MODE :    RATE   :   RATE    :    RATE   :  RES.VOL. : CON.PR.: BLK.PR.:\n";// OR POTENTIAL       :\n";
+
+    if (unitType == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+        ss << ":        :           : OIL  : WAT  : GAS  :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  BARSA :  BARSA :\n";//                    :\n";
+    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+        ss << ":        :           : OIL  : WAT  : GAS  :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :  PSIA  :  PSIA  :\n";//                    :\n";
+    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_LAB) {
+        ss << ":        :           : OIL  : WAT  : GAS  :   SCC/HR  :  SCC/HR   :  SCC/HR   :  RCC/HR   :  ATMA  :  ATMA  :\n";//                    :\n";
+    }
+
+    ss << "=============================================================================================================";//=====================";
+
+    OpmLog::note(ss.str());
+}
+
+template <typename Scalar>
+void LogOutputHelper<Scalar>::endInjectionReport_() const
+{
+    const auto ss = std::string { ":--------:-----------:------:------:------:-----------:-----------:-----------:-----------:--------:--------:" };
+
+    OpmLog::note(ss);
+}
+
+template<class Scalar>
+void LogOutputHelper<Scalar>::
+outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
+                             const std::vector<std::string>& wellInjNames) const
+{
+    const auto isWellRecord =
+        wellInj[WellProdDataType::WellLocationi] >= 1;
+
+    std::ostringstream ss;
+
+    ss << std::right << std::fixed << std::setprecision(0) << ':'
+       << std::setw(8) << wellInjNames[WellInjDataType::WellName] << ':';
+
+    if (! isWellRecord) {
+        ss << std::setw(11) << "" << ':';
+    } else {
+        ss << std::setw( 5) << wellInj[WellInjDataType::WellLocationi] << ','
+           << std::setw( 5) << wellInj[WellInjDataType::WellLocationj] << ':';
+    }
+
+    ss << std::setw( 6) << wellInjNames[WellInjDataType::CTRLModeOil] << ':'
+       << std::setw( 6) << wellInjNames[WellInjDataType::CTRLModeWat] << ':'
+       << std::setw( 6) << wellInjNames[WellInjDataType::CTRLModeGas] << ':' << std::setprecision(1)
+       << std::setw(11) << wellInj[WellInjDataType::OilRate]          << ':'
+       << std::setw(11) << wellInj[WellInjDataType::WaterRate]        << ':'
+       << std::setw(11) << wellInj[WellInjDataType::GasRate]          << ':'
+       << std::setw(11) << wellInj[WellInjDataType::FluidResVol]      << ':';
+
+    if (! isWellRecord) {
+        ss << std::setw(8) << "" << ':' << std::setw(8) << "" << ':'; //wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
+    } else {
+        ss << std::setw(8) << wellInj[WellInjDataType::BHP] << ':'
+           << std::setw(8) << wellInj[WellInjDataType::THP] << ':'; //wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
+    }
+
+    OpmLog::note(ss.str());
+}
+
+template <typename Scalar>
+void LogOutputHelper<Scalar>::beginProductionReport_() const
+{
+    const auto unitType = this->eclState_.getUnits().getType();
+
+    std::ostringstream ss;
+    ss << "\n======================================================= PRODUCTION REPORT =======================================================\n"//=================== \n"
+       << ":  WELL  :  LOCATION :CTRL:    OIL    :   WATER   :    GAS    :   FLUID   :   WATER   : GAS/OIL  :  WAT/GAS   : BHP OR : THP OR :\n"// STEADY-ST PI       :\n"
+       << ":  NAME  :  (I,J,K)  :MODE:    RATE   :   RATE    :    RATE   :  RES.VOL. :    CUT    :  RATIO   :   RATIO    : CON.PR.: BLK.PR.:\n";// OR POTN OF PREF. PH:\n";
+
+    if (unitType == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
+        ss << ":        :           :    :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  SCM/SCM  :  SCM/SCM :  SCM/SCM   :  BARSA :  BARSA :\n";//                    :\n";
+    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
+        ss << ":        :           :    :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :           : MSCF/STB :  STB/MSCF  :  PSIA  :  PSIA  :\n";//                    :\n";
+    } else if (unitType == UnitSystem::UnitType::UNIT_TYPE_LAB) {
+        ss << ":        :           :    :  SCC/HR   :  SCC/HR   :  SCC/HR   :    RCC    :  SCC/SCC  :  SCC/SCC :  SCC/SCC   :  ATMA  :  ATMA  :\n";//                    :\n";
+    }
+
+    ss << "=================================================================================================================================";//===================";
+
+    OpmLog::note(ss.str());
+}
+
+template <typename Scalar>
+void LogOutputHelper<Scalar>::endProductionReport_() const
+{
+    std::ostringstream ss;
+
+    ss << ':' << std::setfill ('-') << std::setw (9) << ':'
+       << std::setfill ('-') << std::setw (12) << ':'
+       << std::setfill ('-') << std::setw ( 5) << ':'
+       << std::setfill ('-') << std::setw (12) << ':'
+       << std::setfill ('-') << std::setw (12) << ':'
+       << std::setfill ('-') << std::setw (12) << ':'
+       << std::setfill ('-') << std::setw (12) << ':'
+       << std::setfill ('-') << std::setw (12) << ':'
+       << std::setfill ('-') << std::setw (11) << ':'
+       << std::setfill ('-') << std::setw (13) << ':'
+       << std::setfill ('-') << std::setw ( 9) << ':'
+       << std::setfill ('-') << std::setw ( 9) << ':';
+
     OpmLog::note(ss.str());
 }
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
-outputInjectionReport_(const std::vector<Scalar>& wellInj,
-                       const std::vector<std::string>& wellInjNames) const
+outputProductionReportRecord_(const std::vector<Scalar>& wellProd,
+                              const std::vector<std::string>& wellProdNames) const
 {
-    const UnitSystem& units = eclState_.getUnits();
-    std::ostringstream ss;
-    if (wellInjNames[WellInjDataType::WellName].empty()) {
-        ss << "\n=================================================== INJECTION REPORT ========================================\n"//===================== \n"
-           << ":  WELL  :  LOCATION : CTRL : CTRL : CTRL :    OIL    :   WATER   :    GAS    :   FLUID   : BHP OR : THP OR :\n"// STEADY-ST II       :\n"
-           << ":  NAME  :  (I,J,K)  : MODE : MODE : MODE :    RATE   :   RATE    :    RATE   :  RES.VOL. : CON.PR.: BLK.PR.:\n";// OR POTENTIAL       :\n";
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            ss << ":        :           : OIL  : WAT  : GAS  :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  BARSA :  BARSA :\n";//                    :\n";
-        } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            ss << ":        :           : OIL  : WAT  : GAS  :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :  PSIA  :  PSIA  :\n";//                    :\n";
-        } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-            ss << ":        :           : OIL  : WAT  : GAS  :   SCC/HR  :  SCC/HR   :  SCC/HR   :  RCC/HR   :  ATMA  :  ATMA  :\n";//                    :\n";
-            ss << ":--------:-----------:------:------:------:-----------:-----------:-----------:-----------:--------:--------:";//--------------------:";
-        }
-        ss << "==============================================================================================================";//=====================";
-    } else {
-        if (wellInj[WellInjDataType::WellLocationi] < 1) {
-            ss << std::right << std::fixed << std::setprecision(0) << ":"
-               << std::setw (8) << wellInjNames[WellInjDataType::WellName] << ":"
-               << std::setw(11) << "" << ":"
-               << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeOil] << ":"
-               << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeWat] << ":"
-               << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeGas] << ":"
-               << std::setprecision(1) << std::setw(11) << wellInj[WellInjDataType::OilRate] << ":"
-               << std::setw(11) << wellInj[WellInjDataType::WaterRate] << ":"
-               << std::setw(11)<< wellInj[WellInjDataType::GasRate] << ":"
-               << std::setw(11) << wellInj[WellInjDataType::FluidResVol] << ":"
-               << std::setw(8)<< "" << ":" << std::setw(8)<< "" << ": \n";//wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
-        } else {
-            ss << std::right << std::fixed << std::setprecision(0) << ":"
-               << std::setw (8) << wellInjNames[WellInjDataType::WellName] << ":"
-               << std::setw(5) << wellInj[WellInjDataType::WellLocationi] << ","
-               << std::setw(5) << wellInj[WellInjDataType::WellLocationj] << ":"
-               << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeOil] << ":"
-               << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeWat] << ":"
-               << std::setw(6) << wellInjNames[WellInjDataType::CTRLModeGas] << ":"
-               << std::setprecision(1) << std::setw(11) << wellInj[WellInjDataType::OilRate] << ":"
-               << std::setw(11) << wellInj[WellInjDataType::WaterRate] << ":"
-               << std::setw(11) << wellInj[WellInjDataType::GasRate] << ":"
-               << std::setw(11) << wellInj[WellInjDataType::FluidResVol] << ":"
-               << std::setw(8) << wellInj[WellInjDataType::BHP] << ":"
-               << std::setw(8)<< wellInj[WellInjDataType::THP] << ": \n";//wellInj[WellInjDataType::SteadyStateII] << std::setw(10) << "\n"
-        }
-        ss << ":--------:-----------:------:------:------:-----------:-----------:-----------:-----------:--------:--------:";//--------------------:";
-    }
-    OpmLog::note(ss.str());
-}
+    const auto isWellRecord =
+        wellProd[WellProdDataType::WellLocationi] >= 1;
 
-template<class Scalar>
-void LogOutputHelper<Scalar>::
-outputProductionReport_(const std::vector<Scalar>& wellProd,
-                        const std::vector<std::string>& wellProdNames) const
-{
-    const UnitSystem& units = eclState_.getUnits();
     std::ostringstream ss;
-    if (wellProdNames[WellProdDataType::WellName].empty()) {
-        ss << "\n======================================================= PRODUCTION REPORT =======================================================\n"//=================== \n"
-           << ":  WELL  :  LOCATION :CTRL:    OIL    :   WATER   :    GAS    :   FLUID   :   WATER   : GAS/OIL  :  WAT/GAS   : BHP OR : THP OR :\n"// STEADY-ST PI       :\n"
-           << ":  NAME  :  (I,J,K)  :MODE:    RATE   :   RATE    :    RATE   :  RES.VOL. :    CUT    :  RATIO   :   RATIO    : CON.PR.: BLK.PR.:\n";// OR POTN OF PREF. PH:\n";
-        if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            ss << ":        :           :    :  SCM/DAY  :  SCM/DAY  :  SCM/DAY  :  RCM/DAY  :  SCM/SCM  :  SCM/SCM :  SCM/SCM   :  BARSA :  BARSA :\n";//                    :\n";
-        } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-            ss << ":        :           :    :  STB/DAY  :  STB/DAY  :  MSCF/DAY :  RB/DAY   :           : MSCF/STB :  STB/MSCF  :  PSIA  :  PSIA  :\n";//                    :\n";
-        } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_LAB) {
-            ss << ":        :           :    :  SCC/HR   :  SCC/HR   :  SCC/HR   :    RCC    :  SCC/SCC  :  SCC/SCC :  SCC/SCC   :  ATMA  :  ATMA  :\n";//                    :\n";
-        }
-        ss << "=================================================================================================================================";//===================";
+
+    ss << std::right << std::fixed << ':'
+       << std::setw(8) << wellProdNames[WellProdDataType::WellName] << ':';
+
+    if (! isWellRecord) {
+        ss << std::setprecision(0) << std::setw(11) << "" << ':';
     } else {
-        if (wellProd[WellProdDataType::WellLocationi] < 1) {
-            ss << std::right << std::fixed << ":"
-               << std::setw(8) << wellProdNames[WellProdDataType::WellName] << ":"
-               << std::setprecision(0) << std::setw(11) << "" << ":"
-               << std::setw(4) << wellProdNames[WellProdDataType::CTRLMode] << ":"
-               << std::setprecision(1) << std::setw(11) << wellProd[WellProdDataType::OilRate] << ":"
-               << std::setw(11) << wellProd[WellProdDataType::WaterRate] << ":"
-               << std::setw(11)<< wellProd[WellProdDataType::GasRate] << ":"
-               << std::setw(11) << wellProd[WellProdDataType::FluidResVol] << std::setprecision(3) << ":"
-               << std::setw(11) << wellProd[WellProdDataType::WaterCut] << std::setprecision(2) << ":"
-               << std::setw(10) << wellProd[WellProdDataType::GasOilRatio] << std::setprecision(4) << ":"
-               << std::setw(12) << wellProd[WellProdDataType::WatGasRatio] << std::setprecision(1) << ":"
-               << std::setw(8) << "" << ":" <<  std::setw(8) << "" << ": \n";
-        } else {
-            ss << std::right << std::fixed << ":"
-               << std::setw (8) << wellProdNames[WellProdDataType::WellName] << ":"
-               << std::setprecision(0) << std::setw(5) << wellProd[WellProdDataType::WellLocationi] << ","
-               << std::setw(5) << wellProd[WellProdDataType::WellLocationj] << ":"
-               << std::setw(4) << wellProdNames[WellProdDataType::CTRLMode] << ":"
-               << std::setprecision(1) << std::setw(11) << wellProd[WellProdDataType::OilRate] << ":"
-               << std::setw(11) << wellProd[WellProdDataType::WaterRate] << ":"
-               << std::setw(11)<< wellProd[WellProdDataType::GasRate] << ":"
-               << std::setw(11) << wellProd[WellProdDataType::FluidResVol] << std::setprecision(3) << ":"
-               << std::setw(11) << wellProd[WellProdDataType::WaterCut] << std::setprecision(2) << ":"
-               << std::setw(10) << wellProd[WellProdDataType::GasOilRatio] << std::setprecision(4) << ":"
-               << std::setw(12) << wellProd[WellProdDataType::WatGasRatio] << std::setprecision(1) << ":"
-               << std::setw(8) << wellProd[WellProdDataType::BHP] << ":"
-               << std::setw(8) << wellProd[WellProdDataType::THP] << ": \n";
-        }
-        ss << ":"<< std::setfill ('-') << std::setw (9) << ":"
-           << std::setfill ('-') << std::setw (12) << ":"
-           << std::setfill ('-') << std::setw (5) << ":"
-           << std::setfill ('-') << std::setw (12) << ":"
-           << std::setfill ('-') << std::setw (12) << ":"
-           << std::setfill ('-') << std::setw (12) << ":"
-           << std::setfill ('-') << std::setw (12) << ":"
-           << std::setfill ('-') << std::setw (12) << ":"
-           << std::setfill ('-') << std::setw (11) << ":"
-           << std::setfill ('-') << std::setw (13) << ":"
-           << std::setfill ('-') << std::setw (9) << ":"
-           << std::setfill ('-') << std::setw (9) << ':';
+        ss << std::setprecision(0)
+           << std::setw(5) << wellProd[WellProdDataType::WellLocationi] << ','
+           << std::setw(5) << wellProd[WellProdDataType::WellLocationj] << ':';
     }
+
+    ss << std::setw( 4) << wellProdNames[WellProdDataType::CTRLMode] << ':' << std::setprecision(1)
+       << std::setw(11) << wellProd[WellProdDataType::OilRate]       << ':'
+       << std::setw(11) << wellProd[WellProdDataType::WaterRate]     << ':'
+       << std::setw(11) << wellProd[WellProdDataType::GasRate]       << ':'
+       << std::setw(11) << wellProd[WellProdDataType::FluidResVol]   << ':' << std::setprecision(3)
+       << std::setw(11) << wellProd[WellProdDataType::WaterCut]      << ':' << std::setprecision(2)
+       << std::setw(10) << wellProd[WellProdDataType::GasOilRatio]   << ':' << std::setprecision(4)
+       << std::setw(12) << wellProd[WellProdDataType::WatGasRatio]   << ':' << std::setprecision(1);
+
+    if (! isWellRecord) {
+        ss << std::setw(8) << "" << ':' << std::setw(8) << "" << ':';
+    } else {
+        ss << std::setw(8) << wellProd[WellProdDataType::BHP] << ':'
+           << std::setw(8) << wellProd[WellProdDataType::THP] << ':';
+    }
+
     OpmLog::note(ss.str());
 }
 

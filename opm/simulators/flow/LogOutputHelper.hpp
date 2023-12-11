@@ -69,8 +69,10 @@ public:
                     std::function<bool(const std::string&)> isDefunct) const;
 
 private:
-    void outputCumulativeReport_(const std::vector<Scalar>& wellCum,
-                                 const std::vector<std::string>& wellCumNames) const;
+    void beginCumulativeReport_() const;
+    void endCumulativeReport_() const;
+    void outputCumulativeReportRecord_(const std::vector<Scalar>& wellCum,
+                                       const std::vector<std::string>& wellCumNames) const;
 
     void outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
                                    std::unordered_map<Inplace::Phase, Scalar> cip,
@@ -81,11 +83,15 @@ private:
     void outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
                                  const int reg) const;
 
-    void outputInjectionReport_(const std::vector<Scalar>& wellInj,
-                                const std::vector<std::string>& wellInjNames) const;
+    void beginInjectionReport_() const;
+    void endInjectionReport_() const;
+    void outputInjectionReportRecord_(const std::vector<Scalar>& wellInj,
+                                      const std::vector<std::string>& wellInjNames) const;
 
-    void outputProductionReport_(const std::vector<Scalar>& wellProd,
-                                 const std::vector<std::string>& wellProdNames) const;
+    void beginProductionReport_() const;
+    void endProductionReport_() const;
+    void outputProductionReportRecord_(const std::vector<Scalar>& wellProd,
+                                       const std::vector<std::string>& wellProdNames) const;
 
     void fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const;
     void pressureUnitConvert_(Scalar& pav) const;
