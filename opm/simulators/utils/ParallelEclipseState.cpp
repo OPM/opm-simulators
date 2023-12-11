@@ -228,10 +228,12 @@ bool ParallelFieldPropsManager::has_double(const std::string& keyword) const
 
 std::vector<std::string> ParallelFieldPropsManager::fip_regions() const
 {
+    constexpr auto maxchar = std::string::size_type{6};
+
     std::vector<std::string> result;
     for (const auto& key : m_intProps) {
         if (Fieldprops::keywords::isFipxxx(key.first)) {
-            result.push_back(key.first);
+            result.push_back(key.first.substr(0, maxchar));
         }
     }
     return result;
