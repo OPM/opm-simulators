@@ -38,6 +38,8 @@
 #include <opm/input/eclipse/EclipseState/Tables/PbvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PdvdTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SaltvdTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/RtempvdTable.hpp>
+
 #include <opm/input/eclipse/EclipseState/Tables/SaltpvdTable.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
@@ -245,11 +247,11 @@ namespace PhasePressODE {
 
 template<class FluidSystem>
 Water<FluidSystem>::
-Water(const double temp,
+Water(const TabulatedFunction& tempVdTable,
       const TabulatedFunction& saltVdTable,
       const int pvtRegionIdx,
       const double normGrav)
-    : temp_(temp)
+    : tempVdTable_(tempVdTable)
     , saltVdTable_(saltVdTable)
     , pvtRegionIdx_(pvtRegionIdx)
     , g_(normGrav)
@@ -271,18 +273,19 @@ density(const double depth,
 {
     // The initializing algorithm can give depths outside the range due to numerical noise i.e. we extrapolate
     double saltConcentration = saltVdTable_.eval(depth, /*extrapolate=*/true);
-    double rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, 0.0 /*=Rsw*/, saltConcentration);
+    double temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
+    double rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, 0.0 /*=Rsw*/, saltConcentration);
     rho *= FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
     return rho;
 }
 
 template<class FluidSystem, class RS>
 Oil<FluidSystem,RS>::
-Oil(const double temp,
+Oil(const TabulatedFunction& tempVdTable,
     const RS& rs,
     const int pvtRegionIdx,
     const double normGrav)
-    : temp_(temp)
+    : tempVdTable_(tempVdTable)
     , rs_(rs)
     , pvtRegionIdx_(pvtRegionIdx)
     , g_(normGrav)
@@ -302,16 +305,17 @@ double Oil<FluidSystem,RS>::
 density(const double depth,
         const double press) const
 {
+    const double temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
     double rs = 0.0;
     if(FluidSystem::enableDissolvedGas())
-        rs = rs_(depth, press, temp_);
+        rs = rs_(depth, press, temp);
 
     double bOil = 0.0;
-    if (rs >= FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, temp_, press)) {
-        bOil = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
+    if (rs >= FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, temp, press)) {
+        bOil = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp, press);
     }
     else {
-        bOil = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, rs);
+        bOil = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, rs);
     }
     double rho = bOil * FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, pvtRegionIdx_);
     if (FluidSystem::enableDissolvedGas()) {
@@ -323,16 +327,16 @@ density(const double depth,
 
 template<class FluidSystem, class RV, class RVW>
 Gas<FluidSystem,RV,RVW>::
-Gas(const double temp,
-        const RV& rv,
-        const RVW& rvw,
-        const int pvtRegionIdx,
-        const double normGrav)
-        : temp_(temp)
-        , rv_(rv)
-        , rvw_(rvw)
-        , pvtRegionIdx_(pvtRegionIdx)
-        , g_(normGrav)
+Gas(const TabulatedFunction& tempVdTable,
+    const RV& rv,
+    const RVW& rvw,
+    const int pvtRegionIdx,
+    const double normGrav)
+    : tempVdTable_(tempVdTable)
+    , rv_(rv)
+    , rvw_(rvw)
+    , pvtRegionIdx_(pvtRegionIdx)
+    , g_(normGrav)
 {
 }
 
@@ -349,23 +353,24 @@ double Gas<FluidSystem,RV,RVW>::
 density(const double depth,
         const double press) const
 {
+    const double temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
     double rv = 0.0;
     if (FluidSystem::enableVaporizedOil())
-        rv = rv_(depth, press, temp_);
+        rv = rv_(depth, press, temp);
 
     double rvw = 0.0;
     if (FluidSystem::enableVaporizedWater())
-        rvw = rvw_(depth, press, temp_);
+        rvw = rvw_(depth, press, temp);
 
     double bGas = 0.0;
 
     if (FluidSystem::enableVaporizedOil() && FluidSystem::enableVaporizedWater()) {
-        if (rv >= FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp_, press)
-            && rvw >= FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_, temp_, press))
+        if (rv >= FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp, press)
+            && rvw >= FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_, temp, press))
         {
-            bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
+            bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp, press);
         } else {
-            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, rv, rvw);
+            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, rv, rvw);
         }
         double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
         rho += rv * bGas * FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, pvtRegionIdx_)
@@ -374,10 +379,10 @@ density(const double depth,
     }
 
     if (FluidSystem::enableVaporizedOil()){
-        if (rv >= FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp_, press)) {
-            bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
+        if (rv >= FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp, press)) {
+            bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp, press);
         } else {
-            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, rv, 0.0/*=rvw*/);
+            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, rv, 0.0/*=rvw*/);
         }
         double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
         rho += rv * bGas * FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, pvtRegionIdx_);
@@ -385,11 +390,11 @@ density(const double depth,
      }
 
     if (FluidSystem::enableVaporizedWater()){
-        if (rvw >= FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_, temp_, press)) {
-            bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp_, press);
+        if (rvw >= FluidSystem::gasPvt().saturatedWaterVaporizationFactor(pvtRegionIdx_, temp, press)) {
+            bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp, press);
         }
         else {
-            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, 0.0/*=rv*/, rvw);
+            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, 0.0/*=rv*/, rvw);
         }
         double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
         rho += rvw * bGas * FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
@@ -397,7 +402,7 @@ density(const double depth,
     }
 
     // immiscible gas
-    bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp_, press, 0.0/*=rv*/, 0.0/*=rvw*/);
+    bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, 0.0/*=rv*/, 0.0/*=rvw*/);
     double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
 
     return rho;
@@ -1206,7 +1211,7 @@ makeOilPressure(const typename OPress::InitCond& ic,
                 const VSpan&                     span)
 {
     const auto drho = OilPressODE {
-        this->temperature_, reg.dissolutionCalculator(),
+        reg.tempVdTable(), reg.dissolutionCalculator(),
         reg.pvtIdx(), this->gravity_
     };
 
@@ -1220,7 +1225,7 @@ makeGasPressure(const typename GPress::InitCond& ic,
                 const VSpan&                     span)
 {
     const auto drho = GasPressODE {
-        this->temperature_, reg.evaporationCalculator(), reg.waterEvaporationCalculator(),
+        reg.tempVdTable(), reg.evaporationCalculator(), reg.waterEvaporationCalculator(),
         reg.pvtIdx(), this->gravity_
     };
 
@@ -1234,7 +1239,7 @@ makeWatPressure(const typename WPress::InitCond& ic,
                 const VSpan&                     span)
 {
     const auto drho = WatPressODE {
-        this->temperature_, reg.saltVdTable(), reg.pvtIdx(), this->gravity_
+        reg.tempVdTable(), reg.saltVdTable(), reg.pvtIdx(), this->gravity_
     };
 
     this->wat_ = std::make_unique<WPress>(drho, ic, this->nsample_, span);
@@ -1300,7 +1305,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                      const double grav,
                      const int num_pressure_points,
                      const bool applySwatInit)
-    : temperature_(grid.size(/*codim=*/0)),
+    : temperature_(grid.size(/*codim=*/0), eclipseState.getTableManager().rtemp()),
       saltConcentration_(grid.size(/*codim=*/0)),
       saltSaturation_(grid.size(/*codim=*/0)),
       pp_(FluidSystem::numPhases,
@@ -1495,7 +1500,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
 
 
     // EXTRACT the initial temperature
-    updateInitialTemperature_(eclipseState);
+    updateInitialTemperature_(eclipseState, eqlmap);
 
     // EXTRACT the initial salt concentration
     updateInitialSaltConcentration_(eclipseState, eqlmap);
@@ -1519,14 +1524,35 @@ template<class FluidSystem,
          class GridView,
          class ElementMapper,
          class CartesianIndexMapper>
+template<class RMap>
 void InitialStateComputer<FluidSystem,
                           Grid,
                           GridView,
                           ElementMapper,
                           CartesianIndexMapper>::
-updateInitialTemperature_(const EclipseState& eclState)
+updateInitialTemperature_(const EclipseState& eclState, const RMap& reg)
 {
-  this->temperature_ = eclState.fieldProps().get_double("TEMPI");
+    const int numEquilReg = rsFunc_.size();
+    tempVdTable_.resize(numEquilReg);
+    const auto& tables = eclState.getTableManager();
+    if (!tables.hasTables("RTEMPVD")) {
+        std::vector<double> x = {0.0,1.0};
+        std::vector<double> y = {tables.rtemp(),tables.rtemp()};
+        for (auto& table : this->tempVdTable_) {
+            table.setXYContainers(x, y);
+        }
+    } else {
+        const TableContainer& tempvdTables = tables.getRtempvdTables();
+        for (std::size_t i = 0; i < tempvdTables.size(); ++i) {
+            const RtempvdTable& tempvdTable = tempvdTables.getTable<RtempvdTable>(i);
+            tempVdTable_[i].setXYContainers(tempvdTable.getDepthColumn(), tempvdTable.getTemperatureColumn());
+            const auto& cells = reg.cells(i);
+            for (const auto& cell : cells) {
+                const double depth = cellCenterDepth_[cell];
+                this->temperature_[cell] = tempVdTable_[i].eval(depth, /*extrapolate=*/true);
+            }
+        }
+    }
 }
 
 template<class FluidSystem,
@@ -1776,7 +1802,7 @@ calcPressSatRsRv(const RMap& reg,
         }
 
         const auto eqreg = EquilReg {
-            rec[r], this->rsFunc_[r], this->rvFunc_[r], this->rvwFunc_[r], this->saltVdTable_[r], this->regionPvtIdx_[r]
+            rec[r], this->rsFunc_[r], this->rvFunc_[r], this->rvwFunc_[r], this->tempVdTable_[r], this->saltVdTable_[r], this->regionPvtIdx_[r]
         };
 
         // Ensure gas/oil and oil/water contacts are within the span for the

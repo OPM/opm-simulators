@@ -341,12 +341,14 @@ EquilReg::EquilReg(const EquilRecord& rec,
                    std::shared_ptr<Miscibility::RsFunction> rs,
                    std::shared_ptr<Miscibility::RsFunction> rv,
                    std::shared_ptr<Miscibility::RsFunction> rvw,
+                   const TabulatedFunction& tempVdTable,
                    const TabulatedFunction& saltVdTable,
                    const int pvtIdx)
     : rec_    (rec)
     , rs_     (rs)
     , rv_     (rv)
     , rvw_     (rvw)
+    , tempVdTable_ (tempVdTable)
     , saltVdTable_ (saltVdTable)
     , pvtIdx_ (pvtIdx)
 {
@@ -409,6 +411,12 @@ const EquilReg::TabulatedFunction&
 EquilReg::saltVdTable() const
 {
     return saltVdTable_;
+}
+
+const EquilReg::TabulatedFunction&
+EquilReg::tempVdTable() const
+{
+    return tempVdTable_;
 }
 
 int EquilReg::pvtIdx() const
