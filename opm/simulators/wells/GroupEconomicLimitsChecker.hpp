@@ -24,6 +24,7 @@
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
+#include <array>
 #include <map>
 #include <string>
 
@@ -78,7 +79,7 @@ class WellTestState;
         const Schedule &schedule_;
         GroupEconProductionLimits::GEconGroupProp gecon_props_;
         bool debug_ = true;
-        double production_rates_[NUM_PHASES];
+        std::array<double,NUM_PHASES> production_rates_;
         std::map<int, BlackoilPhases::PhaseIndex> phase_idx_map_ = {
             {0, BlackoilPhases::Liquid},
             {1, BlackoilPhases::Vapour},
