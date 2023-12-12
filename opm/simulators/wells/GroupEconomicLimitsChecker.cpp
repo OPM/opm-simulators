@@ -334,7 +334,7 @@ addPrintMessage(const std::string &msg, const double value, const double limit, 
 
 bool
 GroupEconomicLimitsChecker::
-closeWellsRecursive(Group group, int level)
+closeWellsRecursive(const Group& group, int level)
 {
     bool wells_closed = false;
 

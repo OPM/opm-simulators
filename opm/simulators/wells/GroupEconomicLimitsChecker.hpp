@@ -64,7 +64,7 @@ class WellTestState;
     private:
         void displayDebugMessage(const std::string &msg) const;
         void addPrintMessage(const std::string &msg, const double value, const double limit, const UnitSystem::measure measure);
-        bool closeWellsRecursive(Group group, int level=0);
+        bool closeWellsRecursive(const Group& group, int level = 0);
         void throwNotImplementedError(const std::string &error) const;
         const BlackoilWellModelGeneric &well_model_;
         const Group &group_;
