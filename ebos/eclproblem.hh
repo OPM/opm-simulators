@@ -1960,7 +1960,7 @@ protected:
     // For CpGrid with local grid refinement, the field property of a cell on the leaf
     // is inherited from its parent or equivalent (when has no parent) cell on level zero.
     std::function<std::vector<double>(const FieldPropsManager&, const std::string&, const unsigned int&)>
-    getFieldPropDoubleOnLeafAssigner_()
+    fieldPropDoubleOnLeafAssigner_()
     {
         const auto& lookup = this->lookUpData_;
         return [&lookup](const FieldPropsManager& fieldPropManager, const std::string& propString,
@@ -1976,7 +1976,7 @@ protected:
     // is inherited from its parent or equivalent (when has no parent) cell on level zero.
     template<typename IntType>
     std::function<std::vector<IntType>(const FieldPropsManager&, const std::string&, const unsigned int&, bool)>
-    getFieldPropIntTypeOnLeafAssigner_()
+    fieldPropIntTypeOnLeafAssigner_()
     {
         const auto& lookup = this->lookUpData_;
         return [&lookup](const FieldPropsManager& fieldPropManager, const std::string& propString,
@@ -2017,7 +2017,8 @@ protected:
         // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         materialLawManager_->initFromState(eclState);
-        materialLawManager_->initParamsForElements(eclState, this->model().numGridDof());
+        materialLawManager_->initParamsForElements(eclState, this->model().numGridDof(),
+                                                   this-> template fieldPropIntTypeOnLeafAssigner_<int>());
         ////////////////////////////////
     }
 
@@ -2032,8 +2033,8 @@ protected:
             // fluid-matrix interactions (saturation functions; relperm/capillary pressure)
             thermalLawManager_ = std::make_shared<EclThermalLawManager>();
             thermalLawManager_->initParamsForElements(eclState, this->model().numGridDof(),
-                                                      this-> getFieldPropDoubleOnLeafAssigner_(),
-                                                      this-> template getFieldPropIntTypeOnLeafAssigner_<unsigned int>());
+                                                      this-> fieldPropDoubleOnLeafAssigner_(),
+                                                      this-> template fieldPropIntTypeOnLeafAssigner_<unsigned int>());
         }
     }
 
