@@ -2003,14 +2003,16 @@ protected:
                 getDoubleOnLeaf = [this](const FieldPropsManager& fieldPropManager, const std::string& propString,
                                          const unsigned int& numElems)
                 {
-                    return EclGenericProblem<GridView,FluidSystem,Scalar>::getAssignDoubleOnLeaf(fieldPropManager, propString, numElems);
+                    return  static_cast<BaseType*>(this)->getLookUpData().assignFieldPropsDoubleOnLeaf(fieldPropManager,
+                                                                                                       propString,
+                                                                                                       numElems);
                 };
             std::function<std::vector<unsigned int>(const FieldPropsManager&, const std::string&, const unsigned int&, bool)>
                 getIntOnLeaf = [this](const FieldPropsManager& fieldPropManager, const std::string& propString,
                                       const unsigned int& numElems, bool needsTranslation)
                 {
-                    return EclGenericProblem<GridView,FluidSystem,Scalar>::getAssignIntOnLeaf(fieldPropManager, propString,
-                                                                                              numElems, needsTranslation);
+                    return static_cast<BaseType*>(this)->getLookUpData().template
+                        assignFieldPropsIntOnLeaf<unsigned int>(fieldPropManager, propString, numElems, needsTranslation);
                 };
             thermalLawManager_->initParamsForElements(eclState, this->model().numGridDof(), getDoubleOnLeaf, getIntOnLeaf);
         }
