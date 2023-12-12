@@ -18,15 +18,24 @@
 */
 
 #include <config.h>
-#include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
 #include <opm/simulators/wells/GroupEconomicLimitsChecker.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+
+#include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
+
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
+#include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
+#include <opm/simulators/wells/WellGroupHelpers.hpp>
+
 #include <fmt/format.h>
 
 #include <ctime>
 #include <chrono>
-#include <iostream>
+#include <sstream>
 #include <iomanip>
 
 namespace Opm {

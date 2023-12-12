@@ -20,21 +20,22 @@
 #ifndef OPM_GROUP_ECONOMIC_LIMITS_CHECKER_HEADER_INCLUDED
 #define OPM_GROUP_ECONOMIC_LIMITS_CHECKER_HEADER_INCLUDED
 
-#include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
-#include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/wells/WellGroupHelpers.hpp>
-#include <opm/simulators/wells/WellState.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/input/eclipse/Schedule/Group/GroupEconProductionLimits.hpp>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
-#include <ctime>
+#include <map>
+#include <string>
 
 namespace Opm
 {
+
+class BlackoilWellModelGeneric;
+class DeferredLogger;
+class Group;
+class WellState;
+class WellTestState;
+
     class GroupEconomicLimitsChecker
     {
     public:
