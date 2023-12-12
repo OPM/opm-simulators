@@ -21,6 +21,8 @@
 
 #define XSD_CXX11_TEMPLATE_ALIAS 1
 
+#include <config.h>
+
 #include <damaris/model/ModifyModel.hpp>
 #include <opm/simulators/utils/DamarisKeywords.hpp>
 #include <opm/simulators/utils/DamarisOutputModule.hpp>
@@ -37,10 +39,10 @@ std::string initDamarisXmlFile(); // Defined in initDamarisXMLFile.cpp, to avoid
 
 /**
  * Initialize Damaris by either reading a file specified by the environment variable FLOW_DAMARIS_XML_FILE or
- * by  filling in th XML file and storing it in the chosen directory
+ * by  filling in the XML file and storing it in the chosen directory
  */
 void
-initializeDamaris(MPI_Comm comm, int mpiRank, std::map<std::string, std::string>& find_replace_map )
+initializeDamaris(const MPI_Comm comm, const int mpiRank, const std::map<std::string, std::string>& find_replace_map )
 {
     int dam_err;
 
@@ -63,14 +65,16 @@ initializeDamaris(MPI_Comm comm, int mpiRank, std::map<std::string, std::string>
         // std::map<std::string, std::string> find_replace_map = DamarisKeywords(outputDir, enableDamarisOutputCollective);
         myMod.RepalceWithRegEx(find_replace_map);
 
-        std::string outputDir = find_replace_map["_PATH_REGEX_"];
+        std::string outputDir = find_replace_map.at("_PATH_REGEX_");
         std::string damaris_xml_filename_str = outputDir + "/damaris_config.xml";
 
         if (mpiRank == 0) {
             myMod.SaveXMLStringToFile(damaris_xml_filename_str);
         }
         
-        OpmLog::info("Initializing Damaris using internally built file: " + damaris_xml_filename_str + " (N.B. use environment variable FLOW_DAMARIS_XML_FILE to override)");
+        OpmLog::info("Initializing Damaris using internally built file: " + damaris_xml_filename_str + 
+                     " (N.B. use environment variable FLOW_DAMARIS_XML_FILE to override)");
+                     
         dam_err = damaris_initialize(damaris_xml_filename_str.c_str(), comm);
         if (dam_err != DAMARIS_OK) {
             OpmLog::error(fmt::format("damariswriter::initializeDamaris()       : ( rank:{}) "

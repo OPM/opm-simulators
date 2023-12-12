@@ -394,8 +394,12 @@ struct EnableDamarisOutput<TypeTag, TTag::EclBaseProblem> {
 };
 // If Damaris is available, write specific variable output in parallel
 template<class TypeTag>
-struct EnableDamarisOutputCollective<TypeTag, TTag::EclBaseProblem> {
+struct DamarisOutputHdfCollective<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = true;
+};
+template<class TypeTag>
+struct DamarisSaveMeshToHdf<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
 };
 template<class TypeTag>
 struct DamarisSaveToHdf<TypeTag, TTag::EclBaseProblem> {

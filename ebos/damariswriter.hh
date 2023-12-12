@@ -50,6 +50,7 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <memory>
 
 #include <omp.h>
 
@@ -66,7 +67,11 @@ struct EnableDamarisOutput {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct EnableDamarisOutputCollective {
+struct DamarisOutputHdfCollective {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisSaveMeshToHdf {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -145,11 +150,16 @@ class DamarisWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::G
 public:
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDamarisOutputCollective,
-                             "Write output via Damaris using parallel HDF5 to get single file per timestep instead of one per Damaris core.");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, DamarisOutputHdfCollective,
+                             "Write output via Damaris using parallel HDF5 to get single file and dataset per timestep instead of one per Damaris \n \
+                                                  core with multiple datasets.");
         EWOMS_REGISTER_PARAM(TypeTag, bool, DamarisSaveToHdf,
                              "Set to false to prevent output to HDF5. Uses collective output by default or set --enable-damaris-collective=false to\n \
                                                   use file per core (file per Damaris server).");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, DamarisSaveMeshToHdf,
+                             "Saves the mesh data to the HDF5 file (1st iteration only). Will set  --damaris-output-hdf-collective to false \n \
+                                                  so will use file per core (file per Damaris server) output (global sizes and offset values \n \
+                                                  of mesh variables are not being provided as yet).");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisPythonScript,
                              "Set to the path and filename of a Python script to run on Damaris server resources with access to OPM flow data.");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisPythonParaviewScript,
@@ -322,15 +332,16 @@ private:
                                       rank_, damaris_error_string(dam_err_) ));
         }
 
-        // This is an example of writing to the Damaris shared memory directly (i.e. not using damaris_write() to copy data there)
-        // We will add the MPI rank value directly into shared memory using the DamarisVar wrapper of the C based Damaris API
-        // The shared memory is given back to Damaris on object deletion - i.e. when the unique_ptr goes out of scope.
-        //auto mpi_rank_var = std::make_unique<Opm::DamarisOutput::DamarisVar<int>>(
-        //    1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)) ; 
-        // std::unique_ptr<Opm::DamarisOutput::DamarisVar<int>>  
+        // This is an example of writing to the Damaris shared memory directly (i.e. not using 
+        // damaris_write() to copy data there)
+        // We will add the MPI rank value directly into shared memory using the DamarisVar 
+        // wrapper of the C based Damaris API.
+        // The shared memory is given back to Damaris on object deletion - i.e. when the 
+        // unique_ptr goes out of scope.
         std::unique_ptr<DamarisVarInt> mpi_rank_var( new DamarisVarInt(1, 
                                                                        {std::string("n_elements_local")}, 
-                                                                       std::string("MPI_RANK"), rank_) ) ;
+                                                                       std::string("MPI_RANK"), rank_) );
+    
         // N.B. we have not set any offset values, so HDF5 collective and Dask arrays cannot be used.
         mpi_rank_var->setDamarisParameterAndShmem( {this->numElements_ } ) ;
         // Fill the created memory area
@@ -406,11 +417,6 @@ private:
                           "damaris_set_position(\"GLOBAL_CELL_INDEX\", temp_int64_t);");
         }
 
-        //auto mpi_rank_var = std::make_unique<Opm::DamarisOutput::DamarisVar<int>>(
-        //    1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)) ; 
-            
-        // std::unique_ptr<Opm::DamarisOutput::DamarisVar<int>>  
-        // mpi_rank_var(new Opm::DamarisOutput::DamarisVar<int>(1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)) ;
         std::unique_ptr<DamarisVarInt> mpi_rank_var( new DamarisVarInt(1, 
                                                                        {std::string("n_elements_local")}, 
                                                                        std::string("MPI_RANK"), rank_) ) ;
@@ -442,19 +448,17 @@ private:
             //     <variable name="z"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonConduitTest" time-varying="false" />
             // </group>
 
-            std::unique_ptr<Opm::DamarisOutput::DamarisVar<double>>  var_x(new Opm::DamarisOutput::DamarisVar<double>(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/x"), rank_)) ; 
+            std::unique_ptr<DamarisVarDbl>  var_x(new DamarisVarDbl(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/x"), rank_)) ; 
             // N.B. We have not set any position/offset values (using DamarisVar::SetDamarisPosition). 
             // They are not needed for mesh data as each process has a local geometric model. 
             // However, HDF5 collective and Dask arrays cannot be used for this data.
             var_x->setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
              
-            std::unique_ptr<Opm::DamarisOutput::DamarisVar<double>>  var_y(new Opm::DamarisOutput::DamarisVar<double>(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/y"), rank_)) ; 
-            var_y->parameterIsSet() ;
-            var_y->setPointersToDamarisShmem() ;
+            std::unique_ptr<DamarisVarDbl>  var_y(new DamarisVarDbl(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/y"), rank_)) ; 
+            var_y->setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
              
-            std::unique_ptr<Opm::DamarisOutput::DamarisVar<double>>  var_z(new Opm::DamarisOutput::DamarisVar<double>(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/z"), rank_)) ; 
-            var_z->parameterIsSet() ;
-            var_z->setPointersToDamarisShmem() ;
+            std::unique_ptr<DamarisVarDbl>  var_z(new DamarisVarDbl(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/z"), rank_)) ; 
+            var_z->setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
             
             // Now we can return the memory that Damaris has allocated in shmem and use it to write the X,y,z coordinates
             double itime, ftime, exec_time;
@@ -462,8 +466,8 @@ private:
             if ( geomData.writeGridPoints(*var_x,*var_y,*var_z) < 0)
                  DUNE_THROW(Dune::IOError, geomData.getError()  );
              
-            //if ( geomData.writeGridPoints(var_x->data(),var_y->data(),var_z->data()) < 0)
-            //     DUNE_THROW(Dune::IOError, geomData.getError()  );
+            if ( geomData.writeGridPoints(var_x->data(),var_y->data(),var_z->data(), geomData.getNVertices()) < 0)
+                 DUNE_THROW(Dune::IOError, geomData.getError()  );
 
             ftime = omp_get_wtime();
             exec_time = ftime - itime;
@@ -489,8 +493,7 @@ private:
             std::unique_ptr<DamarisVarInt>  var_offsets(new DamarisVarInt(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/offsets"), rank_)) ;
             var_offsets->setDamarisParameterAndShmem({ geomData.getNCells()}) ;
             std::unique_ptr<DamarisVarChar>  var_types(new DamarisVarChar(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/types"), rank_)) ;
-            var_types->parameterIsSet() ;
-            var_types->setPointersToDamarisShmem() ;
+            var_types->setDamarisParameterAndShmem({ geomData.getNCells()}) ;
 
             // Copy the mesh data from the Durne grid
             long i = 0 ;
@@ -507,6 +510,7 @@ private:
             i = geomData.writeCellTypes(*var_types) ;
             if ( i != geomData.getNCells())
                  DUNE_THROW(Dune::IOError,geomData.getError());
+             
         }
         catch (std::exception& e) 
         {

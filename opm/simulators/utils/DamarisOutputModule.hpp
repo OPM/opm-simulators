@@ -18,8 +18,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <config.h>
-
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <limits>
@@ -27,10 +25,6 @@
 #include <string>
 
 #include <fmt/format.h>
-
-#if HAVE_MPI
-#include <mpi.h>
-#endif
 
 #include <Damaris.h>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -54,6 +48,6 @@ namespace Opm::DamarisOutput
 *  2/ Reading a file specified by the environment variable FLOW_DAMARIS_XML_FILE 
 *  
 */
- void initializeDamaris(MPI_Comm comm, int mpiRank, std::map<std::string, std::string>& find_replace_map );
+ void initializeDamaris(const MPI_Comm comm, const int mpiRank, const std::map<std::string, std::string>& find_replace_map );
 
 } // namespace Opm::DamarisOutput
