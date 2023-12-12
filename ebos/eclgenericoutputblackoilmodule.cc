@@ -711,7 +711,7 @@ regionSum(const ScalarBuffer& property,
         // the property does not contain the ghostcells
         // This code assumes that that the ghostcells are
         // added after the interior cells
-        // Is this a valid assumption?
+        // OwnerCellsFirst = True
         assert(regionId.size() >= property.size());
         for (std::size_t j = 0; j < property.size(); ++j) {
             const int regionIdx = regionId[j] - 1;

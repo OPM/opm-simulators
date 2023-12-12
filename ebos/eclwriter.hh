@@ -331,7 +331,7 @@ public:
         }
 
         const auto& gridView = simulator_.vanguard().gridView();
-        const int num_interior = Opm::detail::
+        const int num_interior = detail::
             countLocalInteriorCellsGridView(gridView);
 
         this->eclOutputModule_->
@@ -562,7 +562,7 @@ private:
         const auto& gridView = simulator_.vanguard().gridView();
         const bool log = this->collectToIORank_.isIORank();
 
-        const int num_interior = Opm::detail::
+        const int num_interior = detail::
             countLocalInteriorCellsGridView(gridView);
         this->eclOutputModule_->
             allocBuffers(num_interior, reportStepNum,

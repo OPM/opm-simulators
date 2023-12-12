@@ -44,6 +44,7 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/simulators/flow/countGlobalCells.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -516,7 +517,7 @@ private:
         }
 
         const auto& gridView = simulator_.vanguard().gridView();
-        const int num_interior = Opm::detail::
+        const int num_interior = detail::
             countLocalInteriorCellsGridView(gridView);
         const bool log = this->collectToIORank_.isIORank();
 
