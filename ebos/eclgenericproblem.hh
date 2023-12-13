@@ -377,12 +377,6 @@ protected:
     using LookUpData = Opm::LookUpData<Grid,GridView>;
     const LookUpData lookUpData_;
 
-    auto getLookUpData(unsigned elemIdx) const
-    {
-        using GridType = std::remove_cv_t< typename std::remove_reference<decltype(gridView_.grid())>::type>;
-        return lookUpData_.template getFieldPropIdx<GridType>(elemIdx);
-    }
-
 private:
     template<class T>
     void updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regions);
