@@ -57,16 +57,21 @@ struct DamarisSettings {
     std::string pythonFilename_;
     std::string paraviewPythonFilename_;
 
-    std::string damarisSimName_; // empty defaults to opm-sim-<magic_number>
+    std::string damarisSimName_; // empty and set to "opm-flow-<random-number>" if none provided on command line. Used as prefix to HDF5 filenames
+    std::string shmemName_;      // empty and needs to be unique if multiple simulations are running on the same server/node. Used to name the Damaris shared memory region.
     std::string damarisLogLevel_ = "info";
     std::string damarisDaskFile_ = "";
     int nDamarisCores_ = 1;  // this is the number of (Damaris server) cores per node
     int nDamarisNodes_ = 0;
     long shmemSizeBytes_ = 536870912;  // 512 MB
+    
+    std::string rand_value_str_ ;  // to be added to sheared memory name to make unique 
 
     std::map<std::string, std::string>
     getKeywords(const Parallel::Communication& comm,
                 const std::string& OutputDir);
+                
+    void SetRandString(void);  // sets the value of rand_value_str_
 };
 
 /**
@@ -93,6 +98,7 @@ getDamarisKeywords(const Parallel::Communication& comm, const std::string& Outpu
     settings.nDamarisCores_ = EWOMS_GET_PARAM(TypeTag, int, DamarisDedicatedCores);
     settings.nDamarisNodes_ = EWOMS_GET_PARAM(TypeTag, int, DamarisDedicatedNodes);
     settings.shmemSizeBytes_ = EWOMS_GET_PARAM(TypeTag, long, DamarisSharedMemorySizeBytes);
+    settings.shmemName_ = EWOMS_GET_PARAM(TypeTag, std::string, DamarisSharedMemoryName);
     settings.damarisLogLevel_ = EWOMS_GET_PARAM(TypeTag, std::string, DamarisLogLevel);
     settings.damarisDaskFile_ = EWOMS_GET_PARAM(TypeTag, std::string, DamarisDaskFile);
     return settings.getKeywords(comm, OutputDir);

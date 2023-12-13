@@ -426,6 +426,10 @@ struct DamarisDedicatedNodes<TypeTag, TTag::EclBaseProblem> {
     static constexpr int value = 0;
 };
 template<class TypeTag>
+struct DamarisSharedMemoryName<TypeTag, TTag::EclBaseProblem> {
+    static constexpr auto value = "" ;  // default name is empty, will make unique if needed in DamarisKeywords()
+};
+template<class TypeTag>
 struct DamarisSharedMemorySizeBytes<TypeTag, TTag::EclBaseProblem> {
     static constexpr long value = 536870912;  // 512 MB
 };

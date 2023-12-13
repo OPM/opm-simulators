@@ -161,38 +161,14 @@ public:
 }; // class DamarisVarBase
 
 /**
- *  class to store a Damaris variable representation for the XML file (can be
- * used with /ref class DamarisKeywords).
- *
- *  It is thought that the details stored in the object can be used to pass into
- * an XML generation function e.g. DamarisKeywords
- *
- *  Should be instantiated with something like the following:
- *  // The following needs to be defined in the Damaris XML file:
- *  // <parameter name="n_elements_mpi_local"     type="int" value="1" />
- *  // <layout    name="mpi_layout"    type="int"
- * dimensions="n_elements_mpi_local"   comment="MPI elements layout"  />
- *  // <variable name="MPI_RANK"  layout="mpi_layout"   type="scalar"
- * visualizable="true" mesh="unstructured_mesh" unit="rank"  centering="zonal"
- *  //                                                   store="#"
- * time-varying="false"  script="_PYTHON_XML_NAME_" comment="The cells MPI
- * rank"/> damaris::model::DamarisVar<int>  dam_var = new
- * damaris::model::DamarisVar<int>(1, {std::string("n_connectivity_ph")},
- * std::string("topologies/topo/elements/connectivity"), rank_);
- *  dam_var->SetDamarisParameterAndShmem( { geomData.getNCorners() } );
- *
- *  int * shmem_mpi_ptr = dam_var->data_ptr();
- *  // Fill the created memory area
- *  for (int i = 0; i <; i++ )
- *  {
- *      shmem_mpi_ptr[i] = rank_;
- *  }
- *  delete dam_var;  // this tells Damaris that the shared memory that it
- * supplied is at its disposal. It will print error messages too.
- *
- */
+*  class to store a Damaris variable representation for the XML file 
+*  (can be used with /ref class DamarisKeywords).
+*
+*  It is thought that the details stored in the object can be used to pass 
+*  into an XML generation function e.g. DamarisKeywords 
+*
+*/
 template <typename T> class DamarisVar : public DamarisVarBase {
-  int dims_;
   int num_params_; //!< Each paramater name string will need a value and they
                    //!< are set in SetDamarisParameter()
   std::vector<int>
@@ -226,55 +202,67 @@ template <typename T> class DamarisVar : public DamarisVarBase {
   size_t
       current_size_; //!< The total number of elements that may be held by this
                      //!< part of the variable - returned by the size() method.
+                     //!< N.B. the actual size of the data area is dependent on 
+                     //!< how the <variable> XML is written, as paramaters can
+                     //!< be augmented by basic maths relationships. This value
+                     //!< may not even be initialised if ParameterIsSet() method
+                     //!< is being used (e.g. in version 2/ of the constructor below).
 
 public:
-  /**
-    * Constructor - sets private data values and dos not initialise the shared memory area.
-    *
-    * Two usages:
-    *         Example XML definition:
-    *          <parameter name="my_param_name1"     type="int" value="1" />
-    *          <parameter name="my_param_name2"     type="int" value="1" />
-    *          <layout    name="my_layout"          type="int" dimensions="my_param_name1,my_param_name2" comment="This is a 2D variable"/>
-    *          <variable name="MYVARNAME"  layout="my_layout"  visualizable="true"/>
-    *
-    * 1/ The variable's layout needs to be initialised via parameters :
-    *          // Create the DamarisVar object:
-    *          damaris::model::DamarisVar<int>*  MYVARNAME_2d = new damaris::model::DamarisVar<int>(2, 
-    *                                                        {std::string("my_param_name1"), std::string("my_param_name2")}, 
-    *                                                        {100, 25},  
-    *                                                        std::string("MYVARNAME"), rank_);
-    *          // sets the paramater sizes (so, here, my_param_name1 == 25 and my_param_name2 == 100)
-    *          MYVARNAME_2d->SetDamarisParameterAndShmem( {25, 100 } };  
-    *          // Get a pointer to the memeory and use it
-    *          T * mymemory = MYVARNAME_2d->data();
-    *          ... write data to mymemory ....
-    *          delete MYVARNAME_2d;
-    * or,
-    *  2/      The variable's layout has been initialised via parameters in another variable 
-    *          (i.e. "my_param_name1" and "my_param_name2" have been previously set in the code)
-    *          // Create the DamarisVar object:
-    *          damaris::model::DamarisVar<int>*  MYVARNAME_2d = new damaris::model::DamarisVar<int>(2, 
-    *                                                               {std::string("my_param_name1"), std::string("my_param_name2")}, 
-    *                                                               std::string("MYVARNAME"), rank_);
-    *          // explicitly state that the paramater values have been set somewhere else in the code previously.
-    *          MYVARNAME_2d->ParameterIsSet();
-    *          MYVARNAME_2d->SetPointersToDamarisShmem() 
-    *          // Get a pointer to the memeory and use it
-    *          T * mymemory = MYVARNAME_2d->data();
-    *          ... write data to mymemory ....
-    *          delete MYVARNAME_2d;
-    * 
-    *  /param [IN] dims           Used to check that the inputs to SetDamarisPosition() 
-    *                             have the same number of values - one value for each dimension
-    *  /param [IN] param_names    The name the Damaris paramaters. These names (in typical use) control 
-    *                             a Damaris variables size (names are defined in the Damaris XML file).
-    *  /param [IN] variable_name  The name of the Damaris variable (defined in the Damaris XML file)
-    *  /param [IN] rank           The rank of the process. Used for error output.
-    */
+/**
+* Constructor - sets private data values and dos not initialise the shared memory area.
+*
+* N.B. These objects need a matching <variable ...> and <paramater ...> in the Damaris XML file
+*
+* Two usages:
+*    Example XML definition:
+*     <parameter name="my_param_name1"     type="int" value="1" />
+*     <parameter name="my_param_name2"     type="int" value="1" />
+*     <layout    name="my_layout"          type="int" dimensions="my_param_name1,my_param_name2" />
+*     <variable name="MYVARNAME"  layout="my_layout"  visualizable="true"/>
+*
+* 1/ The variable's layout needs to be initialised via parameters :
+*     // Create the DamarisVar object:
+*     damaris::model::DamarisVar<int>  MYVARNAME_2d(2,{std::string("my_param_name1"), 
+*                                                   std::string("my_param_name2")}, 
+*                                                   {100, 25},  
+*                                                   std::string("MYVARNAME"), rank_);
+*     // sets the paramater sizes (so, here, my_param_name1 == 25 and my_param_name2 == 100)
+*     MYVARNAME_2d.SetDamarisParameterAndShmem( {25, 100 } };  
+*     // Get a pointer to the memeory and use it
+*     T * mymemory = MYVARNAME_2d.data();
+*     ... write data to mymemory ....
+*     // Damaris shared memory is tidied up when object MYVARNAME_2d is out of scope.
+* or,
+*  2/ The variable's layout has been initialised via parameters in another variable 
+*     (i.e. "my_param_name1" and "my_param_name2" have been previously set in the code)
+*     // Create the DamarisVar object:
+*     damaris::model::DamarisVar<int>  MYVARNAME_2d(2, {std::string("my_param_name1"), 
+                                                        std::string("my_param_name2")}, 
+*                                                       std::string("MYVARNAME"), rank_);
+*
+*     // explicitly state that the paramater values have been set somewhere else in the code previously.
+*     MYVARNAME_2d.ParameterIsSet();
+*
+*     N.B. This will not set the internal current_size_ value so the size() value will 
+*           not be correct <- This is important to remember
+* 
+*     MYVARNAME_2d.SetPointersToDamarisShmem() 
+*     // Get a pointer to the memeory and use it
+*     T * mymemory = MYVARNAME_2d.data();
+*     ... write data to mymemory ....
+*     // Damaris shared memory is tidied up when object MYVARNAME_2d is out of scope.
+* 
+*  /param [IN] dims           Used to check that the inputs to SetDamarisPosition() 
+*                             have the same number of values - one value for each dimension
+*  /param [IN] param_names    The name the Damaris paramaters. These names (in typical use) control 
+*                             a Damaris variables size (names are defined in the Damaris XML file).
+*  /param [IN] variable_name  The name of the Damaris variable (defined in the Damaris XML file)
+*  /param [IN] rank           The rank of the process. Used for error output.
+*/
   DamarisVar(int dims, std::vector<std::string> param_names,
              std::string variable_name, int rank)
-      : dims_(dims), param_names_(param_names), variable_name_(variable_name),
+      : param_names_(param_names), variable_name_(variable_name),
         rank_(rank) {
     dam_err_ = DAMARIS_OK;
 
@@ -300,38 +288,40 @@ public:
     has_error_ = false;
   }
 
-  /**
-    *  Constructor - Sets private data values and also initialises the Damaris shared memory area for writing (and reading) 
-    *                by specifying the values for the variables parameters . i.e. makes the data_ptr() 
-    * 
-    *  Example use:
-    *         Example XML definition:
-    *          <parameter name="my_param_name1"     type="int" value="1" />
-    *          <parameter name="my_param_name2"     type="int" value="1" />
-    *          <layout    name="my_layout"    type="int" dimensions="my_param_name1,my_param_name2"   comment="This is a 2D variable"  />
-    *          <variable name="MYVARNAME"  layout="my_layout"  visualizable="true"/>
-    *  // The paramaters are intialized in the constructor code
-    *  damaris::model::DamarisVar<int>*  MYVARNAME_2d = new damaris::model::DamarisVar<int>(2, 
-    *                                                        {std::string("my_param_name1"), std::string("my_param_name2")}, 
-    *                                                        {100, 25},  
-    *                                                        std::string("MYVARNAME"), rank_);
-    *  T * mymemory = MYVARNAME_2d->data();
-    *  ... write data to mymemory ....
-    *  delete MYVARNAME_2d;
-    * 
-    *  /param [IN] dims           Used to check that the inputs to SetDamarisPosition() have 
-    *                             the same number of values - one value for each dimension
-    *  /param [IN] param_names    The name the Damaris paramaters. These names (in typical use) 
-    *                             control a Damaris variables size (names are defined in the Damaris XML file).
-    *  /param [IN] param_values   The values of the paramaters - this defines how much memory we will 
-    *                             have access to in the shared memory area (on the current and ongoing iterations,
-    *                             until later modified to new values)
-    *  /param [IN] variable_name  The name of the Damaris variable (defined in the Damaris XML file)
-    *  /param [IN] rank           The rank of the process. Used for error output.
-    */
+/**
+*  Constructor - Sets private data values and also initialises the Damaris shared memory area for writing (and reading) 
+*                by specifying the values for the variables parameters . 
+*                i.e. makes the data() pointer available and sets the size of the memory block it points to.
+*
+*  N.B. These objects need a matching <variable ...> and <paramater ...> in the Damaris XML file
+* 
+*  Example use:
+*         Example XML definition:
+*          <parameter name="my_param_name1"     type="int" value="1" />
+*          <parameter name="my_param_name2"     type="int" value="1" />
+*          <layout    name="my_layout"    type="int" dimensions="my_param_name1,my_param_name2"   comment="This is a 2D variable"  />
+*          <variable name="MYVARNAME"  layout="my_layout"  visualizable="true"/>
+*  // The paramaters are intialized in the constructor code
+*  damaris::model::DamarisVar<int>  MYVARNAME_2d(2,{std::string("my_param_name1"), std::string("my_param_name2")}, 
+*                                                {100, 25},  
+*                                                 std::string("MYVARNAME"), rank_);
+*  T * mymemory = MYVARNAME_2d.data();
+*  ... write data to mymemory ....
+*   // Damaris shared memory is tidied up when object MYVARNAME_2d is out of scope.
+* 
+*  /param [IN] dims           Used to check that the inputs to SetDamarisPosition() have 
+*                             the same number of values - one value for each dimension
+*  /param [IN] param_names    The name the Damaris paramaters. These names (in typical use) 
+*                             control a Damaris variables size (names are defined in the Damaris XML file).
+*  /param [IN] param_values   The values of the paramaters - this defines how much memory we will 
+*                             have access to in the shared memory area (on the current and ongoing iterations,
+*                             until later modified to new values)
+*  /param [IN] variable_name  The name of the Damaris variable (defined in the Damaris XML file)
+*  /param [IN] rank           The rank of the process. Used for error output.
+*/
   DamarisVar(int dims, std::vector<std::string> param_names,
              std::vector<int> param_values, std::string variable_name, int rank)
-      : dims_(dims), param_names_(param_names), variable_name_(variable_name),
+      : param_names_(param_names), variable_name_(variable_name),
         rank_(rank) {
     DamarisVar(dims, param_names, variable_name, rank);
     setDamarisParameterAndShmem(
@@ -589,9 +579,9 @@ public:
    * variable_name_
    */
   void setDamarisPosition(const std::vector<int64_t> &positionsVals) {
-    assert(positionsVals.size() == dims_);
+    assert(positionsVals.size() == num_params_);
 
-    for (int pos_dim = 0; pos_dim < dims_; pos_dim++) {
+    for (int pos_dim = 0; pos_dim < num_params_; pos_dim++) {
       positions_[pos_dim] = positionsVals[pos_dim];
     }
     dam_err_ =

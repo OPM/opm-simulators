@@ -48,7 +48,7 @@
 
         // N.B. does not seem to be able to be allocated with new operator.
         Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView,
-   Dune::Partition::interior );
+                                               Dune::Partition::interior );
 
         geomData.printGridDetails();
 
@@ -58,7 +58,7 @@
         double * x_vert = new double[nvert];
         double * y_vert = new double[nvert];
         double * z_vert = new double[nvert];
-        geomData.writeGridPoints(x_vert,y_vert,z_vert);
+        geomData.writeGridPoints(x_vert,y_vert,z_vert, nvert);
 
         ... do something with vertex data x_vert, y_vert and z_vert ....
 
@@ -68,11 +68,18 @@
 
         // example using AOS
         double * xyz_vert_aos = new double[nvert*3];
-        geomData.writeGridPoints_AOS(xyz_vert_aos);
+        geomData.writeGridPoints_AOS(xyz_vert_aos, nvert);
 
         ... do something with vertex data xyz_vert_aos....
 
         delete [] xyz_vert_aos;
+        
+        
+        // example using SOA with std::vector<double>
+        std::vector<double> xyz_vert_soa(nvert*3);
+        geomData.writeGridPoints_SOA(xyz_vert_soa);
+        
+        ... do something with vertex data xyz_vert_soa....
 
 
 */
@@ -148,8 +155,8 @@ public:
       Count the vertices, cells and corners.
 
       Count all the vertices ( the Dune::Partitions::all partition ) as then we
-     do not need to renumber the vertices as all the subsets use references to
-     the full set.
+      do not need to renumber the vertices as all the subsets use references to
+      the full set.
   */
   void countEntities() {
     // We include all the vertices for this ranks partition
@@ -166,10 +173,22 @@ public:
     }
   }
 
+
+  /**
+    Write the positions of vertices - directly to the pointers given in
+    parameters
+    
+    @param x_inout to be filled with x coordinate verticies
+    @param y_inout to be filled with y coordinate verticies
+    @param y_inout to be filled with z coordinate verticies
+    @param max_size the maximum number of elements of type T that can be 
+           written to the input pointer memory regions.
+           
+    Returns the number of vertices written
+ */
   template <typename T>
   long writeGridPoints(T *x_inout, T *y_inout, T *z_inout, long max_size = 0) {
     if (max_size < nvertices_) {
-      // assert(max_size >= nvertices_);
       OPM_THROW(std::runtime_error,
                 "Opm::GridDataOutput::writeGridPoints( T&  x_inout,  T&  "
                 "y_inout, T& z_inout )  " +
@@ -207,21 +226,32 @@ public:
   /**
     Write the positions of vertices - directly to the pointers given in
     parameters
-
+    
+    @param x_inout to be filled with x coordinate verticies
+    @param y_inout to be filled with y coordinate verticies
+    @param y_inout to be filled with z coordinate verticies
+    
+    All parameters must have a size() and data() method (e.g. a std::vector<T>)
+    and the current size() must be big enough
+    
     Returns the number of vertices written
  */
-  template <typename T>
-  long writeGridPoints(T &x_inout, T &y_inout, T &z_inout) {
-    size_t check_size = x_inout.size();
-
+  template <typename VectType>
+  long writeGridPoints(VectType &x_inout, VectType &y_inout, VectType &z_inout) {
+    size_t check_size_x = x_inout.size();
+    size_t check_size_y = y_inout.size();
+    size_t check_size_z = z_inout.size();
+    
     using VT = decltype(x_inout.data()[0]);
 
-    if (check_size < nvertices_) {
+    if ((check_size_x < nvertices_) || (check_size_y < nvertices_) || (check_size_z < nvertices_)){
       // assert(check_size >= nvertices_);
       OPM_THROW(std::runtime_error,
-                "Opm::GridDataOutput::writeGridPoints( T&  x_inout,  T&  "
-                "y_inout, T& z_inout )  " +
-                    " Input objects size " + std::to_string(check_size) +
+                "Opm::GridDataOutput::writeGridPoints( VectType&  x_inout,  VectType&  "
+                "y_inout, VectType& z_inout )  At least one of the inputs" +
+                    "  object x size " + std::to_string(check_size_x) +
+                    "  object y size " + std::to_string(check_size_y) +
+                    "  object z size " + std::to_string(check_size_z) +
                     " is not sufficient to fit the nvertices_ values( " +
                     std::to_string(nvertices_) + " )");
     }
@@ -254,10 +284,15 @@ public:
   }
 
   /**
-   Write positions of vertices as array of structures : x,y,z,x,y,z,x,y,z,...
-
-   Returns the number of vertices written
-  */
+    Write the positions of vertices - directly to the pointers given in
+    parameters as Array of Structures x,y,z,x,y,z,x,y,z,...
+    
+    @param xyz_inout is the array to be filled with x,y,z coordinate verticies.
+    @param max_size  is the maximum number x,y,z structures with elements of type T 
+                  that can be written to the input pointer memory regions.
+           
+    Returns the number of vertices written
+ */
   template <typename T>
   long writeGridPoints_AOS(T *xyz_inout, long max_size = 0) {
     if (max_size < nvertices_ * 3) {
@@ -288,10 +323,15 @@ public:
     return ((i) / 3);
   }
 
+ 
   /**
-  Write positions of vertices as array of structures : x,y,z,x,y,z,x,y,z,...
-
-  Returns the number of vertices written
+    Write the positions of vertices - directly to the pointers given in
+    parameters as Array of Structures x,y,z,x,y,z,x,y,z,...
+    
+    @param xyz_inout is the array to be filled with x,y,z coordinate verticies.
+            The object VectType must have a size() and data() method (e.g. a std::vector<T>)
+           
+    Returns the number of vertices written
  */
   template <typename VectType> long writeGridPoints_AOS(VectType &xyz_inout) {
     size_t check_size = xyz_inout.size();
@@ -328,12 +368,16 @@ public:
     return ((i) / 3);
   }
 
-  /**
-   Write positions of vertices as structure of arrays  :
-   x,x,x,...,y,y,y,...,z,z,z,...
-
-   Returns the number of vertices written
-  */
+/**
+    Write the positions of vertices - directly to the pointers given in
+    parameters as Structure of Arrays:  x,x,x,...,y,y,y,...,z,z,z,...
+    
+    @param xyz_inout is the array to be filled with x,y,z coordinate verticies.
+    @param max_size  number of verticies (x,...y,...z,... structures) with elements of type T 
+                  that can be written to the input pointer memory regions.
+           
+    Returns the number of vertices written
+ */
   template <typename T>
   long writeGridPoints_SOA(T *xyz_inout, long max_size = 0) {
     if (max_size < nvertices_ * 3) {
@@ -371,11 +415,14 @@ public:
   }
 
   /**
-   Write positions of vertices as structure of arrays  :
-   x,x,x,...,y,y,y,...,z,z,z,...
-
-   Returns the number of vertices written
-  */
+    Write the positions of vertices - directly to the pointers given in
+    parameters as Structure of Arrays:  x,x,x,...,y,y,y,...,z,z,z,...
+    
+    @param xyz_inout is the array to be filled with x,y,z coordinate verticies.
+            The object VectType must have a size() and data() method (e.g. a std::vector<T>)
+           
+    Returns the number of vertices written
+ */
   template <typename VectType> long writeGridPoints_SOA(VectType &xyz_inout) {
     size_t check_size = xyz_inout.size();
 
@@ -420,7 +467,12 @@ public:
   /**
   * Write the connectivity array - directly to the pointer given in parameter 1
     Reorders the indices as selected either in DUNE order or  VTK order.
-
+    
+    @param connectivity_inout is the array to be filled with connectivity indexes 
+           (i.e. the index into the vertex array)
+    @param whichOrder, is the order that verticies are traversed to create a cell (VTK or DUNE)
+    @param max_size is used to check that the space available in the input pointer 
+           parameter will fit the number of corner values written.
     Returns the number of corner indices written.
   */
   template <typename Integer>
@@ -465,11 +517,17 @@ public:
   }
 
   /**
- * Write the connectivity array - directly to the pointer given in parameter 1
-   Reorders the indices as selected either in DUNE order or  VTK order.
-
-   Returns the number of corner indices written.
- */
+  * Write the connectivity array - directly to a VectType object given in parameter 1
+    Reorders the indices as selected either in DUNE order or  VTK order.
+    
+    @param connectivity_inout is the array to be filled with connectivity indexes 
+           (i.e. the index into the vertex array)
+           The object VectType must have a size() and data() method (e.g. a std::vector<T>)
+    @param whichOrder, is the order that verticies are traversed to create a cell (VTK or DUNE)
+    @param max_size is used to check that the space available in the input pointer 
+           parameter will fit the number of corner values written.
+    Returns the number of corner indices written.
+  */
   template <typename VectType>
   long writeConnectivity(VectType &connectivity_inout,
                          ConnectivityVertexOrder whichOrder) {
@@ -514,10 +572,18 @@ public:
     return (i);
   }
 
-  /**
+
+ /**
   * Write the offsets values  - directly to the pointer given in parameter 1
-    Returns the (number of offset values written + 1)
-  */
+    
+    @param offsets_inout is the array to be filled with offsets into the connectivity array 
+           (i.e. the index into the connectivity array to determine the vertices used for 
+           the particular cell)
+    @param max_size is used to check that the space available in the input pointer 
+           parameter will fit the number of cell offset values written.
+           
+    Returns number of offset values written + 1
+*/
   template <typename Integer>
   long writeOffsetsCells(Integer *offsets_inout, long max_size = 0) {
     if (max_size < ncells_) {
@@ -539,10 +605,16 @@ public:
     return (i); // This should be 1 greater than ncells_
   }
 
-  /**
-  * Write the offsets values  - directly to the pointer given in parameter 1
-    Returns the (number of offset values written + 1)
-  */
+/**
+  * Write the offsets values  -  directly to a VectType object given in parameter 1
+    
+    @param offsets_inout is the array to be filled with offsets into the connectivity array 
+           (i.e. the index into the connectivity array to determine the vertices used for 
+           the particular cell).
+           The object VectType must have a size() and data() method (e.g. a std::vector<T>)
+      
+    Returns number of offset values written + 1
+*/
   template <typename VectType> long writeOffsetsCells(VectType &offsets_inout) {
     size_t check_size = offsets_inout.size();
     if (check_size < ncells_) {
@@ -567,9 +639,16 @@ public:
     return (i); // This should be 1 greater than ncells_
   }
 
-  /**
-   * Write the Cell types array - directly to the pointer given in parameter 1
-   */
+/**
+ * Write the cell types values  - directly to the pointer given in parameter 1
+   
+   @param types_inout is the array to be filled with the cell types (VTK defined values)
+           
+   @param max_size is used to check that the space available in the input pointer 
+           parameter will fit the number of cell offset values written.
+           
+    Returns number of cells type values written
+*/
   template <typename Integer>
   long writeCellTypes(Integer *types_inout, long max_size = 0) {
     if (max_size < ncells_) {
@@ -589,14 +668,18 @@ public:
     return (i);
   }
 
-  /**
-   * Write the Cell types array - directly to the pointer given in parameter 1
-   */
+/**
+ * Write the cell types values  - directly to the VectType object given in parameter 1
+   
+   @param types_inout is the array to be filled with the cell types (VTK defined values)
+          The object VectType must have a size() and data() method (e.g. a std::vector<T>)
+          
+    Returns number of cells type values written
+*/
   template <typename VectType> long writeCellTypes(VectType &types_inout) {
     size_t check_size = types_inout.size();
 
     if (check_size < ncells_) {
-      // assert(check_size >= ncells_);
       OPM_THROW(
           std::runtime_error,
           "Opm::GridDataOutput::writeCellTypes( VectType&  types_inout )  " +
