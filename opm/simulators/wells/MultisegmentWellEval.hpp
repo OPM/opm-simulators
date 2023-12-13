@@ -41,6 +41,8 @@ class ConvergenceReport;
 class GroupState;
 class Schedule;
 class WellContributions;
+class SummaryState;
+
 template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
 class WellState;
 
@@ -83,6 +85,7 @@ protected:
     void assembleICDPressureEq(const int seg,
                                const UnitSystem& unit_system,
                                WellState& well_state,
+                               const SummaryState& summary_state,
                                const bool use_average_density,
                                DeferredLogger& deferred_logger);
 
@@ -94,6 +97,7 @@ protected:
     void assemblePressureEq(const int seg,
                             const UnitSystem& unit_system,
                             WellState& well_state,
+                            const SummaryState& summary_state,
                             const bool use_average_density,
                             DeferredLogger& deferred_logger);
 

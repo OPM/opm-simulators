@@ -80,6 +80,7 @@ public:
     void adaptRatesForVFP(std::vector<double>& rates) const;
 
     const Well& wellEcl() const;
+    Well& wellEcl();
     const PhaseUsage& phaseUsage() const;
 
     /// Returns true if the well is currently in prediction mode (i.e. not history mode).

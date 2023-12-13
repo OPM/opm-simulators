@@ -769,9 +769,10 @@ template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 pressureDropValve(const int seg,
+                  const SummaryState& summary_state,
                   const bool extra_reverse_flow_derivatives /*false*/) const
 {
-    const auto& segment_set = well_.wellEcl().getSegments();
+    const Opm::WellSegments& segment_set = well_.wellEcl().getSegments();
     const Valve& valve = segment_set[seg].valve();
 
     EvalWell mass_rate = mass_rates_[seg];
@@ -814,7 +815,8 @@ pressureDropValve(const int seg,
     const EvalWell friction_pressure_loss =
         mswellhelpers::frictionPressureLoss(additional_length, diameter, area, roughness, density, mass_rate, visc);
 
-    const double area_con = valve.conCrossArea();
+    const ValveUDAEval uda_eval {summary_state, this->well_.name(), static_cast<std::size_t>(segment_set[seg].segmentNumber())};
+    const double area_con = valve.conCrossArea(uda_eval);
     const double cv = valve.conFlowCoefficient();
 
     const EvalWell constriction_pressure_loss =
