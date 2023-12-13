@@ -182,6 +182,7 @@ void Main::readDeck(const std::string& deckFilename,
                     const bool allRanksDbgPrtLog,
                     const std::string& parsingStrictness,
                     const int mpiRank,
+                    const std::size_t numThreads,
                     const int output_param,
                     const std::string& parameters,
                     std::string_view moduleVersion,
@@ -194,7 +195,8 @@ void Main::readDeck(const std::string& deckFilename,
                               outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
 
     if (outputCout_) {
-        printPRTHeader(parameters, moduleVersion, compileTimestamp);
+        printPRTHeader(EclGenericVanguard::comm().size(), numThreads,
+                       parameters, moduleVersion, compileTimestamp);
         OpmLog::info("Reading deck file '" + deckFilename + "'");
     }
 

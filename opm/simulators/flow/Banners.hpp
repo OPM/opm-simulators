@@ -31,7 +31,8 @@ struct SimulatorReport;
 struct SimulatorReportSingle;
 
 // Print an ASCII-art header to the PRT and DEBUG files.
-void printPRTHeader(const std::string& parameters,
+void printPRTHeader(const int nprocs, const int nthreads,
+                    const std::string& parameters,
                     std::string_view moduleVersion,
                     std::string_view compileTimestamp);
 

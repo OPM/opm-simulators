@@ -50,7 +50,8 @@ unsigned long long getTotalSystemMemory()
 
 namespace Opm {
 
-void printPRTHeader(const std::string& parameters,
+void printPRTHeader(const int nprocs, const int nthreads,
+                    const std::string& parameters,
                     std::string_view moduleVersion,
                     std::string_view compileTimestamp)
 {
@@ -85,7 +86,7 @@ void printPRTHeader(const std::string& parameters,
        ss << "User             =  " << user << std::endl;
     }
     ss << "Simulation started on " << tmstr << " hrs\n";
-
+    ss << "Using "<< nprocs << " MPI processes with "<< nthreads <<" OMP threads on each \n";
     ss << "Parameters used by Flow:\n" << parameters;
 
     OpmLog::note(ss.str());
