@@ -434,8 +434,6 @@ private:
         unsigned numCells = model.numTotalDof();
         neighborInfo_.reserve(numCells, 6 * numCells);
         std::vector<NeighborInfo> loc_nbinfo;
-        const auto& materialLawManager = problem_().materialLawManager();
-        using FaceDirection = FaceDir::DirEnum;
         for (const auto& elem : elements(gridView_())) {
             stencil.update(elem);
 
@@ -459,7 +457,6 @@ private:
                         const Scalar thpres = problem_().thresholdPressure(myIdx, neighborIdx);
                         Scalar inAlpha {0.};
                         Scalar outAlpha {0.};
-                        FaceDirection dirId = FaceDirection::Unknown;
                         Scalar diffusivity {0.};
                         Scalar dispersivity {0.};
                         if constexpr(enableEnergy){
@@ -472,9 +469,7 @@ private:
                         if (simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion()) {
                             dispersivity = problem_().dispersivity(myIdx, neighborIdx);
                         }
-                        if (materialLawManager->hasDirectionalRelperms()) {
-                            dirId = scvf.faceDirFromDirId();
-                        }
+                        auto dirId = scvf.dirId();
                         loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres, dZg, dirId, Vin, Vex, inAlpha, outAlpha, diffusivity, dispersivity}, nullptr};
 
                     }
@@ -583,8 +578,10 @@ private:
             stencil.update(elem);
             for (unsigned primaryDofIdx = 0; primaryDofIdx < stencil.numPrimaryDof(); ++primaryDofIdx) {
                 unsigned myIdx = stencil.globalSpaceIndex(primaryDofIdx);
-                loc_flinfo.resize(stencil.numDof() - 1);
+                int numFaces = stencil.numBoundaryFaces() + stencil.numInteriorFaces();
+                loc_flinfo.resize(numFaces);
                 loc_vlinfo.resize(stencil.numDof() - 1);
+
                 for (unsigned dofIdx = 0; dofIdx < stencil.numDof(); ++dofIdx) {
                     unsigned neighborIdx = stencil.globalSpaceIndex(dofIdx);
                     if (dofIdx > 0) {
@@ -605,7 +602,15 @@ private:
                         loc_flinfo[dofIdx - 1] = FlowInfo{faceId, flow, nncId};
                         loc_vlinfo[dofIdx - 1] = VelocityInfo{flow};
                     }
+                } 
+
+                for (unsigned bdfIdx = 0; bdfIdx < stencil.numBoundaryFaces(); ++bdfIdx) {
+                    const auto& scvf = stencil.boundaryFace(bdfIdx);
+                    int faceId = scvf.dirId();
+                    loc_flinfo[stencil.numInteriorFaces() + bdfIdx] = FlowInfo{faceId, flow, nncId};
                 }
+
+
                 if (anyFlows) {
                     flowsInfo_.appendRow(loc_flinfo.begin(), loc_flinfo.end());
                 }
@@ -636,6 +641,68 @@ public:
         }
     }
 
+    void updateFlowsInfo() {
+        OPM_TIMEBLOCK(updateFlows);
+        const bool& enableFlows = simulator_().problem().eclWriter()->eclOutputModule().hasFlows() ||
+                                    simulator_().problem().eclWriter()->eclOutputModule().hasBlockFlows();
+        const bool& enableFlores = simulator_().problem().eclWriter()->eclOutputModule().hasFlores();
+        if (!enableFlows && !enableFlores) {
+            return;
+        }
+        const unsigned int numCells = model_().numTotalDof();
+
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (unsigned globI = 0; globI < numCells; ++globI) {
+            OPM_TIMEBLOCK_LOCAL(linearizationForEachCell);
+            const auto& nbInfos = neighborInfo_[globI];
+            ADVectorBlock adres(0.0);
+            ADVectorBlock darcyFlux(0.0);
+            const IntensiveQuantities& intQuantsIn = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+            // Flux term.
+            {
+            OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);
+            for (const auto& nbInfo : nbInfos) {
+                OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
+                unsigned globJ = nbInfo.neighbor;
+                assert(globJ != globI);
+                adres = 0.0;
+                darcyFlux = 0.0;
+                const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
+                LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo);
+                adres *= nbInfo.res_nbinfo.faceArea;
+                if (enableFlows) {
+                    for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
+                        flowsInfo_[globI][nbInfo.res_nbinfo.dirId].flow[phaseIdx] = adres[phaseIdx].value();
+                    }
+                }
+                if (enableFlores) {
+                    for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
+                        floresInfo_[globI][nbInfo.res_nbinfo.dirId].flow[phaseIdx] = darcyFlux[phaseIdx].value();
+                    }
+                }
+            }
+            }
+        }
+
+        // Boundary terms. Only looping over cells with nontrivial bcs.
+        for (const auto& bdyInfo : boundaryInfo_) {
+            ADVectorBlock adres(0.0);
+            const unsigned globI = bdyInfo.cell;
+            const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
+            LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
+            adres *= bdyInfo.bcdata.faceArea;
+
+            if (enableFlows) {
+                for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
+                    flowsInfo_[globI][bdyInfo.dir].flow[phaseIdx] = adres[phaseIdx].value();
+                }
+            }
+            // TODO also store Flores?
+        }
+    }
+
 private:
     template <class SubDomainType>
     void linearize_(const SubDomainType& domain)
@@ -655,9 +722,6 @@ private:
         // the full system to zero, not just our part.
         // Instead, that must be called before starting the linearization.
         const bool& enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
-        const bool& enableFlows = simulator_().problem().eclWriter()->eclOutputModule().hasFlows() ||
-                                    simulator_().problem().eclWriter()->eclOutputModule().hasBlockFlows();
-        const bool& enableFlores = simulator_().problem().eclWriter()->eclOutputModule().hasFlores();
         const unsigned int numCells = domain.cells.size();
         const bool on_full_domain = (numCells == model_().numTotalDof());
 
@@ -692,16 +756,6 @@ private:
                 if (enableDispersion) {
                     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
                         velocityInfo_[globI][loc].velocity[phaseIdx] = darcyFlux[phaseIdx].value() / nbInfo.res_nbinfo.faceArea;
-                    }
-                }
-                if (enableFlows) {
-                    for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
-                        flowsInfo_[globI][loc].flow[phaseIdx] = adres[phaseIdx].value();
-                    }
-                }
-                if (enableFlores) {
-                    for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
-                        floresInfo_[globI][loc].flow[phaseIdx] = darcyFlux[phaseIdx].value();
                     }
                 }
                 setResAndJacobi(res, bMat, adres);

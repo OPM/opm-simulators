@@ -515,10 +515,13 @@ public:
         using Dir = FaceDir::DirEnum;
         if (dirMob_) {
             switch(facedir) {
+                case Dir::XMinus:
                 case Dir::XPlus:
                     return dirMob_->mobilityX_[phaseIdx];
+                case Dir::YMinus:
                 case Dir::YPlus:
                     return dirMob_->mobilityY_[phaseIdx];
+                case Dir::ZMinus:
                 case Dir::ZPlus:
                     return dirMob_->mobilityZ_[phaseIdx];
                 default:
