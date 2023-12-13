@@ -86,7 +86,7 @@ class Water
 {
 using TabulatedFunction = Tabulated1DFunction<double>;
 public:
-    Water(const double temp,
+    Water(const TabulatedFunction& tempVdTable,
           const TabulatedFunction& saltVdTable,
           const int pvtRegionIdx,
           const double normGrav);
@@ -95,7 +95,7 @@ public:
                       const double press) const;
 
 private:
-    const double temp_;
+    const TabulatedFunction& tempVdTable_;
     const TabulatedFunction& saltVdTable_;
     const int pvtRegionIdx_;
     const double g_;
@@ -107,8 +107,9 @@ private:
 template <class FluidSystem, class RS>
 class Oil
 {
+using TabulatedFunction = Tabulated1DFunction<double>;
 public:
-    Oil(const double temp,
+    Oil(const TabulatedFunction& tempVdTable,
         const RS& rs,
         const int pvtRegionIdx,
         const double normGrav);
@@ -117,7 +118,7 @@ public:
                       const double press) const;
 
 private:
-    const double temp_;
+    const TabulatedFunction& tempVdTable_;
     const RS& rs_;
     const int pvtRegionIdx_;
     const double g_;
@@ -129,8 +130,9 @@ private:
 template <class FluidSystem, class RV, class RVW>
 class Gas
 {
+using TabulatedFunction = Tabulated1DFunction<double>;
 public:
-    Gas(const double temp,
+    Gas(const TabulatedFunction& tempVdTable,
         const RV& rv,
         const RVW& rvw,
         const int pvtRegionIdx,
@@ -140,7 +142,7 @@ public:
                       const double press) const;
 
 private:
-    const double temp_;
+    const TabulatedFunction& tempVdTable_;
     const RV& rv_;
     const RVW& rvw_;
     const int pvtRegionIdx_;
@@ -290,7 +292,6 @@ private:
 
     double gravity_;
     int    nsample_;
-    double temperature_{ 273.15 + 20 };
 
     std::unique_ptr<OPress> oil_{};
     std::unique_ptr<GPress> gas_{};
@@ -702,7 +703,8 @@ public:
     const Vec& rvw() const { return rvw_; }
 
 private:
-    void updateInitialTemperature_(const EclipseState& eclState);
+    template <class RMap>
+    void updateInitialTemperature_(const EclipseState& eclState, const RMap& reg);
 
     template <class RMap>
     void updateInitialSaltConcentration_(const EclipseState& eclState, const RMap& reg);
@@ -748,6 +750,7 @@ private:
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
     std::vector< std::shared_ptr<Miscibility::RsFunction> > rvwFunc_;
     using TabulatedFunction = Tabulated1DFunction<double>;
+    std::vector<TabulatedFunction> tempVdTable_;
     std::vector<TabulatedFunction> saltVdTable_;
     std::vector<TabulatedFunction> saltpVdTable_;
     std::vector<int> regionPvtIdx_;

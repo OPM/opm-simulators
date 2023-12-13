@@ -615,6 +615,7 @@ public:
              std::shared_ptr<Miscibility::RsFunction> rs,
              std::shared_ptr<Miscibility::RsFunction> rv,
              std::shared_ptr<Miscibility::RsFunction> rvw,
+             const TabulatedFunction& tempVdTable,
              const TabulatedFunction& saltVdTable,
              const int pvtIdx);
 
@@ -696,6 +697,8 @@ public:
     const CalcWaterEvaporation& waterEvaporationCalculator() const;
 
     const TabulatedFunction& saltVdTable() const;
+    const TabulatedFunction& tempVdTable() const;
+
     /**
      * Retrieve pvtIdx of the region.
      */
@@ -706,6 +709,7 @@ private:
     std::shared_ptr<Miscibility::RsFunction> rs_;      /**< RS calculator */
     std::shared_ptr<Miscibility::RsFunction> rv_;      /**< RV calculator */
     std::shared_ptr<Miscibility::RsFunction> rvw_;      /**< RVW calculator */
+    const TabulatedFunction& tempVdTable_;
     const TabulatedFunction& saltVdTable_;
     const int pvtIdx_;
 };
