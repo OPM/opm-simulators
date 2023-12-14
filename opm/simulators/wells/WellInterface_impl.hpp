@@ -1507,19 +1507,15 @@ namespace Opm
             return std::vector<Scalar>(this->num_components_, 0.0);
 
         double d = computeConnectionDFactor(perf, intQuants, ws);
-        if (d <= 0.0) {
+        if (d < 1.0e-15)  {
             return wi;
         }
 
-        const PhaseUsage& pu = this->phaseUsage();
-        double Q = std::abs(ws.perf_data.phase_rates[perf*pu.num_phases + pu.phase_pos[Gas]]);
-        if (Q < 1.0e-12) {
-            return wi;
-        }
-
+        // Solve a quadratic equation for a connection rate satisfying the ipr and the flow-dependent skin,
+        // then use this rate to evaluate the actual skin.
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
-        double Kh = connection.Kh();
-        double scaling = 3.141592653589 * Kh * connection.wpimult();
+        const double Kh = connection.Kh();
+        const double scaling = 3.141592653589 * Kh * connection.wpimult();
         const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
 
         const double connection_pressure = ws.perf_data.pressure[perf];
@@ -1531,14 +1527,20 @@ namespace Opm
         const double b = 2*scaling/wi[gas_comp_idx];
         const double c = -1.0*b*trans_mult*this->well_index_[perf]*mob_g*drawdown;
 
-        double consistent_Q = Q;
+        // Pick a valid solution or use default wi also for gas (rate 0)
         const double r2 = b*b - 4*a*c;
-        if (r2 > 0) {
-            const double r = std::sqrt(r2);
-            // Choosing lowest (absolute) rate here, yielding highest flow rate (@TODO: ?)
-            consistent_Q = (r-b)*0.5/a;
+        if (r2 <= 0) {
+            return wi;
         }
-
+        const double r = std::sqrt(r2);
+        const double cQ1 = (r-b)*0.5/a;
+        const double cQ2 = -(r+b)*0.5/a;
+        const double sol1 = std::abs(a*cQ1*std::abs(cQ1) + b*cQ1 + c);
+        const double sol2 = std::abs(a*cQ2*std::abs(cQ2) + b*cQ2 + c);
+        if (std::min(sol1, sol2) > 1.0e-6) {
+            return wi;
+        }
+        const double consistent_Q = (sol1 <= sol2) ? cQ1 : cQ2;
         wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (std::abs(consistent_Q)/2 * d / scaling));
         return wi;
     }
