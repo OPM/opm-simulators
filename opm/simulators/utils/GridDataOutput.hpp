@@ -35,11 +35,11 @@
    to get the references into the vertex array and element (aka cell) types for
    the sub-partition. This allows the full set of vertices to be reused for
     visualisation of the various sub-partitions, at the expense of copying all
-   the vertices. Typically a user is interested in the interiorBoarder elements
+   the vertices. Typically a user is interested in the interiorBorder elements
    which make use of the bulk (~80%) of the vertices. This saves having to
    renumber the indexes to the vertices for the sub-partitions. The vertex data
    can be retrieved as seperate x, y and z arrays, or as a single array of
-   structures, or as a single structure of arrays based
+   array of structures, or as single structure of arrays based array.
 
 
     Example:
@@ -480,11 +480,11 @@ public:
                          ConnectivityVertexOrder whichOrder,
                          long max_size = 0) {
     if (max_size < ncorners_) {
-      // assert(max_size >= ncorners_);
+
       OPM_THROW(
           std::runtime_error,
-          "Opm::GridDataOutput::writeConnectivity( T*  connectivity_inout )  " +
-              " Input objects size (" + std::to_string(max_size) +
+          "Opm::GridDataOutput::writeConnectivity( T*  connectivity_inout,... )  " +
+              " Input max_size value (" + std::to_string(max_size) +
               ") is not sufficient to fit the ncorners_ values (" +
               std::to_string(ncorners_) + ")");
     }
@@ -622,7 +622,7 @@ public:
       OPM_THROW(std::runtime_error,
                 "Opm::GridDataOutput::writeOffsetsCells( VectType& "
                 "offsets_inout )  " +
-                    " Input objects check_size (" + std::to_string(check_size) +
+                    " Input objects size (" + std::to_string(offsets_inout.size()) +
                     ") is not sufficient to fit the ncells_ values (" +
                     std::to_string(ncells_) + ")");
     }

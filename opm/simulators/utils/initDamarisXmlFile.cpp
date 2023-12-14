@@ -55,7 +55,7 @@ std::string initDamarisXmlFile()
     <variable name="PRESSURE"    layout="zonal_layout_usmesh"     type="scalar"  visualizable="true"  mesh="us_mesh"   unit="_PRESSURE_UNIT_"   centering="zonal" select-file="GLOBAL_CELL_INDEX" store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
 
     _MORE_VARIABLES_REGEX_
-    <variable name="MPI_RANK"  layout="zonal_layout_usmesh_integer"   type="scalar"  visualizable="true" mesh="us_mesh" unit="rank"  centering="zonal"  store="_MYSTORE_OR_EMPTY_REGEX_" time-varying="false"  select-file="GLOBAL_CELL_INDEX"  script="_MAKE_AVAILABLE_IN_PYTHON_" comment="The MPI rank of each cell"/>
+    <variable name="MPI_RANK"  layout="zonal_layout_usmesh_integer"   type="scalar"  visualizable="true" mesh="us_mesh" unit="rank"  centering="zonal"  store="_MYSTORE_MESH_OR_EMPTY_REGEX_" time-varying="false"  select-file="GLOBAL_CELL_INDEX"  script="_MAKE_AVAILABLE_IN_PYTHON_" comment="The MPI rank of each cell"/>
     
     <variable name="KRNSW_GO"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="#"  unit=""  centering="zonal"     time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="#"   script="#" />
     <variable name="KRNSW_OW"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="#"  unit=""  centering="zonal"     time-varying="true" select-file="GLOBAL_CELL_INDEX"  store="#"   script="#" />

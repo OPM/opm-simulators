@@ -212,7 +212,7 @@ public:
 /**
 * Constructor - sets private data values and dos not initialise the shared memory area.
 *
-* N.B. These objects need a matching <variable ...> and <paramater ...> in the Damaris XML file
+* N.B. These objects need a matching <variable ...> and <paramater ...> entries in the Damaris XML file
 *
 * Two usages:
 *    Example XML definition:
@@ -293,7 +293,7 @@ public:
 *                by specifying the values for the variables parameters . 
 *                i.e. makes the data() pointer available and sets the size of the memory block it points to.
 *
-*  N.B. These objects need a matching <variable ...> and <paramater ...> in the Damaris XML file
+*  N.B. These objects need a matching <variable ...> and <paramater ...> entries in the Damaris XML file
 * 
 *  Example use:
 *         Example XML definition:

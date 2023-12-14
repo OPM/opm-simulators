@@ -461,16 +461,9 @@ private:
             DamarisVarDbl  var_z(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/z"), rank_) ; 
             var_z.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
             
-            // Now we can return the memory that Damaris has allocated in shmem and use it to write the X,y,z coordinates
-            double itime, ftime, exec_time;
-            itime = omp_get_wtime();
+            // Now we can use the shared memory area that Damaris has allocated and use it to write the x,y,z coordinates
             if ( geomData.writeGridPoints(var_x, var_y, var_z) < 0)
                  DUNE_THROW(Dune::IOError, geomData.getError()  );
-            ftime = omp_get_wtime();
-            exec_time = ftime - itime;
-            // OpmLog::info("\n\nTime taken geomData.writeGridPoints(): is  " + std::to_string(exec_time) ) ;
-            std::cout << "\n\n rank_: " << rank_ << " Time taken geomData.writeGridPoints(): is  " + std::to_string(exec_time)  << std::endl ;
-
             
             //  This is the template XML model for connectivity, offsets and types, as defined in initDamarisXmlFile.cpp which is used to 
             //  build the internally generated Damaris XML configuration file.
