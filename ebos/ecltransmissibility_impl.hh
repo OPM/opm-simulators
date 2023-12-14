@@ -804,7 +804,7 @@ updateFromEclState_(bool global)
             if(grid_.maxLevel()>0) {
                 OPM_THROW(std::invalid_argument, "Calculations on TRANX/TRANY/TRANZ arrays are not support with LGRS, yet.");
             }
-            fp->apply_tran(*key, *it);
+        fp->apply_tran(*key, *it);
         }
     }
 
