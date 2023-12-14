@@ -28,6 +28,7 @@
 #define EWOMS_ECL_CP_GRID_GENERIC_VANGUARD_HH
 
 #include <ebos/eclgenericvanguard.hh>
+#include <opm/input/eclipse/EclipseState/Grid/LgrCollection.hpp>
 
 #include <opm/grid/CpGrid.hpp>
 
@@ -170,6 +171,7 @@ protected:
     void allocCartMapper();
 
     void doCreateGrids_(EclipseState& eclState);
+    void createCpGridWithLgrs(const LgrCollection& lgrCollection, const int lgrsSize);
 
     virtual void allocTrans() = 0;
     virtual double getTransmissibility(unsigned I, unsigned J) const = 0;
