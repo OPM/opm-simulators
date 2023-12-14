@@ -377,6 +377,15 @@ protected:
     using LookUpData = Opm::LookUpData<Grid,GridView>;
     const LookUpData lookUpData_;
 
+    // \brief Function to assign the origin cell index on level zero, for a cell on the leaf grid view.
+    //
+    // For CpGrid with local grid refinement, the field property of a cell on the leaf
+    // is inherited from its parent or equivalent (when has no parent) cell on level zero.
+    std::function<unsigned(unsigned)> lookupIdxOnLevelZeroAssigner_()
+    {
+        return [this](unsigned elemIdx) { return lookUpData_.template getFieldPropIdx<Grid>(elemIdx);};
+    }
+
 private:
     template<class T>
     void updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regions);
