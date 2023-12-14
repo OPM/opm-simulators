@@ -799,7 +799,7 @@ updateFromEclState_(bool global)
             if(grid_.maxLevel()>0) {
                 OPM_THROW(std::invalid_argument, "Calculations on TRANX/TRANY/TRANZ arrays are not support with LGRS, yet.");
             }
-            fp->apply_tran(*key, *it);
+        fp->apply_tran(*key, *it);
         }
     }
 
@@ -857,8 +857,9 @@ createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
             else if (gc2 - gc1 == cartDims[0]*cartDims[1]) {
                 if (is_tran[2])
                     // set simulator internal transmissibilities to values from inputTranz
-                     trans[2][c1] = trans_[isID];
+                    trans[2][c1] = trans_[isID];
             }
+
             //else.. We don't support modification of NNC at the moment.
         }
     }
@@ -887,6 +888,9 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
             // order of the local indices, the transmissibilities are still
             // stored at the cell with the lower global cartesian index as
             // the fieldprops are communicated by the grid.
+            /** c1 < c2 <=> gc1 < gc2 is no longer true when the grid is a
+                CpGrid with LGRs. When cells c1 and c2 have the same parent
+                cell on level zero, then gc1 == gc2. */ 
             unsigned c1 = elemMapper.index(intersection.inside());
             unsigned c2 = elemMapper.index(intersection.outside());
             int gc1 = cartMapper_.cartesianIndex(c1);
@@ -911,6 +915,7 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
                     // set simulator internal transmissibilities to values from inputTranz
                     trans_[isID] = trans[2][c1];
             }
+
             //else.. We don't support modification of NNC at the moment.
         }
     }
