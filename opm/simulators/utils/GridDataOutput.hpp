@@ -543,8 +543,6 @@ public:
                     std::to_string(ncorners_) + ")");
     }
 
-    using VT = decltype(connectivity_inout.data()[0]);
-
     long i = 0;
     if (whichOrder == DUNE) {
       // DUNE order
@@ -687,7 +685,7 @@ public:
               ") is not sufficient to fit the ncells_ values (" +
               std::to_string(ncells_) + ")");
     }
-    using VT = decltype(types_inout.data()[0]);
+
     int i = 0;
     for (const auto &cit : elements(gridView_, dunePartition_)) {
       int vtktype = static_cast<int>(Dune::VTK::geometryType(cit.type()));
