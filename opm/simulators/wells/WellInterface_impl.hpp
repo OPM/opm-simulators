@@ -1507,13 +1507,39 @@ namespace Opm
             return std::vector<Scalar>(this->num_components_, 0.0);
 
         double d = computeConnectionDFactor(perf, intQuants, ws);
+        if (d <= 0.0) {
+            return wi;
+        }
+
         const PhaseUsage& pu = this->phaseUsage();
         double Q = std::abs(ws.perf_data.phase_rates[perf*pu.num_phases + pu.phase_pos[Gas]]);
+        if (Q < 1.0e-12) {
+            return wi;
+        }
+
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
         double Kh = connection.Kh();
         double scaling = 3.141592653589 * Kh * connection.wpimult();
         const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (Q/2 * d / scaling));
+
+        const double connection_pressure = ws.perf_data.pressure[perf];
+        const double cell_pressure = getValue(intQuants.fluidState().pressure(FluidSystem::gasPhaseIdx));
+        const double drawdown = cell_pressure - connection_pressure;
+        const double invB = getValue(intQuants.fluidState().invB(FluidSystem::gasPhaseIdx));
+        const double mob_g = getValue(intQuants.mobility(FluidSystem::gasPhaseIdx)) * invB;
+        const double a = d;
+        const double b = 2*scaling/wi[gas_comp_idx];
+        const double c = -1.0*b*trans_mult*this->well_index_[perf]*mob_g*drawdown;
+
+        double consistent_Q = Q;
+        const double r2 = b*b - 4*a*c;
+        if (r2 > 0) {
+            const double r = std::sqrt(r2);
+            // Choosing lowest (absolute) rate here, yielding highest flow rate (@TODO: ?)
+            consistent_Q = (r-b)*0.5/a;
+        }
+
+        wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (std::abs(consistent_Q)/2 * d / scaling));
         return wi;
     }
 
