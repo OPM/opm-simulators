@@ -1995,8 +1995,8 @@ protected:
     {
         const auto& lookup = this->lookUpData_;
         // Get Grid Type
-        using Grid = std::remove_cv_t< typename std::remove_reference<decltype(this->gridView().grid())>::type>;
-        return [&lookup](unsigned elemIdx) { return lookup.template getFieldPropIdx<Grid>(elemIdx);};
+        using GridType = std::remove_cv_t< typename std::remove_reference<decltype(this->gridView().grid())>::type>;
+        return [&lookup](unsigned elemIdx) { return lookup.template getFieldPropIdx<GridType>(elemIdx);};
     }
 
     void readMaterialParameters_()
