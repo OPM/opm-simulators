@@ -1987,6 +1987,18 @@ protected:
         };
     }
 
+    // \brief Function to assign the origin cell index on level zero, for a cell on the leaf grid view.
+    //
+    // For CpGrid with local grid refinement, the field property of a cell on the leaf
+    // is inherited from its parent or equivalent (when has no parent) cell on level zero.
+    std::function<unsigned(unsigned)> lookupIdxOnLevelZeroAssigner_()
+    {
+        const auto& lookup = this->lookUpData_;
+        // Get Grid Type
+        using Grid = std::remove_cv_t< typename std::remove_reference<decltype(this->gridView().grid())>::type>;
+        return [&lookup](unsigned elemIdx) { return lookup.template getFieldPropIdx<Grid>(elemIdx);};
+    }
+
     void readMaterialParameters_()
     {
         OPM_TIMEBLOCK(readMaterialParameters);
@@ -2018,7 +2030,8 @@ protected:
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         materialLawManager_->initFromState(eclState);
         materialLawManager_->initParamsForElements(eclState, this->model().numGridDof(),
-                                                   this-> template fieldPropIntTypeOnLeafAssigner_<int>());
+                                                   this-> template fieldPropIntTypeOnLeafAssigner_<int>(),
+                                                   this-> lookupIdxOnLevelZeroAssigner_());
         ////////////////////////////////
     }
 
