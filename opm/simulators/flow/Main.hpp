@@ -72,6 +72,10 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #endif
 
+#if HAVE_DAMARIS
+#include <opm/simulators/utils/DamarisKeywords.hpp>
+#endif
+
 #include <cassert>
 #include <cstdlib>
 #include <iostream>
@@ -323,9 +327,14 @@ private:
             deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
             outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
         }
+        
+        if (outputDir.empty()) {
+            outputDir = ".";
+        }
 
 #if HAVE_DAMARIS
         enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
+        
         // Reset to false as we cannot use Damaris if there is only one rank.
         if ((enableDamarisOutput_ == true) && (EclGenericVanguard::comm().size() == 1)) {
             std::string msg ;
@@ -333,10 +342,9 @@ private:
             OpmLog::warning(msg);
             enableDamarisOutput_ = false ;
         }
-        
+
         if (enableDamarisOutput_) {
-            this->setupDamaris(outputDir,
-                               EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutputCollective));
+            this->setupDamaris(outputDir); // Damaris server ranks will block here until damaris_stop() is called by client ranks
         }
 #endif // HAVE_DAMARIS
 
@@ -706,8 +714,7 @@ private:
     }
 
 #if HAVE_DAMARIS
-    void setupDamaris(const std::string& outputDir,
-                      const bool enableDamarisOutputCollective);
+    void setupDamaris(const std::string& outputDir);
 #endif
 
     int argc_{0};

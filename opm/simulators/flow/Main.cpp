@@ -235,23 +235,32 @@ void Main::setupVanguard()
 }
 
 #if HAVE_DAMARIS
-void Main::setupDamaris(const std::string& outputDir,
-                        const bool enableDamarisOutputCollective)
+void Main::setupDamaris(const std::string& outputDir )
 {
+    typedef Properties::TTag::FlowEarlyBird PreTypeTag;
     if (!outputDir.empty()) {
         ensureOutputDirExists(outputDir);
     }
 
+    //const auto find_replace_map;
+    //const auto find_replace_map = Opm::DamarisOutput::DamarisKeywords<PreTypeTag>(EclGenericVanguard::comm(), outputDir);
+    std::map<std::string, std::string> find_replace_map;
+    find_replace_map = Opm::DamarisOutput::getDamarisKeywords<PreTypeTag>(EclGenericVanguard::comm(), outputDir);
+    
     // By default EnableDamarisOutputCollective is true so all simulation results will
     // be written into one single file for each iteration using Parallel HDF5.
-    // It set to false, FilePerCore mode is used in Damaris, then simulation results in each
+    // If set to false, FilePerCore mode is used in Damaris, then simulation results in each
     // node are aggregated by dedicated Damaris cores and stored to separate files per Damaris core.
     // Irrespective of mode, output is written asynchronously at the end of each timestep.
     // Using the ModifyModel class to set the XML file for Damaris.
-    DamarisOutput::initializeDamaris(EclGenericVanguard::comm(), EclGenericVanguard::comm().rank(), outputDir, enableDamarisOutputCollective);
+    DamarisOutput::initializeDamaris(EclGenericVanguard::comm(), 
+                                     EclGenericVanguard::comm().rank(), 
+                                     find_replace_map);
     int is_client;
     MPI_Comm new_comm;
-    int err = damaris_start(&is_client);
+    // damaris_start() is where the Damaris Server ranks will block, until damaris_stop() 
+    // is called from the client ranks
+    int err = damaris_start(&is_client);  
     isSimulationRank_ = (is_client > 0);
     if (isSimulationRank_ && err == DAMARIS_OK) {
         damaris_client_comm_get(&new_comm);

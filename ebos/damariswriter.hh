@@ -50,10 +50,15 @@
 #include <limits>
 #include <stdexcept>
 #include <string>
+#include <memory>
+
+#include <omp.h>
 
 #include <fmt/format.h>
 
 #include <Damaris.h>
+#include <opm/simulators/utils/GridDataOutput.hpp>
+#include <opm/simulators/utils/DamarisVar.hpp>
 
 namespace Opm::Properties {
 
@@ -62,7 +67,51 @@ struct EnableDamarisOutput {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
-struct EnableDamarisOutputCollective {
+struct DamarisOutputHdfCollective {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisSaveMeshToHdf {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisSaveToHdf {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisPythonScript {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisPythonParaviewScript {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisSimName {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisDedicatedCores {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisDedicatedNodes {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisSharedMemoryName {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisSharedMemorySizeBytes {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisLogLevel {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct DamarisDaskFile {
     using type = UndefinedProperty;
 };
 } // namespace Opm::Properties
@@ -75,7 +124,7 @@ namespace Opm {
  * \brief Collects necessary output values and pass them to Damaris server processes.
  *
  * Currently only passing through PRESSURE, GLOBAL_CELL_INDEX and MPI_RANK information.
- * This clss will be enhanced to pass through the 3D mesh information to Damaris to enable
+ * This class now passes through the 3D mesh information to Damaris to enable
  * in situ visualization via Paraview or Ascent. And developed so that variables specified 
  * through the Eclipse input deck will be available to Damaris.
  */
@@ -98,12 +147,50 @@ class DamarisWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::G
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
-    
+    using DamarisVarInt = Opm::DamarisOutput::DamarisVar<int> ;
+    using DamarisVarChar = Opm::DamarisOutput::DamarisVar<char> ;
+    using DamarisVarDbl = Opm::DamarisOutput::DamarisVar<double>  ;
+
 public:
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDamarisOutputCollective,
-                             "Write output via Damaris using parallel HDF5 to get single file per timestep instead of one per Damaris core.");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, DamarisOutputHdfCollective,
+                             "Write output via Damaris using parallel HDF5 to get single file and dataset per timestep instead of one per Damaris \n \
+                                                   core with multiple datasets.");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, DamarisSaveToHdf,
+                             "Set to false to prevent output to HDF5. Uses collective output by default or set --enable-damaris-collective=false to\n \
+                                                   use file per core (file per Damaris server).");
+        EWOMS_REGISTER_PARAM(TypeTag, bool, DamarisSaveMeshToHdf,
+                             "Saves the mesh data to the HDF5 file (1st iteration only). Will set  --damaris-output-hdf-collective to false \n \
+                                                   so will use file per core (file per Damaris server) output (global sizes and offset values \n \
+                                                   of mesh variables are not being provided as yet).");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisPythonScript,
+                             "Set to the path and filename of a Python script to run on Damaris server resources with access to OPM flow data.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisPythonParaviewScript,
+                             "Set to the path and filename of a Paraview Python script to run on Paraview Catalyst (1 or 2) on Damaris server \n \
+                                                  resources with access to OPM flow data.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisSimName,
+                             "The name of the simulation to be used by Damaris. If empty (the default) then Damaris uses \"opm-sim-<random-number>\". \n \
+                                                  This name is used for the Damaris HDF5 file name prefix. Make unique if writing to the same output directory.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisLogLevel,
+                             "The log level for the Damaris logging system (boost log based). \n \
+                                                  Levels are: [trace, debug, info, warning, error, fatal]. Currently debug and info are useful. ");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisDaskFile,
+                             "The name of a Dask json configuration file (if using Dask for processing).");                                         
+                                                 
+        EWOMS_REGISTER_PARAM(TypeTag, int, DamarisDedicatedCores,
+                             "Set the number of dedicated cores (MPI processes) that should be used for Damaris processing (per node). \n \
+                                                  Must divide evenly into the number of simulation ranks (client ranks).");
+        EWOMS_REGISTER_PARAM(TypeTag, int, DamarisDedicatedNodes,
+                             "Set the number of dedicated nodes (full nodes) that should be used for Damaris processing (per simulation). \n \
+                                                  Must divide evenly into the number of simulation nodes.");
+        EWOMS_REGISTER_PARAM(TypeTag, long, DamarisSharedMemorySizeBytes,
+                             "Set the size of the shared memory buffer used for IPC between the simulation and the Damaris resources. \n \
+                                                  Needs to hold all the variables published, possibly over multiple simulation iterations.");
+        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisSharedMemoryName,
+                             "The name of the shared memory area to be used by Damaris for the current. If empty (the default) then Damaris uses \"opm-damaris-<random-string>\". \n \
+                                                  This name should be unique if multiple simulations are running on the same node/server as it is used for the Damaris shmem name and by the Python Dask \n \
+                                                  library to locate sections of variables.");
     }
 
     // The Simulator object should preferably have been const - the
@@ -175,8 +262,12 @@ public:
                 // sets data for non-time-varying variables MPI_RANK and GLOBAL_CELL_INDEX
                 this->setGlobalIndexForDamaris() ; 
                 
-                // Currently by default we assume static grid (unchanging through the simulation)
-                // Set damarisUpdate_ to true if we want to update the geometry to sent to Damaris 
+                // Set the geometry data for the mesh model.
+                // this function writes the mesh data directly to Damaris shared memory using Opm::DamarisOutput::DamarisVar objects.
+                this->writeDamarisGridOutput() ;
+                
+                // Currently by default we assume a static mesh grid (the geometry unchanging through the simulation)
+                // Set damarisUpdate_ to true if we want to update the geometry sent to Damaris 
                 this->damarisUpdate_ = false; 
             }
 
@@ -185,18 +276,24 @@ public:
                 int64_t temp_int64_t[1];
                 temp_int64_t[0] = static_cast<int64_t>(this->elements_rank_offsets_[rank_]);
                 dam_err_ = damaris_set_position("PRESSURE", temp_int64_t);
-                if (dam_err_ != DAMARIS_OK && rank_ == 0) {
-                    OpmLog::error(fmt::format("ERORR: damariswriter::writeOutput()       : ( rank:{}) damaris_set_position(PRESSURE, ...), Damaris Error: {}  ",  rank_, damaris_error_string(dam_err_) ));
+                if (dam_err_ != DAMARIS_OK) {
+                    OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{})"
+                                              "damaris_set_position(PRESSURE, ...), Damaris Error: {}  ",
+                                              rank_, damaris_error_string(dam_err_) ));
                 }
 
                 dam_err_ = damaris_write("PRESSURE", (void*)this->damarisOutputModule_->getPRESSURE_ptr());
                 if (dam_err_ != DAMARIS_OK) {
-                   OpmLog::error(fmt::format("ERORR: damariswriter::writeOutput()       : ( rank:{}) damaris_write(PRESSURE, ...), Damaris Error: {}  ",  rank_, damaris_error_string(dam_err_) ));
+                   OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{}) "
+                                             "damaris_write(PRESSURE, ...), Damaris Error: {}  ",
+                                             rank_, damaris_error_string(dam_err_) ));
                 }
 
                 dam_err_ =  damaris_end_iteration();
                 if (dam_err_ != DAMARIS_OK) {
-                    OpmLog::error(fmt::format("ERORR: damariswriter::writeOutput()       : ( rank:{}) damaris_end_iteration(), Damaris Error: {}  ",  rank_, damaris_error_string(dam_err_) ));
+                    OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{}) "
+                                              "damaris_end_iteration(), Damaris Error: {}  ",
+                                              rank_, damaris_error_string(dam_err_) ));
                 }
             }
          } // end of ! isSubstep
@@ -236,18 +333,24 @@ private:
         }
 
         if (dam_err_ != DAMARIS_OK) {
-            OpmLog::error(fmt::format("ERORR: damariswriter::writeOutput()       :"
-                                     "( rank:{}) damaris_write(GLOBAL_CELL_INDEX, ...), Damaris Error: {}  ",  
-                                     rank_, damaris_error_string(dam_err_) ));
+            OpmLog::error(fmt::format("damariswriter::writeOutput()       :"
+                                      "( rank:{}) damaris_write(GLOBAL_CELL_INDEX, ...), Damaris Error: {}  ",  
+                                      rank_, damaris_error_string(dam_err_) ));
         }
-
-        std::vector<int> mpiRank(this->numElements_, rank_ ) ;
-        dam_err_ = damaris_write("MPI_RANK", mpiRank.data() ) ;
-        if (dam_err_ != DAMARIS_OK) {
-           OpmLog::error(fmt::format("ERORR: damariswriter::writeOutput()       :"
-                                     " ( rank:{}) damaris_write(MPI_RANK, ...), Damaris Error: {}  ",
-                                     rank_, damaris_error_string(dam_err_) ));
+        
+        // This is an example of writing to the Damaris shared memory directly (i.e. not using 
+        // damaris_write() to copy data there)
+        // We will add the MPI rank value directly into shared memory using the DamarisVar 
+        // wrapper of the C based Damaris API.
+        // The shared memory is given back to Damaris when the DamarisVarInt goes out of scope.
+        DamarisVarInt mpi_rank_var_test(1, {std::string("n_elements_local")},  std::string("MPI_RANK"), rank_);
+        mpi_rank_var_test.setDamarisParameterAndShmem( {this->numElements_ } ) ;
+        // Fill the created memory area
+        for (int i = 0 ; i < this->numElements_; i++ )
+        {
+            mpi_rank_var_test.data()[i] = rank_ ;  // write the rank vaue to the shared memory area.
         }
+       
     }
 
     void setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local_grid, std::vector<unsigned long long>& elements_rank_offsets)
@@ -280,17 +383,25 @@ private:
         // ToDo: Do we need to check that local ranks are 0 based ?
         int temp_int = static_cast<int>(elements_rank_sizes[rank_]);
         dam_err_ = damaris_parameter_set("n_elements_local", &temp_int, sizeof(int));
-        if (dam_err_ != DAMARIS_OK && rank_ == 0) {
-            OpmLog::error("Damaris library produced an error result for "
+        if (dam_err_ != DAMARIS_OK) {
+            OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
                           "damaris_parameter_set(\"n_elements_local\", &temp_int, sizeof(int));");
         }
         // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
         // ToDo: Do we need to check that n_elements_global_max will fit in a C int type (INT_MAX)
-        temp_int = static_cast<int>(n_elements_global_max);
-        dam_err_ = damaris_parameter_set("n_elements_total", &temp_int, sizeof(int));
-        if (dam_err_ != DAMARIS_OK && rank_ == 0) {
-            OpmLog::error("Damaris library produced an error result for "
-                          "damaris_parameter_set(\"n_elements_total\", &temp_int, sizeof(int));");
+        if( n_elements_global_max <= std::numeric_limits<int>::max() ) {
+            temp_int = static_cast<int>(n_elements_global_max);
+            dam_err_ = damaris_parameter_set("n_elements_total", &temp_int, sizeof(int));
+            if (dam_err_ != DAMARIS_OK) {
+                OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
+                              "damaris_parameter_set(\"n_elements_total\", &temp_int, sizeof(int));");
+            }
+        } else {
+            OpmLog::error(fmt::format("( rank:{} ) The size of the global array ({}) is"
+                                      "greater than what a Damaris paramater type supports ({}).  ", 
+                                      rank_, n_elements_global_max, std::numeric_limits<int>::max() ));
+            // assert( n_elements_global_max <= std::numeric_limits<int>::max() ) ;
+            OPM_THROW(std::runtime_error, "setupDamarisWritingPars() n_elements_global_max > std::numeric_limits<int>::max() " + std::to_string(dam_err_));
         }
 
         // Use damaris_set_position to set the offset in the global size of the array.
@@ -298,19 +409,101 @@ private:
         int64_t temp_int64_t[1];
         temp_int64_t[0] = static_cast<int64_t>(elements_rank_offsets[rank_]);
         dam_err_ = damaris_set_position("PRESSURE", temp_int64_t);
-        if (dam_err_ != DAMARIS_OK && rank_ == 0) {
-            OpmLog::error("Damaris library produced an error result for "
+        if (dam_err_ != DAMARIS_OK) {
+            OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
                           "damaris_set_position(\"PRESSURE\", temp_int64_t);");
         }
         dam_err_ = damaris_set_position("GLOBAL_CELL_INDEX", temp_int64_t);
-        if (dam_err_ != DAMARIS_OK && rank_ == 0) {
-            OpmLog::error("Damaris library produced an error result for "
+        if (dam_err_ != DAMARIS_OK) {
+            OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
                           "damaris_set_position(\"GLOBAL_CELL_INDEX\", temp_int64_t);");
         }
-        dam_err_ = damaris_set_position("MPI_RANK", temp_int64_t);
-        if (dam_err_ != DAMARIS_OK && rank_ == 0) {
-            OpmLog::error("Damaris library produced an error result for "
-                          "damaris_set_position(\"MPI_RANK\", temp_int64_t);");
+
+        // Set the size of the MPI variable
+        DamarisVarInt mpi_rank_var(1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)  ;
+        mpi_rank_var.setDamarisPosition({*temp_int64_t}) ;
+
+    }
+    
+
+
+    void writeDamarisGridOutput( void )
+    {
+        const auto& gridView = simulator_.gridView();
+        Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::Partitions::interior) ;
+
+        try {
+            const bool hasPolyCells = geomData.polyhedralCellPresent() ;
+            if ( hasPolyCells ) {
+                OpmLog::error(fmt::format("ERORR: rank {} The DUNE geometry grid has polyhedral elements - These elements are currently not supported.", rank_ ));
+            }
+
+            // This is the template XML model for x,y,z coordinates defined in initDamarisXmlFile.cpp which is used to 
+            // build the internally generated Damaris XML configuration file.
+            // <parameter name="n_coords_local"     type="int" value="1" />
+            // <parameter name="n_coords_global"    type="int" value="1" comment="only needed if we need to write to HDF5 in Collective mode"/>
+            // <layout    name="n_coords_layout"    type="double" dimensions="n_coords_local"   comment="For the individual x, y and z coordinates of the mesh vertices"  />
+            // <group name="coordset/coords/values"> 
+            //     <variable name="x"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonConduitTest" time-varying="false" />
+            //     <variable name="y"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonConduitTest" time-varying="false" />
+            //     <variable name="z"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonConduitTest" time-varying="false" />
+            // </group>
+
+            DamarisVarDbl  var_x(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/x"), rank_) ; 
+            // N.B. We have not set any position/offset values (using DamarisVar::SetDamarisPosition). 
+            // They are not needed for mesh data as each process has a local geometric model. 
+            // However, HDF5 collective and Dask arrays cannot be used for this data.
+            var_x.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
+             
+            DamarisVarDbl var_y(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/y"), rank_) ; 
+            var_y.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
+             
+            DamarisVarDbl  var_z(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/z"), rank_) ; 
+            var_z.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
+            
+            // Now we can use the shared memory area that Damaris has allocated and use it to write the x,y,z coordinates
+            if ( geomData.writeGridPoints(var_x, var_y, var_z) < 0)
+                 DUNE_THROW(Dune::IOError, geomData.getError()  );
+            
+            //  This is the template XML model for connectivity, offsets and types, as defined in initDamarisXmlFile.cpp which is used to 
+            //  build the internally generated Damaris XML configuration file.
+            // <parameter name="n_connectivity_ph"        type="int"  value="1" />
+            // <layout    name="n_connections_layout_ph"  type="int"  dimensions="n_connectivity_ph"   comment="Layout for connectivities "  />
+            // <parameter name="n_offsets_types_ph"       type="int"  value="1" />
+            // <layout    name="n_offsets_layout_ph"      type="int"  dimensions="n_offsets_types_ph+1"  comment="Layout for the offsets_ph"  />
+            // <layout    name="n_types_layout_ph"        type="char" dimensions="n_offsets_types_ph"  comment="Layout for the types_ph "  />
+            // <group name="topologies/topo/elements">
+            //     <variable name="connectivity" layout="n_connections_layout_ph"  type="scalar"  visualizable="false"  unit=""   script="PythonConduitTest" time-varying="false" />
+            //     <variable name="offsets"      layout="n_offsets_layout_ph"    type="scalar"  visualizable="false"  unit=""   script="PythonConduitTest" time-varying="false" />
+            //     <variable name="types"        layout="n_types_layout_ph"    type="scalar"  visualizable="false"  unit=""   script="PythonConduitTest" time-varying="false" />
+            // </group>
+
+            DamarisVarInt var_connectivity(1, {std::string("n_connectivity_ph")}, std::string("topologies/topo/elements/connectivity"), rank_) ;
+            var_connectivity.setDamarisParameterAndShmem({ geomData.getNCorners()}) ;
+            DamarisVarInt  var_offsets(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/offsets"), rank_) ;
+            var_offsets.setDamarisParameterAndShmem({ geomData.getNCells()}) ;
+            DamarisVarChar  var_types(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/types"), rank_) ;
+            var_types.setDamarisParameterAndShmem({ geomData.getNCells()}) ;
+
+            // Copy the mesh data from the Durne grid
+            long i = 0 ;
+            Opm::GridDataOutput::ConnectivityVertexOrder vtkorder = Opm::GridDataOutput::VTK ;
+            
+            i = geomData.writeConnectivity(var_connectivity, vtkorder) ;
+            if ( i  != geomData.getNCorners())
+                 DUNE_THROW(Dune::IOError, geomData.getError());
+
+            i = geomData.writeOffsetsCells(var_offsets);
+            if ( i != geomData.getNCells()+1)
+                 DUNE_THROW(Dune::IOError,geomData.getError());
+
+            i = geomData.writeCellTypes(var_types) ;
+            if ( i != geomData.getNCells())
+                 DUNE_THROW(Dune::IOError,geomData.getError());
+        }
+        catch (std::exception& e) 
+        {
+            OpmLog::error(e.what());
         }
     }
 

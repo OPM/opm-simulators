@@ -23,6 +23,10 @@
 #include <string>
 #include <map>
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
+#include <ebos/damariswriter.hh>
+
 /*
     Below is the std::map with the keywords that are supported by Damaris.
 
@@ -33,8 +37,72 @@
 
 namespace Opm::DamarisOutput
 {
+    
+/** 
+ * Returns true if the file exists. 
+ * Tests to see if filename string is empty 
+ * or the "#" character and if so returns false.
+ * Tests for file existance on rank 0 and 
+ * passes result via MPI to all other ranks.
+ */
+bool FileExists(const std::string& filename_in,
+                const Parallel::Communication& comm);
 
-std::map<std::string,std::string> DamarisKeywords(std::string outputDir, bool enableDamarisOutputCollective);
+struct DamarisSettings {
+    bool enableDamarisOutputCollective_ = true;
+    bool saveToDamarisHDF5_ = true;
+    // if saveMeshToDamarisHDF5 is true, requires enableDamarisOutputCollective to be false 
+    // (until offsets are are added to mesh data for collective writing)
+    bool saveMeshToHDF5_ = false;  
+    std::string pythonFilename_;
+    std::string paraviewPythonFilename_;
+
+    std::string damarisSimName_; // empty and set to "opm-flow-<random-number>" if none provided on command line. Used as prefix to HDF5 filenames
+    std::string shmemName_;      // empty and needs to be unique if multiple simulations are running on the same server/node. Used to name the Damaris shared memory region.
+    std::string damarisLogLevel_ = "info";
+    std::string damarisDaskFile_ = "";
+    int nDamarisCores_ = 1;  // this is the number of (Damaris server) cores per node
+    int nDamarisNodes_ = 0;
+    long shmemSizeBytes_ = 536870912;  // 512 MB
+    
+    std::string rand_value_str_ ;  // to be added to sheared memory name to make unique 
+
+    std::map<std::string, std::string>
+    getKeywords(const Parallel::Communication& comm,
+                const std::string& OutputDir);
+                
+    void SetRandString(void);  // sets the value of rand_value_str_
+};
+
+/**
+ * Creates the map of search strings and repacement strings that will be used to
+ * modify a templated Damaris XML file which will be used to intialize Damaris.
+ * This function will access all the OPM flow comand line arguments related to
+ * Damaris and perform checks and logic so as to create a valid XML file.
+ * N.B. The created XML file can be overridden using an environment variable
+ * FLOW_DAMARIS_XML_FILE that points to a Damaris XML file.
+ */
+template<class TypeTag>
+std::map<std::string, std::string>
+getDamarisKeywords(const Parallel::Communication& comm, const std::string& OutputDir)
+{
+    DamarisSettings settings;
+    // Get all of the Damaris keywords (except for --enable-damaris, which is used in simulators/flow/Main.hpp)
+    // These command line arguments are defined in ebos/damariswriter.hh and defaults are set in ebos/eclproblem_properties.hh
+    settings.enableDamarisOutputCollective_ = EWOMS_GET_PARAM(TypeTag, bool, DamarisOutputHdfCollective);
+    settings.saveMeshToHDF5_ = EWOMS_GET_PARAM(TypeTag, bool, DamarisSaveMeshToHdf);
+    settings.saveToDamarisHDF5_ = EWOMS_GET_PARAM(TypeTag, bool, DamarisSaveToHdf);
+    settings.pythonFilename_ = EWOMS_GET_PARAM(TypeTag, std::string, DamarisPythonScript);
+    settings.paraviewPythonFilename_ = EWOMS_GET_PARAM(TypeTag, std::string, DamarisPythonParaviewScript);
+    settings.damarisSimName_ = EWOMS_GET_PARAM(TypeTag, std::string, DamarisSimName);
+    settings.nDamarisCores_ = EWOMS_GET_PARAM(TypeTag, int, DamarisDedicatedCores);
+    settings.nDamarisNodes_ = EWOMS_GET_PARAM(TypeTag, int, DamarisDedicatedNodes);
+    settings.shmemSizeBytes_ = EWOMS_GET_PARAM(TypeTag, long, DamarisSharedMemorySizeBytes);
+    settings.shmemName_ = EWOMS_GET_PARAM(TypeTag, std::string, DamarisSharedMemoryName);
+    settings.damarisLogLevel_ = EWOMS_GET_PARAM(TypeTag, std::string, DamarisLogLevel);
+    settings.damarisDaskFile_ = EWOMS_GET_PARAM(TypeTag, std::string, DamarisDaskFile);
+    return settings.getKeywords(comm, OutputDir);
+}
 
 } // namespace Opm::DamarisOutput
 

@@ -18,7 +18,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <limits>
+#include <stdexcept>
 #include <string>
+
+#include <fmt/format.h>
+
 #include <Damaris.h>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -34,7 +41,13 @@ namespace Opm::DamarisOutput
 {
  // Initialize an XML file
  std::string initDamarisXmlFile();
- // Initialize Damaris by filling in th XML file and stroring it in the chosed directory
- void initializeDamaris(MPI_Comm comm, int mpiRank, std::string OutputDir, bool enableDamarisOutputCollective);
+ 
+/**
+*   Initialize Damaris by either:
+*  1/ Filling in a templated XML file and storing it in the chosen directory (output directory)
+*  2/ Reading a file specified by the environment variable FLOW_DAMARIS_XML_FILE 
+*  
+*/
+ void initializeDamaris(const MPI_Comm comm, const int mpiRank, const std::map<std::string, std::string>& find_replace_map );
 
 } // namespace Opm::DamarisOutput

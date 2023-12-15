@@ -18,9 +18,10 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <config.h>
 
 #define XSD_CXX11_TEMPLATE_ALIAS 1
+
+#include <config.h>
 
 #include <damaris/model/ModifyModel.hpp>
 #include <opm/simulators/utils/DamarisKeywords.hpp>
@@ -30,48 +31,55 @@
 
 #include <fmt/format.h>
 
+
 namespace Opm::DamarisOutput
 {
 
 std::string initDamarisXmlFile(); // Defined in initDamarisXMLFile.cpp, to avoid messing up this file.
 
-
+/**
+ * Initialize Damaris by either reading a file specified by the environment variable FLOW_DAMARIS_XML_FILE or
+ * by  filling in the XML file and storing it in the chosen directory
+ */
 void
-initializeDamaris(MPI_Comm comm, int mpiRank, std::string outputDir, bool enableDamarisOutputCollective)
+initializeDamaris(const MPI_Comm comm, const int mpiRank, const std::map<std::string, std::string>& find_replace_map )
 {
-    if (outputDir.empty()) {
-        outputDir = ".";
-    }
-    // Prepare the XML file
-    std::string damaris_config_xml = initDamarisXmlFile();
-    damaris::model::ModifyModel myMod = damaris::model::ModifyModel(damaris_config_xml);
-    // The map will make it precise the output directory and FileMode (either FilePerCore or Collective storage)
-    // The map file find all occurences of the string in position 1 and repalce it/them with string in position 2
-    std::map<std::string, std::string> find_replace_map = DamarisKeywords(outputDir, enableDamarisOutputCollective);
-    myMod.RepalceWithRegEx(find_replace_map);
-    std::string damaris_xml_filename_str = outputDir + "/damaris_config.xml";
-
-    if (mpiRank == 0) {
-        myMod.SaveXMLStringToFile(damaris_xml_filename_str);
-    }
-
-    int damaris_err;
+    int dam_err;
 
     /* Get the name of the Damaris input file from an environment variable if available */
     const char* cs_damaris_xml_file = getenv("FLOW_DAMARIS_XML_FILE");
-    if (cs_damaris_xml_file != NULL) {
-        std::cout << "INFO: initializing Damaris from environment variable FLOW_DAMARIS_XML_FILE: "
-                  << cs_damaris_xml_file << std::endl;
-        damaris_err = damaris_initialize(cs_damaris_xml_file, MPI_COMM_WORLD);
-        if (damaris_err != DAMARIS_OK) {
-            std::cerr << "ERROR: damaris_initialize() error via FLOW_DAMARIS_XML_FILE=" << cs_damaris_xml_file
-                      << std::endl;
+    if (cs_damaris_xml_file != NULL) 
+    {
+        OpmLog::info(std::string("Initializing Damaris from environment variable FLOW_DAMARIS_XML_FILE: ") + cs_damaris_xml_file); 
+        dam_err = damaris_initialize(cs_damaris_xml_file, comm);
+        if (dam_err != DAMARIS_OK) {
+           OpmLog::error(fmt::format("ERORR: damariswriter::initializeDamaris()       : ( rank:{}) "
+                                               "damaris_initialize({}, comm), Damaris Error: {}  ",
+                                               mpiRank, cs_damaris_xml_file, damaris_error_string(dam_err) ));
         }
     } else {
-        std::cout << "INFO: initializing Damaris using internally built file:" << damaris_xml_filename_str << std::endl;
-        damaris_err = damaris_initialize(damaris_xml_filename_str.c_str(), comm);
-        if (damaris_err != DAMARIS_OK) {
-            std::cerr << "ERROR: damaris_initialize() error via built file:" << std::endl << myMod.GetConfigString();
+        // Prepare the inbuilt XML file
+        std::string damaris_config_xml = initDamarisXmlFile();  // This is the template for a Damaris XML file
+        damaris::model::ModifyModel myMod = damaris::model::ModifyModel(damaris_config_xml);
+        // The map file find all occurences of the string in position 1 and replace it/them with string in position 2
+        // std::map<std::string, std::string> find_replace_map = DamarisKeywords(outputDir, enableDamarisOutputCollective);
+        myMod.RepalceWithRegEx(find_replace_map);
+
+        std::string outputDir = find_replace_map.at("_PATH_REGEX_");
+        std::string damaris_xml_filename_str = outputDir + "/damaris_config.xml";
+
+        if (mpiRank == 0) {
+            myMod.SaveXMLStringToFile(damaris_xml_filename_str);
+        }
+        
+        OpmLog::info("Initializing Damaris using internally built file: " + damaris_xml_filename_str + 
+                     " (N.B. use environment variable FLOW_DAMARIS_XML_FILE to override)");
+                     
+        dam_err = damaris_initialize(damaris_xml_filename_str.c_str(), comm);
+        if (dam_err != DAMARIS_OK) {
+            OpmLog::error(fmt::format("damariswriter::initializeDamaris()       : ( rank:{}) "
+                                      "damaris_initialize({}, comm), Damaris Error: {}.  Error via OPM internally built file:",
+                                      mpiRank, cs_damaris_xml_file, damaris_error_string(dam_err) ));
         }
     }
 }
