@@ -738,7 +738,7 @@ public:
      * \brief Write the requested quantities of the current solution into the output
      *        files.
      */
-    void writeOutput(bool verbose = true)
+    void writeOutput(const SimulatorTimer& timer, bool verbose = true)
     {
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
@@ -758,7 +758,7 @@ public:
         }
 #endif 
         if (enableEclOutput_){
-            eclWriter_->writeOutput(std::move(localCellData), isSubStep);
+            eclWriter_->writeOutput(std::move(localCellData), timer, isSubStep);
         }
     }
 

@@ -226,6 +226,13 @@ EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 
 template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
+outputTimeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate)
+{
+    logOutput_.timeStamp(lbl, elapsed, rstep, currentDate);
+}
+
+template<class FluidSystem, class Scalar>
+void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 outputCumLog(std::size_t reportStepNum)
 {
     logOutput_.cumulative(reportStepNum,
@@ -251,21 +258,40 @@ outputInjLog(std::size_t reportStepNum)
                          { return this->isDefunctParallelWell(name); });
 }
 
+
 template<class FluidSystem,class Scalar>
 Inplace EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputFipLog(std::map<std::string, double>& miscSummaryData,
+calc_inplace(std::map<std::string, double>& miscSummaryData,
              std::map<std::string, std::vector<double>>& regionData,
-             const std::size_t reportStepNum,
-             const bool substep,
              const Parallel::Communication& comm)
 {
     auto inplace = this->accumulateRegionSums(comm);
+    
     if (comm.rank() != 0)
         return inplace;
 
     updateSummaryRegionValues(inplace,
                               miscSummaryData,
                               regionData);
+
+    
+    return inplace;
+}
+
+
+template<class FluidSystem,class Scalar>
+void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
+outputFipAndResvLog(const Inplace& inplace,
+                         const std::size_t reportStepNum,
+                         double elapsed,
+                         boost::posix_time::ptime currentDate,
+                         const bool substep,
+                         const Parallel::Communication& comm)
+{
+
+    if (comm.rank() != 0)
+        return;
+
 
     // For report step 0 we use the RPTSOL config, else derive from RPTSCHED
     std::unique_ptr<FIPConfig> fipSched;
@@ -277,53 +303,34 @@ outputFipLog(std::map<std::string, double>& miscSummaryData,
                                                : *fipSched;
 
     if (!substep && !forceDisableFipOutput_ && fipc.output(FIPConfig::OutputField::FIELD)) {
-        logOutput_.fip(inplace, this->initialInplace(), "");
-        if (fipc.output(FIPConfig::OutputField::FIPNUM)) {
-            logOutput_.fip(inplace, this->initialInplace(), "FIPNUM");
+
+        logOutput_.timeStamp("BALANCE", elapsed, reportStepNum, currentDate);
+
+        logOutput_.fip(inplace, this->initialInplace(), "");  
+        
+        if (fipc.output(FIPConfig::OutputField::FIPNUM)) { 
+            logOutput_.fip(inplace, this->initialInplace(), "FIPNUM");    
+            
+            if (fipc.output(FIPConfig::OutputField::RESV))
+                logOutput_.fipResv(inplace, "FIPNUM"); 
         }
+        
         if (fipc.output(FIPConfig::OutputField::FIP)) {
             for (const auto& reg : this->regions_) {
                 if (reg.first != "FIPNUM") {
+                    std::ostringstream ss;
+                    ss << "BAL" << reg.first.substr(3);
+                    logOutput_.timeStamp(ss.str(), elapsed, reportStepNum, currentDate);
                     logOutput_.fip(inplace, this->initialInplace(), reg.first);
+                    
+                    if (fipc.output(FIPConfig::OutputField::RESV))
+                        logOutput_.fipResv(inplace, reg.first); 
                 }
             }
         }
     }
-
-    return inplace;
 }
 
-template<class FluidSystem,class Scalar>
-Inplace EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputFipresvLog(std::map<std::string, double>& miscSummaryData,
-                 std::map<std::string, std::vector<double>>& regionData,
-                 const std::size_t reportStepNum,
-                 const bool substep,
-                 const Parallel::Communication& comm)
-{
-    auto inplace = this->accumulateRegionSums(comm);
-    if (comm.rank() != 0)
-        return inplace;
-
-    updateSummaryRegionValues(inplace,
-                              miscSummaryData,
-                              regionData);
-
-    // For report step 0 we use the RPTSOL config, else derive from RPTSCHED
-    std::unique_ptr<FIPConfig> fipSched;
-    if (reportStepNum != 0) {
-        const auto& rpt = this->schedule_[reportStepNum].rpt_config.get();
-        fipSched = std::make_unique<FIPConfig>(rpt);
-    }
-    const FIPConfig& fipc = reportStepNum == 0 ? this->eclState_.getEclipseConfig().fip()
-                                               : *fipSched;
-
-    if (!substep && !forceDisableFipresvOutput_ && fipc.output(FIPConfig::OutputField::RESV)) {
-        logOutput_.fipResv(inplace);
-    }
-
-    return inplace;
-}
 
 template<class FluidSystem,class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::

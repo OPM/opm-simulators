@@ -29,6 +29,8 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <boost/date_time.hpp>
+
 
 namespace Opm {
 
@@ -58,7 +60,7 @@ public:
              const std::string& name) const;
 
     //! \brief Write fluid-in-place reservoir reports to output.
-    void fipResv(const Inplace& inplace) const;
+    void fipResv(const Inplace& inplace, const std::string& name) const;
 
     //! \brief Write injection report to output.
     void injection(const std::size_t reportStepNum,
@@ -67,6 +69,8 @@ public:
     //! \brief Write production report to output.
     void production(const std::size_t reportStepNum,
                     std::function<bool(const std::string&)> isDefunct) const;
+
+    void timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate) const;
 
 private:
     void beginCumulativeReport_() const;
@@ -167,6 +171,7 @@ private:
     const EclipseState& eclState_;
     const Schedule& schedule_;
     const SummaryState& summaryState_;
+    std::string flowVersionName_;
 };
 
 } // namespace Opm

@@ -62,6 +62,8 @@ public:
         return (this->fluidPressure_.size()) ;
     };
 
+    void outputTimeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate);
+
     // write cumulative production and injection reports to output
     void outputCumLog(std::size_t reportStepNum);
 
@@ -71,19 +73,18 @@ public:
     // write injection report to output
     void outputInjLog(std::size_t reportStepNum);
 
-    // write Fluid In Place to output log
-    Inplace outputFipLog(std::map<std::string, double>& miscSummaryData,
+    // calculate Fluid In Place
+    Inplace calc_inplace(std::map<std::string, double>& miscSummaryData,
                          std::map<std::string, std::vector<double>>& regionData,
+                         const Parallel::Communication& comm);
+
+    void outputFipAndResvLog(const Inplace& inplace,
                          const std::size_t reportStepNum,
+                         double elapsed,
+                         boost::posix_time::ptime currentDate,
                          const bool substep,
                          const Parallel::Communication& comm);
 
-    // write Reservoir Volumes to output log
-    Inplace outputFipresvLog(std::map<std::string, double>& miscSummaryData,
-                         std::map<std::string, std::vector<double>>& regionData,
-                         const std::size_t reportStepNum,
-                         const bool substep,
-                         const Parallel::Communication& comm);
 
     void outputErrorLog(const Parallel::Communication& comm) const;
 
