@@ -10,15 +10,17 @@
 #
 pybind11_add_module(simulators ${PYBIND11_SYSTEM}
   PyBlackOilSimulator.cpp
+  PyEnergySimulator.cpp
   Pybind11Exporter.cpp)
 
 set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
 set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
 
-target_sources(simulators
-  PRIVATE
-  $<TARGET_OBJECTS:moduleVersion>
-  $<TARGET_OBJECTS:flow_libblackoil>)
+target_sources(simulators PRIVATE $<TARGET_OBJECTS:moduleVersion> )
+
+foreach (OBJ ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
+    target_sources(simulators PRIVATE $<TARGET_OBJECTS:flow_lib${OBJ}>)
+endforeach()
 
 target_link_libraries( simulators PRIVATE opmsimulators )
 
@@ -44,21 +46,13 @@ if(OPM_ENABLE_PYTHON_TESTS)
   #   splitting the python tests into multiple add_test() tests instead
   #   of having a single "python -m unittest" test call that will run all
   #   the tests in the "test" sub directory.
-  add_test(NAME python_basic
-      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
-      COMMAND ${CMAKE_COMMAND}
-      -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
-      -m unittest test/test_basic.py)
-  add_test(NAME python_schedule
-      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
-      COMMAND ${CMAKE_COMMAND}
-      -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
-      -m unittest test/test_schedule.py)
-  add_test(NAME python_throw
-      WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
-      COMMAND ${CMAKE_COMMAND}
-      -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
-      -m unittest test/test_throw.py)
+  foreach(case_name IN ITEMS basic fluidstate_variables primary_variables schedule throw)
+    add_test(NAME python_${case_name}
+        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}/python
+        COMMAND ${CMAKE_COMMAND}
+        -E env PYTHONPATH=${PYTHON_PATH} ${PYTHON_EXECUTABLE}
+        -m unittest test/test_${case_name}.py)
+  endforeach()
 endif()
 
 find_file(PYTHON_INSTALL_PY install.py

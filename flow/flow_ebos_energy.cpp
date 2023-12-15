@@ -23,37 +23,54 @@
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
+
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
+#include <opm/models/discretization/common/tpfalinearizer.hh>
+
+
 namespace Opm {
-namespace Properties {
-namespace TTag {
-struct EclFlowEnergyProblem {
-    using InheritsFrom = std::tuple<EclFlowProblem>;
-};
+    namespace Properties {
+
+        template<class TypeTag>
+        struct Linearizer<TypeTag, TTag::EclEnergyProblemTPFA> { using type = TpfaLinearizer<TypeTag>; };
+
+        template<class TypeTag>
+        struct LocalResidual<TypeTag, TTag::EclEnergyProblemTPFA> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+
+        template<class TypeTag>
+        struct EnableDiffusion<TypeTag, TTag::EclEnergyProblemTPFA> { static constexpr bool value = false; };
+
+    }
 }
 
-template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::EclFlowEnergyProblem> {
-    static constexpr bool value = true;
-};
-}}
-
+// ----------------- Main program -----------------
 namespace Opm {
 
-// ----------------- Main program -----------------
+std::unique_ptr<FlowMainEbos<Properties::TTag::EclEnergyProblemTPFA>>
+flowEbosEnergyMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    return std::make_unique<FlowMainEbos<Properties::TTag::EclEnergyProblemTPFA>>(
+        argc, argv, outputCout, outputFiles);
+}
+
 int flowEbosEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowEnergyProblem>
+    FlowMainEbos<Properties::TTag::EclEnergyProblemTPFA>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
 
 int flowEbosEnergyMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowEnergyProblem;
+    using TypeTag = Properties::TTag::EclEnergyProblemTPFA;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!

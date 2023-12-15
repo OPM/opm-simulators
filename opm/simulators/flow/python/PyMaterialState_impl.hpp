@@ -22,6 +22,13 @@
 namespace Opm::Pybind {
 
 template <class TypeTag>
+PyMaterialState<TypeTag>::
+PyMaterialState(Simulator *ebos_simulator) : ebos_simulator_(ebos_simulator)
+{
+
+}
+
+template <class TypeTag>
 std::unique_ptr<double []>
 PyMaterialState<TypeTag>::
 getCellVolumes( std::size_t *size)

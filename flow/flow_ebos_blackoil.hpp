@@ -18,7 +18,7 @@
 #define FLOW_EBOS_BLACKOIL_TPFA_HPP
 
 #include <memory>
-
+//#include <flow/flow_ebos_energy.hpp>
 namespace Opm {
     namespace Properties {
         namespace TTag {
