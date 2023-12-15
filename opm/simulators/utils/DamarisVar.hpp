@@ -170,7 +170,6 @@ namespace DamarisOutput
                                        //!< describe the size of the variables data array
         std::vector<int64_t> positions_; //!< The offsets into the array that the data in the Variable
                                          //!< starts from for this rank.
-        int rank_; //!< Rank of process - used for error reporting.
         bool parameters_set_; //!< set to true after SetDamarisParameter() is call to
                               //!< ensure the variable has correct size for memory
                               //!< allocation in SetPointersToDamarisShmem()
@@ -178,6 +177,7 @@ namespace DamarisOutput
                                                //!< variable depends on (via it's Layout)
         std::string variable_name_; //!< Reference string to the XML attribute name of
                                     //!< the variable.
+        int rank_; //!< Rank of process - used for error reporting.
         int dam_err_; //!<  Set to != DAMARIS_OK if a Damaris error was returned by a
                       //!<  Damaris API function call
         bool has_error_;
