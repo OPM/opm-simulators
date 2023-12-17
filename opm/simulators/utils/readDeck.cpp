@@ -439,8 +439,8 @@ Opm::setupLogging(const int          mpi_rank_,
             : std::filesystem::current_path().generic_string();
     }
 
-    logFileStream << output_dir << "/" << baseName;
-    debugFileStream << output_dir << "/" << baseName;
+    logFileStream << fpath.parent_path().string() << "/" << fpath.stem().string();
+    debugFileStream << fpath.parent_path().string() << "/" << fpath.stem().string();
 
     if (mpi_rank_ != 0) {
         // Added rank to log file for non-zero ranks.
@@ -449,6 +449,7 @@ Opm::setupLogging(const int          mpi_rank_,
         // If the following file appears then there is a bug.
         logFileStream << "." << mpi_rank_;
     }
+
     logFileStream << ".PRT";
     debugFileStream << ".DBG";
 
