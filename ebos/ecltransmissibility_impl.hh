@@ -311,8 +311,10 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
             const auto& outsideElem = intersection.outside();
             unsigned outsideElemIdx = elemMapper.index(outsideElem);
 
-            unsigned insideCartElemIdx = cartMapper_.cartesianIndex(elemIdx);
-            unsigned outsideCartElemIdx = cartMapper_.cartesianIndex(outsideElemIdx);
+            // Get the Cartesian indices of the origen cells (parent or equivalent cell on level zero), for CpGrid with LGRs.
+            // For genral grids and no LGRs, get the usual Cartesian Index.
+            unsigned insideCartElemIdx = this-> lookUpCartesianData_.template getFieldPropCartesianIdx<Grid>(elemIdx);
+            unsigned outsideCartElemIdx =  this-> lookUpCartesianData_.template getFieldPropCartesianIdx<Grid>(outsideElemIdx);
 
             // we only need to calculate a face's transmissibility
             // once...
@@ -401,7 +403,9 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                     };
                     int kup = find_layer(insideCartElemIdx);
                     int kdown=find_layer(outsideCartElemIdx);
-                    assert(kup != kdown);
+                    // When a grid is a CpGrid with LGRs, insideCartElemIdx coincides with outsideCartElemIdx
+                    // for cells on the leaf with the same parent cell on level zero.
+                    assert((kup != kdown) || (insideCartElemIdx == outsideCartElemIdx));
                     if(std::abs(kup -kdown) > 1){
                         trans = 0.0;
                     }
