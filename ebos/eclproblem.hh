@@ -2018,7 +2018,8 @@ protected:
         materialLawManager_ = std::make_shared<EclMaterialLawManager>();
         materialLawManager_->initFromState(eclState);
         materialLawManager_->initParamsForElements(eclState, this->model().numGridDof(),
-                                                   this-> template fieldPropIntTypeOnLeafAssigner_<int>());
+                                                   this-> template fieldPropIntTypeOnLeafAssigner_<int>(),
+                                                   this-> lookupIdxOnLevelZeroAssigner_());
         ////////////////////////////////
     }
 
