@@ -78,6 +78,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -327,10 +328,6 @@ private:
             deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
             outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
         }
-        
-        if (outputDir.empty()) {
-            outputDir = ".";
-        }
 
 #if HAVE_DAMARIS
         enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
@@ -344,7 +341,18 @@ private:
         }
 
         if (enableDamarisOutput_) {
-            this->setupDamaris(outputDir); // Damaris server ranks will block here until damaris_stop() is called by client ranks
+            // Deal with empty (defaulted) output dir, should be deck dir
+            auto damarisOutputDir = outputDir;
+            if (outputDir.empty()) {
+                auto odir = std::filesystem::path{deckFilename}.parent_path();
+                if (odir.empty()) {
+                    damarisOutputDir = ".";
+                } else {
+                    damarisOutputDir = odir.generic_string();
+                }
+            }
+            // Damaris server ranks will block here until damaris_stop() is called by client ranks
+            this->setupDamaris(damarisOutputDir);
         }
 #endif // HAVE_DAMARIS
 
