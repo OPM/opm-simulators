@@ -668,9 +668,10 @@ extractPorosity_()
     // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
     // simulation grid might remove a few elements. (e.g. because it is distributed
     // over several processes.)
+    unsigned numElem = gridView_.size(/*codim=*/0);
     const auto& fp = eclState_.fieldProps();
     if (fp.has_double("PORO")) {
-        porosity_ = fp.get_double("PORO");
+        porosity_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PORO", numElem);
     }
     else
         throw std::logic_error("Can't read the porosityfrom the ecl state. "
@@ -685,8 +686,9 @@ extractDispersion_()
         throw std::runtime_error("Dispersion disabled at compile time, but the deck "
                                  "contains the DISPERC keyword.");
     }
+    unsigned numElem = gridView_.size(/*codim=*/0);
     const auto& fp = eclState_.fieldProps();
-    dispersion_ = fp.get_double("DISPERC");
+    dispersion_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"DISPERC", numElem);
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
