@@ -588,17 +588,17 @@ extractPermeability_()
     // over several processes.)
     const auto& fp = eclState_.fieldProps();
     if (fp.has_double("PERMX")) {
-        const std::vector<double>& permxData = fp.get_double("PERMX");
+        const std::vector<double>& permxData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp, "PERMX", numElem);
 
         std::vector<double> permyData;
         if (fp.has_double("PERMY"))
-            permyData = fp.get_double("PERMY");
+            permyData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMY", numElem);
         else
             permyData = permxData;
 
         std::vector<double> permzData;
         if (fp.has_double("PERMZ"))
-            permzData = fp.get_double("PERMZ");
+            permzData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMZ", numElem);
         else
             permzData = permxData;
 
@@ -630,17 +630,17 @@ extractPermeability_(const std::function<unsigned int(unsigned int)>& map)
     // over several processes.)
     const auto& fp = eclState_.fieldProps();
     if (fp.has_double("PERMX")) {
-        const std::vector<double>& permxData = fp.get_double("PERMX");
+        const std::vector<double>& permxData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMX", numElem);
 
         std::vector<double> permyData;
         if (fp.has_double("PERMY"))
-            permyData = fp.get_double("PERMY");
+            permyData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMY", numElem);
         else
             permyData = permxData;
 
         std::vector<double> permzData;
         if (fp.has_double("PERMZ"))
-            permzData = fp.get_double("PERMZ");
+            permzData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMZ", numElem);
         else
             permzData = permxData;
 
