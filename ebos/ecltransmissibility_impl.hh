@@ -730,10 +730,20 @@ applyAllZMultipliers_(Scalar& trans,
                       const std::array<int, dimWorld>& cartDims,
                       bool pinchTop)
 {
+    if(grid_.maxLevel()> 0) {
+                OPM_THROW(std::invalid_argument, "MULTZ not support with LGRS, yet.");
+    }
     if (insideFaceIdx > 3) { // top or or bottom
         assert(insideFaceIdx==5); // as insideCartElemIdx < outsideCartElemIdx holds for the Z column
-        assert(outsideCartElemIdx > insideCartElemIdx);
-        auto lastCartElemIdx = outsideCartElemIdx - cartDims[0]*cartDims[1];
+        // For CpGrid with LGRs, insideCartElemIdx == outsideCartElemIdx when cells on the leaf have the same parent cell on level zero.
+        assert(outsideCartElemIdx >= insideCartElemIdx);
+        unsigned lastCartElemIdx;
+        if (outsideCartElemIdx == insideCartElemIdx) {
+            lastCartElemIdx = outsideCartElemIdx;
+        }
+        else {
+            lastCartElemIdx = outsideCartElemIdx - cartDims[0]*cartDims[1];
+        }
         // Last multiplier using (Z+)*(Z-)
         Scalar mult = transMult.getMultiplier(lastCartElemIdx , FaceDir::ZPlus) *
             transMult.getMultiplier(outsideCartElemIdx , FaceDir::ZMinus);
