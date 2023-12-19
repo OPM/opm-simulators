@@ -78,6 +78,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <filesystem>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -126,7 +127,7 @@ int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
 class Main
 {
 public:
-    Main(int argc, char** argv);
+    Main(int argc, char** argv, bool ownMPI = true);
 
     // This constructor can be called from Python
     Main(const std::string& filename);
@@ -187,6 +188,14 @@ public:
             //NOTE: exitCode was set by initialize_() above;
             return std::unique_ptr<FlowMainEbosType>(); // nullptr
         }
+    }
+
+    //! \brief Used for test_outputdir.
+    int justInitialize()
+    {
+        int exitCode = EXIT_SUCCESS;
+        initialize_<Properties::TTag::FlowEarlyBird>(exitCode);
+        return exitCode;
     }
 
 private:
@@ -327,10 +336,6 @@ private:
             deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
             outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
         }
-        
-        if (outputDir.empty()) {
-            outputDir = ".";
-        }
 
 #if HAVE_DAMARIS
         enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
@@ -344,7 +349,18 @@ private:
         }
 
         if (enableDamarisOutput_) {
-            this->setupDamaris(outputDir); // Damaris server ranks will block here until damaris_stop() is called by client ranks
+            // Deal with empty (defaulted) output dir, should be deck dir
+            auto damarisOutputDir = outputDir;
+            if (outputDir.empty()) {
+                auto odir = std::filesystem::path{deckFilename}.parent_path();
+                if (odir.empty()) {
+                    damarisOutputDir = ".";
+                } else {
+                    damarisOutputDir = odir.generic_string();
+                }
+            }
+            // Damaris server ranks will block here until damaris_stop() is called by client ranks
+            this->setupDamaris(damarisOutputDir);
         }
 #endif // HAVE_DAMARIS
 
@@ -719,6 +735,7 @@ private:
 
     int argc_{0};
     char** argv_{nullptr};
+    bool ownMPI_{true}; //!< True if we "own" MPI and should init / finalize
     bool outputCout_{false};
     bool outputFiles_{false};
     double setupTime_{0.0};
