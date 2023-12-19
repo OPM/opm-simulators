@@ -190,6 +190,14 @@ public:
         }
     }
 
+    //! \brief Used for test_outputdir.
+    int justInitialize()
+    {
+        int exitCode = EXIT_SUCCESS;
+        initialize_<Properties::TTag::FlowEarlyBird>(exitCode);
+        return exitCode;
+    }
+
 private:
     int dispatchDynamic_()
     {

@@ -349,6 +349,8 @@ if (HAVE_OPM_TESTS)
     include (${CMAKE_CURRENT_SOURCE_DIR}/compareECLFiles.cmake)
 endif()
 
+target_sources(test_outputdir PRIVATE $<TARGET_OBJECTS:moduleVersion>)
+
 opm_set_test_driver(${CMAKE_CURRENT_SOURCE_DIR}/tests/run-parallel-unitTest.sh "")
 
 opm_add_test(test_gatherconvergencereport
