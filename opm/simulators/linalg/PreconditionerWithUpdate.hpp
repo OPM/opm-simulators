@@ -77,7 +77,7 @@ private:
     OriginalPreconditioner orig_precond_;
 };
 
-
+//TODO: extend this functionality to support RebuildOnUpdatePreconditioner
 template <class OriginalPreconditioner, class... Args>
 std::shared_ptr<DummyUpdatePreconditioner<OriginalPreconditioner>>
 wrapPreconditioner(Args&&... args)
@@ -85,6 +85,53 @@ wrapPreconditioner(Args&&... args)
     return std::make_shared<DummyUpdatePreconditioner<OriginalPreconditioner>>(std::forward<Args>(args)...);
 }
 
+template <class OriginalPreconditioner, class Matrix>
+class RebuildOnUpdatePreconditioner : public PreconditionerWithUpdate<typename OriginalPreconditioner::domain_type,
+                                                                  typename OriginalPreconditioner::range_type>
+{
+public:
+    RebuildOnUpdatePreconditioner(Matrix op_mat, const int n, const double w, const bool resort)
+        : orig_precond_(std::make_unique<OriginalPreconditioner>(op_mat, n, w, resort)), op_mat_(op_mat), n_(n), w_(w), resort_(resort)
+    {
+    }
+
+    using X = typename OriginalPreconditioner::domain_type;
+    using Y = typename OriginalPreconditioner::range_type;
+
+    virtual void pre(X& x, Y& b) override
+    {
+        orig_precond_->pre(x, b);
+    }
+
+    virtual void apply(X& v, const Y& d) override
+    {
+        orig_precond_->apply(v, d);
+    }
+
+    virtual void post(X& x) override
+    {
+        orig_precond_->post(x);
+    }
+
+    virtual SolverCategory::Category category() const override
+    {
+        return orig_precond_->category();
+    }
+
+    // The update() function does nothing for a wrapped preconditioner.
+    virtual void update() override
+    {
+        orig_precond_ = std::make_unique<OriginalPreconditioner>(op_mat_, n_, w_, resort_);
+    }
+
+private:
+    std::unique_ptr<OriginalPreconditioner> orig_precond_;
+    //TODO: replace excess copy of matrix with pointer
+    Matrix op_mat_;
+    int n_;
+    double w_;
+    bool resort_;
+};
 
 } // namespace Dune
 
