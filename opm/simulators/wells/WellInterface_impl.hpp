@@ -1541,8 +1541,9 @@ namespace Opm
         const double connection_pressure = ws.perf_data.pressure[perf];
         // viscosity is evaluated at connection pressure
         const auto& rv = getValue(intQuants.fluidState().Rv());
-        const double psat = FluidSystem::gasPvt().saturationPressure(this->pvtRegionIdx(), ws.temperature, rv);
-        const double mu = connection_pressure < psat ?
+        const double rv_sat = FluidSystem::gasPvt().saturatedOilVaporizationFactor(this->pvtRegionIdx(), ws.temperature, connection_pressure);
+        // note that rv here is from grid block with typically p_block > connection_pressure (so we may very well have rv > rv_sat)
+        const double mu = rv >= rv_sat ?
                                 FluidSystem::gasPvt().saturatedViscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure) :
                                 FluidSystem::gasPvt().viscosity(this->pvtRegionIdx(), ws.temperature, connection_pressure, rv, getValue(intQuants.fluidState().Rvw()));
         double rho = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, this->pvtRegionIdx());
