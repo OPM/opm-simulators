@@ -40,10 +40,12 @@
 
 namespace Opm {
 
-Main::Main(int argc, char** argv)
-    : argc_(argc), argv_(argv)
+Main::Main(int argc, char** argv, bool ownMPI)
+    : argc_(argc), argv_(argv), ownMPI_(ownMPI)
 {
-    initMPI();
+    if (ownMPI_) {
+        initMPI();
+    }
 }
 
 Main::Main(const std::string& filename)
@@ -83,7 +85,9 @@ Main::~Main()
     }
 #endif // HAVE_MPI
 
-    EclGenericVanguard::setCommunication(nullptr);
+    if (ownMPI_) {
+        EclGenericVanguard::setCommunication(nullptr);
+    }
 
 #if HAVE_DAMARIS
     if (enableDamarisOutput_) {
@@ -102,7 +106,9 @@ Main::~Main()
 #endif // HAVE_DAMARIS
 
 #if HAVE_MPI && !HAVE_DUNE_FEM
-    MPI_Finalize();
+    if (ownMPI_) {
+        MPI_Finalize();
+    }
 #endif
 }
 

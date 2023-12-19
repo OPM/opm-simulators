@@ -127,7 +127,7 @@ int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
 class Main
 {
 public:
-    Main(int argc, char** argv);
+    Main(int argc, char** argv, bool ownMPI = true);
 
     // This constructor can be called from Python
     Main(const std::string& filename);
@@ -727,6 +727,7 @@ private:
 
     int argc_{0};
     char** argv_{nullptr};
+    bool ownMPI_{true}; //!< True if we "own" MPI and should init / finalize
     bool outputCout_{false};
     bool outputFiles_{false};
     double setupTime_{0.0};
