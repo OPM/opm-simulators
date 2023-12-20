@@ -226,11 +226,9 @@ public:
             const auto& problem = elemCtx.simulator().problem();
             const auto& model = problem.geoMechModel();
             for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-                const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
-                const auto& fs = intQuants.fluidState();
                 unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
                 if (!this->mechPotentialForce_.empty()) {
-                    //assume all mechancal tings should be written
+                    // assume all mechanical things should be written
                     this->mechPotentialForce_[globalDofIdx] = model.mechPotentialForce(globalDofIdx);
                     this->mechPotentialPressForce_[globalDofIdx] = model.mechPotentialPressForce(globalDofIdx);
                     this->mechPotentialTempForce_[globalDofIdx] = model.mechPotentialTempForce(globalDofIdx);
@@ -241,7 +239,7 @@ public:
                     this->stressXX_[globalDofIdx] = model.stress(globalDofIdx, 0);
                     this->stressYY_[globalDofIdx] = model.stress(globalDofIdx, 1);
                     this->stressZZ_[globalDofIdx] = model.stress(globalDofIdx, 2);
-                    //voight notation
+                    // voight notation
                     this->stressXY_[globalDofIdx] = model.stress(globalDofIdx, 5);
                     this->stressXZ_[globalDofIdx] = model.stress(globalDofIdx, 4);
                     this->stressYZ_[globalDofIdx] = model.stress(globalDofIdx, 3);
@@ -249,7 +247,7 @@ public:
                     this->strainXX_[globalDofIdx] = model.strain(globalDofIdx, 0);
                     this->strainYY_[globalDofIdx] = model.strain(globalDofIdx, 1);
                     this->strainZZ_[globalDofIdx] = model.strain(globalDofIdx, 2);
-                    //voight notation
+                    // voight notation
                     this->strainXY_[globalDofIdx] = model.strain(globalDofIdx, 5);
                     this->strainXZ_[globalDofIdx] = model.strain(globalDofIdx, 4);
                     this->strainYZ_[globalDofIdx] = model.strain(globalDofIdx, 3);
@@ -258,7 +256,7 @@ public:
                     this->delstressXX_[globalDofIdx] = model.delstress(globalDofIdx, 0);
                     this->delstressYY_[globalDofIdx] = model.delstress(globalDofIdx, 1);
                     this->delstressZZ_[globalDofIdx] = model.delstress(globalDofIdx, 2);
-                    //voight notation
+                    // voight notation
                     this->delstressXY_[globalDofIdx] = model.delstress(globalDofIdx, 5);
                     this->delstressXZ_[globalDofIdx] = model.delstress(globalDofIdx, 4);
                     this->delstressYZ_[globalDofIdx] = model.delstress(globalDofIdx, 3);
