@@ -85,13 +85,13 @@ wrapPreconditioner(Args&&... args)
     return std::make_shared<DummyUpdatePreconditioner<OriginalPreconditioner>>(std::forward<Args>(args)...);
 }
 
-template <class OriginalPreconditioner, class Matrix>
+template <class OriginalPreconditioner, class MatrixPtr>
 class RebuildOnUpdatePreconditioner : public PreconditionerWithUpdate<typename OriginalPreconditioner::domain_type,
                                                                   typename OriginalPreconditioner::range_type>
 {
 public:
-    RebuildOnUpdatePreconditioner(Matrix op_mat, const int n, const double w, const bool resort)
-        : orig_precond_(std::make_unique<OriginalPreconditioner>(op_mat, n, w, resort)), op_mat_(op_mat), n_(n), w_(w), resort_(resort)
+    RebuildOnUpdatePreconditioner(MatrixPtr mat_ptr, const int n, const double w, const bool resort)
+        : orig_precond_(std::make_unique<OriginalPreconditioner>(*mat_ptr, n, w, resort)), mat_ptr_(mat_ptr), n_(n), w_(w), resort_(resort)
     {
     }
 
@@ -118,19 +118,18 @@ public:
         return orig_precond_->category();
     }
 
-    // The update() function does nothing for a wrapped preconditioner.
-    virtual void update() override
+    // Rebuild the preconditioner on update
+    void update() override
     {
-        orig_precond_ = std::make_unique<OriginalPreconditioner>(op_mat_, n_, w_, resort_);
+        orig_precond_ = std::make_unique<OriginalPreconditioner>(*mat_ptr_, n_, w_, resort_);
     }
 
 private:
     std::unique_ptr<OriginalPreconditioner> orig_precond_;
-    //TODO: replace excess copy of matrix with pointer
-    Matrix op_mat_;
-    int n_;
-    double w_;
-    bool resort_;
+    const MatrixPtr mat_ptr_;
+    const int n_;
+    const double w_;
+    const bool resort_;
 };
 
 } // namespace Dune
