@@ -1511,8 +1511,8 @@ namespace Opm
             return wi;
         }
 
-        // Solve a quadratic equation for a connection rate satisfying the ipr and the flow-dependent skin,
-        // then use this rate to evaluate the actual skin.
+        // Solve quadratic equations for connection rates satisfying the ipr and the flow-dependent skin.
+        // If more than one solution, pick the one corresponding to lowest absolute rate (smallest skin).
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
         const double Kh = connection.Kh();
         const double scaling = 3.141592653589 * Kh * connection.wpimult();
@@ -1525,23 +1525,37 @@ namespace Opm
         const double mob_g = getValue(intQuants.mobility(FluidSystem::gasPhaseIdx)) * invB;
         const double a = d;
         const double b = 2*scaling/wi[gas_comp_idx];
-        const double c = -1.0*b*trans_mult*this->well_index_[perf]*mob_g*drawdown;
+        const double c = -2*scaling*mob_g*drawdown;
 
-        // Pick a valid solution or use default wi also for gas (rate 0)
-        const double r2 = b*b - 4*a*c;
-        if (r2 <= 0) {
-            return wi;
+        double consistentQ = -1.0e20;
+        // Find and check negative solutions (a --> -a)
+        const double r2n = b*b + 4*a*c;
+        if (r2n >= 0) {
+            const double rn = std::sqrt(r2n);
+            const double xn1 = (b-rn)*0.5/a;
+            if (xn1 <= 0) {
+                consistentQ = xn1;
+            }
+            const double xn2 = (b+rn)*0.5/a;
+            if (xn2 <= 0 && xn2 > consistentQ) {
+                consistentQ = xn2;
+            }
         }
-        const double r = std::sqrt(r2);
-        const double cQ1 = (r-b)*0.5/a;
-        const double cQ2 = -(r+b)*0.5/a;
-        const double sol1 = std::abs(a*cQ1*std::abs(cQ1) + b*cQ1 + c);
-        const double sol2 = std::abs(a*cQ2*std::abs(cQ2) + b*cQ2 + c);
-        if (std::min(sol1, sol2) > 1.0e-6) {
-            return wi;
+        // Find and check positive solutions
+        consistentQ *= -1;
+        const double r2p = b*b - 4*a*c;
+        if (r2p >= 0) {
+            const double rp = std::sqrt(r2p);
+            const double xp1 = (rp-b)*0.5/a;
+            if (xp1 > 0 && xp1 < consistent_Q) {
+                consistentQ = xp1;
+            }
+            const double xp2 = -(r+b)*0.5/a;
+            if (xp2 > 0 && xp2 < consistent_Q) {
+                consistent_Q = xp2;
+            }
         }
-        const double consistent_Q = (sol1 <= sol2) ? cQ1 : cQ2;
-        wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (std::abs(consistent_Q)/2 * d / scaling));
+        wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (consistent_Q/2 * d / scaling));
         return wi;
     }
 
