@@ -180,7 +180,7 @@ struct StandardPreconditioners
             const int n = prm.get<int>("ilulevel", 0);
             const double w = prm.get<double>("relaxation", 1.0);
             const bool resort = prm.get<bool>("resort", false);
-            return wrapBlockPreconditioner<RebuildOnUpdatePreconditioner<Dune::SeqILU<M, V, V>, M>>(comm, op.getmat(), n, w, resort);
+            return wrapBlockPreconditioner<RebuildOnUpdatePreconditioner<Dune::SeqILU<M, V, V>, const M*>>(comm, &op.getmat(), n, w, resort);
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
           DUNE_UNUSED_PARAMETER(prm);
