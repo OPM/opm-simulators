@@ -86,11 +86,15 @@ getDummyUpdateWrapper(Args&&... args)
 
 template <class OriginalPreconditioner, class MatrixPtr>
 class RebuildOnUpdatePreconditioner : public PreconditionerWithUpdate<typename OriginalPreconditioner::domain_type,
-                                                                  typename OriginalPreconditioner::range_type>
+                                                                      typename OriginalPreconditioner::range_type>
 {
 public:
     RebuildOnUpdatePreconditioner(MatrixPtr mat_ptr, const int n, const double w, const bool resort)
-        : orig_precond_(std::make_unique<OriginalPreconditioner>(*mat_ptr, n, w, resort)), mat_ptr_(mat_ptr), n_(n), w_(w), resort_(resort)
+        : orig_precond_(std::make_unique<OriginalPreconditioner>(*mat_ptr, n, w, resort))
+        , mat_ptr_(mat_ptr)
+        , n_(n)
+        , w_(w)
+        , resort_(resort)
     {
     }
 
