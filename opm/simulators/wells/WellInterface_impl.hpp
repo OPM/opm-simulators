@@ -1527,30 +1527,30 @@ namespace Opm
         const double b = 2*scaling/wi[gas_comp_idx];
         const double c = -2*scaling*mob_g*drawdown;
 
-        double consistentQ = -1.0e20;
+        double consistent_Q = -1.0e20;
         // Find and check negative solutions (a --> -a)
         const double r2n = b*b + 4*a*c;
         if (r2n >= 0) {
             const double rn = std::sqrt(r2n);
             const double xn1 = (b-rn)*0.5/a;
             if (xn1 <= 0) {
-                consistentQ = xn1;
+                consistent_Q = xn1;
             }
             const double xn2 = (b+rn)*0.5/a;
-            if (xn2 <= 0 && xn2 > consistentQ) {
-                consistentQ = xn2;
+            if (xn2 <= 0 && xn2 > consistent_Q) {
+                consistent_Q = xn2;
             }
         }
         // Find and check positive solutions
-        consistentQ *= -1;
+        consistent_Q *= -1;
         const double r2p = b*b - 4*a*c;
         if (r2p >= 0) {
             const double rp = std::sqrt(r2p);
             const double xp1 = (rp-b)*0.5/a;
             if (xp1 > 0 && xp1 < consistent_Q) {
-                consistentQ = xp1;
+                consistent_Q = xp1;
             }
-            const double xp2 = -(r+b)*0.5/a;
+            const double xp2 = -(rp+b)*0.5/a;
             if (xp2 > 0 && xp2 < consistent_Q) {
                 consistent_Q = xp2;
             }
