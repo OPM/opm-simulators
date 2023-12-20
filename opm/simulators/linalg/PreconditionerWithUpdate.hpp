@@ -77,10 +77,9 @@ private:
     OriginalPreconditioner orig_precond_;
 };
 
-//TODO: extend this functionality to support RebuildOnUpdatePreconditioner
 template <class OriginalPreconditioner, class... Args>
 std::shared_ptr<DummyUpdatePreconditioner<OriginalPreconditioner>>
-wrapPreconditioner(Args&&... args)
+getDummyUpdateWrapper(Args&&... args)
 {
     return std::make_shared<DummyUpdatePreconditioner<OriginalPreconditioner>>(std::forward<Args>(args)...);
 }
@@ -131,6 +130,13 @@ private:
     const double w_;
     const bool resort_;
 };
+
+template <class OriginalPreconditioner, class MatrixPtr>
+std::shared_ptr<RebuildOnUpdatePreconditioner<OriginalPreconditioner, MatrixPtr>>
+getRebuildOnUpdateWrapper(MatrixPtr mat_ptr, const int n, const double w, const bool resort)
+{
+    return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner, MatrixPtr>>(mat_ptr, n, w, resort);
+}
 
 } // namespace Dune
 

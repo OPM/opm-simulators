@@ -416,7 +416,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
             const double w = prm.get<double>("relaxation", 1.0);
             const int n = prm.get<int>("ilulevel", 0);
             const bool resort = prm.get<bool>("resort", false);
-            return wrapPreconditioner<Dune::SeqILU<M, V, V>>(op.getmat(), n, w, resort);
+            return getRebuildOnUpdateWrapper<Dune::SeqILU<M, V, V>, const M*>(&op.getmat(), n, w, resort);
         });
         F::addCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
@@ -437,22 +437,22 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
         F::addCreator("Jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("repeats", 1);
             const double w = prm.get<double>("relaxation", 1.0);
-            return wrapPreconditioner<SeqJac<M, V, V>>(op.getmat(), n, w);
+            return getDummyUpdateWrapper<SeqJac<M, V, V>>(op.getmat(), n, w);
         });
         F::addCreator("GS", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("repeats", 1);
             const double w = prm.get<double>("relaxation", 1.0);
-            return wrapPreconditioner<SeqGS<M, V, V>>(op.getmat(), n, w);
+            return getDummyUpdateWrapper<SeqGS<M, V, V>>(op.getmat(), n, w);
         });
         F::addCreator("SOR", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("repeats", 1);
             const double w = prm.get<double>("relaxation", 1.0);
-            return wrapPreconditioner<SeqSOR<M, V, V>>(op.getmat(), n, w);
+            return getDummyUpdateWrapper<SeqSOR<M, V, V>>(op.getmat(), n, w);
         });
         F::addCreator("SSOR", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("repeats", 1);
             const double w = prm.get<double>("relaxation", 1.0);
-            return wrapPreconditioner<SeqSSOR<M, V, V>>(op.getmat(), n, w);
+            return getDummyUpdateWrapper<SeqSSOR<M, V, V>>(op.getmat(), n, w);
         });
 
         // Only add AMG preconditioners to the factory if the operator
@@ -516,7 +516,7 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                 Dune::Amg::Parameters parms;
                 parms.setNoPreSmoothSteps(1);
                 parms.setNoPostSmoothSteps(1);
-                return wrapPreconditioner<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
+                return getDummyUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
             });
         }
         if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V, false>>) {
