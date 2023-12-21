@@ -31,6 +31,8 @@
 #include <dune/common/version.hh>
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/mcmgmapper.hh>
+#include <dune/grid/common/partitionset.hh>
+
 
 #include <algorithm>
 #include <cassert>
@@ -865,7 +867,7 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
         ElementMapper elemMapper(localGridView, Dune::mcmgElementLayout());
         sortedCartesianIdx_.reserve(localGridView.size(0));
 
-        for (const auto& elem : elements(localGridView))
+        for (const auto& elem : elements(localGridView, Dune::Partitions::interior))
         {
             auto idx = elemMapper.index(elem);
             sortedCartesianIdx_.push_back(cartMapper.cartesianIndex(idx));
@@ -934,12 +936,12 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
         distributedCartesianIndex.resize(gridSize, -1);
 
         // A mapping for the whole grid (including the ghosts) is needed for restarts
-        for (const auto& elem : elements(localGridView)) {
+        for (const auto& elem : elements(localGridView, Dune::Partitions::interior)) {
             int elemIdx = elemMapper.index(elem);
             distributedCartesianIndex[elemIdx] = cartMapper.cartesianIndex(elemIdx);
 
             // only store interior element for collection
-            //assert(element.partitionType() == Dune::InteriorEntity);
+            assert(elem.partitionType() == Dune::InteriorEntity);
 
             localIndexMap_.push_back(elemIdx);
         }

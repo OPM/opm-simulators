@@ -173,6 +173,14 @@ public:
 
         this->forceDisableFipresvOutput_ =
             EWOMS_GET_PARAM(TypeTag, bool, ForceDisableResvFluidInPlaceOutput);
+
+        if (! EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst)) {
+            const std::string msg = "The output code does not support --owner-cells-first=false.";
+            if (collectToIORank.isIORank()) {
+                OpmLog::error(msg);
+            }
+            OPM_THROW_NOLOG(std::runtime_error, msg);
+        }
     }
 
     /*!

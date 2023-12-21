@@ -44,6 +44,7 @@
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/simulators/flow/countGlobalCells.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -516,17 +517,18 @@ private:
         }
 
         const auto& gridView = simulator_.vanguard().gridView();
-        const int numElements = gridView.size(/*codim=*/0);
+        const int num_interior = detail::
+            countLocalInteriorCellsGridView(gridView);
         const bool log = this->collectToIORank_.isIORank();
 
-        damarisOutputModule_->allocBuffers(numElements, reportStepNum,
+        damarisOutputModule_->allocBuffers(num_interior, reportStepNum,
                                       isSubStep, log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
         OPM_TIMEBLOCK(prepareCellBasedData);
-        for (const auto& elem : elements(gridView)) {
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
@@ -535,7 +537,7 @@ private:
         }
         if(!simulator_.model().linearizer().getFlowsInfo().empty()){
             OPM_TIMEBLOCK(prepareFlowsData);
-            for (const auto& elem : elements(gridView)) {
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 damarisOutputModule_->processElementFlows(elemCtx);
@@ -543,7 +545,7 @@ private:
         }
         {
         OPM_TIMEBLOCK(prepareBlockData);
-        for (const auto& elem : elements(gridView)) {
+        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
             damarisOutputModule_->processElementBlockData(elemCtx);
@@ -554,7 +556,7 @@ private:
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
-        for (int dofIdx=0; dofIdx < numElements; ++dofIdx){
+        for (int dofIdx=0; dofIdx < num_interior; ++dofIdx){
                 const auto& intQuants = *(simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0));
                 const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
                 damarisOutputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
