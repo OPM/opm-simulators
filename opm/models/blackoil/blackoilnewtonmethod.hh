@@ -310,7 +310,7 @@ protected:
             deltaSg = update[Indices::compositionSwitchIdx];
             deltaSo -= deltaSg;
         }
-        if (enableSolvent) {
+        if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
             deltaSs = update[Indices::solventSaturationIdx];
             deltaSo -= deltaSs;
         }
@@ -365,7 +365,13 @@ protected:
             }
             else if (enableSolvent && pvIdx == Indices::solventSaturationIdx) {
                 // solvent saturation updates are also subject to the Appleyard chop
-                delta *= satAlpha;
+                if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss) {
+                    delta *= satAlpha;
+                } else {
+                    //Ensure Rssolw factor does not become negative
+                    if (delta > currentValue[Indices::solventSaturationIdx])
+                        delta = currentValue[Indices::solventSaturationIdx];
+                }
             }
             else if (enableExtbo && pvIdx == Indices::zFractionIdx) {
                 // z fraction updates are also subject to the Appleyard chop
@@ -396,8 +402,10 @@ protected:
             nextValue[pvIdx] = currentValue[pvIdx] - delta;
 
             // keep the solvent saturation between 0 and 1
-            if (enableSolvent && pvIdx == Indices::solventSaturationIdx)
-                nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], 0.0), 1.0);
+            if (enableSolvent && pvIdx == Indices::solventSaturationIdx) {
+                if (currentValue.primaryVarsMeaningSolvent() == PrimaryVariables::SolventMeaning::Ss )
+                    nextValue[pvIdx] = std::min(std::max(nextValue[pvIdx], 0.0), 1.0);
+            }
 
             // keep the z fraction between 0 and 1
             if (enableExtbo && pvIdx == Indices::zFractionIdx)

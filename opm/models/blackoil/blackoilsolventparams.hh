@@ -29,6 +29,11 @@
 #define EWOMS_BLACK_OIL_SOLVENT_PARAMS_HH
 
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/Co2GasPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/H2GasPvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/BrineCo2Pvt.hpp>
+#include <opm/material/fluidsystems/blackoilpvt/BrineH2Pvt.hpp>
+
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 namespace Opm {
@@ -40,6 +45,19 @@ struct BlackOilSolventParams {
 
     using SolventPvt = ::Opm::SolventPvt<Scalar>;
     SolventPvt solventPvt_;
+
+    using Co2GasPvt = ::Opm::Co2GasPvt<Scalar>;
+    Co2GasPvt co2GasPvt_;
+
+    using H2GasPvt = ::Opm::H2GasPvt<Scalar>;
+    H2GasPvt h2GasPvt_;
+    
+    using BrineCo2Pvt = ::Opm::BrineCo2Pvt<Scalar>;
+    BrineCo2Pvt brineCo2Pvt_;
+    
+    using BrineH2Pvt = ::Opm::BrineH2Pvt<Scalar>;
+    BrineH2Pvt brineH2Pvt_;
+
     std::vector<TabulatedFunction> ssfnKrg_; // the krg(Fs) column of the SSFN table
     std::vector<TabulatedFunction> ssfnKrs_; // the krs(Fs) column of the SSFN table
     std::vector<TabulatedFunction> sof2Krn_; // the krn(Sn) column of the SOF2 table
@@ -55,6 +73,9 @@ struct BlackOilSolventParams {
     std::vector<TabulatedFunction> tlPMixTable_; // the tlpmixpa(Po) column of the TLPMIXPA table
 
     bool isMiscible_;
+    bool rsSolw_active_ = false;
+    bool co2sol_;
+    bool h2sol_;
 
     /*!
      * \brief Specify the number of satuation regions.

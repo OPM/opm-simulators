@@ -83,6 +83,7 @@ class BlackOilPrimaryVariables : public FvBasePrimaryVariables<TypeTag>
     enum { pressureSwitchIdx = Indices::pressureSwitchIdx };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
     enum { saltConcentrationIdx  = Indices::saltConcentrationIdx };
+    enum { solventSaturationIdx  = Indices::solventSaturationIdx };
 
     static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
     static constexpr bool waterEnabled = Indices::waterEnabled;
@@ -150,6 +151,12 @@ public:
         Disabled, // The primary variable is not used
     };
 
+    enum class SolventMeaning {
+        Ss, // solvent saturation
+        Rsolw, // dissolved solvent in water
+        Disabled, // The primary variable is not used
+    };
+
     BlackOilPrimaryVariables()
         : ParentType()
     {
@@ -167,6 +174,7 @@ public:
         Valgrind::SetUndefined(primaryVarsMeaningGas_);
         Valgrind::SetUndefined(primaryVarsMeaningPressure_);
         Valgrind::SetUndefined(primaryVarsMeaningBrine_);
+        Valgrind::SetUndefined(primaryVarsMeaningSolvent_);
 
         pvtRegionIdx_ = 0;
     }
@@ -184,6 +192,7 @@ public:
         result.primaryVarsMeaningGas_ = GasMeaning::Rv;
         result.primaryVarsMeaningPressure_ = PressureMeaning::Pg;
         result.primaryVarsMeaningWater_ = WaterMeaning::Rsw;
+        result.primaryVarsMeaningSolvent_ = SolventMeaning::Ss;
         for (size_t i = 0; i < result.size(); ++i) {
             result[i] = i+1;
         }
@@ -259,6 +268,18 @@ public:
 
     void setPrimaryVarsMeaningBrine(BrineMeaning newMeaning)
     { primaryVarsMeaningBrine_ = newMeaning; }
+
+
+    SolventMeaning primaryVarsMeaningSolvent() const
+    { return primaryVarsMeaningSolvent_; }
+
+    /*!
+     * \brief Set the interpretation which should be applied to the switching primary
+     *        variables.
+     */
+
+    void setPrimaryVarsMeaningSolvent(SolventMeaning newMeaning)
+    { primaryVarsMeaningSolvent_ = newMeaning; }
 
     /*!
      * \copydoc ImmisciblePrimaryVariables::assignMassConservative
@@ -480,7 +501,6 @@ public:
             default:
                 throw std::logic_error("No valid primary variable selected for composision");
         }
-        checkDefined();
     }
 
     /*!
@@ -538,6 +558,31 @@ public:
                 if (saltConcentration > saltSolubility + eps){ //salt concentration exceeds solubility limit
                     setPrimaryVarsMeaningBrine(BrineMeaning::Sp);
                     (*this)[saltConcentrationIdx] = 0.0;
+                }
+            }
+        }
+
+        // if solvent saturation disappeares:  Ss (Solvent saturation) -> Rsolw (solvent dissolved in water)
+        // if solvent saturation appears: Rsolw (solvent dissolved in water) ->  Ss (Solvent saturation)
+        // Scalar rsolw = 0.0; // not needed at the moment since we dont allow for vapwat in combination with rsolw
+        if constexpr (enableSolvent) {
+            if (SolventModule::isSolubleInWater()) {
+                Scalar p = (*this)[pressureSwitchIdx]; // cap-pressure?
+                Scalar solLimit = SolventModule::solubilityLimit(pvtRegionIndex(), T , p, saltConcentration);
+                if (primaryVarsMeaningSolvent() == SolventMeaning::Ss) {
+                    Scalar solSat = (*this)[solventSaturationIdx];
+                    if (solSat < -eps){ //solvent dissappears
+                        setPrimaryVarsMeaningSolvent(SolventMeaning::Rsolw);
+                        (*this)[solventSaturationIdx] = solLimit; //set rsolw to solubility limit
+
+                    }
+                }
+                else if (primaryVarsMeaningSolvent() == SolventMeaning::Rsolw) {
+                    Scalar rsolw = (*this)[solventSaturationIdx];
+                    if (rsolw > solLimit + eps){ //solvent appears as phase
+                        setPrimaryVarsMeaningSolvent(SolventMeaning::Ss);
+                        (*this)[solventSaturationIdx] = 0.0;
+                    }
                 }
             }
         }
@@ -826,7 +871,7 @@ public:
             sg = (*this)[Indices::compositionSwitchIdx];
 
         Scalar ssol = 0.0;
-        if constexpr (enableSolvent)
+        if (primaryVarsMeaningSolvent() == SolventMeaning::Ss)
             ssol =(*this) [Indices::solventSaturationIdx];
 
         Scalar so = 1.0 - sw - sg - ssol;
@@ -843,7 +888,7 @@ public:
             (*this)[Indices::waterSwitchIdx] = sw;
         if (primaryVarsMeaningGas() == GasMeaning::Sg)
             (*this)[Indices::compositionSwitchIdx] = sg;
-        if constexpr (enableSolvent)
+        if (primaryVarsMeaningSolvent() == SolventMeaning::Ss)
             (*this) [Indices::solventSaturationIdx] = ssol;
 
         return !(st==1);
@@ -877,6 +922,7 @@ public:
         Valgrind::CheckDefined(primaryVarsMeaningGas_);
         Valgrind::CheckDefined(primaryVarsMeaningPressure_);
         Valgrind::CheckDefined(primaryVarsMeaningBrine_);
+        Valgrind::CheckDefined(primaryVarsMeaningSolvent_);
 
         Valgrind::CheckDefined(pvtRegionIdx_);
 #endif // NDEBUG
@@ -891,6 +937,7 @@ public:
         serializer(primaryVarsMeaningPressure_);
         serializer(primaryVarsMeaningGas_);
         serializer(primaryVarsMeaningBrine_);
+        serializer(primaryVarsMeaningSolvent_);
         serializer(pvtRegionIdx_);
     }
 
@@ -901,6 +948,7 @@ public:
                this->primaryVarsMeaningPressure_ == rhs.primaryVarsMeaningPressure_ &&
                this->primaryVarsMeaningGas_ == rhs.primaryVarsMeaningGas_ &&
                this->primaryVarsMeaningBrine_ == rhs.primaryVarsMeaningBrine_ &&
+               this->primaryVarsMeaningSolvent_ == rhs.primaryVarsMeaningSolvent_ &&
                this->pvtRegionIdx_ == rhs.pvtRegionIdx_;
     }
 
@@ -913,10 +961,11 @@ private:
 
     Scalar solventSaturation_() const
     {
-        if constexpr (enableSolvent)
-            return (*this)[Indices::solventSaturationIdx];
-        else
-            return 0.0;
+        if constexpr (enableSolvent) {
+            if ( primaryVarsMeaningSolvent() == SolventMeaning::Ss)
+                return (*this)[Indices::solventSaturationIdx];
+        }
+        return 0.0;
     }
 
     Scalar zFraction_() const
@@ -1033,6 +1082,7 @@ private:
     PressureMeaning primaryVarsMeaningPressure_;
     GasMeaning primaryVarsMeaningGas_;
     BrineMeaning primaryVarsMeaningBrine_;
+    SolventMeaning primaryVarsMeaningSolvent_;
     unsigned short pvtRegionIdx_;
 };
 
