@@ -757,7 +757,7 @@ public:
             damarisWriter_->writeOutput(localCellData, isSubStep) ;
         }
 #endif 
-        if (enableEclOutput_){
+        if (EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput)){
             eclWriter_->writeOutput(std::move(localCellData), isSubStep);
         }
     }
