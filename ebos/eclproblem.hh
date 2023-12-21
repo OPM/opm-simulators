@@ -1544,17 +1544,7 @@ public:
                         throw std::logic_error("you need to specify a valid component (OIL, WATER or GAS) when DIRICHLET type is set in BC");
                         break;
                 }
-                int phaseIndex;
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    phaseIndex = oilPhaseIdx;
-                }
-                else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    phaseIndex = gasPhaseIdx;
-                }
-                else {
-                    phaseIndex = waterPhaseIdx;
-                }
-                double pressure = initialFluidStates_[globalDofIdx].pressure(phaseIndex);
+                double pressure = initialFluidStates_[globalDofIdx].pressure(refPressurePhaseIdx_());
                 const auto pressure_input = bc.pressure;
                 if (pressure_input) {
                     pressure = *pressure_input;
@@ -1578,7 +1568,7 @@ public:
                         fluidState.setPressure(phaseIdx, pressure);
                 }
                 
-                double temperature = initialFluidStates_[globalDofIdx].temperature(phaseIndex);
+                double temperature = initialFluidStates_[globalDofIdx].temperature(0); // we only have one temperature
                 const auto temperature_input = bc.temperature;
                 if(temperature_input)
                     temperature = *temperature_input;
@@ -1656,11 +1646,11 @@ public:
             tableIdx = this->rockTableIdx_[elementIdx];
 
         const auto& fs = intQuants.fluidState();
-        LhsEval effectiveOilPressure = decay<LhsEval>(fs.pressure(oilPhaseIdx));
+        LhsEval effectiveOilPressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
         if (!this->minOilPressure_.empty())
             // The pore space change is irreversible
             effectiveOilPressure =
-                min(decay<LhsEval>(fs.pressure(oilPhaseIdx)),
+                min(decay<LhsEval>(fs.pressure(refPressurePhaseIdx_())),
                                    this->minOilPressure_[elementIdx]);
 
         if (!this->overburdenPressure_.empty())
@@ -1696,12 +1686,12 @@ public:
             tableIdx = this->rockTableIdx_[elementIdx];
 
         const auto& fs = intQuants.fluidState();
-        LhsEval effectiveOilPressure = decay<LhsEval>(fs.pressure(oilPhaseIdx));
+        LhsEval effectiveOilPressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
 
         if (!this->minOilPressure_.empty())
             // The pore space change is irreversible
             effectiveOilPressure =
-                min(decay<LhsEval>(fs.pressure(oilPhaseIdx)),
+                min(decay<LhsEval>(fs.pressure(refPressurePhaseIdx_())),
                     this->minOilPressure_[elementIdx]);
 
         if (!this->overburdenPressure_.empty())
@@ -1919,7 +1909,7 @@ protected:
     {
         OPM_TIMEBLOCK_LOCAL(updateMaxOilSaturation);
         const auto& fs = iq.fluidState();
-        const Scalar So = decay<Scalar>(fs.saturation(oilPhaseIdx));
+        const Scalar So = decay<Scalar>(fs.saturation(refPressurePhaseIdx_()));
         auto& mos = this->maxOilSaturation_;
         if(mos[compressedDofIdx] < So){
             mos[compressedDofIdx] = So;
@@ -1978,7 +1968,7 @@ protected:
     bool updateMinPressure_(unsigned compressedDofIdx, const IntensiveQuantities& iq){
         OPM_TIMEBLOCK_LOCAL(updateMinPressure);
         const auto& fs = iq.fluidState();
-        const Scalar mo = getValue(fs.pressure(oilPhaseIdx));
+        const Scalar mo = getValue(fs.pressure(refPressurePhaseIdx_()));
         auto& mos = this->minOilPressure_;
         if(mos[compressedDofIdx]> mo){
             mos[compressedDofIdx] = mo;
@@ -2124,7 +2114,7 @@ protected:
             if (!this->maxOilSaturation_.empty())
                 this->maxOilSaturation_[elemIdx] = std::max(this->maxOilSaturation_[elemIdx], fs.saturation(oilPhaseIdx));
             if (!this->minOilPressure_.empty())
-                this->minOilPressure_[elemIdx] = std::min(this->minOilPressure_[elemIdx], fs.pressure(oilPhaseIdx));
+                this->minOilPressure_[elemIdx] = std::min(this->minOilPressure_[elemIdx], fs.pressure(refPressurePhaseIdx_()));
         }
 
 
@@ -2691,6 +2681,18 @@ private:
             unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
             unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
             this->model().setEqWeight(activeSolventCompIdx, avgB);
+        }
+    }
+
+    int refPressurePhaseIdx_() const {
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+            return oilPhaseIdx;
+        }
+        else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
+            return gasPhaseIdx;
+        }
+        else {
+            return waterPhaseIdx;
         }
     }
 
