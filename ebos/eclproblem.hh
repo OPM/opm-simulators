@@ -1358,7 +1358,10 @@ public:
             aquiferModel_.initialSolutionApplied();
 
         if (this->simulator().episodeIndex() == 0) {
-            eclWriter_->writeInitialFIPReport();
+            // For CpGrid with LGRs, vtk output is not supported yet.
+            if (enableEclOutput_) {
+                eclWriter_->writeInitialFIPReport();
+            }
         }
     }
 
