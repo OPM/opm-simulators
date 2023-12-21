@@ -438,6 +438,10 @@ public:
 
         // write the static output files (EGRID, INIT, SMSPEC, etc.)
         if (enableEclOutput_) {
+            // For CpGrid with LGRs, vtk output is not supported yet.
+            if (EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput)) // --enable-vtk-output=true
+                return;
+            
             if (simulator.vanguard().grid().comm().size() > 1) {
                 if (simulator.vanguard().grid().comm().rank() == 0)
                     eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
@@ -676,6 +680,9 @@ public:
         }
         }
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
+        // For CpGrid with LGRs, vtk output is not supported yet.
+        if (EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput)) // --enable-vtk-output=true
+            return;
         eclWriter_->evalSummaryState(isSubStep);
 
         int episodeIdx = this->episodeIndex();
@@ -737,6 +744,9 @@ public:
     void writeOutput(bool verbose = true)
     {
         OPM_TIMEBLOCK(problemWriteOutput);
+        // For CpGrid with LGRs, vtk output is not supported yet.
+        if (EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput)) // --enable-vtk-output=true
+            return;
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
         if (EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) || this->simulator().episodeWillBeOver()){
@@ -1354,6 +1364,9 @@ public:
         if (enableAquifers_)
             aquiferModel_.initialSolutionApplied();
 
+        // For CpGrid with LGRs, vtk output is not supported yet.
+        if (EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput)) // --enable-vtk-output=true
+            return;
         if (this->simulator().episodeIndex() == 0) {
             eclWriter_->writeInitialFIPReport();
         }
