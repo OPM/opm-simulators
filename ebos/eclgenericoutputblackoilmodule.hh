@@ -23,6 +23,7 @@
 #ifndef EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 
+#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
@@ -286,6 +287,7 @@ protected:
     enum { gasCompIdx = FluidSystem::gasCompIdx };
     enum { oilCompIdx = FluidSystem::oilCompIdx };
     enum { waterCompIdx = FluidSystem::waterCompIdx };
+    using Dir = FaceDir::DirEnum;
 
     EclGenericOutputBlackoilModule(const EclipseState& eclState,
                                    const Schedule& schedule,
@@ -475,13 +477,8 @@ protected:
 
     std::array<ScalarBuffer, numPhases> residual_;
 
-
-    std::array<ScalarBuffer, numPhases> flowsi_;
-    std::array<ScalarBuffer, numPhases> flowsj_;
-    std::array<ScalarBuffer, numPhases> flowsk_;
-    std::array<ScalarBuffer, numPhases> floresi_;
-    std::array<ScalarBuffer, numPhases> floresj_;
-    std::array<ScalarBuffer, numPhases> floresk_;
+    std::array<std::array<ScalarBuffer, numPhases>, 6> flows_;
+    std::array<std::array<ScalarBuffer, numPhases>, 6> flores_;
 
     std::array<std::pair<std::string, std::pair<std::vector<int>, ScalarBuffer>>, 3> floresn_;
     std::array<std::pair<std::string, std::pair<std::vector<int>, ScalarBuffer>>, 3> flowsn_;
