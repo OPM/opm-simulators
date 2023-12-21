@@ -424,6 +424,10 @@ public:
                 this->sSol_[globalDofIdx] = intQuants.solventSaturation().value();
             }
 
+            if (!this->rswSol_.empty()) {
+                this->rswSol_[globalDofIdx] = intQuants.rsSolw().value();
+            }
+
             if (!this->cPolymer_.empty()) {
                 this->cPolymer_[globalDofIdx] = intQuants.polymerConcentration().value();
             }

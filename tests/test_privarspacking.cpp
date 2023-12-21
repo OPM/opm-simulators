@@ -56,6 +56,12 @@ public:
         Disabled, // The primary variable is not used
     };
 
+    enum class SolventMeaning {
+        Ss, // solvent saturation
+        Rsolw, // dissolved solvent in water
+        Disabled, // The primary variable is not used
+    };
+
     WaterMeaning primaryVarsMeaningWater() const
     { return primaryVarsMeaningWater_; }
     void setPrimaryVarsMeaningWater(WaterMeaning newMeaning)
@@ -76,18 +82,25 @@ public:
     void setPrimaryVarsMeaningBrine(BrineMeaning newMeaning)
     { primaryVarsMeaningBrine_ = newMeaning; }
 
+    SolventMeaning primaryVarsMeaningSolvent() const
+    { return primaryVarsMeaningSolvent_; }
+    void setPrimaryVarsMeaningSolvent(SolventMeaning newMeaning)
+    { primaryVarsMeaningSolvent_ = newMeaning; }
+
     bool operator==(const PriVarMeaning& other) const
     {
         return primaryVarsMeaningWater_ == other.primaryVarsMeaningWater_
             && primaryVarsMeaningPressure_ == other.primaryVarsMeaningPressure_
             && primaryVarsMeaningGas_ == other.primaryVarsMeaningGas_
-            && primaryVarsMeaningBrine_ == other.primaryVarsMeaningBrine_;
+            && primaryVarsMeaningBrine_ == other.primaryVarsMeaningBrine_
+            && primaryVarsMeaningSolvent_ == other.primaryVarsMeaningSolvent_;
     }
 private:
     WaterMeaning primaryVarsMeaningWater_ = WaterMeaning::Disabled;
     PressureMeaning primaryVarsMeaningPressure_ = PressureMeaning::Pw;
     GasMeaning primaryVarsMeaningGas_ = GasMeaning::Disabled;
     BrineMeaning primaryVarsMeaningBrine_ = BrineMeaning::Disabled;
+    SolventMeaning primaryVarsMeaningSolvent_ = SolventMeaning::Disabled;
 };
 
 
@@ -109,6 +122,7 @@ BOOST_AUTO_TEST_CASE(meanings)
         pv1.setPrimaryVarsMeaningWater(PriVarMeaning::WaterMeaning::Rvw);
         pv1.setPrimaryVarsMeaningGas(PriVarMeaning::GasMeaning::Disabled);
         pv1.setPrimaryVarsMeaningBrine(PriVarMeaning::BrineMeaning::Cs);
+        pv1.setPrimaryVarsMeaningSolvent(PriVarMeaning::SolventMeaning::Disabled);
         std::size_t p = Opm::PVUtil::pack(pv1);
         Opm::PVUtil::unPack(pv2, p);
         BOOST_CHECK(pv1 == pv2);

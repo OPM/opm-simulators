@@ -106,6 +106,7 @@ serializationTestObject(const EclipseState& eclState,
     result.minOilPressure_ = {7.0, 8.0, 9.0, 10.0};
     result.overburdenPressure_ = {11.0};
     result.solventSaturation_ = {15.0};
+    result.solventRsw_ = {18.0};
     result.polymer_ = PolymerSolutionContainer<Scalar>::serializationTestObject();
     result.micp_ = MICPSolutionContainer<Scalar>::serializationTestObject();
     result.mixControls_ = EclMixingRateControls<FluidSystem,Scalar>::serializationTestObject(schedule);
@@ -529,6 +530,11 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
             solventSaturation_ = eclState_.fieldProps().get_double("SSOL");
         else
             solventSaturation_.resize(numDof, 0.0);
+
+        //if (eclState_.fieldProps().has_double("SSOL"))
+        //    solventRsw_ = eclState_.fieldProps().get_double("SSOL");
+        //else
+            solventRsw_.resize(numDof, 0.0);
     }
 
     if (enablePolymer) {
@@ -615,6 +621,17 @@ solventSaturation(unsigned elemIdx) const
         return 0;
 
     return solventSaturation_[elemIdx];
+}
+
+
+template<class GridView, class FluidSystem, class Scalar>
+Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
+solventRsw(unsigned elemIdx) const
+{
+    if (solventRsw_.empty())
+        return 0;
+
+    return solventRsw_[elemIdx];
 }
 
 template<class GridView, class FluidSystem, class Scalar>
@@ -761,6 +778,7 @@ operator==(const EclGenericProblem& rhs) const
            this->minOilPressure_ == rhs.minOilPressure_ &&
            this->overburdenPressure_ == rhs.overburdenPressure_ &&
            this->solventSaturation_ == rhs.solventSaturation_ &&
+           this->solventRsw_ == rhs.solventRsw_ &&
            this->polymer_ == rhs.polymer_ &&
            this->micp_ == rhs.micp_ &&
            this->mixControls_ == rhs.mixControls_;

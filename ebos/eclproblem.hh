@@ -1294,8 +1294,7 @@ public:
         values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
         values.assignNaive(initialFluidStates_[globalDofIdx]);
 
-        if constexpr (enableSolvent)
-            values[Indices::solventSaturationIdx] = this->solventSaturation_[globalDofIdx];
+        SolventModule::assignPrimaryVars(values, this->solventSaturation_[globalDofIdx], this->solventRsw_[globalDofIdx]);
 
         if constexpr (enablePolymer)
             values[Indices::polymerConcentrationIdx] = this->polymer_.concentration[globalDofIdx];
@@ -2141,8 +2140,10 @@ protected:
 
         std::size_t numElems = this->model().numGridDof();
         initialFluidStates_.resize(numElems);
-        if constexpr (enableSolvent)
+        if constexpr (enableSolvent) {
             this->solventSaturation_.resize(numElems, 0.0);
+            this->solventRsw_.resize(numElems, 0.0);
+        }
 
         if constexpr (enablePolymer)
             this->polymer_.concentration.resize(numElems, 0.0);
@@ -2178,8 +2179,10 @@ protected:
 
                 processRestartSaturations_(elemFluidState, ssol);
 
-                if constexpr (enableSolvent)
+                if constexpr (enableSolvent) {
                     this->solventSaturation_[elemIdx] = ssol;
+                    this->solventRsw_[elemIdx] = eclWriter_->eclOutputModule().getSolventRsw(elemIdx);
+                }
             }
 
             this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());

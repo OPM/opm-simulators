@@ -474,6 +474,7 @@ assignToSolution(data::Solution& sol)
         DataEntry{"PRESPOTF", UnitSystem::measure::pressure,           mechPotentialPressForce_},
         DataEntry{"PRES_OVB", UnitSystem::measure::pressure,           overburdenPressure_},
         DataEntry{"RSW",      UnitSystem::measure::gas_oil_ratio,      rsw_},
+        DataEntry{"RSWSOL",   UnitSystem::measure::gas_oil_ratio,      rswSol_},
         DataEntry{"RVW",      UnitSystem::measure::oil_gas_ratio,      rvw_},
         DataEntry{"SALTP",    UnitSystem::measure::identity,           pSalt_},
         DataEntry{"SS_X",     UnitSystem::measure::identity,           extboX_},
@@ -650,6 +651,12 @@ setRestart(const data::Solution& sol,
             sSol_[elemIdx] = sol.data<double>("SSOLVENT")[globalDofIndex];
 
         so -= sSol_[elemIdx];
+    }
+
+    if (!rswSol_.empty()) {
+        if (sol.has("RSWSOL"))
+            rswSol_[elemIdx] = sol.data<Scalar>("RSWSOL")[globalDofIndex];
+
     }
 
     assert(!saturation_[oilPhaseIdx].empty());
@@ -971,6 +978,9 @@ doAllocBuffers(const unsigned bufferSize,
 
     if (enableSolvent_) {
         sSol_.resize(bufferSize, 0.0);
+        if (eclState_.getSimulationConfig().hasDISGASW()) {
+            rswSol_.resize(bufferSize, 0.0);
+        }
     }
 
     if (enablePolymer_) {

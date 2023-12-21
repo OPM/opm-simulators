@@ -168,6 +168,11 @@ public:
     Scalar solventSaturation(unsigned elemIdx) const;
 
     /*!
+     * \brief Returns the initial solvent dissolved in water for a given a cell index
+     */
+    Scalar solventRsw(unsigned elemIdx) const;
+
+    /*!
      * \brief Returns the dynamic drsdt convective mixing value
      */
     Scalar drsdtcon(unsigned elemIdx, int episodeIdx) const;
@@ -280,6 +285,7 @@ public:
         serializer(minOilPressure_);
         serializer(overburdenPressure_);
         serializer(solventSaturation_);
+        serializer(solventRsw_);
         serializer(micp_);
         serializer(mixControls_);
     }
@@ -360,6 +366,7 @@ protected:
     std::vector<Scalar> minOilPressure_;
     std::vector<Scalar> overburdenPressure_;
     std::vector<Scalar> solventSaturation_;
+    std::vector<Scalar> solventRsw_;
     MICPSolutionContainer<Scalar> micp_;
 
     EclMixingRateControls<FluidSystem, Scalar> mixControls_;

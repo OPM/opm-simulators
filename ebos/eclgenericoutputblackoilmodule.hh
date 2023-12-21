@@ -106,6 +106,14 @@ public:
         return 0;
     }
 
+    Scalar getSolventRsw(unsigned elemIdx) const
+    {
+        if (rswSol_.size() > elemIdx)
+            return rswSol_[elemIdx];
+
+        return 0;
+    }
+
     Scalar getPolymerConcentration(unsigned elemIdx) const
     {
         if (cPolymer_.size() > elemIdx)
@@ -395,6 +403,7 @@ protected:
     ScalarBuffer oilSaturationPressure_;
     ScalarBuffer drsdtcon_;
     ScalarBuffer sSol_;
+    ScalarBuffer rswSol_;
     ScalarBuffer cPolymer_;
     ScalarBuffer cFoam_;
     ScalarBuffer cSalt_;
