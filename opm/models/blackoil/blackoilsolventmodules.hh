@@ -170,8 +170,8 @@ public:
                                                                    /*sortInput=*/true);
                 }
             }
-            else
-                throw std::runtime_error("SOF2 must be specified in MISCIBLE (SOLVENT) runs\n");
+            else if(eclState.runspec().phases().active(Phase::OIL))
+                throw std::runtime_error("SOF2 must be specified in MISCIBLE (SOLVENT and OIL) runs\n");
 
             const auto& miscTables = tableManager.getMiscTables();
             if (!miscTables.empty()) {
@@ -861,7 +861,7 @@ public:
 
         // Pressure effects on capillary pressure miscibility
         if (SolventModule::isMiscible()) {
-            const Evaluation& p = fs.pressure(oilPhaseIdx); // or gas pressure?
+            const Evaluation& p = FluidSystem::phaseIsActive(oilPhaseIdx)? fs.pressure(oilPhaseIdx) : fs.pressure(gasPhaseIdx);
             const Evaluation pmisc = SolventModule::pmisc(elemCtx, dofIdx, timeIdx).eval(p, /*extrapolate=*/true);
             const Evaluation& pgImisc = fs.pressure(gasPhaseIdx);
 
@@ -894,10 +894,10 @@ public:
         Evaluation Fsolgas = solventSaturation_/gasSolventSat;
 
         // account for miscibility of oil and solvent
-        if (SolventModule::isMiscible()) {
+        if (SolventModule::isMiscible() && FluidSystem::phaseIsActive(oilPhaseIdx)) {
             const auto& misc = SolventModule::misc(elemCtx, dofIdx, timeIdx);
             const auto& pmisc = SolventModule::pmisc(elemCtx, dofIdx, timeIdx);
-            const Evaluation& p = fs.pressure(oilPhaseIdx); // or gas pressure?
+            const Evaluation& p = FluidSystem::phaseIsActive(oilPhaseIdx)? fs.pressure(oilPhaseIdx) : fs.pressure(gasPhaseIdx);
             const Evaluation miscibility = misc.eval(Fsolgas, /*extrapolate=*/true) * pmisc.eval(p, /*extrapolate=*/true);
 
             // TODO adjust endpoints of sn and ssg
@@ -906,16 +906,25 @@ public:
             const auto& scaledDrainageInfo =
                     materialLawManager->oilWaterScaledEpsInfoDrainage(cellIdx);
 
-            const Scalar& sgcr = scaledDrainageInfo.Sgcr;
             const Scalar& sogcr = scaledDrainageInfo.Sogcr;
-            const Evaluation& sw = fs.saturation(waterPhaseIdx);
-            const auto& sorwmis = SolventModule::sorwmis(elemCtx, dofIdx, timeIdx);
-            const auto& sgcwmis = SolventModule::sgcwmis(elemCtx, dofIdx, timeIdx);
+            Evaluation sor = sogcr;
+            if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                const Evaluation& sw = fs.saturation(waterPhaseIdx);
+                const auto& sorwmis = SolventModule::sorwmis(elemCtx, dofIdx, timeIdx);
+                sor = miscibility * sorwmis.eval(sw,  /*extrapolate=*/true) + (1.0 - miscibility) * sogcr;
+            }
+            const Scalar& sgcr = scaledDrainageInfo.Sgcr;
+            Evaluation sgc = sgcr;
+            if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+                const Evaluation& sw = fs.saturation(waterPhaseIdx);
+                const auto& sgcwmis = SolventModule::sgcwmis(elemCtx, dofIdx, timeIdx);
+                sgc = miscibility * sgcwmis.eval(sw,  /*extrapolate=*/true) + (1.0 - miscibility) * sgcr;
+            }
 
-            Evaluation sor = miscibility * sorwmis.eval(sw,  /*extrapolate=*/true) + (1.0 - miscibility) * sogcr;
-            Evaluation sgc = miscibility * sgcwmis.eval(sw,  /*extrapolate=*/true) + (1.0 - miscibility) * sgcr;
-
-            const Evaluation oilGasSolventSat = gasSolventSat + fs.saturation(oilPhaseIdx);
+            Evaluation oilGasSolventSat = gasSolventSat;
+            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                oilGasSolventSat += fs.saturation(oilPhaseIdx);
+            }
             const Evaluation zero = 0.0;
             const Evaluation oilGasSolventEffSat = std::max(oilGasSolventSat - sor - sgc, zero);
 
@@ -940,8 +949,6 @@ public:
             kro *= (1.0 - miscibility);
             kro += miscibility * mkro;
         }
-
-
 
         // compute the mobility of the solvent "phase" and modify the gas phase
         const auto& ssfnKrg = SolventModule::ssfnKrg(elemCtx, dofIdx, timeIdx);
@@ -1060,67 +1067,90 @@ private:
         if (solventSaturation() < cutOff)
             return;
 
+        // We plan to update the fluidstate with the effective
+        // properties
         auto& fs = asImp_().fluidState_;
 
         // Compute effective saturations
-        const auto& sorwmis = SolventModule::sorwmis(elemCtx, scvIdx, timeIdx);
-        const auto& sgcwmis = SolventModule::sgcwmis(elemCtx, scvIdx, timeIdx);
-        const Evaluation& sw = fs.saturation(waterPhaseIdx);
-
-        const Evaluation zero = 0.0;
-        const Evaluation oilEffSat = std::max(fs.saturation(oilPhaseIdx) - sorwmis.eval(sw,  /*extrapolate=*/true),zero);
-        const Evaluation gasEffSat = std::max(fs.saturation(gasPhaseIdx) - sgcwmis.eval(sw,  /*extrapolate=*/true),zero);
-        const Evaluation solventEffSat = std::max(solventSaturation() - sgcwmis.eval(sw,  /*extrapolate=*/true),zero);
-
+        Evaluation oilEffSat = 0.0;
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+            oilEffSat = fs.saturation(oilPhaseIdx);
+        }
+        Evaluation gasEffSat = fs.saturation(gasPhaseIdx);
+        Evaluation solventEffSat = solventSaturation();
+        if (FluidSystem::phaseIsActive(waterPhaseIdx)) {
+            const auto& sorwmis = SolventModule::sorwmis(elemCtx, scvIdx, timeIdx);
+            const auto& sgcwmis = SolventModule::sgcwmis(elemCtx, scvIdx, timeIdx);
+            const Evaluation zero = 0.0;
+            const Evaluation& sw = fs.saturation(waterPhaseIdx);
+            if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                oilEffSat = std::max(oilEffSat - sorwmis.eval(sw,  /*extrapolate=*/true), zero);
+            }
+            gasEffSat = std::max(gasEffSat - sgcwmis.eval(sw,  /*extrapolate=*/true), zero);
+            solventEffSat = std::max(solventEffSat - sgcwmis.eval(sw,  /*extrapolate=*/true), zero);
+        }
         const Evaluation oilGasSolventEffSat =  oilEffSat + gasEffSat + solventEffSat;
         const Evaluation oilSolventEffSat = oilEffSat + solventEffSat;
         const Evaluation solventGasEffSat = solventEffSat + gasEffSat;
 
         // Compute effective viscosities
+
+        // Mixing parameter for viscosity
+        // The pressureMixingParameter represent the miscibility of the solvent while the mixingParameterViscosity the effect of the porous media.
+        // The pressureMixingParameter is not implemented in ecl100.
+        const Evaluation& p = FluidSystem::phaseIsActive(oilPhaseIdx)? fs.pressure(oilPhaseIdx) : fs.pressure(gasPhaseIdx);
+        // account for pressure effects
+        const auto& pmiscTable = SolventModule::pmisc(elemCtx, scvIdx, timeIdx);
+        const Evaluation pmisc = pmiscTable.eval(p, /*extrapolate=*/true);
+        const auto& tlPMixTable = SolventModule::tlPMixTable(elemCtx, scvIdx, timeIdx);
+        const Evaluation tlMixParamMu = SolventModule::tlMixParamViscosity(elemCtx, scvIdx, timeIdx) * tlPMixTable.eval(p,  /*extrapolate=*/true);
+
         const Evaluation& muGas = fs.viscosity(gasPhaseIdx);
-        const Evaluation& muOil = fs.viscosity(oilPhaseIdx);
         const Evaluation& muSolvent = solventViscosity_;
 
-        assert(muOil.value() > 0);
         assert(muGas.value() > 0);
         assert(muSolvent.value() > 0);
-        const Evaluation muOilPow = pow(muOil, 0.25);
         const Evaluation muGasPow = pow(muGas, 0.25);
         const Evaluation muSolventPow = pow(muSolvent, 0.25);
-
-        Evaluation muMixOilSolvent = muOil;
-        if (oilSolventEffSat > cutOff)
-            muMixOilSolvent *= muSolvent / pow(((oilEffSat / oilSolventEffSat) * muSolventPow) + ((solventEffSat / oilSolventEffSat) * muOilPow) , 4.0);
 
         Evaluation muMixSolventGas = muGas;
         if (solventGasEffSat > cutOff)
             muMixSolventGas *= muSolvent / pow(((gasEffSat / solventGasEffSat) * muSolventPow) + ((solventEffSat / solventGasEffSat) * muGasPow) , 4.0);
 
+        Evaluation muOil = 1.0;
+        Evaluation muOilPow = 1.0;
+        Evaluation muMixOilSolvent = 1.0;
+        Evaluation muOilEff = 1.0;
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+            muOil = fs.viscosity(oilPhaseIdx);
+            assert(muOil.value() > 0);
+            muOilPow = pow(muOil, 0.25);
+            muMixOilSolvent = muOil;
+            if (oilSolventEffSat > cutOff)
+                muMixOilSolvent *= muSolvent / pow(((oilEffSat / oilSolventEffSat) * muSolventPow) + ((solventEffSat / oilSolventEffSat) * muOilPow) , 4.0);
+
+            muOilEff = pow(muOil,1.0 - tlMixParamMu) * pow(muMixOilSolvent, tlMixParamMu);
+        }
         Evaluation muMixSolventGasOil = muOil;
         if (oilGasSolventEffSat > cutOff)
             muMixSolventGasOil *= muSolvent * muGas / pow(((oilEffSat / oilGasSolventEffSat) * muSolventPow *  muGasPow)
                   + ((solventEffSat / oilGasSolventEffSat) * muOilPow *  muGasPow) + ((gasEffSat / oilGasSolventEffSat) * muSolventPow * muOilPow), 4.0);
 
-        // Mixing parameter for viscosity
-        // The pressureMixingParameter represent the miscibility of the solvent while the mixingParameterViscosity the effect of the porous media.
-        // The pressureMixingParameter is not implemented in ecl100.
-        const Evaluation& po = fs.pressure(oilPhaseIdx);
-        const auto& tlPMixTable = SolventModule::tlPMixTable(elemCtx, scvIdx, timeIdx);
-        const Evaluation tlMixParamMu = SolventModule::tlMixParamViscosity(elemCtx, scvIdx, timeIdx) * tlPMixTable.eval(po,  /*extrapolate=*/true);
-
-        Evaluation muOilEff = pow(muOil,1.0 - tlMixParamMu) * pow(muMixOilSolvent, tlMixParamMu);
         Evaluation muGasEff = pow(muGas,1.0 - tlMixParamMu) * pow(muMixSolventGas, tlMixParamMu);
         Evaluation muSolventEff = pow(muSolvent,1.0 - tlMixParamMu) * pow(muMixSolventGasOil, tlMixParamMu);
 
         // Compute effective densities
         const Evaluation& rhoGas = fs.density(gasPhaseIdx);
-        const Evaluation& rhoOil = fs.density(oilPhaseIdx);
+        Evaluation rhoOil = 0.0;
+        if (FluidSystem::phaseIsActive(oilPhaseIdx))
+            rhoOil = fs.density(oilPhaseIdx);
+
         const Evaluation& rhoSolvent = solventDensity_;
 
         // Mixing parameter for density
         // The pressureMixingParameter represent the miscibility of the solvent while the mixingParameterDenisty the effect of the porous media.
         // The pressureMixingParameter is not implemented in ecl100.
-        const Evaluation tlMixParamRho = SolventModule::tlMixParamDensity(elemCtx, scvIdx, timeIdx) * tlPMixTable.eval(po,  /*extrapolate=*/true);
+        const Evaluation tlMixParamRho = SolventModule::tlMixParamDensity(elemCtx, scvIdx, timeIdx) * tlPMixTable.eval(p,  /*extrapolate=*/true);
 
         // compute effective viscosities for density calculations. These have to
         // be recomputed as a different mixing parameter may be used.
@@ -1150,15 +1180,6 @@ private:
             rhoGasEff = (rhoGas * solventGasEffFraction) + (rhoSolvent * (1.0 - solventGasEffFraction));
         }
 
-        Evaluation rhoOilEff = 0.0;
-        if (std::abs(muOilPow.value() - muSolventPow.value()) < cutOff) {
-            rhoOilEff = ((1.0 - tlMixParamRho) * rhoOil) + (tlMixParamRho * rhoMixSolventGasOil);
-        }
-        else {
-            const Evaluation solventOilEffFraction = (muOilPow * (muOilEffPow - muSolventPow)) / (muOilEffPow * (muOilPow - muSolventPow));
-            rhoOilEff = (rhoOil * solventOilEffFraction) + (rhoSolvent * (1.0 - solventOilEffFraction));
-        }
-
         Evaluation rhoSolventEff = 0.0;
         if (std::abs((muSolventOilGasPow.value() - (muOilPow.value() * muGasPow.value()))) < cutOff)
             rhoSolventEff = ((1.0 - tlMixParamRho) * rhoSolvent) + (tlMixParamRho * rhoMixSolventGasOil);
@@ -1167,50 +1188,65 @@ private:
             rhoSolventEff = (rhoSolvent * sfraction_se) + (rhoGas * sgf * (1.0 - sfraction_se)) + (rhoOil * sof * (1.0 - sfraction_se));
         }
 
-        unsigned pvtRegionIdx = asImp_().pvtRegionIndex();
         // compute invB from densities.
-        const Evaluation bOilEff = rhoOilEff / (FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx) + FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx) * fs.Rs());
-        const Evaluation bGasEff = rhoGasEff / (FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx) + FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx) * fs.Rv());
+        unsigned pvtRegionIdx = asImp_().pvtRegionIndex();
+        Evaluation bGasEff = rhoGasEff;
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+            bGasEff /= (FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx) + FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx) * fs.Rv());
+        } else {
+            bGasEff /= (FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx));
+        }
         const Evaluation bSolventEff = rhoSolventEff / solventRefDensity();
 
-        // account for pressure effects
-        const auto& pmiscTable = SolventModule::pmisc(elemCtx, scvIdx, timeIdx);
-        const Evaluation pmisc = pmiscTable.eval(po, /*extrapolate=*/true);
-
         // copy the unmodified invB factors
-        const Evaluation bo = fs.invB(oilPhaseIdx);
         const Evaluation bg = fs.invB(gasPhaseIdx);
         const Evaluation bs = solventInverseFormationVolumeFactor();
-
-        const Evaluation bo_eff = pmisc * bOilEff + (1.0 - pmisc) * bo;
         const Evaluation bg_eff = pmisc * bGasEff + (1.0 - pmisc) * bg;
         const Evaluation bs_eff = pmisc * bSolventEff + (1.0 - pmisc) * bs;
 
         // set the densities
-        fs.setDensity(oilPhaseIdx,
-                      bo_eff
-                      *(FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx)
-                        + FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx)*fs.Rs()));
-        fs.setDensity(gasPhaseIdx,
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+            fs.setDensity(gasPhaseIdx,
                       bg_eff
                       *(FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx)
                         + FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx)*fs.Rv()));
+        } else {
+            fs.setDensity(gasPhaseIdx,
+                      bg_eff
+                      *FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx));
+        }
         solventDensity_ = bs_eff*solventRefDensity();
 
-        // set the viscosity / mobility
-        // TODO make it possible to store and modify the viscosity in fs directly
-
-        // keep the mu*b interpolation
-        Evaluation& mobo = asImp_().mobility_[oilPhaseIdx];
-        muOilEff = bo_eff / (pmisc * bOilEff / muOilEff + (1.0 - pmisc) * bo / muOil);
-        mobo *= muOil / muOilEff;
-
+        // set the mobility
         Evaluation& mobg = asImp_().mobility_[gasPhaseIdx];
         muGasEff = bg_eff / (pmisc * bGasEff / muGasEff + (1.0 - pmisc) * bg / muGas);
         mobg *= muGas / muGasEff;
 
         // Update viscosity of solvent
         solventViscosity_ = bs_eff / (pmisc * bSolventEff / muSolventEff + (1.0 - pmisc) * bs / muSolvent);
+
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
+            Evaluation rhoOilEff = 0.0;
+            if (std::abs(muOilPow.value() - muSolventPow.value()) < cutOff) {
+                rhoOilEff = ((1.0 - tlMixParamRho) * rhoOil) + (tlMixParamRho * rhoMixSolventGasOil);
+            }
+            else {
+                const Evaluation solventOilEffFraction = (muOilPow * (muOilEffPow - muSolventPow)) / (muOilEffPow * (muOilPow - muSolventPow));
+                rhoOilEff = (rhoOil * solventOilEffFraction) + (rhoSolvent * (1.0 - solventOilEffFraction));
+            }
+            const Evaluation bOilEff = rhoOilEff / (FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx) + FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx) * fs.Rs());
+            const Evaluation bo = fs.invB(oilPhaseIdx);
+            const Evaluation bo_eff = pmisc * bOilEff + (1.0 - pmisc) * bo;
+            fs.setDensity(oilPhaseIdx,
+                bo_eff
+                *(FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx)
+                + FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx)*fs.Rs()));
+
+            // keep the mu*b interpolation
+            Evaluation& mobo = asImp_().mobility_[oilPhaseIdx];
+            muOilEff = bo_eff / (pmisc * bOilEff / muOilEff + (1.0 - pmisc) * bo / muOil);
+            mobo *= muOil / muOilEff;
+        }
     }
 
 protected:
