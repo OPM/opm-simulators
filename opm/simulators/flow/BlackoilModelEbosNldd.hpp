@@ -212,16 +212,22 @@ public:
         for (const int domain_index : domain_order) {
             const auto& domain = domains_[domain_index];
             SimulatorReportSingle local_report;
-            switch (model_.param().local_solve_approach_) {
-            case DomainSolveApproach::Jacobi:
-                solveDomainJacobi(solution, locally_solved, local_report,
-                                  iteration, timer, domain);
-                break;
-            default:
-            case DomainSolveApproach::GaussSeidel:
-                solveDomainGaussSeidel(solution, locally_solved, local_report,
-                                       iteration, timer, domain);
-                break;
+            try {
+                switch (model_.param().local_solve_approach_) {
+                case DomainSolveApproach::Jacobi:
+                    solveDomainJacobi(solution, locally_solved, local_report,
+                                      iteration, timer, domain);
+                    break;
+                default:
+                case DomainSolveApproach::GaussSeidel:
+                    solveDomainGaussSeidel(solution, locally_solved, local_report,
+                                           iteration, timer, domain);
+                    break;
+                }
+            }
+            catch (...) {
+                // Something went wrong during local solves.
+                local_report.converged = false;
             }
             // This should have updated the global matrix to be
             // dR_i/du_j evaluated at new local solutions for
@@ -233,9 +239,10 @@ public:
             domain_reports[domain.index] = local_report;
         }
 
-        // Log summary of local solve convergence to DBG file.
+        // Accumulate local solve data.
+        int num_converged = 0;
+        int num_domains = domain_reports.size();
         {
-            int num_converged = 0;
             SimulatorReportSingle rep;
             for (const auto& dr : domain_reports) {
                 if (dr.converged) {
@@ -243,13 +250,9 @@ public:
                 }
                 rep += dr;
             }
-            std::ostringstream os;
-            os << fmt::format("Local solves finished. Converged for {}/{} domains.\n",
-                              num_converged, domain_reports.size());
-            rep.reportFullyImplicit(os, nullptr);
-            OpmLog::debug(os.str());
             local_reports_accumulated_ += rep;
         }
+        bool is_iorank = true;
 
         if (model_.param().local_solve_approach_ == DomainSolveApproach::Jacobi) {
             solution = locally_solved;
@@ -284,8 +287,18 @@ public:
 
             // Update intensive quantities for our overlap values.
             model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantitiesOverlap(/*timeIdx=*/0);
+
+            // Make total counts of domains converged.
+            num_converged = comm.sum(num_converged);
+            num_domains = comm.sum(num_domains);
+            is_iorank = comm.rank() == 0;
         }
 #endif // HAVE_MPI
+
+        if (is_iorank) {
+            OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains.\n",
+                                      num_converged, num_domains));
+        }
 
         // Finish with a Newton step.
         // Note that the "iteration + 100" is a simple way to avoid entering
