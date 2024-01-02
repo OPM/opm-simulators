@@ -1407,6 +1407,18 @@ add_test_compareECLFiles(CASENAME 01_multflt
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR mult)
+add_test_compareECLFiles(CASENAME 02_multflt
+                         FILENAME MULTFLT-02
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR mult)
+add_test_compareECLFiles(CASENAME 03_multflt
+                         FILENAME MULTFLT-03
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR mult)
 
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(CASENAME spe12_polyhedralgrid
