@@ -34,8 +34,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
 namespace Opm

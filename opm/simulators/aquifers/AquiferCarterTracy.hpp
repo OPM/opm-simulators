@@ -21,16 +21,18 @@
 #ifndef OPM_AQUIFERCT_HEADER_INCLUDED
 #define OPM_AQUIFERCT_HEADER_INCLUDED
 
-#include <opm/simulators/aquifers/AquiferAnalytical.hpp>
+#include <opm/common/utility/numeric/linearInterpolation.hpp>
 
 #include <opm/input/eclipse/EclipseState/Aquifer/AquiferCT.hpp>
 
 #include <opm/output/data/Aquifer.hpp>
 
-#include <exception>
-#include <memory>
+#include <opm/simulators/aquifers/AquiferAnalytical.hpp>
+
+#include <cstddef>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 namespace Opm
 {

@@ -24,17 +24,12 @@
 
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/AquiferFlux.hpp>
-#include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
-
-#include <opm/common/ErrorMacros.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <algorithm>
 #include <cassert>
 #include <numeric>
-#include <stdexcept>
 #include <vector>
 
 namespace Opm {
