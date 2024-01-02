@@ -32,6 +32,8 @@
 
 namespace Opm {
 
+class FieldPropsManager;
+
 //! \brief Struct holding polymer extension data.
 template<class Scalar>
 struct PolymerSolutionContainer {
@@ -40,6 +42,11 @@ struct PolymerSolutionContainer {
     std::vector<Scalar> moleWeight; // polymer molecular weight
 
     static PolymerSolutionContainer serializationTestObject();
+
+    //! \brief Reads initial condition from field properties.
+    void readInitialCondition(const FieldPropsManager& fp,
+                              bool enablePolymerMW,
+                              const unsigned numDof);
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -65,6 +72,10 @@ struct MICPSolutionContainer {
 
     //! \brief Resize vectors and zero initialize.
     void resize(const unsigned numElems);
+
+    //! \brief Reads initial condition from field properties.
+    void readInitialCondition(const FieldPropsManager& fp,
+                              const unsigned numDof);
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)

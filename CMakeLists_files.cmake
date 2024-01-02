@@ -419,6 +419,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/ecloutputblackoilmodule.hh
   ebos/eclpolyhedralgridvanguard.hh
   ebos/eclproblem.hh
+  ebos/eclproblem_bcic.hh
   ebos/eclproblem_properties.hh
   ebos/eclsolutioncontainers.hh
   ebos/ecltimesteppingparams.hh

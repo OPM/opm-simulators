@@ -28,6 +28,8 @@
 #include <config.h>
 #include <ebos/eclsolutioncontainers.hh>
 
+#include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
+
 namespace Opm {
 
 template<class Scalar>
@@ -37,6 +39,27 @@ PolymerSolutionContainer<Scalar>::serializationTestObject()
     return {{3.0, 4.0, 5.0},
             {12.0},
             {13.0, 14.0}};
+}
+
+template<class Scalar>
+void PolymerSolutionContainer<Scalar>::
+readInitialCondition(const FieldPropsManager& fp,
+                     bool enablePolymerMW,
+                     const unsigned numDof)
+{
+    if (fp.has_double("SPOLY")) {
+        concentration = fp.get_double("SPOLY");
+    } else {
+        concentration.resize(numDof, 0.0);
+    }
+
+    if (enablePolymerMW) {
+        if (fp.has_double("SPOLYMW")) {
+            moleWeight = fp.get_double("SPOLYMW");
+        } else {
+            moleWeight.resize(numDof, 0.0);
+        }
+    }
 }
 
 template<class Scalar>
@@ -67,6 +90,28 @@ void MICPSolutionContainer<Scalar>::resize(const unsigned numElems)
     ureaConcentration.resize(numElems, 0.0);
     biofilmConcentration.resize(numElems, 0.0);
     calciteConcentration.resize(numElems, 0.0);
+}
+
+template<class Scalar>
+void MICPSolutionContainer<Scalar>::
+readInitialCondition(const FieldPropsManager& fp,
+                     const unsigned numDof)
+{
+    auto read = [&fp, numDof](std::vector<Scalar>& data,
+                              const char* fname)
+    {
+        if (fp.has_double(fname)) {
+            data = fp.get_double(fname);
+        } else {
+            data.resize(numDof, 0.0);
+        }
+    };
+
+    read(microbialConcentration, "SMICR");
+    read(oxygenConcentration, "SOXYG");
+    read(ureaConcentration, "SUREA");
+    read(biofilmConcentration, "SBIOF");
+    read(calciteConcentration, "SCALC");
 }
 
 template<class Scalar>

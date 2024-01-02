@@ -37,11 +37,11 @@
 #include <ebos/eclbaseaquifermodel.hh>
 #include <ebos/eclcpgridvanguard.hh>
 #include <ebos/ecldummygradientcalculator.hh>
-#include <ebos/eclequilinitializer.hh>
 #include <ebos/eclfluxmodule.hh>
 #include <ebos/eclgenericproblem.hh>
 #include <ebos/eclnewtonmethod.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
+#include <ebos/eclproblem_bcic.hh>
 #include <ebos/eclproblem_properties.hh>
 #include <ebos/eclthresholdpressure.hh>
 #include <ebos/ecltransmissibility.hh>
@@ -426,7 +426,7 @@ public:
             this->polymer_.maxAdsorption.resize(numElements, 0.0);
         }
 
-        readBoundaryConditions_();
+        bcic_.readBoundaryConditions(this->simulator().vanguard());
 
         // compute and set eq weights based on initial b values
         computeAndSetEqWeights_();
@@ -1144,7 +1144,7 @@ public:
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
         unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-        return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+        return bcic_.initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
 
@@ -1152,7 +1152,7 @@ public:
     {
         // use the initial temperature of the DOF if temperature is not a primary
         // variable
-         return initialFluidStates_[globalDofIdx].temperature(/*phaseIdx=*/0);
+         return bcic_.initialFluidState(globalDofIdx).temperature(/*phaseIdx=*/0);
     }
 
     const SolidEnergyLawParams&
@@ -1179,36 +1179,16 @@ public:
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     {
-        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary);
-        if (!context.intersection(spaceIdx).boundary())
-            return;
-
-        if constexpr (!enableEnergy || !enableThermalFluxBoundaries)
-            values.setNoFlow();
-        else {
-            // in the energy case we need to specify a non-trivial boundary condition
-            // because the geothermal gradient needs to be maintained. for this, we
-            // simply assume the initial temperature at the boundary and specify the
-            // thermal flow accordingly. in this context, "thermal flow" means energy
-            // flow due to a temerature gradient while assuming no-flow for mass
-            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
-            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
-            values.setThermalFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-        }
-
-        if (nonTrivialBoundaryConditions()) {
-            unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
-            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
-            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
-            unsigned pvtRegionIdx = pvtRegionIndex(context, spaceIdx, timeIdx);
-            const auto [type, massrate] = boundaryCondition(globalDofIdx, indexInInside);
-            if (type == BCType::THERMAL)
-                values.setThermalFlow(context, spaceIdx, timeIdx, boundaryFluidState(globalDofIdx, indexInInside));
-            else if (type == BCType::FREE || type == BCType::DIRICHLET)
-                values.setFreeFlow(context, spaceIdx, timeIdx, boundaryFluidState(globalDofIdx, indexInInside));
-            else if (type == BCType::RATE)
-                values.setMassRate(massrate, pvtRegionIdx);
-        }
+        unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
+        unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
+        const auto& sched = this->simulator().vanguard().schedule();
+        bcic_.boundary(values,
+                       context,
+                       spaceIdx,
+                       timeIdx,
+                       this->pvtRegionIndex(context, spaceIdx, timeIdx),
+                       sched[this->episodeIndex()].bcprop,
+                       this->materialLawParams(globalDofIdx));
     }
 
     /*!
@@ -1291,39 +1271,18 @@ public:
      * the whole domain.
      */
     template <class Context>
-    void initial(PrimaryVariables& values, const Context& context, unsigned spaceIdx, unsigned timeIdx) const
+    void initial(PrimaryVariables& values, const Context& context,
+                 unsigned spaceIdx, unsigned timeIdx) const
     {
-        unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-
-        values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
-        values.assignNaive(initialFluidStates_[globalDofIdx]);
-
-        SolventModule::assignPrimaryVars(values, this->solventSaturation_[globalDofIdx], this->solventRsw_[globalDofIdx]);
-
-        if constexpr (enablePolymer)
-            values[Indices::polymerConcentrationIdx] = this->polymer_.concentration[globalDofIdx];
-
-        if constexpr (enablePolymerMolarWeight)
-            values[Indices::polymerMoleWeightIdx]= this->polymer_.moleWeight[globalDofIdx];
-
-        if constexpr (enableBrine) {
-            if (enableSaltPrecipitation && values.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
-                values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltSaturation();
-            }
-            else {
-                values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltConcentration();
-            }
-        }
-
-        if constexpr (enableMICP){
-            values[Indices::microbialConcentrationIdx] = this->micp_.microbialConcentration[globalDofIdx];
-            values[Indices::oxygenConcentrationIdx]= this->micp_.oxygenConcentration[globalDofIdx];
-            values[Indices::ureaConcentrationIdx]= this->micp_.ureaConcentration[globalDofIdx];
-            values[Indices::calciteConcentrationIdx]= this->micp_.calciteConcentration[globalDofIdx];
-            values[Indices::biofilmConcentrationIdx]= this->micp_.biofilmConcentration[globalDofIdx];
-        }
-
-        values.checkDefined();
+        bcic_.initial(values,
+                      this->solventSaturation_,
+                      this->solventRsw_,
+                      this->micp_,
+                      this->polymer_,
+                      context,
+                      spaceIdx,
+                      timeIdx,
+                      this->pvtRegionIndex(context, spaceIdx, timeIdx));
     }
 
     /*!
@@ -1456,7 +1415,7 @@ public:
 
     // temporary solution to facilitate output of initial state from flow
     const InitialFluidState& initialFluidState(unsigned globalDofIdx) const
-    { return initialFluidStates_[globalDofIdx]; }
+    { return bcic_.initialFluidState(globalDofIdx); }
 
     const EclipseIO& eclIO() const
     { return eclWriter_->eclIO(); }
@@ -1468,118 +1427,17 @@ public:
     { return eclWriter_->setSimulationReport(report); }
 
     bool nonTrivialBoundaryConditions() const
-    { return nonTrivialBoundaryConditions_; }
+    { return bcic_.nonTrivialBoundaryConditions(); }
 
-    const InitialFluidState boundaryFluidState(unsigned globalDofIdx, const int directionId) const
+    InitialFluidState boundaryFluidState(unsigned globalDofIdx,
+                                         const int directionId) const
     {
-        OPM_TIMEBLOCK_LOCAL(boundaryFluidState);
-        const auto& bcprop = this->simulator().vanguard().schedule()[this->episodeIndex()].bcprop;
-        if (bcprop.size() > 0) {
-            FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
-
-            // index == 0: no boundary conditions for this
-            // global cell and direction
-            if (bcindex_(dir)[globalDofIdx] == 0)
-                return initialFluidStates_[globalDofIdx];
-
-            const auto& bc = bcprop[bcindex_(dir)[globalDofIdx]];
-            if (bc.bctype == BCType::DIRICHLET )
-            {
-                InitialFluidState fluidState;
-                const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
-                fluidState.setPvtRegionIndex(pvtRegionIdx);
-
-                switch (bc.component) {
-                    case BCComponent::OIL:
-                        if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
-                            throw std::logic_error("oil is not active and you're trying to add oil BC");
-
-                        fluidState.setSaturation(FluidSystem::oilPhaseIdx, 1.0);
-                        break;
-                    case BCComponent::GAS:
-                        if (!FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))
-                            throw std::logic_error("gas is not active and you're trying to add gas BC");
-
-                        fluidState.setSaturation(FluidSystem::gasPhaseIdx, 1.0);
-                        break;
-                        case BCComponent::WATER:
-                        if (!FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
-                            throw std::logic_error("water is not active and you're trying to add water BC");
-
-                        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 1.0);
-                        break;
-                    case BCComponent::SOLVENT:
-                    case BCComponent::POLYMER:
-                    case BCComponent::NONE:
-                        throw std::logic_error("you need to specify a valid component (OIL, WATER or GAS) when DIRICHLET type is set in BC");
-                        break;
-                }
-                int phaseIndex;
-                if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
-                    phaseIndex = oilPhaseIdx;
-                }
-                else if (FluidSystem::phaseIsActive(gasPhaseIdx)) {
-                    phaseIndex = gasPhaseIdx;
-                }
-                else {
-                    phaseIndex = waterPhaseIdx;
-                }
-                double pressure = initialFluidStates_[globalDofIdx].pressure(phaseIndex);
-                const auto pressure_input = bc.pressure;
-                if (pressure_input) {
-                    pressure = *pressure_input;
-                }
-
-                std::array<Scalar, numPhases> pc = {0};
-                const auto& matParams = materialLawParams(globalDofIdx);
-                MaterialLaw::capillaryPressures(pc, matParams, fluidState);
-                Valgrind::CheckDefined(pressure);
-                Valgrind::CheckDefined(pc);
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    if (!FluidSystem::phaseIsActive(phaseIdx))
-                        continue;
-
-                    if (Indices::oilEnabled)
-                        fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
-                    else if (Indices::gasEnabled)
-                        fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
-                    else if (Indices::waterEnabled)
-                        //single (water) phase
-                        fluidState.setPressure(phaseIdx, pressure);
-                }
-                
-                double temperature = initialFluidStates_[globalDofIdx].temperature(phaseIndex);
-                const auto temperature_input = bc.temperature;
-                if(temperature_input)
-                    temperature = *temperature_input;
-                fluidState.setTemperature(temperature);
-
-                if (FluidSystem::enableDissolvedGas()) {
-                    fluidState.setRs(0.0);
-                    fluidState.setRv(0.0);
-                }
-                if (FluidSystem::enableDissolvedGasInWater()) {
-                    fluidState.setRsw(0.0);
-                }
-                if (FluidSystem::enableVaporizedWater())
-                    fluidState.setRvw(0.0);
-
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    if (!FluidSystem::phaseIsActive(phaseIdx))
-                        continue;
-
-                    const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState, phaseIdx, pvtRegionIdx);
-                    fluidState.setInvB(phaseIdx, b);
-
-                    const auto& rho = FluidSystem::density(fluidState, phaseIdx, pvtRegionIdx);
-                    fluidState.setDensity(phaseIdx, rho);
-
-                }
-                fluidState.checkDefined();
-                return fluidState;
-            }
-        }
-        return initialFluidStates_[globalDofIdx];
+        const auto& sched = this->simulator().vanguard().schedule();
+        return bcic_.boundaryFluidState(globalDofIdx,
+                                        directionId,
+                                        this->pvtRegionIndex(globalDofIdx),
+                                        sched[this->episodeIndex()].bcprop,
+                                        this->materialLawParams(globalDofIdx));
     }
 
     /*!
@@ -1644,7 +1502,7 @@ public:
         // water compaction
         assert(!this->rockCompPoroMultWc_.empty());
         LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
-        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+        LhsEval SwDeltaMax = SwMax - bcic_.initialFluidState(elementIdx).saturation(waterPhaseIdx);
 
         return this->rockCompPoroMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
     }
@@ -1683,7 +1541,7 @@ public:
         // water compaction
         assert(!this->rockCompTransMultWc_.empty());
         LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
-        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+        LhsEval SwDeltaMax = SwMax - bcic_.initialFluidState(elementIdx).saturation(waterPhaseIdx);
 
         return this->rockCompTransMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
     }
@@ -1724,52 +1582,9 @@ public:
 
     std::pair<BCType, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId) const
     {
-        OPM_TIMEBLOCK_LOCAL(boundaryCondition);
-        if (!nonTrivialBoundaryConditions_) {
-            return { BCType::NONE, RateVector(0.0) };
-        }
-        FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
-        const auto& schedule = this->simulator().vanguard().schedule();
-        if (bcindex_(dir)[globalSpaceIdx] == 0) {
-            return { BCType::NONE, RateVector(0.0) };
-        }
-        if (schedule[this->episodeIndex()].bcprop.size() == 0) {
-            return { BCType::NONE, RateVector(0.0) };
-        }
-        const auto& bc = schedule[this->episodeIndex()].bcprop[bcindex_(dir)[globalSpaceIdx]];
-        if (bc.bctype!=BCType::RATE) {
-            return { bc.bctype, RateVector(0.0) };
-        }
-
-        RateVector rate = 0.0;
-        switch (bc.component) {
-        case BCComponent::OIL:
-            rate[Indices::canonicalToActiveComponentIndex(oilCompIdx)] = bc.rate;
-            break;
-        case BCComponent::GAS:
-            rate[Indices::canonicalToActiveComponentIndex(gasCompIdx)] = bc.rate;
-            break;
-        case BCComponent::WATER:
-            rate[Indices::canonicalToActiveComponentIndex(waterCompIdx)] = bc.rate;
-            break;
-        case BCComponent::SOLVENT:
-            if constexpr (!enableSolvent)
-                throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
-
-            rate[Indices::solventSaturationIdx] = bc.rate;
-            break;
-        case BCComponent::POLYMER:
-            if constexpr (!enablePolymer)
-                throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
-
-            rate[Indices::polymerConcentrationIdx] = bc.rate;
-            break;
-        case BCComponent::NONE:
-            throw std::logic_error("you need to specify the component when RATE type is set in BC");
-            break;
-        }
-        //TODO add support for enthalpy rate
-        return {bc.bctype, rate};
+        const auto& sched = this->simulator().vanguard().schedule();
+        return bcic_.boundaryCondition(globalSpaceIdx, directionId,
+                                       sched[this->episodeIndex()].bcprop);
     }
 
     const std::unique_ptr<EclWriterType>& eclWriter() const
@@ -2069,50 +1884,32 @@ protected:
 
     void readInitialCondition_()
     {
-        const auto& simulator = this->simulator();
-        const auto& vanguard = simulator.vanguard();
-        const auto& eclState = vanguard.eclState();
-
-        if (eclState.getInitConfig().hasEquil())
-            readEquilInitialCondition_();
-        else
-            readExplicitInitialCondition_();
-
-        if constexpr (enableSolvent || enablePolymer || enablePolymerMolarWeight || enableMICP)
-            this->readBlackoilExtentionsInitialConditions_(this->model().numGridDof(),
-                                                           enableSolvent,
-                                                           enablePolymer,
-                                                           enablePolymerMolarWeight,
-                                                           enableMICP);
+        std::size_t numElems = this->model().numGridDof();
+        bcic_.readInitialCondition(*materialLawManager_,
+                                   this->solventSaturation_,
+                                   this->solventRsw_,
+                                   this->micp_,
+                                   this->polymer_,
+                                   this->simulator(),
+                                   numElems,
+                                   [this](const unsigned idx)
+                                   { return this->pvtRegionIndex(idx); });
 
         //initialize min/max values
-        std::size_t numElems = this->model().numGridDof();
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            const auto& fs = initialFluidStates_[elemIdx];
-            if (!this->maxWaterSaturation_.empty())
-                this->maxWaterSaturation_[elemIdx] = std::max(this->maxWaterSaturation_[elemIdx], fs.saturation(waterPhaseIdx));
-            if (!this->maxOilSaturation_.empty())
-                this->maxOilSaturation_[elemIdx] = std::max(this->maxOilSaturation_[elemIdx], fs.saturation(oilPhaseIdx));
-            if (!this->minOilPressure_.empty())
-                this->minOilPressure_[elemIdx] = std::min(this->minOilPressure_[elemIdx], fs.pressure(oilPhaseIdx));
-        }
-
-
-    }
-
-    void readEquilInitialCondition_()
-    {
-        const auto& simulator = this->simulator();
-
-        // initial condition corresponds to hydrostatic conditions.
-        using EquilInitializer = EclEquilInitializer<TypeTag>;
-        EquilInitializer equilInitializer(simulator, *materialLawManager_);
-
-        std::size_t numElems = this->model().numGridDof();
-        initialFluidStates_.resize(numElems);
-        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto& elemFluidState = initialFluidStates_[elemIdx];
-            elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
+            const auto& fs = bcic_.initialFluidState(elemIdx);
+            if (!this->maxWaterSaturation_.empty()) {
+                this->maxWaterSaturation_[elemIdx] = std::max(this->maxWaterSaturation_[elemIdx],
+                                                              fs.saturation(waterPhaseIdx));
+            }
+            if (!this->maxOilSaturation_.empty()) {
+                this->maxOilSaturation_[elemIdx] = std::max(this->maxOilSaturation_[elemIdx],
+                                                            fs.saturation(oilPhaseIdx));
+            }
+            if (!this->minOilPressure_.empty()) {
+                this->minOilPressure_[elemIdx] = std::min(this->minOilPressure_[elemIdx],
+                                                          fs.pressure(oilPhaseIdx));
+            }
         }
     }
 
@@ -2142,15 +1939,16 @@ protected:
         Scalar dt = std::min(eclWriter_->restartTimeStepSize(), simulator.episodeLength());
         simulator.setTimeStepSize(dt);
 
-        std::size_t numElems = this->model().numGridDof();
-        initialFluidStates_.resize(numElems);
+        const std::size_t numElems = this->model().numGridDof();
+
         if constexpr (enableSolvent) {
             this->solventSaturation_.resize(numElems, 0.0);
             this->solventRsw_.resize(numElems, 0.0);
         }
 
-        if constexpr (enablePolymer)
+        if constexpr (enablePolymer) {
             this->polymer_.concentration.resize(numElems, 0.0);
+        }
 
         if constexpr (enablePolymerMolarWeight) {
             const std::string msg {"Support of the RESTART for polymer molecular weight "
@@ -2164,43 +1962,21 @@ protected:
             this->micp_.resize(numElems);
         }
 
+        bcic_.readEclRestartSolution(this->solventSaturation_,
+                                     this->solventRsw_,
+                                     this->micp_,
+                                     this->polymer_,
+                                     eclWriter_->eclOutputModule(),
+                                     numElems,
+                                     [this](const unsigned idx)
+                                     { return this->pvtRegionIndex(idx); });
+
+
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto& elemFluidState = initialFluidStates_[elemIdx];
-            elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
+            const auto& elemFluidState = bcic_.initialFluidState(elemIdx);
             eclWriter_->eclOutputModule().initHysteresisParams(simulator, elemIdx);
-            eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
-
-            // Note: Function processRestartSaturations_() mutates the
-            // 'ssol' argument--the value from the restart file--if solvent
-            // is enabled.  Then, store the updated solvent saturation into
-            // 'solventSaturation_'.  Otherwise, just pass a dummy value to
-            // the function and discard the unchanged result.  Do not index
-            // into 'solventSaturation_' unless solvent is enabled.
-            {
-                auto ssol = enableSolvent
-                    ? eclWriter_->eclOutputModule().getSolventSaturation(elemIdx)
-                    : Scalar(0);
-
-                processRestartSaturations_(elemFluidState, ssol);
-
-                if constexpr (enableSolvent) {
-                    this->solventSaturation_[elemIdx] = ssol;
-                    this->solventRsw_[elemIdx] = eclWriter_->eclOutputModule().getSolventRsw(elemIdx);
-                }
-            }
 
             this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
-
-            if constexpr (enablePolymer)
-                 this->polymer_.concentration[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
-            if constexpr (enableMICP){
-                 this->micp_.microbialConcentration[elemIdx] = eclWriter_->eclOutputModule().getMicrobialConcentration(elemIdx);
-                 this->micp_.oxygenConcentration[elemIdx] = eclWriter_->eclOutputModule().getOxygenConcentration(elemIdx);
-                 this->micp_.ureaConcentration[elemIdx] = eclWriter_->eclOutputModule().getUreaConcentration(elemIdx);
-                 this->micp_.biofilmConcentration[elemIdx] = eclWriter_->eclOutputModule().getBiofilmConcentration(elemIdx);
-                 this->micp_.calciteConcentration[elemIdx] = eclWriter_->eclOutputModule().getCalciteConcentration(elemIdx);
-            }
-            // if we need to restart for polymer molecular weight simulation, we need to add related here
         }
 
         const int episodeIdx = this->episodeIndex();
@@ -2228,233 +2004,6 @@ protected:
         eclWriter_->endRestart();
     }
 
-    void processRestartSaturations_(InitialFluidState& elemFluidState, Scalar& solventSaturation)
-    {
-        // each phase needs to be above certain value to be claimed to be existing
-        // this is used to recover some RESTART running with the defaulted single-precision format
-        const Scalar smallSaturationTolerance = 1.e-6;
-        Scalar sumSaturation = 0.0;
-        for (std::size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (FluidSystem::phaseIsActive(phaseIdx)) {
-                if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance)
-                    elemFluidState.setSaturation(phaseIdx, 0.0);
-
-                sumSaturation += elemFluidState.saturation(phaseIdx);
-            }
-
-        }
-        if constexpr (enableSolvent) {
-            if (solventSaturation < smallSaturationTolerance)
-                solventSaturation = 0.0;
-
-           sumSaturation += solventSaturation;
-        }
-
-        assert(sumSaturation > 0.0);
-
-        for (std::size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (FluidSystem::phaseIsActive(phaseIdx)) {
-                const Scalar saturation = elemFluidState.saturation(phaseIdx) / sumSaturation;
-                elemFluidState.setSaturation(phaseIdx, saturation);
-            }
-        }
-        if constexpr (enableSolvent) {
-            solventSaturation = solventSaturation / sumSaturation;
-        }
-    }
-
-    void readExplicitInitialCondition_()
-    {
-        const auto& simulator = this->simulator();
-        const auto& vanguard = simulator.vanguard();
-        const auto& eclState = vanguard.eclState();
-        const auto& fp = eclState.fieldProps();
-        bool has_swat     = fp.has_double("SWAT");
-        bool has_sgas     = fp.has_double("SGAS");
-        bool has_rs       = fp.has_double("RS");
-        bool has_rv       = fp.has_double("RV");
-        bool has_rvw       = fp.has_double("RVW");
-        bool has_pressure = fp.has_double("PRESSURE");
-        bool has_salt = fp.has_double("SALT");
-        bool has_saltp = fp.has_double("SALTP");
-
-        // make sure all required quantities are enables
-        if (Indices::numPhases > 1) {
-            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !has_swat)
-                throw std::runtime_error("The ECL input file requires the presence of the SWAT keyword if "
-                                     "the water phase is active");
-            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !has_sgas && FluidSystem::phaseIsActive(oilPhaseIdx))
-                throw std::runtime_error("The ECL input file requires the presence of the SGAS keyword if "
-                                     "the gas phase is active");
-        }
-        if (!has_pressure)
-            throw std::runtime_error("The ECL input file requires the presence of the PRESSURE "
-                                      "keyword if the model is initialized explicitly");
-        if (FluidSystem::enableDissolvedGas() && !has_rs)
-            throw std::runtime_error("The ECL input file requires the RS keyword to be present if"
-                                     " dissolved gas is enabled");
-        if (FluidSystem::enableVaporizedOil() && !has_rv)
-            throw std::runtime_error("The ECL input file requires the RV keyword to be present if"
-                                     " vaporized oil is enabled");
-        if (FluidSystem::enableVaporizedWater() && !has_rvw)
-            throw std::runtime_error("The ECL input file requires the RVW keyword to be present if"
-                                     " vaporized water is enabled");
-        if (enableBrine && !has_salt)
-            throw std::runtime_error("The ECL input file requires the SALT keyword to be present if"
-                                     " brine is enabled and the model is initialized explicitly");
-        if (enableSaltPrecipitation && !has_saltp)
-            throw std::runtime_error("The ECL input file requires the SALTP keyword to be present if"
-                                     " salt precipitation is enabled and the model is initialized explicitly");
-
-        std::size_t numDof = this->model().numGridDof();
-
-        initialFluidStates_.resize(numDof);
-
-        std::vector<double> waterSaturationData;
-        std::vector<double> gasSaturationData;
-        std::vector<double> pressureData;
-        std::vector<double> rsData;
-        std::vector<double> rvData;
-        std::vector<double> rvwData;
-        std::vector<double> tempiData;
-        std::vector<double> saltData;
-        std::vector<double> saltpData;
-
-        if (FluidSystem::phaseIsActive(waterPhaseIdx) && Indices::numPhases > 1)
-            waterSaturationData = fp.get_double("SWAT");
-        else
-            waterSaturationData.resize(numDof);
-
-        if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx))
-            gasSaturationData = fp.get_double("SGAS");
-        else
-            gasSaturationData.resize(numDof);
-
-        pressureData = fp.get_double("PRESSURE");
-        if (FluidSystem::enableDissolvedGas())
-            rsData = fp.get_double("RS");
-
-        if (FluidSystem::enableVaporizedOil())
-            rvData = fp.get_double("RV");
-
-        if (FluidSystem::enableVaporizedWater())
-            rvwData = fp.get_double("RVW");
-
-        // initial reservoir temperature
-        tempiData = fp.get_double("TEMPI");
-
-        // initial salt concentration data
-        if constexpr (enableBrine)
-            saltData = fp.get_double("SALT");
-
-         // initial precipitated salt saturation data
-         if constexpr (enableSaltPrecipitation)
-            saltpData = fp.get_double("SALTP");
-
-        // calculate the initial fluid states
-        for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-            auto& dofFluidState = initialFluidStates_[dofIdx];
-
-            dofFluidState.setPvtRegionIndex(pvtRegionIndex(dofIdx));
-
-            //////
-            // set temperature
-            //////
-            Scalar temperatureLoc = tempiData[dofIdx];
-            if (!std::isfinite(temperatureLoc) || temperatureLoc <= 0)
-                temperatureLoc = FluidSystem::surfaceTemperature;
-            dofFluidState.setTemperature(temperatureLoc);
-
-            //////
-            // set salt concentration
-            //////
-            if constexpr (enableBrine)
-                dofFluidState.setSaltConcentration(saltData[dofIdx]);
-
-            //////
-            // set precipitated salt saturation
-            //////
-            if constexpr (enableSaltPrecipitation)
-                dofFluidState.setSaltSaturation(saltpData[dofIdx]);
-
-            //////
-            // set saturations
-            //////
-            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
-                dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
-                                            waterSaturationData[dofIdx]);
-
-            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
-                if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
-                    dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
-                                            1.0
-                                            - waterSaturationData[dofIdx]);
-                }
-                else
-                    dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
-                                                gasSaturationData[dofIdx]);
-            }
-            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
-                dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
-                                            1.0
-                                            - waterSaturationData[dofIdx]
-                                            - gasSaturationData[dofIdx]);
-
-            //////
-            // set phase pressures
-            //////
-            Scalar pressure = pressureData[dofIdx]; // oil pressure (or gas pressure for water-gas system or water pressure for single phase)
-
-            // this assumes that capillary pressures only depend on the phase saturations
-            // and possibly on temperature. (this is always the case for ECL problems.)
-            std::array<Scalar, numPhases> pc = {0};
-            const auto& matParams = materialLawParams(dofIdx);
-            MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
-            Valgrind::CheckDefined(pressure);
-            Valgrind::CheckDefined(pc);
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
-                    continue;
-
-                if (Indices::oilEnabled)
-                    dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
-                else if (Indices::gasEnabled)
-                    dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
-                else if (Indices::waterEnabled)
-                    //single (water) phase
-                    dofFluidState.setPressure(phaseIdx, pressure);
-            }
-
-            if (FluidSystem::enableDissolvedGas())
-                dofFluidState.setRs(rsData[dofIdx]);
-            else if (Indices::gasEnabled && Indices::oilEnabled)
-                dofFluidState.setRs(0.0);
-
-            if (FluidSystem::enableVaporizedOil())
-                dofFluidState.setRv(rvData[dofIdx]);
-            else if (Indices::gasEnabled && Indices::oilEnabled)
-                dofFluidState.setRv(0.0);
-
-            if (FluidSystem::enableVaporizedWater())
-                dofFluidState.setRvw(rvwData[dofIdx]);
-
-            //////
-            // set invB_
-            //////
-            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                if (!FluidSystem::phaseIsActive(phaseIdx))
-                    continue;
-
-                const auto& b = FluidSystem::inverseFormationVolumeFactor(dofFluidState, phaseIdx, pvtRegionIndex(dofIdx));
-                dofFluidState.setInvB(phaseIdx, b);
-
-                const auto& rho = FluidSystem::density(dofFluidState, phaseIdx, pvtRegionIndex(dofIdx));
-                dofFluidState.setDensity(phaseIdx, rho);
-
-            }
-        }
-    }
-
     // update the hysteresis parameters of the material laws for the whole grid
     bool updateHysteresis_()
     {
@@ -2470,7 +2019,6 @@ protected:
                               });
         return true;
     }
-
 
     bool updateHysteresis_(unsigned compressedDofIdx, const IntensiveQuantities& iq)
     {
@@ -2542,47 +2090,6 @@ private:
         pffDofData_.update(distFn);
     }
 
-    void readBoundaryConditions_()
-    {
-        const auto& simulator = this->simulator();
-        const auto& vanguard = simulator.vanguard();
-        const auto& bcconfig = vanguard.eclState().getSimulationConfig().bcconfig();
-        if (bcconfig.size() > 0) {
-            nonTrivialBoundaryConditions_ = true;
-
-            std::size_t numCartDof = vanguard.cartesianSize();
-            unsigned numElems = vanguard.gridView().size(/*codim=*/0);
-            std::vector<int> cartesianToCompressedElemIdx(numCartDof, -1);
-
-            for (unsigned elemIdx = 0; elemIdx < numElems; ++elemIdx)
-                cartesianToCompressedElemIdx[vanguard.cartesianIndex(elemIdx)] = elemIdx;
-
-            bcindex_.resize(numElems, 0);
-            auto loopAndApply = [&cartesianToCompressedElemIdx,
-                                 &vanguard](const auto& bcface,
-                                            auto apply)
-            {
-                for (int i = bcface.i1; i <= bcface.i2; ++i) {
-                    for (int j = bcface.j1; j <= bcface.j2; ++j) {
-                        for (int k = bcface.k1; k <= bcface.k2; ++k) {
-                            std::array<int, 3> tmp = {i,j,k};
-                            auto elemIdx = cartesianToCompressedElemIdx[vanguard.cartesianIndex(tmp)];
-                            if (elemIdx >= 0)
-                                apply(elemIdx);
-                        }
-                    }
-                }
-            };
-            for (const auto& bcface : bcconfig) {
-                std::vector<int>& data = bcindex_(bcface.dir);
-                const int index = bcface.index;
-                    loopAndApply(bcface,
-                                 [&data,index](int elemIdx)
-                                 { data[elemIdx] = index; });
-            }
-        }
-    }
-
     // this method applies the runtime constraints specified via the deck and/or command
     // line parameters for the size of the next time step.
     Scalar limitNextTimeStepSize_(Scalar dtNext) const
@@ -2639,7 +2146,7 @@ private:
         for(const auto& elem: elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-            const auto& dofFluidState = initialFluidStates_[elemIdx];
+            const auto& dofFluidState = bcic_.initialFluidState(elemIdx);
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (!FluidSystem::phaseIsActive(phaseIdx))
                     continue;
@@ -2671,7 +2178,7 @@ private:
 
     EclThresholdPressure<TypeTag> thresholdPressures_;
 
-    std::vector<InitialFluidState> initialFluidStates_;
+    EclProblemBCIC<TypeTag> bcic_;
 
     bool enableDriftCompensation_;
     GlobalEqVector drift_;
@@ -2692,38 +2199,6 @@ private:
     TracerModel tracerModel_;
 
     EclActionHandler actionHandler_;
-
-    template<class T>
-    struct BCData
-    {
-        std::array<std::vector<T>,6> data;
-
-        void resize(std::size_t size, T defVal)
-        {
-            for (auto& d : data)
-                d.resize(size, defVal);
-        }
-
-        const std::vector<T>& operator()(FaceDir::DirEnum dir) const
-        {
-            if (dir == FaceDir::DirEnum::Unknown)
-                throw std::runtime_error("Tried to access BC data for the 'Unknown' direction");
-            int idx = 0;
-            int div = static_cast<int>(dir);
-            while ((div /= 2) >= 1)
-              ++idx;
-            assert(idx >= 0 && idx <= 5);
-            return data[idx];
-        }
-
-        std::vector<T>& operator()(FaceDir::DirEnum dir)
-        {
-            return const_cast<std::vector<T>&>(std::as_const(*this)(dir));
-        }
-    };
-
-    BCData<int> bcindex_;
-    bool nonTrivialBoundaryConditions_ = false;
 };
 
 } // namespace Opm
