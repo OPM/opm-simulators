@@ -1298,7 +1298,9 @@ public:
         values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
         values.assignNaive(initialFluidStates_[globalDofIdx]);
 
-        SolventModule::assignPrimaryVars(values, this->solventSaturation_[globalDofIdx], this->solventRsw_[globalDofIdx]);
+        SolventModule::assignPrimaryVars(values,
+                                         enableSolvent ? this->solventSaturation_[globalDofIdx] : 0.0,
+                                         enableSolvent ? this->solventRsw_[globalDofIdx] : 0.0);
 
         if constexpr (enablePolymer)
             values[Indices::polymerConcentrationIdx] = this->polymer_.concentration[globalDofIdx];
