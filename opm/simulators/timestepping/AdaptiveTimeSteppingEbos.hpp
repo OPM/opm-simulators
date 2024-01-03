@@ -497,7 +497,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                         time::StopWatch perfTimer;
                         perfTimer.start();
 
-                        ebosProblem.writeOutput();
+                        ebosProblem.writeOutput(simulatorTimer);
 
                         report.success.output_write_time += perfTimer.secsSinceStart();
                     }

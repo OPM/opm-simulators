@@ -18,6 +18,7 @@
 */
 
 #include <config.h>
+#include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/flow/LogOutputHelper.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -28,6 +29,7 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 
 #include <opm/simulators/utils/PressureAverage.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <fmt/format.h>
 
@@ -87,7 +89,9 @@ LogOutputHelper<Scalar>::LogOutputHelper(const EclipseState& eclState,
     : eclState_(eclState)
     , schedule_(schedule)
     , summaryState_(summaryState)
-{}
+{ 
+    flowVersionName_ = moduleVersionName();
+}
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
@@ -306,33 +310,74 @@ fip(const Inplace& inplace,
     }
 }
 
+
 template<class Scalar>
 void LogOutputHelper<Scalar>::
-fipResv(const Inplace& inplace) const
+fipResv(const Inplace& inplace, const std::string& name) const
 {
     {
         std::unordered_map<Inplace::Phase, Scalar> current_values;
 
-        for (const auto& phase : Inplace::phases()) {
+        for (const auto& phase : Inplace::phases()) 
             current_values[phase] = inplace.get(phase);
-        }
+            
+        Scalar field_dyn_pv = 0.0;
+
+
+        for (auto nreg = inplace.max_region(name), reg = 0*nreg + 1; reg <= nreg; ++reg)       
+            field_dyn_pv = field_dyn_pv + inplace.get(name, Inplace::Phase::DynamicPoreVolume, reg);
+        
+        current_values[Inplace::Phase::DynamicPoreVolume] = field_dyn_pv;
+        
         this->fipUnitConvert_(current_values);
         this->outputResvFluidInPlace_(current_values, 0);
     }
-
-    for (std::size_t reg = 1; reg <= inplace.max_region("FIPNUM"); ++reg) {
+    
+    for (auto nreg = inplace.max_region(), reg = 0*nreg + 1; reg <= nreg; ++reg) {        
         std::unordered_map<Inplace::Phase, Scalar> current_values;
-
+              
         for (const auto& phase : Inplace::phases()) {
-            current_values[phase] = inplace.get("FIPNUM", phase, reg);
+            if (reg <= inplace.max_region(name))
+                current_values[phase] = inplace.get(name, phase, reg);
+            else    
+                current_values[phase] = 0.0;
         }
-        current_values[Inplace::Phase::DynamicPoreVolume] =
-            inplace.get("FIPNUM", Inplace::Phase::DynamicPoreVolume, reg);
-
+        
+        if (reg <= inplace.max_region(name))
+            current_values[Inplace::Phase::DynamicPoreVolume] =
+                inplace.get(name, Inplace::Phase::DynamicPoreVolume, reg);
+        else
+            current_values[Inplace::Phase::DynamicPoreVolume] = 0.0;
+ 
         this->fipUnitConvert_(current_values);
         this->outputResvFluidInPlace_(current_values, reg);
     }
+    
+    std::ostringstream ss;
+    ss << " ===========================================================================================";
+    OpmLog::note(ss.str());
 }
+
+
+template<class Scalar>
+void LogOutputHelper<Scalar>::
+timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate) const
+{
+
+    std::ostringstream ss;
+    boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d %b %Y");
+    ss.imbue(std::locale(std::locale::classic(), facet));
+
+    ss  << "\n                              **************************************************************************\n"
+        << "  " << std::left << std::setw(9) << lbl << "AT" << std::right << std::setw(10) 
+        << (double)unit::convert::to(elapsed, unit::day) << "  DAYS" << " *" << std::setw(30) << eclState_.getTitle() << "                                          *\n"
+        << "  REPORT " << std::setw(4) << rstep << "    " << currentDate
+        << "  *                                             Flow  version " << std::setw(11) << flowVersionName_ << "  *\n"
+        << "                              **************************************************************************\n";
+
+    OpmLog::note(ss.str());
+}
+
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
@@ -817,63 +862,62 @@ outputRegionFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> oip,
     std::ostringstream ss;
 
     ss << '\n';
-    if (reg == 0) {
-        ss << "Field total";
-    } else {
-        ss << name << " report region " << reg;
-    }
-
-    ss << " pressure dependent pore volume = "
-       << std::fixed << std::setprecision(0)
-       << cip[Inplace::Phase::DynamicPoreVolume] << ' '
-       << units.name(UnitSystem::measure::volume) << "\n\n";
 
     if (reg == 0) {
-        ss << "                                                  ===================================================\n"
-           << "                                                  :                   Field Totals                  :\n";
+        ss << "                                                     ==================================================\n"
+           << "                                                     :               FIELD TOTALS                     :\n";
     }
     else {
-        ss << "                                                  ===================================================\n"
-           << "                                                  :        " << name << " report region  "
-           << std::setw(8 - name.size()) << reg << "                 :\n";
+        ss << "                                                     ==================================================\n"
+           << "                                                     :        " << name << " REPORT REGION  "
+           << std::setw(8 - name.size()) << reg << "                :\n";
     }
     if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-        ss << "                                                  :      PAV  =" << std::setw(14) << pav << " BARSA                 :\n"
+        ss << "                                                     :         PAV = " << std::setw(14) << pav << " BARSA             :\n"
            << std::fixed << std::setprecision(0)
-           << "                                                  :      PORV =" << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "   RM3                 :\n";
+           << "                                                     :         PORV= " << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "  RM3              :\n";
         if (!reg) {
-            ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
-               << "                                                  : Porv volumes are taken at reference conditions  :\n";
+            ss << "                                                     : Pressure is weighted by hydrocarbon pore volume:\n"
+               << "                                                     : Porv volumes are taken at reference conditions :\n";
         }
-        ss << "                         :--------------- Oil    SM3 ---------------:-- Wat    SM3 --:--------------- Gas    SM3 ---------------:\n";
+        ss << "                           :--------------- OIL    SM3 ----------------:-- WAT    SM3 --:--------------- GAS    SM3  ---------------:\n";
     } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
-        ss << "                                                  :      PAV  =" << std::setw(14) << pav << "  PSIA                 :\n"
+        ss << std::fixed << std::setprecision(0) 
+           << "                                                     :         PAV =" << std::setw(14) << pav << "  PSIA              :\n"
            << std::fixed << std::setprecision(0)
-           << "                                                  :      PORV =" << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "   RB                  :\n";
+           << "                                                     :         PORV=" << std::setw(14) << cip[Inplace::Phase::PoreVolume] << "   RB               :\n";
         if (!reg) {
-            ss << "                                                  : Pressure is weighted by hydrocarbon pore volume :\n"
-               << "                                                  : Pore volumes are taken at reference conditions  :\n";
+            ss << "                                                     : Pressure is weighted by hydrocarbon pore volume:\n"
+               << "                                                     : Pore volumes are taken at reference conditions :\n";
         }
-        ss << "                         :--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:\n";
+        ss << "                           :--------------- OIL    STB ----------------:-- WAT    STB --:--------------- GAS   MSCF ----------------:\n";
     }
-    ss << "                         :      Liquid        Vapour        Total   :      Total     :      Free        Dissolved       Total   :" << "\n"
-       << ":------------------------:------------------------------------------:----------------:------------------------------------------:" << "\n"
-       << ":Currently   in place    :" << std::setw(14) << cip[Inplace::Phase::OilInLiquidPhase]
+    ss << "                           :      LIQUID        VAPOUR         TOTAL   :      TOTAL     :       FREE      DISSOLVED         TOTAL   :" << "\n"
+       << " :-------------------------:-------------------------------------------:----------------:-------------------------------------------:" << "\n"
+       << " :CURRENTLY IN PLACE       :" << std::setw(14) << cip[Inplace::Phase::OilInLiquidPhase]
        << std::setw(14) << cip[Inplace::Phase::OilInGasPhase]
-       << std::setw(14) << cip[Inplace::Phase::OIL] << ":"
-       << std::setw(13) << cip[Inplace::Phase::WATER] << "   :"
+       << std::setw(15) << cip[Inplace::Phase::OIL] << ":"
+       << std::setw(14) << cip[Inplace::Phase::WATER] << "  :"
        << std::setw(14) << (cip[Inplace::Phase::GasInGasPhase])
        << std::setw(14) << cip[Inplace::Phase::GasInLiquidPhase]
-       << std::setw(14) << cip[Inplace::Phase::GAS] << ":\n"
-       << ":------------------------:------------------------------------------:----------------:------------------------------------------:\n"
-       << ":Originally  in place    :" << std::setw(14) << oip[Inplace::Phase::OilInLiquidPhase]
+       << std::setw(15) << cip[Inplace::Phase::GAS] << ":\n"
+       << " :-------------------------:-------------------------------------------:----------------:-------------------------------------------:\n"
+       << " :ORIGINALLY IN PLACE      :" << std::setw(14) << oip[Inplace::Phase::OilInLiquidPhase]
        << std::setw(14) << oip[Inplace::Phase::OilInGasPhase]
-       << std::setw(14) << oip[Inplace::Phase::OIL] << ":"
-       << std::setw(13) << oip[Inplace::Phase::WATER] << "   :"
+       << std::setw(15) << oip[Inplace::Phase::OIL] << ":"
+       << std::setw(14) << oip[Inplace::Phase::WATER] << "  :"
        << std::setw(14) << oip[Inplace::Phase::GasInGasPhase]
        << std::setw(14) << oip[Inplace::Phase::GasInLiquidPhase]
-       << std::setw(14) << oip[Inplace::Phase::GAS] << ":\n"
-       << ":========================:==========================================:================:==========================================:";
+       << std::setw(15) << oip[Inplace::Phase::GAS] << ":\n";
+    
+    if (reg == 0){
+       ss << " ====================================================================================================================================\n\n";
+    
+    } else {
+       ss << " :-------------------------:-------------------------------------------:----------------:-------------------------------------------:\n";
+       ss << " ====================================================================================================================================\n\n";
+    }
+       
     OpmLog::note(ss.str());
 }
 
@@ -882,37 +926,37 @@ void LogOutputHelper<Scalar>::
 outputResvFluidInPlace_(std::unordered_map<Inplace::Phase, Scalar> cipr,
                         const int reg) const
 {
-    // don't output FIPNUM report if the region has no porv.
-    if (cipr[Inplace::Phase::PoreVolume] == 0) {
-        return;
-    }
-
     const UnitSystem& units = eclState_.getUnits();
     std::ostringstream ss;
+
     if (reg == 0) {
         ss << "\n                                                     ===================================\n";
         if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_METRIC) {
-            ss << "                                                     :  RESERVOIR VOLUMES      M3      :\n";
+            ss << "                                                     :  RESERVOIR VOLUMES      RM3     :\n";
         } else if (units.getType() == UnitSystem::UnitType::UNIT_TYPE_FIELD) {
             ss << "                                                     :  RESERVOIR VOLUMES      RB      :\n";
         }
-        ss << ":---------:---------------:---------------:---------------:---------------:---------------:\n"
-           << ": REGION  :  TOTAL PORE   :  PORE VOLUME  :  PORE VOLUME  : PORE VOLUME   :  PORE VOLUME  :\n"
-           << ":         :   VOLUME      :  CONTAINING   :  CONTAINING   : CONTAINING    :  CONTAINING   :\n"
-           << ":         :               :     OIL       :    WATER      :    GAS        :  HYDRO-CARBON :\n"
-           << ":---------:---------------:---------------:---------------:---------------:---------------";
-    }
-    else {
-        ss << std::right << std::fixed << std::setprecision(0) << ":"
-           << std::setw (9) <<  reg << ":"
-           << std::setw(15) << cipr[Inplace::Phase::DynamicPoreVolume] << ":"
-           << std::setw(15) << cipr[Inplace::Phase::OilResVolume] << ":"
-           << std::setw(15) << cipr[Inplace::Phase::WaterResVolume] << ":"
-           << std::setw(15) << cipr[Inplace::Phase::GasResVolume] << ":"
-           << std::setw(15) << cipr[Inplace::Phase::OilResVolume] +
-                               cipr[Inplace::Phase::GasResVolume] << ":\n"
-           << ":---------:---------------:---------------:---------------:---------------:---------------:";
-    }
+        ss << " :---------:---------------:---------------:---------------:---------------:---------------:\n"
+           << " : REGION  :  TOTAL PORE   :  PORE VOLUME  :  PORE VOLUME  : PORE VOLUME   :  PORE VOLUME  :\n"
+           << " :         :   VOLUME      :  CONTAINING   :  CONTAINING   : CONTAINING    :  CONTAINING   :\n"
+           << " :         :               :     OIL       :    WATER      :    GAS        :  HYDRO-CARBON :\n"
+           << " :---------:---------------:---------------:---------------:---------------:---------------\n";
+
+        ss << std::right << std::fixed << std::setprecision(0) << " :"
+           << std::setw (8) <<  "FIELD" << " :";
+
+    } else {
+        ss << std::right << std::fixed << std::setprecision(0) << " :"
+           << std::setw (8) <<  reg << " :";
+    }    
+        
+    ss << std::setw(15) << cipr[Inplace::Phase::DynamicPoreVolume] << ":"
+       << std::setw(15) << cipr[Inplace::Phase::OilResVolume] << ":"
+       << std::setw(15) << cipr[Inplace::Phase::WaterResVolume] << ":"
+       << std::setw(15) << cipr[Inplace::Phase::GasResVolume] << ":"
+       << std::setw(15) << cipr[Inplace::Phase::OilResVolume] +
+                           cipr[Inplace::Phase::GasResVolume] << ":";
+    
     OpmLog::note(ss.str());
 }
 

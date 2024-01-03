@@ -42,7 +42,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
-
+#include <opm/simulators/timestepping/SimulatorTimer.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -123,6 +123,7 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
     enum { enableSolvent = getPropValue<TypeTag, Properties::EnableSolvent>() };
 
 public:
+
     static void registerParameters()
     {
         EclOutputBlackOilModule<TypeTag>::registerParameters();
@@ -176,6 +177,7 @@ public:
     {
         OPM_TIMEBLOCK(evalSummaryState);
         const int reportStepNum = simulator_.episodeIndex() + 1;
+        
         /*
           The summary data is not evaluated for timestep 0, that is
           implemented with a:
@@ -193,6 +195,7 @@ public:
           "Correct" in this context means unchanged behavior, might very
           well be more correct to actually remove this if test.
         */
+        
         if (reportStepNum == 0)
             return;
 
@@ -245,18 +248,22 @@ public:
             OPM_END_PARALLEL_TRY_CATCH("Collect to I/O rank: ",
                                        this->simulator_.vanguard().grid().comm());
         }
+        
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
         Inplace inplace;
+        
         {
             OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
-            inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, reportStepNum,
-                                                     isSubStep, simulator_.gridView().comm());
-            eclOutputModule_->outputFipresvLog(miscSummaryData, regionData, reportStepNum,
-                                               isSubStep, simulator_.gridView().comm());
-        }
 
+            inplace = eclOutputModule_->calc_inplace(miscSummaryData, regionData, simulator_.gridView().comm());
+            
+            if (this->collectToIORank_.isIORank()){
+                inplace_ = inplace;
+            }
+        }
+        
         // Add TCPU
         if (totalCpuTime != 0.0) {
             miscSummaryData["TCPU"] = totalCpuTime;
@@ -309,16 +316,6 @@ public:
                               this->summaryState(),
                               this->udqState());
         }
-
-        if (! isSubStep) {
-            OPM_TIMEBLOCK(outputProdInjLogs);
-
-            eclOutputModule_->outputProdLog(reportStepNum);
-            eclOutputModule_->outputInjLog(reportStepNum);
-            eclOutputModule_->outputCumLog(reportStepNum);
-
-            OpmLog::note("");   // Blank line after all reports.
-        }
     }
 
     //! \brief Writes the initial FIP report as configured in RPTSOL.
@@ -352,14 +349,21 @@ public:
         Inplace inplace;
         {
             OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
-            inplace = eclOutputModule_->outputFipLog(miscSummaryData, regionData, 0,
+            
+            boost::posix_time::ptime start_time = boost::posix_time::from_time_t(simulator_.vanguard().schedule().getStartTime());
+
+            inplace = eclOutputModule_->calc_inplace(miscSummaryData, regionData, simulator_.gridView().comm());
+
+            if (this->collectToIORank_.isIORank()){
+                inplace_ = inplace;
+                
+                eclOutputModule_->outputFipAndResvLog(inplace_, 0, 0.0, start_time, 
                                                      false, simulator_.gridView().comm());
-            eclOutputModule_->outputFipresvLog(miscSummaryData, regionData, 0,
-                                               false, simulator_.gridView().comm());
+            }
         }
     }
 
-    void writeOutput(data::Solution&& localCellData, bool isSubStep)
+    void writeOutput(data::Solution&& localCellData, const SimulatorTimer& timer, bool isSubStep)
     {
         OPM_TIMEBLOCK(writeOutput);
 
@@ -383,6 +387,23 @@ public:
 
         // data::Solution localCellData = {};
         if (! isSubStep) {
+            
+            auto rstep = timer.reportStepNum();
+            
+            if ((rstep > 0) && (this->collectToIORank_.isIORank())){
+
+                eclOutputModule_->outputFipAndResvLog(inplace_, rstep, timer.simulationTimeElapsed(),
+                                                     timer.currentDateTime(), false, simulator_.gridView().comm()); 
+
+
+                eclOutputModule_->outputTimeStamp("WELLS", timer.simulationTimeElapsed(), rstep, timer.currentDateTime()); 
+                                                             
+                eclOutputModule_->outputProdLog(reportStepNum);
+                eclOutputModule_->outputInjLog(reportStepNum);
+                eclOutputModule_->outputCumLog(reportStepNum);
+
+                OpmLog::note("");   // Blank line after all reports.
+            }
             
             if (localCellData.empty()) {
                 this->eclOutputModule_->assignToSolution(localCellData);
@@ -675,6 +696,7 @@ private:
     std::unique_ptr<EclOutputBlackOilModule<TypeTag> > eclOutputModule_;
     Scalar restartTimeStepSize_;
     int rank_ ;
+    Inplace inplace_;
 };
 
 } // namespace Opm

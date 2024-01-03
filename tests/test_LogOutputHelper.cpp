@@ -72,6 +72,8 @@ WCONINJE
   'INJ' 'GAS' 'OPEN'  'RATE'  100000 1* 9014 /
 /)";
 
+
+
 std::string trimStream(std::stringstream& str)
 {
     char buffer[1024];
@@ -88,6 +90,7 @@ std::string trimStream(std::stringstream& str)
 
     return data;
 }
+
 
 }
 
@@ -169,6 +172,7 @@ BOOST_AUTO_TEST_CASE(Cumulative)
     BOOST_CHECK_EQUAL(data, reference);
 }
 
+
 BOOST_AUTO_TEST_CASE(Error)
 {
     const std::string reference = R"(Finding the bubble point pressure failed for 3 cells [(2,1,1), (1,3,1), (1,4,1)]
@@ -200,33 +204,39 @@ Finding the dew point pressure failed for 3 cells [(5,1,1), (6,1,1), (7,1,1)]
 
 BOOST_AUTO_TEST_CASE(Fip)
 {
-    const std::string reference = R"(Field total pressure dependent pore volume = 50 RB
-===================================================
-:                   Field Totals                  :
-:      PAV  =             0  PSIA                 :
-:      PORV =           157   RB                  :
-: Pressure is weighted by hydrocarbon pore volume :
-: Pore volumes are taken at reference conditions  :
-:--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:
-:      Liquid        Vapour        Total   :      Total     :      Free        Dissolved       Total   :
-:------------------------:------------------------------------------:----------------:------------------------------------------:
-:Currently   in place    :           132           138           120:          113   :             1             1             1:
-:------------------------:------------------------------------------:----------------:------------------------------------------:
-:Originally  in place    :            25            31            13:            6   :             0             0             0:
-:========================:==========================================:================:==========================================:
-FIPNUM report region 1 pressure dependent pore volume = 50 RB
-===================================================
-:        FIPNUM report region   1                 :
-:      PAV  =             0  PSIA                 :
-:      PORV =           371   RB                  :
-:--------------- Oil    STB ---------------:-- Wat    STB --:--------------- Gas   MSCF ---------------:
-:      Liquid        Vapour        Total   :      Total     :      Free        Dissolved       Total   :
-:------------------------:------------------------------------------:----------------:------------------------------------------:
-:Currently   in place    :           346           352           333:          327   :             2             2             2:
-:------------------------:------------------------------------------:----------------:------------------------------------------:
-:Originally  in place    :           239           245           226:          220   :             1             1             1:
-:========================:==========================================:================:==========================================:
+    const std::string reference = R"(
+                                                     ==================================================
+                                                     :               FIELD TOTALS                     :
+                                                     :         PAV =             0  PSIA              :
+                                                     :         PORV=           157   RB               :
+                                                     : Pressure is weighted by hydrocarbon pore volume:
+                                                     : Pore volumes are taken at reference conditions :
+                           :--------------- OIL    STB ----------------:-- WAT    STB --:--------------- GAS   MSCF ----------------:
+                           :      LIQUID        VAPOUR         TOTAL   :      TOTAL     :       FREE      DISSOLVED         TOTAL   :
+ :-------------------------:-------------------------------------------:----------------:-------------------------------------------:
+ :CURRENTLY IN PLACE       :           132           138            120:           113  :             1             1              1:
+ :-------------------------:-------------------------------------------:----------------:-------------------------------------------:
+ :ORIGINALLY IN PLACE      :            25            31             13:             6  :             0             0              0:
+ ====================================================================================================================================
+
+
+
+                                                     ==================================================
+                                                     :        FIPNUM REPORT REGION   1                :
+                                                     :         PAV =             0  PSIA              :
+                                                     :         PORV=           371   RB               :
+                           :--------------- OIL    STB ----------------:-- WAT    STB --:--------------- GAS   MSCF ----------------:
+                           :      LIQUID        VAPOUR         TOTAL   :      TOTAL     :       FREE      DISSOLVED         TOTAL   :
+ :-------------------------:-------------------------------------------:----------------:-------------------------------------------:
+ :CURRENTLY IN PLACE       :           346           352            333:           327  :             2             2              2:
+ :-------------------------:-------------------------------------------:----------------:-------------------------------------------:
+ :ORIGINALLY IN PLACE      :           239           245            226:           220  :             1             1              1:
+ :-------------------------:-------------------------------------------:----------------:-------------------------------------------:
+ ====================================================================================================================================
+
+
 )";
+
 
     std::stringstream str;
     Opm::OpmLog::addBackend("stream",
@@ -274,22 +284,25 @@ FIPNUM report region 1 pressure dependent pore volume = 50 RB
 
     helper.fip(current, initial, "");
     helper.fip(current, initial, "FIPNUM");
-    std::string data = trimStream(str);
-    BOOST_CHECK_EQUAL(data, reference);
+
+    BOOST_CHECK_EQUAL(str.str(), reference);
 }
 
 BOOST_AUTO_TEST_CASE(FipResv)
 {
-    const std::string reference = R"(===================================
-:  RESERVOIR VOLUMES      RB      :
-:---------:---------------:---------------:---------------:---------------:---------------:
-: REGION  :  TOTAL PORE   :  PORE VOLUME  :  PORE VOLUME  : PORE VOLUME   :  PORE VOLUME  :
-:         :   VOLUME      :  CONTAINING   :  CONTAINING   : CONTAINING    :  CONTAINING   :
-:         :               :     OIL       :    WATER      :    GAS        :  HYDRO-CARBON :
-:---------:---------------:---------------:---------------:---------------:---------------
-:        1:            176:            170:            164:            176:            346:
-:---------:---------------:---------------:---------------:---------------:---------------:
+    const std::string reference = R"(
+                                                     ===================================
+                                                     :  RESERVOIR VOLUMES      RB      :
+ :---------:---------------:---------------:---------------:---------------:---------------:
+ : REGION  :  TOTAL PORE   :  PORE VOLUME  :  PORE VOLUME  : PORE VOLUME   :  PORE VOLUME  :
+ :         :   VOLUME      :  CONTAINING   :  CONTAINING   : CONTAINING    :  CONTAINING   :
+ :         :               :     OIL       :    WATER      :    GAS        :  HYDRO-CARBON :
+ :---------:---------------:---------------:---------------:---------------:---------------
+ :   FIELD :            176:             13:             19:             25:             38:
+ :       1 :            176:            170:            164:            176:            346:
+ ===========================================================================================
 )";
+    
 
     std::stringstream str;
     Opm::OpmLog::addBackend("stream",
@@ -323,10 +336,10 @@ BOOST_AUTO_TEST_CASE(FipResv)
     current.add(Opm::Inplace::Phase::GasResVolume, 4.0);
     current.add("FIPNUM", Opm::Inplace::Phase::DynamicPoreVolume, 1, 11.0 + phases.size());
 
-    helper.fipResv(current);
-    std::string data = trimStream(str);
-    BOOST_CHECK_EQUAL(data, reference);
+    helper.fipResv(current, "FIPNUM");
+    BOOST_CHECK_EQUAL(str.str(), reference);
 }
+
 
 BOOST_AUTO_TEST_CASE(Injection)
 {
@@ -381,6 +394,7 @@ BOOST_AUTO_TEST_CASE(Injection)
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
 }
+
 
 BOOST_AUTO_TEST_CASE(Production)
 {
@@ -441,3 +455,4 @@ BOOST_AUTO_TEST_CASE(Production)
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
 }
+

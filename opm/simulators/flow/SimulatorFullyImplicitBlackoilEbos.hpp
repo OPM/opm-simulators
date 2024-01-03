@@ -362,7 +362,7 @@ public:
             ebosSimulator_.setEpisodeLength(0.0);
             ebosSimulator_.setTimeStepSize(0.0);
             wellModel_().beginReportStep(timer.currentStepNum());
-            ebosSimulator_.problem().writeOutput();
+            ebosSimulator_.problem().writeOutput(timer);
 
             report_.success.output_write_time += perfTimer.stop();
         }
@@ -432,7 +432,7 @@ public:
         perfTimer.start();
         const double nextstep = adaptiveTimeStepping_ ? adaptiveTimeStepping_->suggestedNextStep() : -1.0;
         ebosSimulator_.problem().setNextTimeStepSize(nextstep);
-        ebosSimulator_.problem().writeOutput();
+        ebosSimulator_.problem().writeOutput(timer);
         report_.success.output_write_time += perfTimer.stop();
 
         solver_->model().endReportStep();
@@ -452,13 +452,8 @@ public:
 
         // Increment timer, remember well state.
         ++timer;
-
+        
         if (terminalOutput_) {
-            if (!timer.initialStep()) {
-                const std::string version = moduleVersionName();
-                outputTimestampFIP(timer, eclState().getTitle(), version);
-            }
-
             std::string msg =
                 "Time step took " + std::to_string(solverTimer_->secsSinceStart()) + " seconds; "
                 "total solver time " + std::to_string(report_.success.solver_time) + " seconds.";
