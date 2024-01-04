@@ -95,8 +95,7 @@ LogOutputHelper<Scalar>::LogOutputHelper(const EclipseState& eclState,
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
-cumulative(const std::size_t reportStepNum,
-           std::function<bool(const std::string&)> isDefunct) const
+cumulative(const std::size_t reportStepNum) const
 {
     this->beginCumulativeReport_();
 
@@ -138,11 +137,6 @@ cumulative(const std::size_t reportStepNum,
     }
 
     for (const auto& wname : schedule_.wellNames(reportStepNum)) {
-        // don't bother with wells not on this process
-        if (isDefunct(wname)) {
-            continue;
-        }
-
         const auto& well = schedule_.getWell(wname, reportStepNum);
         tmp_names[0] = wname; // WellCumDataType::WellName
         auto wName = static_cast<std::string>(wname);
@@ -381,8 +375,7 @@ timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
-injection(const std::size_t reportStepNum,
-          std::function<bool(const std::string&)> isDefunct) const
+injection(const std::size_t reportStepNum) const
 {
     this->beginInjectionReport_();
 
@@ -415,11 +408,6 @@ injection(const std::size_t reportStepNum,
     }
 
     for (const auto& wname : schedule_.wellNames(reportStepNum)) {
-        // don't bother with wells not on this process
-        if (isDefunct(wname)) {
-            continue;
-        }
-
         const auto& well = schedule_.getWell(wname, reportStepNum);
 
         // Ignore Producer wells
@@ -507,8 +495,7 @@ injection(const std::size_t reportStepNum,
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
-production(const std::size_t reportStepNum,
-           std::function<bool(const std::string&)> isDefunct) const
+production(const std::size_t reportStepNum) const
 {
     this->beginProductionReport_();
 
@@ -550,12 +537,6 @@ production(const std::size_t reportStepNum,
     }
 
     for (const auto& wname : schedule_.wellNames(reportStepNum)) {
-
-        // don't bother with wells not on this process
-        if (isDefunct(wname)) {
-            continue;
-        }
-
         const auto& well = schedule_.getWell(wname, reportStepNum);
 
         // Ignore injector wells

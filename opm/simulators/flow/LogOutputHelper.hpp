@@ -25,7 +25,6 @@
 #include <opm/output/eclipse/Inplace.hpp>
 
 #include <cstddef>
-#include <functional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -47,8 +46,7 @@ public:
                     const SummaryState& st);
 
     //! \brief Write cumulative production and injection reports to output.
-    void cumulative(const std::size_t reportStepNum,
-                    std::function<bool(const std::string&)> isDefunct) const;
+    void cumulative(const std::size_t reportStepNum) const;
 
     //! \brief Write error report to output.
     void error(const std::vector<int>& failedCellsPbub,
@@ -63,12 +61,10 @@ public:
     void fipResv(const Inplace& inplace, const std::string& name) const;
 
     //! \brief Write injection report to output.
-    void injection(const std::size_t reportStepNum,
-                   std::function<bool(const std::string&)> isDefunct) const;
+    void injection(const std::size_t reportStepNum) const;
 
     //! \brief Write production report to output.
-    void production(const std::size_t reportStepNum,
-                    std::function<bool(const std::string&)> isDefunct) const;
+    void production(const std::size_t reportStepNum) const;
 
     void timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate) const;
 
