@@ -1604,7 +1604,7 @@ namespace Opm
         for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
             const int cell_idx = this->well_cells_[perf];
             const auto& intQuants = simulator.model().intensiveQuantities(cell_idx, /*timeIdx=*/ 0);
-            const double trans_mult = simulator.problem().template rockCompTransMultiplier<double>(intQuants, cell_idx);
+            const double trans_mult = simulator.problem().template wellTransMultiplier<double>(intQuants, cell_idx);
             const auto& connection = this->well_ecl_.getConnections()[perf_data.ecl_index[perf]];
             perf_data.connection_transmissibility_factor[perf] = connection.CF() * trans_mult;
         }

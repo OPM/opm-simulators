@@ -243,6 +243,10 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, int, NumPressurePointsEquil,
                              "Number of pressure points (in each direction) in tables used for equilibration");
         EWOMS_HIDE_PARAM(TypeTag, NumPressurePointsEquil); // Users will typically not need to modify this parameter..
+        EWOMS_REGISTER_PARAM(TypeTag, bool, ExplicitRockCompaction,
+                             "Use pressure from end of the last time step when evaluating rock compaction");
+        EWOMS_HIDE_PARAM(TypeTag, ExplicitRockCompaction); // Users will typically not need to modify this parameter..
+
     }
 
 
@@ -1677,35 +1681,9 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        OPM_TIMEBLOCK_LOCAL(rockCompTransMultiplier);
-        if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty())
-            return 1.0;
-
-        unsigned tableIdx = 0;
-        if (!this->rockTableIdx_.empty())
-            tableIdx = this->rockTableIdx_[elementIdx];
-
-        const auto& fs = intQuants.fluidState();
-        LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
-
-        if (!this->minRefPressure_.empty())
-            // The pore space change is irreversible
-            effectivePressure =
-                min(decay<LhsEval>(fs.pressure(refPressurePhaseIdx_())),
-                    this->minRefPressure_[elementIdx]);
-
-        if (!this->overburdenPressure_.empty())
-            effectivePressure -= this->overburdenPressure_[elementIdx];
-
-        if (!this->rockCompTransMult_.empty())
-            return this->rockCompTransMult_[tableIdx].eval(effectivePressure, /*extrapolation=*/true);
-
-        // water compaction
-        assert(!this->rockCompTransMultWc_.empty());
-        LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
-        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
-
-        return this->rockCompTransMultWc_[tableIdx].eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);
+        bool implicit = !EWOMS_GET_PARAM(TypeTag, bool, ExplicitRockCompaction);
+        return implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx)
+                        : this->simulator().problem().getRockCompTransMultVal(elementIdx);
     }
 
     /*!
@@ -1736,7 +1714,9 @@ public:
     {
         OPM_TIMEBLOCK_LOCAL(wellTransMultiplier);
         
-        double trans_mult = this->simulator().problem().template rockCompTransMultiplier<double>(intQuants, elementIdx);
+        bool implicit = !EWOMS_GET_PARAM(TypeTag, bool, ExplicitRockCompaction);
+        double trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<double>(intQuants, elementIdx)
+                                     : this->simulator().problem().getRockCompTransMultVal(elementIdx);
         trans_mult *= this->simulator().problem().template permFactTransMultiplier<double>(intQuants);
     
         return trans_mult;
@@ -1832,6 +1812,8 @@ protected:
 
         if constexpr (getPropValue<TypeTag, Properties::EnablePolymer>())
             updateMaxPolymerAdsorption_();
+
+        updateRockCompTransMultVal_();
     }
 
     template<class UpdateFunc>
@@ -2522,6 +2504,15 @@ protected:
         }
     }
 
+    Scalar getRockCompTransMultVal(std::size_t dofIdx) const
+    {
+        if (this->rockCompTransMultVal_.empty())
+            return 1.0;
+
+        return this->rockCompTransMultVal_[dofIdx];
+    }
+
+
 private:
     struct PffDofData_
     {
@@ -2694,6 +2685,57 @@ private:
         else {
             return waterPhaseIdx;
         }
+    }
+
+    void updateRockCompTransMultVal_()
+    {
+        const auto& model = this->simulator().model();
+        std::size_t numGridDof = this->model().numGridDof();
+        this->rockCompTransMultVal_.resize(numGridDof, 1.0);
+        for (std::size_t elementIdx = 0; elementIdx < numGridDof; ++elementIdx) {
+            const auto& iq = *model.cachedIntensiveQuantities(elementIdx, /*timeIdx=*/ 0);
+            Scalar trans_mult = computeRockCompTransMultiplier_<Scalar>(iq, elementIdx);
+            this->rockCompTransMultVal_[elementIdx] = trans_mult;
+        }
+    }
+
+    /*!
+     * \brief Calculate the transmissibility multiplier due to water induced rock compaction.
+     *
+     * TODO: The API of this is a bit ad-hoc, it would be better to use context objects.
+     */
+    template <class LhsEval>
+    LhsEval computeRockCompTransMultiplier_(const IntensiveQuantities& intQuants, unsigned elementIdx) const
+    {
+        OPM_TIMEBLOCK_LOCAL(computeRockCompTransMultiplier);
+        if (this->rockCompTransMult_.empty() && this->rockCompTransMultWc_.empty())
+            return 1.0;
+
+        unsigned tableIdx = 0;
+        if (!this->rockTableIdx_.empty())
+            tableIdx = this->rockTableIdx_[elementIdx];
+
+        const auto& fs = intQuants.fluidState();
+        LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
+
+        if (!this->minRefPressure_.empty())
+            // The pore space change is irreversible
+            effectivePressure =
+                min(decay<LhsEval>(fs.pressure(refPressurePhaseIdx_())),
+                    this->minRefPressure_[elementIdx]);
+
+        if (!this->overburdenPressure_.empty())
+            effectivePressure -= this->overburdenPressure_[elementIdx];
+
+        if (!this->rockCompTransMult_.empty())
+            return this->rockCompTransMult_[tableIdx].eval(effectivePressure, /*extrapolation=*/true);
+
+        // water compaction
+        assert(!this->rockCompTransMultWc_.empty());
+        LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
+        LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
+
+        return this->rockCompTransMultWc_[tableIdx].eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);
     }
 
     typename Vanguard::TransmissibilityType transmissibilities_;

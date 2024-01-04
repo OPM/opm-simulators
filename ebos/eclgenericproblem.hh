@@ -359,6 +359,7 @@ protected:
     std::vector<TabulatedTwoDFunction> rockCompTransMultWc_;
     std::vector<TabulatedFunction> rockCompPoroMult_;
     std::vector<TabulatedFunction> rockCompTransMult_;
+    std::vector<Scalar> rockCompTransMultVal_;
 
     PolymerSolutionContainer<Scalar> polymer_;
     std::vector<Scalar> maxOilSaturation_;
