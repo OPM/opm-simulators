@@ -430,6 +430,7 @@ assignToSolution(data::Solution& sol)
         DataEntry{"PPCW",     UnitSystem::measure::pressure,                              ppcw_},
         DataEntry{"PRESROCC", UnitSystem::measure::pressure,                              minimumOilPressure_},
         DataEntry{"PRESSURE", UnitSystem::measure::pressure,                              fluidPressure_},
+        DataEntry{"RPORV",    UnitSystem::measure::volume,                                rPorV_},
         DataEntry{"RS",       UnitSystem::measure::gas_oil_ratio,                         rs_},
         DataEntry{"RSSAT",    UnitSystem::measure::gas_oil_ratio,                         gasDissolutionFactor_},
         DataEntry{"RV",       UnitSystem::measure::oil_gas_ratio,                         rv_},
@@ -1078,6 +1079,10 @@ doAllocBuffers(const unsigned bufferSize,
     if (FluidSystem::phaseIsActive(gasPhaseIdx) && rstKeywords["BG"] > 0) {
         rstKeywords["BG"] = 0;
         invB_[gasPhaseIdx].resize(bufferSize, 0.0);
+    }
+    if (rstKeywords["RPORV"] > 0) {
+        rstKeywords["RPORV"] = 0;
+        rPorV_.resize(bufferSize, 0.0);
     }
 
     enableFlows_ = false;
