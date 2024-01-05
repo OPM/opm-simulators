@@ -38,10 +38,11 @@
 #include <dune/istl/bvector.hh>
 #include <dune/common/fvector.hh>
 
-#include <vector>
+#include <array>
 #include <sstream>
 #include <string>
-#include <array>
+#include <string_view>
+#include <vector>
 
 #include <cstdio>
 
@@ -422,7 +423,7 @@ protected:
     {
         char name[512];
         for (unsigned i = 0; i < numPhases; ++i) {
-            snprintf(name, 512, pattern, FluidSystem::phaseName(i));
+            snprintf(name, 512, pattern, FluidSystem::phaseName(i).data());
 
             if (bufferType == DofBuffer)
                 DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i], name);
@@ -445,7 +446,7 @@ protected:
     {
         char name[512];
         for (unsigned i = 0; i < numComponents; ++i) {
-            snprintf(name, 512, pattern, FluidSystem::componentName(i));
+            snprintf(name, 512, pattern, FluidSystem::componentName(i).data());
 
             if (bufferType == DofBuffer)
                 DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i], name);
@@ -470,8 +471,8 @@ protected:
         for (unsigned i= 0; i < numPhases; ++i) {
             for (unsigned j = 0; j < numComponents; ++j) {
                 snprintf(name, 512, pattern,
-                         FluidSystem::phaseName(i),
-                         FluidSystem::componentName(j));
+                         FluidSystem::phaseName(i).data(),
+                         FluidSystem::componentName(j).data());
 
                 if (bufferType == DofBuffer)
                     DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i][j], name);
