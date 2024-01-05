@@ -461,6 +461,11 @@ public:
                 this->extboZ_[globalDofIdx] = intQuants.zFraction().value();
             }
 
+            if (!this->rPorV_.empty()) {
+                const auto totVolume = elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
+                this->rPorV_[globalDofIdx] = totVolume * intQuants.porosity().value();
+            }
+
             if (!this->mFracCo2_.empty()) {
                 const Scalar stdVolOil = getValue(fs.saturation(oilPhaseIdx)) * getValue(fs.invB(oilPhaseIdx))
                     + getValue(fs.saturation(gasPhaseIdx)) * getValue(fs.invB(gasPhaseIdx)) * getValue(fs.Rv());
