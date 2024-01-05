@@ -318,7 +318,13 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
 
             // we only need to calculate a face's transmissibility
             // once...
-            if (elemIdx > outsideElemIdx)
+
+            // This comparison can be problematic for corner cases in mpi
+            // Test case observed elemIdx <= outsideElemIdx AND insideFaceIdx==4
+            // This means an assert failure in applyAllZMultipliers_() while useSmallestMultiplier==true
+            // Converting to comparison between insideCartElemIdx and outsideCartElemIdx fixes the problem
+            // if (elemIdx > outsideElemIdx)
+            if (insideCartElemIdx > outsideCartElemIdx)
                 continue;
 
             // local indices of the faces of the inside and
