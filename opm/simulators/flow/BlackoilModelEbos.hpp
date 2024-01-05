@@ -337,7 +337,7 @@ namespace Opm {
             // the step is not considered converged until at least minIter iterations is done
             {
                 auto convrep = getConvergence(timer, iteration, residual_norms);
-                report.converged = convrep.converged() && iteration > minIter;
+                report.converged = convrep.converged() && iteration >= minIter;
                 ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
                 convergence_reports_.back().report.push_back(std::move(convrep));
 
