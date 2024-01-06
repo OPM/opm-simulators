@@ -318,13 +318,11 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
 
             // we only need to calculate a face's transmissibility
             // once...
-
-            // This comparison can be problematic for corner cases in mpi
-            // Test case observed elemIdx <= outsideElemIdx AND insideFaceIdx==4
-            // This means an assert failure in applyAllZMultipliers_() while useSmallestMultiplier==true
-            // Converting to comparison between insideCartElemIdx and outsideCartElemIdx fixes the problem
-            // if (elemIdx > outsideElemIdx)
-            if (insideCartElemIdx > outsideCartElemIdx)
+            // In a parallel run insideCartElemIdx>outsideCartElemIdx does not imply elemIdx>outsideElemIdx for
+            // ghost cells and we need to use the cartesian index as this will be used when applying Z multipliers
+            // We still need to cover the case where both cells are part of an LGR and as a consequence might have
+            // the same cartesian index
+            if (std::tie(insideCartElemIdx, elemIdx) > std::tie(outsideCartElemIdx, outsideElemIdx))
                 continue;
 
             // local indices of the faces of the inside and
