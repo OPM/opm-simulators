@@ -318,7 +318,11 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
 
             // we only need to calculate a face's transmissibility
             // once...
-            if (elemIdx > outsideElemIdx)
+            // In a parallel run insideCartElemIdx>outsideCartElemIdx does not imply elemIdx>outsideElemIdx for
+            // ghost cells and we need to use the cartesian index as this will be used when applying Z multipliers
+            // We still need to cover the case where both cells are part of an LGR and as a consequence might have
+            // the same cartesian index
+            if (std::tie(insideCartElemIdx, elemIdx) > std::tie(outsideCartElemIdx, outsideElemIdx))
                 continue;
 
             // local indices of the faces of the inside and
