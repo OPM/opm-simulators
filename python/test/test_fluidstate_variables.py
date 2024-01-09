@@ -16,4 +16,5 @@ class TestBasic(unittest.TestCase):
 
     def test_all(self):
         with pushd(self.data_dir):
-            assert True
+            sim = BlackOilSimulator("SPE1CASE1.DATA")
+            sim.step_init()
