@@ -1507,13 +1507,55 @@ namespace Opm
             return std::vector<Scalar>(this->num_components_, 0.0);
 
         double d = computeConnectionDFactor(perf, intQuants, ws);
-        const PhaseUsage& pu = this->phaseUsage();
-        double Q = std::abs(ws.perf_data.phase_rates[perf*pu.num_phases + pu.phase_pos[Gas]]);
+        if (d < 1.0e-15)  {
+            return wi;
+        }
+
+        // Solve quadratic equations for connection rates satisfying the ipr and the flow-dependent skin.
+        // If more than one solution, pick the one corresponding to lowest absolute rate (smallest skin).
         const auto& connection = this->well_ecl_.getConnections()[ws.perf_data.ecl_index[perf]];
-        double Kh = connection.Kh();
-        double scaling = 3.141592653589 * Kh * connection.wpimult();
+        const double Kh = connection.Kh();
+        const double scaling = 3.141592653589 * Kh * connection.wpimult();
         const unsigned gas_comp_idx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (Q/2 * d / scaling));
+
+        const double connection_pressure = ws.perf_data.pressure[perf];
+        const double cell_pressure = getValue(intQuants.fluidState().pressure(FluidSystem::gasPhaseIdx));
+        const double drawdown = cell_pressure - connection_pressure;
+        const double invB = getValue(intQuants.fluidState().invB(FluidSystem::gasPhaseIdx));
+        const double mob_g = getValue(intQuants.mobility(FluidSystem::gasPhaseIdx)) * invB;
+        const double a = d;
+        const double b = 2*scaling/wi[gas_comp_idx];
+        const double c = -2*scaling*mob_g*drawdown;
+
+        double consistent_Q = -1.0e20;
+        // Find and check negative solutions (a --> -a)
+        const double r2n = b*b + 4*a*c;
+        if (r2n >= 0) {
+            const double rn = std::sqrt(r2n);
+            const double xn1 = (b-rn)*0.5/a;
+            if (xn1 <= 0) {
+                consistent_Q = xn1;
+            }
+            const double xn2 = (b+rn)*0.5/a;
+            if (xn2 <= 0 && xn2 > consistent_Q) {
+                consistent_Q = xn2;
+            }
+        }
+        // Find and check positive solutions
+        consistent_Q *= -1;
+        const double r2p = b*b - 4*a*c;
+        if (r2p >= 0) {
+            const double rp = std::sqrt(r2p);
+            const double xp1 = (rp-b)*0.5/a;
+            if (xp1 > 0 && xp1 < consistent_Q) {
+                consistent_Q = xp1;
+            }
+            const double xp2 = -(rp+b)*0.5/a;
+            if (xp2 > 0 && xp2 < consistent_Q) {
+                consistent_Q = xp2;
+            }
+        }
+        wi[gas_comp_idx]  = 1.0/(1.0/(trans_mult * this->well_index_[perf]) + (consistent_Q/2 * d / scaling));
         return wi;
     }
 
