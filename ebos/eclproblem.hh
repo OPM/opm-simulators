@@ -1409,6 +1409,34 @@ public:
         if (enableAquifers_)
             aquiferModel_.addToSource(rate, globalDofIdx, timeIdx);
 
+        // Add source term from deck
+        const auto& source = this->simulator().vanguard().schedule()[this->episodeIndex()].source();
+        if (source.size() > 0) {
+            std::array<int,3> ijk;
+                this->simulator().vanguard().cartesianCoordinate(globalDofIdx, ijk);
+            RateVector massRate(0.0);
+            if ( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
+                massRate[Indices::canonicalToActiveComponentIndex(oilCompIdx)] = source.rate({ijk, SourceComponent::OIL}) / this->model().dofTotalVolume(globalDofIdx);
+            }
+            if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
+                massRate[Indices::canonicalToActiveComponentIndex(gasCompIdx)] = source.rate({ijk, SourceComponent::GAS}) / this->model().dofTotalVolume(globalDofIdx);
+            }
+            if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                massRate[Indices::canonicalToActiveComponentIndex(waterCompIdx)] = source.rate({ijk, SourceComponent::WATER}) / this->model().dofTotalVolume(globalDofIdx);
+            }
+            if constexpr (enableSolvent) {
+                massRate[Indices::solventSaturationIdx] = source.rate({ijk, SourceComponent::SOLVENT}) / this->model().dofTotalVolume(globalDofIdx);
+            }
+            const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
+            rate.setMassRate(massRate, pvtRegionIdx);
+            if constexpr (enablePolymer) {
+                rate[Indices::polymerConcentrationIdx] = source.rate({ijk, SourceComponent::POLYMER}) / this->model().dofTotalVolume(globalDofIdx);
+            }
+            if constexpr (enableEnergy) {
+                rate[Indices::contiEnergyEqIdx] = source.hrate(ijk) / this->model().dofTotalVolume(globalDofIdx);
+            }
+        }
+
         // if requested, compensate systematic mass loss for cells which were "well
         // behaved" in the last time step
         // Note that we don't allow for drift compensation if there are no active wells.

@@ -52,6 +52,7 @@
 #include <opm/input/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/input/eclipse/Schedule/RPTConfig.hpp>
 #include <opm/input/eclipse/Schedule/RSTConfig.hpp>
+#include <opm/input/eclipse/Schedule/Source.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/Action/ActionResult.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
@@ -281,6 +282,7 @@ TEST_FOR_TYPE(SkprpolyTable)
 TEST_FOR_TYPE(SkprwatTable)
 TEST_FOR_TYPE(SICD)
 TEST_FOR_TYPE(SolventDensityTable)
+TEST_FOR_TYPE(Source)
 TEST_FOR_TYPE(SummaryConfig)
 TEST_FOR_TYPE(SummaryConfigNode)
 TEST_FOR_TYPE(SummaryState)
