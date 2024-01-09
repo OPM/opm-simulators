@@ -167,7 +167,7 @@ BOOST_AUTO_TEST_CASE(Cumulative)
     }
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st);
-    helper.cumulative(0, [](const std::string&) { return false; });
+    helper.cumulative(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
 }
@@ -390,7 +390,7 @@ BOOST_AUTO_TEST_CASE(Injection)
     }
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st);
-    helper.injection(0, [](const std::string&) { return false; });
+    helper.injection(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
 }
@@ -451,7 +451,7 @@ BOOST_AUTO_TEST_CASE(Production)
     }
 
     Opm::LogOutputHelper<double> helper(eclState, schedule, st);
-    helper.production(0, [](const std::string&) { return false; });
+    helper.production(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
 }
