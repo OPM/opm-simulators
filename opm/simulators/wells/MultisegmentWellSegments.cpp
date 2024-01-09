@@ -829,43 +829,36 @@ pressureDropValve(const int seg,
 template<class FluidSystem, class Indices, class Scalar>
 typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
 MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
-accelerationPressureLoss(const int seg) const
+accelerationPressureLossContribution(const int seg,
+                                     const double area,
+                                     const bool extra_reverse_flow_derivatives /*false*/) const
 {
-    const auto& segment_set = well_.wellEcl().getSegments();
-    const double area = segment_set[seg].crossArea();
-    const EvalWell mass_rate = mass_rates_[seg];
+    // Compute the *signed* velocity head for given segment (sign is positive for flow towards surface, i.e., negative rate) 
+    // Optionally return derivatives for reversed flow case
+    EvalWell mass_rate = mass_rates_[seg];
     const int seg_upwind = upwinding_segments_[seg];
-    EvalWell density = densities_[seg_upwind];
-    // WARNING
-    // We disregard the derivatives from the upwind density to make sure derivatives
-    // wrt. to different segments dont get mixed.
+    EvalWell density = densities_[seg_upwind];    
     if (seg != seg_upwind) {
-        density.clearDerivatives();
-    }
-
-    EvalWell accelerationPressureLoss = mswellhelpers::velocityHead(area, mass_rate, density);
-    // handling the velocity head of intlet segments
-    for (const int inlet : inlets_[seg]) {
-        const int seg_upwind_inlet = upwinding_segments_[inlet];
-        const double inlet_area = segment_set[inlet].crossArea();
-        EvalWell inlet_density = densities_[seg_upwind_inlet];
-        // WARNING
-        // We disregard the derivatives from the upwind density to make sure derivatives
-        // wrt. to different segments dont get mixed.
-        if (inlet != seg_upwind_inlet) {
-            inlet_density.clearDerivatives();
+        if (!extra_reverse_flow_derivatives){
+            constexpr int WQTotal = Indices::numEq + PrimaryVariables::WQTotal;
+            constexpr int SPres = Indices::numEq + PrimaryVariables::SPres;
+            density.setDerivative(WQTotal, 0.0);
+            density.setDerivative(SPres, 0.0);
+        } else {
+            if (PrimaryVariables::has_water){
+                constexpr int WFrac = Indices::numEq + PrimaryVariables::WFrac;
+                density.setDerivative(WFrac, 0.0);
+            }
+            if (PrimaryVariables::has_gas){
+                constexpr int GFrac = Indices::numEq + PrimaryVariables::GFrac;
+                density.setDerivative(GFrac, 0.0);
+            }
+            mass_rate.clearDerivatives();
         }
-        const EvalWell inlet_mass_rate = mass_rates_[inlet];
-        accelerationPressureLoss -= mswellhelpers::velocityHead(std::max(inlet_area, area), inlet_mass_rate, inlet_density);
     }
-
-    // We change the sign of the accelerationPressureLoss for injectors.
-    // Is this correct? Testing indicates that this is what the reference simulator does
-    const double sign = mass_rate < 0. ? 1.0 : - 1.0;
-    accelerationPressureLoss *= sign;
-
-    return accelerationPressureLoss;
-}
+    const double sign = mass_rate > 0 ? -1.0 : 1.0;
+    return sign*mswellhelpers::velocityHead(area, mass_rate, density);
+}                                     
 
 template <class FluidSystem, class Indices, class Scalar>
 void

@@ -198,19 +198,50 @@ extendEval(const Eval& in) const
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
-handleAccelerationPressureLoss(const int seg,
-                               WellState& well_state)
+assembleAccelerationPressureLoss(const int seg,
+                                 WellState& well_state)
 {
-    const EvalWell accelerationPressureLoss = segments_.accelerationPressureLoss(seg);
-
+    // Computes and assembles p-drop due to acceleration
+    assert(seg != 0); // top segment can not enter here
     auto& segments = well_state.well(baseif_.indexOfWell()).segments;
-    segments.pressure_drop_accel[seg] = accelerationPressureLoss.value();
+    const auto& segment_set = this->segmentSet();
 
+    // Add segment head
+    const double seg_area = segment_set[seg].crossArea();
+    const EvalWell signed_velocity_head = segments_.accelerationPressureLossContribution(seg, seg_area);
+    segments.pressure_drop_accel[seg] = signed_velocity_head.value();
+    
+    const int seg_upwind = segments_.upwinding_segment(seg);
+    // acceleration term is *subtracted* from pressure equation
     MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
-        assemblePressureLoss(seg,
-                             segments_.upwinding_segment(seg),
-                             accelerationPressureLoss, linSys_);
+        assembleAccelerationTerm(seg, seg, seg_upwind, signed_velocity_head, linSys_);
+    if (seg != seg_upwind) {// special treatment for reverse flow
+        // extra derivatives are *added* to Jacobian (hence minus)
+        const EvalWell extra_derivatives = -segments_.accelerationPressureLossContribution(seg, seg_area, /*extra_derivatives*/ true);
+        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+            assemblePressureEqExtraDerivatives(seg, seg_upwind, extra_derivatives, linSys_);
+    }
+
+    // Subtract inlet head(s), opposite signs from above
+    for (const int inlet : segments_.inlets(seg)) {
+        // area used in formula is max of areas
+        const double inlet_area = std::max(seg_area, segment_set[inlet].crossArea());
+        const EvalWell signed_velocity_head_inlet = segments_.accelerationPressureLossContribution(inlet, inlet_area);
+        segments.pressure_drop_accel[seg] -= signed_velocity_head_inlet.value();
+
+        const int inlet_upwind = segments_.upwinding_segment(inlet); 
+        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+            assembleAccelerationTerm(seg, inlet, inlet_upwind, -signed_velocity_head_inlet, linSys_);
+        if (inlet != inlet_upwind) {// special treatment for reverse flow
+            // extra derivatives are *added* to Jacobian (hence minus minus)
+            const EvalWell extra_derivatives_inlet = segments_.accelerationPressureLossContribution(inlet, inlet_area, /*extra_derivatives*/ true);
+            // in this case inlet_upwind = seg
+            MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(baseif_).
+                assemblePressureEqExtraDerivatives(seg, inlet_upwind, extra_derivatives_inlet, linSys_);
+        }
+    }
 }
+
 
 template<typename FluidSystem, typename Indices, typename Scalar>
 void
@@ -352,7 +383,7 @@ assembleAccelerationAndHydroPressureLosses(const int seg,
                                            const bool use_average_density)
 {
     if (this->accelerationalPressureLossConsidered()) {
-        handleAccelerationPressureLoss(seg, well_state);
+        assembleAccelerationPressureLoss(seg, well_state);
     }
 
     // Since density derivatives are organized differently than what is required for assemblePressureEq,
