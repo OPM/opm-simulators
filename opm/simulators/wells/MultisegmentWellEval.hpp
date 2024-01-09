@@ -128,8 +128,8 @@ protected:
                                    const double tolerance_pressure_ms_wells,
                                    DeferredLogger& deferred_logger) const;
 
-    void handleAccelerationPressureLoss(const int seg,
-                                        WellState& well_state);
+    void assembleAccelerationPressureLoss(const int seg,
+                                          WellState& well_state);
 
     EvalWell pressureDropAutoICD(const int seg,
                                  const UnitSystem& unit_system) const;

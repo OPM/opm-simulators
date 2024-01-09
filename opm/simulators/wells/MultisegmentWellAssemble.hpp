@@ -80,19 +80,20 @@ public:
                            Equations& eqns,
                            DeferredLogger& deferred_logger) const;
 
+    //! \brief Assemble piece of the acceleration term
+    void assembleAccelerationTerm(const int seg_target,
+                                  const int seg,
+                                  const int seg_upwing,
+                                  const EvalWell& accelerationTerm,
+                                  Equations& eqns1) const;
 
-    //! \brief Assemble pressure loss term.
-    void assemblePressureLoss(const int seg,
-                              const int seg_upwind,
-                              const EvalWell& accelerationPressureLoss,
-                              Equations& eqns) const;
-
-
+    //! \brief Assemble hydraulic pressure term
     void assembleHydroPressureLoss(const int seg,
                                    const int seg_density,
                                    const EvalWell& hydro_pressure_drop_seg,
                                    Equations& eqns1) const;
 
+    //! \brief Assemble additional derivatives due to reverse flow
     void assemblePressureEqExtraDerivatives(const int seg,
                                             const int seg_upwind,
                                             const EvalWell& extra_derivatives,
