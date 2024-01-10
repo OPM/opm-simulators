@@ -20,16 +20,10 @@
 #ifndef DAMARIS_OUTPUT_MODULE_HPP
 #define DAMARIS_OUTPUT_MODULE_HPP
 
-#include <opm/common/OpmLog/OpmLog.hpp>
-
-#include <limits>
-#include <stdexcept>
-#include <string>
-
-#include <fmt/format.h>
-
-#include <Damaris.h>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+
+#include <map>
+#include <string>
 
 /*
     Below is the XML file for Damaris that is supported by Damaris.
@@ -38,11 +32,10 @@
     Keywords.
 */
 
+namespace Opm::DamarisOutput {
 
-namespace Opm::DamarisOutput
-{
- // Initialize an XML file
- std::string initDamarisXmlFile();
+// Initialize an XML file
+std::string initDamarisXmlFile();
  
 /**
 *   Initialize Damaris by either:
@@ -50,7 +43,8 @@ namespace Opm::DamarisOutput
 *  2/ Reading a file specified by the environment variable FLOW_DAMARIS_XML_FILE 
 *  
 */
- void initializeDamaris(const MPI_Comm comm, const int mpiRank, const std::map<std::string, std::string>& find_replace_map );
+void initializeDamaris(const Parallel::Communication comm, const int mpiRank,
+                       const std::map<std::string, std::string>& find_replace_map);
 
 } // namespace Opm::DamarisOutput
 

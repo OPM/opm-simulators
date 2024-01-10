@@ -70,10 +70,10 @@ namespace Opm {
  
 template <class TypeTag>
 class DamarisWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>,
-                                          GetPropType<TypeTag, Properties::EquilGrid>,
-                                          GetPropType<TypeTag, Properties::GridView>,
-                                          GetPropType<TypeTag, Properties::ElementMapper>,
-                                          GetPropType<TypeTag, Properties::Scalar>>
+                                              GetPropType<TypeTag, Properties::EquilGrid>,
+                                              GetPropType<TypeTag, Properties::GridView>,
+                                              GetPropType<TypeTag, Properties::ElementMapper>,
+                                              GetPropType<TypeTag, Properties::Scalar>>
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
