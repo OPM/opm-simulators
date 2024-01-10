@@ -19,15 +19,21 @@
 */
 
 #include <config.h>
+#include <opm/simulators/utils/DamarisKeywords.hpp>
+
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <Damaris.h>
-#include <opm/simulators/utils/DamarisKeywords.hpp>
 #include <damaris/env/Environment.hpp>
 
-#include <string>
+#include <fmt/format.h>
+
+#include <fstream>
 #include <map>
 #include <random>
-#include <fstream>
+#include <stdexcept>
+#include <string>
 
 
 /**

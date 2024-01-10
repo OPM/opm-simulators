@@ -18,19 +18,18 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <config.h>
+#include <opm/simulators/utils/DamarisOutputModule.hpp>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/simulators/utils/DamarisKeywords.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #define XSD_CXX11_TEMPLATE_ALIAS 1
 
-#include <config.h>
-
+#include <Damaris.h>
 #include <damaris/model/ModifyModel.hpp>
-#include <opm/simulators/utils/DamarisKeywords.hpp>
-#include <opm/simulators/utils/DamarisOutputModule.hpp>
-#include <opm/simulators/utils/ParallelCommunication.hpp>
-#include <opm/common/OpmLog/OpmLog.hpp>
-
 #include <fmt/format.h>
-
 
 namespace Opm::DamarisOutput
 {
@@ -42,7 +41,7 @@ std::string initDamarisXmlFile(); // Defined in initDamarisXMLFile.cpp, to avoid
  * by  filling in the XML file and storing it in the chosen directory
  */
 void
-initializeDamaris(const MPI_Comm comm, const int mpiRank, const std::map<std::string, std::string>& find_replace_map )
+initializeDamaris(const Parallel::Communication comm, const int mpiRank, const std::map<std::string, std::string>& find_replace_map )
 {
     int dam_err;
 
