@@ -519,6 +519,19 @@ opm_add_test(test_HDF5Serializer_Parallel
     4
 )
 
+opm_add_test(test_rstconv_parallel
+  EXE_NAME
+    test_rstconv
+  CONDITION
+    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+  DRIVER_ARGS
+    -n 4
+    -b ${PROJECT_BINARY_DIR}
+  NO_COMPILE
+  PROCESSORS
+    4
+)
+
 include(OpmBashCompletion)
 
 if (NOT BUILD_FLOW)
