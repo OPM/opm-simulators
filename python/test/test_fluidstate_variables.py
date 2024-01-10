@@ -19,5 +19,5 @@ class TestBasic(unittest.TestCase):
             sim = BlackOilSimulator("SPE1CASE1.DATA")
             sim.step_init()
             sim.step()
-            #oil_pressure = sim.get_fluidstate_variable(name='po')
+            oil_pressure = sim.get_fluidstate_variable(name='po')
             #self.assertAlmostEqual(oil_pressure[0], 41729978.837, places=2, msg='value of oil pressure')
