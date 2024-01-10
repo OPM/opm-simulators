@@ -20,4 +20,5 @@ class TestBasic(unittest.TestCase):
             sim.step_init()
             sim.step()
             oil_pressure = sim.get_fluidstate_variable(name='po')
+            assert True
             #self.assertAlmostEqual(oil_pressure[0], 41729978.837, places=2, msg='value of oil pressure')

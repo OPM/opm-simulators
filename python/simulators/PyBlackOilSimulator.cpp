@@ -102,6 +102,7 @@ py::array_t<double>
 PyBlackOilSimulator::
 getFluidStateVariable(const std::string &name) const
 {
+    std::cout << "getFluidStateVariable: " << name << std::endl;
     auto vector = getFluidState().getFluidStateVariable(name);
     return py::array(vector.size(), vector.data());
 }
