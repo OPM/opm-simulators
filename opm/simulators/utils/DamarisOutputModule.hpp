@@ -17,6 +17,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#ifndef DAMARIS_OUTPUT_MODULE_HPP
+#define DAMARIS_OUTPUT_MODULE_HPP
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -51,3 +53,5 @@ namespace Opm::DamarisOutput
  void initializeDamaris(const MPI_Comm comm, const int mpiRank, const std::map<std::string, std::string>& find_replace_map );
 
 } // namespace Opm::DamarisOutput
+
+#endif // DAMARIS_OUTPUT_MODULE_HPP
