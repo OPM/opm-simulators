@@ -20,12 +20,12 @@
 #ifndef OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 #define OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 
-#include <string>
-#include <map>
-
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
-#include <ebos/damariswriter.hh>
+#include <ebos/damaris_properties.hh>
+
+#include <map>
+#include <string>
 
 /*
     Below is the std::map with the keywords that are supported by Damaris.
@@ -33,7 +33,6 @@
     Most entries in the map below are not critical ('static') and will not
     be changed. We only allow changing FileMode together with output directory
 */
-
 
 namespace Opm::DamarisOutput
 {

@@ -33,89 +33,26 @@
 
 #include <dune/grid/common/partitionset.hh>
 
-#include <ebos/collecttoiorank.hh>
+#include <ebos/damaris_properties.hh>
 #include <ebos/eclbasevanguard.hh>
 #include <ebos/eclgenericwriter.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
 
-#include <opm/input/eclipse/Units/UnitSystem.hpp>
-
-#include <opm/output/eclipse/RestartValue.hpp>
-
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/utils/ParallelRestart.hpp>
-#include <opm/simulators/flow/countGlobalCells.hpp>
-
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <limits>
-#include <stdexcept>
-#include <string>
-#include <memory>
-
-#include <omp.h>
+#include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/utils/DamarisVar.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/GridDataOutput.hpp>
 
 #include <fmt/format.h>
 
 #include <Damaris.h>
-#include <opm/simulators/utils/GridDataOutput.hpp>
-#include <opm/simulators/utils/DamarisVar.hpp>
 
-namespace Opm::Properties {
-
-template<class TypeTag, class MyTypeTag>
-struct EnableDamarisOutput {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisOutputHdfCollective {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisSaveMeshToHdf {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisSaveToHdf {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisPythonScript {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisPythonParaviewScript {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisSimName {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisDedicatedCores {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisDedicatedNodes {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisSharedMemoryName {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisSharedMemorySizeBytes {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisLogLevel {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisDaskFile {
-    using type = UndefinedProperty;
-};
-} // namespace Opm::Properties
+#include <limits>
+#include <memory>
+#include <stdexcept>
+#include <string>
 
 namespace Opm {
 
