@@ -65,6 +65,13 @@ class BlackOilDispersionModule<TypeTag, /*enableDispersion=*/false>
 
 public:
     using ExtensiveQuantities = BlackOilDispersionExtensiveQuantities<TypeTag,false>;
+
+#if HAVE_ECL_INPUT
+    static void initFromState(const EclipseState&)
+    {
+    }
+#endif
+
     /*!
      * \brief Adds the dispersive flux to the flux vector over a flux
      *        integration point.
@@ -112,6 +119,16 @@ class BlackOilDispersionModule<TypeTag, /*enableDispersion=*/true>
 
 public:
     using ExtensiveQuantities = BlackOilDispersionExtensiveQuantities<TypeTag,true>;
+#if HAVE_ECL_INPUT
+    static void initFromState(const EclipseState& eclState)
+    {
+        if (eclState.getSimulationConfig().hasVAPWAT() || eclState.getSimulationConfig().hasVAPOIL()) {
+            OpmLog::warning("Dispersion is activated in combination with VAPWAT/VAPOIL. \n"
+                            "Water/oil is still allowed to vaporize, but dispersion in the "
+                            "gas phase is ignored.");
+        }
+    }
+#endif
     /*!
      * \brief Adds the mass flux due to dispersion to the flux vector over the
      *        flux integration point.
@@ -167,6 +184,13 @@ public:
 
             // no dispersion in water for blackoil models unless water can contain dissolved gas
             if (!FluidSystem::enableDissolvedGasInWater() && FluidSystem::waterPhaseIdx == phaseIdx) {
+                continue;
+            }
+
+            // Adding dispersion in the gas phase leads to
+            // convergence issues and unphysical results. 
+            // We disable dispersion in the gas phase for now
+            if (FluidSystem::gasPhaseIdx == phaseIdx) {
                 continue;
             }
 
@@ -226,6 +250,7 @@ public:
     }
 
 private:
+
     static Scalar toMassFractionGasOil (unsigned regionIdx) {
         Scalar rhoO = FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, regionIdx);
         Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
