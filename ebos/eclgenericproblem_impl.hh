@@ -103,7 +103,7 @@ serializationTestObject(const EclipseState& eclState,
     EclGenericProblem result(eclState, schedule, gridView);
     result.maxOilSaturation_ = {1.0, 2.0};
     result.maxWaterSaturation_ = {6.0};
-    result.minOilPressure_ = {7.0, 8.0, 9.0, 10.0};
+    result.minRefPressure_ = {7.0, 8.0, 9.0, 10.0};
     result.overburdenPressure_ = {11.0};
     result.solventSaturation_ = {15.0};
     result.solventRsw_ = {18.0};
@@ -238,7 +238,7 @@ readRockCompactionParameters_()
     case RockConfig::Hysteresis::IRREVERS:
         // interpolate the porv volume multiplier using the minimum pressure in the cell
         // i.e. don't allow re-inflation.
-        minOilPressure_.resize(numElem, 1e99);
+        minRefPressure_.resize(numElem, 1e99);
         break;
     default:
         throw std::runtime_error("Not support ROCKOMP hysteresis option ");
@@ -597,10 +597,10 @@ template<class GridView, class FluidSystem, class Scalar>
 Scalar EclGenericProblem<GridView,FluidSystem,Scalar>::
 minOilPressure(unsigned globalDofIdx) const
 {
-    if (minOilPressure_.empty())
+    if (minRefPressure_.empty())
         return 0.0;
 
-    return minOilPressure_[globalDofIdx];
+    return minRefPressure_[globalDofIdx];
 }
 
 template<class GridView, class FluidSystem, class Scalar>
@@ -775,7 +775,7 @@ bool EclGenericProblem<GridView,FluidSystem,Scalar>::
 operator==(const EclGenericProblem& rhs) const
 {
     return this->maxWaterSaturation_ == rhs.maxWaterSaturation_ &&
-           this->minOilPressure_ == rhs.minOilPressure_ &&
+           this->minRefPressure_ == rhs.minRefPressure_ &&
            this->overburdenPressure_ == rhs.overburdenPressure_ &&
            this->solventSaturation_ == rhs.solventSaturation_ &&
            this->solventRsw_ == rhs.solventRsw_ &&

@@ -1646,19 +1646,19 @@ public:
             tableIdx = this->rockTableIdx_[elementIdx];
 
         const auto& fs = intQuants.fluidState();
-        LhsEval effectiveOilPressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
-        if (!this->minOilPressure_.empty())
+        LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
+        if (!this->minRefPressure_.empty())
             // The pore space change is irreversible
-            effectiveOilPressure =
+            effectivePressure =
                 min(decay<LhsEval>(fs.pressure(refPressurePhaseIdx_())),
-                                   this->minOilPressure_[elementIdx]);
+                                   this->minRefPressure_[elementIdx]);
 
         if (!this->overburdenPressure_.empty())
-            effectiveOilPressure -= this->overburdenPressure_[elementIdx];
+            effectivePressure -= this->overburdenPressure_[elementIdx];
 
 
         if (!this->rockCompPoroMult_.empty()) {
-            return this->rockCompPoroMult_[tableIdx].eval(effectiveOilPressure, /*extrapolation=*/true);
+            return this->rockCompPoroMult_[tableIdx].eval(effectivePressure, /*extrapolation=*/true);
         }
 
         // water compaction
@@ -1666,7 +1666,7 @@ public:
         LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
         LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
 
-        return this->rockCompPoroMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
+        return this->rockCompPoroMultWc_[tableIdx].eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);
     }
 
     /*!
@@ -1686,26 +1686,26 @@ public:
             tableIdx = this->rockTableIdx_[elementIdx];
 
         const auto& fs = intQuants.fluidState();
-        LhsEval effectiveOilPressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
+        LhsEval effectivePressure = decay<LhsEval>(fs.pressure(refPressurePhaseIdx_()));
 
-        if (!this->minOilPressure_.empty())
+        if (!this->minRefPressure_.empty())
             // The pore space change is irreversible
-            effectiveOilPressure =
+            effectivePressure =
                 min(decay<LhsEval>(fs.pressure(refPressurePhaseIdx_())),
-                    this->minOilPressure_[elementIdx]);
+                    this->minRefPressure_[elementIdx]);
 
         if (!this->overburdenPressure_.empty())
-            effectiveOilPressure -= this->overburdenPressure_[elementIdx];
+            effectivePressure -= this->overburdenPressure_[elementIdx];
 
         if (!this->rockCompTransMult_.empty())
-            return this->rockCompTransMult_[tableIdx].eval(effectiveOilPressure, /*extrapolation=*/true);
+            return this->rockCompTransMult_[tableIdx].eval(effectivePressure, /*extrapolation=*/true);
 
         // water compaction
         assert(!this->rockCompTransMultWc_.empty());
         LhsEval SwMax = max(decay<LhsEval>(fs.saturation(waterPhaseIdx)), this->maxWaterSaturation_[elementIdx]);
         LhsEval SwDeltaMax = SwMax - initialFluidStates_[elementIdx].saturation(waterPhaseIdx);
 
-        return this->rockCompTransMultWc_[tableIdx].eval(effectiveOilPressure, SwDeltaMax, /*extrapolation=*/true);
+        return this->rockCompTransMultWc_[tableIdx].eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);
     }
 
     /*!
@@ -1954,7 +1954,7 @@ protected:
     {
         OPM_TIMEBLOCK(updateMinPressure);
         // IRREVERS option is used in ROCKCOMP
-        if (this->minOilPressure_.empty())
+        if (this->minRefPressure_.empty())
             return false;
 
         this->updateProperty_("EclProblem::updateMinPressure_() failed:",
@@ -1968,10 +1968,10 @@ protected:
     bool updateMinPressure_(unsigned compressedDofIdx, const IntensiveQuantities& iq){
         OPM_TIMEBLOCK_LOCAL(updateMinPressure);
         const auto& fs = iq.fluidState();
-        const Scalar mo = getValue(fs.pressure(refPressurePhaseIdx_()));
-        auto& mos = this->minOilPressure_;
-        if(mos[compressedDofIdx]> mo){
-            mos[compressedDofIdx] = mo;
+        const Scalar min_pressure = getValue(fs.pressure(refPressurePhaseIdx_()));
+        auto& min_pressures = this->minRefPressure_;
+        if(min_pressures[compressedDofIdx]> min_pressure){
+            min_pressures[compressedDofIdx] = min_pressure;
             return true;
         }else{
             return false;
@@ -2113,8 +2113,8 @@ protected:
                 this->maxWaterSaturation_[elemIdx] = std::max(this->maxWaterSaturation_[elemIdx], fs.saturation(waterPhaseIdx));
             if (!this->maxOilSaturation_.empty())
                 this->maxOilSaturation_[elemIdx] = std::max(this->maxOilSaturation_[elemIdx], fs.saturation(oilPhaseIdx));
-            if (!this->minOilPressure_.empty())
-                this->minOilPressure_[elemIdx] = std::min(this->minOilPressure_[elemIdx], fs.pressure(refPressurePhaseIdx_()));
+            if (!this->minRefPressure_.empty())
+                this->minRefPressure_[elemIdx] = std::min(this->minRefPressure_[elemIdx], fs.pressure(refPressurePhaseIdx_()));
         }
 
 
