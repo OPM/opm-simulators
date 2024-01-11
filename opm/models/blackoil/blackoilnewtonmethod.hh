@@ -56,6 +56,10 @@ struct TemperatureMax { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct TemperatureMin { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
+struct PressureMax { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct PressureMin { using type = UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
 struct MaximumWaterSaturation { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct WaterOnlyThreshold { using type = UndefinedProperty; };
@@ -96,6 +100,18 @@ struct TemperatureMin<TypeTag, TTag::NewtonMethod>
 {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.0; //Kelvin
+};
+template<class TypeTag>
+struct PressureMax<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e99; //Kelvin
+};
+template<class TypeTag>
+struct PressureMin<TypeTag, TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = -1e99; //Kelvin
 };
 template<class TypeTag>
 struct MaximumWaterSaturation<TypeTag, TTag::NewtonMethod>
@@ -146,6 +162,8 @@ public:
         maxTempChange_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxTemperatureChange);
         tempMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, TemperatureMax);
         tempMin_ = EWOMS_GET_PARAM(TypeTag, Scalar, TemperatureMin);
+        pressMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, PressureMax);
+        pressMin_ = EWOMS_GET_PARAM(TypeTag, Scalar, PressureMin);
         waterSaturationMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaximumWaterSaturation);
         waterOnlyThreshold_ = EWOMS_GET_PARAM(TypeTag, Scalar, WaterOnlyThreshold);
     }
@@ -176,6 +194,8 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxTemperatureChange, "Maximum absolute change of temperature in a single iteration");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, TemperatureMax, "Maximum absolute temperature");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, TemperatureMin, "Minimum absolute temperature");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, PressureMax, "Maximum absolute pressure");
+        EWOMS_REGISTER_PARAM(TypeTag, Scalar, PressureMin, "Minimum absolute pressure");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaximumWaterSaturation, "Maximum water saturation");
         EWOMS_REGISTER_PARAM(TypeTag, Scalar, WaterOnlyThreshold, "Cells with water saturation above or equal is considered one-phase water only");
     }
@@ -346,7 +366,7 @@ protected:
                     delta *= satAlpha;
                 else {
                     //Ensure Rvw and Rsw factor does not become negative
-                    if (delta > currentValue[ Indices::waterSwitchIdx]) 
+                    if (delta > currentValue[ Indices::waterSwitchIdx])
                         delta = currentValue[ Indices::waterSwitchIdx];
                 }
             else if (pvIdx == Indices::compositionSwitchIdx) {
@@ -426,18 +446,23 @@ protected:
             if (enableFoam && pvIdx == Indices::foamConcentrationIdx)
                 nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
 
-            if (enableBrine && pvIdx == Indices::saltConcentrationIdx) { 
+            if (enableBrine && pvIdx == Indices::saltConcentrationIdx) {
                // keep the salt concentration above 0
                if (!enableSaltPrecipitation || (enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Cs))
-                   nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0); 
+                   nextValue[pvIdx] = std::max(nextValue[pvIdx], 0.0);
                // keep the salt saturation below upperlimit
                if ((enableSaltPrecipitation && currentValue.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp))
-                   nextValue[pvIdx] = std::min(nextValue[pvIdx], 1.0-1.e-8); 
+                   nextValue[pvIdx] = std::min(nextValue[pvIdx], 1.0-1.e-8);
             }
 
             // keep the temperature within given values
             if (enableEnergy && pvIdx == Indices::temperatureIdx)
                 nextValue[pvIdx] = std::clamp(nextValue[pvIdx], tempMin_, tempMax_);
+
+            if (pvIdx == Indices::pressureSwitchIdx) {
+                nextValue[pvIdx] = std::clamp(nextValue[pvIdx], pressMin_, pressMax_);
+            }
+
 
             // Limit the variables to [0, cmax] values to improve the convergence.
             // For the microorganisms we set this value equal to the biomass density value.
@@ -486,6 +511,8 @@ private:
     Scalar maxTempChange_;
     Scalar tempMax_;
     Scalar tempMin_;
+    Scalar pressMax_;
+    Scalar pressMin_;
 
     // keep track of cells where the primary variable meaning has changed
     // to detect and hinder oscillations
