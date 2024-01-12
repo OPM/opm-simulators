@@ -125,11 +125,14 @@ getFluidStateVariable(const std::string &name) const
     const ElementIterator& elem_end_itr = grid_view.template end</*codim=*/0>();
     auto var_type = getVariableType_(name);
     // Debugging this loop
+    int i = 0;
     for (; elem_itr != elem_end_itr; ++elem_itr) {
+        std::cout << "i=" << i << std::endl;
         const Element& elem = *elem_itr;
         elem_ctx.updatePrimaryStencil(elem);
         elem_ctx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         for (unsigned dof_idx = 0; dof_idx < elem_ctx.numPrimaryDof(/*timeIdx=*/0); ++dof_idx) {
+            std::cout << "j=" << dof_idx << std::endl;
             const auto& int_quants = elem_ctx.intensiveQuantities(dof_idx, /*timeIdx=*/0);
             const auto& fs = int_quants.fluidState();
             unsigned global_dof_idx = elem_ctx.globalSpaceIndex(dof_idx, /*timeIdx=*/0);
