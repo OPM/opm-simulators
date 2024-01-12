@@ -285,9 +285,8 @@ public:
 
             const bool upwindIsInterior = (static_cast<unsigned>(upIdx[phaseIdx]) == interiorDofIdx);
             const IntensiveQuantities& up = upwindIsInterior ? intQuantsIn : intQuantsEx;
-            // TODO: should the rock compaction transmissibility multiplier be upstreamed
-            // or averaged? all fluids should see the same compaction?!
-            const Evaluation& transMult = up.rockCompTransMultiplier();
+            // Use arithmetic average (more accurate with harmonic, but that requires recomputing the transmissbility)
+            const Evaluation transMult = (intQuantsIn.rockCompTransMultiplier() + Toolbox::value(intQuantsEx.rockCompTransMultiplier()))/2;
 
             const auto& materialLawManager = problem.materialLawManager();
             FaceDir::DirEnum facedir = FaceDir::DirEnum::Unknown;
@@ -300,7 +299,7 @@ public:
             else
                 volumeFlux[phaseIdx] =
                     pressureDifferences[phaseIdx]*
-                        (Toolbox::value(up.mobility(phaseIdx, facedir))*Toolbox::value(transMult)*(-trans/faceArea));
+                        (Toolbox::value(up.mobility(phaseIdx, facedir))*transMult*(-trans/faceArea));
         }
     }
 
