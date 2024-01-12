@@ -52,6 +52,7 @@
 #include <fmt/format.h>
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <cstddef>
@@ -96,7 +97,7 @@ public:
     //! \param param param Model parameters
     //! \param compNames Names of the solution components
     BlackoilModelEbosNldd(BlackoilModelEbos<TypeTag>& model)
-        : model_(model)
+        : model_(model), rank_(model_.ebosSimulator().vanguard().grid().comm().rank())
     {
         // Create partitions.
         const auto& [partition_vector, num_domains] = this->partitionCells();
@@ -208,6 +209,7 @@ public:
         const auto domain_order = this->getSubdomainOrder();
 
         // -----------   Solve each domain separately   -----------
+        DeferredLogger logger;
         std::vector<SimulatorReportSingle> domain_reports(domains_.size());
         for (const int domain_index : domain_order) {
             const auto& domain = domains_[domain_index];
@@ -215,12 +217,12 @@ public:
             try {
                 switch (model_.param().local_solve_approach_) {
                 case DomainSolveApproach::Jacobi:
-                    solveDomainJacobi(solution, locally_solved, local_report,
+                    solveDomainJacobi(solution, locally_solved, local_report, logger,
                                       iteration, timer, domain);
                     break;
                 default:
                 case DomainSolveApproach::GaussSeidel:
-                    solveDomainGaussSeidel(solution, locally_solved, local_report,
+                    solveDomainGaussSeidel(solution, locally_solved, local_report, logger,
                                            iteration, timer, domain);
                     break;
                 }
@@ -234,25 +236,37 @@ public:
             // i == j, at old solution for i != j.
             if (!local_report.converged) {
                 // TODO: more proper treatment, including in parallel.
-                OpmLog::debug("Convergence failure in domain " + std::to_string(domain.index));
+                logger.debug(fmt::format("Convergence failure in domain {} on rank {}." , domain.index, rank_));
             }
             domain_reports[domain.index] = local_report;
         }
 
+        // Communicate and log all messages.
+        auto global_logger = gatherDeferredLogger(logger, model_.ebosSimulator().vanguard().grid().comm());
+        global_logger.logMessages();
+
         // Accumulate local solve data.
-        int num_converged = 0;
-        int num_domains = domain_reports.size();
+        // Putting the counts in a single array to avoid multiple
+        // comm.sum() calls. Keeping the named vars for readability.
+        std::array<int, 4> counts{ 0, 0, 0, static_cast<int>(domain_reports.size()) };
+        int& num_converged = counts[0];
+        int& num_converged_already = counts[1];
+        int& num_local_newtons = counts[2];
+        int& num_domains = counts[3];
         {
             SimulatorReportSingle rep;
             for (const auto& dr : domain_reports) {
                 if (dr.converged) {
                     ++num_converged;
+                    if (dr.total_newton_iterations == 0) {
+                        ++num_converged_already;
+                    }
                 }
                 rep += dr;
             }
+            num_local_newtons = rep.total_newton_iterations;
             local_reports_accumulated_ += rep;
         }
-        bool is_iorank = true;
 
         if (model_.param().local_solve_approach_ == DomainSolveApproach::Jacobi) {
             solution = locally_solved;
@@ -289,15 +303,14 @@ public:
             model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantitiesOverlap(/*timeIdx=*/0);
 
             // Make total counts of domains converged.
-            num_converged = comm.sum(num_converged);
-            num_domains = comm.sum(num_domains);
-            is_iorank = comm.rank() == 0;
+            comm.sum(counts.data(), counts.size());
         }
 #endif // HAVE_MPI
 
+        const bool is_iorank = this->rank_ == 0;
         if (is_iorank) {
-            OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains.\n",
-                                      num_converged, num_domains));
+            OpmLog::debug(fmt::format("Local solves finished. Converged for {}/{} domains. {} domains did no work. {} total local Newton iterations.\n",
+                                      num_converged, num_domains, num_converged_already, num_local_newtons));
         }
 
         // Finish with a Newton step.
@@ -344,6 +357,7 @@ private:
     std::pair<SimulatorReportSingle, ConvergenceReport>
     solveDomain(const Domain& domain,
                 const SimulatorTimerInterface& timer,
+                DeferredLogger& logger,
                 [[maybe_unused]] const int global_iteration,
                 const bool initial_assembly_required)
     {
@@ -376,7 +390,7 @@ private:
         detailTimer.reset();
         detailTimer.start();
         std::vector<double> resnorms;
-        auto convreport = this->getDomainConvergence(domain, timer, 0, resnorms);
+        auto convreport = this->getDomainConvergence(domain, timer, 0, logger, resnorms);
         if (convreport.converged()) {
             // TODO: set more info, timing etc.
             report.converged = true;
@@ -433,7 +447,7 @@ private:
             // Check for local convergence.
             detailTimer.reset();
             detailTimer.start();
-            convreport = this->getDomainConvergence(domain, timer, iter, resnorms);
+            convreport = this->getDomainConvergence(domain, timer, iter, logger, resnorms);
 
             // apply the Schur complement of the well model to the
             // reservoir linearized equations
@@ -580,6 +594,7 @@ private:
                                                     const double dt,
                                                     const int iteration,
                                                     const Domain& domain,
+                                                    DeferredLogger& logger,
                                                     std::vector<Scalar>& B_avg,
                                                     std::vector<Scalar>& residual_norms)
     {
@@ -629,32 +644,26 @@ private:
             for (int ii : {0, 1}) {
                 if (std::isnan(res[ii])) {
                     report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
-                    if (model_.terminalOutputEnabled()) {
-                        OpmLog::debug("NaN residual for " + model_.compNames().name(compIdx) + " equation.");
-                    }
+                    logger.debug("NaN residual for " + model_.compNames().name(compIdx) + " equation.");
                 } else if (res[ii] > model_.param().max_residual_allowed_) {
                     report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
-                    if (model_.terminalOutputEnabled()) {
-                        OpmLog::debug("Too large residual for " + model_.compNames().name(compIdx) + " equation.");
-                    }
+                    logger.debug("Too large residual for " + model_.compNames().name(compIdx) + " equation.");
                 } else if (res[ii] < 0.0) {
                     report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                    if (model_.terminalOutputEnabled()) {
-                        OpmLog::debug("Negative residual for " + model_.compNames().name(compIdx) + " equation.");
-                    }
+                    logger.debug("Negative residual for " + model_.compNames().name(compIdx) + " equation.");
                 } else if (res[ii] > tol[ii]) {
                     report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                 }
             }
         }
 
-        // Output of residuals.
-        if (model_.terminalOutputEnabled())
-        {
-            // Only rank 0 does print to std::cout
+        // Output of residuals. If converged at initial state, log nothing.
+        const bool converged_at_initial_state = (report.converged() && iteration == 0);
+        if (!converged_at_initial_state) {
             if (iteration == 0) {
-                std::string msg = fmt::format("Domain {}, size {}, containing cell {}\n| Iter",
-                                              domain.index, domain.cells.size(), domain.cells[0]);
+                // Log header.
+                std::string msg = fmt::format("Domain {} on rank {}, size {}, containing cell {}\n| Iter",
+                                              domain.index, this->rank_, domain.cells.size(), domain.cells[0]);
                 for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                     msg += "    MB(";
                     msg += model_.compNames().name(compIdx)[0];
@@ -665,8 +674,9 @@ private:
                     msg += model_.compNames().name(compIdx)[0];
                     msg += ") ";
                 }
-                OpmLog::debug(msg);
+                logger.debug(msg);
             }
+            // Log convergence data.
             std::ostringstream ss;
             ss << "| ";
             const std::streamsize oprec = ss.precision(3);
@@ -680,7 +690,7 @@ private:
             }
             ss.precision(oprec);
             ss.flags(oflags);
-            OpmLog::debug(ss.str());
+            logger.debug(ss.str());
         }
 
         return report;
@@ -689,6 +699,7 @@ private:
     ConvergenceReport getDomainConvergence(const Domain& domain,
                                            const SimulatorTimerInterface& timer,
                                            const int iteration,
+                                           DeferredLogger& logger,
                                            std::vector<double>& residual_norms)
     {
         std::vector<Scalar> B_avg(numEq, 0.0);
@@ -696,9 +707,10 @@ private:
                                                           timer.currentStepLength(),
                                                           iteration,
                                                           domain,
+                                                          logger,
                                                           B_avg,
                                                           residual_norms);
-        report += model_.wellModel().getDomainWellConvergence(domain, B_avg);
+        report += model_.wellModel().getDomainWellConvergence(domain, B_avg, logger);
         return report;
     }
 
@@ -772,13 +784,14 @@ private:
     void solveDomainJacobi(GlobalEqVector& solution,
                            GlobalEqVector& locally_solved,
                            SimulatorReportSingle& local_report,
+                           DeferredLogger& logger,
                            const int iteration,
                            const SimulatorTimerInterface& timer,
                            const Domain& domain)
     {
         auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
-        auto res = solveDomain(domain, timer, iteration, false);
+        auto res = solveDomain(domain, timer, logger, iteration, false);
         local_report = res.first;
         if (local_report.converged) {
             auto local_solution = Details::extractVector(solution, domain.cells);
@@ -796,13 +809,14 @@ private:
     void solveDomainGaussSeidel(GlobalEqVector& solution,
                                 GlobalEqVector& locally_solved,
                                 SimulatorReportSingle& local_report,
+                                DeferredLogger& logger,
                                 const int iteration,
                                 const SimulatorTimerInterface& timer,
                                 const Domain& domain)
     {
         auto initial_local_well_primary_vars = model_.wellModel().getPrimaryVarsDomain(domain);
         auto initial_local_solution = Details::extractVector(solution, domain.cells);
-        auto res = solveDomain(domain, timer, iteration, true);
+        auto res = solveDomain(domain, timer, logger, iteration, true);
         local_report = res.first;
         if (!local_report.converged) {
             // We look at the detailed convergence report to evaluate
@@ -825,7 +839,7 @@ private:
                 const double acceptable_local_cnv_sum = 1.0;
                 if (mb_sum < acceptable_local_mb_sum && cnv_sum < acceptable_local_cnv_sum) {
                     local_report.converged = true;
-                    OpmLog::debug("Accepting solution in unconverged domain " + std::to_string(domain.index));
+                    logger.debug(fmt::format("Accepting solution in unconverged domain {} on rank {}.", domain.index, rank_));
                 }
             }
         }
@@ -942,6 +956,7 @@ private:
     std::vector<std::unique_ptr<Mat>> domain_matrices_; //!< Vector of matrix operator for each subdomain
     std::vector<ISTLSolverType> domain_linsolvers_; //!< Vector of linear solvers for each domain
     SimulatorReportSingle local_reports_accumulated_; //!< Accumulated convergence report for subdomain solvers
+    int rank_ = 0; //!< MPI rank of this process
 };
 
 } // namespace Opm

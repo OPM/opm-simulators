@@ -291,7 +291,8 @@ namespace Opm {
 
             // Check if well equations are converged locally.
             ConvergenceReport getDomainWellConvergence(const Domain& domain,
-                                                       const std::vector<Scalar>& B_avg) const;
+                                                       const std::vector<Scalar>& B_avg,
+                                                       DeferredLogger& local_deferredLogger) const;
 
             const SimulatorReportSingle& lastReport() const;
 

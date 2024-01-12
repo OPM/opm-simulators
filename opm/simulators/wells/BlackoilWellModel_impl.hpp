@@ -1764,56 +1764,38 @@ namespace Opm {
     ConvergenceReport
     BlackoilWellModel<TypeTag>::
     getDomainWellConvergence(const Domain& domain,
-                             const std::vector<Scalar>& B_avg) const
+                             const std::vector<Scalar>& B_avg,
+                             DeferredLogger& local_deferredLogger) const
     {
         const auto& summary_state = ebosSimulator_.vanguard().summaryState();
         const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
         const bool relax_tolerance = iterationIdx > param_.strict_outer_iter_wells_;
 
-        Opm::DeferredLogger local_deferredLogger;
-        ConvergenceReport local_report;
+        ConvergenceReport report;
         for (const auto& well : well_container_) {
             if ((well_domain_.at(well->name()) == domain.index)) {
                 if (well->isOperableAndSolvable() || well->wellIsStopped()) {
-                    local_report += well->getWellConvergence(summary_state,
-                                                             this->wellState(),
-                                                             B_avg,
-                                                             local_deferredLogger,
-                                                             relax_tolerance);
+                    report += well->getWellConvergence(summary_state,
+                                                       this->wellState(),
+                                                       B_avg,
+                                                       local_deferredLogger,
+                                                       relax_tolerance);
                 } else {
-                    ConvergenceReport report;
+                    ConvergenceReport xreport;
                     using CR = ConvergenceReport;
-                    report.setWellFailed({CR::WellFailure::Type::Unsolvable, CR::Severity::Normal, -1, well->name()});
-                    local_report += report;
+                    xreport.setWellFailed({CR::WellFailure::Type::Unsolvable, CR::Severity::Normal, -1, well->name()});
+                    report += xreport;
                 }
             }
         }
 
-        // This function will be called once for each domain on a process,
-        // and the number of domains on a process will vary, so there is
-        // no way to communicate here. There is also no need, as a domain
-        // is local to a single process in our current approach.
-        // Therefore there is no call to gatherDeferredLogger() or to
-        // gatherConvergenceReport() below. However, as of now, log messages
-        // on non-output ranks will be lost here.
-        // TODO: create the DeferredLogger outside this scope to enable it
-        // to be gathered and printed on the output rank.
-        Opm::DeferredLogger global_deferredLogger = local_deferredLogger;
-        ConvergenceReport report = local_report;
-        if (terminal_output_) {
-            global_deferredLogger.logMessages();
-        }
-
         // Log debug messages for NaN or too large residuals.
-        // TODO: This will as of now only be logged on the output rank.
-        // In the similar code in getWellConvergence(), all ranks will be
-        // at the same spot, that does not hold for this per-domain function.
         if (terminal_output_) {
             for (const auto& f : report.wellFailures()) {
                 if (f.severity() == ConvergenceReport::Severity::NotANumber) {
-                    OpmLog::debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
+                    local_deferredLogger.debug("NaN residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
                 } else if (f.severity() == ConvergenceReport::Severity::TooLarge) {
-                    OpmLog::debug("Too large residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
+                    local_deferredLogger.debug("Too large residual found with phase " + std::to_string(f.phase()) + " for well " + f.wellName());
                 }
             }
         }
