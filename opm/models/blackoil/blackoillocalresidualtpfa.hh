@@ -356,7 +356,8 @@ public:
 
             const IntensiveQuantities& up = (upIdx == interiorDofIdx) ? intQuantsIn : intQuantsEx;
             unsigned globalUpIndex = (upIdx == interiorDofIdx) ? globalIndexIn : globalIndexEx;
-            const Evaluation& transMult = up.rockCompTransMultiplier();
+            // Use arithmetic average (more accurate with harmonic, but that requires recomputing the transmissbility)
+            const Evaluation transMult = (intQuantsIn.rockCompTransMultiplier() + Toolbox::value(intQuantsEx.rockCompTransMultiplier()))/2;
             Evaluation darcyFlux;
             if (pressureDifference == 0) {
                 darcyFlux = 0.0; // NB maybe we could drop calculations
@@ -365,7 +366,7 @@ public:
                     darcyFlux = pressureDifference * up.mobility(phaseIdx, facedir) * transMult * (-trans / faceArea);
                 else
                     darcyFlux = pressureDifference *
-                       (Toolbox::value(up.mobility(phaseIdx, facedir)) * Toolbox::value(transMult) * (-trans / faceArea));
+                       (Toolbox::value(up.mobility(phaseIdx, facedir)) * transMult * (-trans / faceArea));
             }
             unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
             darcy[conti0EqIdx + activeCompIdx] = darcyFlux.value() * faceArea; // NB! For the FLORES fluxes without derivatives
