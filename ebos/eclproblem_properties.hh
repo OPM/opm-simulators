@@ -139,6 +139,11 @@ template<class TypeTag, class MyTypeTag>
 struct NumPressurePointsEquil {
     using type = UndefinedProperty;
 };
+// implicit or explicit pressure in rock compaction
+template<class TypeTag, class MyTypeTag>
+struct ExplicitRockCompaction {
+    using type = UndefinedProperty;
+};
 
 
 
@@ -607,6 +612,11 @@ struct OutputMode<TypeTag, TTag::EclBaseProblem> {
 template<class TypeTag>
 struct NumPressurePointsEquil<TypeTag, TTag::EclBaseProblem> {
     static constexpr int value = ParserKeywords::EQLDIMS::DEPTH_NODES_P::defaultValue;
+};
+// By default, use implicit pressure in rock compaction
+template<class TypeTag>
+struct ExplicitRockCompaction<TypeTag, TTag::EclBaseProblem> {
+    static constexpr bool value = false;
 };
 
 } // namespace Opm::Properties
