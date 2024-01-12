@@ -124,7 +124,7 @@ getFluidStateVariable(const std::string &name) const
     ElementIterator elem_itr = grid_view.template begin</*codim=*/0>();
     const ElementIterator& elem_end_itr = grid_view.template end</*codim=*/0>();
     auto var_type = getVariableType_(name);
-    // Debugging this loop
+    // JENKINS dummy line
     int i = 0;
     for (; elem_itr != elem_end_itr; ++elem_itr) {
         std::cout << "i=" << i << std::endl;
