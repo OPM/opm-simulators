@@ -36,7 +36,7 @@
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/BrooksCorey.hpp>
 #include <opm/material/constraintsolvers/PTFlash.hpp> 
-#include <opm/material/fluidsystems/GenericFluidSystem.hh>
+#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
@@ -115,7 +115,7 @@ private:
     static constexpr int num_comp = getPropValue<TypeTag, Properties::NumComp>();
 
 public:
-    using type = Opm::GenericFluidSystem<Scalar, num_comp>;
+    using type = Opm::GenericOilGasFluidSystem<Scalar, num_comp>;
 };
 
 // Set the material Law
@@ -357,7 +357,7 @@ public:
         const Scalar epi_len = EWOMS_GET_PARAM(TypeTag, Scalar, EpisodeLength);
         simulator.setEpisodeLength(epi_len);
         FluidSystem::init();
-        using CompParm = ComponentParam<Scalar>;
+        using CompParm = typename FluidSystem::ComponentParam;
         using CO2 = Opm::SimpleCO2<Scalar>;
         using C1 = Opm::C1<Scalar>;
         using C10 = Opm::C10<Scalar>;
