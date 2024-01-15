@@ -847,10 +847,6 @@ namespace Opm {
                     // repeated timestep cuts. It should therefore not be opened,
                     // even if it was new or received new targets this report step.
                     const bool closed_this_step = (wellTestState().lastTestTime(well_name) == ebosSimulator_.time());
-                    // Always check if wells on historic controls can be opened
-                    if (!closed_this_step && !well_ecl.predictionMode()) {
-                        wellTestState().open_well(well_name);
-                    }
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
