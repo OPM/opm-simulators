@@ -96,8 +96,6 @@ updateInjFCMult(const WellInterfaceGeneric& well,
             const double poro = filter_cake.poro;
             const double perm = filter_cake.perm;
             const double rw = connection.getFilterCakeRadius();
-            const auto cr0 = connection.r0();
-            const auto crw = connection.rw();
             const double K = connection.Kh() / connection.connectionLength();
             const double factor = filter_cake.sf_multiplier;
             // the thickness of the filtration cake
@@ -130,10 +128,7 @@ updateInjFCMult(const WellInterfaceGeneric& well,
             }
             filtrate_data.skin_factor[perf] = skin_factor;
 
-            // the original skin factor for the connection
-            const auto cskinfactor = connection.skinFactor();
-            // compute a multiplier for the well connection transmissibility
-            const auto denom = std::log(cr0 / std::min(crw, cr0)) + cskinfactor;
+            const auto denom = connection.ctfProperties().peaceman_denom;
             const auto denom2 = denom + skin_factor;
             inj_fc_multiplier_[perf] = denom / denom2;
         } else {
