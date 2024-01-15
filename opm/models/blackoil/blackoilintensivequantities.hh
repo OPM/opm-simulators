@@ -130,6 +130,7 @@ class BlackOilIntensiveQuantities
     using DispersionIntensiveQuantities = BlackOilDispersionIntensiveQuantities<TypeTag, enableDispersion>;
 
     using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
+    using BrineModule = BlackOilBrineModule<TypeTag>;
 
 
 public:
@@ -256,6 +257,19 @@ public:
         const auto& materialParams = problem.materialLawParams(globalSpaceIdx);
         MaterialLaw::capillaryPressures(pC, materialParams, fluidState_);
         problem.updateRelperms(mobility_, dirMob_, fluidState_, globalSpaceIdx);
+
+        // scaling the capillary pressure due to salt precipitation 
+        if (BrineModule::hasPcfactTables() && priVars.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
+            unsigned satnumRegionIdx = elemCtx.problem().satnumRegionIndex(elemCtx, dofIdx, timeIdx);
+            const Evaluation Sp = priVars.makeEvaluation(Indices::saltConcentrationIdx, timeIdx);
+            const Evaluation porosityFactor  = min(1.0 - Sp, 1.0); //phi/phi_0
+            const auto& pcfactTable = BrineModule::pcfactTable(satnumRegionIdx);
+            const Evaluation pcFactor = pcfactTable.eval(porosityFactor, /*extrapolation=*/true);
+            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx)
+                if (FluidSystem::phaseIsActive(phaseIdx)) {
+                    pC[phaseIdx] *= pcFactor;
+                }
+        }
 
         // oil is the reference phase for pressure
         if (priVars.primaryVarsMeaningPressure() == PrimaryVariables::PressureMeaning::Pg) {

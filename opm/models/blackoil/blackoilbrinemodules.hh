@@ -35,6 +35,7 @@
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PvtwsaltTable.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/PcfactTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/PermfactTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/SaltSolubilityTable.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
@@ -142,6 +143,16 @@ public:
                     const SaltsolTable& saltsolTable = saltsolTables.getTable<SaltsolTable>(pvtRegionIdx );
                     params_.saltsolTable_[pvtRegionIdx] = saltsolTable.getSaltsolColumn().front();
                     params_.saltdenTable_[pvtRegionIdx] = saltsolTable.getSaltdenColumn().front();
+                }
+            }
+
+            const TableContainer& pcfactTables = tableManager.getPcfactTables();
+            if (!pcfactTables.empty()) {
+                unsigned numSatRegions = tableManager.getTabdims().getNumSatTables();
+                params_.pcfactTable_.resize(numSatRegions);
+                for (size_t i = 0; i < pcfactTables.size(); ++i) {
+                    const PcfactTable& pcfactTable = pcfactTables.getTable<PcfactTable>(i);
+                    params_.pcfactTable_[i].setXYContainers(pcfactTable.getPorosityChangeColumn(), pcfactTable.getPcMultiplierColumn());
                 }
             }
         }
@@ -328,6 +339,11 @@ public:
         return params_.bdensityTable_[pvtnumRegionIdx];
     }
 
+    static const TabulatedFunction& pcfactTable(unsigned satnumRegionIdx)
+    {
+        return params_.pcfactTable_[satnumRegionIdx];
+    }
+
     static const TabulatedFunction& permfactTable(const ElementContext& elemCtx,
                                                   unsigned scvIdx,
                                                   unsigned timeIdx)
@@ -365,6 +381,14 @@ public:
     static bool hasSaltsolTables()
     {
         return !params_.saltsolTable_.empty();
+    }
+
+    static bool hasPcfactTables()
+    {
+        if constexpr (enableSaltPrecipitation)
+            return !params_.pcfactTable_.empty();
+        else
+            return false;
     }
 
     static Scalar saltSol(unsigned regionIdx) {

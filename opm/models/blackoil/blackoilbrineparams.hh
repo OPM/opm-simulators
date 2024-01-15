@@ -40,6 +40,7 @@ struct BlackOilBrineParams {
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
     std::vector<TabulatedFunction> bdensityTable_;
+    std::vector<TabulatedFunction> pcfactTable_;
     std::vector<TabulatedFunction> permfactTable_;
     std::vector<Scalar> saltsolTable_;
     std::vector<Scalar> saltdenTable_;
