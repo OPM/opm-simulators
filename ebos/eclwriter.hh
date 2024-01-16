@@ -431,6 +431,11 @@ public:
                                            /* interRegFlows = */ {},
                                            flowsn,
                                            floresn);
+            if (this->collectToIORank_.isIORank()) {
+                this->eclOutputModule_->assignGlobalFieldsToSolution(this->collectToIORank_.globalCellData());
+            }
+        } else {
+            this->eclOutputModule_->assignGlobalFieldsToSolution(localCellData);
         }
 
         if (this->collectToIORank_.isIORank()) {

@@ -35,9 +35,7 @@
 #include <cstddef>
 #include <functional>
 #include <map>
-#include <numeric>
 #include <optional>
-#include <stdexcept>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -268,6 +266,11 @@ public:
         local_data_valid_ = true;
     }
 
+    void setCnvData(const std::vector<std::vector<int>>& data)
+    {
+        cnvData_ = data;
+    }
+
     // Virtual destructor for safer inheritance.
     virtual ~EclGenericOutputBlackoilModule();
 
@@ -276,6 +279,12 @@ public:
     {
         serializer(initialInplace_);
     }
+
+    //! \brief Assign fields that are in global numbering to the solution.
+    //! \detail This is used to add fields that for some reason cannot be collected
+    //!         using the regular collect mechanism to the solution. In particular this
+    //!         is used with RPTRST CONV output.
+    void assignGlobalFieldsToSolution(data::Solution& sol);
 
 protected:
     using ScalarBuffer = std::vector<Scalar>;
@@ -489,6 +498,8 @@ protected:
     std::map<std::size_t, Scalar> waterConnectionSaturations_;
     std::map<std::size_t, Scalar> gasConnectionSaturations_;
     std::map<std::pair<std::string, int>, double> blockData_;
+
+    std::vector<std::vector<int>> cnvData_; //!< Data for CNV_xxx arrays
 
     std::optional<Inplace> initialInplace_;
     bool local_data_valid_;

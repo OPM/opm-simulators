@@ -40,9 +40,10 @@
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/flow/BlackoilModelEbosNldd.hpp>
+#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/flow/RSTConv.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
@@ -233,6 +234,8 @@ namespace Opm {
         , phaseUsage_(phaseUsageFromDeck(eclState()))
         , param_( param )
         , well_model_ (well_model)
+        , rst_conv_(ebosSimulator_.problem().eclWriter()->collectToIORank().localIdxToGlobalIdxMapping(),
+                    grid_.comm())
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
         , dx_old_(ebosSimulator_.model().numGridDof())
@@ -302,6 +305,22 @@ namespace Opm {
             }
 
             report.pre_post_time += perfTimer.stop();
+
+            auto getIdx = [](unsigned phaseIdx) -> int
+            {
+                if (FluidSystem::phaseIsActive(phaseIdx)) {
+                    const unsigned sIdx = FluidSystem::solventComponentIndex(phaseIdx);
+                    return Indices::canonicalToActiveComponentIndex(sIdx);
+                }
+
+                return -1;
+            };
+            const auto& schedule = ebosSimulator_.vanguard().schedule();
+            rst_conv_.init(ebosSimulator_.vanguard().globalNumCells(),
+                           schedule[timer.reportStepNum()].rst_config(),
+                           {getIdx(FluidSystem::oilPhaseIdx),
+                            getIdx(FluidSystem::gasPhaseIdx),
+                            getIdx(FluidSystem::waterPhaseIdx)});
 
             return report;
         }
@@ -375,14 +394,19 @@ namespace Opm {
                 convergence_reports_.back().report.reserve(11);
             }
 
+            SimulatorReportSingle result;
             if ((this->param_.nonlinear_solver_ != "nldd") ||
                 (iteration < this->param_.nldd_num_initial_newton_iter_))
             {
-                return this->nonlinearIterationNewton(iteration, timer, nonlinear_solver);
+                result = this->nonlinearIterationNewton(iteration, timer, nonlinear_solver);
             }
             else {
-                return this->nlddSolver_->nonlinearIterationNldd(iteration, timer, nonlinear_solver);
+                result = this->nlddSolver_->nonlinearIterationNldd(iteration, timer, nonlinear_solver);
             }
+
+            rst_conv_.update(ebosSimulator_.model().linearizer().residual());
+
+            return result;
         }
 
 
@@ -479,6 +503,7 @@ namespace Opm {
             Dune::Timer perfTimer;
             perfTimer.start();
             ebosSimulator_.problem().endTimeStep();
+            ebosSimulator_.problem().setConvData(rst_conv_.getData());
             report.pre_post_time += perfTimer.stop();
             return report;
         }
@@ -1056,6 +1081,9 @@ namespace Opm {
             }
         }
 
+        const std::vector<std::vector<int>>& getConvCells() const
+        { return rst_conv_.getData(); }
+
     protected:
         // ---------  Data members  ---------
 
@@ -1076,6 +1104,8 @@ namespace Opm {
 
         // Well Model
         BlackoilWellModel<TypeTag>& well_model_;
+
+        RSTConv rst_conv_; //!< Helper class for RPTRST CONV
 
         /// \brief Whether we print something to std::cout
         bool terminal_output_;

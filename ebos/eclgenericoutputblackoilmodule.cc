@@ -1499,6 +1499,20 @@ setupBlockData(std::function<bool(int)> isCartIdxOnThisRank)
     }
 }
 
+template<class FluidSystem, class Scalar>
+void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
+assignGlobalFieldsToSolution(data::Solution& sol)
+{
+    if (!this->cnvData_.empty()) {
+        constexpr std::array names = {"CNV_OIL", "CNV_GAS", "CNV_WAT"};
+        for (size_t i = 0; i < 3; ++i) {
+            if (!this->cnvData_[i].empty()) {
+                sol.insert(names[i], this->cnvData_[i], data::TargetType::RESTART_SOLUTION);
+            }
+        }
+    }
+}
+
 template class EclGenericOutputBlackoilModule<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,double>;
 
 } // namespace Opm

@@ -108,6 +108,11 @@ public:
         return outputNnc_;
     }
 
+    const CollectDataToIORankType& collectToIORank() const
+    {
+        return collectToIORank_;
+    }
+
 protected:
     const TransmissibilityType& globalTrans() const;
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const;

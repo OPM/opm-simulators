@@ -760,7 +760,7 @@ public:
         if (enableDamarisOutput_) {
             damarisWriter_->writeOutput(localCellData, isSubStep) ;
         }
-#endif 
+#endif
         if (enableEclOutput_){
             eclWriter_->writeOutput(std::move(localCellData), timer, isSubStep);
         }
@@ -1775,6 +1775,11 @@ public:
     const std::unique_ptr<EclWriterType>& eclWriter() const
     {
         return eclWriter_;
+    }
+
+    void setConvData(const std::vector<std::vector<int>>& data)
+    {
+        eclWriter_->mutableEclOutputModule().setCnvData(data);
     }
 
     template<class Serializer>
