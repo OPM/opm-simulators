@@ -567,13 +567,13 @@ public:
             exLambda = decay<Scalar>(exIq.totalThermalConductivity());
 
         Evaluation H;
-        if (inLambda > 0.0 && exLambda > 0.0) {
+        const Evaluation& inH = inLambda*inAlpha;
+        const Evaluation& exH = exLambda*outAlpha;
+        if (inH > 0 && exH > 0) {
             // compute the "thermal transmissibility". In contrast to the normal
             // transmissibility this cannot be done as a preprocessing step because the
             // average thermal conductivity is analogous to the permeability but
             // depends on the solution.
-            const Evaluation& inH = inLambda*inAlpha;
-            const Evaluation& exH = exLambda*outAlpha;
             H = 1.0/(1.0/inH + 1.0/exH);
         }
         else
