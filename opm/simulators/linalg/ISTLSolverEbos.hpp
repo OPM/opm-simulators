@@ -272,6 +272,13 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 f.interiorCellNum_ = interiorCellNum_;
             }
 
+#if HAVE_MPI
+            if (isParallel()) {
+                const std::size_t size = simulator_.vanguard().grid().leafGridView().size(0);
+                detail::copyParValues(parallelInformation_, size, *comm_);
+            }
+#endif
+
             // Print parameters to PRT/DBG logs.
             if (on_io_rank && parameters_[activeSolverNum_].linear_solver_print_json_definition_) {
                 std::ostringstream os;
@@ -308,12 +315,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         void initPrepare(const Matrix& M, Vector& b)
         {
             const bool firstcall = (matrix_ == nullptr);
-#if HAVE_MPI
-            if (firstcall && isParallel()) {
-                const std::size_t size = M.N();
-                detail::copyParValues(parallelInformation_, size, *comm_);
-            }
-#endif
 
             // update matrix entries for solvers.
             if (firstcall) {
