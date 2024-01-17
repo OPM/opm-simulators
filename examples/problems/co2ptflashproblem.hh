@@ -29,10 +29,14 @@
 #define OPM_CO2PTFLASH_PROBLEM_HH
 
 #include <opm/common/Exceptions.hpp>
+
+#include <opm/material/components/SimpleCO2.hpp>
+#include <opm/material/components/C10.hpp>
+#include <opm/material/components/C1.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedBrooksCorey.hpp>
 #include <opm/material/fluidmatrixinteractions/BrooksCorey.hpp>
 #include <opm/material/constraintsolvers/PTFlash.hpp> 
-#include <opm/material/fluidsystems/ThreeComponentFluidSystem.hh>
+#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
@@ -73,6 +77,14 @@ struct EpisodeLength { using type = UndefinedProperty;};
 template <class TypeTag, class MyTypeTag>
 struct Initialpressure { using type = UndefinedProperty;};
 
+template <class TypeTag, class MyTypeTag>
+struct NumComp { using type = UndefinedProperty; };
+
+template <class TypeTag>
+struct NumComp<TypeTag, TTag::CO2PTBaseProblem> {
+    static constexpr int value = 3;
+};
+
 // Set the grid type: --->2D
 template <class TypeTag>
 struct Grid<TypeTag, TTag::CO2PTBaseProblem> { using type = Dune::YaspGrid</*dim=*/2>; };
@@ -100,9 +112,10 @@ struct FluidSystem<TypeTag, TTag::CO2PTBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr int num_comp = getPropValue<TypeTag, Properties::NumComp>();
 
 public:
-    using type = Opm::ThreeComponentFluidSystem<Scalar>;
+    using type = Opm::GenericOilGasFluidSystem<Scalar, num_comp>;
 };
 
 // Set the material Law
@@ -321,11 +334,7 @@ class CO2PTProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { numPhases = FluidSystem::numPhases };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
-    enum { Comp2Idx = FluidSystem::Comp2Idx };
-    enum { Comp1Idx = FluidSystem::Comp1Idx };
-    enum { Comp0Idx = FluidSystem::Comp0Idx };
     enum { conti0EqIdx = Indices::conti0EqIdx };
-    enum { contiCO2EqIdx = conti0EqIdx + Comp1Idx };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
@@ -347,6 +356,18 @@ public:
     {
         const Scalar epi_len = EWOMS_GET_PARAM(TypeTag, Scalar, EpisodeLength);
         simulator.setEpisodeLength(epi_len);
+        FluidSystem::init();
+        using CompParm = typename FluidSystem::ComponentParam;
+        using CO2 = Opm::SimpleCO2<Scalar>;
+        using C1 = Opm::C1<Scalar>;
+        using C10 = Opm::C10<Scalar>;
+        FluidSystem::addComponent(CompParm {CO2::name(), CO2::molarMass(), CO2::criticalTemperature(),
+                                   CO2::criticalPressure(), CO2::criticalVolume(), CO2::acentricFactor()});
+        FluidSystem::addComponent(CompParm {C1::name(), C1::molarMass(), C1::criticalTemperature(),
+                                   C1::criticalPressure(), C1::criticalVolume(), C1::acentricFactor()});
+        FluidSystem::addComponent(CompParm{C10::name(), C10::molarMass(), C10::criticalTemperature(),
+                                   C10::criticalPressure(), C10::criticalVolume(), C10::acentricFactor()});
+        // FluidSystem::add
     }
 
     void initPetrophysics()
@@ -571,13 +592,10 @@ private:
         fs.setPressure(FluidSystem::oilPhaseIdx, p_init);
         fs.setPressure(FluidSystem::gasPhaseIdx, p_init);
 
-        fs.setMoleFraction(FluidSystem::oilPhaseIdx, FluidSystem::Comp0Idx, comp[0]);
-        fs.setMoleFraction(FluidSystem::oilPhaseIdx, FluidSystem::Comp1Idx, comp[1]);
-        fs.setMoleFraction(FluidSystem::oilPhaseIdx, FluidSystem::Comp2Idx, comp[2]);
-
-        fs.setMoleFraction(FluidSystem::gasPhaseIdx, FluidSystem::Comp0Idx, comp[0]);
-        fs.setMoleFraction(FluidSystem::gasPhaseIdx, FluidSystem::Comp1Idx, comp[1]);
-        fs.setMoleFraction(FluidSystem::gasPhaseIdx, FluidSystem::Comp2Idx, comp[2]);
+        for (unsigned compIdx = 0; compIdx < numComponents; ++compIdx) {
+            fs.setMoleFraction(FluidSystem::oilPhaseIdx, compIdx, comp[compIdx]);
+            fs.setMoleFraction(FluidSystem::gasPhaseIdx, compIdx, comp[compIdx]);
+        }
 
         // It is used here only for calculate the z
         fs.setSaturation(FluidSystem::oilPhaseIdx, sat[0]);

@@ -38,6 +38,7 @@
 #include <dune/common/fvector.hh>
 
 #include <cstdio>
+#include <string_view>
 
 namespace Opm::Properties {
 
@@ -308,7 +309,7 @@ public:
                         std::max<Scalar>(1e-20, fractureVelocityWeight_[phaseIdx][dofIdx]);
                 // commit the phase velocity
                 char name[512];
-                snprintf(name, 512, "fractureFilterVelocity_%s", FluidSystem::phaseName(phaseIdx));
+                snprintf(name, 512, "fractureFilterVelocity_%s", FluidSystem::phaseName(phaseIdx).data());
 
                 DiscBaseOutputModule::attachVectorDofData_(baseWriter, fractureVelocity_[phaseIdx], name);
             }

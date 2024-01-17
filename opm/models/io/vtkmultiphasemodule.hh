@@ -39,6 +39,7 @@
 #include <dune/common/fvector.hh>
 
 #include <cstdio>
+#include <string_view>
 
 namespace Opm::Properties {
 
@@ -376,7 +377,7 @@ public:
                     velocity_[phaseIdx][i] /= velocityWeight_[phaseIdx][i];
                 // commit the phase velocity
                 char name[512];
-                snprintf(name, 512, "filterVelocity_%s", FluidSystem::phaseName(phaseIdx));
+                snprintf(name, 512, "filterVelocity_%s", FluidSystem::phaseName(phaseIdx).data());
 
                 DiscBaseOutputModule::attachVectorDofData_(baseWriter, velocity_[phaseIdx], name);
             }
@@ -392,7 +393,7 @@ public:
                     potentialGradient_[phaseIdx][i] /= potentialWeight_[phaseIdx][i];
                 // commit the phase velocity
                 char name[512];
-                snprintf(name, 512, "gradP_%s", FluidSystem::phaseName(phaseIdx));
+                snprintf(name, 512, "gradP_%s", FluidSystem::phaseName(phaseIdx).data());
 
                 DiscBaseOutputModule::attachVectorDofData_(baseWriter,
                                                            potentialGradient_[phaseIdx],
