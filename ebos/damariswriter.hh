@@ -419,7 +419,7 @@ private:
             DamarisVarInt var_connectivity(1, {std::string("n_connectivity_ph")}, std::string("topologies/topo/elements/connectivity"), rank_) ;
             var_connectivity.setDamarisParameterAndShmem({ geomData.getNCorners()}) ;
             DamarisVarInt  var_offsets(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/offsets"), rank_) ;
-            var_offsets.setDamarisParameterAndShmem({ geomData.getNCells()}) ;
+            var_offsets.setDamarisParameterAndShmem({ geomData.getNCells()+1}) ;
             DamarisVarChar  var_types(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/types"), rank_) ;
             var_types.setDamarisParameterAndShmem({ geomData.getNCells()}) ;
 
