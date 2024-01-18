@@ -102,7 +102,7 @@ struct FlexibleSolverInfo
                 bool parallel,
                 const PropertyTree& prm,
                 std::size_t pressureIndex,
-                std::function<Vector()> trueFunc,
+                std::function<Vector()> weightCalculator,
                 const bool forceSerial,
                 Comm& comm);
 
@@ -460,22 +460,17 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         {
             OPM_TIMEBLOCK(flexibleSolverPrepare);
             if (shouldCreateSolver()) {
-                std::function<Vector()> trueFunc =
-                    [this]
-                    {
-                        return this->getTrueImpesWeights(pressureIndex);
-                    };
-
                 if (!useWellConn_) {
                     auto wellOp = std::make_unique<WellModelOperator>(simulator_.problem().wellModel());
                     flexibleSolver_[activeSolverNum_].wellOperator_ = std::move(wellOp);
                 }
+                std::function<Vector()> weightCalculator = this->getWeightsCalculator(prm_[activeSolverNum_], getMatrix(), pressureIndex);
                 OPM_TIMEBLOCK(flexibleSolverCreate);
                 flexibleSolver_[activeSolverNum_].create(getMatrix(),
                                                          isParallel(),
                                                          prm_[activeSolverNum_],
                                                          pressureIndex,
-                                                         trueFunc,
+                                                         weightCalculator,
                                                          forceSerial_,
                                                          *comm_);
             }
@@ -540,17 +535,62 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         // Weights to make approximate pressure equations.
         // Calculated from the storage terms (only) of the
         // conservation equations, ignoring all other terms.
-        Vector getTrueImpesWeights(int pressureVarIndex) const
+        std::function<Vector()> getWeightsCalculator(const PropertyTree& prm,
+                                                     const Matrix& matrix,
+                                                     std::size_t pressIndex) const
         {
-            OPM_TIMEBLOCK(getTrueImpesWeights);
-            Vector weights(rhs_->size());
-            ElementContext elemCtx(simulator_);
-            Amg::getTrueImpesWeights(pressureVarIndex, weights,
-                                     simulator_.vanguard().gridView(),
-                                     elemCtx, simulator_.model(),
-                                     ThreadManager::threadId());
-            return weights;
+            std::function<Vector()> weightsCalculator;
+
+            using namespace std::string_literals;
+
+            auto preconditionerType = prm.get("preconditioner.type"s, "cpr"s);
+            if (preconditionerType == "cpr" || preconditionerType == "cprt"
+                || preconditionerType == "cprw" || preconditionerType == "cprwt") {
+                const bool transpose = preconditionerType == "cprt" || preconditionerType == "cprwt";
+                const auto weightsType = prm.get("preconditioner.weight_type"s, "quasiimpes"s);
+                if (weightsType == "quasiimpes") {
+                    // weights will be created as default in the solver
+                    // assignment p = pressureIndex prevent compiler warning about
+                    // capturing variable with non-automatic storage duration
+                    weightsCalculator = [matrix, transpose, pressIndex]() {
+                        return Amg::getQuasiImpesWeights<Matrix, Vector>(matrix,
+                                                                         pressIndex,
+                                                                         transpose);
+                    };
+                } else if ( weightsType == "trueimpes" ) {
+                    weightsCalculator =
+                        [this, pressIndex]
+                        {
+                            Vector weights(rhs_->size());
+                            ElementContext elemCtx(simulator_);
+                            Amg::getTrueImpesWeights(pressIndex, weights,
+                                                             simulator_.vanguard().gridView(),
+                                                             elemCtx, simulator_.model(),
+                                                             ThreadManager::threadId());
+                            return weights;
+                        };
+                } else if  (weightsType == "trueimpesanalytic" ) {
+                    weightsCalculator =
+                        [this, pressIndex]
+                        {
+                            Vector weights(rhs_->size());
+                            ElementContext elemCtx(simulator_);
+                            Amg::getTrueImpesWeightsAnalytic(pressIndex, weights,
+                                                             simulator_.vanguard().gridView(),
+                                                             elemCtx, simulator_.model(),
+                                                             ThreadManager::threadId());
+                            return weights;
+                        };
+                } else {
+                    OPM_THROW(std::invalid_argument,
+                              "Weights type " + weightsType +
+                              "not implemented for cpr."
+                              " Please use quasiimpes or trueimpes.");
+                }
+            }
+            return weightsCalculator;
         }
+
 
         Matrix& getMatrix()
         {
