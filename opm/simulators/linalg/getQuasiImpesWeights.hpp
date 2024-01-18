@@ -162,7 +162,7 @@ namespace Amg
         VectorBlockType rhs(0.0);
         const auto& solution = model.solution(/*timeIdx*/ 0);
         OPM_BEGIN_PARALLEL_TRY_CATCH();
-         for (const auto& elem : elements(gridView)) {
+        for (const auto& elem : elements(gridView)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
             const auto& index = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
@@ -192,9 +192,6 @@ namespace Amg
                 denominator = Toolbox::template decay<LhsEval>(1 - rs * rv);
             }
 
-            if (not(denominator > 0)) {
-                std::cout << "Probably negative compressibility" << std::endl;
-            }
             if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
                 unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
                     FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
@@ -208,31 +205,6 @@ namespace Amg
                 bweights[activeCompIdx] = Toolbox::template decay<LhsEval>(
                     (1 / fs.invB(FluidSystem::gasPhaseIdx) - rv / fs.invB(FluidSystem::oilPhaseIdx))
                     / denominator);
-            }
-            if(false){
-                // usure about the best for undersaturated
-
-                if (
-                    (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv)
-                    ||
-                    (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs)
-                    ) {
-                    // Probably not need bweiths may be initialized to zero anyway
-                    unsigned activeCompIdx = -10;
-                    if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
-                        // only water and gas pressent
-                        activeCompIdx = Indices::canonicalToActiveComponentIndex(
-                        FluidSystem::solventComponentIndex(FluidSystem::oilPhaseIdx));
-                        bweights[activeCompIdx] = 0.0;
-                                                                                         }
-                    if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
-                        // only water and oil pressent
-                        activeCompIdx = Indices::canonicalToActiveComponentIndex(
-                            FluidSystem::solventComponentIndex(FluidSystem::gasPhaseIdx));
-                        bweights[activeCompIdx] = 0.0;
-                }
-
-            }
             }
             weights[index] = bweights;
         }
