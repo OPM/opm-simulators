@@ -1415,29 +1415,63 @@ public:
 
         // Add source term from deck
         const auto& source = this->simulator().vanguard().schedule()[this->episodeIndex()].source();
-        if (source.size() > 0) {
-            std::array<int,3> ijk;
-                this->simulator().vanguard().cartesianCoordinate(globalDofIdx, ijk);
-            RateVector massRate(0.0);
-            if ( FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-                massRate[Indices::canonicalToActiveComponentIndex(oilCompIdx)] = source.rate({ijk, SourceComponent::OIL}) / this->model().dofTotalVolume(globalDofIdx);
+        std::array<int,3> ijk;
+        this->simulator().vanguard().cartesianCoordinate(globalDofIdx, ijk);
+
+        if (source.hasSource(ijk)) {
+            const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);  
+            static std::array<SourceComponent, 3> sc_map = {SourceComponent::WATER, SourceComponent::OIL, SourceComponent::GAS};
+            static std::array<int, 3> phidx_map = {FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx}; 
+            static std::array<int, 3> cidx_map = {waterCompIdx, oilCompIdx, gasCompIdx}; 
+
+            for (unsigned i = 0; i < phidx_map.size(); ++i) {
+                const auto phaseIdx = phidx_map[i];
+                const auto sourceComp = sc_map[i];
+                const auto compIdx = cidx_map[i];
+                if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                    continue;
+                } 
+                Scalar mass_rate = source.rate({ijk, sourceComp}) / this->model().dofTotalVolume(globalDofIdx);
+                if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
+                    mass_rate /= FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
+                }
+                rate[Indices::canonicalToActiveComponentIndex(compIdx)] += mass_rate;
             }
-            if ( FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-                massRate[Indices::canonicalToActiveComponentIndex(gasCompIdx)] = source.rate({ijk, SourceComponent::GAS}) / this->model().dofTotalVolume(globalDofIdx);
-            }
-            if ( FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-                massRate[Indices::canonicalToActiveComponentIndex(waterCompIdx)] = source.rate({ijk, SourceComponent::WATER}) / this->model().dofTotalVolume(globalDofIdx);
-            }
+
             if constexpr (enableSolvent) {
-                massRate[Indices::solventSaturationIdx] = source.rate({ijk, SourceComponent::SOLVENT}) / this->model().dofTotalVolume(globalDofIdx);
+                Scalar mass_rate = source.rate({ijk, SourceComponent::SOLVENT}) / this->model().dofTotalVolume(globalDofIdx);
+                if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
+                    const auto& solventPvt = SolventModule::solventPvt();
+                    mass_rate /= solventPvt.referenceDensity(pvtRegionIdx);
+                }
+                rate[Indices::contiSolventEqIdx] += mass_rate;
             }
-            const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
-            rate.setMassRate(massRate, pvtRegionIdx);
             if constexpr (enablePolymer) {
-                rate[Indices::polymerConcentrationIdx] = source.rate({ijk, SourceComponent::POLYMER}) / this->model().dofTotalVolume(globalDofIdx);
+                rate[Indices::polymerConcentrationIdx] += source.rate({ijk, SourceComponent::POLYMER}) / this->model().dofTotalVolume(globalDofIdx);
             }
             if constexpr (enableEnergy) {
-                rate[Indices::contiEnergyEqIdx] = source.hrate(ijk) / this->model().dofTotalVolume(globalDofIdx);
+                for (unsigned i = 0; i < phidx_map.size(); ++i) {
+                    const auto phaseIdx = phidx_map[i];
+                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
+                        continue;
+                    }
+                    const auto sourceComp = sc_map[i];
+                    if (source.hasHrate({ijk, sourceComp})) {
+                        rate[Indices::contiEnergyEqIdx] += source.hrate({ijk, sourceComp}) / this->model().dofTotalVolume(globalDofIdx);
+                    } else {
+                        const auto& intQuants = this->simulator().model().intensiveQuantities(globalDofIdx, /*timeIdx*/ 0);
+                        auto fs = intQuants.fluidState();
+                        // if temperature is not set, use cell temperature as default
+                        if (source.hasTemperature({ijk, sourceComp})) {
+                            Scalar temperature = source.temperature({ijk, sourceComp});
+                            fs.setTemperature(temperature);
+                        }
+                        const auto& h = FluidSystem::enthalpy(fs, phaseIdx, pvtRegionIdx);
+                        Scalar mass_rate = source.rate({ijk, sourceComp})/ this->model().dofTotalVolume(globalDofIdx);
+                        Scalar energy_rate = getValue(h)*mass_rate;
+                        rate[Indices::contiEnergyEqIdx] += energy_rate;
+                    }
+                }
             }
         }
 
