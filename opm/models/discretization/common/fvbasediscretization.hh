@@ -466,6 +466,7 @@ public:
 
         enableStorageCache_ = EWOMS_GET_PARAM(TypeTag, bool, EnableStorageCache);
 
+        PrimaryVariables::init();
         size_t numDof = asImp_().numGridDof();
         for (unsigned timeIdx = 0; timeIdx < historySize; ++timeIdx) {
             if (storeIntensiveQuantities()) {
@@ -505,7 +506,7 @@ public:
         ExtensiveQuantities::registerParameters();
         NewtonMethod::registerParameters();
         Linearizer::registerParameters();
-
+        PrimaryVariables::registerParameters();
         // register runtime parameters of the output modules
         VtkPrimaryVarsModule<TypeTag>::registerParameters();
 
