@@ -129,7 +129,7 @@ getFluidStateVariable(const std::string &name) const
     for (; elem_itr != elem_end_itr; ++elem_itr) {
         std::cout << "i=" << i << std::endl;
         const Element& elem = *elem_itr;
-        elem_ctx.updatePrimaryStencil(elem);
+        //elem_ctx.updatePrimaryStencil(elem);
         elem_ctx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         for (unsigned dof_idx = 0; dof_idx < elem_ctx.numPrimaryDof(/*timeIdx=*/0); ++dof_idx) {
             std::cout << "j=" << dof_idx << std::endl;
