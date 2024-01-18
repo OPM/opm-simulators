@@ -170,6 +170,10 @@ public:
                 const auto& rho = FluidSystem::density(fluidState, phaseIdx, regionIdx);
                 fluidState.setDensity(phaseIdx, rho);
 
+                if (enableEnergy) {
+                    const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, regionIdx);
+                    fluidState.setEnthalpy(phaseIdx, h);
+                }
             }
 
             // set the salt concentration

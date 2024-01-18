@@ -1597,7 +1597,10 @@ public:
 
                     const auto& rho = FluidSystem::density(fluidState, phaseIdx, pvtRegionIdx);
                     fluidState.setDensity(phaseIdx, rho);
-
+                    if (enableEnergy) {
+                        const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, pvtRegionIdx);
+                        fluidState.setEnthalpy(phaseIdx, h);
+                    }
                 }
                 fluidState.checkDefined();
                 return fluidState;
