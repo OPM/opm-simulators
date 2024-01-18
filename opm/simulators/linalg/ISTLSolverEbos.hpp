@@ -536,7 +536,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         // conservation equations, ignoring all other terms.
         std::function<Vector()> getWeightsCalculator(const PropertyTree& prm,
                                                      const Matrix& matrix,
-                                                     std::size_t pressureIndex) const
+                                                     std::size_t pressIndex) const
         {
             std::function<Vector()> weightsCalculator;
 
@@ -551,18 +551,18 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                     // weights will be created as default in the solver
                     // assignment p = pressureIndex prevent compiler warning about
                     // capturing variable with non-automatic storage duration
-                    weightsCalculator = [matrix, transpose, pressureIndex]() {
+                    weightsCalculator = [matrix, transpose, pressIndex]() {
                         return Amg::getQuasiImpesWeights<Matrix, Vector>(matrix,
-                                                                         pressureIndex,
+                                                                         pressIndex,
                                                                          transpose);
                     };
                 } else if ( weightsType == "trueimpes" ) {
                     weightsCalculator =
-                        [this, pressureIndex]
+                        [this, pressIndex]
                         {
                             Vector weights(rhs_->size());
                             ElementContext elemCtx(simulator_);
-                            Amg::getTrueImpesWeights(pressureIndex, weights,
+                            Amg::getTrueImpesWeights(pressIndex, weights,
                                                              simulator_.vanguard().gridView(),
                                                              elemCtx, simulator_.model(),
                                                              ThreadManager::threadId());
@@ -570,11 +570,11 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                         };
                 } else if  (weightsType == "trueimpesanalytic" ) {
                     weightsCalculator =
-                        [this, pressureIndex]
+                        [this, pressIndex]
                         {
                             Vector weights(rhs_->size());
                             ElementContext elemCtx(simulator_);
-                            Amg::getTrueImpesWeightsAnalytic(pressureIndex, weights,
+                            Amg::getTrueImpesWeightsAnalytic(pressIndex, weights,
                                                              simulator_.vanguard().gridView(),
                                                              elemCtx, simulator_.model(),
                                                              ThreadManager::threadId());
