@@ -86,7 +86,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
                                                     bool parallel,
                                                     const PropertyTree& prm,
                                                     std::size_t pressureIndex,
-                                                    std::function<Vector()> trueFunc,
+                                                    std::function<Vector()> weightsCalculator,
                                                     const bool forceSerial,
                                                     [[maybe_unused]] Comm& comm)
 
@@ -103,7 +103,7 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
         if (basic_comm.size() > 1) {
             os << fmt::format("on MPI rank: {} ", basic_comm.rank());
         }
-        // The static_cast of Matrix::block_type::rows is needed for fmt version 10. 
+        // The static_cast of Matrix::block_type::rows is needed for fmt version 10.
         // TODO: Check if the cast is still needed in future versions.
         os << fmt::format("blocksize: {} size: {:7d} block nonzeroes: {:9d}",
                           static_cast<int>(Matrix::block_type::rows), matrix.N(), matrix.nonzeroes());
@@ -114,8 +114,6 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
             global_logger.logMessages();
         }
     }
-
-    std::function<Vector()> weightsCalculator = trueFunc;
 
     if (parallel) {
 #if HAVE_MPI
