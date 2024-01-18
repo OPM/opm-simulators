@@ -134,7 +134,7 @@ namespace Amg
     }
 
     template <class Vector, class GridView, class ElementContext, class Model>
-    void getTrueImpesWeightsAnalytic(int pressureVarIndex,
+    void getTrueImpesWeightsAnalytic(int /*pressureVarIndex*/,
                                      Vector& weights,
                                      const GridView& gridView,
                                      ElementContext& elemCtx,
@@ -155,7 +155,6 @@ namespace Amg
 
         using PrimaryVariables = typename Model::PrimaryVariables;
         using VectorBlockType = typename Vector::block_type;
-        constexpr int numEq = VectorBlockType::size();
         using Evaluation =
             typename std::decay_t<decltype(model.localLinearizer(threadId).localResidual().residual(0))>::block_type;
         using Toolbox = MathToolbox<Evaluation>;
@@ -173,7 +172,7 @@ namespace Amg
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(
                     FluidSystem::solventComponentIndex(FluidSystem::waterPhaseIdx));
-                bweights[FluidSystem::waterPhaseIdx]
+                bweights[activeCompIdx]
                     = Toolbox::template decay<LhsEval>(1 / fs.invB(FluidSystem::waterPhaseIdx));
             }
 
