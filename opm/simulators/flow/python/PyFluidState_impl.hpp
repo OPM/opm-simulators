@@ -115,6 +115,7 @@ getFluidStateVariable(const std::string &name) const
 
     Model &model = this->ebos_simulator_->model();
     auto size = model.numGridDof();
+    std::cout << "model size=" << size << std::endl;
     std::vector<double> array(size);
     const auto& grid_view = this->ebos_simulator_->vanguard().gridView();
     /* NOTE: grid_view.size(0) should give the same value as
@@ -129,7 +130,7 @@ getFluidStateVariable(const std::string &name) const
     for (; elem_itr != elem_end_itr; ++elem_itr) {
         std::cout << "i=" << i << std::endl;
         const Element& elem = *elem_itr;
-        //elem_ctx.updatePrimaryStencil(elem);
+        elem_ctx.updatePrimaryStencil(elem);
         elem_ctx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         for (unsigned dof_idx = 0; dof_idx < elem_ctx.numPrimaryDof(/*timeIdx=*/0); ++dof_idx) {
             std::cout << "j=" << dof_idx << std::endl;
@@ -138,6 +139,7 @@ getFluidStateVariable(const std::string &name) const
             unsigned global_dof_idx = elem_ctx.globalSpaceIndex(dof_idx, /*timeIdx=*/0);
             array[global_dof_idx] = getVariableValue_(fs, var_type, name);
         }
+        i+=1;
     }
     return array;
 }
