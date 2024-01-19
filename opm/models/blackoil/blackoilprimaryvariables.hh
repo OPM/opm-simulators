@@ -208,38 +208,41 @@ public:
 
         return result;
     }
-    //template <class TypeTag>
+
     static void init()
     {
         // TODO: these parameters have undocumented non-trivial dependencies
         pressureScale_ = EWOMS_GET_PARAM(TypeTag, double, PressureScale);
     }
-    //template <class TypeTag>
+
     static void registerParameters()
     {
         EWOMS_REGISTER_PARAM(TypeTag, double, PressureScale, "Scaling of pressure primary variable");
     }
 
-    void setPressureScale(Scalar val){
+    void setPressureScale(Scalar val)
+    {
         pressureScale_ = val;
     }
 
-    Evaluation makeEvaluation(unsigned varIdx, unsigned timeIdx, LinearizationType linearizationType = LinearizationType()) const
+    Evaluation
+    makeEvaluation(unsigned varIdx, unsigned timeIdx, LinearizationType linearizationType = LinearizationType()) const
     {
         Scalar scale = 1.0;
-        if(varIdx == pressureSwitchIdx){
+        if (varIdx == pressureSwitchIdx) {
             scale = this->pressureScale_;
         }
         if (std::is_same<Evaluation, Scalar>::value)
-            return (*this)[varIdx]*scale; // finite differences
+            return (*this)[varIdx] * scale; // finite differences
         else {
             // automatic differentiation
             if (timeIdx == linearizationType.time)
-                return Toolbox::createVariable((*this)[varIdx], varIdx)*scale;
+                return Toolbox::createVariable((*this)[varIdx], varIdx) * scale;
             else
-                return Toolbox::createConstant((*this)[varIdx])*scale;
+                return Toolbox::createConstant((*this)[varIdx]) * scale;
         }
     }
+
     /*!
      * \brief Set the index of the region which should be used for PVT properties.
      *
@@ -693,7 +696,7 @@ public:
                 // if gas phase disappeares:  Sw (water saturation) -> Rsw (fraction of gas in water phase)
                 // and Pg (gas pressure) -> Pw ( water pressure)
                 if(sg < -eps && sw > eps && FluidSystem::enableDissolvedGasInWater()) {
-                    const Scalar& pg = this->pressure_();
+                    const Scalar pg = this->pressure_();
                     assert(primaryVarsMeaningPressure() == PressureMeaning::Pg);
                     std::array<Scalar, numPhases> pC = { 0.0 };
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
@@ -757,7 +760,7 @@ public:
                     std::array<Scalar, numPhases> pC = { 0.0 };
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     computeCapillaryPressures_(pC, /*so=*/ 0.0,  /*sg=*/ 0.0, /*sw=*/ 1.0, matParams);
-                    Scalar pg = pw + (pC[gasPhaseIdx] - pC[waterPhaseIdx]);
+                    Scalar pg = pw + pcFactor_ * (pC[gasPhaseIdx] - pC[waterPhaseIdx]);
                     this->setScaledPressure_(pg);
                     changed = true;
                 }
@@ -784,7 +787,7 @@ public:
             {
                 Scalar s = 1.0 - sw - solventSaturation_();
                 if (sg < -eps && s > 0.0 && FluidSystem::enableDissolvedGas()) {
-                    const Scalar& po = this->pressure_();
+                    const Scalar po = this->pressure_();
                     setPrimaryVarsMeaningGas(GasMeaning::Rs);
                     Scalar soMax = std::max(s, problem.maxOilSaturation(globalDofIdx));
                     Scalar rsMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
@@ -805,7 +808,7 @@ public:
                     // present, i.e., switch the primary variables to GasMeaning::Rv.
                     // we only have the oil pressure readily available, but we need the gas
                     // pressure, i.e. we must determine capillary pressure
-                    const Scalar& po = this->pressure_();
+                    const Scalar po = this->pressure_();
                     std::array<Scalar, numPhases> pC = { 0.0 };
                     const MaterialLawParams& matParams = problem.materialLawParams(globalDofIdx);
                     computeCapillaryPressures_(pC, /*so=*/0.0, sg + solventSaturation_(), sw, matParams);
@@ -836,7 +839,7 @@ public:
                 // Gas phase not present. The hydrocarbon gas phase
                 // appears as soon as more of the gas component is present in the oil phase
                 // than what saturated oil can hold.
-                const Scalar& po = this->pressure_();
+                const Scalar po = this->pressure_();
                 Scalar so = 1.0 - sw - solventSaturation_();
                 Scalar soMax = std::max(so, problem.maxOilSaturation(globalDofIdx));
                 Scalar rsMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
@@ -864,7 +867,7 @@ public:
                 // soon as more of the oil component is present in the hydrocarbon gas phase
                 // than what saturated gas contains. Note that we use the blackoil specific
                 // low-level PVT objects here for performance reasons.
-                const Scalar& pg = this->pressure_();
+                const Scalar pg = this->pressure_();
                 Scalar soMax = problem.maxOilSaturation(globalDofIdx);
                 Scalar rvMax = problem.maxOilVaporizationFactor(/*timeIdx=*/0, globalDofIdx);
                 Scalar rvSat = enableExtbo ? ExtboModule::rv(pvtRegionIndex(),
@@ -1131,12 +1134,12 @@ private:
 
     Scalar pressure_() const
     {
-        return (*this)[Indices::pressureSwitchIdx]*this->pressureScale_;
+        return (*this)[Indices::pressureSwitchIdx] * this->pressureScale_;
     }
 
     void setScaledPressure_(Scalar pressure)
     {
-        (*this)[Indices::pressureSwitchIdx]=pressure/(this->pressureScale_);
+        (*this)[Indices::pressureSwitchIdx] = pressure / (this->pressureScale_);
     }
 
     WaterMeaning primaryVarsMeaningWater_;
