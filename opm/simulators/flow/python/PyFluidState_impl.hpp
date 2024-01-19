@@ -17,6 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <fmt/format.h>
+#include <dune/grid/common/gridenums.hh>
+#include <dune/grid/common/rangegenerators.hh>
 
 namespace Opm::Pybind {
 
@@ -122,14 +124,15 @@ getFluidStateVariable(const std::string &name) const
      *  model.numGridDof()
      */
     ElementContext elem_ctx(*this->ebos_simulator_);
-    ElementIterator elem_itr = grid_view.template begin</*codim=*/0>();
-    const ElementIterator& elem_end_itr = grid_view.template end</*codim=*/0>();
+    //ElementIterator elem_itr = grid_view.template begin</*codim=*/0>();
+    //const ElementIterator& elem_end_itr = grid_view.template end</*codim=*/0>();
     auto var_type = getVariableType_(name);
     // JENKINS dummy line
     int i = 0;
-    for (; elem_itr != elem_end_itr; ++elem_itr) {
+    for (const auto& elem : elements(grid_view, Dune::Partitions::interior)) {
+    //for (; elem_itr != elem_end_itr; ++elem_itr) {
         std::cout << "i=" << i << std::endl;
-        const Element& elem = *elem_itr;
+        //const Element& elem = *elem_itr;
         elem_ctx.updatePrimaryStencil(elem);
         elem_ctx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         for (unsigned dof_idx = 0; dof_idx < elem_ctx.numPrimaryDof(/*timeIdx=*/0); ++dof_idx) {
