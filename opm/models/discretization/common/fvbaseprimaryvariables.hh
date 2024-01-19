@@ -80,6 +80,16 @@ public:
      */
     FvBasePrimaryVariables& operator=(const FvBasePrimaryVariables& value) = default;
 
+    static void init()
+    {
+        // Nothing required by default.
+    }
+
+    static void registerParameters()
+    {
+        // No parameters to register by default.
+    }
+
     /*!
      * \brief Return a primary variable intensive evaluation.
      *
