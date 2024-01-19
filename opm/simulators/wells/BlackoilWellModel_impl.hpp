@@ -2665,13 +2665,20 @@ namespace Opm {
                                    ebosSimulator_.gridView().comm());
 
         // Write well/domain info to the DBG file.
-        if (ebosSimulator_.gridView().comm().rank() == 0) {
+        const Opm::Parallel::Communication& comm = grid().comm();
+        const int rank = comm.rank();
+        DeferredLogger local_log;
+        {
             std::ostringstream os;
-            os << "Well name      Domain\n";
+            os << "Well name      Rank      Domain\n";
             for (const auto& [wname, domain] : well_domain_) {
-                os << wname << std::setw(21 - wname.size()) << domain << '\n';
+                os << wname << std::setw(19 - wname.size()) << rank << std::setw(12) << domain << '\n';
             }
-            OpmLog::debug(os.str());
+            local_log.debug(os.str());
+        }
+        auto global_log = gatherDeferredLogger(local_log, comm);
+        if (terminal_output_) {
+            global_log.logMessages();
         }
     }
 
