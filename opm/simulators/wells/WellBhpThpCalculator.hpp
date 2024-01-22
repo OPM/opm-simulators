@@ -118,18 +118,21 @@ public:
   std::pair<double, double>
   getFloIPR(const WellState& well_state,
             const Well& well, 
-            const SummaryState& summary_state) const;                                                                                              
-    //! \brief Find limits using brute-force solver.
-    static bool bruteForceBracket(const std::function<double(const double)>& eq,
-                                  const std::array<double, 2>& range,
-                                  double& low, double& high,
-                                  DeferredLogger& deferred_logger);
+            const SummaryState& summary_state) const;
 
- //! \brief Find limits using brute-force solver.
-    static bool bruteForceBracketHigh(const std::function<double(const double)>& eq,
-                                  const std::array<double, 2>& range,
-                                  double& low, double& high,
-                                  DeferredLogger& deferred_logger);
+  //! \brief Find limits using brute-force solver.
+  static bool bruteForceBracket(const std::function<double(const double)>& eq,
+                                const std::array<double, 2>& range,
+                                double& low, double& high,
+                                DeferredLogger& deferred_logger);
+
+  //! \brief Find limits using brute-force solver.
+  static bool bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
+                                const std::array<double, 2>& range,
+                                double& low, double& high,
+                                std::optional<double>& approximate_solution,
+                                const double& limit,
+                                DeferredLogger& deferred_logger);
 
 private:
     //! \brief Compute BHP from THP limit for an injector - implementation.
@@ -160,7 +163,7 @@ private:
     //! \brief Get pressure adjustment to the bhp calculated from VFP table
     double getVfpBhpAdjustment(const double bph_tab, const double thp_limit) const;
 
-    //! \brief Find limits using bisection.
+   //! \brief Find limits using bisection.
     bool bisectBracket(const std::function<double(const double)>& eq,
                        const std::array<double, 2>& range,
                        double& low, double& high,

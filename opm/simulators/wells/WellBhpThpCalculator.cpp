@@ -844,7 +844,7 @@ bruteForceBracket(const std::function<double(const double)>& eq,
     bool bracket_found = false;
     low = range[0];
     high = range[1];
-    const int sample_number = 300;
+    const int sample_number = 200;
     const double interval = (high - low) / sample_number;
     double eq_low = eq(low);
     double eq_high = 0.0;
@@ -859,11 +859,6 @@ bruteForceBracket(const std::function<double(const double)>& eq,
         eq_low = eq_high;
     }
     if (bracket_found) {
-        // std::cout << "BFB: low: " << low << " high: " << high << std::endl;
-        // std::cout << "BFB: low_value: " << eq_low << " high_value: " << eq_high << std::endl;
-        // double low_value = eq(low);
-        // double high_value = eq(high);
-        // std::cout << "CHK: low_value: " << low_value<< " high_value: " << high_value << std::endl;
         deferred_logger.debug(
                 " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
                 " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
@@ -974,21 +969,29 @@ getFloIPR(const WellState& well_state,
 
 bool
 WellBhpThpCalculator::
-bruteForceBracketHigh(const std::function<double(const double)>& eq,
+bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
                   const std::array<double, 2>& range,
                   double& low, double& high,
+                  std::optional<double>& approximate_solution,
+                  const double& limit,
                   DeferredLogger& deferred_logger)
 {
     bool bracket_found = false;
+    // bool approximate_solution_found = false;
     low = range[0];
     high = range[1];
-    const int sample_number = 300;
+    const int sample_number = 300;//10000; //300; //10000;
     const double interval = (high - low) / sample_number;
     double eq_low = eq(low);
     double eq_high = 0.0;
     for (int i = 0; i < sample_number + 1; ++i) {
         high = range[0] + interval * i;
         eq_high = eq(high);
+        if ( (std::fabs(eq_high) < limit)) {
+            // approximate_solution_found = true;
+            approximate_solution = high;
+            break;
+        }
         if (eq_high * eq_low <= 0.) {
             bracket_found = true;
             break;
@@ -998,80 +1001,12 @@ bruteForceBracketHigh(const std::function<double(const double)>& eq,
     }
 
     if (bracket_found) {
-        // const double limit = 0.0003;
-        // double abs_low = std::fabs(eq_low);
-        // double abs_high = std::fabs(eq_high);
-        // if (std::min(abs_low, abs_high) < limit) {
-        //     // Return the least bad solution if less off than 0.1 bar.
-        //     deferred_logger.warning("Robust common THP not solved precisely for well " + well_.name());
-        //     approximate_solution = abs_low < abs_high ? low : high;
-        // } else {
-        //         // Return failure.
-        //     deferred_logger.warning("FAILED_ROBUST_BHP_THP_SOLVE_BRACKETING_FAILURE",
-        //                                 "Robust bhp(thp) solve failed due to bracketing failure for well " +
-        //                                 well_.name());
-        // }
-
-        //check if [high, range[1]] contains a bracket
-        // low = range[0];
-        // bool bracket_found2 = false;
-        // double range0 = high;
-        // double low1 = range0;
-        // double high1 = range[1];
-        // const int sample_number = 300;
-        // const double interval = (high1 - low1) / sample_number;
-        // double eq_low1 = eq(low1);
-        // double eq_high1 = 0.0;
-        // for (int i = 0; i < sample_number + 1; ++i) {
-        //     high1 = range0 + interval * i;
-        //     eq_high1 = eq(high1);
-        //     if (eq_high1 * eq_low1 <= 0.) {
-        //         bracket_found2 = true;
-        //         low = low1;
-        //         high = high1;
-        //         break;
-        //     }
-        //     low1 = high1;
-        //     eq_low1 = eq_high1;
-        // }
         deferred_logger.debug(
                 " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
                 " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
     }
     return bracket_found;
 }
-
-// bool
-// WellBhpThpCalculator::
-// bruteForceBracketHigh(const std::function<double(const double)>& eq,
-//                   const std::array<double, 2>& range,
-//                   double& low, double& high,
-//                   DeferredLogger& deferred_logger)
-// {
-//     bool bracket_found = false;
-//     low = range[0];
-//     high = range[1];
-//     const int sample_number = 300;
-//     const double interval = (high - low) / sample_number;
-//     double eq_low = 0.0;
-//     double eq_high = eq(high);
-//     for (int i = 0; i < sample_number + 1; ++i) {
-//         low = range[1] - interval * i;
-//         eq_low = eq(low);
-//         if (eq_high * eq_low <= 0.) {
-//             bracket_found = true;
-//             break;
-//         }
-//         high = low;
-//         eq_high = eq_low;
-//     }
-//     if (bracket_found) {
-//         deferred_logger.debug(
-//                 " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
-//                 " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
-//     }
-//     return bracket_found;
-// }
 
 #define INSTANCE(...) \
 template __VA_ARGS__ WellBhpThpCalculator:: \
