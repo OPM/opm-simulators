@@ -34,7 +34,7 @@ namespace Opm {
 
 void RSTConv::init(const std::size_t numCells,
                    const RSTConfig& rst_config,
-                   const std::array<int,3>& compIdx)
+                   const std::array<int,6>& compIdx)
 {
     const auto kw = rst_config.keywords.find("CONV");
     if (kw == rst_config.keywords.end()) {
@@ -46,9 +46,9 @@ void RSTConv::init(const std::size_t numCells,
     N_ = kw->second;
     compIdx_ = compIdx;
 
-    cnv_X_.resize(3);
-    for (std::size_t i = 0; i < 3; ++i) {
-        if (compIdx_[i] != -1) {
+    cnv_X_.resize(6);
+    for (std::size_t i = 0; i < 6; ++i) {
+        if (compIdx_[i] > -1) {
             cnv_X_[i].resize(numCells);
         }
     }

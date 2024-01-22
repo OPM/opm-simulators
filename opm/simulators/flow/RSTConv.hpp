@@ -45,10 +45,10 @@ public:
     //! \brief Init state at beginning of step.
     //! \param numCells Global number of active cells in the model
     //! \param rst_config RPTRST configuration
-    //! \param compIdx Component index for phases {OIL, GAS, WAT}, -1 if inactive
+    //! \param compIdx Component index for phases {OIL, GAS, WAT, POLYMER, BRINE, SOLVENT}, negative if inactive
     void init(const std::size_t numCells,
               const RSTConfig& rst_config,
-              const std::array<int,3>& compIdx);
+              const std::array<int,6>& compIdx);
 
     //! \brief Adds the CONV output for given residual vector.
     template<class ResidualVector>
@@ -71,7 +71,7 @@ private:
     const std::vector<int>& globalCell_; //!< Global cell indices
     Parallel::Communication comm_; //!< Communicator
     std::vector<std::vector<int>> cnv_X_; //!< Counts of worst cells for RPTRST CONV
-    std::array<int,3> compIdx_; //!< Component indices
+    std::array<int,6> compIdx_; //!< Component indices
     int N_ = 0; //!< Number of cells to consider
 };
 

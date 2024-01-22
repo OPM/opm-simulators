@@ -1504,8 +1504,9 @@ void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 assignGlobalFieldsToSolution(data::Solution& sol)
 {
     if (!this->cnvData_.empty()) {
-        constexpr std::array names = {"CNV_OIL", "CNV_GAS", "CNV_WAT"};
-        for (size_t i = 0; i < 3; ++i) {
+        constexpr const std::array names{"CNV_OIL", "CNV_GAS", "CNV_WAT",
+                                         "CNV_PLY", "CNV_SAL", "CNV_SOL"};
+        for (std::size_t i = 0; i < names.size(); ++i) {
             if (!this->cnvData_[i].empty()) {
                 sol.insert(names[i], this->cnvData_[i], data::TargetType::RESTART_SOLUTION);
             }

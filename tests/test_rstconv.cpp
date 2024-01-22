@@ -68,7 +68,7 @@ init_unit_test_func()
 
 struct TestCase {
     std::size_t N;
-    std::array<int,3> phase;
+    std::array<int,6> phase;
 };
 
 std::ostream& operator<<(std::ostream& os, const TestCase& t)
@@ -82,12 +82,15 @@ std::ostream& operator<<(std::ostream& os, const TestCase& t)
 }
 
 static const std::vector<TestCase> tests = {
-    {1, {0, 1, 2}},
-    {3, {0, 1, 2}},
-    {1, {0, -1, 1}},
-    {5, {0, -1, 1}},
-    {1, {-1, -1, 0}},
-    {4, {-1, -1, 0}},
+    {1, { 0,  1,  2, -1, -1, -1}},
+    {3, { 0,  1,  2, -1, -1, -1}},
+    {1, { 0, -1,  1, -1, -1, -1}},
+    {5, { 0, -1,  1, -1, -1, -1}},
+    {1, {-1, -1,  0, -1, -1, -1}},
+    {4, {-1, -1,  0, -1, -1, -1}},
+    {1, { 0,  1, -1,  2, -1, -1}},
+    {1, { 0,  1, -1, -1,  2, -1}},
+    {1, { 0,  1, -1, -1, -1,  2}},
 };
 
 #if BOOST_VERSION / 100000 == 1 && BOOST_VERSION / 100 % 1000 > 66
@@ -107,16 +110,16 @@ BOOST_AUTO_TEST_CASE(RstConvTest)
     std::vector<int> cellMapping(10);
     std::iota(cellMapping.begin(), cellMapping.end(), cc.rank()*10);
 
-    Dune::BlockVector<Dune::FieldVector<double,3>> residual(10);
+    Dune::BlockVector<Dune::FieldVector<double,6>> residual(10);
 
     // generate data
-    std::vector<std::vector<int>> max(3);
+    std::vector<std::vector<int>> max(6);
     if (cc.rank() == 0) {
         std::random_device rng_device;
         std::mt19937 mersenne_engine{rng_device()};
         std::uniform_int_distribution<int> dist{0, 10*cc.size()-1};
 
-        for (int c = 0; c < 3; ++c) {
+        for (int c = 0; c < 6; ++c) {
             if (sample.phase[c] == -1) {
                 continue;
             }
@@ -130,7 +133,7 @@ BOOST_AUTO_TEST_CASE(RstConvTest)
         }
     }
 
-    for (int c = 0; c < 3; ++c) {
+    for (int c = 0; c < 6; ++c) {
         std::size_t size = max[c].size();
         cc.broadcast(&size, 1, 0);
         if (cc.rank() != 0) {
@@ -140,7 +143,7 @@ BOOST_AUTO_TEST_CASE(RstConvTest)
     }
 
     for (int i = 0; i < 10; ++i) {
-        for (int c = 0; c < 3; ++c) {
+        for (int c = 0; c < 6; ++c) {
             if (sample.phase[c] != -1) {
                 bool inMax = std::find(max[c].begin(),
                                        max[c].end(),
@@ -157,16 +160,14 @@ BOOST_AUTO_TEST_CASE(RstConvTest)
     cnv.update(residual);
 
     if (cc.rank() == 0) {
-        BOOST_CHECK_EQUAL(cnv.getData().size(), 3);
-        BOOST_CHECK_EQUAL(cnv.getData()[0].size(),
-                          sample.phase[0] == -1 ? 0 : cc.size() * 10);
-        BOOST_CHECK_EQUAL(cnv.getData()[1].size(),
-                          sample.phase[1] == -1 ? 0 : cc.size() * 10);
-        BOOST_CHECK_EQUAL(cnv.getData()[2].size(),
-                          sample.phase[2] == -1 ? 0 : cc.size() * 10);
+        BOOST_CHECK_EQUAL(cnv.getData().size(), 6);
+        for (std::size_t i = 0; i < 6; ++i) {
+            BOOST_CHECK_EQUAL(cnv.getData()[i].size(),
+                              sample.phase[i] == -1 ? 0 : cc.size() * 10);
+        }
 
         for (int i = 0; i < cc.size() * 10; ++i) {
-            for (int c = 0; c < 3; ++c) {
+            for (int c = 0; c < 6; ++c) {
                 if (sample.phase[c] != -1) {
                     bool inMax = std::find(max[c].begin(),
                                            max[c].end(), i) != max[c].end();
