@@ -115,6 +115,21 @@ std::string EclString(const Opm::Inplace::Phase phase)
     case Opm::Inplace::Phase::WaterInWaterPhase:
         return "WIPL";
 
+    case Opm::Inplace::Phase::CO2Mass:
+        return "GMIP";
+
+    case Opm::Inplace::Phase::CO2MassInWaterPhase:
+        return "GMGP";
+
+    case Opm::Inplace::Phase::CO2MassInGasPhase:
+        return "GMDS";
+
+    case Opm::Inplace::Phase::CO2MassInGasPhaseInMob:
+        return "GMTR";
+        
+    case Opm::Inplace::Phase::CO2MassInGasPhaseMob:
+        return "GMMO";
+
     default:
         throw std::logic_error {
             fmt::format("Phase enum with integer value: "

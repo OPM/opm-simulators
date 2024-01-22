@@ -1315,12 +1315,17 @@ private:
 
         if (FluidSystem::phaseIsActive(gasPhaseIdx) &&
             (!this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty() ||
-             !this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty()))
+             !this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty() ||
+             !this->fip_[Inplace::Phase::CO2MassInGasPhaseInMob].empty() ||
+             !this->fip_[Inplace::Phase::CO2MassInGasPhaseMob].empty() ||
+             !this->fip_[Inplace::Phase::CO2Mass].empty()))
         {
             this->updateCO2InGas(globalDofIdx, pv, fs);
         }
-
-        if (!this->fip_[Inplace::Phase::CO2InWaterPhase].empty() &&
+        
+        if ((!this->fip_[Inplace::Phase::CO2InWaterPhase].empty() ||
+             !this->fip_[Inplace::Phase::CO2MassInWaterPhase].empty() ||
+             !this->fip_[Inplace::Phase::CO2Mass].empty()) &&
             (FluidSystem::phaseIsActive(waterPhaseIdx) ||
              FluidSystem::phaseIsActive(oilPhaseIdx)))
         {
@@ -1328,7 +1333,16 @@ private:
                 ? this->co2InWaterFromOil(fs, pv)
                 : this->co2InWaterFromWater(fs, pv);
 
-            this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2InWater;
+            const Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+            if (!this->fip_[Inplace::Phase::CO2Mass].empty()) {
+                this->fip_[Inplace::Phase::CO2Mass][globalDofIdx] += co2InWater  * mM;
+            }
+            if (!this->fip_[Inplace::Phase::CO2MassInWaterPhase].empty()) {
+                this->fip_[Inplace::Phase::CO2MassInWaterPhase][globalDofIdx] = co2InWater  * mM;
+            }
+            if (!this->fip_[Inplace::Phase::CO2InWaterPhase].empty()) {
+                this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2InWater;
+            }
         }
     }
 
@@ -1480,15 +1494,29 @@ private:
             : FluidSystem::convertRvToXgO(getValue(fs.Rv()), fs.pvtRegionIndex());
 
         const Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+        const Scalar massGas = (1 - xgW) * pv * rhog;
+        if (!this->fip_[Inplace::Phase::CO2Mass].empty()) {
+            this->fip_[Inplace::Phase::CO2Mass][globalDofIdx] = massGas;
+        }
 
         if (!this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty()) {
-            const Scalar imMobileGas = (1 - xgW) * pv * rhog / mM * std::min(sgcr , sg);
+            const Scalar imMobileGas = massGas / mM * std::min(sgcr , sg);
             this->fip_[Inplace::Phase::CO2InGasPhaseInMob][globalDofIdx] = imMobileGas;
         }
 
         if (!this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty()) {
-            const Scalar mobileGas = (1 - xgW) * pv * rhog / mM * std::max(0.0, sg - sgcr);
+            const Scalar mobileGas = massGas / mM * std::max(0.0, sg - sgcr);
             this->fip_[Inplace::Phase::CO2InGasPhaseMob][globalDofIdx] = mobileGas;
+        }
+
+        if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseInMob].empty()) {
+            const Scalar imMobileMassGas = massGas * std::min(sgcr , sg);
+            this->fip_[Inplace::Phase::CO2MassInGasPhaseInMob][globalDofIdx] = imMobileMassGas;
+        }
+
+        if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMob].empty()) {
+            const Scalar mobileMassGas = massGas * std::max(0.0, sg - sgcr);
+            this->fip_[Inplace::Phase::CO2MassInGasPhaseMob][globalDofIdx] = mobileMassGas;
         }
     }
 
