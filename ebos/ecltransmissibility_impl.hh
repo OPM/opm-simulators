@@ -848,21 +848,29 @@ createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
 
             auto isID = isId(c1, c2);
 
-            if (gc2 - gc1 == 1 && cartDims[0] > 1) {
+            // For CpGrid with LGRs, when leaf grid view cells with indices c1 and c2
+            // have the same parent cell on level zero, then gc2 - gc1 == 0. In that case,
+            // 'intersection.indexInSIde()' needed to be checked to determine the direction, i.e.
+            // add in the if/else-if  'gc2 == gc1 && intersection.indexInInside() == ... '
+            if ((gc2 - gc1 == 1 || (gc2 == gc1 && (intersection.indexInInside() == 0 || intersection.indexInInside() == 1)))
+                && cartDims[0] > 1) {
                 if (is_tran[0])
                     // set simulator internal transmissibilities to values from inputTranx
                      trans[0][c1] = trans_[isID];
             }
-            else if (gc2 - gc1 == cartDims[0] && cartDims[1] > 1) {
+            else if ((gc2 - gc1 == cartDims[0] || (gc2 == gc1 && (intersection.indexInInside() == 2 || intersection.indexInInside() == 3)))
+                     && cartDims[1] > 1) {
                 if (is_tran[1])
                     // set simulator internal transmissibilities to values from inputTrany
                      trans[1][c1] = trans_[isID];
             }
-            else if (gc2 - gc1 == cartDims[0]*cartDims[1]) {
+            else if (gc2 - gc1 == cartDims[0]*cartDims[1] ||
+                     (gc2 == gc1 && (intersection.indexInInside() == 4 || intersection.indexInInside() == 5))) {
                 if (is_tran[2])
                     // set simulator internal transmissibilities to values from inputTranz
-                     trans[2][c1] = trans_[isID];
+                    trans[2][c1] = trans_[isID];
             }
+
             //else.. We don't support modification of NNC at the moment.
         }
     }
@@ -891,6 +899,9 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
             // order of the local indices, the transmissibilities are still
             // stored at the cell with the lower global cartesian index as
             // the fieldprops are communicated by the grid.
+            /** c1 < c2 <=> gc1 < gc2 is no longer true when the grid is a
+                CpGrid with LGRs. When cells c1 and c2 have the same parent
+                cell on level zero, then gc1 == gc2. */ 
             unsigned c1 = elemMapper.index(intersection.inside());
             unsigned c2 = elemMapper.index(intersection.outside());
             int gc1 = cartMapper_.cartesianIndex(c1);
@@ -900,21 +911,29 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
 
             auto isID = isId(c1, c2);
 
-            if (gc2 - gc1 == 1 && cartDims[0] > 1) {
+            // For CpGrid with LGRs, when leaf grid view cells with indices c1 and c2
+            // have the same parent cell on level zero, then gc2 - gc1 == 0. In that case,
+            // 'intersection.indexInSIde()' needed to be checked to determine the direction, i.e.
+            // add in the if/else-if  'gc2 == gc1 && intersection.indexInInside() == ... '
+            if ((gc2 - gc1 == 1  || (gc2 == gc1 && (intersection.indexInInside() == 0 || intersection.indexInInside() == 1)))
+                 && cartDims[0] > 1) {
                 if (is_tran[0])
                     // set simulator internal transmissibilities to values from inputTranx
                     trans_[isID] = trans[0][c1];
             }
-            else if (gc2 - gc1 == cartDims[0] && cartDims[1] > 1) {
+            else if ((gc2 - gc1 == cartDims[0] || (gc2 == gc1 && (intersection.indexInInside() == 2|| intersection.indexInInside() == 3)))
+                     && cartDims[1] > 1) {
                 if (is_tran[1])
                     // set simulator internal transmissibilities to values from inputTrany
                     trans_[isID] = trans[1][c1];
             }
-            else if (gc2 - gc1 == cartDims[0]*cartDims[1]) {
+            else if (gc2 - gc1 == cartDims[0]*cartDims[1] ||
+                     (gc2 == gc1 && (intersection.indexInInside() == 4 || intersection.indexInInside() == 5))) {
                 if (is_tran[2])
                     // set simulator internal transmissibilities to values from inputTranz
                     trans_[isID] = trans[2][c1];
             }
+
             //else.. We don't support modification of NNC at the moment.
         }
     }
