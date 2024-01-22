@@ -103,6 +103,7 @@ public:
     void setWsolvent(const Scalar wsolvent);
     void setDynamicThpLimit(const Scalar thp_limit);
     std::optional<Scalar> getDynamicThpLimit() const;
+    void setDynamicThpLimit(const std::optional<Scalar> thp_limit);
     void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
     /// Returns true if the well has one or more THP limits/constraints.
