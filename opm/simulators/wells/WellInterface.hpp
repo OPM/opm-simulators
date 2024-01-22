@@ -382,7 +382,18 @@ public:
                                             const WellProductionControls& prod_controls,
                                             WellState& well_state,
                                             const GroupState& group_state,
-                                            DeferredLogger& deferred_logger) = 0;
+                                            DeferredLogger& deferred_logger, 
+                                            const bool fixed_control = false, 
+                                            const bool fixed_status = false) = 0;
+
+    bool solveWellWithTHPConstraint(const Simulator& simulator,
+                                    const double dt,
+                                    const Well::InjectionControls& inj_controls,
+                                    const Well::ProductionControls& prod_controls,
+                                    WellState& well_state,
+                                    const GroupState& group_state,
+                                    DeferredLogger& deferred_logger);
+
 protected:
     // simulation parameters
     const ModelParameters& param_;
