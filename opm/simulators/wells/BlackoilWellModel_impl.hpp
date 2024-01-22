@@ -55,6 +55,7 @@
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
 
+
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
 #endif
@@ -1213,8 +1214,6 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControlsAndNetwork(const bool mandatory_network_balance, const double dt, DeferredLogger& local_deferredLogger)
     {
-        // PJPE: calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
-        computeWellGroupThp(dt,local_deferredLogger);
         // not necessarily that we always need to update once of the network solutions
         bool do_network_update = true;
         bool well_group_control_changed = false;
@@ -1356,6 +1355,23 @@ namespace Opm {
                     return (group_rate - orig_target)/orig_target;
                 };
 
+                double well_group_rate(0.0);
+                double rate(0.0);
+                double thp(0.0);
+                double min_thp(1.0E8);
+                double max_thp(0.0);
+                for (auto& well : this->well_container_) {
+                    std::string well_name = well->name();
+                    if (group.hasWell(well_name)) {
+                        auto& ws = well_state.well(well_name);
+                        rate = -tcalc.calcModeRateFromRates(ws.surface_rates);
+                        well_group_rate += rate;
+                        thp = ws.thp;
+                        min_thp = std::min(min_thp, thp);
+                        max_thp = std::max(max_thp, thp);
+                    }
+                }
+
                 const auto upbranch = network.uptree_branch(nodeName);
                 const auto it = this->node_pressures_.find((*upbranch).uptree_node());
                 const Scalar nodal_pressure = it->second;
@@ -1426,6 +1442,7 @@ namespace Opm {
                 for (auto& well : this->well_container_) {
                     std::string well_name = well->name();
                     if (group.hasWell(well_name)) {
+
                         well->setDynamicThpLimit(well_group_thp);
                     }
                 }
