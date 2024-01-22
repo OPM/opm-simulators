@@ -320,7 +320,10 @@ namespace Opm {
                            schedule[timer.reportStepNum()].rst_config(),
                            {getIdx(FluidSystem::oilPhaseIdx),
                             getIdx(FluidSystem::gasPhaseIdx),
-                            getIdx(FluidSystem::waterPhaseIdx)});
+                            getIdx(FluidSystem::waterPhaseIdx),
+                            contiPolymerEqIdx,
+                            contiBrineEqIdx,
+                            contiSolventEqIdx});
 
             return report;
         }
