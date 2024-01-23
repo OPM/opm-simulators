@@ -76,6 +76,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/setupPropertyTree.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeSteppingEbos.cpp
+  opm/simulators/timestepping/ConvergenceReport.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimerInterface.cpp

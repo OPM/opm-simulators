@@ -229,6 +229,15 @@ namespace Opm
     };
 
 
+    std::string to_string(const ConvergenceReport::ReservoirFailure::Type t);
+
+    std::string to_string(const ConvergenceReport::Severity s);
+
+    std::string to_string(const ConvergenceReport::WellFailure::Type t);
+
+    std::string to_string(const ConvergenceReport::WellFailure& wf);
+
+
 } // namespace Opm
 
 #endif // OPM_CONVERGENCEREPORT_HEADER_INCLUDED
