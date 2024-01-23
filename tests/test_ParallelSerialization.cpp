@@ -143,14 +143,14 @@
 #include <opm/input/eclipse/EclipseState/Tables/TableSchema.hpp>
 #include <opm/output/data/Aquifer.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
-#include <ebos/eclmpiserializer.hh>
+#include <opm/simulators/utils/MPISerializer.hpp>
 
 template<class T>
 std::tuple<T,int,int> PackUnpack(T& in)
 {
     const auto& comm = Dune::MPIHelper::getCommunication();
 
-    Opm::EclMpiSerializer ser(comm);
+    Opm::Parallel::MpiSerializer ser(comm);
     ser.pack(in);
     const size_t pos1 = ser.position();
     T out;

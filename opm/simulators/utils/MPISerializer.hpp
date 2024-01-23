@@ -18,19 +18,19 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef ECL_MPI_SERIALIZER_HH
-#define ECL_MPI_SERIALIZER_HH
+#ifndef MPI_SERIALIZER_HPP
+#define MPI_SERIALIZER_HPP
 
 #include <opm/common/utility/Serializer.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
-namespace Opm {
+namespace Opm::Parallel {
 
 //! \brief Class for serializing and broadcasting data using MPI.
-class EclMpiSerializer : public Serializer<Mpi::Packer> {
+class MpiSerializer : public Serializer<Mpi::Packer> {
 public:
-    EclMpiSerializer(Parallel::Communication comm)
+    MpiSerializer(Parallel::Communication comm)
         : Serializer<Mpi::Packer>(m_packer)
         , m_packer(comm)
         , m_comm(comm)

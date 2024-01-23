@@ -24,7 +24,7 @@
 #endif
 
 #if HAVE_MPI
-#include <ebos/eclmpiserializer.hh>
+#include <opm/simulators/utils/MPISerializer.hpp>
 #endif
 
 #include <opm/output/eclipse/EclipseIO.hpp>
@@ -51,7 +51,7 @@ RestartValue loadParallelRestart(const EclipseIO* eclIO,
         restartValues = eclIO->loadRestart(actionState, summaryState, solutionKeys, extraKeys);
     }
 
-    EclMpiSerializer ser(comm);
+    Parallel::MpiSerializer ser(comm);
     ser.broadcast(0, restartValues, summaryState);
     return restartValues;
 #else
