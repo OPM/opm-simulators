@@ -257,14 +257,15 @@ BOOST_AUTO_TEST_CASE(Fip)
     Opm::LogOutputHelper<double> helper(eclState, schedule, st);
     Opm::Inplace initial, current;
     const auto& phases = current.phases();
+    int offset = 17;
     double j = 1.0;
     for (const auto& phase : phases) {
         initial.add(phase, j);
-        initial.add("FIPNUM", phase, 0, j + 2*phases.size());
-        initial.add("FIPNUM", phase, 1, j + 2*phases.size());
-        current.add(phase, j + phases.size());
-        current.add("FIPNUM", phase, 0, j + 3*phases.size());
-        current.add("FIPNUM", phase, 1, j + 3*phases.size());
+        initial.add("FIPNUM", phase, 0, j + 2*offset);
+        initial.add("FIPNUM", phase, 1, j + 2*offset);
+        current.add(phase, j + offset);
+        current.add("FIPNUM", phase, 0, j + 3*offset);
+        current.add("FIPNUM", phase, 1, j + 3*offset);
         ++j;
     }
 
@@ -323,10 +324,11 @@ BOOST_AUTO_TEST_CASE(FipResv)
     Opm::LogOutputHelper<double> helper(eclState, schedule, st);
     Opm::Inplace current;
     const auto& phases = current.phases();
+    int offset = 17;
     double j = 1.0;
     for (const auto& phase : phases) {
-        current.add(phase, phases.size());
-        current.add("FIPNUM", phase, 1, j + phases.size());
+        current.add(phase, offset);
+        current.add("FIPNUM", phase, 1, j + offset);
         ++j;
     }
 
@@ -334,7 +336,7 @@ BOOST_AUTO_TEST_CASE(FipResv)
     current.add(Opm::Inplace::Phase::OilResVolume, 2.0);
     current.add(Opm::Inplace::Phase::WaterResVolume, 3.0);
     current.add(Opm::Inplace::Phase::GasResVolume, 4.0);
-    current.add("FIPNUM", Opm::Inplace::Phase::DynamicPoreVolume, 1, 11.0 + phases.size());
+    current.add("FIPNUM", Opm::Inplace::Phase::DynamicPoreVolume, 1, 11.0 + offset);
 
     helper.fipResv(current, "FIPNUM");
     BOOST_CHECK_EQUAL(str.str(), reference);
