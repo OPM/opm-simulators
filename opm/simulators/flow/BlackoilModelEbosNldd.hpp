@@ -840,6 +840,13 @@ private:
                 if (mb_sum < acceptable_local_mb_sum && cnv_sum < acceptable_local_cnv_sum) {
                     local_report.converged = true;
                     logger.debug(fmt::format("Accepting solution in unconverged domain {} on rank {}.", domain.index, rank_));
+                } else {
+                    logger.debug("Unconverged local solution.");
+                }
+            } else {
+                logger.debug("Unconverged local solution with well convergence failures:");
+                for (const auto& wf : convrep.wellFailures()) {
+                    logger.debug(to_string(wf));
                 }
             }
         }

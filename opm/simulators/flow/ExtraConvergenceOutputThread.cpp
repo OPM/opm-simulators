@@ -122,13 +122,7 @@ namespace {
                << (report.wellFailed() ? "FAIL" : "CONV");
             if (report.wellFailed()) {
                 for (const auto& wf : report.wellFailures()) {
-                    os << " { "
-                       << wf.wellName() << ' ' << to_string(wf.type());
-                    if (wf.type() == Opm::ConvergenceReport::WellFailure::Type::MassBalance) {
-                        os << " Severity=" << to_string(wf.severity())
-                           << " Phase=" << wf.phase();
-                    }
-                    os << " }";
+                    os << " " << to_string(wf);
                 }
             }
             os << '\n';
