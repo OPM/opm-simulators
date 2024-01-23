@@ -2101,7 +2101,7 @@ protected:
         this->referencePorosity_[/*timeIdx=*/0].resize(numDof);
 
         const auto& fp = eclState.fieldProps();
-        const std::vector<double> porvData = this -> fieldPropDoubleOnLeafAssigner_()(fp, "PORV");
+        const std::vector<double> porvData = this -> fieldPropDoubleOnLeafAssigner_()(fp, "PORV", numDof);
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             Scalar poreVolume = porvData[dofIdx];
 
