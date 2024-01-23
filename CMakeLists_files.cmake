@@ -241,6 +241,8 @@ if(MPI_FOUND)
                                 opm/simulators/utils/ParallelNLDDPartitioningZoltan.cpp
                                 opm/simulators/utils/ParallelSerialization.cpp
                                 opm/simulators/utils/SetupZoltanParams.cpp)
+  list(APPEND PUBLIC_HEADER_FILES opm/simulators/utils/MPIPacker.hpp
+                                  opm/simulators/utils/MPISerializer.hpp)
 endif()
 if(HDF5_FOUND)
   list(APPEND MAIN_SOURCE_FILES opm/simulators/utils/HDF5File.cpp)
@@ -416,7 +418,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclgenericwriter.hh
   ebos/eclgenericwriter_impl.hh
   ebos/eclmixingratecontrols.hh
-  ebos/eclmpiserializer.hh
   ebos/eclnewtonmethod.hh
   ebos/ecloutputblackoilmodule.hh
   ebos/eclpolyhedralgridvanguard.hh

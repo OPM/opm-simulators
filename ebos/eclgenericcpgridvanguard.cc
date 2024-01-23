@@ -26,7 +26,7 @@
 #include <ebos/eclgenericcpgridvanguard.hh>
 
 #if HAVE_MPI
-#include <ebos/eclmpiserializer.hh>
+#include <opm/simulators/utils/MPISerializer.hpp>
 #endif
 
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
@@ -365,7 +365,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         // other processes
         if (has_numerical_aquifer && mpiSize > 1) {
             auto nnc_input = eclState.getInputNNC();
-            EclMpiSerializer ser(grid_->comm());
+            Parallel::MpiSerializer ser(grid_->comm());
             ser.broadcast(nnc_input);
             if (mpiRank > 0) {
                 eclState.setInputNNC(nnc_input);

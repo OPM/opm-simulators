@@ -37,7 +37,7 @@
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #if HAVE_MPI
-#include <ebos/eclmpiserializer.hh>
+#include <opm/simulators/utils/MPISerializer.hpp>
 #endif
 
 #include <algorithm>
@@ -1411,7 +1411,7 @@ namespace Opm {
                     group_alq_rates.resize(num_rates_to_sync);
                 }
 #if HAVE_MPI
-                EclMpiSerializer ser(comm);
+                Parallel::MpiSerializer ser(comm);
                 ser.broadcast(i, group_indexes, group_oil_rates,
                               group_gas_rates, group_water_rates, group_alq_rates);
 #endif

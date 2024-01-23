@@ -45,7 +45,7 @@
 #include <opm/output/eclipse/Summary.hpp>
 
 #if HAVE_MPI
-#include <ebos/eclmpiserializer.hh>
+#include <opm/simulators/utils/MPISerializer.hpp>
 #endif
 
 #if HAVE_MPI
@@ -257,7 +257,7 @@ writeInit(const std::function<unsigned int(unsigned int)>& map)
 #if HAVE_MPI
     if (collectToIORank_.isParallel()) {
         const auto& comm = grid_.comm();
-        Opm::EclMpiSerializer ser(comm);
+        Opm::Parallel::MpiSerializer ser(comm);
         ser.broadcast(outputNnc_);
     }
 #endif
@@ -659,7 +659,7 @@ evalSummary(const int                                            reportStepNum,
 
 #if HAVE_MPI
     if (collectToIORank_.isParallel()) {
-        EclMpiSerializer ser(grid_.comm());
+        Parallel::MpiSerializer ser(grid_.comm());
         ser.append(summaryState);
     }
 #endif

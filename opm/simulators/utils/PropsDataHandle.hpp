@@ -73,7 +73,7 @@ public:
             m_distributed_fieldProps.copyTran(globalProps);
         }
 
-        EclMpiSerializer ser(comm);
+        Parallel::MpiSerializer ser(comm);
         ser.broadcast(*this);
 
         m_no_data = m_intKeys.size() + m_doubleKeys.size();

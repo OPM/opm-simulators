@@ -63,7 +63,7 @@
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
 
 
-#include <ebos/eclmpiserializer.hh>
+#include <opm/simulators/utils/MPISerializer.hpp>
 
 #include <dune/common/parallel/mpihelper.hh>
 
@@ -75,14 +75,14 @@ void eclStateBroadcast(Parallel::Communication comm, EclipseState& eclState, Sch
                        Action::State& actionState,
                        WellTestState&  wtestState)
 {
-    Opm::EclMpiSerializer ser(comm);
+    Opm::Parallel::MpiSerializer ser(comm);
     ser.broadcast(0, eclState, schedule, summaryConfig, udqState, actionState, wtestState);
 }
 
 template <class T>
 void eclBroadcast(Parallel::Communication comm, T& data)
 {
-    Opm::EclMpiSerializer ser(comm);
+    Opm::Parallel::MpiSerializer ser(comm);
     ser.broadcast(data);
 }
 
