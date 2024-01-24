@@ -686,7 +686,10 @@ public:
         }
         }
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
-        eclWriter_->evalSummaryState(isSubStep);
+        // For CpGrid with LGRs, ecl/vtk output is not supported yet.
+        if (enableEclOutput_) {
+            eclWriter_->evalSummaryState(isSubStep);
+        }
 
         int episodeIdx = this->episodeIndex();
 
