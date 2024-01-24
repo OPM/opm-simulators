@@ -2100,7 +2100,6 @@ protected:
 
         const auto& fp = eclState.fieldProps();
         const std::vector<double> porvData = fp.porv(false);
-        const std::vector<int> actnumData = fp.actnum();
         for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
             Scalar poreVolume = porvData[dofIdx];
 
