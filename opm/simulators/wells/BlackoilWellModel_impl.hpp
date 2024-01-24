@@ -2668,7 +2668,7 @@ namespace Opm {
         const Opm::Parallel::Communication& comm = grid().comm();
         const int rank = comm.rank();
         DeferredLogger local_log;
-        {
+        if (!well_domain_.empty()) {
             std::ostringstream os;
             os << "Well name      Rank      Domain\n";
             for (const auto& [wname, domain] : well_domain_) {
