@@ -585,7 +585,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                     OPM_THROW(std::invalid_argument,
                               "Weights type " + weightsType +
                               "not implemented for cpr."
-                              " Please use quasiimpes or trueimpes.");
+                              " Please use quasiimpes, trueimpes or trueimpesanalytic.");
                 }
             }
             return weightsCalculator;
