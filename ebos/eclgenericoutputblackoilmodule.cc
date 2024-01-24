@@ -31,12 +31,17 @@
 #include <opm/output/data/Solution.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/Regdims.hpp>
+#include <opm/input/eclipse/EclipseState/Tables/Tabdims.hpp>
+
 #include <opm/input/eclipse/Schedule/RFTConfig.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/simulators/utils/PressureAverage.hpp>
@@ -136,6 +141,12 @@ std::string EclString(const Opm::Inplace::Phase phase)
 
         return regions;
     }
+
+    std::size_t declaredMaxRegionID(const Opm::Runspec& rspec)
+    {
+        return std::max(rspec.tabdims().getNumFIPRegions(),
+                        rspec.regdims().getNTFIP());
+    }
 }
 
 namespace Opm {
@@ -160,7 +171,9 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , schedule_(schedule)
     , summaryConfig_(summaryConfig)
     , summaryState_(summaryState)
-    , interRegionFlows_(numCells(eclState), defineInterRegionFlowArrays(eclState, summaryConfig))
+    , interRegionFlows_(numCells(eclState),
+                        defineInterRegionFlowArrays(eclState, summaryConfig),
+                        declaredMaxRegionID(eclState.runspec()))
     , logOutput_(eclState, schedule, summaryState)
     , enableEnergy_(enableEnergy)
     , enableTemperature_(enableTemperature)

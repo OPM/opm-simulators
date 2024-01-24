@@ -210,8 +210,13 @@ namespace Opm {
         ///    overlap cells if applicable.
         ///
         /// \param[in] regions All applicable region definition arrays.
+        ///
+        /// \param[in] declaredMaxRegID Declared maximum region ID in the
+        ///    run-typically from the TABDIMS and/or REGDIMS keywords.  Used
+        ///    for sizing internal data structures if greater than zero.
         explicit EclInterRegFlowMap(const std::size_t                numCells,
-                                    const std::vector<SingleRegion>& regions);
+                                    const std::vector<SingleRegion>& regions,
+                                    const std::size_t                declaredMaxRegID = 0);
 
         EclInterRegFlowMap(const EclInterRegFlowMap& rhs) = default;
         EclInterRegFlowMap(EclInterRegFlowMap&& rhs) noexcept = default;

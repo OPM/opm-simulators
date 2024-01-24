@@ -105,7 +105,10 @@ assignGlobalMaxRegionID(const std::size_t regID)
         return false;
     }
 
-    this->maxGlobalRegionID_ = regID;
+    if (regID > this->maxGlobalRegionID_) {
+        this->maxGlobalRegionID_ = regID;
+    }
+
     return true;
 }
 
@@ -128,7 +131,8 @@ Opm::EclInterRegFlowMap::createMapFromNames(std::vector<std::string> names)
 
 Opm::EclInterRegFlowMap::
 EclInterRegFlowMap(const std::size_t                numCells,
-                   const std::vector<SingleRegion>& regions)
+                   const std::vector<SingleRegion>& regions,
+                   const std::size_t                declaredMaxRegID)
 {
     this->regionMaps_.reserve(regions.size());
     this->names_.reserve(regions.size());
@@ -138,6 +142,12 @@ EclInterRegFlowMap(const std::size_t                numCells,
     for (const auto& region : regions) {
         this->regionMaps_.emplace_back(region.definition);
         this->names_.push_back(region.name);
+    }
+
+    if (declaredMaxRegID > std::size_t{0}) {
+        for (auto& regionMap : this->regionMaps_) {
+            regionMap.assignGlobalMaxRegionID(declaredMaxRegID);
+        }
     }
 }
 
