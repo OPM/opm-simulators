@@ -187,9 +187,8 @@ public:
     std::vector<bool> excluded(fineOperator.getmat().N(), false);
     VisitedMap vm(excluded.begin(), Dune::IdentityMap());
     ParallelInformation pinfo;
-    std::size_t aggregates = renumberer.coarsen(pinfo, pg, vm,
-                                                *aggregatesMap_, pinfo,
-                                                noAggregates);
+
+    std::size_t aggregates = coarsen(renumberer, pinfo, pg, vm,*aggregatesMap_, noAggregates, true);
     std::vector<bool>& visited=excluded;
 
     typedef std::vector<bool>::iterator Iterator;
@@ -228,6 +227,30 @@ public:
   }
 
 private:
+  template <typename RN, typename PI, typename PG, typename VM, typename AM>
+  auto coarsen(RN& renumberer,
+               PI& pinfo,
+               PG& pg,
+               VM& vm,
+               AM& aggregatesMap,
+               int noAggregates,
+               bool useFixedOrder) ->
+               decltype(renumberer.coarsen(pinfo, pg, vm, aggregatesMap, pinfo, noAggregates, useFixedOrder))
+  {
+    return renumberer.coarsen(pinfo, pg, vm, aggregatesMap, pinfo, noAggregates, useFixedOrder);
+  }
+
+  template <typename RN, typename PI, typename PG, typename VM, typename AM>
+  auto coarsen(RN& renumberer,
+               PI& pinfo,
+               PG& pg,
+               VM& vm,
+               AM& aggregatesMap,
+               int noAggregates, ...)
+  {
+    return renumberer.coarsen(pinfo, pg, vm, aggregatesMap, pinfo, noAggregates);
+  }
+
   typename O::matrix_type::field_type prolongDamp_;
   std::shared_ptr<AggregatesMap> aggregatesMap_;
   Criterion criterion_;
