@@ -67,12 +67,11 @@ CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
                              A.nonzeroes()));
 
     // Compute the inverted diagonal of A and store it in a vector format in m_diagInvFlattened
-    detail::invertDiagonalAndFlatten(m_gpuMatrix.getNonZeroValues().data(),
-                                     m_gpuMatrix.getRowIndices().data(),
-                                     m_gpuMatrix.getColumnIndices().data(),
-                                     m_gpuMatrix.N(),
-                                     m_gpuMatrix.blockSize(),
-                                     m_diagInvFlattened.data());
+    detail::invertDiagonalAndFlatten<field_type, matrix_type::block_type::cols>(m_gpuMatrix.getNonZeroValues().data(),
+                                                                                m_gpuMatrix.getRowIndices().data(),
+                                                                                m_gpuMatrix.getColumnIndices().data(),
+                                                                                m_gpuMatrix.N(),
+                                                                                m_diagInvFlattened.data());
 }
 
 template <class M, class X, class Y, int l>
@@ -90,12 +89,8 @@ CuJac<M, X, Y, l>::apply(X& v, const Y& d)
 
     // Compute the MV product where the matrix is diagonal and therefore stored as a vector.
     // The product is thus computed as a hadamard product.
-    detail::weightedDiagMV(m_diagInvFlattened.data(),
-                           m_gpuMatrix.N(),
-                           m_gpuMatrix.blockSize(),
-                           m_relaxationFactor,
-                           d.data(),
-                           v.data());
+    detail::weightedDiagMV(
+        m_diagInvFlattened.data(), m_gpuMatrix.N(), m_gpuMatrix.blockSize(), m_relaxationFactor, d.data(), v.data());
 }
 
 template <class M, class X, class Y, int l>
@@ -116,12 +111,11 @@ void
 CuJac<M, X, Y, l>::update()
 {
     m_gpuMatrix.updateNonzeroValues(m_cpuMatrix);
-    detail::invertDiagonalAndFlatten(m_gpuMatrix.getNonZeroValues().data(),
-                                     m_gpuMatrix.getRowIndices().data(),
-                                     m_gpuMatrix.getColumnIndices().data(),
-                                     m_gpuMatrix.N(),
-                                     m_gpuMatrix.blockSize(),
-                                     m_diagInvFlattened.data());
+    detail::invertDiagonalAndFlatten<field_type, matrix_type::block_type::cols>(m_gpuMatrix.getNonZeroValues().data(),
+                                                                                m_gpuMatrix.getRowIndices().data(),
+                                                                                m_gpuMatrix.getColumnIndices().data(),
+                                                                                m_gpuMatrix.N(),
+                                                                                m_diagInvFlattened.data());
 }
 
 } // namespace Opm::cuistl
