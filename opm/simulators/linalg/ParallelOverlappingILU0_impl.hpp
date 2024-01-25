@@ -98,7 +98,7 @@ void ghost_last_bilu0_decomposition (M& A, std::size_t interiorSize)
 template<class M, class CRS, class InvVector>
 void convertToCRS(const M& A, CRS& lower, CRS& upper, InvVector& inv)
 {
-  OPM_TIMEBLOCK(convertToCRS);  
+  OPM_TIMEBLOCK(convertToCRS);
   // No need to do anything for 0 rows. Return to prevent indexing a
   // a zero sized array.
   if ( A.N() == 0 )
@@ -289,7 +289,8 @@ template<class Matrix, class Domain, class Range, class ParallelInfoT>
 void ParallelOverlappingILU0<Matrix,Domain,Range,ParallelInfoT>::
 apply (Domain& v, const Range& d)
 {
-    OPM_TIMEBLOCK(apply);
+    OPM_TIMEBLOCK_LOCAL(apply);
+
     Range& md = reorderD(d);
     Domain& mv = reorderV(v);
 

@@ -23,6 +23,7 @@ set (opm-simulators_CONFIG_VAR
   HAVE_DAMARIS
   HAVE_HDF5
   USE_TRACY
+  USE_TRACY_LOCAL
   )
 
 # dependencies
