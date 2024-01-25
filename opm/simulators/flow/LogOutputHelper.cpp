@@ -89,9 +89,7 @@ LogOutputHelper<Scalar>::LogOutputHelper(const EclipseState& eclState,
     : eclState_(eclState)
     , schedule_(schedule)
     , summaryState_(summaryState)
-{ 
-    flowVersionName_ = moduleVersionName();
-}
+{}
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::
@@ -366,7 +364,7 @@ timeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::
         << "  " << std::left << std::setw(9) << lbl << "AT" << std::right << std::setw(10) 
         << (double)unit::convert::to(elapsed, unit::day) << "  DAYS" << " *" << std::setw(30) << eclState_.getTitle() << "                                          *\n"
         << "  REPORT " << std::setw(4) << rstep << "    " << currentDate
-        << "  *                                             Flow  version " << std::setw(11) << flowVersionName_ << "  *\n"
+        << "  *                                                                        *\n"
         << "                              **************************************************************************\n";
 
     OpmLog::note(ss.str());

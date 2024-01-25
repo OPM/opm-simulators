@@ -167,7 +167,6 @@ private:
     const EclipseState& eclState_;
     const Schedule& schedule_;
     const SummaryState& summaryState_;
-    std::string flowVersionName_;
 };
 
 } // namespace Opm
