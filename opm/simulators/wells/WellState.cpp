@@ -594,6 +594,7 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
         connection.reservoir_rate = perf_rates[i];
         connection.trans_factor = perf_data.connection_transmissibility_factor[i];
         connection.d_factor = perf_data.connection_d_factor[i];
+        connection.compact_mult = perf_data.connection_compaction_tmult[i];
         connection.rates.set(rt::dissolved_gas, perf_mixing_rates[i][ws.dissolved_gas]);
         connection.rates.set(rt::vaporized_oil, perf_mixing_rates[i][ws.vaporized_oil]);
         if (!ws.producer) {
