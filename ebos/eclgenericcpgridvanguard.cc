@@ -354,6 +354,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
 
     cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
 
+        OpmLog::info("\nCreating grid with LGRs");
 #if HAVE_MPI
     {
         const bool has_numerical_aquifer = eclState.aquifer().hasNumericalAquifer();
