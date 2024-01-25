@@ -245,6 +245,9 @@ namespace Opm {
             convergence_reports_.reserve(300); // Often insufficient, but avoids frequent moves.
             // TODO: remember to fix!
             if (param_.nonlinear_solver_ == "nldd") {
+                if (!param_.matrix_add_well_contributions_) {
+                    OPM_THROW(std::runtime_error, "The --nonlinear-solver=nldd option can only be used with --matrix-add-well-contributions=true");
+                }
                 if (terminal_output) {
                     OpmLog::info("Using Non-Linear Domain Decomposition solver (nldd).");
                 }
