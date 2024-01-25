@@ -364,6 +364,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
     // If there are lgrs, create the grid with them, and update the leaf grid view.
     if (lgrsSize)
     {
+        OpmLog::info("\nCreating grid with LGRs");
         this->createCpGridWithLgrs(lgrs, lgrsSize);
     }
 
