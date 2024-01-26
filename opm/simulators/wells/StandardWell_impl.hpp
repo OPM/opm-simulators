@@ -1170,10 +1170,16 @@ namespace Opm
         // For the polymer, energy and foam cases, there is one more mass balance equations of reservoir than wells
         assert((int(B_avg.size()) == this->num_components_) || has_polymer || has_energy || has_foam || has_brine || has_zFraction || has_micp);
 
-        // using sricter tolerance for stopped wells and wells under zero rate target control.
-        constexpr double stricter_factor = 1.e-4;
-        const double tol_wells = this->stopppedOrZeroRateTarget(summary_state, well_state) ?
-                                 this->param_.tolerance_wells_ * stricter_factor : this->param_.tolerance_wells_;
+        double tol_wells = this->param_.tolerance_wells_;
+        // use stricter tolerance for stopped wells and wells under zero rate target control.
+        constexpr double stopped_factor = 1.e-4;
+        // use stricter tolerance for dynamic thp to ameliorate network convergence
+        constexpr double dynamic_thp_factor = 1.e-1;
+        if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
+            tol_wells = tol_wells*stopped_factor;
+        } else if (this->getDynamicThpLimit()) {
+            tol_wells = tol_wells*dynamic_thp_factor;
+        }
 
         std::vector<double> res;
         ConvergenceReport report = this->StdWellEval::getWellConvergence(well_state,
