@@ -171,15 +171,15 @@ public:
                 fluidState.setDensity(phaseIdx, rho);
 
                 if (enableEnergy) {
-                    const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, regionIdx);
-                    fluidState.setEnthalpy(phaseIdx, h);
+                    const auto& energy = FluidSystem::internalEnergy(fluidState, phaseIdx, regionIdx);
+                    fluidState.setInternalEnergy(phaseIdx, energy);
                 }
             }
 
             // set the salt concentration
             if constexpr (enableBrine)
                 fluidState.setSaltConcentration(initialState.saltConcentration()[elemIdx]);
-                
+
             //set the (solid) salt saturation
             if constexpr (enableSaltPrecipitation)
                 fluidState.setSaltSaturation(initialState.saltSaturation()[elemIdx]);

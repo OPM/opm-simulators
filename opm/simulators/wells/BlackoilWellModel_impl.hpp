@@ -2558,7 +2558,7 @@ namespace Opm {
                     if (!FluidSystem::phaseIsActive(phaseIdx)) {
                         continue;
                     }
-                    cellInternalEnergy = fs.enthalpy(phaseIdx).value() - fs.pressure(phaseIdx).value() / fs.density(phaseIdx).value();
+                    cellInternalEnergy = fs.internalEnergy(phaseIdx).value();
                     cellBinv = fs.invB(phaseIdx).value();
                     cellDensity = fs.density(phaseIdx).value();
                     perfPhaseRate = perf_phase_rate[ perf*np + phaseIdx ];

@@ -794,7 +794,7 @@ namespace Opm
             // the well index associated with the connection
             double trans_mult = ebos_simulator.problem().template wellTransMultiplier<double>(int_quantities, cell_idx);
             const auto& wellstate_nupcol = ebos_simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-            const std::vector<Scalar> tw_perf = this->wellIndex(perf, int_quantities, trans_mult, wellstate_nupcol);  
+            const std::vector<Scalar> tw_perf = this->wellIndex(perf, int_quantities, trans_mult, wellstate_nupcol);
             std::vector<double> ipr_a_perf(this->ipr_a_.size());
             std::vector<double> ipr_b_perf(this->ipr_b_.size());
             for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
@@ -836,13 +836,13 @@ namespace Opm
     void
     StandardWell<TypeTag>::
     updateIPRImplicit(const Simulator& ebosSimulator,
-                      WellState& well_state, 
+                      WellState& well_state,
                       DeferredLogger& deferred_logger)
-    {   
+    {
         // Compute IPR based on *converged* well-equation:
-        // For a component rate r the derivative dr/dbhp is obtained by 
+        // For a component rate r the derivative dr/dbhp is obtained by
         // dr/dbhp = - (partial r/partial x) * inv(partial Eq/partial x) * (partial Eq/partial bhp_target)
-        // where Eq(x)=0 is the well equation setup with bhp control and primary variables x 
+        // where Eq(x)=0 is the well equation setup with bhp control and primary variables x
 
         // We shouldn't have zero rates at this stage, but check
         bool zero_rates;
@@ -856,7 +856,7 @@ namespace Opm
             const auto msg = fmt::format("updateIPRImplicit: Well {} has zero rate, IPRs might be problematic", this->name());
             deferred_logger.debug(msg);
             /*
-            // could revert to standard approach here:    
+            // could revert to standard approach here:
             updateIPR(ebos_simulator, deferred_logger);
             for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx){
                 const int idx = this->ebosCompIdxToFlowCompIdx(comp_idx);
@@ -865,12 +865,12 @@ namespace Opm
             }
             return;
             */
-        } 
+        }
         const auto& group_state  = ebosSimulator.problem().wellModel().groupState();
 
         std::fill(ws.implicit_ipr_a.begin(), ws.implicit_ipr_a.end(), 0.);
         std::fill(ws.implicit_ipr_b.begin(), ws.implicit_ipr_b.end(), 0.);
-   
+
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0);
         prod_controls.addControl(Well::ProducerCMode::BHP);
@@ -887,7 +887,7 @@ namespace Opm
         rhs[0].resize(nEq);
         // rhs = 0 except -1 for control eq
         for (size_t i=0; i < nEq; ++i){
-            rhs[0][i] = 0.0;            
+            rhs[0][i] = 0.0;
         }
         rhs[0][Bhp] = -1.0;
 
@@ -899,7 +899,7 @@ namespace Opm
             EvalWell comp_rate = this->primary_variables_.getQs(comp_idx);
             const int idx = this->ebosCompIdxToFlowCompIdx(comp_idx);
             for (size_t pvIdx = 0; pvIdx < nEq; ++pvIdx) {
-                // well primary variable derivatives in EvalWell start at position Indices::numEq 
+                // well primary variable derivatives in EvalWell start at position Indices::numEq
                 ws.implicit_ipr_b[idx] -= x_well[0][pvIdx]*comp_rate.derivative(pvIdx+Indices::numEq);
             }
             ws.implicit_ipr_a[idx] = ws.implicit_ipr_b[idx]*ws.bhp - comp_rate.value();
@@ -1576,7 +1576,7 @@ namespace Opm
                                   DeferredLogger& deferred_logger) const
     {
         // Create a copy of the well.
-        // TODO: check if we can avoid taking multiple copies. Call from updateWellPotentials 
+        // TODO: check if we can avoid taking multiple copies. Call from updateWellPotentials
         // is allready a copy, but not from other calls.
         StandardWell<TypeTag> well_copy(*this);
 
@@ -1596,7 +1596,7 @@ namespace Opm
 
         // prepare/modify well state and control
         well_copy.prepareForPotentialCalculations(summary_state, well_state_copy, inj_controls, prod_controls);
-        
+
         // initialize rates from previous potentials
         const int np = this->number_of_phases_;
         bool trivial = true;
@@ -1695,7 +1695,7 @@ namespace Opm
         if (this->param_.local_well_solver_control_switching_) {
             converged_implicit = computeWellPotentialsImplicit(ebosSimulator, well_potentials, deferred_logger);
         }
-        if (!converged_implicit) {        
+        if (!converged_implicit) {
             // does the well have a THP related constraint?
             const auto& summaryState = ebosSimulator.vanguard().summaryState();
             if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
@@ -1818,7 +1818,7 @@ namespace Opm
             PerforationRates perf_rates;
             double trans_mult = ebos_simulator.problem().template wellTransMultiplier<double>(int_quant, cell_idx);
             const auto& wellstate_nupcol = ebos_simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-            const std::vector<Scalar> Tw = this->wellIndex(perf, int_quant, trans_mult, wellstate_nupcol);  
+            const std::vector<Scalar> Tw = this->wellIndex(perf, int_quant, trans_mult, wellstate_nupcol);
             computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf, cq_s,
                             perf_rates, deferred_logger);
             // TODO: make area a member
@@ -2317,8 +2317,8 @@ namespace Opm
                                const Well::ProductionControls& prod_controls,
                                WellState& well_state,
                                const GroupState& group_state,
-                               DeferredLogger& deferred_logger, 
-                               const bool fixed_control /*false*/, 
+                               DeferredLogger& deferred_logger,
+                               const bool fixed_control /*false*/,
                                const bool fixed_status /*false*/)
     {
         const int max_iter = this->param_.max_inner_iter_wells_;
@@ -2329,8 +2329,8 @@ namespace Opm
         const auto& summary_state = ebosSimulator.vanguard().summaryState();
 
         // Always take a few (more than one) iterations after a switch before allowing a new switch
-        // The optimal number here is subject to further investigation, but it has been observerved 
-        // that unless this number is >1, we may get stuck in a cycle 
+        // The optimal number here is subject to further investigation, but it has been observerved
+        // that unless this number is >1, we may get stuck in a cycle
         constexpr int min_its_after_switch = 4;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
@@ -2351,7 +2351,7 @@ namespace Opm
             its_since_last_switch++;
             if (allow_switching && its_since_last_switch >= min_its_after_switch){
                 const double wqTotal = this->primary_variables_.eval(WQTotal).value();
-                changed = this->updateWellControlAndStatusLocalIteration(ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger, fixed_control, fixed_status); 
+                changed = this->updateWellControlAndStatusLocalIteration(ebosSimulator, well_state, group_state, inj_controls, prod_controls, wqTotal, deferred_logger, fixed_control, fixed_status);
                 if (changed){
                     its_since_last_switch = 0;
                     switch_count++;
@@ -2393,7 +2393,7 @@ namespace Opm
             initPrimaryVariablesEvaluation();
 
         } while (it < max_iter);
-        
+
         if (converged) {
             if (allow_switching){
                 // update operability if status change
@@ -2548,13 +2548,23 @@ namespace Opm
 
                 const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);
                 fs.setDensity(phaseIdx, rho);
-                const auto& h = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
-                fs.setEnthalpy(phaseIdx, h);
-                cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                const auto& energy = FluidSystem::internalEnergy(fs, paramCache, phaseIdx);
+                fs.setInternalEnergy(phaseIdx, energy);
+                bool use_work_term_ = true;
+                if(use_work_term_){
+                    cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                }else{
+                    cq_r_thermal *= this->extendEval(fs.internalEnergy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                }
                 result += getValue(cq_r_thermal);
             } else {
                 // compute the thermal flux
-                cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                bool use_work_term_ = true;
+                if(use_work_term_){
+                    cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                }else{
+                    cq_r_thermal *= this->extendEval(fs.internalEnergy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                }
                 result += Base::restrictEval(cq_r_thermal);
             }
         }
