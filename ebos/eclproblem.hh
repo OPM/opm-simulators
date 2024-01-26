@@ -2008,14 +2008,13 @@ protected:
     //
     // For CpGrid with local grid refinement, the field property of a cell on the leaf
     // is inherited from its parent or equivalent (when has no parent) cell on level zero.
-    std::function<std::vector<double>(const FieldPropsManager&, const std::string&, const unsigned int&)>
+    std::function<std::vector<double>(const FieldPropsManager&, const std::string&)>
     fieldPropDoubleOnLeafAssigner_()
     {
         const auto& lookup = this->lookUpData_;
-        return [&lookup](const FieldPropsManager& fieldPropManager, const std::string& propString,
-                         const unsigned int& numElems)
+        return [&lookup](const FieldPropsManager& fieldPropManager, const std::string& propString)
         {
-            return lookup.assignFieldPropsDoubleOnLeaf(fieldPropManager, propString, numElems);
+            return lookup.assignFieldPropsDoubleOnLeaf(fieldPropManager, propString);
         };
     }
 
@@ -2024,15 +2023,13 @@ protected:
     // For CpGrid with local grid refinement, the field property of a cell on the leaf
     // is inherited from its parent or equivalent (when has no parent) cell on level zero.
     template<typename IntType>
-    std::function<std::vector<IntType>(const FieldPropsManager&, const std::string&, const unsigned int&, bool)>
+    std::function<std::vector<IntType>(const FieldPropsManager&, const std::string&, bool)>
     fieldPropIntTypeOnLeafAssigner_()
     {
         const auto& lookup = this->lookUpData_;
-        return [&lookup](const FieldPropsManager& fieldPropManager, const std::string& propString,
-                         const unsigned int& numElems, bool needsTranslation)
+        return [&lookup](const FieldPropsManager& fieldPropManager, const std::string& propString, bool needsTranslation)
         {
-            return lookup.template assignFieldPropsIntOnLeaf<IntType>(fieldPropManager, propString,
-                                                                      numElems, needsTranslation);
+            return lookup.template assignFieldPropsIntOnLeaf<IntType>(fieldPropManager, propString, needsTranslation);
         };
     }
 

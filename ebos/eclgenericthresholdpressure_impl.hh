@@ -101,8 +101,6 @@ template<class Grid, class GridView, class ElementMapper, class Scalar>
 void EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 finishInit()
 {
-    unsigned numElements = gridView_.size(/*codim=*/0);
-
     const auto& simConfig = eclState_.getSimulationConfig();
 
     enableThresholdPressure_ = simConfig.useThresholdPressure();
@@ -133,7 +131,7 @@ finishInit()
 
     // internalize the data specified using the EQLNUM keyword
     elemEquilRegion_ = lookUpData_.template assignFieldPropsIntOnLeaf<short unsigned int>(eclState_.fieldProps(),
-                                                                                          "EQLNUM", numElements, true);
+                                                                                          "EQLNUM", true);
 
     /*
       If this is a restart run the ThresholdPressure object will be active,

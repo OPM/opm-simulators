@@ -192,7 +192,7 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
 
         rockTableIdx_ = this->lookUpData_.template assignFieldPropsIntOnLeaf<short unsigned int>(eclState_.fieldProps(),
                                                                                                  rock_config.rocknum_property(),
-                                                                                                 numElem, true /*needsTranslation*/,
+                                                                                                 true /*needsTranslation*/,
                                                                                                  valueCheck);
     }
 
@@ -370,7 +370,6 @@ updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regi
     if (!eclState_.fieldProps().has_int(name))
         return;
 
-    unsigned numElems = gridView_.size(/*codim=*/0);
     std::function<void(T, int)> valueCheck = [num_regions,name](T fieldPropValue, [[maybe_unused]] int fieldPropIdx) {
         if ( fieldPropValue > (int)num_regions) {
             throw std::runtime_error("Values larger than maximum number of regions "
@@ -381,7 +380,7 @@ updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regi
         }
     };
 
-    numbers = this->lookUpData_.template assignFieldPropsIntOnLeaf<T>(eclState_.fieldProps(), name, numElems,
+    numbers = this->lookUpData_.template assignFieldPropsIntOnLeaf<T>(eclState_.fieldProps(), name,
                                                                       true /*needsTranslation*/, valueCheck);
 }
 
