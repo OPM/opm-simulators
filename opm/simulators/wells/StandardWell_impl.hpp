@@ -2339,9 +2339,12 @@ namespace Opm
         const auto operability_orig = this->operability_status_;
         auto well_status_cur = well_status_orig;
         int status_switch_count = 0;
-        // only allow switcing if well is not under zero-rate target and is open from schedule
-        bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) && (this->well_ecl_.getStatus() == WellStatus::OPEN);
-        allow_switching = allow_switching && (!fixed_control || !fixed_status);
+        // don't allow opening wells that are stopped from schedule or has a stopped well state
+        const bool allow_open =  this->well_ecl_.getStatus() == WellStatus::OPEN &&
+                                 well_state.well(this->index_of_well_).status == WellStatus::OPEN;
+        // don't allow switcing for wells under zero rate target or requested fixed status and control
+        const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) &&
+                                     (!fixed_control || !fixed_status) && allow_open;
         bool changed = false;
         bool final_check = false;
         // well needs to be set operable or else solving/updating of re-opened wells is skipped
