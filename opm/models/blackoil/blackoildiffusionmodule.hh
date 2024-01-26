@@ -212,6 +212,11 @@ public:
                 convFactor = 1.0 / (toFractionGasWater(pvtRegionIndex) + rsAvg);
                 diffR = fluidStateI.Rsw() - Toolbox::value(fluidStateJ.Rsw());
             }
+            if (FluidSystem::enableVaporizedWater() && phaseIdx == FluidSystem::gasPhaseIdx) {
+                Evaluation rvAvg = (fluidStateI.Rvw() + Toolbox::value(fluidStateJ.Rvw())) / 2;
+                convFactor = toFractionGasWater(pvtRegionIndex)/ (1.0 + rvAvg*toFractionGasWater(pvtRegionIndex));
+                diffR = fluidStateI.Rvw() - Toolbox::value(fluidStateJ.Rvw());
+            }
 
             // mass flux of solvent component (oil in oil or gas in gas)
             unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
