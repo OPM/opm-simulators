@@ -227,6 +227,7 @@ public:
   }
 
 private:
+  // trailing return type with decltype used for detecting the signature of coarsen member function by overloading this coarsen function
   template <typename RN, typename PI, typename PG, typename VM, typename AM>
   auto coarsen(RN& renumberer,
                PI& pinfo,
