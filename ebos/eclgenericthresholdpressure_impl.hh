@@ -101,8 +101,6 @@ template<class Grid, class GridView, class ElementMapper, class Scalar>
 void EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 finishInit()
 {
-    unsigned numElements = gridView_.size(/*codim=*/0);
-
     const auto& simConfig = eclState_.getSimulationConfig();
 
     enableThresholdPressure_ = simConfig.useThresholdPressure();
