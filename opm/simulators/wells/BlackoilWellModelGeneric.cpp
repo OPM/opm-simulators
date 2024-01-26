@@ -1172,15 +1172,11 @@ updateNetworkPressures(const int reportStepIdx)
             // due to the fact our nodal pressure calculation is somewhat explicit
             // TODO: the following parameters are subject to adjustment for optimization purpose
             constexpr double upper_update_bound = 5.0 * unit::barsa;
-            constexpr double lower_update_bound = 0.05 * unit::barsa;
             // relative dampening factor based on update value
             constexpr double damping_factor = 0.1;
-            const double allowed_change = std::max(std::min(damping_factor * std::abs(change), upper_update_bound),
-                                                   lower_update_bound);
-            if (std::abs(change) > allowed_change) {
-                const double sign = change > 0 ? 1. : -1.;
-                node_pressures_[name] = pressure + sign * allowed_change;
-            }
+            const double damped_change = std::min(damping_factor * std::abs(change), upper_update_bound);                                                
+            const double sign = change > 0 ? 1. : -1.;
+            node_pressures_[name] = pressure + sign * damped_change;
         }
     } else {
         for (const auto& [name, pressure]: node_pressures_) {
