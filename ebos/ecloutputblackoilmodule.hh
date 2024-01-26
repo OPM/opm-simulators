@@ -1329,20 +1329,7 @@ private:
             (FluidSystem::phaseIsActive(waterPhaseIdx) ||
              FluidSystem::phaseIsActive(oilPhaseIdx)))
         {
-            const auto co2InWater = FluidSystem::phaseIsActive(oilPhaseIdx)
-                ? this->co2InWaterFromOil(fs, pv)
-                : this->co2InWaterFromWater(fs, pv);
-
-            const Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
-            if (!this->fip_[Inplace::Phase::CO2Mass].empty()) {
-                this->fip_[Inplace::Phase::CO2Mass][globalDofIdx] += co2InWater  * mM;
-            }
-            if (!this->fip_[Inplace::Phase::CO2MassInWaterPhase].empty()) {
-                this->fip_[Inplace::Phase::CO2MassInWaterPhase][globalDofIdx] = co2InWater  * mM;
-            }
-            if (!this->fip_[Inplace::Phase::CO2InWaterPhase].empty()) {
-                this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2InWater;
-            }
+            this->updateCO2InWater(globalDofIdx, pv, fs);
         }
     }
 
@@ -1517,6 +1504,27 @@ private:
         if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMob].empty()) {
             const Scalar mobileMassGas = massGas * std::max(0.0, sg - sgcr);
             this->fip_[Inplace::Phase::CO2MassInGasPhaseMob][globalDofIdx] = mobileMassGas;
+        }
+    }
+
+    template <typename FluidState>
+    void updateCO2InWater(const unsigned    globalDofIdx,
+                          const double      pv,
+                          const FluidState& fs)
+    {
+        const auto co2InWater = FluidSystem::phaseIsActive(oilPhaseIdx)
+            ? this->co2InWaterFromOil(fs, pv)
+            : this->co2InWaterFromWater(fs, pv);
+
+        const Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
+        if (!this->fip_[Inplace::Phase::CO2Mass].empty()) {
+            this->fip_[Inplace::Phase::CO2Mass][globalDofIdx] += co2InWater  * mM;
+        }
+        if (!this->fip_[Inplace::Phase::CO2MassInWaterPhase].empty()) {
+            this->fip_[Inplace::Phase::CO2MassInWaterPhase][globalDofIdx] = co2InWater  * mM;
+        }
+        if (!this->fip_[Inplace::Phase::CO2InWaterPhase].empty()) {
+            this->fip_[Inplace::Phase::CO2InWaterPhase][globalDofIdx] = co2InWater;
         }
     }
 
