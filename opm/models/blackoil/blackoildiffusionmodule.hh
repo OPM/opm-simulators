@@ -61,6 +61,16 @@ class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/false>
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
 public:
+
+    #if HAVE_ECL_INPUT
+    /*!
+     * \brief Initialize all internal data structures needed by the diffusion module
+     */
+    static void initFromState(const EclipseState&)
+    {
+    }
+    #endif
+
     /*!
      * \brief Register all run-time parameters for the diffusion module.
      */
@@ -99,6 +109,18 @@ class BlackOilDiffusionModule<TypeTag, /*enableDiffusion=*/true>
 
 public:
     using ExtensiveQuantities = BlackOilDiffusionExtensiveQuantities<TypeTag,true>;
+    
+    
+    #if HAVE_ECL_INPUT
+    /*!
+     * \brief Initialize all internal data structures needed by the diffusion module
+     */
+    static void initFromState(const EclipseState& eclState)
+    {
+        use_mole_fraction_ = eclState.getTableManager().diffMoleFraction();
+    }
+    #endif
+
     /*!
      * \brief Register all run-time parameters for the diffusion module.
      */
@@ -107,7 +129,25 @@ public:
 
     /*!
      * \brief Adds the mass flux due to molecular diffusion to the flux vector over the
-     *        flux integration point.
+     *        integration point. Following the notation in blackoilmodel.hh,
+     *        the diffusive flux for component \f$\kappa\f$ in phase \f$\alpha\f$
+     *        is given by: \f$-\phi b_\alpha S_\alpha D \mathbf{grad}X_\alpha^\kappa\f$,
+     *        where \f$b_\alpha\f$ is the shrinkage/expansion factor [-], 
+     *        \f$S_\alpha\f$ is the saturation [-] D is the diffusion coefficient [L/T^2]
+     *        and \f$X_\alpha^\kappa\f$ the component mass fraction [-] or molar fraction [-],  
+     *        depending on the input use_mole_fraction_ (default true)
+     *        Each component mass/molar fraction can be computed using \f$R_s,\;R_v,\;R_{sw},\;R_{vw}\f$. 
+     *        For example the mass fraction are given by,
+     *        \f$X_w^G=\frac{R_{sw}}{R_{sw}+\rho_w/\rho_g}\f$, where \f$\rho_w\f$ and \f$\rho_g\f$
+     *        are the reference densities.
+     *        Considering the water phase and gas component as an example, for cells i and j, the discrete version
+     *        of the diffusive flux at the face's integration point is given by
+     *        \f$-b_{w,ij}S_{w,ij}D_{w,ij}(\frac{1}{R_{sw,ij}+\rho_w/\rho_g})DT_{ij}(R_{sw,i}-R_{sw,j})\f$
+     *        where \f$b_{w,ij}\f$, \f$S_{w,ij}\f$, \f$D_{w,ij}\f$, and \f$R_{sw,ij}\f$ are computed using the arithmetic mean, and
+     *        the ratio \f$\frac{1}{R_{sw,ij}+\rho_w/\rho_g}\f$ is denoted as conversion factor. The diffusivity
+     *        \f$DT_{ij}\f$ is computed in ecltransmissibility_impl.hh, using the cells porosity, face area and distance between 
+     *        cell center and the integration point. 
+     *        For mol fraction the convertion factor is given by \f$\frac{1}{R_{sw,ij}+(Mm_g\rho_w)/(Mm_w\rho_g)}\f$ 
      */
     template <class Context>
     static void addDiffusiveFlux(RateVector& flux, const Context& context,
@@ -159,17 +199,17 @@ public:
             Evaluation diffR = 0.0;
             if (FluidSystem::enableDissolvedGas() && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && phaseIdx == FluidSystem::oilPhaseIdx) {
                 Evaluation rsAvg = (fluidStateI.Rs() + Toolbox::value(fluidStateJ.Rs())) / 2;
-                convFactor = 1.0 / (toMolFractionGasOil(pvtRegionIndex) + rsAvg);
+                convFactor = 1.0 / (toFractionGasOil(pvtRegionIndex) + rsAvg);
                 diffR = fluidStateI.Rs() - Toolbox::value(fluidStateJ.Rs());
             }
             if (FluidSystem::enableVaporizedOil() && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && phaseIdx == FluidSystem::gasPhaseIdx) {
                 Evaluation rvAvg = (fluidStateI.Rv() + Toolbox::value(fluidStateJ.Rv())) / 2;
-                convFactor = toMolFractionGasOil(pvtRegionIndex) / (1.0 + rvAvg*toMolFractionGasOil(pvtRegionIndex));
+                convFactor = toFractionGasOil(pvtRegionIndex) / (1.0 + rvAvg*toFractionGasOil(pvtRegionIndex));
                 diffR = fluidStateI.Rv() - Toolbox::value(fluidStateJ.Rv());
             }
             if (FluidSystem::enableDissolvedGasInWater() && phaseIdx == FluidSystem::waterPhaseIdx) {
                 Evaluation rsAvg = (fluidStateI.Rsw() + Toolbox::value(fluidStateJ.Rsw())) / 2;
-                convFactor = 1.0 / (toMolFractionGasWater(pvtRegionIndex) + rsAvg);
+                convFactor = 1.0 / (toFractionGasWater(pvtRegionIndex) + rsAvg);
                 diffR = fluidStateI.Rsw() - Toolbox::value(fluidStateJ.Rsw());
             }
 
@@ -196,21 +236,27 @@ public:
     }
 
 private:
-    static Scalar toMolFractionGasOil (unsigned regionIdx) {
-        Scalar mMOil = FluidSystem::molarMass(FluidSystem::oilCompIdx, regionIdx);
+    static Scalar toFractionGasOil (unsigned regionIdx) {
+        Scalar mMOil = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::oilCompIdx, regionIdx) : 1;
         Scalar rhoO = FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, regionIdx);
-        Scalar mMGas = FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx);
+        Scalar mMGas = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx) : 1;
         Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
         return rhoO * mMGas / (rhoG * mMOil);
     }
-    static Scalar toMolFractionGasWater (unsigned regionIdx) {
-        Scalar mMWater = FluidSystem::molarMass(FluidSystem::waterCompIdx, regionIdx);
+    static Scalar toFractionGasWater (unsigned regionIdx) {
+        Scalar mMWater = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::waterCompIdx, regionIdx) : 1;
         Scalar rhoW = FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, regionIdx);
-        Scalar mMGas = FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx);
+        Scalar mMGas = use_mole_fraction_? FluidSystem::molarMass(FluidSystem::gasCompIdx, regionIdx) : 1;
         Scalar rhoG = FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regionIdx);
         return rhoW * mMGas / (rhoG * mMWater);
     }
+
+    static bool use_mole_fraction_;
 };
+
+template <typename TypeTag>
+bool
+BlackOilDiffusionModule<TypeTag, true>::use_mole_fraction_;
 
 /*!
  * \ingroup Diffusion
