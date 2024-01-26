@@ -95,6 +95,7 @@ struct AMGSmootherArgsHelper<Opm::ParallelOverlappingILU0<M,V,V,C>>
 };
 
 
+// trailing return type with decltype used for detecting existence of setUseFixedOrder member function by overloading the setUseFixedOrder function
 template <typename C>
 auto setUseFixedOrder(C criterion, bool booleanValue) -> decltype(criterion.setUseFixedOrder(booleanValue))
 {
