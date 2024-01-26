@@ -171,7 +171,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
 
     unsigned numElements = elemMapper.size();
     // get the ntg values, the ntg values are modified for the cells merged with minpv
-    const std::vector<double>& ntg = this->lookUpData_.assignFieldPropsDoubleOnLeaf(eclState_.fieldProps(), "NTG", numElements);
+    const std::vector<double>& ntg = this->lookUpData_.assignFieldPropsDoubleOnLeaf(eclState_.fieldProps(), "NTG");
     const bool updateDiffusivity = eclState_.getSimulationConfig().isDiffusive();
     const bool updateDispersivity = eclState_.getSimulationConfig().rock_config().dispersion();
 
@@ -596,17 +596,17 @@ extractPermeability_()
     // over several processes.)
     const auto& fp = eclState_.fieldProps();
     if (fp.has_double("PERMX")) {
-        const std::vector<double>& permxData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp, "PERMX", numElem);
+        const std::vector<double>& permxData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp, "PERMX");
 
         std::vector<double> permyData;
         if (fp.has_double("PERMY"))
-            permyData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMY", numElem);
+            permyData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMY");
         else
             permyData = permxData;
 
         std::vector<double> permzData;
         if (fp.has_double("PERMZ"))
-            permzData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMZ", numElem);
+            permzData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMZ");
         else
             permzData = permxData;
 
@@ -638,17 +638,17 @@ extractPermeability_(const std::function<unsigned int(unsigned int)>& map)
     // over several processes.)
     const auto& fp = eclState_.fieldProps();
     if (fp.has_double("PERMX")) {
-        const std::vector<double>& permxData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMX", numElem);
+        const std::vector<double>& permxData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMX");
 
         std::vector<double> permyData;
         if (fp.has_double("PERMY"))
-            permyData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMY", numElem);
+            permyData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMY");
         else
             permyData = permxData;
 
         std::vector<double> permzData;
         if (fp.has_double("PERMZ"))
-            permzData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMZ", numElem);
+            permzData = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PERMZ");
         else
             permzData = permxData;
 
@@ -676,10 +676,9 @@ extractPorosity_()
     // provided by eclState are one-per-cell of "uncompressed" grid, whereas the
     // simulation grid might remove a few elements. (e.g. because it is distributed
     // over several processes.)
-    unsigned numElem = gridView_.size(/*codim=*/0);
     const auto& fp = eclState_.fieldProps();
     if (fp.has_double("PORO")) {
-        porosity_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PORO", numElem);
+        porosity_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PORO");
     }
     else
         throw std::logic_error("Can't read the porosityfrom the ecl state. "
@@ -694,9 +693,8 @@ extractDispersion_()
         throw std::runtime_error("Dispersion disabled at compile time, but the deck "
                                  "contains the DISPERC keyword.");
     }
-    unsigned numElem = gridView_.size(/*codim=*/0);
     const auto& fp = eclState_.fieldProps();
-    dispersion_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"DISPERC", numElem);
+    dispersion_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"DISPERC");
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>

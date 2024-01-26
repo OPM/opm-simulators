@@ -133,7 +133,7 @@ finishInit()
 
     // internalize the data specified using the EQLNUM keyword
     elemEquilRegion_ = lookUpData_.template assignFieldPropsIntOnLeaf<short unsigned int>(eclState_.fieldProps(),
-                                                                                          "EQLNUM", numElements, true);
+                                                                                          "EQLNUM", true);
 
     /*
       If this is a restart run the ThresholdPressure object will be active,

@@ -192,7 +192,7 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
 
         rockTableIdx_ = this->lookUpData_.template assignFieldPropsIntOnLeaf<short unsigned int>(eclState_.fieldProps(),
                                                                                                  rock_config.rocknum_property(),
-                                                                                                 numElem, true /*needsTranslation*/,
+                                                                                                 true /*needsTranslation*/,
                                                                                                  valueCheck);
     }
 
@@ -381,7 +381,7 @@ updateNum(const std::string& name, std::vector<T>& numbers, std::size_t num_regi
         }
     };
 
-    numbers = this->lookUpData_.template assignFieldPropsIntOnLeaf<T>(eclState_.fieldProps(), name, numElems,
+    numbers = this->lookUpData_.template assignFieldPropsIntOnLeaf<T>(eclState_.fieldProps(), name,
                                                                       true /*needsTranslation*/, valueCheck);
 }
 
