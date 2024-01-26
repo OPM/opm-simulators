@@ -488,6 +488,8 @@ public:
             computeBoundaryFluxRate(bdyFlux, bdyInfo);
         } else if (bdyInfo.type == BCType::FREE || bdyInfo.type == BCType::DIRICHLET) {
             computeBoundaryFluxFree(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
+        } else if (bdyInfo.type == BCType::THERMAL) {
+            computeBoundaryThermal(problem, bdyFlux, bdyInfo, insideIntQuants, globalSpaceIdx);
         } else {
             throw std::logic_error("Unknown boundary condition type " + std::to_string(static_cast<int>(bdyInfo.type)) + " in computeBoundaryFlux()." );
         }
@@ -601,6 +603,41 @@ public:
 
         // make sure that the right mass conservation quantities are used
         adaptMassConservationQuantities_(bdyFlux, insideIntQuants.pvtRegionIndex());
+
+#ifndef NDEBUG
+        for (unsigned i = 0; i < numEq; ++i) {
+            Valgrind::CheckDefined(bdyFlux[i]);
+        }
+        Valgrind::CheckDefined(bdyFlux);
+#endif
+    }
+
+    template <class BoundaryConditionData>
+    static void computeBoundaryThermal(const Problem& problem,
+                                       RateVector& bdyFlux,
+                                       const BoundaryConditionData& bdyInfo,
+                                       const IntensiveQuantities& insideIntQuants,
+                                       unsigned globalSpaceIdx)
+    {
+        OPM_TIMEBLOCK_LOCAL(computeBoundaryThermal);
+        // only heat is allowed to flow through this boundary
+        bdyFlux = 0.0;
+
+        // conductive heat flux from boundary
+        if constexpr(enableEnergy){
+            Evaluation heatFlux;
+            // avoid overload of functions with same numeber of elements in eclproblem
+            Scalar alpha = problem.eclTransmissibilities().thermalHalfTransBoundary(globalSpaceIdx, bdyInfo.boundaryFaceIndex);
+            unsigned inIdx = 0;//dummy
+            // always calculated with derivatives of this cell
+            EnergyModule::ExtensiveQuantities::template updateEnergyBoundary(heatFlux,
+                                                                             insideIntQuants,
+                                                                             /*focusDofIndex*/ inIdx,
+                                                                             inIdx,
+                                                                             alpha,
+                                                                             bdyInfo.exFluidState);
+            EnergyModule::addHeatFlux(bdyFlux, heatFlux);
+        }
 
 #ifndef NDEBUG
         for (unsigned i = 0; i < numEq; ++i) {
