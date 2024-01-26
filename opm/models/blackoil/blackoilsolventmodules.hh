@@ -485,12 +485,12 @@ public:
 
                 if (isSolubleInWater()) {
                     if (upIdx == inIdx) 
-                        flux[contiSolventEqIdx] =
+                        flux[contiSolventEqIdx] +=
                                 extQuants.volumeFlux(waterPhaseIdx)
                                 * up.fluidState().invB(waterPhaseIdx)
                                 * up.rsSolw();
                     else
-                        flux[contiSolventEqIdx] =
+                        flux[contiSolventEqIdx] +=
                                 extQuants.volumeFlux(waterPhaseIdx)
                                 *decay<Scalar>(up.fluidState().invB(waterPhaseIdx))
                                 *decay<Scalar>(up.rsSolw());
@@ -509,12 +509,12 @@ public:
 
                 if (isSolubleInWater()) {
                     if (upIdx == inIdx) 
-                        flux[contiSolventEqIdx] =
+                        flux[contiSolventEqIdx] +=
                                 extQuants.volumeFlux(waterPhaseIdx)
                                 * up.fluidState().density(waterPhaseIdx)
                                 * up.rsSolw();
                     else
-                        flux[contiSolventEqIdx] =
+                        flux[contiSolventEqIdx] +=
                                 extQuants.volumeFlux(waterPhaseIdx)
                                 *decay<Scalar>(up.fluidState().density(waterPhaseIdx))
                                 *decay<Scalar>(up.rsSolw());
