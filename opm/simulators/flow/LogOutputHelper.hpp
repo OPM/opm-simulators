@@ -43,7 +43,8 @@ class LogOutputHelper {
 public:
     LogOutputHelper(const EclipseState& eclState,
                     const Schedule& schedule,
-                    const SummaryState& st);
+                    const SummaryState& st,
+                    const std::string& moduleVersionName);
 
     //! \brief Write cumulative production and injection reports to output.
     void cumulative(const std::size_t reportStepNum) const;

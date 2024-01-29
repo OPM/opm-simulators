@@ -303,6 +303,7 @@ protected:
                                    const Schedule& schedule,
                                    const SummaryConfig& summaryConfig,
                                    const SummaryState& summaryState,
+                                   const std::string& moduleVersionName,
                                    bool enableEnergy,
                                    bool enableTemperature,
                                    bool enableMech,
