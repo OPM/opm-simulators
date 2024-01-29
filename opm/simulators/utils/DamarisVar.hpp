@@ -20,11 +20,15 @@
 #ifndef DAMARISVAR_HPP
 #define DAMARISVAR_HPP
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <cassert>
+#include <cstddef>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <typeinfo>
+#include <vector>
 
 #define BOOST_BIND_GLOBAL_PLACEHOLDERS 1
 
@@ -190,13 +194,13 @@ namespace DamarisOutput
         T* data_ptr_; //!< This pointer will be mapped to the Damaris shared memory
                       //!< area for the variable in the SetPointersToDamarisShmem()
                       //!< method. The type T will match the Layout type
-        size_t current_size_; //!< The total number of elements that may be held by this
-                              //!< part of the variable - returned by the size() method.
-                              //!< N.B. the actual size of the data area is dependent on
-                              //!< how the <variable> XML is written, as paramaters can
-                              //!< be augmented by basic maths relationships. This value
-                              //!< may not even be initialised if ParameterIsSet() method
-                              //!< is being used (e.g. in version 2/ of the constructor below).
+        std::size_t current_size_; //!< The total number of elements that may be held by this
+                                   //!< part of the variable - returned by the size() method.
+                                   //!< N.B. the actual size of the data area is dependent on
+                                   //!< how the <variable> XML is written, as paramaters can
+                                   //!< be augmented by basic maths relationships. This value
+                                   //!< may not even be initialised if ParameterIsSet() method
+                                   //!< is being used (e.g. in version 2/ of the constructor below).
 
     public:
         /**
@@ -257,7 +261,7 @@ namespace DamarisOutput
         {
             dam_err_ = DAMARIS_OK;
 
-            assert(param_names_.size() == dims);
+            assert(param_names_.size() == static_cast<std::size_t>(dims));
             assert(dims > 0);
 
             has_error_ = false;
@@ -510,7 +514,7 @@ namespace DamarisOutput
          *  Returns the number of elements in the memory area.
          *  Used as a method for compatibility with std::vector
          */
-        size_t size()
+        std::size_t size()
         {
             if (parameters_set_ == true) {
                 return current_size_;
@@ -532,10 +536,10 @@ namespace DamarisOutput
          */
         void setDamarisParameter(const std::vector<int>& paramSizeVal)
         {
-            assert(paramSizeVal.size() == num_params_);
+            assert(paramSizeVal.size() == static_cast<std::size_t>(num_params_));
 
             bool resbool = true;
-            size_t total_size = 1;
+            std::size_t total_size = 1;
             for (int varnum = 0; varnum < num_params_; varnum++) {
                 param_sizes_[varnum] = paramSizeVal[varnum];
                 total_size *= param_sizes_[varnum];
@@ -582,7 +586,7 @@ namespace DamarisOutput
          */
         void setDamarisPosition(const std::vector<int64_t>& positionsVals)
         {
-            assert(positionsVals.size() == num_params_);
+            assert(positionsVals.size() == static_cast<std::size_t>(num_params_));
 
             for (int pos_dim = 0; pos_dim < num_params_; pos_dim++) {
                 positions_[pos_dim] = positionsVals[pos_dim];
