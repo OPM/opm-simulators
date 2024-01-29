@@ -629,6 +629,9 @@ if(HDF5_FOUND)
     opm/simulators/utils/HDF5Serializer.hpp
     opm/simulators/utils/HDF5File.hpp
   )
+  list(APPEND MAIN_SOURCE_FILES
+    opm/simulators/utils/HDF5Serializer.cpp
+  )
 endif()
 
 list (APPEND EXAMPLE_SOURCE_FILES
