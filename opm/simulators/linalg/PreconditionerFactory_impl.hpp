@@ -96,6 +96,18 @@ struct AMGSmootherArgsHelper<Opm::ParallelOverlappingILU0<M,V,V,C>>
 };
 
 
+// trailing return type with decltype used for detecting existence of setUseFixedOrder member function by overloading the setUseFixedOrder function
+template <typename C>
+auto setUseFixedOrder(C criterion, bool booleanValue) -> decltype(criterion.setUseFixedOrder(booleanValue))
+{
+    return criterion.setUseFixedOrder(booleanValue); // Set flag to ensure that the matrices in the AMG hierarchy are constructed with deterministic indices.
+}
+template <typename C>
+void setUseFixedOrder(C, ...)
+{
+    // do nothing, since the function setUseFixedOrder does not exist yet
+}
+
 template <class Operator, class Comm, class Matrix, class Vector>
 typename AMGHelper<Operator, Comm, Matrix, Vector>::Criterion
 AMGHelper<Operator,Comm,Matrix,Vector>::criterion(const PropertyTree& prm)
@@ -118,6 +130,7 @@ AMGHelper<Operator,Comm,Matrix,Vector>::criterion(const PropertyTree& prm)
     criterion.setMaxConnectivity(prm.get<int>("maxconnectivity", 15));
     criterion.setMaxAggregateSize(prm.get<int>("maxaggsize", 6));
     criterion.setMinAggregateSize(prm.get<int>("minaggsize", 4));
+    setUseFixedOrder(criterion, true); // If possible, set flag to ensure that the matrices in the AMG hierarchy are constructed with deterministic indices.
     return criterion;
 }
 
