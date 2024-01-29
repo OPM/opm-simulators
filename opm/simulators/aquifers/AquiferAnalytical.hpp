@@ -200,16 +200,30 @@ public:
                 paramCache.updatePhase(fs, this->phaseIdx_());
                 const auto& energy = FluidSystem::internalEnergy(fs, paramCache, this->phaseIdx_());
                 fs.setInternalEnergy(this->phaseIdx_(), energy);
-            }
-            auto enthalpyFlux = this->Qai_[idx] * FluidSystem::referenceDensity( this->phaseIdx_(), intQuants.pvtRegionIndex()) / model.dofTotalVolume(cellIdx);
-            bool use_work_term_ = true;
-            if(use_work_term_){
-                enthalpyFlux *= fs.enthalpy(this->phaseIdx_());
+
+                //NB here one may use pressure from wrong side
+                auto enthalpyFlux = this->Qai_[idx] * FluidSystem::referenceDensity( this->phaseIdx_(), intQuants.pvtRegionIndex()) / model.dofTotalVolume(cellIdx);
+                bool use_work_term_ = true;
+                if(use_work_term_){
+                    enthalpyFlux *= FluidSystem::enthalpy(fs, paramCache, this->phaseIdx_());
+                    //fs.enthalpy(this->phaseIdx_());
+                }else{
+                    enthalpyFlux *= FluidSystem::internalEnergy(fs, paramCache, this->phaseIdx_());
+                    //fs.internalEnergy(this->phaseIdx_());
+                }
+                rates[BlackoilIndices::contiEnergyEqIdx]
+                    += enthalpyFlux;
             }else{
-                enthalpyFlux *= fs.internalEnergy(this->phaseIdx_());
+                auto enthalpyFlux = this->Qai_[idx] * FluidSystem::referenceDensity( this->phaseIdx_(), intQuants.pvtRegionIndex()) / model.dofTotalVolume(cellIdx);
+                bool use_work_term_ = true;
+                if(use_work_term_){
+                    enthalpyFlux *= fs.enthalpy(this->phaseIdx_());
+                }else{
+                    enthalpyFlux *= fs.internalEnergy(this->phaseIdx_());
+                }
+                rates[BlackoilIndices::contiEnergyEqIdx]
+                    += enthalpyFlux;
             }
-            rates[BlackoilIndices::contiEnergyEqIdx]
-                += enthalpyFlux;
 
         }
     }

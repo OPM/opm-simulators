@@ -1463,14 +1463,22 @@ public:
                     } else {
                         const auto& intQuants = this->simulator().model().intensiveQuantities(globalDofIdx, /*timeIdx*/ 0);
                         auto fs = intQuants.fluidState();
-                        // if temperature is not set, use cell temperature as default
+                        // if temperature is not set, use cell temperature as default temperature
+                        // and other quaniteis maybe for different points
                         if (source.hasTemperature({ijk, sourceComp})) {
                             Scalar temperature = source.temperature({ijk, sourceComp});
                             fs.setTemperature(temperature);
                         }
-                        const auto& h = FluidSystem::enthalpy(fs, phaseIdx, pvtRegionIdx);
-                        Scalar mass_rate = source.rate({ijk, sourceComp})/ this->model().dofTotalVolume(globalDofIdx);
-                        Scalar energy_rate = getValue(h)*mass_rate;
+                        Scalar energy_rate = source.rate({ijk, sourceComp})/ this->model().dofTotalVolume(globalDofIdx);
+                        //Scalar energy_rate = getValue(h)*mass_rate;
+                        bool use_work_term_ = true;
+                        if(use_work_term_){
+                            const auto& h = FluidSystem::enthalpy(fs, phaseIdx, pvtRegionIdx);
+                            energy_rate *= getValue(h);
+                        }else{
+                            const auto& energy = FluidSystem::internalEnergy(fs, phaseIdx, pvtRegionIdx);
+                            energy_rate *= getValue(energy);
+                        }
                         rate[Indices::contiEnergyEqIdx] += energy_rate;
                     }
                 }

@@ -2548,13 +2548,18 @@ namespace Opm
 
                 const auto& rho = FluidSystem::density(fs, paramCache, phaseIdx);
                 fs.setDensity(phaseIdx, rho);
-                const auto& energy = FluidSystem::internalEnergy(fs, paramCache, phaseIdx);
-                fs.setInternalEnergy(phaseIdx, energy);
                 bool use_work_term_ = true;
                 if(use_work_term_){
-                    cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                    const auto& energy = FluidSystem::internalEnergy(fs, paramCache, phaseIdx);
+                    fs.setInternalEnergy(phaseIdx, energy);
+                    //const auto& enthalpy = FluidSystem::enthalpy(fs, paramCache, phaseIdx);
+                    // cq_r_thermal *= this->extendEval(enthalpy) * this->extendEval(fs.density(phaseIdx));
+                     cq_r_thermal *= this->extendEval(fs.enthalpy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
                 }else{
-                    cq_r_thermal *= this->extendEval(fs.internalEnergy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
+                    const auto& energy = FluidSystem::internalEnergy(fs, paramCache, phaseIdx);
+                    //fs.setInternalEnergy(phaseIdx, energy);
+                    cq_r_thermal *= this->extendEval(energy) * this->extendEval(fs.density(phaseIdx));
+                    //cq_r_thermal *= this->extendEval(fs.internalEnergy(phaseIdx)) * this->extendEval(fs.density(phaseIdx));
                 }
                 result += getValue(cq_r_thermal);
             } else {
