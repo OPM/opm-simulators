@@ -20,8 +20,12 @@
 #ifndef OPM_GRID_DATA_OUTPUT_HPP
 #define OPM_GRID_DATA_OUTPUT_HPP
 
+#include <opm/common/ErrorMacros.hpp>
+
 #include <dune/grid/common/rangegenerators.hh>
 #include <dune/grid/io/file/vtk/common.hh>
+
+#include <cstddef>
 #include <sstream>
 
 /** @file
@@ -239,13 +243,15 @@ public:
     template <typename VectType>
     long writeGridPoints(VectType& x_inout, VectType& y_inout, VectType& z_inout)
     {
-        size_t check_size_x = x_inout.size();
-        size_t check_size_y = y_inout.size();
-        size_t check_size_z = z_inout.size();
+        const std::size_t check_size_x = x_inout.size();
+        const std::size_t check_size_y = y_inout.size();
+        const std::size_t check_size_z = z_inout.size();
 
         using VT = decltype(x_inout.data()[0]);
 
-        if ((check_size_x < nvertices_) || (check_size_y < nvertices_) || (check_size_z < nvertices_)) {
+        if ((check_size_x < static_cast<std::size_t>(nvertices_)) ||
+            (check_size_y < static_cast<std::size_t>(nvertices_)) ||
+            (check_size_z < static_cast<std::size_t>(nvertices_))) {
             // assert(check_size >= nvertices_);
             OPM_THROW(std::runtime_error,
                       "Opm::GridDataOutput::writeGridPoints( VectType&  x_inout,  VectType&  "
@@ -332,11 +338,11 @@ public:
     template <typename VectType>
     long writeGridPoints_AOS(VectType& xyz_inout)
     {
-        size_t check_size = xyz_inout.size();
+        const std::size_t check_size = xyz_inout.size();
 
         using VT = decltype(xyz_inout.data()[0]);
 
-        if (check_size < nvertices_ * 3) {
+        if (check_size < static_cast<std::size_t>(nvertices_ * 3)) {
             assert(check_size >= nvertices_ * 3);
             OPM_THROW(std::runtime_error,
                       "Opm::GridDataOutput::writeGridPoints_AOS( VectType&  xyz_inout )  "
@@ -423,9 +429,9 @@ public:
     template <typename VectType>
     long writeGridPoints_SOA(VectType& xyz_inout)
     {
-        size_t check_size = xyz_inout.size();
+        const std::size_t check_size = xyz_inout.size();
 
-        if (check_size < nvertices_ * 3) {
+        if (check_size < static_cast<std::size_t>(nvertices_ * 3)) {
             // assert(check_size >= nvertices_ * 3);
             OPM_THROW(std::runtime_error,
                       "Opm::GridDataOutput::writeGridPoints_SOA( VectType&  xyz_inout )  "
@@ -526,9 +532,9 @@ public:
     template <typename VectType>
     long writeConnectivity(VectType& connectivity_inout, ConnectivityVertexOrder whichOrder)
     {
-        size_t check_size = connectivity_inout.size();
+        const std::size_t check_size = connectivity_inout.size();
 
-        if (check_size < ncorners_) {
+        if (check_size < static_cast<std::size_t>(ncorners_)) {
             // assert(check_size >= ncorners_);
             OPM_THROW(std::runtime_error,
                       "Opm::GridDataOutput::writeConnectivity( VectType&  "
@@ -609,8 +615,8 @@ public:
     template <typename VectType>
     long writeOffsetsCells(VectType& offsets_inout)
     {
-        size_t check_size = offsets_inout.size();
-        if (check_size < ncells_) {
+        const std::size_t check_size = offsets_inout.size();
+        if (check_size < static_cast<std::size_t>(ncells_)) {
             // assert(check_size >= ncells_);
             OPM_THROW(std::runtime_error,
                       "Opm::GridDataOutput::writeOffsetsCells( VectType& "
@@ -670,9 +676,9 @@ public:
     template <typename VectType>
     long writeCellTypes(VectType& types_inout)
     {
-        size_t check_size = types_inout.size();
+        const std::size_t check_size = types_inout.size();
 
-        if (check_size < ncells_) {
+        if (check_size < static_cast<std::size_t>(ncells_)) {
             OPM_THROW(std::runtime_error,
                       "Opm::GridDataOutput::writeCellTypes( VectType&  types_inout )  " + " Input objects check_size ("
                           + std::to_string(check_size) + ") is not sufficient to fit the ncells_ values ("
