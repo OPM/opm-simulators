@@ -175,6 +175,8 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
     const bool updateDiffusivity = eclState_.getSimulationConfig().isDiffusive();
     const bool updateDispersivity = eclState_.getSimulationConfig().rock_config().dispersion();
 
+    const bool disableNNC = eclState_.getSimulationConfig().useNONNC();
+
     if (map)
         extractPermeability_(map);
     else
@@ -571,16 +573,18 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
         globalToLocal[cartElemIdx] = elemIdx;
     }
 
-    this->applyEditNncToGridTrans_(globalToLocal);
-    this->applyNncToGridTrans_(globalToLocal);
-    this->applyEditNncrToGridTrans_(globalToLocal);
-
-    if (applyNncMultregT) {
-        this->applyNncMultreg_(globalToLocal);
+    if (!disableNNC) {
+        this->applyEditNncToGridTrans_(globalToLocal);
+        this->applyNncToGridTrans_(globalToLocal);
+        this->applyEditNncrToGridTrans_(globalToLocal);
+        if (applyNncMultregT) {
+            this->applyNncMultreg_(globalToLocal);
+        }
     }
 
-    // Remove very small non-neighbouring transmissibilities.
-    this->removeSmallNonCartesianTransmissibilities_();
+    // If disableNNC == true, remove all non-neighbouring transmissibilities.
+    // If disableNNC == false, remove very small non-neighbouring transmissibilities.
+    this->removeNonCartesianTransmissibilities_(disableNNC);
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -699,11 +703,12 @@ extractDispersion_()
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-removeSmallNonCartesianTransmissibilities_()
+removeNonCartesianTransmissibilities_(bool removeAll)
 {
     const auto& cartDims = cartMapper_.cartesianDimensions();
     for (auto&& trans: trans_) {
-        if (trans.second < transmissibilityThreshold_) {
+        //either remove all NNC transmissibilities or those less than the threshold (by default 1e-6 in the deck's unit system)
+        if (removeAll or trans.second < transmissibilityThreshold_) {
             const auto& id = trans.first;
             const auto& elements = isIdReverse(id);
             int gc1 = std::min(cartMapper_.cartesianIndex(elements.first), cartMapper_.cartesianIndex(elements.second));
@@ -715,7 +720,6 @@ removeSmallNonCartesianTransmissibilities_()
             if (gc2 - gc1 == 1 || gc2 - gc1 == cartDims[0] || gc2 - gc1 == cartDims[0]*cartDims[1] || gc2 - gc1 == 0)
                 continue;
 
-            //remove transmissibilities less than the threshold (by default 1e-6 in the deck's unit system)
             trans.second = 0.0;
         }
     }

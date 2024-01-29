@@ -153,7 +153,7 @@ public:
 protected:
     void updateFromEclState_(bool global);
 
-    void removeSmallNonCartesianTransmissibilities_();
+    void removeNonCartesianTransmissibilities_(bool removeAll);
 
     /// \brief Apply the Multipliers for the case PINCH(4)==TOPBOT
     ///
