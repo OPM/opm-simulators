@@ -31,6 +31,7 @@
 #include <opm/input/eclipse/EclipseState/Grid/LgrCollection.hpp>
 
 #include <opm/grid/CpGrid.hpp>
+#include <opm/grid/LookUpData.hh>
 
 #include <functional>
 #include <memory>
@@ -141,6 +142,15 @@ public:
         return this->cell_part_;
     }
 
+    std::function<std::vector<int>(const FieldPropsManager&, const std::string&, bool)>
+    fieldPropIntOnLeafAssigner_() const
+    {
+        return [this](const FieldPropsManager& fieldPropManager, const std::string& propString, bool needsTranslation)
+        {
+            LookUpData<Dune::CpGrid,GridView> lookup(this->grid().leafGridView());
+            return lookup.template assignFieldPropsIntOnLeaf<int>(fieldPropManager, propString, needsTranslation);
+        };
+    }
 protected:
     /*!
      * \brief Distribute the simulation grid over multiple processes

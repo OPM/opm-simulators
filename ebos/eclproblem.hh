@@ -1832,6 +1832,17 @@ public:
         serializer(*materialLawManager_);
         serializer(*eclWriter_);
     }
+
+    std::function<std::vector<int>(const FieldPropsManager&, const std::string&, bool)>
+    fieldPropIntOnLeafAssigner_() const
+    {
+        const auto& lookup = this->lookUpData_;
+        return [&lookup](const FieldPropsManager& fieldPropManager, const std::string& propString, bool needsTranslation)
+        {
+            return lookup.template assignFieldPropsIntOnLeaf<int>(fieldPropManager, propString, needsTranslation);
+        };
+    }
+
 private:
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }

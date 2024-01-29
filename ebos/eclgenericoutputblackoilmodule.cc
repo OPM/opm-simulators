@@ -182,7 +182,9 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
                            bool enableBrine,
                            bool enableSaltPrecipitation,
                            bool enableExtbo,
-                           bool enableMICP)
+                               bool enableMICP,
+                               std::function<std::vector<int>(const FieldPropsManager&, const std::string&, bool)>
+                                   fieldPropIntOnLeafAssigner)
     : eclState_(eclState)
     , schedule_(schedule)
     , summaryConfig_(summaryConfig)
@@ -202,12 +204,15 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , enableExtbo_(enableExtbo)
     , enableMICP_(enableMICP)
     , local_data_valid_(false)
+    , fieldPropIntOnLeafAssigner_(fieldPropIntOnLeafAssigner)
 {
     const auto& fp = eclState_.fieldProps();
 
-    this->regions_["FIPNUM"] = fp.get_int("FIPNUM");
+    this->regions_["FIPNUM"] = this->fieldPropIntOnLeafAssigner_(fp, "FIPNUM", true /*needs translation*/);
+    std::cout<< "FIPNUM size from genericOutputBlackOilMod constructor: " << regions_["FIPNUM"].size() << std::endl;
     for (const auto& region : fp.fip_regions()) {
-        this->regions_[region] = fp.get_int(region);
+        this->regions_[region] = this->fieldPropIntOnLeafAssigner_(fp, region, true /*needs translation*/);
+        std::cout<< "REGION in for-loop size from genericOutputBlackOilMod constructor: " << regions_[region].size() << std::endl;
     }
 
     this->RPRNodes_  = summaryConfig_.keywords("RPR*");

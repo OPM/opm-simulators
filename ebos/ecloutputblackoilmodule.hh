@@ -156,9 +156,11 @@ public:
                    getPropValue<TypeTag, Properties::EnableBrine>(),
                    getPropValue<TypeTag, Properties::EnableSaltPrecipitation>(),
                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                   getPropValue<TypeTag, Properties::EnableMICP>())
+                   getPropValue<TypeTag, Properties::EnableMICP>(),
+                   simulator.vanguard().fieldPropIntOnLeafAssigner_())
         , simulator_(simulator)
     {
+        std::cout<< "GridView size from outputBlackOilMod constructor: " << simulator.vanguard().gridView().size(0) << std::endl;
         for (auto& region_pair : this->regions_) {
             this->createLocalRegion_(region_pair.second);
         }

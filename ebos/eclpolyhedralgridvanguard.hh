@@ -230,6 +230,7 @@ public:
         // not required for this type of grid yet (only from bdaBridge??)
         return {};
     }
+
 protected:
     void createGrids_()
     {

@@ -116,7 +116,7 @@ public:
 
     EclAluGridVanguard(Simulator& simulator)
         : EclBaseVanguard<TypeTag>(simulator)
-    { 
+    {
       this->mpiRank = EclGenericVanguard::comm().rank();
       this->callImplementationInit();
     }
@@ -284,6 +284,7 @@ public:
     }
 
 protected:
+
     void createGrids_()
     {
         // we use separate grid objects: one for the calculation of the initial condition

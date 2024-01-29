@@ -51,6 +51,7 @@ namespace Opm {
 template <class TypeTag>
 class EclBaseVanguard;
 template<typename Grid, typename GridView> struct LookUpCellCentroid;
+//template<typename Grid, typename GridView> class LookUpData;
 }
 
 namespace Opm::Properties {

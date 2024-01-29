@@ -42,6 +42,8 @@
 
 namespace Opm {
 
+class FieldPropsManager;
+
 namespace data { class Solution; }
 class EclipseState;
 class Schedule;
@@ -313,7 +315,9 @@ protected:
                                    bool enableBrine,
                                    bool enableSaltPrecipitation,
                                    bool enableExtbo,
-                                   bool enableMICP);
+                                   bool enableMICP,
+                                   std::function<std::vector<int>(const FieldPropsManager&, const std::string&, bool)>
+                                   fieldPropIntOnLeafAssigner);
 
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
@@ -505,6 +509,8 @@ protected:
 
     std::optional<Inplace> initialInplace_;
     bool local_data_valid_;
+
+    std::function<std::vector<int>(const FieldPropsManager&, const std::string&, bool)> fieldPropIntOnLeafAssigner_;
 };
 
 } // namespace Opm
