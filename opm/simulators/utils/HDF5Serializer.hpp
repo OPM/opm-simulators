@@ -18,8 +18,8 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef ECL_HDF5_SERIALIZER_HH
-#define ECL_HDF5_SERIALIZER_HH
+#ifndef HDF5_SERIALIZER_HPP
+#define HDF5_SERIALIZER_HPP
 
 #include <opm/common/utility/Serializer.hpp>
 
@@ -29,7 +29,6 @@
 #include <opm/simulators/utils/SerializationPackers.hpp>
 
 #include <algorithm>
-#include <cctype>
 #include <cstdlib>
 
 namespace Opm {
@@ -134,4 +133,4 @@ private:
 
 }
 
-#endif
+#endif // HDF5_SERIALIZER_HPP

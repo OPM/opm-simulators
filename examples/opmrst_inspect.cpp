@@ -19,7 +19,7 @@
 
 #include <config.h>
 
-#include <ebos/hdf5serializer.hh>
+#include <opm/simulators/utils/HDF5Serializer.hpp>
 
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
