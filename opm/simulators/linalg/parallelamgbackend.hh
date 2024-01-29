@@ -255,6 +255,18 @@ protected:
     }
 #endif
 
+    // trailing return type with decltype used for detecting existence of setUseFixedOrder member function by overloading the setUseFixedOrder function
+    template <typename C>
+    auto setUseFixedOrder(C criterion, bool booleanValue) -> decltype(criterion.setUseFixedOrder(booleanValue))
+    {
+        return criterion.setUseFixedOrder(booleanValue); // Set flag to ensure that the matrices in the AMG hierarchy are constructed with deterministic indices.
+    }
+    template <typename C>
+    void setUseFixedOrder(C, ...)
+    {
+        // do nothing, since the function setUseFixedOrder does not exist yet
+    }
+
     void setupAmg_()
     {
         if (amg_)
@@ -291,6 +303,7 @@ protected:
         // coarsenCriterion.setAccumulate(Dune::Amg::noAccu);
         coarsenCriterion.setAccumulate(Dune::Amg::atOnceAccu);
         coarsenCriterion.setSkipIsolated(false);
+        setUseFixedOrder(coarsenCriterion, true); // If possible, set flag to ensure that the matrices in the AMG hierarchy are constructed with deterministic indices.
 
 // instantiate the AMG preconditioner
 #if HAVE_MPI
