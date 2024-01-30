@@ -94,17 +94,11 @@ namespace DamarisOutput
         DamarisVarXMLAttributes()
         {
             // Additional data needed to complete an XML <variable> element
-            layout_ = "";
-            mesh_ = "";
             type_ = "scalar"; // This is probably not needed as vector data is defined using
                               // the Layout paramter. Could be useful for cross checking
             visualizable_ = "false";
-            unit_ = "";
             time_varying_ = "true";
             centering_ = "zonal";
-            store_ = "";
-            script_ = "";
-            select_mem_ = "";
         }
 
         /**
