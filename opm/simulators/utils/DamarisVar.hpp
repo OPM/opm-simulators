@@ -248,7 +248,10 @@ namespace DamarisOutput
         *  /param [IN] variable_name  The name of the Damaris variable (defined in the Damaris XML file)
         *  /param [IN] rank           The rank of the process. Used for error output.
         */
-        DamarisVar(int dims, std::vector<std::string> param_names, std::string variable_name, int rank)
+        DamarisVar(int dims,
+                   const std::vector<std::string>& param_names,
+                   const std::string& variable_name,
+                   int rank)
             : param_names_(param_names)
             , variable_name_(variable_name)
             , rank_(rank)
@@ -308,9 +311,9 @@ namespace DamarisOutput
          *  /param [IN] rank           The rank of the process. Used for error output.
          */
         DamarisVar(int dims,
-                   std::vector<std::string> param_names,
-                   std::vector<int> param_values,
-                   std::string variable_name,
+                   const std::vector<std::string>& param_names,
+                   const std::vector<int>& param_values,
+                   const std::string& variable_name,
                    int rank)
             : param_names_(param_names)
             , variable_name_(variable_name)
@@ -334,7 +337,7 @@ namespace DamarisOutput
          *  Method to check that the template paramater T is the same as the requested
          * type for the variable in the XML file
          */
-        bool TestType(std::string variable_name)
+        bool TestType(const std::string& variable_name)
         {
             bool resbool = true;
             // This gets the type of the Damaris XML <variable>'s <layout>
@@ -673,7 +676,9 @@ namespace DamarisOutput
         }
 
     private:
-        void formatTypeError(std::string& var_name, std::string type_name1, std::string type_name2)
+        void formatTypeError(const std::string& var_name,
+                             const std::string& type_name1,
+                             const std::string& type_name2)
         {
             dam_err_sstr_ << "  ERROR rank =" << rank_ << " : DamarisVar::DamarisVar () variable_name_: \"" << var_name
                           << "\" The template type of Type of DamarisVar<T> in the code: " << type_name1
