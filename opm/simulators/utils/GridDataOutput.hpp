@@ -24,7 +24,8 @@
 
 #include <dune/grid/common/partitionset.hh>
 
-#include <sstream>
+#include <iosfwd>
+#include <string>
 
 /** @file
     @brief Allows model geometry data to be passed to external code - via a copy
@@ -338,20 +339,17 @@ public:
 
     std::string getError() const
     {
-        return error_strm_.str();
+        return error_;
     }
 
     void clearError()
     {
-        error_strm_.str("");
+        error_.clear();
     }
 
     bool hasError() const
     {
-        if (error_strm_.str().length() > 0)
-            return true;
-        else
-            return false;
+        return !error_.empty();
     }
 
 protected:
@@ -376,7 +374,7 @@ protected:
     int dimw_; // dimensions of the input grid
 
 private:
-    std::stringstream error_strm_;
+    std::string error_;
 };
 
 } // namespace Opm::GridDataOutput
