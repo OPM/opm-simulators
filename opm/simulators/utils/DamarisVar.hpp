@@ -140,15 +140,15 @@ namespace DamarisOutput
     {
     public:
         virtual ~DamarisVarBase() = default;
-        virtual void printError() = 0;
-        virtual bool hasError() = 0;
+        virtual void printError() const = 0;
+        virtual bool hasError() const = 0;
         virtual void setDamarisParameterAndShmem(const std::vector<int>& paramSizeVal) = 0;
         virtual void setDamarisParameter(const std::vector<int>& paramSizeVal) = 0;
         virtual void setDamarisPosition(const std::vector<int64_t>& positionsVals) = 0;
         virtual void setPointersToDamarisShmem() = 0;
         virtual void commitVariableDamarisShmem() = 0;
         virtual void clearVariableDamarisShmem() = 0;
-        virtual std::string& variable_name() = 0;
+        virtual const std::string& variable_name() const = 0;
     }; // class DamarisVarBase
 
     /**
@@ -449,12 +449,12 @@ namespace DamarisOutput
             parameters_set_ = true;
         }
 
-        void printError() override
+        void printError() const override
         {
             OPM_THROW(std::runtime_error, dam_err_sstr_.str());
         }
 
-        bool hasError() override
+        bool hasError() const override
         {
             return (has_error_);
         }
@@ -472,7 +472,7 @@ namespace DamarisOutput
             }
         }
 
-        std::string& variable_name() override
+        const std::string& variable_name() const override
         {
             return (variable_name_);
         }
