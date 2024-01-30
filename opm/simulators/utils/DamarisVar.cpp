@@ -273,76 +273,40 @@ bool DamarisVar<T>::TestType(const std::string& variable_name)
     T test_id;
     const std::type_info& t1 = typeid(test_id);
 
+    auto check = [&variable_name,this](auto td)
+    {
+        const std::type_info& t2 = typeid(td);
+        if (t1 != t2) {
+            formatTypeError(variable_name, t1.name(), t2.name());
+            return false;
+        }
+        return true;
+    };
+
     if (vartype == DAMARIS_TYPE_DOUBLE) {
-        double td = 0.0;
-        const std::type_info& t2 = typeid(td);
-        if (t1 != t2) {
-            formatTypeError(variable_name, t1.name(), t2.name());
-            resbool = false;
-        }
+        resbool = check(double{});
     } else if (vartype == DAMARIS_TYPE_FLOAT) {
-        float td = 0.0f;
-        const std::type_info& t2 = typeid(td);
-        if (t1 != t2) {
-            formatTypeError(variable_name, t1.name(), t2.name());
-            resbool = false;
-        }
+        resbool = check(float{});
     } else if (vartype == DAMARIS_TYPE_CHAR) {
-        char td = 0;
-        const std::type_info& t2 = typeid(td);
-        if (t1 != t2) {
-            formatTypeError(variable_name, t1.name(), t2.name());
-            resbool = false;
-        }
+        resbool = check(char{});
     } else if (vartype == DAMARIS_TYPE_UCHAR) {
-        unsigned char td = 0;
-        const std::type_info& t2 = typeid(td);
-        if (t1 != t2) {
-            formatTypeError(variable_name, t1.name(), t2.name());
-            resbool = false;
-        }
+        using uchar = unsigned char;
+        resbool = check(uchar{});
     } else if (vartype == DAMARIS_TYPE_SHORT) {
-        short td = 0;
-        const std::type_info& t2 = typeid(td);
-        if (t1 != t2) {
-            formatTypeError(variable_name, t1.name(), t2.name());
-            resbool = false;
-        }
+        resbool = check(short{});
     } else if (vartype == DAMARIS_TYPE_USHORT) {
-        unsigned short td = 0;
-        const std::type_info& t2 = typeid(td);
-        if (t1 != t2) {
-            formatTypeError(variable_name, t1.name(), t2.name());
-            resbool = false;
-        }
+        using ushort = unsigned short;
+        resbool = check(ushort{});
     } else if (vartype == DAMARIS_TYPE_INT) {
-        int td = 0;
-        const std::type_info& t2 = typeid(td);
-        if (t1 != t2) {
-            formatTypeError(variable_name, t1.name(), t2.name());
-            resbool = false;
-        }
+        resbool = check(int{});
     } else if (vartype == DAMARIS_TYPE_UINT) {
-        unsigned int td = 0;
-        const std::type_info& t2 = typeid(td);
-        if (t1 != t2) {
-            formatTypeError(variable_name, t1.name(), t2.name());
-            resbool = false;
-        }
+        using uint = unsigned int;
+        resbool = check(uint{});
     } else if (vartype == DAMARIS_TYPE_LONG) {
-        long td = 0;
-        const std::type_info& t2 = typeid(td);
-        if (t1 != t2) {
-            formatTypeError(variable_name, t1.name(), t2.name());
-            resbool = false;
-        }
+        resbool = check(long{});
     } else if (vartype == DAMARIS_TYPE_ULONG) {
-        unsigned long td = 0;
-        const std::type_info& t2 = typeid(td);
-        if (t1 != t2) {
-            formatTypeError(variable_name, t1.name(), t2.name());
-            resbool = false;
-        }
+        using ulong = unsigned long;
+        resbool = check(ulong{});
     } else if (vartype == DAMARIS_TYPE_UNDEFINED) {
         dam_err_str_ += fmt::format("  ERROR rank = {}: DamarisVar::DamarisVar():: \"{}\""
                                     " has type DAMARIS_TYPE_UNDEFINED\n", rank_, variable_name);
