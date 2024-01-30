@@ -47,14 +47,23 @@
 
 #include <fmt/format.h>
 
-#include <Damaris.h>
-
+#include <algorithm>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <stdexcept>
 #include <string>
 
 namespace Opm {
+
+namespace DamarisOutput {
+
+int endIteration(int rank);
+int setParameter(const char* field, int rank, int value);
+int setPosition(const char* field, int rank, int64_t pos);
+int write(const char* field, int rank, const void* data);
+
+}
 
 /*!
  * \ingroup EclBlackOilSimulator
@@ -211,28 +220,12 @@ public:
 
             if (this->damarisOutputModule_->getPRESSURE_ptr() != nullptr) 
             {
-                int64_t temp_int64_t[1];
-                temp_int64_t[0] = static_cast<int64_t>(this->elements_rank_offsets_[rank_]);
-                dam_err_ = damaris_set_position("PRESSURE", temp_int64_t);
-                if (dam_err_ != DAMARIS_OK) {
-                    OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{})"
-                                              "damaris_set_position(PRESSURE, ...), Damaris Error: {}  ",
-                                              rank_, damaris_error_string(dam_err_) ));
-                }
+                dam_err_ = DamarisOutput::setPosition("PRESSURE", rank_,
+                                                      this->elements_rank_offsets_[rank_]);
+                dam_err_ = DamarisOutput::write("PRESSURE", rank_,
+                                                this->damarisOutputModule_->getPRESSURE_ptr());
 
-                dam_err_ = damaris_write("PRESSURE", (void*)this->damarisOutputModule_->getPRESSURE_ptr());
-                if (dam_err_ != DAMARIS_OK) {
-                   OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{}) "
-                                             "damaris_write(PRESSURE, ...), Damaris Error: {}  ",
-                                             rank_, damaris_error_string(dam_err_) ));
-                }
-
-                dam_err_ =  damaris_end_iteration();
-                if (dam_err_ != DAMARIS_OK) {
-                    OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{}) "
-                                              "damaris_end_iteration(), Damaris Error: {}  ",
-                                              rank_, damaris_error_string(dam_err_) ));
-                }
+                dam_err_ =  DamarisOutput::endIteration(rank_);
             }
          } // end of ! isSubstep
     }
@@ -257,25 +250,16 @@ private:
     {
         // GLOBAL_CELL_INDEX is used to reorder variable data when writing to disk 
         // This is enabled using select-file="GLOBAL_CELL_INDEX" in the <variable> XML tag
-        if ( this->collectToIORank_.isParallel() ){
-            const std::vector<int>& local_to_global =  this->collectToIORank_.localIdxToGlobalIdxMapping(); 
-            dam_err_ = damaris_write("GLOBAL_CELL_INDEX", local_to_global.data());
+        if (this->collectToIORank_.isParallel()) {
+            const std::vector<int>& local_to_global =  this->collectToIORank_.localIdxToGlobalIdxMapping();
+            dam_err_ = DamarisOutput::write("GLOBAL_CELL_INDEX", rank_, local_to_global.data());
         } else {
             std::vector<int> local_to_global_filled ;
             local_to_global_filled.resize(this->numElements_) ;
-            for (int i = 0 ; i < this->numElements_ ; i++)
-            {
-                local_to_global_filled[i] = i ;
-            }
-            dam_err_ = damaris_write("GLOBAL_CELL_INDEX", local_to_global_filled.data());
+            std::iota(local_to_global_filled.begin(), local_to_global_filled.end(), 0);
+            dam_err_ = DamarisOutput::write("GLOBAL_CELL_INDEX", rank_, local_to_global_filled.data());
         }
 
-        if (dam_err_ != DAMARIS_OK) {
-            OpmLog::error(fmt::format("damariswriter::writeOutput()       :"
-                                      "( rank:{}) damaris_write(GLOBAL_CELL_INDEX, ...), Damaris Error: {}  ",  
-                                      rank_, damaris_error_string(dam_err_) ));
-        }
-        
         // This is an example of writing to the Damaris shared memory directly (i.e. not using 
         // damaris_write() to copy data there)
         // We will add the MPI rank value directly into shared memory using the DamarisVar 
@@ -284,14 +268,12 @@ private:
         DamarisVarInt mpi_rank_var_test(1, {std::string("n_elements_local")},  std::string("MPI_RANK"), rank_);
         mpi_rank_var_test.setDamarisParameterAndShmem( {this->numElements_ } ) ;
         // Fill the created memory area
-        for (int i = 0 ; i < this->numElements_; i++ )
-        {
-            mpi_rank_var_test.data()[i] = rank_ ;  // write the rank vaue to the shared memory area.
-        }
-       
+        std::fill(mpi_rank_var_test.data(), mpi_rank_var_test.data() + numElements_, rank_);
     }
 
-    void setupDamarisWritingPars(Parallel::Communication comm, const int n_elements_local_grid, std::vector<unsigned long long>& elements_rank_offsets)
+    void setupDamarisWritingPars(Parallel::Communication comm,
+                                 const int n_elements_local_grid,
+                                 std::vector<unsigned long long>& elements_rank_offsets)
     {
         // one for each rank -- to be gathered from each client rank
         std::vector<unsigned long long> elements_rank_sizes(nranks_); 
@@ -319,21 +301,11 @@ private:
         // Set the paramater so that the Damaris servers can allocate the correct amount of memory for the variabe
         // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
         // ToDo: Do we need to check that local ranks are 0 based ?
-        int temp_int = static_cast<int>(elements_rank_sizes[rank_]);
-        dam_err_ = damaris_parameter_set("n_elements_local", &temp_int, sizeof(int));
-        if (dam_err_ != DAMARIS_OK) {
-            OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
-                          "damaris_parameter_set(\"n_elements_local\", &temp_int, sizeof(int));");
-        }
+        dam_err_ = DamarisOutput::setParameter("n_elements_local", rank_, elements_rank_sizes[rank_]);
         // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
         // ToDo: Do we need to check that n_elements_global_max will fit in a C int type (INT_MAX)
         if( n_elements_global_max <= std::numeric_limits<int>::max() ) {
-            temp_int = static_cast<int>(n_elements_global_max);
-            dam_err_ = damaris_parameter_set("n_elements_total", &temp_int, sizeof(int));
-            if (dam_err_ != DAMARIS_OK) {
-                OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
-                              "damaris_parameter_set(\"n_elements_total\", &temp_int, sizeof(int));");
-            }
+            dam_err_ = DamarisOutput::setParameter("n_elements_total", rank_, n_elements_global_max);
         } else {
             OpmLog::error(fmt::format("( rank:{} ) The size of the global array ({}) is"
                                       "greater than what a Damaris paramater type supports ({}).  ", 
@@ -344,28 +316,15 @@ private:
 
         // Use damaris_set_position to set the offset in the global size of the array.
         // This is used so that output functionality (e.g. HDF5Store) knows global offsets of the data of the ranks
-        int64_t temp_int64_t[1];
-        temp_int64_t[0] = static_cast<int64_t>(elements_rank_offsets[rank_]);
-        dam_err_ = damaris_set_position("PRESSURE", temp_int64_t);
-        if (dam_err_ != DAMARIS_OK) {
-            OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
-                          "damaris_set_position(\"PRESSURE\", temp_int64_t);");
-        }
-        dam_err_ = damaris_set_position("GLOBAL_CELL_INDEX", temp_int64_t);
-        if (dam_err_ != DAMARIS_OK) {
-            OpmLog::error("( rank:" + std::to_string(rank_)+") Damaris library produced an error result for "
-                          "damaris_set_position(\"GLOBAL_CELL_INDEX\", temp_int64_t);");
-        }
+        dam_err_ = DamarisOutput::setPosition("PRESSURE", rank_, elements_rank_offsets[rank_]);
+        dam_err_ = DamarisOutput::setPosition("GLOBAL_CELL_INDEX", rank_, elements_rank_offsets[rank_]);
 
         // Set the size of the MPI variable
         DamarisVarInt mpi_rank_var(1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)  ;
-        mpi_rank_var.setDamarisPosition({*temp_int64_t}) ;
-
+        mpi_rank_var.setDamarisPosition({static_cast<int64_t>(elements_rank_offsets[rank_])});
     }
-    
 
-
-    void writeDamarisGridOutput( void )
+    void writeDamarisGridOutput()
     {
         const auto& gridView = simulator_.gridView();
         Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::Partitions::interior) ;
