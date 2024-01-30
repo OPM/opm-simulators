@@ -35,6 +35,7 @@
 #include <ebos/eclgenericwriter_impl.hh>
 #include <ebos/ecltransmissibility_impl.hh>
 #include <ebos/equil/initstateequil_impl.hh>
+#include <opm/simulators/utils/GridDataOutput_impl.hpp>
 
 namespace Opm {
 namespace Properties {
