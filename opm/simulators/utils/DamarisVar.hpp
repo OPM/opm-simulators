@@ -334,110 +334,6 @@ namespace DamarisOutput
         }
 
         /**
-         *  Method to check that the template paramater T is the same as the requested
-         * type for the variable in the XML file
-         */
-        bool TestType(const std::string& variable_name)
-        {
-            bool resbool = true;
-            // This gets the type of the Damaris XML <variable>'s <layout>
-            DAMARIS_TYPE_STR vartype;
-            dam_err_ = damaris_get_type(variable_name.c_str(), &vartype);
-            if (dam_err_ != DAMARIS_OK) {
-                dam_err_sstr_ << "  ERROR rankDamarisVar::DamarisVar ()  damaris_get_type(\"" << variable_name_
-                              << "\", vartype);  Damaris error = " << damaris_error_string(dam_err_) << std::endl;
-                has_error_ = true;
-                return false;
-            }
-            T test_id;
-            const std::type_info& t1 = typeid(test_id);
-
-            if (vartype == DAMARIS_TYPE_DOUBLE) {
-                double td = 0.0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_FLOAT) {
-                float td = 0.0f;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_CHAR) {
-                char td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_UCHAR) {
-                unsigned char td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_SHORT) {
-                short td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_USHORT) {
-                unsigned short td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_INT) {
-                int td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_UINT) {
-                unsigned int td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_LONG) {
-                long td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_ULONG) {
-                unsigned long td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_UNDEFINED) {
-                dam_err_sstr_ << "  ERROR rank =" << rank_ << " : DamarisVar::DamarisVar()::  \"" << variable_name
-                              << "\" has type DAMARIS_TYPE_UNDEFINED" << std::endl;
-                has_error_ = true;
-                resbool = false;
-            } else {
-                dam_err_sstr_ << "  ERROR rank =" << rank_ << " : DamarisVar::DamarisVar():: \"" << variable_name
-                              << "\" is not of available type " << std::endl;
-                has_error_ = true;
-                resbool = false;
-            }
-
-            return resbool;
-        }
-
-        /**
          *  Allow a user to indicate that the Damaris variable has allocated a size -
          * This method is usefull as a single parameter can control one or more
          * layouts and a single layout can describe the size of multiple <variable>
@@ -676,6 +572,110 @@ namespace DamarisOutput
         }
 
     private:
+        /**
+         *  Method to check that the template parameter T is the same as the requested
+         * type for the variable in the XML file
+         */
+        bool TestType(const std::string& variable_name)
+        {
+            bool resbool = true;
+            // This gets the type of the Damaris XML <variable>'s <layout>
+            DAMARIS_TYPE_STR vartype;
+            dam_err_ = damaris_get_type(variable_name.c_str(), &vartype);
+            if (dam_err_ != DAMARIS_OK) {
+                dam_err_sstr_ << "  ERROR rankDamarisVar::DamarisVar ()  damaris_get_type(\"" << variable_name_
+                              << "\", vartype);  Damaris error = " << damaris_error_string(dam_err_) << std::endl;
+                has_error_ = true;
+                return false;
+            }
+            T test_id;
+            const std::type_info& t1 = typeid(test_id);
+
+            if (vartype == DAMARIS_TYPE_DOUBLE) {
+                double td = 0.0;
+                const std::type_info& t2 = typeid(td);
+                if (t1 != t2) {
+                    formatTypeError(variable_name, t1.name(), t2.name());
+                    resbool = false;
+                }
+            } else if (vartype == DAMARIS_TYPE_FLOAT) {
+                float td = 0.0f;
+                const std::type_info& t2 = typeid(td);
+                if (t1 != t2) {
+                    formatTypeError(variable_name, t1.name(), t2.name());
+                    resbool = false;
+                }
+            } else if (vartype == DAMARIS_TYPE_CHAR) {
+                char td = 0;
+                const std::type_info& t2 = typeid(td);
+                if (t1 != t2) {
+                    formatTypeError(variable_name, t1.name(), t2.name());
+                    resbool = false;
+                }
+            } else if (vartype == DAMARIS_TYPE_UCHAR) {
+                unsigned char td = 0;
+                const std::type_info& t2 = typeid(td);
+                if (t1 != t2) {
+                    formatTypeError(variable_name, t1.name(), t2.name());
+                    resbool = false;
+                }
+            } else if (vartype == DAMARIS_TYPE_SHORT) {
+                short td = 0;
+                const std::type_info& t2 = typeid(td);
+                if (t1 != t2) {
+                    formatTypeError(variable_name, t1.name(), t2.name());
+                    resbool = false;
+                }
+            } else if (vartype == DAMARIS_TYPE_USHORT) {
+                unsigned short td = 0;
+                const std::type_info& t2 = typeid(td);
+                if (t1 != t2) {
+                    formatTypeError(variable_name, t1.name(), t2.name());
+                    resbool = false;
+                }
+            } else if (vartype == DAMARIS_TYPE_INT) {
+                int td = 0;
+                const std::type_info& t2 = typeid(td);
+                if (t1 != t2) {
+                    formatTypeError(variable_name, t1.name(), t2.name());
+                    resbool = false;
+                }
+            } else if (vartype == DAMARIS_TYPE_UINT) {
+                unsigned int td = 0;
+                const std::type_info& t2 = typeid(td);
+                if (t1 != t2) {
+                    formatTypeError(variable_name, t1.name(), t2.name());
+                    resbool = false;
+                }
+            } else if (vartype == DAMARIS_TYPE_LONG) {
+                long td = 0;
+                const std::type_info& t2 = typeid(td);
+                if (t1 != t2) {
+                    formatTypeError(variable_name, t1.name(), t2.name());
+                    resbool = false;
+                }
+            } else if (vartype == DAMARIS_TYPE_ULONG) {
+                unsigned long td = 0;
+                const std::type_info& t2 = typeid(td);
+                if (t1 != t2) {
+                    formatTypeError(variable_name, t1.name(), t2.name());
+                    resbool = false;
+                }
+            } else if (vartype == DAMARIS_TYPE_UNDEFINED) {
+                dam_err_sstr_ << "  ERROR rank =" << rank_ << " : DamarisVar::DamarisVar()::  \"" << variable_name
+                              << "\" has type DAMARIS_TYPE_UNDEFINED" << std::endl;
+                has_error_ = true;
+                resbool = false;
+            } else {
+                dam_err_sstr_ << "  ERROR rank =" << rank_ << " : DamarisVar::DamarisVar():: \"" << variable_name
+                              << "\" is not of available type " << std::endl;
+                has_error_ = true;
+                resbool = false;
+            }
+
+            return resbool;
+        }
+
         void formatTypeError(const std::string& var_name,
                              const std::string& type_name1,
                              const std::string& type_name2)
