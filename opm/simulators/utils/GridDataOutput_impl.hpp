@@ -485,24 +485,32 @@ template <class GridView, unsigned int partitions>
 std::string SimMeshDataAccessor<GridView,partitions>::
 getPartitionTypeString() const
 {
-    if (this->dunePartition_ == Dune::Partitions::all)
-        return std::string("Dune::Partitions::all");
-    if (this->dunePartition_ == Dune::Partitions::interior)
-        return std::string("Dune::Partitions::interior");
-    if (this->dunePartition_ == Dune::Partitions::interiorBorder)
-        return std::string("Dune::Partitions::interiorBorder");
-    if (this->dunePartition_ == Dune::Partitions::interiorBorderOverlap)
-        return std::string("Dune::Partitions::interiorBorderOverlap");
-    if (this->dunePartition_ == Dune::Partitions::front)
-        return std::string("Dune::Partitions::front");
-    if (this->dunePartition_ == Dune::Partitions::interiorBorderOverlapFront)
-        return std::string("Dune::Partitions::InteriorBorderOverlapFront");
-    if (this->dunePartition_ == Dune::Partitions::border)
-        return std::string("Dune::Partitions::border");
-    if (this->dunePartition_ == Dune::Partitions::ghost)
-        return std::string("Dune::Partitions::ghost");
+    if (this->dunePartition_ == Dune::Partitions::all) {
+        return "Dune::Partitions::all";
+    }
+    if (this->dunePartition_ == Dune::Partitions::interior) {
+        return "Dune::Partitions::interior";
+    }
+    if (this->dunePartition_ == Dune::Partitions::interiorBorder) {
+        return "Dune::Partitions::interiorBorder";
+    }
+    if (this->dunePartition_ == Dune::Partitions::interiorBorderOverlap) {
+        return "Dune::Partitions::interiorBorderOverlap";
+    }
+    if (this->dunePartition_ == Dune::Partitions::front) {
+        return "Dune::Partitions::front";
+    }
+    if (this->dunePartition_ == Dune::Partitions::interiorBorderOverlapFront) {
+        return "Dune::Partitions::InteriorBorderOverlapFront";
+    }
+    if (this->dunePartition_ == Dune::Partitions::border) {
+        return "Dune::Partitions::border";
+    }
+    if (this->dunePartition_ == Dune::Partitions::ghost) {
+        return "Dune::Partitions::ghost";
+    }
 
-    return std::string("Unknown Dune::PartitionSet<>");
+    return "Unknown Dune::PartitionSet<>";
 }
 
 template <class GridView, unsigned int partitions>
