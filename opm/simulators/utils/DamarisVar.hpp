@@ -20,19 +20,10 @@
 #ifndef DAMARISVAR_HPP
 #define DAMARISVAR_HPP
 
-#include <opm/common/ErrorMacros.hpp>
-
-#include <cassert>
 #include <cstddef>
-#include <iostream>
 #include <sstream>
 #include <string>
-#include <typeinfo>
 #include <vector>
-
-#define BOOST_BIND_GLOBAL_PLACEHOLDERS 1
-
-#include <Damaris.h>
 
 /*
     File: DamarisVar.hpp
@@ -91,49 +82,11 @@ namespace DamarisOutput
                                     //!< the ranks data (Damaris version 1.8+)
 
     public:
-        DamarisVarXMLAttributes()
-        {
-            // Additional data needed to complete an XML <variable> element
-            type_ = "scalar"; // This is probably not needed as vector data is defined using
-                              // the Layout paramter. Could be useful for cross checking
-            visualizable_ = "false";
-            time_varying_ = "true";
-            centering_ = "zonal";
-        }
-
+        DamarisVarXMLAttributes();
         /**
          * Creates the XML representation of the variable from the available strings
          */
-        std::string ReturnXMLForVariable()
-        {
-            std::ostringstream var_sstr;
-
-            var_sstr << " layout=\"" << this->layout_ << "\"";
-            if (this->mesh_ != "")
-                var_sstr << " mesh=\"" << this->mesh_ << "\"";
-            if (this->type_ != "")
-                var_sstr << " type=\"" << this->type_ << "\"";
-            if (this->visualizable_ != "")
-                var_sstr << " visualizable=\"" << this->visualizable_ << "\"";
-            if (this->unit_ != "")
-                var_sstr << " unit=\"" << this->unit_ << "\"";
-            if (this->time_varying_ != "")
-                var_sstr << " time_varying=\"" << this->time_varying_ << "\"";
-            if (this->centering_ != "")
-                var_sstr << " centering=\"" << this->centering_ << "\"";
-            if (this->store_ != "")
-                var_sstr << " store=\"" << this->store_ << "\"";
-            if (this->script_ != "")
-                var_sstr << " script=\"" << this->script_ << "\"";
-            if (this->select_mem_ != "")
-                var_sstr << " select-mem=\"" << this->select_mem_ << "\"";
-            if (this->select_file_ != "")
-                var_sstr << " select-file=\"" << this->select_file_ << "\"";
-            if (this->select_subset_ != "")
-                var_sstr << " select-subset=\"" << this->select_subset_ << "\"";
-
-            return var_sstr.str();
-        }
+        std::string ReturnXMLForVariable();
     };
 
     class DamarisVarBase
@@ -251,34 +204,7 @@ namespace DamarisOutput
         DamarisVar(int dims,
                    const std::vector<std::string>& param_names,
                    const std::string& variable_name,
-                   int rank)
-            : param_names_(param_names)
-            , variable_name_(variable_name)
-            , rank_(rank)
-        {
-            dam_err_ = DAMARIS_OK;
-
-            assert(param_names_.size() == static_cast<std::size_t>(dims));
-            assert(dims > 0);
-
-            has_error_ = false;
-
-            // Check that our template type T matches out Damaris XML <layout> type
-            TestType(variable_name);
-            if (hasError()) {
-                printError(); // throws a runtime error, with error message from
-                              // dam_err_sstr_
-            }
-
-            current_size_ = 0;
-            num_params_ = param_names_.size();
-            param_sizes_.resize(num_params_);
-            positions_.resize(dims);
-
-            data_ptr_ = nullptr;
-            parameters_set_ = false;
-            has_error_ = false;
-        }
+                   int rank);
 
         /**
          *  Constructor - Sets private data values and also initialises the Damaris shared memory area for writing (and
@@ -314,24 +240,9 @@ namespace DamarisOutput
                    const std::vector<std::string>& param_names,
                    const std::vector<int>& param_values,
                    const std::string& variable_name,
-                   int rank)
-            : param_names_(param_names)
-            , variable_name_(variable_name)
-            , rank_(rank)
-        {
-            DamarisVar(dims, param_names, variable_name, rank);
-            setDamarisParameterAndShmem(param_values); // Initialise the memory size in the constructor.
-        }
+                   int rank);
 
-        ~DamarisVar()
-        {
-            if (data_ptr_ != nullptr) {
-                commitVariableDamarisShmem();
-                clearVariableDamarisShmem();
-            }
-            if (this->hasError())
-                printError(); // flush out any error messages
-        }
+        ~DamarisVar();
 
         /**
          *  Allow a user to indicate that the Damaris variable has allocated a size -
@@ -345,10 +256,7 @@ namespace DamarisOutput
             parameters_set_ = true;
         }
 
-        void printError() const override
-        {
-            OPM_THROW(std::runtime_error, dam_err_sstr_.str());
-        }
+        void printError() const override;
 
         bool hasError() const override
         {
@@ -376,17 +284,7 @@ namespace DamarisOutput
         /**
          * Creates the XML representation of the variable from the available strings
          */
-        std::string returnXMLForVariable()
-        {
-            std::ostringstream var_sstr;
-
-            var_sstr << "<variable "
-                     << " name=\"" << variable_name_ << "\"";
-            var_sstr << xml_attributes_.ReturnXMLForVariable();
-            var_sstr << " /> ";
-
-            return var_sstr.str();
-        }
+        std::string returnXMLForVariable();
 
         /**
          *  Method to set the Damaris paramater values and set the shmem region \ref
@@ -427,45 +325,7 @@ namespace DamarisOutput
          *  /implicit                : Implicitly uses the array of paramater names:
          * \ref param_names_
          */
-        void setDamarisParameter(const std::vector<int>& paramSizeVal) override
-        {
-            assert(paramSizeVal.size() == static_cast<std::size_t>(num_params_));
-
-            bool resbool = true;
-            std::size_t total_size = 1;
-            for (int varnum = 0; varnum < num_params_; varnum++) {
-                param_sizes_[varnum] = paramSizeVal[varnum];
-                total_size *= param_sizes_[varnum];
-
-                dam_err_ = damaris_parameter_set(param_names_[varnum].c_str(), &paramSizeVal[varnum], sizeof(int));
-                if (dam_err_ != DAMARIS_OK) {
-                    dam_err_sstr_ << "  ERROR rank =" << rank_ << " : class DamarisVar : damaris_parameter_set(\""
-                                  << param_names_[varnum] << "\", paramSizeVal, sizeof(int));  Damaris error = "
-                                  << damaris_error_string(dam_err_) << std::endl;
-                    resbool = false;
-                    has_error_ = true;
-                }
-            }
-
-            if (resbool == true) {
-                parameterIsSet(); // sets parameters_set_ and gets the size of the
-                                  // variables block storage (as number of elemnts)
-            }
-
-            if (total_size > 0) {
-                current_size_ = total_size;
-            } else {
-                dam_err_sstr_ << "  ERROR rank =" << rank_ << " : class DamarisVar::getDataStoreBlockSize() "
-                              << "The total size of the variable is  0 - please check "
-                                 "input paramSizeVal array."
-                              << std::endl;
-                has_error_ = true;
-            }
-
-            if (hasError()) {
-                printError();
-            }
-        }
+        void setDamarisParameter(const std::vector<int>& paramSizeVal) override;
 
         /**
          *  Method to set the Damaris position values.
@@ -477,25 +337,7 @@ namespace DamarisOutput
          *  /implicit                 : Implicitly uses the variable name: \ref
          * variable_name_
          */
-        void setDamarisPosition(const std::vector<int64_t>& positionsVals) override
-        {
-            assert(positionsVals.size() == static_cast<std::size_t>(num_params_));
-
-            for (int pos_dim = 0; pos_dim < num_params_; pos_dim++) {
-                positions_[pos_dim] = positionsVals[pos_dim];
-            }
-            dam_err_ = damaris_set_position(variable_name_.c_str(), positionsVals.data());
-            if (dam_err_ != DAMARIS_OK) {
-                dam_err_sstr_ << "  ERROR rank =" << rank_ << " : class DamarisVar : damaris_set_position(\""
-                              << variable_name_
-                              << "\", positionsVals);  Damaris error = " << damaris_error_string(dam_err_) << std::endl;
-                has_error_ = true;
-            }
-
-            if (hasError()) {
-                printError();
-            }
-        }
+        void setDamarisPosition(const std::vector<int64_t>& positionsVals) override;
 
         /**
          *  Method to set the internal pointer (data_ptr_) to the Damaris shared
@@ -505,31 +347,7 @@ namespace DamarisOutput
          * string  \ref variable_name_ /implicit                : Implicitly uses the
          * class data element : \ref data_ptr_
          */
-        void setPointersToDamarisShmem() override
-        {
-            if (parameters_set_ == true) {
-                // Allocate memory in the shared memory section...
-                dam_err_ = damaris_alloc(variable_name_.c_str(), (void**)&data_ptr_);
-                if (dam_err_ != DAMARIS_OK) {
-                    dam_err_sstr_ << "  ERROR rank =" << rank_ << " : class DamarisVar : damaris_alloc(\""
-                                  << variable_name_ << "\", (void **) &ret_ptr)"
-                                  << ", Damaris error = " << damaris_error_string(dam_err_) << std::endl;
-                    has_error_ = true;
-                }
-            } else {
-                dam_err_ = -1;
-                dam_err_sstr_ << "  ERROR rank =" << rank_
-                              << " : class DamarisVar : setDamarisParameter() should be "
-                                 "called first so as to define the size of the memory "
-                                 "block required for variable : "
-                              << variable_name_ << std::endl;
-                has_error_ = true;
-            }
-
-            if (hasError()) {
-                printError();
-            }
-        }
+        void setPointersToDamarisShmem() override;
 
         /**
          *  Method to commit the memory of the data written to the Damaris variable -
@@ -538,17 +356,7 @@ namespace DamarisOutput
          *  /implicit                : Implicitly uses the variable name string  \ref
          * variable_name_
          */
-        void commitVariableDamarisShmem() override
-        {
-            // Signal to Damaris we are done writing data for this iteration
-            dam_err_ = damaris_commit(variable_name_.c_str());
-            if (dam_err_ != DAMARIS_OK) {
-                dam_err_sstr_ << "  ERROR rank =" << rank_ << " : class DamarisVar : damaris_commit(\""
-                              << variable_name_ << "\")"
-                              << ", Damaris error = " << damaris_error_string(dam_err_) << std::endl;
-                has_error_ = true;
-            }
-        }
+        void commitVariableDamarisShmem() override;
 
         /**
          *  Method to release the memory of the data written to the Damaris variable -
@@ -558,133 +366,18 @@ namespace DamarisOutput
          *  /implicit                : Implicitly uses the variable name string  \ref
          * variable_name_
          */
-        void clearVariableDamarisShmem() override
-        {
-            // Signal to Damaris it has complete charge of the memory area
-            dam_err_ = damaris_clear(variable_name_.c_str());
-            if (dam_err_ != DAMARIS_OK) {
-                dam_err_sstr_ << "  ERROR rank =" << rank_ << " : class DamarisVar : damaris_clear(\"" << variable_name_
-                              << "\")"
-                              << ", Damaris error = " << damaris_error_string(dam_err_) << std::endl;
-                has_error_ = true;
-            }
-            data_ptr_ = nullptr;
-        }
+        void clearVariableDamarisShmem() override;
 
     private:
         /**
          *  Method to check that the template parameter T is the same as the requested
          * type for the variable in the XML file
          */
-        bool TestType(const std::string& variable_name)
-        {
-            bool resbool = true;
-            // This gets the type of the Damaris XML <variable>'s <layout>
-            DAMARIS_TYPE_STR vartype;
-            dam_err_ = damaris_get_type(variable_name.c_str(), &vartype);
-            if (dam_err_ != DAMARIS_OK) {
-                dam_err_sstr_ << "  ERROR rankDamarisVar::DamarisVar ()  damaris_get_type(\"" << variable_name_
-                              << "\", vartype);  Damaris error = " << damaris_error_string(dam_err_) << std::endl;
-                has_error_ = true;
-                return false;
-            }
-            T test_id;
-            const std::type_info& t1 = typeid(test_id);
-
-            if (vartype == DAMARIS_TYPE_DOUBLE) {
-                double td = 0.0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_FLOAT) {
-                float td = 0.0f;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_CHAR) {
-                char td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_UCHAR) {
-                unsigned char td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_SHORT) {
-                short td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_USHORT) {
-                unsigned short td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_INT) {
-                int td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_UINT) {
-                unsigned int td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_LONG) {
-                long td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_ULONG) {
-                unsigned long td = 0;
-                const std::type_info& t2 = typeid(td);
-                if (t1 != t2) {
-                    formatTypeError(variable_name, t1.name(), t2.name());
-                    resbool = false;
-                }
-            } else if (vartype == DAMARIS_TYPE_UNDEFINED) {
-                dam_err_sstr_ << "  ERROR rank =" << rank_ << " : DamarisVar::DamarisVar()::  \"" << variable_name
-                              << "\" has type DAMARIS_TYPE_UNDEFINED" << std::endl;
-                has_error_ = true;
-                resbool = false;
-            } else {
-                dam_err_sstr_ << "  ERROR rank =" << rank_ << " : DamarisVar::DamarisVar():: \"" << variable_name
-                              << "\" is not of available type " << std::endl;
-                has_error_ = true;
-                resbool = false;
-            }
-
-            return resbool;
-        }
+        bool TestType(const std::string& variable_name);
 
         void formatTypeError(const std::string& var_name,
                              const std::string& type_name1,
-                             const std::string& type_name2)
-        {
-            dam_err_sstr_ << "  ERROR rank =" << rank_ << " : DamarisVar::DamarisVar () variable_name_: \"" << var_name
-                          << "\" The template type of Type of DamarisVar<T> in the code: " << type_name1
-                          << " does not match type in XML:" << type_name2 << std::endl;
-            has_error_ = true;
-        }
+                             const std::string& type_name2);
     }; // class DamarisVar
 
 } // namespace DamarisOutput
