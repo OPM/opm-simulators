@@ -21,7 +21,6 @@
 #define DAMARISVAR_HPP
 
 #include <cstddef>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -132,8 +131,7 @@ namespace DamarisOutput
         int dam_err_; //!<  Set to != DAMARIS_OK if a Damaris error was returned by a
                       //!<  Damaris API function call
         bool has_error_;
-        std::ostringstream dam_err_sstr_; //!< Use dam_err_sstr.str() to return an
-                                          //!< error string describing detected error
+        std::string dam_err_str_; //!< Error string describing detected error
         DamarisVarXMLAttributes xml_attributes_; //!< The extra elements that need to be part of a Damaris
                                                  //!< <variable> type. They are simple string values that
                                                  //!< may reference other XML elements (and could be
