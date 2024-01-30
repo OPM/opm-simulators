@@ -139,7 +139,7 @@ namespace DamarisOutput
     class DamarisVarBase
     {
     public:
-        virtual ~DamarisVarBase() {};
+        virtual ~DamarisVarBase() = default;
         virtual void printError() = 0;
         virtual bool hasError() = 0;
         virtual void setDamarisParameterAndShmem(const std::vector<int>& paramSizeVal) = 0;
@@ -449,12 +449,12 @@ namespace DamarisOutput
             parameters_set_ = true;
         }
 
-        void printError()
+        void printError() override
         {
             OPM_THROW(std::runtime_error, dam_err_sstr_.str());
         }
 
-        bool hasError()
+        bool hasError() override
         {
             return (has_error_);
         }
@@ -472,7 +472,7 @@ namespace DamarisOutput
             }
         }
 
-        std::string& variable_name()
+        std::string& variable_name() override
         {
             return (variable_name_);
         }
@@ -501,7 +501,7 @@ namespace DamarisOutput
          *
          *
          */
-        void setDamarisParameterAndShmem(const std::vector<int>& paramSizeVal)
+        void setDamarisParameterAndShmem(const std::vector<int>& paramSizeVal) override
         {
             this->setDamarisParameter(paramSizeVal);
             this->setPointersToDamarisShmem();
@@ -531,7 +531,7 @@ namespace DamarisOutput
          *  /implicit                : Implicitly uses the array of paramater names:
          * \ref param_names_
          */
-        void setDamarisParameter(const std::vector<int>& paramSizeVal)
+        void setDamarisParameter(const std::vector<int>& paramSizeVal) override
         {
             assert(paramSizeVal.size() == static_cast<std::size_t>(num_params_));
 
@@ -581,7 +581,7 @@ namespace DamarisOutput
          *  /implicit                 : Implicitly uses the variable name: \ref
          * variable_name_
          */
-        void setDamarisPosition(const std::vector<int64_t>& positionsVals)
+        void setDamarisPosition(const std::vector<int64_t>& positionsVals) override
         {
             assert(positionsVals.size() == static_cast<std::size_t>(num_params_));
 
@@ -609,7 +609,7 @@ namespace DamarisOutput
          * string  \ref variable_name_ /implicit                : Implicitly uses the
          * class data element : \ref data_ptr_
          */
-        void setPointersToDamarisShmem()
+        void setPointersToDamarisShmem() override
         {
             if (parameters_set_ == true) {
                 // Allocate memory in the shared memory section...
@@ -642,7 +642,7 @@ namespace DamarisOutput
          *  /implicit                : Implicitly uses the variable name string  \ref
          * variable_name_
          */
-        void commitVariableDamarisShmem()
+        void commitVariableDamarisShmem() override
         {
             // Signal to Damaris we are done writing data for this iteration
             dam_err_ = damaris_commit(variable_name_.c_str());
@@ -662,7 +662,7 @@ namespace DamarisOutput
          *  /implicit                : Implicitly uses the variable name string  \ref
          * variable_name_
          */
-        void clearVariableDamarisShmem()
+        void clearVariableDamarisShmem() override
         {
             // Signal to Damaris it has complete charge of the memory area
             dam_err_ = damaris_clear(variable_name_.c_str());
