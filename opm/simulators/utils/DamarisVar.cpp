@@ -26,7 +26,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <sstream>
 #include <string_view>
 #include <typeinfo>
 
@@ -139,14 +138,8 @@ void DamarisVar<T>::printError() const
 template<class T>
 std::string DamarisVar<T>::returnXMLForVariable()
 {
-    std::ostringstream var_sstr;
-
-    var_sstr << "<variable "
-             << " name=\"" << variable_name_ << "\"";
-    var_sstr << xml_attributes_.ReturnXMLForVariable();
-    var_sstr << " /> ";
-
-    return var_sstr.str();
+    return fmt::format("<variable name=\"{}\" {} />", variable_name_,
+                       xml_attributes_.ReturnXMLForVariable());
 }
 
 template<class T>
