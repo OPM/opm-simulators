@@ -36,13 +36,13 @@ template<class T> using DV = DamarisOutput::DamarisVar<T>;
 #define INSTANCE(part, ...) \
     template class SimMeshDataAccessor<__VA_ARGS__, part>; \
     template long SimMeshDataAccessor<__VA_ARGS__,part>:: \
-        writeGridPoints<DV<double>>(DV<double>&, DV<double>&, DV<double>&); \
+        writeGridPoints<DV<double>>(DV<double>&, DV<double>&, DV<double>&) const; \
     template long SimMeshDataAccessor<__VA_ARGS__,part>:: \
-        writeConnectivity<DV<int>>(DV<int>&, ConnectivityVertexOrder); \
+        writeConnectivity<DV<int>>(DV<int>&, ConnectivityVertexOrder) const; \
     template long SimMeshDataAccessor<__VA_ARGS__,part>:: \
-        writeOffsetsCells<DV<int>>(DV<int>&); \
+        writeOffsetsCells<DV<int>>(DV<int>&) const; \
     template long SimMeshDataAccessor<__VA_ARGS__,part>:: \
-        writeCellTypes<DV<char>>(DV<char>&);
+        writeCellTypes<DV<char>>(DV<char>&) const;
 
 INSTANCE(1, Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>)
 

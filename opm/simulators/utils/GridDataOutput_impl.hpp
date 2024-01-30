@@ -42,7 +42,7 @@ SimMeshDataAccessor<GridView,partitions>::
 }
 
 template <class GridView, unsigned int partitions>
-bool SimMeshDataAccessor<GridView,partitions>::polyhedralCellPresent()
+bool SimMeshDataAccessor<GridView,partitions>::polyhedralCellPresent() const
 {
     for (const auto& cit : elements(gridView_, dunePartition_)) {
         auto corner_geom = cit.geometry();
@@ -73,7 +73,7 @@ void SimMeshDataAccessor<GridView,partitions>::countEntities()
 template <class GridView, unsigned int partitions>
 template <typename T>
 long SimMeshDataAccessor<GridView,partitions>::
-writeGridPoints(T* x_inout, T* y_inout, T* z_inout, long max_size)
+writeGridPoints(T* x_inout, T* y_inout, T* z_inout, long max_size) const
 {
     if (max_size < nvertices_) {
         OPM_THROW(std::runtime_error,
@@ -109,7 +109,7 @@ writeGridPoints(T* x_inout, T* y_inout, T* z_inout, long max_size)
 template <class GridView, unsigned int partitions>
 template <typename VectType>
 long SimMeshDataAccessor<GridView,partitions>::
-writeGridPoints(VectType& x_inout, VectType& y_inout, VectType& z_inout)
+writeGridPoints(VectType& x_inout, VectType& y_inout, VectType& z_inout) const
 {
     const std::size_t check_size_x = x_inout.size();
     const std::size_t check_size_y = y_inout.size();
@@ -156,7 +156,7 @@ writeGridPoints(VectType& x_inout, VectType& y_inout, VectType& z_inout)
 template <class GridView, unsigned int partitions>
 template <typename T>
 long SimMeshDataAccessor<GridView,partitions>::
-writeGridPoints_AOS(T* xyz_inout, long max_size)
+writeGridPoints_AOS(T* xyz_inout, long max_size) const
 {
     if (max_size < nvertices_ * 3) {
         assert(max_size >= nvertices_ * 3);
@@ -188,7 +188,7 @@ writeGridPoints_AOS(T* xyz_inout, long max_size)
 template <class GridView, unsigned int partitions>
 template <typename VectType>
 long SimMeshDataAccessor<GridView,partitions>::
-writeGridPoints_AOS(VectType& xyz_inout)
+writeGridPoints_AOS(VectType& xyz_inout) const
 {
     const std::size_t check_size = xyz_inout.size();
 
@@ -226,7 +226,7 @@ writeGridPoints_AOS(VectType& xyz_inout)
 template <class GridView, unsigned int partitions>
 template <typename T>
 long SimMeshDataAccessor<GridView,partitions>::
-writeGridPoints_SOA(T* xyz_inout, long max_size)
+writeGridPoints_SOA(T* xyz_inout, long max_size) const
 {
     if (max_size < nvertices_ * 3) {
         // assert(max_size >= nvertices_ * 3);
@@ -264,7 +264,7 @@ writeGridPoints_SOA(T* xyz_inout, long max_size)
 template <class GridView, unsigned int partitions>
 template <typename VectType>
 long SimMeshDataAccessor<GridView,partitions>::
-writeGridPoints_SOA(VectType& xyz_inout)
+writeGridPoints_SOA(VectType& xyz_inout) const
 {
     const std::size_t check_size = xyz_inout.size();
 
@@ -309,7 +309,7 @@ template <class GridView, unsigned int partitions>
 template <typename Integer>
 long SimMeshDataAccessor<GridView,partitions>::
 writeConnectivity(Integer* connectivity_inout,
-                  ConnectivityVertexOrder whichOrder, long max_size)
+                  ConnectivityVertexOrder whichOrder, long max_size) const
 {
     if (max_size < ncorners_) {
 
@@ -349,7 +349,8 @@ writeConnectivity(Integer* connectivity_inout,
 template <class GridView, unsigned int partitions>
 template <typename VectType>
 long SimMeshDataAccessor<GridView,partitions>::
-writeConnectivity(VectType& connectivity_inout, ConnectivityVertexOrder whichOrder)
+writeConnectivity(VectType& connectivity_inout,
+                  ConnectivityVertexOrder whichOrder) const
 {
     const std::size_t check_size = connectivity_inout.size();
 
@@ -392,7 +393,7 @@ writeConnectivity(VectType& connectivity_inout, ConnectivityVertexOrder whichOrd
 template <class GridView, unsigned int partitions>
 template <typename Integer>
 long SimMeshDataAccessor<GridView,partitions>::
-writeOffsetsCells(Integer* offsets_inout, long max_size)
+writeOffsetsCells(Integer* offsets_inout, long max_size) const
 {
     if (max_size < ncells_) {
         // assert(max_size >= ncells_);
@@ -414,7 +415,7 @@ writeOffsetsCells(Integer* offsets_inout, long max_size)
 template <class GridView, unsigned int partitions>
 template <typename VectType>
 long SimMeshDataAccessor<GridView,partitions>::
-writeOffsetsCells(VectType& offsets_inout)
+writeOffsetsCells(VectType& offsets_inout) const
 {
     const std::size_t check_size = offsets_inout.size();
     if (check_size < static_cast<std::size_t>(ncells_)) {
@@ -441,7 +442,7 @@ writeOffsetsCells(VectType& offsets_inout)
 template <class GridView, unsigned int partitions>
 template <typename Integer>
 long SimMeshDataAccessor<GridView,partitions>::
-writeCellTypes(Integer* types_inout, long max_size)
+writeCellTypes(Integer* types_inout, long max_size) const
 {
     if (max_size < ncells_) {
         // assert(max_size >= ncells_);
@@ -461,7 +462,7 @@ writeCellTypes(Integer* types_inout, long max_size)
 template <class GridView, unsigned int partitions>
 template <typename VectType>
 long SimMeshDataAccessor<GridView,partitions>::
-writeCellTypes(VectType& types_inout)
+writeCellTypes(VectType& types_inout) const
 {
     const std::size_t check_size = types_inout.size();
 
@@ -482,7 +483,7 @@ writeCellTypes(VectType& types_inout)
 
 template <class GridView, unsigned int partitions>
 std::string SimMeshDataAccessor<GridView,partitions>::
-getPartitionTypeString()
+getPartitionTypeString() const
 {
     if (this->dunePartition_ == Dune::Partitions::all)
         return std::string("Dune::Partitions::all");
@@ -506,7 +507,7 @@ getPartitionTypeString()
 
 template <class GridView, unsigned int partitions>
 void SimMeshDataAccessor<GridView,partitions>::
-printGridDetails(std::ostream& outstr)
+printGridDetails(std::ostream& outstr) const
 {
     outstr << "Dune Partition = " << partition_value_ << ", " << getPartitionTypeString() << std::endl;
     outstr << "ncells_: " << getNCells() << std::endl;

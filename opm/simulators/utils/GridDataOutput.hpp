@@ -138,7 +138,7 @@ public:
       partition is not going to be available for visualisation as this class does
       not yet handle polyhedral cells.
    */
-    bool polyhedralCellPresent();
+    bool polyhedralCellPresent() const;
 
     /**
         Count the vertices, cells and corners.
@@ -162,7 +162,7 @@ public:
       Returns the number of vertices written
    */
     template <typename T>
-    long writeGridPoints(T* x_inout, T* y_inout, T* z_inout, long max_size = 0);
+    long writeGridPoints(T* x_inout, T* y_inout, T* z_inout, long max_size = 0) const;
 
     /**
       Write the positions of vertices - directly to the pointers given in
@@ -178,7 +178,7 @@ public:
       Returns the number of vertices written
    */
     template <typename VectType>
-    long writeGridPoints(VectType& x_inout, VectType& y_inout, VectType& z_inout);
+    long writeGridPoints(VectType& x_inout, VectType& y_inout, VectType& z_inout) const;
 
     /**
       Write the positions of vertices - directly to the pointers given in
@@ -191,7 +191,7 @@ public:
       Returns the number of vertices written
    */
     template <typename T>
-    long writeGridPoints_AOS(T* xyz_inout, long max_size = 0);
+    long writeGridPoints_AOS(T* xyz_inout, long max_size = 0) const;
 
     /**
       Write the positions of vertices - directly to the pointers given in
@@ -203,7 +203,7 @@ public:
       Returns the number of vertices written
    */
     template <typename VectType>
-    long writeGridPoints_AOS(VectType& xyz_inout);
+    long writeGridPoints_AOS(VectType& xyz_inout) const;
 
     /**
         Write the positions of vertices - directly to the pointers given in
@@ -216,7 +216,7 @@ public:
         Returns the number of vertices written
      */
     template <typename T>
-    long writeGridPoints_SOA(T* xyz_inout, long max_size = 0);
+    long writeGridPoints_SOA(T* xyz_inout, long max_size = 0) const;
 
     /**
       Write the positions of vertices - directly to the pointers given in
@@ -228,7 +228,7 @@ public:
       Returns the number of vertices written
    */
     template <typename VectType>
-    long writeGridPoints_SOA(VectType& xyz_inout);
+    long writeGridPoints_SOA(VectType& xyz_inout) const;
 
     /**
     * Write the connectivity array - directly to the pointer given in parameter 1
@@ -243,7 +243,7 @@ public:
     */
     template <typename Integer>
     long writeConnectivity(Integer* connectivity_inout,
-                           ConnectivityVertexOrder whichOrder, long max_size = 0);
+                           ConnectivityVertexOrder whichOrder, long max_size = 0) const;
 
     /**
     * Write the connectivity array - directly to a VectType object given in parameter 1
@@ -258,7 +258,8 @@ public:
       Returns the number of corner indices written.
     */
     template <typename VectType>
-    long writeConnectivity(VectType& connectivity_inout, ConnectivityVertexOrder whichOrder);
+    long writeConnectivity(VectType& connectivity_inout,
+                           ConnectivityVertexOrder whichOrder) const;
 
     /**
      * Write the offsets values  - directly to the pointer given in parameter 1
@@ -272,7 +273,7 @@ public:
        Returns number of offset values written + 1
    */
     template <typename Integer>
-    long writeOffsetsCells(Integer* offsets_inout, long max_size = 0);
+    long writeOffsetsCells(Integer* offsets_inout, long max_size = 0) const;
 
     /**
       * Write the offsets values  -  directly to a VectType object given in parameter 1
@@ -285,7 +286,7 @@ public:
         Returns number of offset values written + 1
     */
     template <typename VectType>
-    long writeOffsetsCells(VectType& offsets_inout);
+    long writeOffsetsCells(VectType& offsets_inout) const;
 
     /**
      * Write the cell types values  - directly to the pointer given in parameter 1
@@ -298,7 +299,7 @@ public:
         Returns number of cells type values written
     */
     template <typename Integer>
-    long writeCellTypes(Integer* types_inout, long max_size = 0);
+    long writeCellTypes(Integer* types_inout, long max_size = 0) const;
 
     /**
      * Write the cell types values  - directly to the VectType object given in parameter 1
@@ -309,33 +310,33 @@ public:
         Returns number of cells type values written
     */
     template <typename VectType>
-    long writeCellTypes(VectType& types_inout);
+    long writeCellTypes(VectType& types_inout) const;
 
-    std::string getPartitionTypeString();
+    std::string getPartitionTypeString() const;
 
     Dune::PartitionSet<partitions> getPartition(void)
     {
         return this->dunePartition_;
     }
 
-    void printGridDetails(std::ostream& outstr);
+    void printGridDetails(std::ostream& outstr) const;
 
-    int getNCells()
+    int getNCells() const
     {
         return ncells_;
     }
 
-    int getNVertices()
+    int getNVertices() const
     {
         return nvertices_;
     }
 
-    int getNCorners()
+    int getNCorners() const
     {
         return ncorners_;
     }
 
-    std::string getError()
+    std::string getError() const
     {
         return error_strm_.str();
     }
@@ -345,7 +346,7 @@ public:
         error_strm_.str("");
     }
 
-    bool hasError()
+    bool hasError() const
     {
         if (error_strm_.str().length() > 0)
             return true;
