@@ -125,8 +125,9 @@ DamarisVar<T>::~DamarisVar()
         commitVariableDamarisShmem();
         clearVariableDamarisShmem();
     }
-    if (this->hasError())
+    if (this->hasError()) {
         printError(); // flush out any error messages
+    }
 }
 
 template<class T>

@@ -88,21 +88,6 @@ namespace DamarisOutput
         std::string ReturnXMLForVariable();
     };
 
-    class DamarisVarBase
-    {
-    public:
-        virtual ~DamarisVarBase() = default;
-        virtual void printError() const = 0;
-        virtual bool hasError() const = 0;
-        virtual void setDamarisParameterAndShmem(const std::vector<int>& paramSizeVal) = 0;
-        virtual void setDamarisParameter(const std::vector<int>& paramSizeVal) = 0;
-        virtual void setDamarisPosition(const std::vector<int64_t>& positionsVals) = 0;
-        virtual void setPointersToDamarisShmem() = 0;
-        virtual void commitVariableDamarisShmem() = 0;
-        virtual void clearVariableDamarisShmem() = 0;
-        virtual const std::string& variable_name() const = 0;
-    }; // class DamarisVarBase
-
     /**
      *  class to store a Damaris variable representation for the XML file
      *  (can be used with \ref class DamarisKeywords).
@@ -112,7 +97,7 @@ namespace DamarisOutput
      *
      */
     template <typename T>
-    class DamarisVar : public DamarisVarBase
+    class DamarisVar
     {
         int num_params_; //!< Each paramater name string will need a value and they
                          //!< are set in SetDamarisParameter()
@@ -254,9 +239,9 @@ namespace DamarisOutput
             parameters_set_ = true;
         }
 
-        void printError() const override;
+        void printError() const;
 
-        bool hasError() const override
+        bool hasError() const
         {
             return has_error_;
         }
@@ -274,7 +259,7 @@ namespace DamarisOutput
             }
         }
 
-        const std::string& variable_name() const override
+        const std::string& variable_name() const
         {
             return variable_name_;
         }
@@ -293,7 +278,7 @@ namespace DamarisOutput
          *
          *
          */
-        void setDamarisParameterAndShmem(const std::vector<int>& paramSizeVal) override
+        void setDamarisParameterAndShmem(const std::vector<int>& paramSizeVal)
         {
             this->setDamarisParameter(paramSizeVal);
             this->setPointersToDamarisShmem();
@@ -323,7 +308,7 @@ namespace DamarisOutput
          *  /implicit                : Implicitly uses the array of paramater names:
          * \ref param_names_
          */
-        void setDamarisParameter(const std::vector<int>& paramSizeVal) override;
+        void setDamarisParameter(const std::vector<int>& paramSizeVal);
 
         /**
          *  Method to set the Damaris position values.
@@ -335,7 +320,7 @@ namespace DamarisOutput
          *  /implicit                 : Implicitly uses the variable name: \ref
          * variable_name_
          */
-        void setDamarisPosition(const std::vector<int64_t>& positionsVals) override;
+        void setDamarisPosition(const std::vector<int64_t>& positionsVals);
 
         /**
          *  Method to set the internal pointer (data_ptr_) to the Damaris shared
@@ -345,7 +330,7 @@ namespace DamarisOutput
          * string  \ref variable_name_ /implicit                : Implicitly uses the
          * class data element : \ref data_ptr_
          */
-        void setPointersToDamarisShmem() override;
+        void setPointersToDamarisShmem();
 
         /**
          *  Method to commit the memory of the data written to the Damaris variable -
@@ -354,7 +339,7 @@ namespace DamarisOutput
          *  /implicit                : Implicitly uses the variable name string  \ref
          * variable_name_
          */
-        void commitVariableDamarisShmem() override;
+        void commitVariableDamarisShmem();
 
         /**
          *  Method to release the memory of the data written to the Damaris variable -
@@ -364,7 +349,7 @@ namespace DamarisOutput
          *  /implicit                : Implicitly uses the variable name string  \ref
          * variable_name_
          */
-        void clearVariableDamarisShmem() override;
+        void clearVariableDamarisShmem();
 
     private:
         /**
