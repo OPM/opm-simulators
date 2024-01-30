@@ -276,6 +276,48 @@ endfunction()
 
 ###########################################################################
 
+###########################################################################
+# TEST: compareDamarisFiles
+###########################################################################
+
+# Input:
+#   - casename: basename (no extension)
+#
+# Details:
+#   - This test class compares output from a simulation to reference files.
+function(add_test_compareDamarisFiles)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX MPI_PROCS)
+  set(multiValueArgs TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+  if(NOT PARAM_DIR)
+    set(PARAM_DIR ${PARAM_CASENAME})
+  endif()
+  if(NOT PARAM_PREFIX)
+    set(PARAM_PREFIX compareDamarisFiles)
+  endif()
+  if(PARAM_MPI_PROCS)
+    set(MPI_PROCS ${PARAM_MPI_PROCS})
+  else()
+    set(MPI_PROCS 4)
+  endif()
+  set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(TEST_ARGS ${PARAM_TEST_ARGS})
+  set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR}
+                  -r ${RESULT_PATH}
+                  -b ${PROJECT_BINARY_DIR}/bin
+                  -f ${PARAM_FILENAME}
+                  -a ${PARAM_ABS_TOL}
+                  -t ${PARAM_REL_TOL}
+                  -c ${HDF5_DIFF_EXECUTABLE}
+                  -n ${MPI_PROCS})
+  set(TEST_NAME ${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME})
+  opm_add_test(${TEST_NAME} NO_COMPILE
+               EXE_NAME ${PARAM_SIMULATOR}
+               DRIVER_ARGS ${DRIVER_ARGS}
+               TEST_ARGS ${TEST_ARGS})
+  set_tests_properties(${TEST_NAME} PROPERTIES PROCESSORS ${MPI_PROCS})
+endfunction()
+
 
 if(NOT TARGET test-suite)
   add_custom_target(test-suite)
@@ -361,6 +403,17 @@ if(MPI_FOUND)
                       SIMULATOR flow
                       ABS_TOL 0.0
                       REL_TOL 0.0)
+
+  # Single test for damaris
+  if(Damaris_FOUND)
+      opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-damaris-regressionTest.sh "")
+      add_test_compareDamarisFiles(CASENAME spe1_damaris
+                      FILENAME SPE1CASE1
+                      SIMULATOR flow
+                      ABS_TOL ${abs_tol}
+                      REL_TOL ${rel_tol}
+                      DIR spe1)
+    endif()
 
   include (${CMAKE_CURRENT_SOURCE_DIR}/parallelTests.cmake)
 endif()
