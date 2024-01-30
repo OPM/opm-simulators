@@ -434,7 +434,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/ecltransmissibility_impl.hh
   ebos/eclwriter.hh
   ebos/femcpgridcompat.hh
-  ebos/hdf5serializer.hh
   ebos/vtkecltracermodule.hh
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/priVarsPacking.hpp
@@ -627,8 +626,11 @@ endif()
 
 if(HDF5_FOUND)
   list(APPEND PUBLIC_HEADER_FILES
-    ebos/hdf5serializer.hh
+    opm/simulators/utils/HDF5Serializer.hpp
     opm/simulators/utils/HDF5File.hpp
+  )
+  list(APPEND MAIN_SOURCE_FILES
+    opm/simulators/utils/HDF5Serializer.cpp
   )
 endif()
 

@@ -18,19 +18,18 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef ECL_HDF5_SERIALIZER_HH
-#define ECL_HDF5_SERIALIZER_HH
+#ifndef HDF5_SERIALIZER_HPP
+#define HDF5_SERIALIZER_HPP
 
 #include <opm/common/utility/Serializer.hpp>
 
 #include <opm/simulators/utils/HDF5File.hpp>
-#include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/utils/SerializationPackers.hpp>
 
-#include <algorithm>
-#include <cctype>
-#include <cstdlib>
+#include <cstddef>
+#include <limits>
+#include <string>
 
 namespace Opm {
 
@@ -56,7 +55,7 @@ public:
         try {
             this->pack(data);
         } catch (...) {
-            m_packSize = std::numeric_limits<size_t>::max();
+            m_packSize = std::numeric_limits<std::size_t>::max();
             throw;
         }
 
@@ -75,17 +74,7 @@ public:
                      const std::string& time_stamp,
                      const std::string& case_name,
                      const std::string& params,
-                     int num_procs)
-    {
-        try {
-            this->pack(simulator_name, module_version, time_stamp,
-                       case_name, params, num_procs);
-        } catch (...) {
-            m_packSize = std::numeric_limits<size_t>::max();
-            throw;
-        }
-        m_h5file.write("/", "simulator_info", m_buffer, HDF5File::DataSetMode::ROOT_ONLY);
-    }
+                     int num_procs);
 
     //! \brief Read data and deserialize from restart file.
     //! \tparam T Type of class to read
@@ -101,31 +90,10 @@ public:
     }
 
     //! \brief Returns the last report step stored in file.
-    int lastReportStep() const
-    {
-        const auto entries = m_h5file.list("/report_step");
-        int last = -1;
-        for (const auto& entry : entries) {
-            int num = std::atoi(entry.c_str());
-            last = std::max(last, num);
-        }
-
-        return last;
-    }
+    int lastReportStep() const;
 
     //! \brief Returns a list of report steps stored in restart file.
-    std::vector<int> reportSteps() const
-    {
-        const auto entries = m_h5file.list("/report_step");
-        std::vector<int> result(entries.size());
-        std::transform(entries.begin(), entries.end(), result.begin(),
-                       [](const std::string& input)
-                       {
-                          return std::atoi(input.c_str());
-                       });
-        std::sort(result.begin(), result.end());
-        return result;
-    }
+    std::vector<int> reportSteps() const;
 
 private:
     const Serialization::MemPacker m_packer_priv{}; //!< Packer instance
@@ -134,4 +102,4 @@ private:
 
 }
 
-#endif
+#endif // HDF5_SERIALIZER_HPP

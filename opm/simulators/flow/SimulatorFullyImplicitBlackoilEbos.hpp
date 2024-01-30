@@ -54,7 +54,7 @@
 #include <vector>
 
 #if HAVE_HDF5
-#include <ebos/hdf5serializer.hh>
+#include <opm/simulators/utils/HDF5Serializer.hpp>
 #endif
 
 namespace Opm::Properties {

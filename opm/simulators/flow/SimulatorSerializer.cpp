@@ -32,7 +32,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #if HAVE_HDF5
-#include <ebos/hdf5serializer.hh>
+#include <opm/simulators/utils/HDF5Serializer.hpp>
 #endif
 
 #include <algorithm>

@@ -21,7 +21,7 @@
 
 #include <opm/common/utility/FileSystem.hpp>
 
-#include <ebos/hdf5serializer.hh>
+#include <opm/simulators/utils/HDF5Serializer.hpp>
 
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
@@ -31,7 +31,6 @@
 #include <boost/test/unit_test.hpp>
 
 #include <filesystem>
-#include <stdexcept>
 
 using namespace Opm;
 
