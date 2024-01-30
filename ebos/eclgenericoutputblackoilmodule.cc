@@ -172,6 +172,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
                            const Schedule& schedule,
                            const SummaryConfig& summaryConfig,
                            const SummaryState& summaryState,
+                           const std::string& moduleVersion,
                            bool enableEnergy,
                            bool enableTemperature,
                            bool enableMech,
@@ -189,7 +190,7 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     , interRegionFlows_(numCells(eclState),
                         defineInterRegionFlowArrays(eclState, summaryConfig),
                         declaredMaxRegionID(eclState.runspec()))
-    , logOutput_(eclState, schedule, summaryState)
+    , logOutput_(eclState, schedule, summaryState, moduleVersion)
     , enableEnergy_(enableEnergy)
     , enableTemperature_(enableTemperature)
     , enableMech_(enableMech)

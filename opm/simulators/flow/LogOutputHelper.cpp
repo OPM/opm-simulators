@@ -85,13 +85,13 @@ namespace Opm {
 template<class Scalar>
 LogOutputHelper<Scalar>::LogOutputHelper(const EclipseState& eclState,
                                          const Schedule& schedule,
-                                         const SummaryState& summaryState)
+                                         const SummaryState& summaryState,
+                                         const std::string& moduleVersionName)
     : eclState_(eclState)
     , schedule_(schedule)
     , summaryState_(summaryState)
-{ 
-    flowVersionName_ = moduleVersionName();
-}
+    , flowVersionName_(moduleVersionName)
+{}
 
 template<class Scalar>
 void LogOutputHelper<Scalar>::

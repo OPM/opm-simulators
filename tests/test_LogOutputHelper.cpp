@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(Cumulative)
         st.set(p.first, p.second * 1e3);
     }
 
-    Opm::LogOutputHelper<double> helper(eclState, schedule, st);
+    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     helper.cumulative(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
@@ -194,7 +194,7 @@ Finding the dew point pressure failed for 3 cells [(5,1,1), (6,1,1), (7,1,1)]
     Opm::EclipseState eclState(deck);
 
     Opm::SummaryState st;
-    Opm::LogOutputHelper<double> helper(eclState, schedule, st);
+    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
 
     str.str(""); // clear out parser errors
     helper.error({1,20,30}, {4,5,6});
@@ -254,7 +254,7 @@ BOOST_AUTO_TEST_CASE(Fip)
     Opm::EclipseState eclState(deck);
     Opm::SummaryState st;
 
-    Opm::LogOutputHelper<double> helper(eclState, schedule, st);
+    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     Opm::Inplace initial, current;
     const auto& phases = current.phases();
     int offset = 17;
@@ -321,7 +321,7 @@ BOOST_AUTO_TEST_CASE(FipResv)
     Opm::EclipseState eclState(deck);
     Opm::SummaryState st;
 
-    Opm::LogOutputHelper<double> helper(eclState, schedule, st);
+    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     Opm::Inplace current;
     const auto& phases = current.phases();
     int offset = 17;
@@ -391,7 +391,7 @@ BOOST_AUTO_TEST_CASE(Injection)
         st.set(p.first, p.second);
     }
 
-    Opm::LogOutputHelper<double> helper(eclState, schedule, st);
+    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     helper.injection(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
@@ -452,7 +452,7 @@ BOOST_AUTO_TEST_CASE(Production)
         st.set(p.first, p.second);
     }
 
-    Opm::LogOutputHelper<double> helper(eclState, schedule, st);
+    Opm::LogOutputHelper<double> helper(eclState, schedule, st, "dummy version");
     helper.production(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);

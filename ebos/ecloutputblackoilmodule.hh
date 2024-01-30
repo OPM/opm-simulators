@@ -31,6 +31,8 @@
 
 #include <ebos/eclbasevanguard.hh>
 #include <ebos/eclgenericoutputblackoilmodule.hh>
+#include <opm/simulators/utils/moduleVersion.hpp>
+
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
@@ -144,6 +146,7 @@ public:
                    simulator.vanguard().schedule(),
                    simulator.vanguard().summaryConfig(),
                    simulator.vanguard().summaryState(),
+                   moduleVersionName(),
                    getPropValue<TypeTag, Properties::EnableEnergy>(),
                    getPropValue<TypeTag, Properties::EnableTemperature>(),
                    getPropValue<TypeTag, Properties::EnableMech>(),
