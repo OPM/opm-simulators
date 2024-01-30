@@ -132,7 +132,7 @@ namespace DamarisOutput
             if (this->select_subset_ != "")
                 var_sstr << " select-subset=\"" << this->select_subset_ << "\"";
 
-            return (var_sstr.str());
+            return var_sstr.str();
         }
     };
 
@@ -153,7 +153,7 @@ namespace DamarisOutput
 
     /**
      *  class to store a Damaris variable representation for the XML file
-     *  (can be used with /ref class DamarisKeywords).
+     *  (can be used with \ref class DamarisKeywords).
      *
      *  It is thought that the details stored in the object can be used to pass
      *  into an XML generation function e.g. DamarisKeywords
@@ -347,7 +347,7 @@ namespace DamarisOutput
                 dam_err_sstr_ << "  ERROR rankDamarisVar::DamarisVar ()  damaris_get_type(\"" << variable_name_
                               << "\", vartype);  Damaris error = " << damaris_error_string(dam_err_) << std::endl;
                 has_error_ = true;
-                return (false);
+                return false;
             }
             T test_id;
             const std::type_info& t1 = typeid(test_id);
@@ -456,7 +456,7 @@ namespace DamarisOutput
 
         bool hasError() const override
         {
-            return (has_error_);
+            return has_error_;
         }
 
         /**
@@ -466,15 +466,15 @@ namespace DamarisOutput
         T* data()
         {
             if (parameters_set_ == true) {
-                return (data_ptr_); // This still could be nullptr
+                return data_ptr_; // This still could be nullptr
             } else {
-                return (nullptr);
+                return nullptr;
             }
         }
 
         const std::string& variable_name() const override
         {
-            return (variable_name_);
+            return variable_name_;
         }
 
         /**
