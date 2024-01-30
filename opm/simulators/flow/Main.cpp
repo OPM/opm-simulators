@@ -31,6 +31,7 @@
 #include <opm/simulators/utils/readDeck.hpp>
 
 #if HAVE_DAMARIS
+#include <Damaris.h>
 #include <opm/simulators/utils/DamarisOutputModule.hpp>
 #endif
 
