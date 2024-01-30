@@ -104,7 +104,7 @@ namespace DamarisOutput
         /**
          * Creates the XML representation of the variable from the available strings
          */
-        std::string ReturnXMLForVariable(void)
+        std::string ReturnXMLForVariable()
         {
             std::ostringstream var_sstr;
 
@@ -139,16 +139,16 @@ namespace DamarisOutput
     class DamarisVarBase
     {
     public:
-        virtual ~DamarisVarBase(void) {};
-        virtual void printError(void) = 0;
-        virtual bool hasError(void) = 0;
+        virtual ~DamarisVarBase() {};
+        virtual void printError() = 0;
+        virtual bool hasError() = 0;
         virtual void setDamarisParameterAndShmem(const std::vector<int>& paramSizeVal) = 0;
         virtual void setDamarisParameter(const std::vector<int>& paramSizeVal) = 0;
         virtual void setDamarisPosition(const std::vector<int64_t>& positionsVals) = 0;
-        virtual void setPointersToDamarisShmem(void) = 0;
-        virtual void commitVariableDamarisShmem(void) = 0;
-        virtual void clearVariableDamarisShmem(void) = 0;
-        virtual std::string& variable_name(void) = 0;
+        virtual void setPointersToDamarisShmem() = 0;
+        virtual void commitVariableDamarisShmem() = 0;
+        virtual void clearVariableDamarisShmem() = 0;
+        virtual std::string& variable_name() = 0;
     }; // class DamarisVarBase
 
     /**
@@ -323,7 +323,7 @@ namespace DamarisOutput
             setDamarisParameterAndShmem(param_values); // Initialise the memory size in the constructor.
         }
 
-        ~DamarisVar(void)
+        ~DamarisVar()
         {
             if (data_ptr_ != nullptr) {
                 commitVariableDamarisShmem();
@@ -449,12 +449,12 @@ namespace DamarisOutput
             parameters_set_ = true;
         }
 
-        void printError(void)
+        void printError()
         {
             OPM_THROW(std::runtime_error, dam_err_sstr_.str());
         }
 
-        bool hasError(void)
+        bool hasError()
         {
             return (has_error_);
         }
@@ -463,7 +463,7 @@ namespace DamarisOutput
          *  Returns the data pointer to shared memory, or nullptr if it has not been
          * allocated
          */
-        T* data(void)
+        T* data()
         {
             if (parameters_set_ == true) {
                 return (data_ptr_); // This still could be nullptr
@@ -472,7 +472,7 @@ namespace DamarisOutput
             }
         }
 
-        std::string& variable_name(void)
+        std::string& variable_name()
         {
             return (variable_name_);
         }
@@ -480,7 +480,7 @@ namespace DamarisOutput
         /**
          * Creates the XML representation of the variable from the available strings
          */
-        std::string returnXMLForVariable(void)
+        std::string returnXMLForVariable()
         {
             std::ostringstream var_sstr;
 
@@ -609,7 +609,7 @@ namespace DamarisOutput
          * string  \ref variable_name_ /implicit                : Implicitly uses the
          * class data element : \ref data_ptr_
          */
-        void setPointersToDamarisShmem(void)
+        void setPointersToDamarisShmem()
         {
             if (parameters_set_ == true) {
                 // Allocate memory in the shared memory section...
@@ -642,7 +642,7 @@ namespace DamarisOutput
          *  /implicit                : Implicitly uses the variable name string  \ref
          * variable_name_
          */
-        void commitVariableDamarisShmem(void)
+        void commitVariableDamarisShmem()
         {
             // Signal to Damaris we are done writing data for this iteration
             dam_err_ = damaris_commit(variable_name_.c_str());
@@ -662,7 +662,7 @@ namespace DamarisOutput
          *  /implicit                : Implicitly uses the variable name string  \ref
          * variable_name_
          */
-        void clearVariableDamarisShmem(void)
+        void clearVariableDamarisShmem()
         {
             // Signal to Damaris it has complete charge of the memory area
             dam_err_ = damaris_clear(variable_name_.c_str());
