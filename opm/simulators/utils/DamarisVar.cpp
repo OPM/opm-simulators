@@ -24,8 +24,10 @@
 #include <Damaris.h>
 #include <fmt/format.h>
 
+#include <algorithm>
 #include <cassert>
 #include <sstream>
+#include <string_view>
 #include <typeinfo>
 
 namespace Opm::DamarisOutput {
@@ -42,33 +44,33 @@ DamarisVarXMLAttributes::DamarisVarXMLAttributes()
 
 std::string DamarisVarXMLAttributes::ReturnXMLForVariable()
 {
-    std::ostringstream var_sstr;
+    std::string var_str;
 
-    var_sstr << " layout=\"" << this->layout_ << "\"";
-    if (this->mesh_ != "")
-        var_sstr << " mesh=\"" << this->mesh_ << "\"";
-    if (this->type_ != "")
-        var_sstr << " type=\"" << this->type_ << "\"";
-    if (this->visualizable_ != "")
-        var_sstr << " visualizable=\"" << this->visualizable_ << "\"";
-    if (this->unit_ != "")
-        var_sstr << " unit=\"" << this->unit_ << "\"";
-    if (this->time_varying_ != "")
-        var_sstr << " time_varying=\"" << this->time_varying_ << "\"";
-    if (this->centering_ != "")
-        var_sstr << " centering=\"" << this->centering_ << "\"";
-    if (this->store_ != "")
-        var_sstr << " store=\"" << this->store_ << "\"";
-    if (this->script_ != "")
-        var_sstr << " script=\"" << this->script_ << "\"";
-    if (this->select_mem_ != "")
-        var_sstr << " select-mem=\"" << this->select_mem_ << "\"";
-    if (this->select_file_ != "")
-        var_sstr << " select-file=\"" << this->select_file_ << "\"";
-    if (this->select_subset_ != "")
-        var_sstr << " select-subset=\"" << this->select_subset_ << "\"";
+    using Entry = std::pair<std::string_view, const std::string&>;
+    auto addAttrib = [&var_str](const Entry& entry)
+    {
+        if (!entry.second.empty()) {
+            var_str += fmt::format(" {}=\"{}\"", entry.first, entry.second);
+        }
+    };
 
-    return var_sstr.str();
+    const auto entries = std::array{
+        Entry{"layout", this->layout_},
+        Entry{"mesh", this->mesh_},
+        Entry{"type", this->type_},
+        Entry{"visualizable", this->visualizable_},
+        Entry{"unit", this->unit_},
+        Entry{"time_varying", this->time_varying_},
+        Entry{"centering", this->centering_},
+        Entry{"store", this->store_},
+        Entry{"select-mem", this->select_mem_},
+        Entry{"select-file", this->select_file_},
+        Entry{"select-subset", this->select_subset_}
+    };
+
+    std::for_each(entries.begin(), entries.end(), addAttrib);
+
+    return var_str;
 }
 
 template<class T>
