@@ -446,6 +446,7 @@ assignToSolution(data::Solution& sol)
         DataEntry{"OIL_DEN",  UnitSystem::measure::density,                               density_[oilPhaseIdx]},
         DataEntry{"OIL_VISC", UnitSystem::measure::viscosity,                             viscosity_[oilPhaseIdx]},
         DataEntry{"PBUB",     UnitSystem::measure::pressure,                              bubblePointPressure_},
+        DataEntry{"PCGW",     UnitSystem::measure::pressure,                              pcgw_},
         DataEntry{"PCOG",     UnitSystem::measure::pressure,                              pcog_},
         DataEntry{"PCOW",     UnitSystem::measure::pressure,                              pcow_},
         DataEntry{"PDEW",     UnitSystem::measure::pressure,                              dewPointPressure_},
@@ -1240,6 +1241,10 @@ doAllocBuffers(const unsigned bufferSize,
         relativePermeability_[gasPhaseIdx].resize(bufferSize, 0.0);
     }
 
+    if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["PCGW"] > 0) {
+        rstKeywords["PCGW"] = 0;
+        pcgw_.resize(bufferSize, 0.0);
+    }
     if (FluidSystem::phaseIsActive(oilPhaseIdx) && FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["PCOW"] > 0) {
         rstKeywords["PCOW"] = 0;
         pcow_.resize(bufferSize, 0.0);

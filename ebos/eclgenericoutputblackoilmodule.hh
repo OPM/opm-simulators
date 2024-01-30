@@ -449,6 +449,7 @@ protected:
     ScalarBuffer cUrea_;
     ScalarBuffer cBiofilm_;
     ScalarBuffer cCalcite_;
+    ScalarBuffer pcgw_;
     ScalarBuffer pcow_;
     ScalarBuffer pcog_;
 

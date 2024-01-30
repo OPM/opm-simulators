@@ -365,6 +365,10 @@ public:
                 this->rv_[globalDofIdx] = getValue(fs.Rv());
                 Valgrind::CheckDefined(this->rv_[globalDofIdx]);
             }
+            if (!this->pcgw_.empty()) {
+                this->pcgw_[globalDofIdx] = getValue(fs.pressure(gasPhaseIdx)) - getValue(fs.pressure(waterPhaseIdx));
+                Valgrind::CheckDefined(this->pcgw_[globalDofIdx]);
+            }
             if (!this->pcow_.empty()) {
                 this->pcow_[globalDofIdx] = getValue(fs.pressure(oilPhaseIdx)) - getValue(fs.pressure(waterPhaseIdx));
                 Valgrind::CheckDefined(this->pcow_[globalDofIdx]);
