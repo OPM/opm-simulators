@@ -315,24 +315,24 @@ public:
 
     Dune::PartitionSet<partitions> getPartition(void)
     {
-        return (this->dunePartition_);
+        return this->dunePartition_;
     }
 
     void printGridDetails(std::ostream& outstr);
 
     int getNCells()
     {
-        return (ncells_);
+        return ncells_;
     }
 
     int getNVertices()
     {
-        return (nvertices_);
+        return nvertices_;
     }
 
     int getNCorners()
     {
-        return (ncorners_);
+        return ncorners_;
     }
 
     std::string getError()

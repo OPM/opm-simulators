@@ -182,7 +182,7 @@ writeGridPoints_AOS(T* xyz_inout, long max_size)
             xyz_inout[i++] = static_cast<T>(0.0);
         }
     }
-    return ((i) / 3);
+    return i / 3;
 }
 
 template <class GridView, unsigned int partitions>
@@ -220,7 +220,7 @@ writeGridPoints_AOS(VectType& xyz_inout)
             xyz_inout[i++] = static_cast<VT>(td);
         }
     }
-    return ((i) / 3);
+    return i / 3;
 }
 
 template <class GridView, unsigned int partitions>
@@ -258,7 +258,7 @@ writeGridPoints_SOA(T* xyz_inout, long max_size)
             i++;
         }
     }
-    return (i);
+    return i;
 }
 
 template <class GridView, unsigned int partitions>
@@ -302,7 +302,7 @@ writeGridPoints_SOA(VectType& xyz_inout)
             i++;
         }
     }
-    return (i);
+    return i;
 }
 
 template <class GridView, unsigned int partitions>
@@ -343,7 +343,7 @@ writeConnectivity(Integer* connectivity_inout,
             i += cell_corners;
         }
     }
-    return (i);
+    return i;
 }
 
 template <class GridView, unsigned int partitions>
@@ -386,7 +386,7 @@ writeConnectivity(VectType& connectivity_inout, ConnectivityVertexOrder whichOrd
             i += cell_corners;
         }
     }
-    return (i);
+    return i;
 }
 
 template <class GridView, unsigned int partitions>
@@ -408,7 +408,7 @@ writeOffsetsCells(Integer* offsets_inout, long max_size)
         offsets_inout[i] = offsets_inout[i - 1] + cell_corners;
         i++;
     }
-    return (i); // This should be 1 greater than ncells_
+    return i; // This should be 1 greater than ncells_
 }
 
 template <class GridView, unsigned int partitions>
@@ -435,7 +435,7 @@ writeOffsetsCells(VectType& offsets_inout)
         offsets_inout.data()[i] = offsets_inout.data()[i - 1] + cell_corners;
         i++;
     }
-    return (i); // This should be 1 greater than ncells_
+    return i; // This should be 1 greater than ncells_
 }
 
 template <class GridView, unsigned int partitions>
@@ -455,7 +455,7 @@ writeCellTypes(Integer* types_inout, long max_size)
         Integer vtktype = static_cast<Integer>(Dune::VTK::geometryType(cit.type()));
         types_inout[i++] = vtktype;
     }
-    return (i);
+    return i;
 }
 
 template <class GridView, unsigned int partitions>
@@ -477,7 +477,7 @@ writeCellTypes(VectType& types_inout)
         int vtktype = static_cast<int>(Dune::VTK::geometryType(cit.type()));
         types_inout.data()[i++] = vtktype;
     }
-    return (i);
+    return i;
 }
 
 template <class GridView, unsigned int partitions>
@@ -485,23 +485,23 @@ std::string SimMeshDataAccessor<GridView,partitions>::
 getPartitionTypeString()
 {
     if (this->dunePartition_ == Dune::Partitions::all)
-        return (std::string("Dune::Partitions::all"));
+        return std::string("Dune::Partitions::all");
     if (this->dunePartition_ == Dune::Partitions::interior)
-        return (std::string("Dune::Partitions::interior"));
+        return std::string("Dune::Partitions::interior");
     if (this->dunePartition_ == Dune::Partitions::interiorBorder)
-        return (std::string("Dune::Partitions::interiorBorder"));
+        return std::string("Dune::Partitions::interiorBorder");
     if (this->dunePartition_ == Dune::Partitions::interiorBorderOverlap)
-        return (std::string("Dune::Partitions::interiorBorderOverlap"));
+        return std::string("Dune::Partitions::interiorBorderOverlap");
     if (this->dunePartition_ == Dune::Partitions::front)
-        return (std::string("Dune::Partitions::front"));
+        return std::string("Dune::Partitions::front");
     if (this->dunePartition_ == Dune::Partitions::interiorBorderOverlapFront)
-        return (std::string("Dune::Partitions::InteriorBorderOverlapFront"));
+        return std::string("Dune::Partitions::InteriorBorderOverlapFront");
     if (this->dunePartition_ == Dune::Partitions::border)
-        return (std::string("Dune::Partitions::border"));
+        return std::string("Dune::Partitions::border");
     if (this->dunePartition_ == Dune::Partitions::ghost)
-        return (std::string("Dune::Partitions::ghost"));
+        return std::string("Dune::Partitions::ghost");
 
-    return (std::string("Unknown Dune::PartitionSet<>"));
+    return std::string("Unknown Dune::PartitionSet<>");
 }
 
 template <class GridView, unsigned int partitions>
