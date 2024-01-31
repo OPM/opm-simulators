@@ -71,7 +71,7 @@ int flowEbosWaterOnlyEnergyMain(int argc, char** argv, bool outputCout, bool out
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowProblemWaterOnlyEnergy>
+    FlowMain<Properties::TTag::EclFlowProblemWaterOnlyEnergy>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

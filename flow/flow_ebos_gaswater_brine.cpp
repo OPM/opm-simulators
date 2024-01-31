@@ -77,7 +77,7 @@ int flowEbosGasWaterBrineMain(int argc, char** argv, bool outputCout, bool outpu
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowGasWaterBrineProblem>
+    FlowMain<Properties::TTag::EclFlowGasWaterBrineProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

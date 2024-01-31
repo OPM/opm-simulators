@@ -50,7 +50,7 @@ int flowEbosSolventFoamMain(int argc, char** argv, bool outputCout, bool outputF
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowSolventFoamProblem>
+    FlowMain<Properties::TTag::EclFlowSolventFoamProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

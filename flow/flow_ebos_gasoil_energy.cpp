@@ -84,7 +84,7 @@ int flowEbosGasOilEnergyMain(int argc, char** argv, bool outputCout, bool output
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowGasOilEnergyProblem>
+    FlowMain<Properties::TTag::EclFlowGasOilEnergyProblem>
         mainfunc {argc, argv, outputCout, outputFiles} ;
     return mainfunc.execute();
 }

@@ -19,8 +19,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
-#define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
+#ifndef OPM_FLOW_MAIN_HEADER_INCLUDED
+#define OPM_FLOW_MAIN_HEADER_INCLUDED
 
 #include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
@@ -92,9 +92,9 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 
     class Deck;
 
-    // The FlowMain class is the ebos based black-oil simulator.
+    // The FlowMain class is the black-oil simulator.
     template <class TypeTag>
-    class FlowMainEbos
+    class FlowMain
     {
     public:
         using MaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
@@ -107,7 +107,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 
         using Simulator = SimulatorFullyImplicitBlackoil<TypeTag>;
 
-        FlowMainEbos(int argc, char **argv, bool output_cout, bool output_files )
+        FlowMain(int argc, char **argv, bool output_cout, bool output_files )
             : argc_{argc}, argv_{argv},
               output_cout_{output_cout}, output_files_{output_files}
         {
@@ -289,12 +289,12 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         /// input.
         int execute()
         {
-            return execute_(&FlowMainEbos::runSimulator, /*cleanup=*/true);
+            return execute_(&FlowMain::runSimulator, /*cleanup=*/true);
         }
 
         int executeInitStep()
         {
-            return execute_(&FlowMainEbos::runSimulatorInit, /*cleanup=*/false);
+            return execute_(&FlowMain::runSimulatorInit, /*cleanup=*/false);
         }
 
         // Returns true unless "EXIT" was encountered in the schedule
@@ -329,7 +329,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 
     private:
         // called by execute() or executeInitStep()
-        int execute_(int (FlowMainEbos::* runOrInitFunc)(), bool cleanup)
+        int execute_(int (FlowMain::* runOrInitFunc)(), bool cleanup)
         {
             auto logger = [this](const std::exception& e, const std::string& message_start) {
                 std::ostringstream message;
@@ -474,12 +474,12 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         // Run the simulator.
         int runSimulator()
         {
-            return runSimulatorInitOrRun_(&FlowMainEbos::runSimulatorRunCallback_);
+            return runSimulatorInitOrRun_(&FlowMain::runSimulatorRunCallback_);
         }
 
         int runSimulatorInit()
         {
-            return runSimulatorInitOrRun_(&FlowMainEbos::runSimulatorInitCallback_);
+            return runSimulatorInitOrRun_(&FlowMain::runSimulatorInitCallback_);
         }
 
     private:
@@ -522,7 +522,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         }
 
         // Run the simulator.
-        int runSimulatorInitOrRun_(int (FlowMainEbos::* initOrRunFunc)())
+        int runSimulatorInitOrRun_(int (FlowMain::* initOrRunFunc)())
         {
 
             const auto& schedule = this->schedule();
@@ -592,4 +592,4 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 
 } // namespace Opm
 
-#endif // OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
+#endif // OPM_FLOW_MAIN_HEADER_INCLUDED

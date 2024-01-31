@@ -21,7 +21,7 @@
 #define OPM_PY_BLACKOIL_SIMULATOR_HEADER_INCLUDED
 
 #include <opm/simulators/flow/Main.hpp>
-#include <opm/simulators/flow/FlowMainEbos.hpp>
+#include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/simulators/flow/python/Pybind11Exporter.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
@@ -57,7 +57,7 @@ public:
     int stepInit();
 
 private:
-    Opm::FlowMainEbos<TypeTag>& getFlowMainEbos() const;
+    Opm::FlowMain<TypeTag>& getFlowMain() const;
     PyMaterialState<TypeTag>& getMaterialState() const;
 
     const std::string deck_filename_;
@@ -69,7 +69,7 @@ private:
     // MPI at the correct time (ie after the other objects).
     std::unique_ptr<Opm::Main> main_;
 
-    std::unique_ptr<Opm::FlowMainEbos<TypeTag>> main_ebos_;
+    std::unique_ptr<Opm::FlowMain<TypeTag>> main_ebos_;
     Simulator *ebos_simulator_;
     std::unique_ptr<PyMaterialState<TypeTag>> material_state_;
     std::shared_ptr<Opm::Deck> deck_;

@@ -69,7 +69,7 @@ int flowEbosMICPMain(int argc, char** argv, bool outputCout, bool outputFiles)
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowMICPProblem>
+    FlowMain<Properties::TTag::EclFlowMICPProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

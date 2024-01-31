@@ -45,7 +45,7 @@ int flowEbosBrineMain(int argc, char** argv, bool outputCout, bool outputFiles)
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowBrineProblem>
+    FlowMain<Properties::TTag::EclFlowBrineProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
