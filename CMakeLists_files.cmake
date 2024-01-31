@@ -75,7 +75,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/PropertyTree.cpp
   opm/simulators/linalg/setupPropertyTree.cpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
-  opm/simulators/timestepping/AdaptiveTimeSteppingEbos.cpp
+  opm/simulators/timestepping/AdaptiveTimeStepping.cpp
   opm/simulators/timestepping/ConvergenceReport.cpp
   opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
@@ -525,7 +525,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/getQuasiImpesWeights.hpp
   opm/simulators/linalg/setupPropertyTree.hpp
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
-  opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp
+  opm/simulators/timestepping/AdaptiveTimeStepping.hpp
   opm/simulators/timestepping/ConvergenceReport.hpp
   opm/simulators/timestepping/TimeStepControl.hpp
   opm/simulators/timestepping/TimeStepControlInterface.hpp

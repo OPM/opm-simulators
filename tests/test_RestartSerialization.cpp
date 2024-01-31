@@ -37,7 +37,7 @@
 
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 
-#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
@@ -112,11 +112,11 @@ TEST_FOR_TYPE(SimulatorReport)
 TEST_FOR_TYPE(SimulatorReportSingle)
 TEST_FOR_TYPE(SimulatorTimer)
 
-namespace Opm { using ATE = AdaptiveTimeSteppingEbos<Properties::TTag::EbosTypeTag>; }
-TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosHardcoded, serializationTestObjectHardcoded)
-TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosPID, serializationTestObjectPID)
-TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosPIDIt, serializationTestObjectPIDIt)
-TEST_FOR_TYPE_NAMED_OBJ(ATE, AdaptiveTimeSteppingEbosSimple, serializationTestObjectSimple)
+namespace Opm { using ATS = AdaptiveTimeStepping<Properties::TTag::EbosTypeTag>; }
+TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingHardcoded, serializationTestObjectHardcoded)
+TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPID, serializationTestObjectPID)
+TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPIDIt, serializationTestObjectPIDIt)
+TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingSimple, serializationTestObjectSimple)
 
 namespace Opm { using BPV = BlackOilPrimaryVariables<Properties::TTag::EbosTypeTag>; }
 TEST_FOR_TYPE_NAMED(BPV, BlackoilPrimaryVariables)
@@ -445,7 +445,7 @@ struct AquiferFixture {
             "test_RestartSerialization",
             "--ecl-deck-file-name=GLIFT1.DATA"
         };
-        Opm::AdaptiveTimeSteppingEbos<TT>::registerParameters();
+        Opm::AdaptiveTimeStepping<TT>::registerParameters();
         Opm::setupParameters_<TT>(2, argv, /*registerParams=*/true);
         Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
     }

@@ -2,7 +2,7 @@
 */
 
 #include <config.h>
-#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 

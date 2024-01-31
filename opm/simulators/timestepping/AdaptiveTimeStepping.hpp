@@ -1,7 +1,7 @@
 /*
 */
-#ifndef OPM_ADAPTIVE_TIME_STEPPING_EBOS_HPP
-#define OPM_ADAPTIVE_TIME_STEPPING_EBOS_HPP
+#ifndef OPM_ADAPTIVE_TIME_STEPPING_HPP
+#define OPM_ADAPTIVE_TIME_STEPPING_HPP
 
 #include <dune/common/version.hh>
 #if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 8)
@@ -217,14 +217,14 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
     // AdaptiveTimeStepping
     //---------------------
     template<class TypeTag>
-    class AdaptiveTimeSteppingEbos
+    class AdaptiveTimeStepping
     {
         template <class Solver>
-        class SolutionTimeErrorSolverWrapperEbos : public RelativeChangeInterface
+        class SolutionTimeErrorSolverWrapper : public RelativeChangeInterface
         {
             const Solver& solver_;
         public:
-            SolutionTimeErrorSolverWrapperEbos(const Solver& solver)
+            SolutionTimeErrorSolverWrapper(const Solver& solver)
               : solver_(solver)
             {}
 
@@ -245,11 +245,11 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
         }
 
     public:
-        AdaptiveTimeSteppingEbos() = default;
+        AdaptiveTimeStepping() = default;
 
         //! \brief contructor taking parameter object
-        AdaptiveTimeSteppingEbos(const UnitSystem& unitSystem,
-                                 const bool terminalOutput = true)
+        AdaptiveTimeStepping(const UnitSystem& unitSystem,
+                             const bool terminalOutput = true)
             : timeStepControl_()
             , restartFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverRestartFactor)) // 0.33
             , growthFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverGrowthFactor)) // 2.0
@@ -275,10 +275,10 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
         //! \brief contructor taking parameter object
         //! \param tuning Pointer to ecl TUNING keyword
         //! \param timeStep current report step
-        AdaptiveTimeSteppingEbos(double max_next_tstep,
-                                 const Tuning& tuning,
-                                 const UnitSystem& unitSystem,
-                                 const bool terminalOutput = true)
+        AdaptiveTimeStepping(double max_next_tstep,
+                             const Tuning& tuning,
+                             const UnitSystem& unitSystem,
+                             const bool terminalOutput = true)
             : timeStepControl_()
             , restartFactor_(tuning.TSFCNV)
             , growthFactor_(tuning.TFDIFF)
@@ -454,7 +454,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                     ++substepTimer;
 
                     // create object to compute the time error, simply forwards the call to the model
-                    SolutionTimeErrorSolverWrapperEbos<Solver> relativeChange(solver);
+                    SolutionTimeErrorSolverWrapper<Solver> relativeChange(solver);
 
                     // compute new time step estimate
                     const int iterations = useNewtonIteration_ ? substepReport.total_newton_iterations
@@ -666,27 +666,27 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
             serializer(minTimeStepBeforeShuttingProblematicWells_);
         }
 
-        static AdaptiveTimeSteppingEbos<TypeTag> serializationTestObjectHardcoded()
+        static AdaptiveTimeStepping<TypeTag> serializationTestObjectHardcoded()
         {
             return serializationTestObject_<HardcodedTimeStepControl>();
         }
 
-        static AdaptiveTimeSteppingEbos<TypeTag> serializationTestObjectPID()
+        static AdaptiveTimeStepping<TypeTag> serializationTestObjectPID()
         {
             return serializationTestObject_<PIDTimeStepControl>();
         }
 
-        static AdaptiveTimeSteppingEbos<TypeTag> serializationTestObjectPIDIt()
+        static AdaptiveTimeStepping<TypeTag> serializationTestObjectPIDIt()
         {
             return serializationTestObject_<PIDAndIterationCountTimeStepControl>();
         }
 
-        static AdaptiveTimeSteppingEbos<TypeTag> serializationTestObjectSimple()
+        static AdaptiveTimeStepping<TypeTag> serializationTestObjectSimple()
         {
             return serializationTestObject_<SimpleIterationCountTimeStepControl>();
         }
 
-        bool operator==(const AdaptiveTimeSteppingEbos<TypeTag>& rhs)
+        bool operator==(const AdaptiveTimeStepping<TypeTag>& rhs)
         {
             if (timeStepControlType_ != rhs.timeStepControlType_ ||
                 (timeStepControl_ && !rhs.timeStepControl_) ||
@@ -728,9 +728,9 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
 
     private:
         template<class Controller>
-        static AdaptiveTimeSteppingEbos<TypeTag> serializationTestObject_()
+        static AdaptiveTimeStepping<TypeTag> serializationTestObject_()
         {
-            AdaptiveTimeSteppingEbos<TypeTag> result;
+            AdaptiveTimeStepping<TypeTag> result;
 
             result.restartFactor_ = 1.0;
             result.growthFactor_ = 2.0;
@@ -760,7 +760,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
         }
 
         template<class T>
-        bool castAndComp(const AdaptiveTimeSteppingEbos<TypeTag>& Rhs) const
+        bool castAndComp(const AdaptiveTimeStepping<TypeTag>& Rhs) const
         {
             const T* lhs = static_cast<const T*>(timeStepControl_.get());
             const T* rhs = static_cast<const T*>(Rhs.timeStepControl_.get());
@@ -846,4 +846,4 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
     };
 }
 
-#endif // OPM_ADAPTIVE_TIME_STEPPING_EBOS_HPP
+#endif // OPM_ADAPTIVE_TIME_STEPPING_HPP
