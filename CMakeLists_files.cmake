@@ -437,7 +437,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/vtkecltracermodule.hh
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/priVarsPacking.hpp
-  opm/simulators/flow/BlackoilModelEbos.hpp
+  opm/simulators/flow/BlackoilModel.hpp
   opm/simulators/flow/BlackoilModelNldd.hpp
   opm/simulators/flow/BlackoilModelParameters.hpp
   opm/simulators/flow/Banners.hpp

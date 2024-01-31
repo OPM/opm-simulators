@@ -44,7 +44,7 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
-#include <opm/simulators/flow/BlackoilModelEbos.hpp>
+#include <opm/simulators/flow/BlackoilModel.hpp>
 
 #include <ebos/eclproblem.hh>
 #include <opm/models/utils/start.hh>

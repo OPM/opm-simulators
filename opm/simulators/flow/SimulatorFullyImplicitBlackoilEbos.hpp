@@ -25,7 +25,7 @@
 #include <fmt/format.h>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/flow/BlackoilModelEbos.hpp>
+#include <opm/simulators/flow/BlackoilModel.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/ExtraConvergenceOutputThread.hpp>
@@ -170,7 +170,7 @@ public:
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
     typedef BlackOilMICPModule<TypeTag> MICPModule;
 
-    typedef BlackoilModelEbos<TypeTag> Model;
+    using Model = BlackoilModel<TypeTag>;
     typedef NonlinearSolverEbos<TypeTag, Model> Solver;
     typedef typename Model::ModelParameters ModelParameters;
     typedef typename Solver::SolverParameters SolverParameters;
