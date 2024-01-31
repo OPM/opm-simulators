@@ -94,9 +94,9 @@ class DamarisWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::G
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
-    using DamarisVarInt = Opm::DamarisOutput::DamarisVar<int> ;
-    using DamarisVarChar = Opm::DamarisOutput::DamarisVar<char> ;
-    using DamarisVarDbl = Opm::DamarisOutput::DamarisVar<double>  ;
+    using DamarisVarInt = DamarisOutput::DamarisVar<int>;
+    using DamarisVarChar = DamarisOutput::DamarisVar<char>;
+    using DamarisVarDbl = DamarisOutput::DamarisVar<double>;
 
 public:
     static void registerParameters()
@@ -320,14 +320,14 @@ private:
         dam_err_ = DamarisOutput::setPosition("GLOBAL_CELL_INDEX", rank_, elements_rank_offsets[rank_]);
 
         // Set the size of the MPI variable
-        DamarisVarInt mpi_rank_var(1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)  ;
+        DamarisVarInt mpi_rank_var(1, {"n_elements_local"}, "MPI_RANK", rank_)  ;
         mpi_rank_var.setDamarisPosition({static_cast<int64_t>(elements_rank_offsets[rank_])});
     }
 
     void writeDamarisGridOutput()
     {
         const auto& gridView = simulator_.gridView();
-        Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::Partitions::interior) ;
+        GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::Partitions::interior) ;
 
         try {
             const bool hasPolyCells = geomData.polyhedralCellPresent() ;
@@ -384,7 +384,7 @@ private:
 
             // Copy the mesh data from the Durne grid
             long i = 0 ;
-            Opm::GridDataOutput::ConnectivityVertexOrder vtkorder = Opm::GridDataOutput::VTK ;
+            GridDataOutput::ConnectivityVertexOrder vtkorder = GridDataOutput::VTK ;
             
             i = geomData.writeConnectivity(var_connectivity, vtkorder) ;
             if ( i  != geomData.getNCorners())
