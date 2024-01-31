@@ -201,7 +201,8 @@ public:
                 // which define sizes of the Damaris variables, per-rank and globally (over all ranks).
                 // Also sets the offsets to where a ranks array data sits within the global array. 
                 // This is usefull for HDF5 output and for defining distributed arrays in Dask.
-                this->setupDamarisWritingPars(simulator_.vanguard().grid().comm(), numElements_, elements_rank_offsets_);
+                dam_err_ = this->setupDamarisWritingPars(simulator_.vanguard().grid().comm(),
+                                                         numElements_, elements_rank_offsets_);
                 
                 // sets data for non-time-varying variables MPI_RANK and GLOBAL_CELL_INDEX
                 this->setGlobalIndexForDamaris() ; 
@@ -269,12 +270,12 @@ private:
         std::fill(mpi_rank_var_test.data(), mpi_rank_var_test.data() + numElements_, rank_);
     }
 
-    void setupDamarisWritingPars(Parallel::Communication comm,
-                                 const int n_elements_local_grid,
-                                 std::vector<unsigned long long>& elements_rank_offsets)
+    int setupDamarisWritingPars(Parallel::Communication comm,
+                                const int n_elements_local_grid,
+                                std::vector<unsigned long long>& elements_rank_offsets)
     {
         // one for each rank -- to be gathered from each client rank
-        std::vector<unsigned long long> elements_rank_sizes(nranks_); 
+        std::vector<unsigned long long> elements_rank_sizes(comm.size());
         // n_elements_local_grid should be the full model size
         const unsigned long long n_elements_local = n_elements_local_grid;
 
@@ -290,10 +291,10 @@ private:
                          elements_rank_offsets.begin() + 1);
 
         // find the global/total size
-        unsigned long long n_elements_global_max = elements_rank_offsets[nranks_ - 1];
-        n_elements_global_max += elements_rank_sizes[nranks_ - 1]; // add the last ranks size to the already accumulated offset values
+        unsigned long long n_elements_global_max = elements_rank_offsets[comm.size() - 1];
+        n_elements_global_max += elements_rank_sizes[comm.size() - 1]; // add the last ranks size to the already accumulated offset values
 
-        if (rank_ == 0) {
+        if (comm.rank() == 0) {
             OpmLog::debug(fmt::format("In setupDamarisWritingPars(): n_elements_global_max = {}",
                                       n_elements_global_max));
         }
@@ -301,27 +302,29 @@ private:
         // Set the paramater so that the Damaris servers can allocate the correct amount of memory for the variabe
         // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
         // ToDo: Do we need to check that local ranks are 0 based ?
-        dam_err_ = DamarisOutput::setParameter("n_elements_local", rank_, elements_rank_sizes[rank_]);
+        int dam_err = DamarisOutput::setParameter("n_elements_local", comm.rank(), elements_rank_sizes[comm.rank()]);
         // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
         // ToDo: Do we need to check that n_elements_global_max will fit in a C int type (INT_MAX)
         if( n_elements_global_max <= std::numeric_limits<int>::max() ) {
-            dam_err_ = DamarisOutput::setParameter("n_elements_total", rank_, n_elements_global_max);
+            dam_err = DamarisOutput::setParameter("n_elements_total", comm.rank(), n_elements_global_max);
         } else {
             OpmLog::error(fmt::format("( rank:{} ) The size of the global array ({}) is"
-                                      "greater than what a Damaris paramater type supports ({}).  ", 
-                                      rank_, n_elements_global_max, std::numeric_limits<int>::max() ));
+                                      "greater than what a Damaris paramater type supports ({}).  ",
+                                      comm.rank(), n_elements_global_max, std::numeric_limits<int>::max() ));
             // assert( n_elements_global_max <= std::numeric_limits<int>::max() ) ;
-            OPM_THROW(std::runtime_error, "setupDamarisWritingPars() n_elements_global_max > std::numeric_limits<int>::max() " + std::to_string(dam_err_));
+            OPM_THROW(std::runtime_error, "setupDamarisWritingPars() n_elements_global_max > std::numeric_limits<int>::max() " + std::to_string(dam_err));
         }
 
         // Use damaris_set_position to set the offset in the global size of the array.
         // This is used so that output functionality (e.g. HDF5Store) knows global offsets of the data of the ranks
-        dam_err_ = DamarisOutput::setPosition("PRESSURE", rank_, elements_rank_offsets[rank_]);
-        dam_err_ = DamarisOutput::setPosition("GLOBAL_CELL_INDEX", rank_, elements_rank_offsets[rank_]);
+        dam_err = DamarisOutput::setPosition("PRESSURE", comm.rank(), elements_rank_offsets[comm.rank()]);
+        dam_err = DamarisOutput::setPosition("GLOBAL_CELL_INDEX", comm.rank(), elements_rank_offsets[comm.rank()]);
 
         // Set the size of the MPI variable
-        DamarisVarInt mpi_rank_var(1, {"n_elements_local"}, "MPI_RANK", rank_)  ;
-        mpi_rank_var.setDamarisPosition({static_cast<int64_t>(elements_rank_offsets[rank_])});
+        DamarisVarInt mpi_rank_var(1, {"n_elements_local"}, "MPI_RANK", comm.rank())  ;
+        mpi_rank_var.setDamarisPosition({static_cast<int64_t>(elements_rank_offsets[comm.rank()])});
+
+        return dam_err;
     }
 
     void writeDamarisGridOutput()
