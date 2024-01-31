@@ -48,11 +48,10 @@
 #include <fmt/format.h>
 
 #include <algorithm>
-#include <limits>
 #include <memory>
 #include <numeric>
-#include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace Opm {
 
@@ -62,7 +61,9 @@ int endIteration(int rank);
 int setParameter(const char* field, int rank, int value);
 int setPosition(const char* field, int rank, int64_t pos);
 int write(const char* field, int rank, const void* data);
-
+int setupWritingPars(Parallel::Communication comm,
+                     const int n_elements_local_grid,
+                     std::vector<unsigned long long>& elements_rank_offsets);
 }
 
 /*!
@@ -94,9 +95,9 @@ class DamarisWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::G
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
-    using DamarisVarInt = Opm::DamarisOutput::DamarisVar<int> ;
-    using DamarisVarChar = Opm::DamarisOutput::DamarisVar<char> ;
-    using DamarisVarDbl = Opm::DamarisOutput::DamarisVar<double>  ;
+    using DamarisVarInt = DamarisOutput::DamarisVar<int>;
+    using DamarisVarChar = DamarisOutput::DamarisVar<char>;
+    using DamarisVarDbl = DamarisOutput::DamarisVar<double>;
 
 public:
     static void registerParameters()
@@ -169,9 +170,6 @@ public:
         this->damarisOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>(simulator, this->collectToIORank_);
     }
 
-    ~DamarisWriter()
-    { }
-
     /*!
      * \brief Writes localCellData through to Damaris servers. Sets up the unstructured mesh which is passed to Damaris.
      */
@@ -204,7 +202,8 @@ public:
                 // which define sizes of the Damaris variables, per-rank and globally (over all ranks).
                 // Also sets the offsets to where a ranks array data sits within the global array. 
                 // This is usefull for HDF5 output and for defining distributed arrays in Dask.
-                this->setupDamarisWritingPars(simulator_.vanguard().grid().comm(), numElements_, elements_rank_offsets_);
+                dam_err_ = DamarisOutput::setupWritingPars(simulator_.vanguard().grid().comm(),
+                                                           numElements_, elements_rank_offsets_);
                 
                 // sets data for non-time-varying variables MPI_RANK and GLOBAL_CELL_INDEX
                 this->setGlobalIndexForDamaris() ; 
@@ -251,7 +250,8 @@ private:
         // GLOBAL_CELL_INDEX is used to reorder variable data when writing to disk 
         // This is enabled using select-file="GLOBAL_CELL_INDEX" in the <variable> XML tag
         if (this->collectToIORank_.isParallel()) {
-            const std::vector<int>& local_to_global =  this->collectToIORank_.localIdxToGlobalIdxMapping();
+            const std::vector<int>& local_to_global =
+                this->collectToIORank_.localIdxToGlobalIdxMapping();
             dam_err_ = DamarisOutput::write("GLOBAL_CELL_INDEX", rank_, local_to_global.data());
         } else {
             std::vector<int> local_to_global_filled ;
@@ -265,69 +265,16 @@ private:
         // We will add the MPI rank value directly into shared memory using the DamarisVar 
         // wrapper of the C based Damaris API.
         // The shared memory is given back to Damaris when the DamarisVarInt goes out of scope.
-        DamarisVarInt mpi_rank_var_test(1, {std::string("n_elements_local")},  std::string("MPI_RANK"), rank_);
+        DamarisVarInt mpi_rank_var_test(1, {"n_elements_local"},  "MPI_RANK", rank_);
         mpi_rank_var_test.setDamarisParameterAndShmem( {this->numElements_ } ) ;
         // Fill the created memory area
         std::fill(mpi_rank_var_test.data(), mpi_rank_var_test.data() + numElements_, rank_);
     }
 
-    void setupDamarisWritingPars(Parallel::Communication comm,
-                                 const int n_elements_local_grid,
-                                 std::vector<unsigned long long>& elements_rank_offsets)
-    {
-        // one for each rank -- to be gathered from each client rank
-        std::vector<unsigned long long> elements_rank_sizes(nranks_); 
-        // n_elements_local_grid should be the full model size
-        const unsigned long long n_elements_local = n_elements_local_grid;
-
-        // This gets the n_elements_local from all ranks and copies them to a std::vector of all the values on all ranks
-        // (elements_rank_sizes[]).
-        comm.allgather(&n_elements_local, 1, elements_rank_sizes.data());
-        elements_rank_offsets[0] = 0ULL;
-        // This scan makes the offsets to the start of each ranks grid section if each local grid data was concatenated (in
-        // rank order)
-        for (int t1 = 1; t1 < nranks_; t1++) {
-            elements_rank_offsets[t1] = elements_rank_offsets[t1 - 1] + elements_rank_sizes[t1 - 1];
-        }
-
-        // find the global/total size
-        unsigned long long n_elements_global_max = elements_rank_offsets[nranks_ - 1];
-        n_elements_global_max += elements_rank_sizes[nranks_ - 1]; // add the last ranks size to the already accumulated offset values
-
-        if (rank_ == 0) {
-            OpmLog::debug(fmt::format("In setupDamarisWritingPars(): n_elements_global_max = {}", n_elements_global_max));
-        }
-
-        // Set the paramater so that the Damaris servers can allocate the correct amount of memory for the variabe
-        // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
-        // ToDo: Do we need to check that local ranks are 0 based ?
-        dam_err_ = DamarisOutput::setParameter("n_elements_local", rank_, elements_rank_sizes[rank_]);
-        // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
-        // ToDo: Do we need to check that n_elements_global_max will fit in a C int type (INT_MAX)
-        if( n_elements_global_max <= std::numeric_limits<int>::max() ) {
-            dam_err_ = DamarisOutput::setParameter("n_elements_total", rank_, n_elements_global_max);
-        } else {
-            OpmLog::error(fmt::format("( rank:{} ) The size of the global array ({}) is"
-                                      "greater than what a Damaris paramater type supports ({}).  ", 
-                                      rank_, n_elements_global_max, std::numeric_limits<int>::max() ));
-            // assert( n_elements_global_max <= std::numeric_limits<int>::max() ) ;
-            OPM_THROW(std::runtime_error, "setupDamarisWritingPars() n_elements_global_max > std::numeric_limits<int>::max() " + std::to_string(dam_err_));
-        }
-
-        // Use damaris_set_position to set the offset in the global size of the array.
-        // This is used so that output functionality (e.g. HDF5Store) knows global offsets of the data of the ranks
-        dam_err_ = DamarisOutput::setPosition("PRESSURE", rank_, elements_rank_offsets[rank_]);
-        dam_err_ = DamarisOutput::setPosition("GLOBAL_CELL_INDEX", rank_, elements_rank_offsets[rank_]);
-
-        // Set the size of the MPI variable
-        DamarisVarInt mpi_rank_var(1, {std::string("n_elements_local")}, std::string("MPI_RANK"), rank_)  ;
-        mpi_rank_var.setDamarisPosition({static_cast<int64_t>(elements_rank_offsets[rank_])});
-    }
-
     void writeDamarisGridOutput()
     {
         const auto& gridView = simulator_.gridView();
-        Opm::GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::Partitions::interior) ;
+        GridDataOutput::SimMeshDataAccessor geomData(gridView, Dune::Partitions::interior) ;
 
         try {
             const bool hasPolyCells = geomData.polyhedralCellPresent() ;
@@ -346,16 +293,16 @@ private:
             //     <variable name="z"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonConduitTest" time-varying="false" />
             // </group>
 
-            DamarisVarDbl  var_x(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/x"), rank_) ; 
+            DamarisVarDbl  var_x(1, {"n_coords_local"}, "coordset/coords/values/x", rank_) ;
             // N.B. We have not set any position/offset values (using DamarisVar::SetDamarisPosition). 
             // They are not needed for mesh data as each process has a local geometric model. 
             // However, HDF5 collective and Dask arrays cannot be used for this data.
             var_x.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
              
-            DamarisVarDbl var_y(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/y"), rank_) ; 
+            DamarisVarDbl var_y(1, {"n_coords_local"}, "coordset/coords/values/y", rank_) ;
             var_y.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
              
-            DamarisVarDbl  var_z(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/z"), rank_) ; 
+            DamarisVarDbl  var_z(1, {"n_coords_local"}, "coordset/coords/values/z", rank_) ;
             var_z.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
             
             // Now we can use the shared memory area that Damaris has allocated and use it to write the x,y,z coordinates
@@ -375,16 +322,19 @@ private:
             //     <variable name="types"        layout="n_types_layout_ph"    type="scalar"  visualizable="false"  unit=""   script="PythonConduitTest" time-varying="false" />
             // </group>
 
-            DamarisVarInt var_connectivity(1, {std::string("n_connectivity_ph")}, std::string("topologies/topo/elements/connectivity"), rank_) ;
+            DamarisVarInt var_connectivity(1, {"n_connectivity_ph"},
+                                           "topologies/topo/elements/connectivity", rank_) ;
             var_connectivity.setDamarisParameterAndShmem({ geomData.getNCorners()}) ;
-            DamarisVarInt  var_offsets(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/offsets"), rank_) ;
+            DamarisVarInt  var_offsets(1, {"n_offsets_types_ph"},
+                                      "topologies/topo/elements/offsets", rank_) ;
             var_offsets.setDamarisParameterAndShmem({ geomData.getNCells()+1}) ;
-            DamarisVarChar  var_types(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/types"), rank_) ;
+            DamarisVarChar  var_types(1, {"n_offsets_types_ph"},
+                                     "topologies/topo/elements/types", rank_) ;
             var_types.setDamarisParameterAndShmem({ geomData.getNCells()}) ;
 
             // Copy the mesh data from the Durne grid
             long i = 0 ;
-            Opm::GridDataOutput::ConnectivityVertexOrder vtkorder = Opm::GridDataOutput::VTK ;
+            GridDataOutput::ConnectivityVertexOrder vtkorder = GridDataOutput::VTK ;
             
             i = geomData.writeConnectivity(var_connectivity, vtkorder) ;
             if ( i  != geomData.getNCorners())
