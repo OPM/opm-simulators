@@ -46,7 +46,6 @@
 
 #include <array>
 #include <cstddef>
-#include <optional>
 #include <unordered_map>
 #include <vector>
 

@@ -25,6 +25,10 @@
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
 #include <cstddef>
+#include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
 namespace Opm {
 

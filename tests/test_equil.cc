@@ -49,18 +49,13 @@
 #endif
 
 #include <array>
-#include <cmath>
 #include <cstdlib>
-#include <exception>
+#include <cstring>
 #include <iostream>
-#include <limits>
 #include <memory>
 #include <numeric>
-#include <sstream>
-#include <stdexcept>
 #include <string>
 #include <vector>
-#include <string.h>
 
 #include <boost/test/unit_test.hpp>
 #include <boost/version.hpp>
