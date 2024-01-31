@@ -169,9 +169,6 @@ public:
         this->damarisOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>(simulator, this->collectToIORank_);
     }
 
-    ~DamarisWriter()
-    { }
-
     /*!
      * \brief Writes localCellData through to Damaris servers. Sets up the unstructured mesh which is passed to Damaris.
      */
