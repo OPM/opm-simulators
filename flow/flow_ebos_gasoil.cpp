@@ -22,7 +22,7 @@
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/grid/CpGrid.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
