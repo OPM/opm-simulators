@@ -39,7 +39,7 @@
 
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/flow/BlackoilModelEbosNldd.hpp>
+#include <opm/simulators/flow/BlackoilModelNldd.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
@@ -251,7 +251,7 @@ namespace Opm {
                 if (terminal_output) {
                     OpmLog::info("Using Non-Linear Domain Decomposition solver (nldd).");
                 }
-                nlddSolver_ = std::make_unique<BlackoilModelEbosNldd<TypeTag>>(*this);
+                nlddSolver_ = std::make_unique<BlackoilModelNldd<TypeTag>>(*this);
             } else if (param_.nonlinear_solver_ == "newton") {
                 if (terminal_output) {
                     OpmLog::info("Using Newton nonlinear solver.");
@@ -1125,7 +1125,7 @@ namespace Opm {
         std::vector<StepReport> convergence_reports_;
         ComponentName compNames_{};
 
-        std::unique_ptr<BlackoilModelEbosNldd<TypeTag>> nlddSolver_; //!< Non-linear DD solver
+        std::unique_ptr<BlackoilModelNldd<TypeTag>> nlddSolver_; //!< Non-linear DD solver
 
     public:
         /// return the StandardWells object

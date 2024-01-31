@@ -21,8 +21,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILMODELEBOS_NLDD_HEADER_INCLUDED
-#define OPM_BLACKOILMODELEBOS_NLDD_HEADER_INCLUDED
+#ifndef OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
+#define OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
 
 #include <dune/common/timer.hh>
 
@@ -75,7 +75,7 @@ template<class TypeTag> class BlackoilModelEbos;
 
 /// A NLDD implementation for three-phase black oil.
 template <class TypeTag>
-class BlackoilModelEbosNldd {
+class BlackoilModelNldd {
 public:
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -96,7 +96,7 @@ public:
     //! \param model BlackOil model to solve for
     //! \param param param Model parameters
     //! \param compNames Names of the solution components
-    BlackoilModelEbosNldd(BlackoilModelEbos<TypeTag>& model)
+    BlackoilModelNldd(BlackoilModelEbos<TypeTag>& model)
         : model_(model), rank_(model_.ebosSimulator().vanguard().grid().comm().rank())
     {
         // Create partitions.
@@ -968,4 +968,4 @@ private:
 
 } // namespace Opm
 
-#endif // OPM_BLACKOILMODELEBOS_NLDD_HEADER_INCLUDED
+#endif // OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
