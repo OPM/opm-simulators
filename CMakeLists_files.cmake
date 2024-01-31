@@ -291,6 +291,10 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_wellstate.cpp
   )
 
+if (HAVE_ECL_INPUT)
+  list(APPEND TEST_SOURCE_FILES tests/test_nonnc.cpp)
+endif()
+
 if(MPI_FOUND)
   list(APPEND TEST_SOURCE_FILES tests/test_parallelistlinformation.cpp
                                 tests/test_ParallelSerialization.cpp)
