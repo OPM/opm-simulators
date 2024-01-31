@@ -31,7 +31,7 @@
 
 namespace Opm {
 template <class TypeTag>
-class ISTLSolverEbosBda;
+class ISTLSolverBda;
 template <class TypeTag>
 class ISTLSolverEbos;
 }
@@ -221,7 +221,7 @@ struct OpenclIluParallel<TypeTag, TTag::FlowIstlSolverParams> {
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams> {
 #if COMPILE_BDA_BRIDGE
-    using type = ISTLSolverEbosBda<TypeTag>;
+    using type = ISTLSolverBda<TypeTag>;
 #else
     using type = ISTLSolverEbos<TypeTag>;
 #endif

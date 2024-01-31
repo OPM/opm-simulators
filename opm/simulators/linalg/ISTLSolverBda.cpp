@@ -21,7 +21,7 @@
 
 #include <config.h>
 #include <opm/common/TimingMacros.hpp>
-#include <opm/simulators/linalg/ISTLSolverEbosBda.hpp>
+#include <opm/simulators/linalg/ISTLSolverBda.hpp>
 
 #include <dune/istl/schwarz.hh>
 

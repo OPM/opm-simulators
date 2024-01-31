@@ -19,8 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_ISTLSOLVER_EBOS_WITH_BDA_INCLUDED
-#define OPM_ISTLSOLVER_EBOS_WITH_BDA_INCLUDED
+#ifndef OPM_ISTLSOLVER_WITH_BDA_HEADER_INCLUDED
+#define OPM_ISTLSOLVER_WITH_BDA_HEADER_INCLUDED
 
 #include <opm/simulators/linalg/ISTLSolverEbos.hpp>
 
@@ -98,7 +98,7 @@ private:
 /// as a block-structured matrix (one block for all cell variables) for a fixed
 /// number of cell variables np .
 template <class TypeTag>
-class ISTLSolverEbosBda : public ISTLSolverEbos<TypeTag>
+class ISTLSolverBda : public ISTLSolverEbos<TypeTag>
 {
 protected:
     using ParentType = ISTLSolverEbos<TypeTag>;
@@ -132,7 +132,7 @@ public:
     /// \param[in] simulator   The opm-models simulator object
     /// \param[in] parameters  Explicit parameters for solver setup, do not
     ///                        read them from command line parameters.
-    ISTLSolverEbosBda(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
+    ISTLSolverBda(const Simulator& simulator, const FlowLinearSolverParameters& parameters)
         : ParentType(simulator, parameters)
     {
         initializeBda();
@@ -140,8 +140,8 @@ public:
 
     /// Construct a system solver.
     /// \param[in] simulator   The opm-models simulator object
-    explicit ISTLSolverEbosBda(const Simulator& simulator)
-    : ParentType(simulator)
+    explicit ISTLSolverBda(const Simulator& simulator)
+        : ParentType(simulator)
     {
         initializeBda();
     }
@@ -234,7 +234,7 @@ public:
             return ParentType::solve(x);
         }
 
-        OPM_TIMEBLOCK(istlSolverEbosBdaSolve);
+        OPM_TIMEBLOCK(istlSolverBdaSolve);
         this->solveCount_ += 1;
         // Write linear system if asked for.
         const int verbosity = this->prm_[this->activeSolverNum_].template get<int>("verbosity", 0);
@@ -279,4 +279,4 @@ protected:
 
 } // namespace Opm
 
-#endif // OPM_ISTLSOLVER_EBOS_BDA_HEADER_INCLUDED
+#endif // OPM_ISTLSOLVER_WITH_BDA_HEADER_INCLUDED
