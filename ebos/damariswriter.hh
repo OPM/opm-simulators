@@ -283,9 +283,10 @@ private:
         elements_rank_offsets[0] = 0ULL;
         // This scan makes the offsets to the start of each ranks grid section if each local grid data was concatenated (in
         // rank order)
-        for (int t1 = 1; t1 < nranks_; t1++) {
-            elements_rank_offsets[t1] = elements_rank_offsets[t1 - 1] + elements_rank_sizes[t1 - 1];
-        }
+
+        std::partial_sum(elements_rank_sizes.begin(),
+                         std::prev(elements_rank_sizes.end()),
+                         elements_rank_offsets.begin() + 1);
 
         // find the global/total size
         unsigned long long n_elements_global_max = elements_rank_offsets[nranks_ - 1];
