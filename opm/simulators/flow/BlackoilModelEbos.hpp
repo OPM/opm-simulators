@@ -40,7 +40,7 @@
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/flow/BlackoilModelEbosNldd.hpp>
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
@@ -165,7 +165,7 @@ namespace Opm {
     {
     public:
         // ---------  Types and enums  ---------
-        using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
+        using ModelParameters = BlackoilModelParameters<TypeTag>;
 
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using Grid = GetPropType<TypeTag, Properties::Grid>;

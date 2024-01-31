@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILMODELPARAMETERS_EBOS_HEADER_INCLUDED
-#define OPM_BLACKOILMODELPARAMETERS_EBOS_HEADER_INCLUDED
+#ifndef OPM_BLACKOILMODELPARAMETERS_HEADER_INCLUDED
+#define OPM_BLACKOILMODELPARAMETERS_HEADER_INCLUDED
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
@@ -463,7 +463,7 @@ namespace Opm
 {
     /// Solver parameters for the BlackoilModel.
     template <class TypeTag>
-    struct BlackoilModelParametersEbos
+    struct BlackoilModelParameters
     {
     private:
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -595,7 +595,7 @@ namespace Opm
         bool write_partitions_{false};
 
         /// Construct from user parameters or defaults.
-        BlackoilModelParametersEbos()
+        BlackoilModelParameters()
         {
             dbhp_max_rel_=  EWOMS_GET_PARAM(TypeTag, Scalar, DbhpMaxRel);
             dwell_fraction_max_ = EWOMS_GET_PARAM(TypeTag, Scalar, DwellFractionMax);
@@ -715,4 +715,4 @@ namespace Opm
     };
 } // namespace Opm
 
-#endif // OPM_BLACKOILMODELPARAMETERS_EBOS_HEADER_INCLUDED
+#endif // OPM_BLACKOILMODELPARAMETERS_HEADER_INCLUDED

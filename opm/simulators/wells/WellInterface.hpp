@@ -39,7 +39,7 @@ namespace Opm {
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
@@ -78,7 +78,7 @@ class WellInterface : public WellInterfaceIndices<GetPropType<TypeTag, Propertie
                                       GetPropType<TypeTag, Properties::Indices>,
                                       GetPropType<TypeTag, Properties::Scalar>>;
 public:
-    using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
+    using ModelParameters = BlackoilModelParameters<TypeTag>;
 
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;

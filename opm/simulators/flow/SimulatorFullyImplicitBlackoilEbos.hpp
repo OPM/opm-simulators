@@ -26,7 +26,7 @@
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/flow/BlackoilModelEbos.hpp>
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/ExtraConvergenceOutputThread.hpp>
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>

@@ -193,7 +193,7 @@ public:
     {
         ParentType::registerParameters();
 
-        BlackoilModelParametersEbos<TypeTag>::registerParameters();
+        BlackoilModelParameters<TypeTag>::registerParameters();
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTerminalOutput, "Do *NOT* use!");
         EWOMS_HIDE_PARAM(TypeTag, DbhpMaxRel);
         EWOMS_HIDE_PARAM(TypeTag, DwellFractionMax);

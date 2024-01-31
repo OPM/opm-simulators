@@ -96,7 +96,7 @@ namespace Opm {
         {
         public:
             // ---------      Types      ---------
-            typedef BlackoilModelParametersEbos<TypeTag> ModelParameters;
+            using ModelParameters = BlackoilModelParameters<TypeTag>;
 
             using Grid = GetPropType<TypeTag, Properties::Grid>;
             using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;

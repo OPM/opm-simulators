@@ -81,7 +81,7 @@ public:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
-    using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
+    using ModelParameters = BlackoilModelParameters<TypeTag>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
 
