@@ -248,7 +248,8 @@ private:
         // GLOBAL_CELL_INDEX is used to reorder variable data when writing to disk 
         // This is enabled using select-file="GLOBAL_CELL_INDEX" in the <variable> XML tag
         if (this->collectToIORank_.isParallel()) {
-            const std::vector<int>& local_to_global =  this->collectToIORank_.localIdxToGlobalIdxMapping();
+            const std::vector<int>& local_to_global =
+                this->collectToIORank_.localIdxToGlobalIdxMapping();
             dam_err_ = DamarisOutput::write("GLOBAL_CELL_INDEX", rank_, local_to_global.data());
         } else {
             std::vector<int> local_to_global_filled ;
@@ -262,7 +263,7 @@ private:
         // We will add the MPI rank value directly into shared memory using the DamarisVar 
         // wrapper of the C based Damaris API.
         // The shared memory is given back to Damaris when the DamarisVarInt goes out of scope.
-        DamarisVarInt mpi_rank_var_test(1, {std::string("n_elements_local")},  std::string("MPI_RANK"), rank_);
+        DamarisVarInt mpi_rank_var_test(1, {"n_elements_local"},  "MPI_RANK", rank_);
         mpi_rank_var_test.setDamarisParameterAndShmem( {this->numElements_ } ) ;
         // Fill the created memory area
         std::fill(mpi_rank_var_test.data(), mpi_rank_var_test.data() + numElements_, rank_);
@@ -293,7 +294,8 @@ private:
         n_elements_global_max += elements_rank_sizes[nranks_ - 1]; // add the last ranks size to the already accumulated offset values
 
         if (rank_ == 0) {
-            OpmLog::debug(fmt::format("In setupDamarisWritingPars(): n_elements_global_max = {}", n_elements_global_max));
+            OpmLog::debug(fmt::format("In setupDamarisWritingPars(): n_elements_global_max = {}",
+                                      n_elements_global_max));
         }
 
         // Set the paramater so that the Damaris servers can allocate the correct amount of memory for the variabe
@@ -344,16 +346,16 @@ private:
             //     <variable name="z"    layout="n_coords_layout"  type="scalar"  visualizable="false"  unit="m"   script="PythonConduitTest" time-varying="false" />
             // </group>
 
-            DamarisVarDbl  var_x(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/x"), rank_) ; 
+            DamarisVarDbl  var_x(1, {"n_coords_local"}, "coordset/coords/values/x", rank_) ;
             // N.B. We have not set any position/offset values (using DamarisVar::SetDamarisPosition). 
             // They are not needed for mesh data as each process has a local geometric model. 
             // However, HDF5 collective and Dask arrays cannot be used for this data.
             var_x.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
              
-            DamarisVarDbl var_y(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/y"), rank_) ; 
+            DamarisVarDbl var_y(1, {"n_coords_local"}, "coordset/coords/values/y", rank_) ;
             var_y.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
              
-            DamarisVarDbl  var_z(1, {std::string("n_coords_local")}, std::string("coordset/coords/values/z"), rank_) ; 
+            DamarisVarDbl  var_z(1, {"n_coords_local"}, "coordset/coords/values/z", rank_) ;
             var_z.setDamarisParameterAndShmem( { geomData.getNVertices() } ) ;
             
             // Now we can use the shared memory area that Damaris has allocated and use it to write the x,y,z coordinates
@@ -373,11 +375,14 @@ private:
             //     <variable name="types"        layout="n_types_layout_ph"    type="scalar"  visualizable="false"  unit=""   script="PythonConduitTest" time-varying="false" />
             // </group>
 
-            DamarisVarInt var_connectivity(1, {std::string("n_connectivity_ph")}, std::string("topologies/topo/elements/connectivity"), rank_) ;
+            DamarisVarInt var_connectivity(1, {"n_connectivity_ph"},
+                                           "topologies/topo/elements/connectivity", rank_) ;
             var_connectivity.setDamarisParameterAndShmem({ geomData.getNCorners()}) ;
-            DamarisVarInt  var_offsets(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/offsets"), rank_) ;
+            DamarisVarInt  var_offsets(1, {"n_offsets_types_ph"},
+                                      "topologies/topo/elements/offsets", rank_) ;
             var_offsets.setDamarisParameterAndShmem({ geomData.getNCells()+1}) ;
-            DamarisVarChar  var_types(1, {std::string("n_offsets_types_ph")}, std::string("topologies/topo/elements/types"), rank_) ;
+            DamarisVarChar  var_types(1, {"n_offsets_types_ph"},
+                                     "topologies/topo/elements/types", rank_) ;
             var_types.setDamarisParameterAndShmem({ geomData.getNCells()}) ;
 
             // Copy the mesh data from the Durne grid
