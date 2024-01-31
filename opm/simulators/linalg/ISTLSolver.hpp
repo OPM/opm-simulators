@@ -19,8 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_ISTLSOLVER_EBOS_HEADER_INCLUDED
-#define OPM_ISTLSOLVER_EBOS_HEADER_INCLUDED
+#ifndef OPM_ISTLSOLVER_HEADER_INCLUDED
+#define OPM_ISTLSOLVER_HEADER_INCLUDED
 
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/solver.hh>
@@ -140,7 +140,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
     /// as a block-structured matrix (one block for all cell variables) for a fixed
     /// number of cell variables np .
     template <class TypeTag>
-    class ISTLSolverEbos
+    class ISTLSolver
     {
     protected:
         using GridView = GetPropType<TypeTag, Properties::GridView>;
@@ -181,7 +181,9 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         /// \param[in] forceSerial If true, will set up a serial linear solver only,
         ///                        local to the current rank, instead of creating a
         ///                        parallel (MPI distributed) linear solver.
-        ISTLSolverEbos(const Simulator& simulator, const FlowLinearSolverParameters& parameters, bool forceSerial = false)
+        ISTLSolver(const Simulator& simulator,
+                   const FlowLinearSolverParameters& parameters,
+                   bool forceSerial = false)
             : simulator_(simulator),
               iterations_( 0 ),
               converged_(false),
@@ -194,7 +196,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         /// Construct a system solver.
         /// \param[in] simulator   The opm-models simulator object
-        explicit ISTLSolverEbos(const Simulator& simulator)
+        explicit ISTLSolver(const Simulator& simulator)
             : simulator_(simulator),
               iterations_( 0 ),
               solveCount_(0),
@@ -627,4 +629,5 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
     }; // end ISTLSolver
 
 } // namespace Opm
-#endif
+
+#endif // OPM_ISTLSOLVER_HEADER_INCLUDED

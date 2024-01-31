@@ -62,7 +62,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver4.cpp
   opm/simulators/linalg/FlexibleSolver5.cpp
   opm/simulators/linalg/FlexibleSolver6.cpp
-  opm/simulators/linalg/ISTLSolverEbos.cpp
+  opm/simulators/linalg/ISTLSolver.cpp
   opm/simulators/linalg/MILU.cpp
   opm/simulators/linalg/ParallelIstlInformation.cpp
   opm/simulators/linalg/ParallelOverlappingILU0.cpp
@@ -504,7 +504,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/FlexibleSolver_impl.hpp
   opm/simulators/linalg/FlowLinearSolverParameters.hpp
   opm/simulators/linalg/GraphColoring.hpp
-  opm/simulators/linalg/ISTLSolverEbos.hpp
+  opm/simulators/linalg/ISTLSolver.hpp
   opm/simulators/linalg/ISTLSolverBda.hpp
   opm/simulators/linalg/MatrixMarketSpecializations.hpp
   opm/simulators/linalg/OwningBlockPreconditioner.hpp

@@ -22,7 +22,7 @@
 #ifndef OPM_ISTLSOLVER_WITH_BDA_HEADER_INCLUDED
 #define OPM_ISTLSOLVER_WITH_BDA_HEADER_INCLUDED
 
-#include <opm/simulators/linalg/ISTLSolverEbos.hpp>
+#include <opm/simulators/linalg/ISTLSolver.hpp>
 
 #include <cstddef>
 #include <memory>
@@ -98,10 +98,10 @@ private:
 /// as a block-structured matrix (one block for all cell variables) for a fixed
 /// number of cell variables np .
 template <class TypeTag>
-class ISTLSolverBda : public ISTLSolverEbos<TypeTag>
+class ISTLSolverBda : public ISTLSolver<TypeTag>
 {
 protected:
-    using ParentType = ISTLSolverEbos<TypeTag>;
+    using ParentType = ISTLSolver<TypeTag>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;

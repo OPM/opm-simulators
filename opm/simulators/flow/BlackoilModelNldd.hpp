@@ -40,7 +40,7 @@
 #if COMPILE_BDA_BRIDGE
 #include <opm/simulators/linalg/ISTLSolverBda.hpp>
 #else
-#include <opm/simulators/linalg/ISTLSolverEbos.hpp>
+#include <opm/simulators/linalg/ISTLSolver.hpp>
 #endif
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
@@ -87,7 +87,7 @@ public:
 
     using BVector = typename BlackoilModel<TypeTag>::BVector;
     using Domain = SubDomain<Grid>;
-    using ISTLSolverType = ISTLSolverEbos<TypeTag>;
+    using ISTLSolverType = ISTLSolver<TypeTag>;
     using Mat = typename BlackoilModel<TypeTag>::Mat;
 
     static constexpr int numEq = Indices::numEq;
@@ -154,7 +154,7 @@ public:
 
         // Set up container for the local linear solvers.
         for (int index = 0; index < num_domains; ++index) {
-            // TODO: The ISTLSolverEbos constructor will make
+            // TODO: The ISTLSolver constructor will make
             // parallel structures appropriate for the full grid
             // only. This must be addressed before going parallel.
             const auto& eclState = model_.ebosSimulator().vanguard().eclState();

@@ -33,7 +33,7 @@ namespace Opm {
 template <class TypeTag>
 class ISTLSolverBda;
 template <class TypeTag>
-class ISTLSolverEbos;
+class ISTLSolver;
 }
 
 
@@ -223,7 +223,7 @@ struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams> {
 #if COMPILE_BDA_BRIDGE
     using type = ISTLSolverBda<TypeTag>;
 #else
-    using type = ISTLSolverEbos<TypeTag>;
+    using type = ISTLSolver<TypeTag>;
 #endif
 };
 } // namespace Opm::Properties
