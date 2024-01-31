@@ -113,6 +113,9 @@ assembleControlEq(const WellState& well_state,
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             rates[Gas] = primary_variables.getQs(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx));
         }
+        if constexpr (Indices::enableSolvent) {
+            rates[Gas] += primary_variables.getQs(Indices::contiSolventEqIdx);
+        }
         return rates;
     };
 
