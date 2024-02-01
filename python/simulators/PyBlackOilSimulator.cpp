@@ -35,6 +35,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <stdlib.h>
 
 namespace py = pybind11;
 
@@ -102,6 +103,7 @@ py::array_t<double>
 PyBlackOilSimulator::
 getFluidStateVariable(const std::string &name) const
 {
+    setenv("OPM_DEBUG", "1", /*overwrite=*/1);
     std::cout << "getFluidStateVariable: " << name << std::endl;
     auto vector = getFluidState().getFluidStateVariable(name);
     return py::array(vector.size(), vector.data());
@@ -127,7 +129,6 @@ std::map<std::string, int>
 PyBlackOilSimulator::
 getPrimaryVarMeaningMap(const std::string &variable) const
 {
-
     return getFluidState().getPrimaryVarMeaningMap(variable);
 }
 
