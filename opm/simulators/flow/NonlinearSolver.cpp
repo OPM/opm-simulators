@@ -18,7 +18,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
-#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
+#include <opm/simulators/flow/NonlinearSolver.hpp>
 
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>

@@ -29,7 +29,7 @@
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/ExtraConvergenceOutputThread.hpp>
-#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
+#include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/SimulatorSerializer.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
@@ -171,7 +171,7 @@ public:
     typedef BlackOilMICPModule<TypeTag> MICPModule;
 
     using Model = BlackoilModel<TypeTag>;
-    typedef NonlinearSolverEbos<TypeTag, Model> Solver;
+    using Solver = NonlinearSolver<TypeTag, Model>;
     typedef typename Model::ModelParameters ModelParameters;
     typedef typename Solver::SolverParameters SolverParameters;
     typedef BlackoilWellModel<TypeTag> WellModel;

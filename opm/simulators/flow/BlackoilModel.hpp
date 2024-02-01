@@ -42,7 +42,7 @@
 #include <opm/simulators/flow/BlackoilModelNldd.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
-#include <opm/simulators/flow/NonlinearSolverEbos.hpp>
+#include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>

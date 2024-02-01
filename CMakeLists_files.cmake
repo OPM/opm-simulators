@@ -49,7 +49,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/LogOutputHelper.cpp
   opm/simulators/flow/Main.cpp
-  opm/simulators/flow/NonlinearSolverEbos.cpp
+  opm/simulators/flow/NonlinearSolver.cpp
   opm/simulators/flow/RSTConv.cpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
@@ -451,7 +451,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMainEbos.hpp
   opm/simulators/flow/Main.hpp
-  opm/simulators/flow/NonlinearSolverEbos.hpp
+  opm/simulators/flow/NonlinearSolver.hpp
   opm/simulators/flow/RSTConv.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp
   opm/simulators/flow/SimulatorSerializer.hpp

@@ -18,8 +18,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_NON_LINEAR_SOLVER_EBOS_HPP
-#define OPM_NON_LINEAR_SOLVER_EBOS_HPP
+#ifndef OPM_NON_LINEAR_SOLVER_HPP
+#define OPM_NON_LINEAR_SOLVER_HPP
 
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/common/ErrorMacros.hpp>
@@ -106,7 +106,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
     /// A nonlinear solver class suitable for general fully-implicit models,
     /// as well as pressure, transport and sequential models.
     template <class TypeTag, class PhysicalModel>
-    class NonlinearSolverEbos
+    class NonlinearSolver
     {
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
@@ -175,7 +175,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         ///
         /// \param[in]      param   parameters controlling nonlinear process
         /// \param[in, out] model   physical simulation model.
-        NonlinearSolverEbos(const SolverParameters& param,
+        NonlinearSolver(const SolverParameters& param,
                             std::unique_ptr<PhysicalModel> model)
             : param_(param)
             , model_(std::move(model))
@@ -351,4 +351,4 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
 
 } // namespace Opm
 
-#endif // OPM_NON_LINEAR_SOLVER_EBOS_HPP
+#endif // OPM_NON_LINEAR_SOLVER_HPP
