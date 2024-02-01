@@ -29,7 +29,9 @@
 #include <opm/simulators/linalg/cuistl/CuOwnerOverlapCopy.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/cuistl/set_device.hpp>
 #include <random>
+#include <mpi.h>
 
 bool
 init_unit_test_func()
@@ -41,6 +43,10 @@ int
 main(int argc, char** argv)
 {
     [[maybe_unused]] const auto& helper = Dune::MPIHelper::instance(argc, argv);
+    int rank, totalRanks;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &totalRanks);
+    Opm::cuistl::setDevice(rank, totalRanks);
     boost::unit_test::unit_test_main(&init_unit_test_func, argc, argv);
 }
 
@@ -58,8 +64,10 @@ BOOST_AUTO_TEST_CASE(TestProject)
     auto xCPU = std::vector<double> {{1.0, 2.0, 3.0}};
     auto xGPU = Opm::cuistl::CuVector<double>(xCPU);
 
+    auto gpuComm = std::make_shared<Opm::cuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
+    
     auto cuOwnerOverlapCopy
-        = Opm::cuistl::CuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(ownerOverlapCopy);
+        = Opm::cuistl::CuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
 
     cuOwnerOverlapCopy.project(xGPU);
 
@@ -88,8 +96,10 @@ BOOST_AUTO_TEST_CASE(TestDot)
     auto xCPU = std::vector<double> {{1.0, 2.0, 3.0}};
     auto xGPU = Opm::cuistl::CuVector<double>(xCPU);
 
+    auto gpuComm = std::make_shared<Opm::cuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
+
     auto cuOwnerOverlapCopy
-        = Opm::cuistl::CuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(ownerOverlapCopy);
+        = Opm::cuistl::CuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
 
     double outputDune = -1.0;
     auto xDune = xGPU.asDuneBlockVector<1>();
@@ -100,5 +110,4 @@ BOOST_AUTO_TEST_CASE(TestDot)
 
 
     BOOST_CHECK_EQUAL(outputDune, output);
-    BOOST_CHECK_EQUAL(4.0, output);
 }

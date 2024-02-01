@@ -33,8 +33,6 @@
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/detail/has_function.hpp>
 
-
-
 namespace Opm::cuistl
 {
 //! @brief Wraps a CUDA solver to work with CPU data.
@@ -163,10 +161,31 @@ private:
             auto preconditionerReallyOnGPU = preconditionerAdapterAsHolder->getUnderlyingPreconditioner();
             const auto& communication = m_opOnCPUWithMatrix.getCommunication();
 
+            // Temporary solution use the GPU Direct communication solely based on these prepcrosessor statements
+            bool mpiMightBeSupportedDuringCompilation = true;
+            bool mpiMightBeSupportedDuringRuntime = true;
+
+            #if defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
+                mpiMightBeSupportedDuringCompilation = false;
+            #endif /* MPIX_CUDA_AWARE_SUPPORT */
+
+            #if defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_Query_cuda_support
+                mpiMightBeSupportedDuringRuntime = false;
+            #endif /* MPIX_CUDA_AWARE_SUPPORT */
+
+            // TODO add typename Operator communication type as a named type with using
+            std::shared_ptr<Opm::cuistl::GPUSender<real_type, typename Operator::communication_type>> gpuComm;
+            if (mpiMightBeSupportedDuringCompilation && mpiMightBeSupportedDuringRuntime){
+                gpuComm = std::make_shared<Opm::cuistl::GPUAwareMPISender<real_type, block_size, typename Operator::communication_type>>(communication);
+            }
+            else{
+                gpuComm = std::make_shared<Opm::cuistl::GPUObliviousMPISender<real_type, block_size, typename Operator::communication_type>>(communication);
+            }
+
             using CudaCommunication = CuOwnerOverlapCopy<real_type, block_size, typename Operator::communication_type>;
             using SchwarzOperator
                 = Dune::OverlappingSchwarzOperator<CuSparseMatrix<real_type>, XGPU, XGPU, CudaCommunication>;
-            auto cudaCommunication = std::make_shared<CudaCommunication>(communication);
+            auto cudaCommunication = std::make_shared<CudaCommunication>(gpuComm);
 
             auto mpiPreconditioner = std::make_shared<CuBlockPreconditioner<XGPU, XGPU, CudaCommunication>>(
                 preconditionerReallyOnGPU, cudaCommunication);
