@@ -66,7 +66,7 @@ namespace Opm::Properties {
 
     template<>
     struct LinearSolverBackend<TTag::TestRestartTypeTag, TTag::FlowIstlSolverParams> {
-        using type = ISTLSolverEbos<TTag::TestRestartTypeTag>;
+        using type = ISTLSolver<TTag::TestRestartTypeTag>;
     };
 }
 
