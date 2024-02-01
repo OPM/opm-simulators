@@ -422,7 +422,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"NOGGF", {true, std::nullopt}},
         {"NOINSPEC", {false, std::nullopt}},
         {"NOMONITO", {true, std::nullopt}},
-        {"NONNC", {true, std::nullopt}},
         {"NORSSPEC", {false, std::nullopt}},
         {"NOWARN", {false, std::nullopt}},
         {"NSTACK", {false, std::nullopt}},

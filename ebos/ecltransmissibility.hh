@@ -153,7 +153,7 @@ public:
 protected:
     void updateFromEclState_(bool global);
 
-    void removeSmallNonCartesianTransmissibilities_();
+    void removeNonCartesianTransmissibilities_(bool removeAll);
 
     /// \brief Apply the Multipliers for the case PINCH(4)==TOPBOT
     ///
@@ -286,6 +286,12 @@ protected:
     const LookUpData<Grid,GridView> lookUpData_;
     const LookUpCartesianData<Grid,GridView> lookUpCartesianData_;
 };
+
+namespace details {
+    std::uint64_t isId(std::uint32_t elemIdx1, std::uint32_t elemIdx2);
+    std::pair<std::uint32_t, std::uint32_t> isIdReverse(const std::uint64_t& id);
+    std::uint64_t directionalIsId(std::uint32_t elemIdx1, std::uint32_t elemIdx2);
+}
 
 } // namespace Opm
 
