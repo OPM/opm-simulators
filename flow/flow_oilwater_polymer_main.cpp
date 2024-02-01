@@ -15,7 +15,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include <flow/flow_ebos_oilwater_polymer.hpp>
+#include <flow/flow_oilwater_polymer.hpp>
 
 
 int main(int argc, char** argv)

@@ -15,7 +15,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include <flow/flow_ebos_brine_saltprecipitation.hpp>
+#include <flow/flow_brine_saltprecipitation.hpp>
 
 
 int main(int argc, char** argv)
