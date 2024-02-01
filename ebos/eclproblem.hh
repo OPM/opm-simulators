@@ -182,6 +182,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using ExtboModule = BlackOilExtboModule<TypeTag>;
     using MICPModule = BlackOilMICPModule<TypeTag>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
+    using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
 
     using InitialFluidState = typename EclEquilInitializer<TypeTag>::ScalarFluidState;
 
@@ -308,6 +309,7 @@ public:
         ExtboModule::initFromState(vanguard.eclState());
         MICPModule::initFromState(vanguard.eclState());
         DispersionModule::initFromState(vanguard.eclState());
+        DiffusionModule::initFromState(vanguard.eclState());
 
         // create the ECL writer
         eclWriter_ = std::make_unique<EclWriterType>(simulator);
