@@ -286,6 +286,20 @@ CuVector<T>::copyToHost(std::vector<T>& data) const
 {
     copyToHost(data.data(), data.size());
 }
+
+template <typename T>
+void
+CuVector<T>::prepareSendBuf(CuVector<T>& buffer, const CuVector<int>& indexSet) const
+{
+    return detail::prepareSendBuf(m_dataOnDevice, buffer.data(), indexSet.dim(), indexSet.data());
+}
+template <typename T>
+void
+CuVector<T>::syncFromRecvBuf(CuVector<T>& buffer, const CuVector<int>& indexSet) const
+{
+    return detail::syncFromRecvBuf(m_dataOnDevice, buffer.data(), indexSet.dim(), indexSet.data());
+}
+
 template class CuVector<double>;
 template class CuVector<float>;
 template class CuVector<int>;
