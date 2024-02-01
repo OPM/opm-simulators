@@ -580,7 +580,7 @@ foreach(OBJ ${COMMON_MODELS} ${FLOW_MODELS} ${FLOW_VARIANT_MODELS})
   opm_add_test(flow_${OBJ}
                ONLY_COMPILE
                SOURCES
-               flow/flow_${OBJ}.cpp
+               flow/flow_${OBJ}_main.cpp
                $<TARGET_OBJECTS:moduleVersion>
                $<TARGET_OBJECTS:flow_lib${OBJ}>
                EXE_NAME flow_${OBJ}
