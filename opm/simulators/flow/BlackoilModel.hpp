@@ -21,8 +21,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILMODELEBOS_HEADER_INCLUDED
-#define OPM_BLACKOILMODELEBOS_HEADER_INCLUDED
+#ifndef OPM_BLACKOILMODEL_HEADER_INCLUDED
+#define OPM_BLACKOILMODEL_HEADER_INCLUDED
 
 #include <fmt/format.h>
 
@@ -39,8 +39,8 @@
 
 #include <opm/simulators/aquifers/AquiferGridUtils.hpp>
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/flow/BlackoilModelEbosNldd.hpp>
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelNldd.hpp>
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/NonlinearSolverEbos.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
@@ -161,11 +161,11 @@ namespace Opm {
     /// uses an industry-standard TPFA discretization with per-phase
     /// upwind weighting of mobilities.
     template <class TypeTag>
-    class BlackoilModelEbos
+    class BlackoilModel
     {
     public:
         // ---------  Types and enums  ---------
-        using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
+        using ModelParameters = BlackoilModelParameters<TypeTag>;
 
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using Grid = GetPropType<TypeTag, Properties::Grid>;
@@ -225,10 +225,10 @@ namespace Opm {
         /// \param[in] linsolver        linear solver
         /// \param[in] eclState         eclipse state
         /// \param[in] terminal_output  request output to cout/cerr
-        BlackoilModelEbos(Simulator& ebosSimulator,
-                          const ModelParameters& param,
-                          BlackoilWellModel<TypeTag>& well_model,
-                          const bool terminal_output)
+        BlackoilModel(Simulator& ebosSimulator,
+                      const ModelParameters& param,
+                      BlackoilWellModel<TypeTag>& well_model,
+                      const bool terminal_output)
         : ebosSimulator_(ebosSimulator)
         , grid_(ebosSimulator_.vanguard().grid())
         , phaseUsage_(phaseUsageFromDeck(eclState()))
@@ -251,7 +251,7 @@ namespace Opm {
                 if (terminal_output) {
                     OpmLog::info("Using Non-Linear Domain Decomposition solver (nldd).");
                 }
-                nlddSolver_ = std::make_unique<BlackoilModelEbosNldd<TypeTag>>(*this);
+                nlddSolver_ = std::make_unique<BlackoilModelNldd<TypeTag>>(*this);
             } else if (param_.nonlinear_solver_ == "newton") {
                 if (terminal_output) {
                     OpmLog::info("Using Newton nonlinear solver.");
@@ -818,7 +818,7 @@ namespace Opm {
                                   B_avg, R_sum, maxCoeff, maxCoeffCell);
             }
 
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::localConvergenceData() failed: ", grid_.comm());
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilModel::localConvergenceData() failed: ", grid_.comm());
 
             // compute local average in terms of global number of elements
             const int bSize = B_avg.size();
@@ -872,7 +872,7 @@ namespace Opm {
                 }
             }
 
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilModelEbos::ComputeCnvError() failed: ", grid_.comm());
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilModel::ComputeCnvError() failed: ", grid_.comm());
 
             return grid_.comm().sum(errorPV);
         }
@@ -881,7 +881,7 @@ namespace Opm {
         void updateTUNING(const Tuning& tuning) {          
             param_.tolerance_mb_ = tuning.XXXMBE;
             if ( terminal_output_ ) {
-                OpmLog::debug(fmt::format("Setting BlackoilModelEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
+                OpmLog::debug(fmt::format("Setting BlackoilModel mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
             }
         }
 
@@ -1125,7 +1125,7 @@ namespace Opm {
         std::vector<StepReport> convergence_reports_;
         ComponentName compNames_{};
 
-        std::unique_ptr<BlackoilModelEbosNldd<TypeTag>> nlddSolver_; //!< Non-linear DD solver
+        std::unique_ptr<BlackoilModelNldd<TypeTag>> nlddSolver_; //!< Non-linear DD solver
 
     public:
         /// return the StandardWells object
@@ -1285,4 +1285,4 @@ namespace Opm {
     };
 } // namespace Opm
 
-#endif // OPM_BLACKOILMODELBASE_IMPL_HEADER_INCLUDED
+#endif // OPM_BLACKOILMODEL_HEADER_INCLUDED

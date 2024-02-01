@@ -39,7 +39,7 @@
 #include <opm/models/utils/start.hh>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 #if HAVE_DUNE_FEM
@@ -233,7 +233,7 @@ struct EquilFixture {
         Dune::MPIHelper::instance(argc, argv);
 #endif
         Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
-        Opm::BlackoilModelParametersEbos<TypeTag>::registerParameters();
+        Opm::BlackoilModelParameters<TypeTag>::registerParameters();
         Opm::AdaptiveTimeSteppingEbos<TypeTag>::registerParameters();
         Opm::Parameters::registerParam<TypeTag, bool>("EnableTerminalOutput",
                                                       "EnableTerminalOutput",

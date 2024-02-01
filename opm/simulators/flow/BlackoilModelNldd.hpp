@@ -21,8 +21,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_BLACKOILMODELEBOS_NLDD_HEADER_INCLUDED
-#define OPM_BLACKOILMODELEBOS_NLDD_HEADER_INCLUDED
+#ifndef OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
+#define OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED
 
 #include <dune/common/timer.hh>
 
@@ -71,24 +71,24 @@
 
 namespace Opm {
 
-template<class TypeTag> class BlackoilModelEbos;
+template<class TypeTag> class BlackoilModel;
 
 /// A NLDD implementation for three-phase black oil.
 template <class TypeTag>
-class BlackoilModelEbosNldd {
+class BlackoilModelNldd {
 public:
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
-    using ModelParameters = BlackoilModelParametersEbos<TypeTag>;
+    using ModelParameters = BlackoilModelParameters<TypeTag>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using SolutionVector = GetPropType<TypeTag, Properties::SolutionVector>;
 
-    using BVector = typename BlackoilModelEbos<TypeTag>::BVector;
+    using BVector = typename BlackoilModel<TypeTag>::BVector;
     using Domain = SubDomain<Grid>;
     using ISTLSolverType = ISTLSolverEbos<TypeTag>;
-    using Mat = typename BlackoilModelEbos<TypeTag>::Mat;
+    using Mat = typename BlackoilModel<TypeTag>::Mat;
 
     static constexpr int numEq = Indices::numEq;
 
@@ -96,7 +96,7 @@ public:
     //! \param model BlackOil model to solve for
     //! \param param param Model parameters
     //! \param compNames Names of the solution components
-    BlackoilModelEbosNldd(BlackoilModelEbos<TypeTag>& model)
+    BlackoilModelNldd(BlackoilModel<TypeTag>& model)
         : model_(model), rank_(model_.ebosSimulator().vanguard().grid().comm().rank())
     {
         // Create partitions.
@@ -958,7 +958,7 @@ private:
         return p;
     }
 
-    BlackoilModelEbos<TypeTag>& model_; //!< Reference to model
+    BlackoilModel<TypeTag>& model_; //!< Reference to model
     std::vector<Domain> domains_; //!< Vector of subdomains
     std::vector<std::unique_ptr<Mat>> domain_matrices_; //!< Vector of matrix operator for each subdomain
     std::vector<ISTLSolverType> domain_linsolvers_; //!< Vector of linear solvers for each domain
@@ -968,4 +968,4 @@ private:
 
 } // namespace Opm
 
-#endif // OPM_BLACKOILMODELEBOS_NLDD_HEADER_INCLUDED
+#endif // OPM_BLACKOILMODEL_NLDD_HEADER_INCLUDED

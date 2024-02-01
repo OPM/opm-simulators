@@ -35,7 +35,7 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
-#include <opm/simulators/flow/BlackoilModelEbos.hpp>
+#include <opm/simulators/flow/BlackoilModel.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>

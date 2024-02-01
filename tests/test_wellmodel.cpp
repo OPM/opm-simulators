@@ -42,7 +42,7 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/simulators/flow/FlowMainEbos.hpp>
-#include <opm/simulators/flow/BlackoilModelEbos.hpp>
+#include <opm/simulators/flow/BlackoilModel.hpp>
 
 #include <ebos/eclproblem.hh>
 #include <opm/models/utils/start.hh>
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
     BOOST_CHECK_EQUAL( wells_ecl.size(), 2);
     const Opm::Well& well = wells_ecl[1];
-    const Opm::BlackoilModelParametersEbos<Opm::Properties::TTag::EclFlowProblem> param;
+    const Opm::BlackoilModelParameters<Opm::Properties::TTag::EclFlowProblem> param;
 
     // For the conversion between the surface volume rate and resrevoir voidage rate
     typedef Opm::BlackOilFluidSystem<double> FluidSystem;
@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
 
     {
         const int nw = wells_ecl.size();
-        const Opm::BlackoilModelParametersEbos<Opm::Properties::TTag::EclFlowProblem> param;
+        const Opm::BlackoilModelParameters<Opm::Properties::TTag::EclFlowProblem> param;
 
         for (int w = 0; w < nw; ++w) {
             // For the conversion between the surface volume rate and resrevoir voidage rate

@@ -35,7 +35,7 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/simulators/flow/BlackoilModelParametersEbos.hpp>
+#include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
