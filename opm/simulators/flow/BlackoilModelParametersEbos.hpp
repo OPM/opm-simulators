@@ -362,7 +362,7 @@ struct EnableWellOperabilityCheck<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct EnableWellOperabilityCheckIter<TypeTag, TTag::FlowModelParameters> {
-    static constexpr bool value = false;
+    static constexpr bool value = true;
 };
 template<class TypeTag>
 struct DebugEmitCellPartition<TypeTag, TTag::FlowModelParameters> {
