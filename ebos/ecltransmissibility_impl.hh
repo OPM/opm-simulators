@@ -53,37 +53,36 @@
 #include <utility>
 #include <vector>
 
-namespace {
-
-constexpr unsigned elemIdxShift = 32; // bits
-
-std::uint64_t isId(std::uint32_t elemIdx1, std::uint32_t elemIdx2)
-{
-    std::uint32_t elemAIdx = std::min(elemIdx1, elemIdx2);
-    std::uint64_t elemBIdx = std::max(elemIdx1, elemIdx2);
-
-    return (elemBIdx<<elemIdxShift) + elemAIdx;
-}
-
-std::pair<std::uint32_t, std::uint32_t> isIdReverse(const std::uint64_t& id)
-{
-    // Assigning an unsigned integer to a narrower type discards the most significant bits.
-    // See "The C programming language", section A.6.2.
-    // NOTE that the ordering of element A and B may have changed
-    std::uint32_t elemAIdx = id;
-    std::uint32_t elemBIdx = (id - elemAIdx) >> elemIdxShift;
-
-    return std::make_pair(elemAIdx, elemBIdx);
-}
-
-std::uint64_t directionalIsId(std::uint32_t elemIdx1, std::uint32_t elemIdx2)
-{
-    return (std::uint64_t(elemIdx1)<<elemIdxShift) + elemIdx2;
-}
-
-}
-
 namespace Opm {
+
+namespace details {
+
+    constexpr unsigned elemIdxShift = 32; // bits
+
+    std::uint64_t isId(std::uint32_t elemIdx1, std::uint32_t elemIdx2)
+    {
+        std::uint32_t elemAIdx = std::min(elemIdx1, elemIdx2);
+        std::uint64_t elemBIdx = std::max(elemIdx1, elemIdx2);
+
+        return (elemBIdx<<elemIdxShift) + elemAIdx;
+    }
+
+    std::pair<std::uint32_t, std::uint32_t> isIdReverse(const std::uint64_t& id)
+    {
+        // Assigning an unsigned integer to a narrower type discards the most significant bits.
+        // See "The C programming language", section A.6.2.
+        // NOTE that the ordering of element A and B may have changed
+        std::uint32_t elemAIdx = id;
+        std::uint32_t elemBIdx = (id - elemAIdx) >> elemIdxShift;
+
+        return std::make_pair(elemAIdx, elemBIdx);
+    }
+
+    std::uint64_t directionalIsId(std::uint32_t elemIdx1, std::uint32_t elemIdx2)
+    {
+        return (std::uint64_t(elemIdx1)<<elemIdxShift) + elemIdx2;
+    }
+}
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
@@ -114,7 +113,7 @@ template<class Grid, class GridView, class ElementMapper, class CartesianIndexMa
 Scalar EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 transmissibility(unsigned elemIdx1, unsigned elemIdx2) const
 {
-    return trans_.at(isId(elemIdx1, elemIdx2));
+    return trans_.at(details::isId(elemIdx1, elemIdx2));
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -128,7 +127,7 @@ template<class Grid, class GridView, class ElementMapper, class CartesianIndexMa
 Scalar EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 thermalHalfTrans(unsigned insideElemIdx, unsigned outsideElemIdx) const
 {
-    return thermalHalfTrans_.at(directionalIsId(insideElemIdx, outsideElemIdx));
+    return thermalHalfTrans_.at(details::directionalIsId(insideElemIdx, outsideElemIdx));
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -145,7 +144,7 @@ diffusivity(unsigned elemIdx1, unsigned elemIdx2) const
     if (diffusivity_.empty())
         return 0.0;
 
-    return diffusivity_.at(isId(elemIdx1, elemIdx2));
+    return diffusivity_.at(details::isId(elemIdx1, elemIdx2));
 
 }
 
@@ -156,7 +155,7 @@ dispersivity(unsigned elemIdx1, unsigned elemIdx2) const
     if (dispersivity_.empty())
         return 0.0;
 
-    return dispersivity_.at(isId(elemIdx1, elemIdx2));
+    return dispersivity_.at(details::isId(elemIdx1, elemIdx2));
 
 }
 
@@ -336,17 +335,17 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                 // NNC. Set zero transmissibility, as it will be
                 // *added to* by applyNncToGridTrans_() later.
                 assert(outsideFaceIdx == -1);
-                trans_[isId(elemIdx, outsideElemIdx)] = 0.0;
+                trans_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
                 if (enableEnergy_){
-                    thermalHalfTrans_[directionalIsId(elemIdx, outsideElemIdx)] = 0.0;
-                    thermalHalfTrans_[directionalIsId(outsideElemIdx, elemIdx)] = 0.0;
+                    thermalHalfTrans_[details::directionalIsId(elemIdx, outsideElemIdx)] = 0.0;
+                    thermalHalfTrans_[details::directionalIsId(outsideElemIdx, elemIdx)] = 0.0;
                 }
 
                 if (updateDiffusivity) {
-                    diffusivity_[isId(elemIdx, outsideElemIdx)] = 0.0;
+                    diffusivity_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
                 }
                 if (updateDispersivity) {
-                    dispersivity_[isId(elemIdx, outsideElemIdx)] = 0.0;
+                    dispersivity_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
                 }
                 continue;
             }
@@ -459,7 +458,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                                                    outsideCartElemIdx,
                                                    faceDir);
 
-            trans_[isId(elemIdx, outsideElemIdx)] = trans;
+            trans_[details::isId(elemIdx, outsideElemIdx)] = trans;
 
             // update the "thermal half transmissibility" for the intersection
             if (enableEnergy_) {
@@ -482,8 +481,8 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                                                         axisCentroids),
                                         1.0);
                 //TODO Add support for multipliers
-                thermalHalfTrans_[directionalIsId(elemIdx, outsideElemIdx)] = halfDiffusivity1;
-                thermalHalfTrans_[directionalIsId(outsideElemIdx, elemIdx)] = halfDiffusivity2;
+                thermalHalfTrans_[details::directionalIsId(elemIdx, outsideElemIdx)] = halfDiffusivity1;
+                thermalHalfTrans_[details::directionalIsId(outsideElemIdx, elemIdx)] = halfDiffusivity2;
            }
 
             // update the "diffusive half transmissibility" for the intersection
@@ -519,7 +518,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                     diffusivity = 1.0 / (1.0/halfDiffusivity1 + 1.0/halfDiffusivity2);
 
 
-                diffusivity_[isId(elemIdx, outsideElemIdx)] = diffusivity;
+                diffusivity_[details::isId(elemIdx, outsideElemIdx)] = diffusivity;
            }
 
            // update the "dispersivity half transmissibility" for the intersection
@@ -555,7 +554,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                     dispersivity = 1.0 / (1.0/halfDispersivity1 + 1.0/halfDispersivity2);
 
 
-                dispersivity_[isId(elemIdx, outsideElemIdx)] = dispersivity;
+                dispersivity_[details::isId(elemIdx, outsideElemIdx)] = dispersivity;
            }
         }
     }
@@ -710,7 +709,7 @@ removeNonCartesianTransmissibilities_(bool removeAll)
         //either remove all NNC transmissibilities or those less than the threshold (by default 1e-6 in the deck's unit system)
         if (removeAll or trans.second < transmissibilityThreshold_) {
             const auto& id = trans.first;
-            const auto& elements = isIdReverse(id);
+            const auto& elements = details::isIdReverse(id);
             int gc1 = std::min(cartMapper_.cartesianIndex(elements.first), cartMapper_.cartesianIndex(elements.second));
             int gc2 = std::max(cartMapper_.cartesianIndex(elements.first), cartMapper_.cartesianIndex(elements.second));
 
@@ -848,7 +847,7 @@ createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
             if (c1 > c2)
                 continue; // we only need to handle each connection once, thank you.
 
-            auto isID = isId(c1, c2);
+            auto isID = details::isId(c1, c2);
 
             // For CpGrid with LGRs, when leaf grid view cells with indices c1 and c2
             // have the same parent cell on level zero, then gc2 - gc1 == 0. In that case,
@@ -911,7 +910,7 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
             if (c1 > c2)
                 continue; // we only need to handle each connection once, thank you.
 
-            auto isID = isId(c1, c2);
+            auto isID = details::isId(c1, c2);
 
             // For CpGrid with LGRs, when leaf grid view cells with indices c1 and c2
             // have the same parent cell on level zero, then gc2 - gc1 == 0. In that case,
@@ -1016,7 +1015,7 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
         }
 
         {
-            auto candidate = trans_.find(isId(low, high));
+            auto candidate = trans_.find(details::isId(low, high));
             if (candidate != trans_.end()) {
                 // NNC is represented by the grid and might be a neighboring connection
                 // In this case the transmissibilty is added to the value already
@@ -1025,14 +1024,14 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
             }
         }
         // if (enableEnergy_) {
-        //     auto candidate = thermalHalfTrans_.find(directionalIsId(low, high));
+        //     auto candidate = thermalHalfTrans_.find(details::directionalIsId(low, high));
         //     if (candidate != trans_.end()) {
         //         // NNC is represented by the grid and might be a neighboring connection
         //         // In this case the transmissibilty is added to the value already
         //         // set or computed.
         //         candidate->second += nncEntry.transEnergy1;
         //     }
-        //     auto candidate = thermalHalfTrans_.find(directionalIsId(high, low));
+        //     auto candidate = thermalHalfTrans_.find(details::directionalIsId(high, low));
         //     if (candidate != trans_.end()) {
         //         // NNC is represented by the grid and might be a neighboring connection
         //         // In this case the transmissibilty is added to the value already
@@ -1041,7 +1040,7 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
         //     }
         // }
         // if (enableDiffusivity_) {
-        //     auto candidate = diffusivity_.find(isId(low, high));
+        //     auto candidate = diffusivity_.find(details::isId(low, high));
         //     if (candidate != trans_.end()) {
         //         // NNC is represented by the grid and might be a neighboring connection
         //         // In this case the transmissibilty is added to the value already
@@ -1131,7 +1130,7 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
         if (low > high)
             std::swap(low, high);
 
-        auto candidate = trans_.find(isId(low, high));
+        auto candidate = trans_.find(details::isId(low, high));
         if (candidate == trans_.end()) {
             print_warning(*nnc);
             ++nnc;
@@ -1194,7 +1193,7 @@ applyNncMultreg_(const std::unordered_map<std::size_t,int>& cartesianToCompresse
                 std::swap(low, high);
             }
 
-            auto candidate = this->trans_.find(isId(low, high));
+            auto candidate = this->trans_.find(details::isId(low, high));
             if (candidate != this->trans_.end()) {
                 candidate->second *= transMult.getRegionMultiplierNNC(c1, c2);
             }
