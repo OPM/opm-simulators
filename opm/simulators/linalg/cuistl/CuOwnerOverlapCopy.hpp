@@ -26,29 +26,30 @@
 
 namespace Opm::cuistl
 {
-/**
- * @brief CUDA compatiable variant of Dune::OwnerOverlapCopyCommunication
- *
- * This class can essentially be seen as an adapter around Dune::OwnerOverlapCopyCommunication, and should work as
- * a Dune::OwnerOverlapCopyCommunication on CuVectors
- *
- *
- * @note This currently only has the functionality to parallelize the linear solve.
- *
- * @tparam field_type should be a field_type supported by CuVector (double, float)
- * @tparam block_size the block size used (this is relevant for say figuring out the correct indices)
- * @tparam OwnerOverlapCopyCommunicationType should mimic Dune::OwnerOverlapCopyCommunication.
- */
+
+// CuOwnerOverlapCopy is instansiated with a GPUSender object
+// This class contains a virtual function that is overriden by one of two possible subclasses
+// One handles the case using GPU direct, the other sends messages over MPI through the CPU
+template<class field_type>
+class GPUSender {
+public:
+    using X = CuVector<field_type>;
+
+    virtual void copyOwnerToAll(const X& source, X& dest) const = 0;
+
+    virtual void dot(const X& x, const X& y, field_type& output) const = 0;
+    virtual field_type norm(const X& x) const = 0;
+    virtual void project(X& x) const = 0;
+};
+
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
-class CuOwnerOverlapCopy
+class GPUObliviousMPISender : public GPUSender<field_type> 
 {
 public:
     using X = CuVector<field_type>;
 
-    CuOwnerOverlapCopy(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
-        : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy)
-    {
-    }
+    GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy){}
+    
     /**
      * @brief dot will carry out the dot product between x and y on the owned indices, then sum up the result across MPI
      * processes.
@@ -56,7 +57,7 @@ public:
      *
      * @note This uses the same interface as its DUNE equivalent.
      */
-    void dot(const X& x, const X& y, field_type& output) const
+    void dot(const X& x, const X& y, field_type& output) const override
     {
         std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
 
@@ -70,7 +71,7 @@ public:
      * This will compute the dot product of x with itself on owned indices, then
      * sum the result across process and return the square root of the sum.
      */
-    field_type norm(const X& x) const
+    field_type norm(const X& x) const override
     {
         auto xDotX = field_type(0);
         this->dot(x, x, xDotX);
@@ -86,7 +87,7 @@ public:
      *
      * @param[inout] x the vector to project
      */
-    void project(X& x) const
+    void project(X& x) const override
     {
         std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
         x.setZeroAtIndexSet(*m_indicesCopy);
@@ -98,8 +99,7 @@ public:
      * @param[in] source
      * @param[out] dest
      */
-    void copyOwnerToAll_orig(const X& source, X& dest) const
-    {
+    void copyOwnerToAll(const X& source, X& dest) const override {
         // TODO: [perf] Can we reduce copying from the GPU here?
         // TODO: [perf] Maybe create a global buffer instead?
         auto sourceAsDuneVector = source.template asDuneBlockVector<block_size>();
@@ -108,29 +108,99 @@ public:
         dest.copyFromHost(destAsDuneVector);
     }
 
-    // Georgs new code intended to use GPU direct
-    void copyOwnerToAll(const X& source, X& dest) const
-    {
-//             printf("Compile time check:\n");
-// #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-//     printf("This MPI library has CUDA-aware support.\n", MPIX_CUDA_AWARE_SUPPORT);
-// #elif defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
-//     printf("This MPI library does not have CUDA-aware support.\n");
-// #else
-//     printf("This MPI library cannot determine if there is CUDA-aware support.\n");
-// #endif /* MPIX_CUDA_AWARE_SUPPORT */
- 
-//     printf("Run time check:\n");
-// #if defined(MPIX_CUDA_AWARE_SUPPORT)
-//     if (1 == MPIX_Query_cuda_support()) {
-//         printf("This MPI library has CUDA-aware support.\n");
-//     } else {
-//         printf("This MPI library does not have CUDA-aware support.\n");
-//     }
-// #else /* !defined(MPIX_CUDA_AWARE_SUPPORT) */
-//     printf("This MPI library cannot determine if there is CUDA-aware support.\n");
-// #endif /* MPIX_CUDA_AWARE_SUPPORT */
+private:
+    const OwnerOverlapCopyCommunicationType& m_cpuOwnerOverlapCopy;
 
+
+    // Used to call the initIndexSet. Note that this is kind of a
+    // premature optimization, in the sense that we could just initialize these indices
+    // always, but they are not always used.
+    mutable std::once_flag m_initializedIndices;
+    mutable std::unique_ptr<CuVector<int>> m_indicesCopy;
+    mutable std::unique_ptr<CuVector<int>> m_indicesOwner;
+
+    void initIndexSet() const
+    {
+        // We need indices that we we will use in the project, dot and norm calls.
+        // TODO: [premature perf] Can this be run once per instance? Or do we need to rebuild every time?
+        const auto& pis = m_cpuOwnerOverlapCopy.indexSet();
+        std::vector<int> indicesCopyOnCPU;
+        std::vector<int> indicesOwnerCPU;
+        for (const auto& index : pis) {
+            if (index.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::copy) {
+                for (int component = 0; component < block_size; ++component) {
+                    indicesCopyOnCPU.push_back(index.local().local() * block_size + component);
+                }
+            }
+
+            if (index.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::owner) {
+                for (int component = 0; component < block_size; ++component) {
+                    indicesOwnerCPU.push_back(index.local().local() * block_size + component);
+                }
+            }
+        }
+
+        m_indicesCopy = std::make_unique<CuVector<int>>(indicesCopyOnCPU);
+        m_indicesOwner = std::make_unique<CuVector<int>>(indicesOwnerCPU);
+    }
+};
+
+template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
+class GPUAwareMPISender : public GPUSender<field_type>
+{
+public:
+    using X = CuVector<field_type>;
+
+    GPUAwareMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
+        : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy)
+    {
+    }
+    /**
+     * @brief dot will carry out the dot product between x and y on the owned indices, then sum up the result across MPI
+     * processes.
+     * @param[out] output result will be stored here
+     *
+     * @note This uses the same interface as its DUNE equivalent.
+     */
+    void dot(const X& x, const X& y, field_type& output) const override
+    {
+        std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
+
+        const auto dotAtRank = x.dot(y, *m_indicesOwner);
+        output = m_cpuOwnerOverlapCopy.communicator().sum(dotAtRank);
+    }
+
+    /**
+     * @brief norm computes the l^2-norm of x across processes.
+     *
+     * This will compute the dot product of x with itself on owned indices, then
+     * sum the result across process and return the square root of the sum.
+     */
+    field_type norm(const X& x) const override
+    {
+        auto xDotX = field_type(0);
+        this->dot(x, x, xDotX);
+
+        using std::sqrt;
+        return sqrt(xDotX);
+    }
+
+    /**
+     * @brief project will project x to the owned subspace
+     *
+     * For each component i which is not owned, x_i will be set to 0
+     *
+     * @param[inout] x the vector to project
+     */
+    void project(X& x) const override
+    {
+        std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
+        x.setZeroAtIndexSet(*m_indicesCopy);
+    }
+
+    // Georgs new code intended to use GPU direct
+    void copyOwnerToAll(const X& source, X& dest) const override
+    {
 
         assert(&source == &dest); // In this context, source == dest!!!
         std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
@@ -215,7 +285,7 @@ private:
     mutable std::unique_ptr<CuVector<int>> m_indicesCopy;
     mutable std::unique_ptr<CuVector<int>> m_indicesOwner;
 
-        mutable std::unique_ptr<CuVector<int>> m_commpair_indicesCopy;
+    mutable std::unique_ptr<CuVector<int>> m_commpair_indicesCopy;
     mutable std::unique_ptr<CuVector<int>> m_commpair_indicesOwner;
     mutable std::unique_ptr<CuVector<field_type>> m_GPUSendBuf;
     mutable std::unique_ptr<CuVector<field_type>> m_GPURecvBuf;
@@ -332,6 +402,52 @@ private:
 
         buildCommPairIdxs();
     }
+};
+
+/**
+ * @brief CUDA compatiable variant of Dune::OwnerOverlapCopyCommunication
+ *
+ * This class can essentially be seen as an adapter around Dune::OwnerOverlapCopyCommunication, and should work as
+ * a Dune::OwnerOverlapCopyCommunication on CuVectors
+ *
+ *
+ * @note This currently only has the functionality to parallelize the linear solve.
+ *
+ * @tparam field_type should be a field_type supported by CuVector (double, float)
+ * @tparam block_size the block size used (this is relevant for say figuring out the correct indices)
+ * @tparam OwnerOverlapCopyCommunicationType should mimic Dune::OwnerOverlapCopyCommunication.
+ */
+template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
+class CuOwnerOverlapCopy
+{
+public:
+    using X = CuVector<field_type>;
+
+    CuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type>> sender) : m_sender(sender){}
+
+    void copyOwnerToAll(const X& source, X& dest) const {
+        m_sender->copyOwnerToAll(source, dest);
+    }
+
+
+    // TOOD: move this functionality back to this class to avoid code duplication
+    void dot(const X& x, const X& y, field_type& output) const
+    {
+        m_sender->dot(x, y, output);
+    }
+
+    field_type norm(const X& x) const
+    {
+        return m_sender->norm(x);
+    }
+
+    void project(X& x) const
+    {
+        m_sender->project(x);
+    }
+
+private:
+    std::shared_ptr<GPUSender<field_type>> m_sender;
 };
 } // namespace Opm::cuistl
 #endif
