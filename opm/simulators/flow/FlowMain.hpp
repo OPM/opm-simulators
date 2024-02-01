@@ -98,7 +98,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
     {
     public:
         using MaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
-        using EbosSimulator = GetPropType<TypeTag, Properties::Simulator>;
+        using ModelSimulator = GetPropType<TypeTag, Properties::Simulator>;
         using Grid = GetPropType<TypeTag, Properties::Grid>;
         using GridView = GetPropType<TypeTag, Properties::GridView>;
         using Problem = GetPropType<TypeTag, Properties::Problem>;
@@ -138,7 +138,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 
             Simulator::registerParameters();
 
-            // register the parameters inherited from ebos
+            // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
 
             // hide the parameters unused by flow. TODO: this is a pain to maintain
@@ -313,11 +313,13 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             return report.success.exit_status;
         }
 
-        EbosSimulator *getSimulatorPtr() {
-            return ebosSimulator_.get();
+        ModelSimulator* getSimulatorPtr()
+        {
+            return modelSimulator_.get();
         }
 
-        SimulatorTimer* getSimTimer() {
+        SimulatorTimer* getSimTimer()
+        {
             return simtimer_.get();
         }
 
@@ -357,7 +359,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                     return status;
 
                 setupParallelism();
-                setupEbosSimulator();
+                setupModelSimulator();
                 createSimulator();
 
                 // if run, do the actual work, else just initialize
@@ -420,7 +422,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             // force closing of all log files.
             OpmLog::removeAllBackends();
 
-            if (mpi_rank_ != 0 || mpi_size_ < 2 || !this->output_files_ || !ebosSimulator_) {
+            if (mpi_rank_ != 0 || mpi_size_ < 2 || !this->output_files_ || !modelSimulator_) {
                 return;
             }
 
@@ -429,11 +431,11 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                                           EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning));
         }
 
-        void setupEbosSimulator()
+        void setupModelSimulator()
         {
-            ebosSimulator_ = std::make_unique<EbosSimulator>(EclGenericVanguard::comm(), /*verbose=*/false);
-            ebosSimulator_->executionTimer().start();
-            ebosSimulator_->model().applyInitialSolution();
+            modelSimulator_ = std::make_unique<ModelSimulator>(EclGenericVanguard::comm(), /*verbose=*/false);
+            modelSimulator_->executionTimer().start();
+            modelSimulator_->model().applyInitialSolution();
 
             try {
                 // Possible to force initialization only behavior (NOSIM).
@@ -463,13 +465,13 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         }
 
         const EclipseState& eclState() const
-        { return ebosSimulator_->vanguard().eclState(); }
+        { return modelSimulator_->vanguard().eclState(); }
 
         EclipseState& eclState()
-        { return ebosSimulator_->vanguard().eclState(); }
+        { return modelSimulator_->vanguard().eclState(); }
 
         const Schedule& schedule() const
-        { return ebosSimulator_->vanguard().schedule(); }
+        { return modelSimulator_->vanguard().schedule(); }
 
         // Run the simulator.
         int runSimulator()
@@ -571,14 +573,14 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         void createSimulator()
         {
             // Create the simulator instance.
-            simulator_ = std::make_unique<Simulator>(*ebosSimulator_);
+            simulator_ = std::make_unique<Simulator>(*modelSimulator_);
         }
 
         Grid& grid()
-        { return ebosSimulator_->vanguard().grid(); }
+        { return modelSimulator_->vanguard().grid(); }
 
     private:
-        std::unique_ptr<EbosSimulator> ebosSimulator_;
+        std::unique_ptr<ModelSimulator> modelSimulator_;
         int  mpi_rank_ = 0;
         int  mpi_size_ = 1;
         std::any parallel_information_;
