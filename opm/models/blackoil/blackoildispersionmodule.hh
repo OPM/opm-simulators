@@ -122,6 +122,10 @@ public:
 #if HAVE_ECL_INPUT
     static void initFromState(const EclipseState& eclState)
     {
+        if (!eclState.getSimulationConfig().rock_config().dispersion()) {
+            return;
+        }
+
         if (eclState.getSimulationConfig().hasVAPWAT() || eclState.getSimulationConfig().hasVAPOIL()) {
             OpmLog::warning("Dispersion is activated in combination with VAPWAT/VAPOIL. \n"
                             "Water/oil is still allowed to vaporize, but dispersion in the "
