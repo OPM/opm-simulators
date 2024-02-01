@@ -44,7 +44,7 @@
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
-#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>

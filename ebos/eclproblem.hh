@@ -83,7 +83,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/simulators/flow/EclActionHandler.hpp>
-#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>

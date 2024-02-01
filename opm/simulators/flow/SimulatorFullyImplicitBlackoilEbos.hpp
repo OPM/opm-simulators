@@ -31,7 +31,7 @@
 #include <opm/simulators/flow/ExtraConvergenceOutputThread.hpp>
 #include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/SimulatorSerializer.hpp>
-#include <opm/simulators/timestepping/AdaptiveTimeSteppingEbos.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/wells/WellState.hpp>
@@ -166,7 +166,7 @@ public:
     using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
     using AquiferModel = GetPropType<TypeTag, Properties::EclAquiferModel>;
 
-    typedef AdaptiveTimeSteppingEbos<TypeTag> TimeStepper;
+    using TimeStepper = AdaptiveTimeStepping<TypeTag>;
     typedef BlackOilPolymerModule<TypeTag> PolymerModule;
     typedef BlackOilMICPModule<TypeTag> MICPModule;
 

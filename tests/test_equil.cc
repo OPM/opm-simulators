@@ -234,7 +234,7 @@ struct EquilFixture {
 #endif
         Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
         Opm::BlackoilModelParameters<TypeTag>::registerParameters();
-        Opm::AdaptiveTimeSteppingEbos<TypeTag>::registerParameters();
+        Opm::AdaptiveTimeStepping<TypeTag>::registerParameters();
         Opm::Parameters::registerParam<TypeTag, bool>("EnableTerminalOutput",
                                                       "EnableTerminalOutput",
                                                       Opm::getPropValue<TypeTag, Opm::Properties::EnableTerminalOutput>(),
