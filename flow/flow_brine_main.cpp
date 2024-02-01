@@ -20,5 +20,5 @@
 
 int main(int argc, char** argv)
 {
-    return Opm::flowEbosBrineMainStandalone(argc, argv);
+    return Opm::flowBrineMainStandalone(argc, argv);
 }

@@ -20,5 +20,5 @@
 
 int main(int argc, char** argv)
 {
-    return Opm::flowEbosPolymerMainStandalone(argc, argv);
+    return Opm::flowPolymerMainStandalone(argc, argv);
 }

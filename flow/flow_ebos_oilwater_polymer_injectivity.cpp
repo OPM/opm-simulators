@@ -68,16 +68,9 @@ public:
 }}
 
 namespace Opm {
-/* void flowEbosOilWaterPolymerInjectivitySetDeck(Deck& deck, EclipseState& eclState)
-{
-    using TypeTag = Properties::TTag::EclFlowOilWaterPolymerInjectivityProblem;
-    using Vanguard = GetPropType<TypeTag, Properties::Vanguard>;
-
-    Vanguard::setExternalDeck(std::move(deck, &eclState));
-} */
 
 // ----------------- Main program -----------------
-int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -88,7 +81,7 @@ int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCou
     return mainfunc.execute();
 }
 
-int flowEbosOilWaterPolymerInjectivityMainStandalone(int argc, char** argv)
+int flowOilWaterPolymerInjectivityMainStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::FlowOilWaterPolymerInjectivityProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);

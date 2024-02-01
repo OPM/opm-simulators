@@ -107,7 +107,7 @@ class WellTestState;
 
 // ----------------- Main program -----------------
 template <class TypeTag>
-int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -172,17 +172,17 @@ public:
 
     using FlowMainType = FlowMain<Properties::TTag::FlowProblemTPFA>;
     // To be called from the Python interface code. Only do the
-    // initialization and then return a pointer to the FlowEbosMain
+    // initialization and then return a pointer to the FlowMain
     // object that can later be accessed directly from the Python interface
     // to e.g. advance the simulator one report step
-    std::unique_ptr<FlowMainType> initFlowEbosBlackoil(int& exitCode)
+    std::unique_ptr<FlowMainType> initFlowBlackoil(int& exitCode)
     {
         exitCode = EXIT_SUCCESS;
         if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
             // TODO: check that this deck really represents a blackoil
             // case. E.g. check that number of phases == 3
             this->setupVanguard();
-            return flowEbosBlackoilTpfaMainInit(
+            return flowBlackoilTpfaMainInit(
                 argc_, argv_, outputCout_, outputFiles_);
         } else {
             //NOTE: exitCode was set by initialize_() above;
@@ -282,7 +282,7 @@ private:
     int dispatchStatic_()
     {
         this->setupVanguard();
-        return flowEbosMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
+        return flowMain<TypeTag>(argc_, argv_, outputCout_, outputFiles_);
     }
 
     /// \brief Initialize
@@ -470,10 +470,10 @@ private:
             return EXIT_FAILURE;
         }
 
-        return flowEbosMICPMain(this->argc_,
-                                this->argv_,
-                                this->outputCout_,
-                                this->outputFiles_);
+        return flowMICPMain(this->argc_,
+                            this->argv_,
+                            this->outputCout_,
+                            this->outputFiles_);
     }
 
     int runTwoPhase(const Phases& phases)
@@ -485,9 +485,9 @@ private:
         // oil-gas
         if (phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
             if (diffusive) {
-                return flowEbosGasOilDiffuseMain(argc_, argv_, outputCout_, outputFiles_);
+                return flowGasOilDiffuseMain(argc_, argv_, outputCout_, outputFiles_);
             } else {
-                return flowEbosGasOilMain(argc_, argv_, outputCout_, outputFiles_);
+                return flowGasOilMain(argc_, argv_, outputCout_, outputFiles_);
             }
         }
 
@@ -499,16 +499,16 @@ private:
                 }
                 return EXIT_FAILURE;
             }
-            return flowEbosOilWaterMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowOilWaterMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
         // gas-water
         else if ( phases.active( Phase::GAS ) && phases.active( Phase::WATER ) ) {
             if (disgasw || vapwat) {
                 if (diffusive) {
-                    return flowEbosGasWaterDissolutionDiffuseMain(argc_, argv_, outputCout_, outputFiles_);
+                    return flowGasWaterDissolutionDiffuseMain(argc_, argv_, outputCout_, outputFiles_);
                 }
-                return flowEbosGasWaterDissolutionMain(argc_, argv_, outputCout_, outputFiles_);
+                return flowGasWaterDissolutionMain(argc_, argv_, outputCout_, outputFiles_);
             }
             if (diffusive) {
                 if (outputCout_) {
@@ -517,7 +517,7 @@ private:
                 return EXIT_FAILURE;
             }
 
-            return flowEbosGasWaterMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowGasWaterMain(argc_, argv_, outputCout_, outputFiles_);
         }
         else {
             if (outputCout_) {
@@ -543,20 +543,20 @@ private:
         if (phases.active(Phase::POLYMW)) {
             // only oil water two phase for now
             assert (phases.size() == 4);
-            return flowEbosOilWaterPolymerInjectivityMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowOilWaterPolymerInjectivityMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
         if (phases.size() == 3) { // oil water polymer case
-            return flowEbosOilWaterPolymerMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowOilWaterPolymerMain(argc_, argv_, outputCout_, outputFiles_);
         }
         else {
-            return flowEbosPolymerMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowPolymerMain(argc_, argv_, outputCout_, outputFiles_);
         }
     }
 
     int runFoam()
     {
-        return flowEbosFoamMain(argc_, argv_, outputCout_, outputFiles_);
+        return flowFoamMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     int runWaterOnly(const Phases& phases)
@@ -569,7 +569,7 @@ private:
             return EXIT_FAILURE;
         }
 
-        return flowEbosWaterOnlyMain(argc_, argv_, outputCout_, outputFiles_);
+        return flowWaterOnlyMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     int runWaterOnlyEnergy(const Phases& phases)
@@ -582,7 +582,7 @@ private:
             return EXIT_FAILURE;
         }
 
-        return flowEbosWaterOnlyEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+        return flowWaterOnlyEnergyMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     int runBrine(const Phases& phases)
@@ -598,30 +598,30 @@ private:
         if (phases.size() == 3) {
 
             if (phases.active(Phase::OIL)){ // oil water brine case
-                return flowEbosOilWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
+                return flowOilWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
             }
             if (phases.active(Phase::GAS)){ // gas water brine case
                 if (eclipseState_->getSimulationConfig().hasPRECSALT() &&
                     eclipseState_->getSimulationConfig().hasVAPWAT()) {
                     //case with water vaporization into gas phase and salt precipitation
-                    return flowEbosGasWaterSaltprecVapwatMain(argc_, argv_, outputCout_, outputFiles_);
+                    return flowGasWaterSaltprecVapwatMain(argc_, argv_, outputCout_, outputFiles_);
                 }
                 else {
-                    return flowEbosGasWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
+                    return flowGasWaterBrineMain(argc_, argv_, outputCout_, outputFiles_);
                 }
             }
         }
         else if (eclipseState_->getSimulationConfig().hasPRECSALT()) {
             if (eclipseState_->getSimulationConfig().hasVAPWAT()) {
                     //case with water vaporization into gas phase and salt precipitation
-                    return flowEbosBrinePrecsaltVapwatMain(argc_, argv_, outputCout_, outputFiles_);
+                    return flowBrinePrecsaltVapwatMain(argc_, argv_, outputCout_, outputFiles_);
             }
             else {
-                return flowEbosBrineSaltPrecipitationMain(argc_, argv_, outputCout_, outputFiles_);
+                return flowBrineSaltPrecipitationMain(argc_, argv_, outputCout_, outputFiles_);
             }
         }
         else {
-            return flowEbosBrineMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowBrineMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
         return EXIT_FAILURE;
@@ -630,16 +630,16 @@ private:
     int runSolvent(const Phases& phases)
     {
         if (phases.active(Phase::FOAM)) {
-            return flowEbosSolventFoamMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowSolventFoamMain(argc_, argv_, outputCout_, outputFiles_);
         }
         // solvent + gas + water
         if (!phases.active( Phase::OIL ) && phases.active( Phase::WATER ) && phases.active( Phase::GAS )) {
-            return flowEbosGasWaterSolventMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowGasWaterSolventMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
         // solvent + gas + water + oil
         if (phases.active( Phase::OIL ) && phases.active( Phase::WATER ) && phases.active( Phase::GAS )) {
-            return flowEbosSolventMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowSolventMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
         if (outputCout_)
@@ -651,26 +651,26 @@ private:
 
     int runExtendedBlackOil()
     {
-        return flowEbosExtboMain(argc_, argv_, outputCout_, outputFiles_);
+        return flowExtboMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     int runThermal(const Phases& phases)
     {
         // oil-gas-thermal
         if (!phases.active( Phase::WATER ) && phases.active( Phase::OIL ) && phases.active( Phase::GAS )) {
-            return flowEbosGasOilEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowGasOilEnergyMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
         // water-gas-thermal
         if (!phases.active( Phase::OIL ) && phases.active( Phase::WATER ) && phases.active( Phase::GAS )) {
 
             if (phases.active(Phase::BRINE)){
-                return flowEbosGasWaterSaltprecEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+                return flowGasWaterSaltprecEnergyMain(argc_, argv_, outputCout_, outputFiles_);
             }
-            return flowEbosGasWaterEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowGasWaterEnergyMain(argc_, argv_, outputCout_, outputFiles_);
         }
 
-        return flowEbosEnergyMain(argc_, argv_, outputCout_, outputFiles_);
+        return flowEnergyMain(argc_, argv_, outputCout_, outputFiles_);
     }
 
     int runBlackOil()
@@ -679,9 +679,9 @@ private:
         if (diffusive) {
             // Use the traditional linearizer, as the TpfaLinearizer does not
             // support the diffusion module yet.
-            return flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
         } else {
-            return flowEbosBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
+            return flowBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
         }
     }
 

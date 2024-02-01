@@ -20,5 +20,5 @@
 
 int main(int argc, char** argv)
 {
-    return Opm::flowEbosBrineSaltPrecipitationMainStandalone(argc, argv);
+    return Opm::flowBrineSaltPrecipitationMainStandalone(argc, argv);
 }

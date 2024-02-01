@@ -40,7 +40,7 @@ struct EnableEnergy<TypeTag, TTag::FlowEnergyProblem> {
 namespace Opm {
 
 // ----------------- Main program -----------------
-int flowEbosEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -51,7 +51,7 @@ int flowEbosEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
     return mainfunc.execute();
 }
 
-int flowEbosEnergyMainStandalone(int argc, char** argv)
+int flowEnergyMainStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::FlowEnergyProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);

@@ -78,7 +78,7 @@ struct EnableDispersion<TypeTag, TTag::FlowGasOilEnergyProblem> { static constex
 namespace Opm {
 
 // ----------------- Main program -----------------
-int flowEbosGasOilEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowGasOilEnergyMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -89,7 +89,7 @@ int flowEbosGasOilEnergyMain(int argc, char** argv, bool outputCout, bool output
     return mainfunc.execute();
 }
 
-int flowEbosGasOilEnergyMainStandalone(int argc, char** argv)
+int flowGasOilEnergyMainStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::FlowGasOilEnergyProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);

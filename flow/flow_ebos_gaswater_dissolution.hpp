@@ -20,10 +20,10 @@
 namespace Opm {
 
 //! \brief Main function used in flow binary.
-int flowEbosGasWaterDissolutionMain(int argc, char** argv, bool outputCout, bool outputFiles);
+int flowGasWaterDissolutionMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
 //! \brief Main function used in flow_gaswater_dissolution binary.
-int flowEbosGasWaterDissolutionMainStandalone(int argc, char** argv);
+int flowGasWaterDissolutionMainStandalone(int argc, char** argv);
 
 }
 

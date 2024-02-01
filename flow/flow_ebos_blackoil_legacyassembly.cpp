@@ -25,7 +25,7 @@
 namespace Opm {
 
 std::unique_ptr<FlowMain<Properties::TTag::FlowProblem>>
-flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
+flowBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -36,13 +36,13 @@ flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFile
 }
 
 // ----------------- Main program -----------------
-int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
-    auto mainfunc = flowEbosBlackoilMainInit(argc, argv, outputCout, outputFiles);
+    auto mainfunc = flowBlackoilMainInit(argc, argv, outputCout, outputFiles);
     return mainfunc->execute();
 }
 
-int flowEbosBlackoilMainStandalone(int argc, char** argv)
+int flowBlackoilMainStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::FlowProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);

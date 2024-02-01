@@ -20,5 +20,5 @@
 
 int main(int argc, char** argv)
 {
-    return Opm::flowEbosGasOilMainStandalone(argc, argv);
+    return Opm::flowGasOilMainStandalone(argc, argv);
 }

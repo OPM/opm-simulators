@@ -20,10 +20,10 @@
 namespace Opm {
 
 //! \brief Main function used in flow binary.
-int flowEbosSolventMain(int argc, char** argv, bool outoutCout, bool outputFiles);
+int flowSolventMain(int argc, char** argv, bool outoutCout, bool outputFiles);
 
 //! \brief Main function used in flow_solvent binary.
-int flowEbosSolventMainStandalone(int argc, char** argv);
+int flowSolventMainStandalone(int argc, char** argv);
 
 }
 

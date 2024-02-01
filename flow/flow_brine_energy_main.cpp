@@ -20,5 +20,5 @@
 
 int main(int argc, char** argv)
 {
-    return Opm::flowEbosBrineEnergyMain(argc, argv);
+    return Opm::flowBrineEnergyMain(argc, argv);
 }

@@ -20,5 +20,5 @@
 
 int main(int argc, char** argv)
 {
-    return Opm::flowEbosBrinePrecsaltVapwatMainStandalone(argc, argv);
+    return Opm::flowBrinePrecsaltVapwatMainStandalone(argc, argv);
 }

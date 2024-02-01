@@ -29,14 +29,14 @@ class State;
 namespace Properties { namespace TTag { struct FlowProblem; } }
 
 //! \brief Main function used in flow binary.
-int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles);
+int flowBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
 //! \brief Initialization function used in flow binary and python simulator.
 std::unique_ptr<FlowMain<Properties::TTag::FlowProblem>>
-    flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
+flowBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
 
 //! \brief Main function used in flow_blackoil binary.
-int flowEbosBlackoilMainStandalone(int argc, char** argv);
+int flowBlackoilMainStandalone(int argc, char** argv);
 
 }
 

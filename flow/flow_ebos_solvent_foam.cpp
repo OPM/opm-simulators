@@ -44,7 +44,7 @@ struct EnableFoam<TypeTag, TTag::FlowSolventFoamProblem> {
 namespace Opm {
 
 // ----------------- Main program -----------------
-int flowEbosSolventFoamMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowSolventFoamMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -55,7 +55,7 @@ int flowEbosSolventFoamMain(int argc, char** argv, bool outputCout, bool outputF
     return mainfunc.execute();
 }
 
-int flowEbosSolventFoamMainStandalone(int argc, char** argv)
+int flowSolventFoamMainStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::FlowSolventFoamProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);

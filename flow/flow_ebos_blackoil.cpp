@@ -45,7 +45,7 @@ namespace Opm {
 namespace Opm
 {
 std::unique_ptr<FlowMain<Properties::TTag::FlowProblemTPFA>>
-flowEbosBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
+flowBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -56,7 +56,7 @@ flowEbosBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool output
 }
 
 // ----------------- Main program -----------------
-int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -67,7 +67,7 @@ int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool output
     return mainfunc.execute();
 }
 
-int flowEbosBlackoilTpfaMainStandalone(int argc, char** argv)
+int flowBlackoilTpfaMainStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::FlowProblemTPFA;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
