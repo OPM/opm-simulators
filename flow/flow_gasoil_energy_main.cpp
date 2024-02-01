@@ -15,7 +15,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include <flow/flow_ebos_gasoil_energy.hpp>
+#include <flow/flow_gasoil_energy.hpp>
 
 
 int main(int argc, char** argv)
