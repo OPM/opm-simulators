@@ -91,6 +91,27 @@ namespace
         const auto threads = getThreads(numberOfElements);
         return (numberOfElements + threads - 1) / threads;
     }
+
+    template <class T>
+    __global__ void
+    prepareSendBufKernel(const T* a, T* buffer, size_t numberOfElements, const int* indices)
+    {
+        const auto globalIndex = blockDim.x * blockIdx.x + threadIdx.x;
+
+        if (globalIndex < numberOfElements) {
+            buffer[globalIndex] = a[indices[globalIndex]];
+        }
+    }
+    template <class T>
+    __global__ void
+    syncFromRecvBufKernel(T* a, T* buffer, size_t numberOfElements, const int* indices)
+    {
+        const auto globalIndex = blockDim.x * blockIdx.x + threadIdx.x;
+
+        if (globalIndex < numberOfElements) {
+            a[indices[globalIndex]] = buffer[globalIndex];
+        }
+    }
 } // namespace
 
 template <class T>
@@ -132,6 +153,25 @@ template double innerProductAtIndices(const double*, const double*, double* buff
 template float innerProductAtIndices(const float*, const float*, float* buffer, size_t, const int*);
 template int innerProductAtIndices(const int*, const int*, int* buffer, size_t, const int*);
 
+template <class T>
+void prepareSendBuf(const T* deviceA, T* buffer, size_t numberOfElements, const int* indices)
+{
+    prepareSendBufKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(deviceA, buffer, numberOfElements, indices);
+    cudaDeviceSynchronize(); // The buffers are prepared for MPI. Wait for them to finish.
+}
+template void prepareSendBuf(const double* deviceA, double* buffer, size_t numberOfElements, const int* indices);
+template void prepareSendBuf(const float* deviceA, float* buffer, size_t numberOfElements, const int* indices);
+template void prepareSendBuf(const int* deviceA, int* buffer, size_t numberOfElements, const int* indices);
+
+template <class T>
+void syncFromRecvBuf(T* deviceA, T* buffer, size_t numberOfElements, const int* indices)
+{
+    syncFromRecvBufKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(deviceA, buffer, numberOfElements, indices);
+    //cudaDeviceSynchronize(); // Not needed, I guess...
+}
+template void syncFromRecvBuf(double* deviceA, double* buffer, size_t numberOfElements, const int* indices);
+template void syncFromRecvBuf(float* deviceA, float* buffer, size_t numberOfElements, const int* indices);
+template void syncFromRecvBuf(int* deviceA, int* buffer, size_t numberOfElements, const int* indices);
 
 template <class T>
 void

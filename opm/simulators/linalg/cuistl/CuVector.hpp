@@ -231,6 +231,9 @@ public:
      */
     void copyToHost(std::vector<T>& data) const;
 
+    void prepareSendBuf(CuVector<T>& buffer, const CuVector<int>& indexSet) const;
+    void syncFromRecvBuf(CuVector<T>& buffer, const CuVector<int>& indexSet) const;
+
     /**
      * @brief operator *= multiplies every element by scalar
      * @param scalar the scalar to with which to multiply every element
