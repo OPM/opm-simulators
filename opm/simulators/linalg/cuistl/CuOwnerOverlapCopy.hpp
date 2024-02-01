@@ -22,6 +22,7 @@
 #include <memory>
 #include <mutex>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <vector>
 
 namespace Opm::cuistl
 {
@@ -110,27 +111,25 @@ public:
     // Georgs new code intended to use GPU direct
     void copyOwnerToAll(const X& source, X& dest) const
     {
-
-        printf("\n\nGPU DIRECT CODE IS RUN\n\n");
-            printf("Compile time check:\n");
-#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
-    printf("This MPI library has CUDA-aware support.\n", MPIX_CUDA_AWARE_SUPPORT);
-#elif defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
-    printf("This MPI library does not have CUDA-aware support.\n");
-#else
-    printf("This MPI library cannot determine if there is CUDA-aware support.\n");
-#endif /* MPIX_CUDA_AWARE_SUPPORT */
+//             printf("Compile time check:\n");
+// #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+//     printf("This MPI library has CUDA-aware support.\n", MPIX_CUDA_AWARE_SUPPORT);
+// #elif defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
+//     printf("This MPI library does not have CUDA-aware support.\n");
+// #else
+//     printf("This MPI library cannot determine if there is CUDA-aware support.\n");
+// #endif /* MPIX_CUDA_AWARE_SUPPORT */
  
-    printf("Run time check:\n");
-#if defined(MPIX_CUDA_AWARE_SUPPORT)
-    if (1 == MPIX_Query_cuda_support()) {
-        printf("This MPI library has CUDA-aware support.\n");
-    } else {
-        printf("This MPI library does not have CUDA-aware support.\n");
-    }
-#else /* !defined(MPIX_CUDA_AWARE_SUPPORT) */
-    printf("This MPI library cannot determine if there is CUDA-aware support.\n");
-#endif /* MPIX_CUDA_AWARE_SUPPORT */
+//     printf("Run time check:\n");
+// #if defined(MPIX_CUDA_AWARE_SUPPORT)
+//     if (1 == MPIX_Query_cuda_support()) {
+//         printf("This MPI library has CUDA-aware support.\n");
+//     } else {
+//         printf("This MPI library does not have CUDA-aware support.\n");
+//     }
+// #else /* !defined(MPIX_CUDA_AWARE_SUPPORT) */
+//     printf("This MPI library cannot determine if there is CUDA-aware support.\n");
+// #endif /* MPIX_CUDA_AWARE_SUPPORT */
 
 
         assert(&source == &dest); // In this context, source == dest!!!
@@ -142,14 +141,14 @@ public:
 
         // Start MPI stuff here...
         // Note: This has been taken from DUNE's parallel/communicator.hh
-        MPI_Request* sendRequests = new MPI_Request[messageInformation_.size()];
-        MPI_Request* recvRequests = new MPI_Request[messageInformation_.size()];
+        std::vector<MPI_Request> sendRequests(messageInformation_.size());
+        std::vector<MPI_Request> recvRequests(messageInformation_.size());
+        std::vector<int> processMap(messageInformation_.size());
         size_t numberOfRealRecvRequests = 0;
 
         typedef typename InformationMap::const_iterator const_iterator;
         const const_iterator end = messageInformation_.end();
         size_t i=0;
-        int* processMap = new int[messageInformation_.size()];
         for(const_iterator info = messageInformation_.begin(); info != end; ++info, ++i) {
             processMap[i]=info->first;
             if(info->second.second.size_) {
@@ -185,7 +184,7 @@ public:
         MPI_Status status;
         for(i=0; i< numberOfRealRecvRequests; i++) {
             status.MPI_ERROR=MPI_SUCCESS;
-            MPI_Waitany(messageInformation_.size(), recvRequests, &finished, &status);
+            MPI_Waitany(messageInformation_.size(), recvRequests.data(), &finished, &status);
 
             if(status.MPI_ERROR!=MPI_SUCCESS) {
                 std::cerr<< rank << ": MPI_Error occurred while receiving message from "<< processMap[finished] << std::endl;
@@ -199,9 +198,6 @@ public:
                 assert(false);
             }
         }
-        delete[] processMap;
-        delete[] sendRequests;
-        delete[] recvRequests;
         // ...End of MPI stuff
 
         dest.syncFromRecvBuf(*m_GPURecvBuf, *m_commpair_indicesCopy);
