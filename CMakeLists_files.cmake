@@ -32,7 +32,6 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenericvanguard.cc
   ebos/eclgenericwriter.cc
   ebos/eclmixingratecontrols.cc
-  ebos/eclsolutioncontainers.cc
   ebos/ecltransmissibility.cc
   ebos/equil/equilibrationhelpers.cc
   ebos/equil/initstateequil.cc
@@ -53,6 +52,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/RSTConv.cpp
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
+  opm/simulators/flow/SolutionContainers.cpp
   opm/simulators/flow/ValidationFunctions.cpp
   opm/simulators/flow/partitionCells.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
@@ -433,7 +433,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclpolyhedralgridvanguard.hh
   ebos/eclproblem.hh
   ebos/eclproblem_properties.hh
-  ebos/eclsolutioncontainers.hh
   ebos/eclthresholdpressure.hh
   ebos/ecltracermodel.hh
   ebos/ecltransmissibility.hh
@@ -463,6 +462,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp
   opm/simulators/flow/SimulatorReportBanners.hpp
   opm/simulators/flow/SimulatorSerializer.hpp
+  opm/simulators/flow/SolutionContainers.hpp
   opm/simulators/flow/SubDomain.hpp
   opm/simulators/flow/ValidationFunctions.hpp
   opm/core/props/BlackoilPhases.hpp

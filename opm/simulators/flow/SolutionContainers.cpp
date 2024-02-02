@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclProblem
+ * \copydoc Opm::FlowProblem
  */
 #include <config.h>
-#include <ebos/eclsolutioncontainers.hh>
+#include <opm/simulators/flow/SolutionContainers.hpp>
 
 namespace Opm {
 

@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclProblem
+ * \copydoc Opm::FlowProblem
  */
-#ifndef ECL_SOLUTION_CONTAINERS_HH
-#define ECL_SOLUTION_CONTAINERS_HH
+#ifndef OPM_SOLUTION_CONTAINERS_HPP
+#define OPM_SOLUTION_CONTAINERS_HPP
 
 #include <vector>
 
@@ -81,4 +81,4 @@ struct MICPSolutionContainer {
 
 } // namespace Opm
 
-#endif
+#endif // OPM_SOLUTION_CONTAINERS_HPP
