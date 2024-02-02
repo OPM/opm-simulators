@@ -37,7 +37,6 @@
 #include <ebos/eclbaseaquifermodel.hh>
 #include <ebos/eclcpgridvanguard.hh>
 #include <ebos/eclequilinitializer.hh>
-#include <ebos/eclfluxmodule.hh>
 #include <ebos/eclgenericproblem.hh>
 #include <ebos/eclnewtonmethod.hh>
 #include <ebos/eclproblem_properties.hh>
@@ -82,6 +81,7 @@
 
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
+#include <opm/simulators/flow/NewTranFluxModule.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
