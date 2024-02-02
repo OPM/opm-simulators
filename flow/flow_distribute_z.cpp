@@ -23,7 +23,7 @@
 #include "config.h"
 
 #include <opm/simulators/flow/Main.hpp>
-#include <ebos/eclcpgridvanguard.hh>
+#include <opm/simulators/flow/CpGridVanguard.hpp>
 
 std::vector<int> loadBalanceInZOnly(const Dune::CpGrid& grid)
 {
@@ -61,7 +61,7 @@ std::vector<int> loadBalanceInZOnly(const Dune::CpGrid& grid)
 int main(int argc, char** argv)
 {
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
-    Opm::EclCpGridVanguard<Opm::Properties::TTag::FlowProblem>::setExternalLoadBalancer(loadBalanceInZOnly);
+    Opm::CpGridVanguard<Opm::Properties::TTag::FlowProblem>::setExternalLoadBalancer(loadBalanceInZOnly);
     auto ret = mainObject->runDynamic();
     // Destruct mainObject as the destructor calls MPI_Finalize!
     mainObject.reset();

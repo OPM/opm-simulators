@@ -34,7 +34,6 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-#include <ebos/eclcpgridvanguard.hh>
 #include <ebos/eclgenericproblem.hh>
 #include <ebos/eclnewtonmethod.hh>
 #include <ebos/eclproblem_properties.hh>
@@ -74,6 +73,7 @@
 
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/BaseAquiferModel.hpp>
+#include <opm/simulators/flow/CpGridVanguard.hpp>
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
 #include <opm/simulators/flow/EclWriter.hpp>
 #include <opm/simulators/flow/EquilInitializer.hpp>

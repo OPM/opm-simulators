@@ -411,7 +411,6 @@ list (APPEND TEST_DATA_FILES
 list (APPEND PUBLIC_HEADER_FILES
   ebos/ebos.hh
   ebos/eclbasevanguard.hh
-  ebos/eclcpgridvanguard.hh
   ebos/eclgenericcpgridvanguard.hh
   ebos/eclgenericproblem.hh
   ebos/eclgenericproblem_impl.hh
@@ -433,6 +432,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/CollectDataOnIORank_impl.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/countGlobalCells.hpp
+  opm/simulators/flow/CpGridVanguard.hpp
   opm/simulators/flow/DummyGradientCalculator.hpp
   opm/simulators/flow/EclGenericWriter.hpp
   opm/simulators/flow/EclGenericWriter_impl.hpp
