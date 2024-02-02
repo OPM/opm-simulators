@@ -22,8 +22,7 @@
 */
 
 #include <config.h>
-#include <ebos/collecttoiorank.hh>
-#include <ebos/collecttoiorank_impl.hh>
+#include <opm/simulators/flow/CollectDataOnIORank_impl.hpp>
 
 #include <opm/grid/CpGrid.hpp>
 
@@ -35,15 +34,15 @@
 
 namespace Opm {
 
-template class CollectDataToIORank<Dune::CpGrid,
+template class CollectDataOnIORank<Dune::CpGrid,
                                    Dune::CpGrid,
                                    Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>;
 
 #if HAVE_DUNE_FEM
-template class CollectDataToIORank<Dune::CpGrid,
+template class CollectDataOnIORank<Dune::CpGrid,
                                    Dune::CpGrid,
                                    Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>;
-template class CollectDataToIORank<Dune::CpGrid,
+template class CollectDataOnIORank<Dune::CpGrid,
                                    Dune::CpGrid,
                                    Dune::Fem::GridPart2GridViewImpl<
                                        Dune::Fem::AdaptiveLeafGridPart<

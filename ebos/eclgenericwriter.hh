@@ -28,14 +28,13 @@
 #ifndef EWOMS_ECL_GENERIC_WRITER_HH
 #define EWOMS_ECL_GENERIC_WRITER_HH
 
-#include <ebos/collecttoiorank.hh>
 #include <ebos/ecltransmissibility.hh>
 
 #include <opm/models/parallel/tasklets.hh>
 
+#include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 
-#include <cstddef>
 #include <map>
 #include <memory>
 #include <string>
@@ -67,7 +66,7 @@ class EclGenericWriter
 {
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     using EquilCartesianIndexMapper = Dune::CartesianIndexMapper<EquilGrid>;
-    using CollectDataToIORankType = CollectDataToIORank<Grid,EquilGrid,GridView>;
+    using CollectDataOnIORankType = CollectDataOnIORank<Grid,EquilGrid,GridView>;
     using TransmissibilityType = EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>;
 
 public:
@@ -108,9 +107,9 @@ public:
         return outputNnc_;
     }
 
-    const CollectDataToIORankType& collectToIORank() const
+    const CollectDataOnIORankType& collectOnIORank() const
     {
-        return collectToIORank_;
+        return collectOnIORank_;
     }
 
 protected:
@@ -151,7 +150,7 @@ protected:
                      SummaryState&                                        summaryState,
                      UDQState&                                            udqState);
 
-    CollectDataToIORankType collectToIORank_;
+    CollectDataOnIORankType collectOnIORank_;
     const Grid& grid_;
     const GridView& gridView_;
     const Schedule& schedule_;

@@ -234,7 +234,7 @@ namespace Opm {
         , phaseUsage_(phaseUsageFromDeck(eclState()))
         , param_( param )
         , well_model_ (well_model)
-        , rst_conv_(simulator_.problem().eclWriter()->collectToIORank().localIdxToGlobalIdxMapping(),
+        , rst_conv_(simulator_.problem().eclWriter()->collectOnIORank().localIdxToGlobalIdxMapping(),
                     grid_.comm())
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)

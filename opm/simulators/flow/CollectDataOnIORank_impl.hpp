@@ -21,17 +21,17 @@
   copyright holders.
 */
 
-#ifndef EWOMS_COLLECT_TO_IO_RANK_IMPL_HH
-#define EWOMS_COLLECT_TO_IO_RANK_IMPL_HH
+#ifndef OPM_COLLECT_DATA_ON_IO_RANK_IMPL_HPP
+#define OPM_COLLECT_DATA_ON_IO_RANK_IMPL_HPP
 
-#include <ebos/collecttoiorank.hh>
-
-#include <opm/grid/common/CartesianIndexMapper.hpp>
+#include <opm/simulators/flow/CollectDataOnIORank.hpp>
 
 #include <dune/common/version.hh>
 #include <dune/grid/common/gridenums.hh>
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/common/partitionset.hh>
+
+#include <opm/grid/common/CartesianIndexMapper.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -842,8 +842,8 @@ public:
 };
 
 template <class Grid, class EquilGrid, class GridView>
-CollectDataToIORank<Grid,EquilGrid,GridView>::
-CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
+CollectDataOnIORank<Grid,EquilGrid,GridView>::
+CollectDataOnIORank(const Grid& grid, const EquilGrid* equilGrid,
                     const GridView& localGridView,
                     const Dune::CartesianIndexMapper<Grid>& cartMapper,
                     const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
@@ -965,7 +965,7 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
 }
 
 template <class Grid, class EquilGrid, class GridView>
-void CollectDataToIORank<Grid,EquilGrid,GridView>::
+void CollectDataOnIORank<Grid,EquilGrid,GridView>::
 collect(const data::Solution&                                localCellData,
         const std::map<std::pair<std::string, int>, double>& localBlockData,
         const data::Wells&                                   localWellData,
@@ -1087,7 +1087,7 @@ collect(const data::Solution&                                localCellData,
 }
 
 template <class Grid, class EquilGrid, class GridView>
-int CollectDataToIORank<Grid,EquilGrid,GridView>::
+int CollectDataOnIORank<Grid,EquilGrid,GridView>::
 localIdxToGlobalIdx(unsigned localIdx) const
 {
     if (!isParallel()) {
@@ -1106,7 +1106,7 @@ localIdxToGlobalIdx(unsigned localIdx) const
 }
 
 template <class Grid, class EquilGrid, class GridView>
-bool CollectDataToIORank<Grid,EquilGrid,GridView>::
+bool CollectDataOnIORank<Grid,EquilGrid,GridView>::
 isCartIdxOnThisRank(int cartIdx) const
 {
     if (! this->isParallel()) {
@@ -1124,4 +1124,5 @@ isCartIdxOnThisRank(int cartIdx) const
 }
 
 } // end namespace Opm
-#endif
+
+#endif // OPM_COLLECT_DATA_ON_IO_RANK_IMPL_HPP
