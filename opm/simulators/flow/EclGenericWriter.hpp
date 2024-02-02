@@ -25,8 +25,8 @@
  *
  * \copydoc Opm::EclWriter
  */
-#ifndef EWOMS_ECL_GENERIC_WRITER_HH
-#define EWOMS_ECL_GENERIC_WRITER_HH
+#ifndef OPM_ECL_GENERIC_WRITER_HPP
+#define OPM_ECL_GENERIC_WRITER_HPP
 
 #include <ebos/ecltransmissibility.hh>
 
@@ -174,4 +174,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_ECL_GENERIC_WRITER_HPP

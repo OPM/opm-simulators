@@ -28,7 +28,6 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenericthresholdpressure.cc
   ebos/eclgenerictracermodel.cc
   ebos/eclgenericvanguard.cc
-  ebos/eclgenericwriter.cc
   ebos/eclmixingratecontrols.cc
   ebos/eclsolutioncontainers.cc
   ebos/ecltransmissibility.cc
@@ -42,6 +41,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/Banners.cpp
   opm/simulators/flow/CollectDataOnIORank.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
+  opm/simulators/flow/EclGenericWriter.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/FlowUtils.cpp
   opm/simulators/flow/GenericOutputBlackoilModule.cpp
@@ -422,8 +422,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclgenerictracermodel.hh
   ebos/eclgenerictracermodel_impl.hh
   ebos/eclgenericvanguard.hh
-  ebos/eclgenericwriter.hh
-  ebos/eclgenericwriter_impl.hh
   ebos/eclmixingratecontrols.hh
   ebos/eclnewtonmethod.hh
   ebos/eclproblem.hh
@@ -448,6 +446,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/DummyGradientCalculator.hpp
+  opm/simulators/flow/EclGenericWriter.hpp
+  opm/simulators/flow/EclGenericWriter_impl.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FemCpGridCompat.hpp
   opm/simulators/flow/FIBlackoilModel.hpp
