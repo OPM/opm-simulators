@@ -28,7 +28,6 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenericthresholdpressure.cc
   ebos/eclgenerictracermodel.cc
   ebos/eclgenericvanguard.cc
-  ebos/eclmixingratecontrols.cc
   ebos/eclsolutioncontainers.cc
   ebos/ecltransmissibility.cc
   ebos/equil/equilibrationhelpers.cc
@@ -49,6 +48,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/LogOutputHelper.cpp
   opm/simulators/flow/Main.cpp
+  opm/simulators/flow/MixingRateControls.cpp
   opm/simulators/flow/NonlinearSolver.cpp
   opm/simulators/flow/partitionCells.cpp
   opm/simulators/flow/RSTConv.cpp
@@ -422,7 +422,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclgenerictracermodel.hh
   ebos/eclgenerictracermodel_impl.hh
   ebos/eclgenericvanguard.hh
-  ebos/eclmixingratecontrols.hh
   ebos/eclnewtonmethod.hh
   ebos/eclproblem.hh
   ebos/eclproblem_properties.hh
@@ -459,6 +458,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/KeywordValidation.hpp
   opm/simulators/flow/LogOutputHelper.hpp
   opm/simulators/flow/Main.hpp
+  opm/simulators/flow/MixingRateControls.hpp
   opm/simulators/flow/NonlinearSolver.hpp
   opm/simulators/flow/OutputBlackoilModule.hpp
   opm/simulators/flow/partitionCells.hpp
