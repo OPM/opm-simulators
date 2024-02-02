@@ -24,7 +24,6 @@
 
 #define BOOST_TEST_MODULE Equil
 
-#include <ebos/equil/equilibrationhelpers.hh>
 #include <ebos/eclproblem.hh>
 #include <ebos/eclgenericvanguard.hh>
 
@@ -36,10 +35,12 @@
 
 #include <opm/input/eclipse/Units/Units.hpp>
 
+#include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/start.hh>
-#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
+#include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
+#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 #if HAVE_DUNE_FEM

@@ -23,12 +23,10 @@
 /**
  * \file
  *
- * \copydoc Opm::EclEquilInitializer
+ * \copydoc Opm::EquilInitializer
  */
-#ifndef EWOMS_ECL_EQUIL_INITIALIZER_HH
-#define EWOMS_ECL_EQUIL_INITIALIZER_HH
-
-#include <ebos/equil/initstateequil.hh>
+#ifndef OPM_EQUIL_INITIALIZER_HPP
+#define OPM_EQUIL_INITIALIZER_HPP
 
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 
@@ -38,6 +36,8 @@
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
+
+#include <opm/simulators/flow/equil/InitStateEquil.hpp>
 
 #include <vector>
 
@@ -54,7 +54,7 @@ namespace Opm {
  * performance improvements.
  */
 template <class TypeTag>
-class EclEquilInitializer
+class EquilInitializer
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -99,8 +99,8 @@ public:
 
 
     template <class EclMaterialLawManager>
-    EclEquilInitializer(const Simulator& simulator,
-                        EclMaterialLawManager& materialLawManager)
+    EquilInitializer(const Simulator& simulator,
+                     EclMaterialLawManager& materialLawManager)
         : simulator_(simulator)
     {
         const auto& vanguard = simulator.vanguard();
@@ -204,4 +204,4 @@ protected:
 };
 } // namespace Opm
 
-#endif
+#endif // OPM_EQUIL_INITIALIZER_HPP

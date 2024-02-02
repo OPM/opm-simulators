@@ -21,8 +21,8 @@
   copyright holders.
 */
 
-#include "config.h"
-#include "equilibrationhelpers_impl.hh"
+#include <config.h>
+#include <opm/simulators/flow/equil/EquilibrationHelpers_impl.hpp>
 
 namespace Opm {
 namespace EQUIL {

@@ -26,14 +26,13 @@
  * \brief Auxiliary routines that to solve the ODEs that emerge from the hydrostatic
  *        equilibrium problem
  */
-#ifndef EWOMS_EQUILIBRATIONHELPERS_HH
-#define EWOMS_EQUILIBRATIONHELPERS_HH
+#ifndef OPM_EQUILIBRATION_HELPERS_HPP
+#define OPM_EQUILIBRATION_HELPERS_HPP
 
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #include <opm/input/eclipse/EclipseState/InitConfig/Equil.hpp>
 
-#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -803,4 +802,4 @@ bool isConstPc(const MaterialLawManager& materialLawManager,
 } // namespace Equil
 } // namespace Opm
 
-#endif // EWOMS_EQUILIBRATIONHELPERS_HH
+#endif // OPM_EQUILIBRATION_HELPERS_HPP

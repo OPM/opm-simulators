@@ -20,12 +20,10 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef EWOMS_INITSTATEEQUIL_IMPL_HH
-#define EWOMS_INITSTATEEQUIL_IMPL_HH
+#ifndef OPM_INIT_STATE_EQUIL_IMPL_HPP
+#define OPM_INIT_STATE_EQUIL_IMPL_HPP
 
-
-#include <ebos/equil/initstateequil.hh>
-#include <ebos/equil/equilibrationhelpers.hh>
+#include <dune/grid/common/mcmgmapper.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -45,8 +43,9 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
+#include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
+#include <opm/simulators/flow/equil/InitStateEquil.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <dune/grid/common/mcmgmapper.hh>
 
 #include <fmt/format.h>
 
@@ -2013,4 +2012,5 @@ equilibrateHorizontal(const CellRange&  cells,
 }
 } // namespace EQUIL
 } // namespace Opm
-#endif
+
+#endif // OPM_INIT_STATE_EQUIL_IMPL_HPP

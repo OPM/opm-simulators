@@ -21,8 +21,6 @@
   copyright holders.
 */
 
-#include <ebos/equil/equilibrationhelpers.hh>
-
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/common/utility/numeric/RootFinders.hpp>
@@ -30,6 +28,8 @@
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 
 #include <fmt/format.h>
 
