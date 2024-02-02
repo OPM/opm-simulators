@@ -162,15 +162,14 @@ public:
     using AquiferModel = GetPropType<TypeTag, Properties::EclAquiferModel>;
 
     using TimeStepper = AdaptiveTimeStepping<TypeTag>;
-    typedef BlackOilPolymerModule<TypeTag> PolymerModule;
-    typedef BlackOilMICPModule<TypeTag> MICPModule;
+    using PolymerModule = BlackOilPolymerModule<TypeTag>;
+    using MICPModule = BlackOilMICPModule<TypeTag>;
 
     using Model = BlackoilModel<TypeTag>;
     using Solver = NonlinearSolver<TypeTag, Model>;
-    typedef typename Model::ModelParameters ModelParameters;
-    typedef typename Solver::SolverParameters SolverParameters;
-    typedef BlackoilWellModel<TypeTag> WellModel;
-
+    using ModelParameters = typename Model::ModelParameters;
+    using SolverParameters = typename Solver::SolverParameters;
+    using WellModel = BlackoilWellModel<TypeTag>;
 
     /// Initialise from parameters and objects to observe.
     /// \param[in] param       parameters, this class accepts the following:
