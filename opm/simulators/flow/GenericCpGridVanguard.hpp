@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::EclCpGridVanguard
+ * \copydoc Opm::CpGridVanguard
  */
-#ifndef EWOMS_ECL_CP_GRID_GENERIC_VANGUARD_HH
-#define EWOMS_ECL_CP_GRID_GENERIC_VANGUARD_HH
+#ifndef OPM_GENERIC_CPGRID_VANGUARD_HPP
+#define OPM_GENERIC_CPGRID_VANGUARD_HPP
 
 #include <ebos/eclgenericvanguard.hh>
 
@@ -74,15 +74,15 @@ private:
 extern std::optional<std::function<std::vector<int> (const Dune::CpGrid&)>> externalLoadBalancer;
 
 template<class ElementMapper, class GridView, class Scalar>
-class EclGenericCpGridVanguard {
+class GenericCpGridVanguard {
 protected:
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Dune::CpGrid>;
     using Element = typename GridView::template Codim<0>::Entity;
 
 public:
-    EclGenericCpGridVanguard();
+    GenericCpGridVanguard();
 
-    virtual ~EclGenericCpGridVanguard() = default;
+    virtual ~GenericCpGridVanguard() = default;
 
     /*!
      * \brief Return a reference to the simulation grid.
@@ -213,4 +213,4 @@ protected:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_GENERIC_CPGRID_VANGUARD_HPP

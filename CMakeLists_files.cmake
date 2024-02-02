@@ -23,7 +23,6 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-  ebos/eclgenericcpgridvanguard.cc
   ebos/eclgenericproblem.cc
   ebos/eclgenericthresholdpressure.cc
   ebos/eclgenerictracermodel.cc
@@ -44,6 +43,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/FlowMain.cpp
+  opm/simulators/flow/GenericCpGridVanguard.cpp
   opm/simulators/flow/GenericOutputBlackoilModule.cpp
   opm/simulators/flow/InterRegFlows.cpp
   opm/simulators/flow/KeywordValidation.cpp
@@ -414,7 +414,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclbasevanguard.hh
   ebos/eclequilinitializer.hh
   ebos/eclfluxmodule.hh
-  ebos/eclgenericcpgridvanguard.hh
   ebos/eclgenericproblem.hh
   ebos/eclgenericproblem_impl.hh
   ebos/eclgenericthresholdpressure.hh
@@ -453,6 +452,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMain.hpp
   opm/simulators/flow/FlowsData.hpp
+  opm/simulators/flow/GenericCpGridVanguard.hpp
   opm/simulators/flow/GenericOutputBlackoilModule.hpp
   opm/simulators/flow/InterRegFlows.hpp
   opm/simulators/flow/KeywordValidation.hpp

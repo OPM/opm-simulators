@@ -28,7 +28,6 @@
 #define OPM_CPGRID_VANGUARD_HPP
 
 #include <ebos/eclbasevanguard.hh>
-#include <ebos/eclgenericcpgridvanguard.hh>
 #include <ebos/ecltransmissibility.hh>
 #include <ebos/femcpgridcompat.hh>
 
@@ -36,6 +35,8 @@
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
+
+#include <opm/simulators/flow/GenericCpGridVanguard.hpp>
 
 #include <array>
 #include <functional>
@@ -84,9 +85,9 @@ namespace Opm {
  */
 template <class TypeTag>
 class CpGridVanguard : public EclBaseVanguard<TypeTag>
-                     , public EclGenericCpGridVanguard<GetPropType<TypeTag, Properties::ElementMapper>,
-                                                       GetPropType<TypeTag, Properties::GridView>,
-                                                       GetPropType<TypeTag, Properties::Scalar>>
+                     , public GenericCpGridVanguard<GetPropType<TypeTag, Properties::ElementMapper>,
+                                                    GetPropType<TypeTag, Properties::GridView>,
+                                                    GetPropType<TypeTag, Properties::Scalar>>
 {
     friend class EclBaseVanguard<TypeTag>;
     using ParentType = EclBaseVanguard<TypeTag>;
