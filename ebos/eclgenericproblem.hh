@@ -23,17 +23,17 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclProblem
+ * \copydoc Opm::FlowProblem
  */
 #ifndef EWOMS_GENERIC_ECL_PROBLEM_HH
 #define EWOMS_GENERIC_ECL_PROBLEM_HH
 
-#include <ebos/eclsolutioncontainers.hh>
 
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
 #include <opm/simulators/flow/MixingRateControls.hpp>
+#include <opm/simulators/flow/SolutionContainers.hpp>
 
 #include <array>
 #include <cstddef>
