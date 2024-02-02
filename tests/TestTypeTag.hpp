@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \brief The common settings for all ebos variants.
+ * \brief Typetag used in tests
  */
-#ifndef EBOS_HH
-#define EBOS_HH
+#ifndef OPM_TEST_TYPETAG_HPP
+#define OPM_TEST_TYPETAG_HPP
 
 #include <ebos/eclproblem.hh>
 
@@ -37,36 +37,31 @@
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
-namespace Opm {
-template <class TypeTag>
-class EbosProblem;
-}
-
 namespace Opm::Properties {
 
 namespace TTag {
-struct EbosTypeTag {
+struct TestTypeTag {
     using InheritsFrom = std::tuple<FlowModelParameters, EclBaseProblem, BlackOilModel, EclTimeSteppingParameters>;
 };
 }
 
 // Set the problem class
 template<class TypeTag>
-struct Problem<TypeTag, TTag::EbosTypeTag> {
-    using type = EbosProblem<TypeTag>;
+struct Problem<TypeTag, TTag::TestTypeTag> {
+    using type = EclProblem<TypeTag>;
 };
 
 // Enable experimental features for ebos: ebos is the research simulator of the OPM
 // project. If you're looking for a more stable "production quality" simulator, consider
 // using `flow`
 template<class TypeTag>
-struct EnableExperiments<TypeTag, TTag::EbosTypeTag> {
+struct EnableExperiments<TypeTag, TTag::TestTypeTag> {
     static constexpr bool value = true;
 };
 
 // use flow's well model for now
 template<class TypeTag>
-struct WellModel<TypeTag, TTag::EbosTypeTag> {
+struct WellModel<TypeTag, TTag::TestTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 };
 
@@ -74,53 +69,53 @@ struct WellModel<TypeTag, TTag::EbosTypeTag> {
 // regressions. the --use-multisegment-well=true|false command line parameter is still
 // available in ebos, but hidden from view.
 template<class TypeTag>
-struct UseMultisegmentWell<TypeTag, TTag::EbosTypeTag> {
+struct UseMultisegmentWell<TypeTag, TTag::TestTypeTag> {
     static constexpr bool value = false;
 };
 
 // set some properties that are only required by the well model
 template<class TypeTag>
-struct MatrixAddWellContributions<TypeTag, TTag::EbosTypeTag> {
+struct MatrixAddWellContributions<TypeTag, TTag::TestTypeTag> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, TTag::EbosTypeTag> {
+struct EnableTerminalOutput<TypeTag, TTag::TestTypeTag> {
     static constexpr bool value = false;
 };
 
 // flow's well model only works with surface volumes
 template<class TypeTag>
-struct BlackoilConserveSurfaceVolume<TypeTag, TTag::EbosTypeTag> {
+struct BlackoilConserveSurfaceVolume<TypeTag, TTag::TestTypeTag> {
     static constexpr bool value = true;
 };
 
 // the values for the residual are for the whole cell instead of for a cubic meter of the cell
 template<class TypeTag>
-struct UseVolumetricResidual<TypeTag, TTag::EbosTypeTag> {
+struct UseVolumetricResidual<TypeTag, TTag::TestTypeTag> {
     static constexpr bool value = false;
 };
 
 // by default use flow's aquifer model for now
 template<class TypeTag>
-struct AquiferModel<TypeTag, TTag::EbosTypeTag> {
+struct AquiferModel<TypeTag, TTag::TestTypeTag> {
     using type = BlackoilAquiferModel<TypeTag>;
 };
 
 // use flow's linear solver backend for now
 template<class TypeTag>
-struct LinearSolverSplice<TypeTag, TTag::EbosTypeTag> {
+struct LinearSolverSplice<TypeTag, TTag::TestTypeTag> {
     using type = TTag::FlowIstlSolver;
 };
 
 template<>
-struct LinearSolverBackend<TTag::EbosTypeTag, TTag::FlowIstlSolverParams> {
-    using type = ISTLSolver<TTag::EbosTypeTag>;
+struct LinearSolverBackend<TTag::TestTypeTag, TTag::FlowIstlSolverParams> {
+    using type = ISTLSolver<TTag::TestTypeTag>;
 };
 
 // the default for the allowed volumetric error for oil per second
 template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::EbosTypeTag> {
+struct NewtonTolerance<TypeTag, TTag::TestTypeTag> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-1;
 };
@@ -128,14 +123,14 @@ struct NewtonTolerance<TypeTag, TTag::EbosTypeTag> {
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
 template<class TypeTag>
-struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::EbosTypeTag> {
+struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::TestTypeTag> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.05;
 };
 
 // the maximum volumetric error of a cell in the relaxed region
 template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::EbosTypeTag> {
+struct EclNewtonRelaxedTolerance<TypeTag, TTag::TestTypeTag> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e6*getPropValue<TypeTag, Properties::NewtonTolerance>();
 };
@@ -144,7 +139,7 @@ struct EclNewtonRelaxedTolerance<TypeTag, TTag::EbosTypeTag> {
 // reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
 // will tolerate larger residuals.
 template<class TypeTag>
-struct EclNewtonSumTolerance<TypeTag, TTag::EbosTypeTag> {
+struct EclNewtonSumTolerance<TypeTag, TTag::TestTypeTag> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-5;
 };
@@ -153,14 +148,14 @@ struct EclNewtonSumTolerance<TypeTag, TTag::EbosTypeTag> {
 // always be upheld in the majority of the spatial domain. In this context, "majority"
 // means 1 - EclNewtonRelaxedVolumeFraction.
 template<class TypeTag>
-struct EclNewtonStrictIterations<TypeTag, TTag::EbosTypeTag> {
+struct EclNewtonStrictIterations<TypeTag, TTag::TestTypeTag> {
     static constexpr int value = 100;
 };
 
 // set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
 // relatively often)
 template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::EbosTypeTag> {
+struct NewtonMaxIterations<TypeTag, TTag::TestTypeTag> {
     static constexpr int value = 8;
 };
 
@@ -168,7 +163,7 @@ struct NewtonMaxIterations<TypeTag, TTag::EbosTypeTag> {
 // simulation to 2 (instead of grabbing everything that is available).
 #if _OPENMP
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, TTag::EbosTypeTag> {
+struct ThreadsPerProcess<TypeTag, TTag::TestTypeTag> {
     static constexpr int value = 2;
 };
 #endif
@@ -176,54 +171,10 @@ struct ThreadsPerProcess<TypeTag, TTag::EbosTypeTag> {
 // By default, ebos accepts the result of the time integration unconditionally if the
 // smallest time step size is reached.
 template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, TTag::EbosTypeTag> {
+struct ContinueOnConvergenceError<TypeTag, TTag::TestTypeTag> {
     static constexpr bool value = true;
 };
 
 } // namespace Opm::Properties
 
-namespace Opm {
-template <class TypeTag>
-class EbosProblem : public EclProblem<TypeTag>
-{
-    typedef EclProblem<TypeTag> ParentType;
-
-public:
-    static void registerParameters()
-    {
-        ParentType::registerParameters();
-
-        BlackoilModelParameters<TypeTag>::registerParameters();
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTerminalOutput, "Do *NOT* use!");
-        EWOMS_HIDE_PARAM(TypeTag, DbhpMaxRel);
-        EWOMS_HIDE_PARAM(TypeTag, DwellFractionMax);
-        EWOMS_HIDE_PARAM(TypeTag, MaxResidualAllowed);
-        EWOMS_HIDE_PARAM(TypeTag, ToleranceMb);
-        EWOMS_HIDE_PARAM(TypeTag, ToleranceMbRelaxed);
-        EWOMS_HIDE_PARAM(TypeTag, ToleranceCnv);
-        EWOMS_HIDE_PARAM(TypeTag, ToleranceCnvRelaxed);
-        EWOMS_HIDE_PARAM(TypeTag, ToleranceWells);
-        EWOMS_HIDE_PARAM(TypeTag, ToleranceWellControl);
-        EWOMS_HIDE_PARAM(TypeTag, MaxWelleqIter);
-        EWOMS_HIDE_PARAM(TypeTag, UseMultisegmentWell);
-        EWOMS_HIDE_PARAM(TypeTag, TolerancePressureMsWells);
-        EWOMS_HIDE_PARAM(TypeTag, MaxPressureChangeMsWells);
-        EWOMS_HIDE_PARAM(TypeTag, MaxInnerIterMsWells);
-        EWOMS_HIDE_PARAM(TypeTag, MaxNewtonIterationsWithInnerWellIterations);
-        EWOMS_HIDE_PARAM(TypeTag, MaxInnerIterWells);
-        EWOMS_HIDE_PARAM(TypeTag, MaxSinglePrecisionDays);
-        EWOMS_HIDE_PARAM(TypeTag, MinStrictCnvIter);
-        EWOMS_HIDE_PARAM(TypeTag, MinStrictMbIter);
-        EWOMS_HIDE_PARAM(TypeTag, SolveWelleqInitially);
-        EWOMS_HIDE_PARAM(TypeTag, UpdateEquationsScaling);
-        EWOMS_HIDE_PARAM(TypeTag, UseUpdateStabilization);
-        EWOMS_HIDE_PARAM(TypeTag, MatrixAddWellContributions);
-        EWOMS_HIDE_PARAM(TypeTag, EnableTerminalOutput);
-    }
-
-    // inherit the constructors
-    using ParentType::EclProblem;
-};
-}
-
-#endif // EBOS_HH
+#endif // OPM_TEST_TYPETAG_HPP

@@ -19,7 +19,7 @@
 
 #include <config.h>
 
-#include <ebos/ebos.hh>
+#include "TestTypeTag.hpp"
 
 #include <opm/common/utility/Serializer.hpp>
 
@@ -61,7 +61,7 @@
 namespace Opm::Properties {
     namespace TTag {
     struct TestRestartTypeTag {
-            using InheritsFrom = std::tuple<EbosTypeTag, FlowTimeSteppingParameters>;
+            using InheritsFrom = std::tuple<TestTypeTag, FlowTimeSteppingParameters>;
         };
     }
 
@@ -113,13 +113,13 @@ TEST_FOR_TYPE(SimulatorReport)
 TEST_FOR_TYPE(SimulatorReportSingle)
 TEST_FOR_TYPE(SimulatorTimer)
 
-namespace Opm { using ATS = AdaptiveTimeStepping<Properties::TTag::EbosTypeTag>; }
+namespace Opm { using ATS = AdaptiveTimeStepping<Properties::TTag::TestTypeTag>; }
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingHardcoded, serializationTestObjectHardcoded)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPID, serializationTestObjectPID)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPIDIt, serializationTestObjectPIDIt)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingSimple, serializationTestObjectSimple)
 
-namespace Opm { using BPV = BlackOilPrimaryVariables<Properties::TTag::EbosTypeTag>; }
+namespace Opm { using BPV = BlackOilPrimaryVariables<Properties::TTag::TestTypeTag>; }
 TEST_FOR_TYPE_NAMED(BPV, BlackoilPrimaryVariables)
 
 namespace Opm {
@@ -137,7 +137,7 @@ namespace Opm {
 TEST_FOR_TYPE_NAMED(HystParam, EclHysteresisTwoPhaseLawParams)
 
 namespace Opm {
-    using Disc = Opm::FvBaseDiscretization<Opm::Properties::TTag::EbosTypeTag>;
+    using Disc = Opm::FvBaseDiscretization<Opm::Properties::TTag::TestTypeTag>;
     using BVec = typename Disc::BlockVectorWrapper;
 }
 TEST_FOR_TYPE_NAMED(BVec, BlockVectorWrapper)
@@ -429,7 +429,7 @@ BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
 
 namespace Opm {
 
-class TBatchExport : public TracerModel<Properties::TTag::EbosTypeTag> {
+class TBatchExport : public TracerModel<Properties::TTag::TestTypeTag> {
 public:
     using TBatch = TracerBatch<double>;
 };
@@ -442,14 +442,17 @@ namespace {
 
 struct AquiferFixture {
     AquiferFixture() {
-        using TT = Opm::Properties::TTag::TestRestartTypeTag;
+        using namespace Opm;
+        using TT = Properties::TTag::TestRestartTypeTag;
         const char* argv[] = {
             "test_RestartSerialization",
             "--ecl-deck-file-name=GLIFT1.DATA"
         };
-        Opm::AdaptiveTimeStepping<TT>::registerParameters();
-        Opm::setupParameters_<TT>(2, argv, /*registerParams=*/true);
-        Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+        AdaptiveTimeStepping<TT>::registerParameters();
+        BlackoilModelParameters<TT>::registerParameters();
+        EWOMS_REGISTER_PARAM(TT, bool, EnableTerminalOutput, "Do *NOT* use!");
+        setupParameters_<TT>(2, argv, /*registerParams=*/true);
+        FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
     }
 };
 
