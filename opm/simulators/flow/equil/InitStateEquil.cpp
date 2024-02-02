@@ -22,8 +22,7 @@
 */
 
 #include <config.h>
-#include <ebos/equil/initstateequil.hh>
-#include <ebos/equil/initstateequil_impl.hh>
+#include <opm/simulators/flow/equil/InitStateEquil_impl.hpp>
 
 #include <opm/grid/CpGrid.hpp>
 

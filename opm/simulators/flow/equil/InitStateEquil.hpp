@@ -26,8 +26,8 @@
  * \brief Routines that actually solve the ODEs that emerge from the hydrostatic
  *        equilibrium problem
  */
-#ifndef EWOMS_INITSTATEEQUIL_HH
-#define EWOMS_INITSTATEEQUIL_HH
+#ifndef OPM_INIT_STATE_EQUIL_HPP
+#define OPM_INIT_STATE_EQUIL_HPP
 
 #include <opm/models/utils/propertysystem.hh>
 
@@ -774,4 +774,4 @@ private:
 } // namespace EQUIL
 } // namespace Opm
 
-#endif // OPM_INITSTATEEQUIL_HEADER_INCLUDED
+#endif // OPM_INIT_STATE_EQUIL_HPP

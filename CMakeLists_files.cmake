@@ -32,8 +32,6 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclmixingratecontrols.cc
   ebos/eclsolutioncontainers.cc
   ebos/ecltransmissibility.cc
-  ebos/equil/equilibrationhelpers.cc
-  ebos/equil/initstateequil.cc
   opm/core/props/BlackoilPhases.cpp
   opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
@@ -56,6 +54,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/ValidationFunctions.cpp
+  opm/simulators/flow/equil/EquilibrationHelpers.cpp
+  opm/simulators/flow/equil/InitStateEquil.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/FlexibleSolver1.cpp
   opm/simulators/linalg/FlexibleSolver2.cpp
@@ -267,7 +267,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
   tests/test_dilu.cpp
-  tests/test_equil.cc
+  tests/test_equil.cpp
   tests/test_extractMatrix.cpp
   tests/test_flexiblesolver.cpp
   tests/test_glift1.cpp
@@ -413,7 +413,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclbaseaquifermodel.hh
   ebos/eclbasevanguard.hh
   ebos/eclcpgridvanguard.hh
-  ebos/eclequilinitializer.hh
   ebos/eclfluxmodule.hh
   ebos/eclgenericcpgridvanguard.hh
   ebos/eclgenericproblem.hh
@@ -450,6 +449,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/DummyGradientCalculator.hpp
+  opm/simulators/flow/EquilInitializer.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMain.hpp
   opm/simulators/flow/FlowsData.hpp
@@ -469,6 +469,10 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/SimulatorSerializer.hpp
   opm/simulators/flow/SubDomain.hpp
   opm/simulators/flow/ValidationFunctions.hpp
+  opm/simulators/flow/equil/EquilibrationHelpers.hpp
+  opm/simulators/flow/equil/EquilibrationHelpers_impl.hpp
+  opm/simulators/flow/equil/InitStateEquil.hpp
+  opm/simulators/flow/equil/InitStateEquil_impl.hpp
   opm/core/props/BlackoilPhases.hpp
   opm/core/props/phaseUsageFromDeck.hpp
   opm/core/props/satfunc/RelpermDiagnostics.hpp
