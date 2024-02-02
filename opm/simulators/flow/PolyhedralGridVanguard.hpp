@@ -27,12 +27,13 @@
 #ifndef OPM_POLYHEDRAL_GRID_VANGUARD_HPP
 #define OPM_POLYHEDRAL_GRID_VANGUARD_HPP
 
-#include <ebos/eclbasevanguard.hh>
 #include <ebos/ecltransmissibility.hh>
 
 #include <opm/grid/polyhedralgrid.hh>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
+
+#include <opm/simulators/flow/FlowBaseVanguard.hpp>
 
 #include <array>
 #include <functional>
@@ -49,7 +50,7 @@ namespace Opm::Properties {
 
 namespace TTag {
 struct PolyhedralGridVanguard {
-    using InheritsFrom = std::tuple<EclBaseVanguard>;
+    using InheritsFrom = std::tuple<FlowBaseVanguard>;
 };
 }
 
@@ -79,10 +80,10 @@ namespace Opm {
  * This class uses Dune::PolyhedralGrid as the simulation grid.
  */
 template <class TypeTag>
-class PolyhedralGridVanguard : public EclBaseVanguard<TypeTag>
+class PolyhedralGridVanguard : public FlowBaseVanguard<TypeTag>
 {
-    friend class EclBaseVanguard<TypeTag>;
-    using ParentType = EclBaseVanguard<TypeTag>;
+    friend class FlowBaseVanguard<TypeTag>;
+    using ParentType = FlowBaseVanguard<TypeTag>;
 
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -106,8 +107,8 @@ public:
                                                      CartesianIndexMapper, Scalar>;
 
     PolyhedralGridVanguard(Simulator& simulator)
-        : EclBaseVanguard<TypeTag>(simulator),
-          simulator_( simulator )
+        : FlowBaseVanguard<TypeTag>(simulator)
+        , simulator_(simulator)
     {
         this->callImplementationInit();
         // add a copy in standard vector format to fullfill new interface
@@ -215,7 +216,7 @@ public:
      * It is a function return the centroid for the given element
      * index.
      */
-    std::function<std::array<double,EclBaseVanguard<TypeTag>::dimensionworld>(int)>
+    std::function<std::array<double,FlowBaseVanguard<TypeTag>::dimensionworld>(int)>
     cellCentroids() const
     {
         return this->cellCentroids_(this->cartesianIndexMapper(), false);

@@ -27,7 +27,6 @@
 #ifndef OPM_CPGRID_VANGUARD_HPP
 #define OPM_CPGRID_VANGUARD_HPP
 
-#include <ebos/eclbasevanguard.hh>
 #include <ebos/ecltransmissibility.hh>
 
 #include <opm/common/TimingMacros.hpp>
@@ -36,6 +35,7 @@
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
+#include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericCpGridVanguard.hpp>
 
 #include <array>
@@ -54,7 +54,7 @@ namespace Opm::Properties {
 
 namespace TTag {
 struct CpGridVanguard {
-    using InheritsFrom = std::tuple<EclBaseVanguard>;
+    using InheritsFrom = std::tuple<FlowBaseVanguard>;
 };
 }
 
@@ -84,13 +84,13 @@ namespace Opm {
  * This class uses Dune::CpGrid as the simulation grid.
  */
 template <class TypeTag>
-class CpGridVanguard : public EclBaseVanguard<TypeTag>
+class CpGridVanguard : public FlowBaseVanguard<TypeTag>
                      , public GenericCpGridVanguard<GetPropType<TypeTag, Properties::ElementMapper>,
                                                     GetPropType<TypeTag, Properties::GridView>,
                                                     GetPropType<TypeTag, Properties::Scalar>>
 {
-    friend class EclBaseVanguard<TypeTag>;
-    using ParentType = EclBaseVanguard<TypeTag>;
+    friend class FlowBaseVanguard<TypeTag>;
+    using ParentType = FlowBaseVanguard<TypeTag>;
 
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -112,7 +112,7 @@ private:
 
 public:
     CpGridVanguard(Simulator& simulator)
-        : EclBaseVanguard<TypeTag>(simulator)
+        : FlowBaseVanguard<TypeTag>(simulator)
     {
         this->checkConsistency();
         this->callImplementationInit();

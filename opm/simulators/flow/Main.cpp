@@ -194,7 +194,7 @@ void Main::readDeck(const std::string& deckFilename,
                     std::string_view moduleVersion,
                     std::string_view compileTimestamp)
 {
-    auto omode = setupLogging(EclGenericVanguard::comm(),
+    auto omode = setupLogging(FlowGenericVanguard::comm(),
                               deckFilename,
                               outputDir,
                               outputMode,
