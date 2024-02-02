@@ -36,7 +36,7 @@
 
 #include <opm/grid/common/p2pcommunicator.hh>
 
-#include <opm/simulators/flow/EclInterRegFlows.hpp>
+#include <opm/simulators/flow/InterRegFlows.hpp>
 
 #include <cmath>
 #include <cstddef>
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_SUITE(Single_FIP_Region)
 
 BOOST_AUTO_TEST_CASE(AllInternal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ all_same_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ all_same_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{1});
 
     BOOST_CHECK_MESSAGE(flows.assignGlobalMaxRegionID(5),
@@ -234,7 +234,7 @@ BOOST_AUTO_TEST_CASE(AllInternal)
 
 BOOST_AUTO_TEST_CASE(LeftInternal_RightOther)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ all_same_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ all_same_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{1});
 
     BOOST_CHECK_MESSAGE(flows.assignGlobalMaxRegionID(5),
@@ -263,7 +263,7 @@ BOOST_AUTO_TEST_CASE(LeftInternal_RightOther)
 
 BOOST_AUTO_TEST_CASE(TopInternal_BottomOther)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ all_same_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ all_same_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{1});
 
     BOOST_CHECK_MESSAGE(flows.assignGlobalMaxRegionID(5),
@@ -298,7 +298,7 @@ BOOST_AUTO_TEST_SUITE(Left_Right_Split_Region)
 
 BOOST_AUTO_TEST_CASE(AllInternal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ left_right_split_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ left_right_split_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{2});
 
     flows.addConnection({ 0, 0, true }, { 1, 1, true }, conn_01());
@@ -384,7 +384,7 @@ BOOST_AUTO_TEST_CASE(AllInternal)
 
 BOOST_AUTO_TEST_CASE(LeftInternal_RightOther)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ left_right_split_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ left_right_split_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{2});
 
     flows.addConnection({ 0, 0, true } , { 1, 1, false }, conn_01());
@@ -470,7 +470,7 @@ BOOST_AUTO_TEST_CASE(LeftInternal_RightOther)
 
 BOOST_AUTO_TEST_CASE(LeftOther_RightInternal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ left_right_split_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ left_right_split_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{2});
 
     flows.addConnection({ 0, 0, false }, { 1, 1, true } , conn_01());
@@ -500,7 +500,7 @@ BOOST_AUTO_TEST_CASE(LeftOther_RightInternal)
 
 BOOST_AUTO_TEST_CASE(TopOther_BottomInternal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ left_right_split_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ left_right_split_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{2});
 
     flows.addConnection({ 0, 0, true } , { 1, 1, true } , conn_01());
@@ -551,7 +551,7 @@ BOOST_AUTO_TEST_CASE(TopOther_BottomInternal)
 
 BOOST_AUTO_TEST_CASE(CheckerBoard_Internal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ left_right_split_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ left_right_split_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{2});
 
     flows.addConnection({ 0, 0, false }, { 1, 1, true } , conn_01());
@@ -608,7 +608,7 @@ BOOST_AUTO_TEST_SUITE(Checker_Board_Region)
 
 BOOST_AUTO_TEST_CASE(AllInternal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ checker_board_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ checker_board_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{2});
 
     flows.addConnection({ 0, 0, true }, { 1, 1, true }, conn_01());
@@ -659,7 +659,7 @@ BOOST_AUTO_TEST_CASE(AllInternal)
 
 BOOST_AUTO_TEST_CASE(LeftInternal_RightOther)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ checker_board_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ checker_board_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{2});
 
     flows.addConnection({ 0, 0, true } , { 1, 1, false }, conn_01());
@@ -710,7 +710,7 @@ BOOST_AUTO_TEST_CASE(LeftInternal_RightOther)
 
 BOOST_AUTO_TEST_CASE(LeftOther_RightInternal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ checker_board_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ checker_board_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{2});
 
     flows.addConnection({ 0, 0, false }, { 1, 1, true } , conn_01());
@@ -761,7 +761,7 @@ BOOST_AUTO_TEST_CASE(LeftOther_RightInternal)
 
 BOOST_AUTO_TEST_CASE(TopOther_BottomInternal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ checker_board_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ checker_board_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{2});
 
     flows.addConnection({ 0, 0, false }, { 1, 1, false }, conn_01());
@@ -812,7 +812,7 @@ BOOST_AUTO_TEST_CASE(TopOther_BottomInternal)
 
 BOOST_AUTO_TEST_CASE(CheckerBoard_Internal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ checker_board_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ checker_board_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{2});
 
     flows.addConnection({ 0, 0, false }, { 1, 1, true } , conn_01());
@@ -863,7 +863,7 @@ BOOST_AUTO_TEST_CASE(CheckerBoard_Internal)
 
 BOOST_AUTO_TEST_CASE(Reverse_CheckerBoard_Internal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ checker_board_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ checker_board_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{2});
 
     flows.addConnection({ 0, 0, true } , { 1, 1, false }, conn_01());
@@ -920,7 +920,7 @@ BOOST_AUTO_TEST_SUITE(All_Separate_Region)
 
 BOOST_AUTO_TEST_CASE(AllInternal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ all_separate_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ all_separate_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{4});
 
     BOOST_CHECK_MESSAGE(! flows.assignGlobalMaxRegionID(2),
@@ -1059,7 +1059,7 @@ BOOST_AUTO_TEST_CASE(AllInternal)
 
 BOOST_AUTO_TEST_CASE(LeftInternal_RightOther)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ all_separate_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ all_separate_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{4});
 
     flows.addConnection({ 0, 0, true } , { 1, 1, false }, conn_01());
@@ -1201,7 +1201,7 @@ BOOST_AUTO_TEST_CASE(LeftInternal_RightOther)
 
 BOOST_AUTO_TEST_CASE(LeftOther_RightInternal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ all_separate_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ all_separate_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{4});
 
     flows.addConnection({ 0, 0, false }, { 1, 1, true } , conn_01());
@@ -1287,7 +1287,7 @@ BOOST_AUTO_TEST_CASE(LeftOther_RightInternal)
 
 BOOST_AUTO_TEST_CASE(TopOther_BottomInternal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ all_separate_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ all_separate_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{4});
 
     flows.addConnection({ 0, 0, false }, { 1, 1, false }, conn_01());
@@ -1373,7 +1373,7 @@ BOOST_AUTO_TEST_CASE(TopOther_BottomInternal)
 
 BOOST_AUTO_TEST_CASE(Checker_Board_Region)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ all_separate_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ all_separate_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{4});
 
     flows.addConnection({ 0, 0, false }, { 1, 1, true } , conn_01());
@@ -1487,7 +1487,7 @@ BOOST_AUTO_TEST_CASE(Checker_Board_Region)
 
 BOOST_AUTO_TEST_CASE(Reverse_CheckerBoard_Internal)
 {
-    auto flows = Opm::EclInterRegFlowMapSingleFIP{ all_separate_region() };
+    auto flows = Opm::InterRegFlowMapSingleFIP{ all_separate_region() };
     BOOST_CHECK_EQUAL(flows.getLocalMaxRegionID(), std::size_t{4});
 
     flows.addConnection({ 0, 0, true } , { 1, 1, false }, conn_01());
@@ -1613,8 +1613,8 @@ namespace {
     }
 
     template <typename Predicate>
-    void addConnections(Predicate&&                       isInterior,
-                        Opm::EclInterRegFlowMapSingleFIP& rank)
+    void addConnections(Predicate&&                    isInterior,
+                        Opm::InterRegFlowMapSingleFIP& rank)
     {
         rank.addConnection({ 0, 0, isInterior(0) }, { 1, 1, isInterior(1) }, conn_01());
         rank.addConnection({ 0, 0, isInterior(0) }, { 2, 2, isInterior(2) }, conn_02());
@@ -1627,7 +1627,7 @@ BOOST_AUTO_TEST_SUITE(Two_Processes)
 
 BOOST_AUTO_TEST_CASE(Empty)
 {
-    using Map = Opm::EclInterRegFlowMapSingleFIP;
+    using Map = Opm::InterRegFlowMapSingleFIP;
 
     auto rank = std::vector<Map>(2, Map { all_same_region() });
 
@@ -1667,7 +1667,7 @@ BOOST_AUTO_TEST_CASE(Empty)
 
 BOOST_AUTO_TEST_CASE(Single_FIP_Region)
 {
-    using Map = Opm::EclInterRegFlowMapSingleFIP;
+    using Map = Opm::InterRegFlowMapSingleFIP;
 
     auto rank = std::vector<Map>(2, Map { all_same_region() });
 
@@ -1710,7 +1710,7 @@ BOOST_AUTO_TEST_CASE(Single_FIP_Region)
 
 BOOST_AUTO_TEST_CASE(Left_Right_Split_Region)
 {
-    using Map = Opm::EclInterRegFlowMapSingleFIP;
+    using Map = Opm::InterRegFlowMapSingleFIP;
 
     auto rank = std::vector<Map>(2, Map { left_right_split_region() });
 
@@ -1774,7 +1774,7 @@ BOOST_AUTO_TEST_CASE(Left_Right_Split_Region)
 
 BOOST_AUTO_TEST_CASE(Checker_Board_Region)
 {
-    using Map = Opm::EclInterRegFlowMapSingleFIP;
+    using Map = Opm::InterRegFlowMapSingleFIP;
 
     auto rank = std::vector<Map>(2, Map { checker_board_region() });
 
@@ -1839,7 +1839,7 @@ BOOST_AUTO_TEST_CASE(Checker_Board_Region)
 
 BOOST_AUTO_TEST_CASE(All_Separate_Region)
 {
-    using Map = Opm::EclInterRegFlowMapSingleFIP;
+    using Map = Opm::InterRegFlowMapSingleFIP;
 
     auto rank = std::vector<Map>(2, Map { all_separate_region() });
 
@@ -1995,7 +1995,7 @@ BOOST_AUTO_TEST_SUITE(Four_Processes)
 
 BOOST_AUTO_TEST_CASE(Single_FIP_Region)
 {
-    using Map = Opm::EclInterRegFlowMapSingleFIP;
+    using Map = Opm::InterRegFlowMapSingleFIP;
 
     auto rank = std::vector<Map>(4, Map { all_same_region() });
     BOOST_CHECK_EQUAL(rank[0].getLocalMaxRegionID(), std::size_t{1});
@@ -2047,7 +2047,7 @@ BOOST_AUTO_TEST_CASE(Single_FIP_Region)
 
 BOOST_AUTO_TEST_CASE(Left_Right_Split_Region)
 {
-    using Map = Opm::EclInterRegFlowMapSingleFIP;
+    using Map = Opm::InterRegFlowMapSingleFIP;
 
     auto rank = std::vector<Map>(4, Map { left_right_split_region() });
     BOOST_CHECK_EQUAL(rank[0].getLocalMaxRegionID(), std::size_t{2});
@@ -2121,7 +2121,7 @@ BOOST_AUTO_TEST_CASE(Left_Right_Split_Region)
 
 BOOST_AUTO_TEST_CASE(Checker_Board_Region)
 {
-    using Map = Opm::EclInterRegFlowMapSingleFIP;
+    using Map = Opm::InterRegFlowMapSingleFIP;
 
     auto rank = std::vector<Map>(4, Map { checker_board_region() });
     BOOST_CHECK_EQUAL(rank[0].getLocalMaxRegionID(), std::size_t{2});
@@ -2196,7 +2196,7 @@ BOOST_AUTO_TEST_CASE(Checker_Board_Region)
 
 BOOST_AUTO_TEST_CASE(All_Separate_Region)
 {
-    using Map = Opm::EclInterRegFlowMapSingleFIP;
+    using Map = Opm::InterRegFlowMapSingleFIP;
 
     auto rank = std::vector<Map>(4, Map { all_separate_region() });
     BOOST_CHECK_EQUAL(rank[0].getLocalMaxRegionID(), std::size_t{4});
@@ -2371,8 +2371,8 @@ namespace {
     }
 
     template <typename Predicate>
-    void addConnections(Predicate&&              isInterior,
-                        Opm::EclInterRegFlowMap& rank)
+    void addConnections(Predicate&&           isInterior,
+                        Opm::InterRegFlowMap& rank)
     {
         rank.addConnection({ 0, 0, isInterior(0) }, { 1, 1, isInterior(1) }, conn_01());
         rank.addConnection({ 0, 0, isInterior(0) }, { 2, 2, isInterior(2) }, conn_02());
@@ -2388,7 +2388,7 @@ BOOST_AUTO_TEST_CASE(Single_Process)
     const auto fipchk = checker_board_region();
     const auto fipsep = all_separate_region();
 
-    auto flows = Opm::EclInterRegFlowMap {
+    auto flows = Opm::InterRegFlowMap {
         fipnum.size(),
         {
             { "FIPNUM", std::cref(fipnum) },
@@ -2693,7 +2693,7 @@ BOOST_AUTO_TEST_CASE(Single_Process)
 
 BOOST_AUTO_TEST_CASE(Two_Processes)
 {
-    using Map = Opm::EclInterRegFlowMap;
+    using Map = Opm::InterRegFlowMap;
 
     const auto fipnum = all_same_region();
     const auto fipspl = left_right_split_region();
@@ -3013,7 +3013,7 @@ BOOST_AUTO_TEST_CASE(Two_Processes)
 
 BOOST_AUTO_TEST_CASE(Two_Processes_Inconsistent_ReadWrite)
 {
-    using Map = Opm::EclInterRegFlowMap;
+    using Map = Opm::InterRegFlowMap;
 
     const auto fipnum = all_same_region();
     const auto fipspl = left_right_split_region();
@@ -3058,7 +3058,7 @@ BOOST_AUTO_TEST_CASE(Two_Processes_Inconsistent_ReadWrite)
 
 BOOST_AUTO_TEST_CASE(Four_Processes)
 {
-    using Map = Opm::EclInterRegFlowMap;
+    using Map = Opm::InterRegFlowMap;
 
     const auto fipnum = all_same_region();
     const auto fipspl = left_right_split_region();
@@ -3384,7 +3384,7 @@ BOOST_AUTO_TEST_CASE(Four_Processes)
 
 BOOST_AUTO_TEST_CASE(Four_Processes_Declared_MaxID)
 {
-    using Map = Opm::EclInterRegFlowMap;
+    using Map = Opm::InterRegFlowMap;
 
     const auto fipnum = all_same_region();
     const auto fipspl = left_right_split_region();

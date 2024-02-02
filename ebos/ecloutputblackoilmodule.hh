@@ -943,7 +943,7 @@ public:
     {
         OPM_TIMEBLOCK_LOCAL(processFluxes);
         const auto identifyCell = [&activeIndex, &cartesianIndex](const Element& elem)
-            -> EclInterRegFlowMap::Cell
+            -> InterRegFlowMap::Cell
         {
             const auto cellIndex = activeIndex(elem);
 
@@ -992,7 +992,7 @@ public:
     /*!
      * \brief Get read-only access to collection of inter-region flows.
      */
-    const EclInterRegFlowMap& getInterRegFlows() const
+    const InterRegFlowMap& getInterRegFlows() const
     {
         return this->interRegionFlows_;
     }

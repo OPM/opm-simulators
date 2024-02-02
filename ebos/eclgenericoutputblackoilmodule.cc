@@ -143,11 +143,11 @@ std::string EclString(const Opm::Inplace::Phase phase)
         return eclState.fieldProps().get_int("FIPNUM").size();
     }
 
-    std::vector<Opm::EclInterRegFlowMap::SingleRegion>
+    std::vector<Opm::InterRegFlowMap::SingleRegion>
     defineInterRegionFlowArrays(const Opm::EclipseState&  eclState,
                                 const Opm::SummaryConfig& summaryConfig)
     {
-        auto regions = std::vector<Opm::EclInterRegFlowMap::SingleRegion>{};
+        auto regions = std::vector<Opm::InterRegFlowMap::SingleRegion>{};
 
         const auto& fprops = eclState.fieldProps();
         for (const auto& arrayName : summaryConfig.fip_regions_interreg_flow()) {

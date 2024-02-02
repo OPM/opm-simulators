@@ -43,9 +43,9 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/Banners.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/EclActionHandler.cpp
-  opm/simulators/flow/EclInterRegFlows.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/FlowMainEbos.cpp
+  opm/simulators/flow/InterRegFlows.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/LogOutputHelper.cpp
   opm/simulators/flow/Main.cpp
@@ -261,13 +261,13 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
   tests/test_dilu.cpp
-  tests/test_eclinterregflows.cpp
   tests/test_equil.cc
   tests/test_extractMatrix.cpp
   tests/test_flexiblesolver.cpp
   tests/test_glift1.cpp
   tests/test_graphcoloring.cpp
   tests/test_GroupState.cpp
+  tests/test_interregflows.cpp
   tests/test_invert.cpp
   tests/test_keyword_validator.cpp
   tests/test_LogOutputHelper.cpp
@@ -447,9 +447,9 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/Banners.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/EclActionHandler.hpp
-  opm/simulators/flow/EclInterRegFlows.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMainEbos.hpp
+  opm/simulators/flow/InterRegFlows.hpp
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/NonlinearSolver.hpp
   opm/simulators/flow/RSTConv.hpp

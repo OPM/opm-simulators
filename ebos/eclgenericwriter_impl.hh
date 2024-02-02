@@ -115,7 +115,7 @@ bool directVerticalNeighbors(const std::array<int, 3>& cartDims,
 }
 
 std::unordered_map<std::string, Opm::data::InterRegFlowMap>
-getInterRegFlowsAsMap(const Opm::EclInterRegFlowMap& map)
+getInterRegFlowsAsMap(const Opm::InterRegFlowMap& map)
 {
     auto maps = std::unordered_map<std::string, Opm::data::InterRegFlowMap>{};
 
@@ -605,7 +605,7 @@ evalSummary(const int                                            reportStepNum,
             const std::map<std::string, std::vector<double>>&    regionData,
             const Inplace&                                       inplace,
             const Inplace&                                       initialInPlace,
-            const EclInterRegFlowMap&                            interRegFlows,
+            const InterRegFlowMap&                               interRegFlows,
             SummaryState&                                        summaryState,
             UDQState&                                            udqState)
 {

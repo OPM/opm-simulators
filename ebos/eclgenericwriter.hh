@@ -46,7 +46,7 @@ namespace Opm {
 
 class EclipseIO;
 class EclipseState;
-class EclInterRegFlowMap;
+class InterRegFlowMap;
 class Inplace;
 struct NNCdata;
 class Schedule;
@@ -147,7 +147,7 @@ protected:
                      const std::map<std::string, std::vector<double>>&    regionData,
                      const Inplace&                                       inplace,
                      const Inplace&                                       initialInPlace,
-                     const EclInterRegFlowMap&                            interRegFlows,
+                     const InterRegFlowMap&                               interRegFlows,
                      SummaryState&                                        summaryState,
                      UDQState&                                            udqState);
 
