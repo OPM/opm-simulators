@@ -412,7 +412,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/ebos.hh
   ebos/eclbasevanguard.hh
   ebos/eclcpgridvanguard.hh
-  ebos/eclfluxmodule.hh
   ebos/eclgenericcpgridvanguard.hh
   ebos/eclgenericproblem.hh
   ebos/eclgenericproblem_impl.hh
@@ -456,6 +455,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/LogOutputHelper.hpp
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/MixingRateControls.hpp
+  opm/simulators/flow/NewTranFluxModule.hpp
   opm/simulators/flow/NonlinearSolver.hpp
   opm/simulators/flow/OutputBlackoilModule.hpp
   opm/simulators/flow/partitionCells.hpp

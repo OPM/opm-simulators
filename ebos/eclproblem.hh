@@ -35,7 +35,6 @@
 #include <dune/common/fmatrix.hh>
 
 #include <ebos/eclcpgridvanguard.hh>
-#include <ebos/eclfluxmodule.hh>
 #include <ebos/eclgenericproblem.hh>
 #include <ebos/eclnewtonmethod.hh>
 #include <ebos/eclproblem_properties.hh>
@@ -80,6 +79,7 @@
 #include <opm/simulators/flow/EquilInitializer.hpp>
 #include <opm/simulators/flow/FIBlackoilModel.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
+#include <opm/simulators/flow/NewTranFluxModule.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>

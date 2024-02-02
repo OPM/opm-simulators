@@ -29,7 +29,6 @@
 #define ECL_PROBLEM_PROPERTIES_HH
 
 #include <ebos/eclcpgridvanguard.hh>
-#include <ebos/eclfluxmodule.hh>
 #include <ebos/eclnewtonmethod.hh>
 
 #if HAVE_DAMARIS
@@ -48,6 +47,7 @@
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
 #include <opm/simulators/flow/EclWriter.hpp>
 #include <opm/simulators/flow/FIBlackoilModel.hpp>
+#include <opm/simulators/flow/NewTranFluxModule.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
 
@@ -495,7 +495,7 @@ struct EnableStorageCache<TypeTag, TTag::EclBaseProblem> {
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::EclBaseProblem> {
-    using type = EclTransFluxModule<TypeTag>;
+    using type = NewTranFluxModule<TypeTag>;
 };
 
 // Use the dummy gradient calculator in order not to do unnecessary work.

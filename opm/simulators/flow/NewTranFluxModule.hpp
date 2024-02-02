@@ -23,13 +23,13 @@
 /*!
  * \file
  *
- * \brief This file contains the flux module which is used for ECL problems
+ * \brief This file contains the flux module which is used for flow problems
  *
  * This approach to fluxes is very specific to two-point flux approximation and applies
  * what the Eclipse Technical Description calls the "NEWTRAN" transmissibility approach.
  */
-#ifndef EWOMS_ECL_FLUX_MODULE_HH
-#define EWOMS_ECL_FLUX_MODULE_HH
+#ifndef OPM_NEWTRAN_FLUX_MODULE_HPP
+#define OPM_NEWTRAN_FLUX_MODULE_HPP
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -50,24 +50,24 @@
 namespace Opm {
 
 template <class TypeTag>
-class EclTransIntensiveQuantities;
+class NewTranIntensiveQuantities;
 
 template <class TypeTag>
-class EclTransExtensiveQuantities;
+class NewTranExtensiveQuantities;
 
 template <class TypeTag>
-class EclTransBaseProblem;
+class NewTranBaseProblem;
 
 /*!
  * \ingroup EclBlackOilSimulator
  * \brief Specifies a flux module which uses ECL transmissibilities.
  */
 template <class TypeTag>
-struct EclTransFluxModule
+struct NewTranFluxModule
 {
-    using FluxIntensiveQuantities = EclTransIntensiveQuantities<TypeTag>;
-    using FluxExtensiveQuantities = EclTransExtensiveQuantities<TypeTag>;
-    using FluxBaseProblem = EclTransBaseProblem<TypeTag>;
+    using FluxIntensiveQuantities = NewTranIntensiveQuantities<TypeTag>;
+    using FluxExtensiveQuantities = NewTranExtensiveQuantities<TypeTag>;
+    using FluxBaseProblem = NewTranBaseProblem<TypeTag>;
 
     /*!
      * \brief Register all run-time parameters for the flux module.
@@ -82,7 +82,7 @@ struct EclTransFluxModule
  *        transmissibility based volume flux calculation.
  */
 template <class TypeTag>
-class EclTransBaseProblem
+class NewTranBaseProblem
 { };
 
 /*!
@@ -90,7 +90,7 @@ class EclTransBaseProblem
  * \brief Provides the intensive quantities for the ECL flux module
  */
 template <class TypeTag>
-class EclTransIntensiveQuantities
+class NewTranIntensiveQuantities
 {
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
 protected:
@@ -103,7 +103,7 @@ protected:
  * \brief Provides the ECL flux module
  */
 template <class TypeTag>
-class EclTransExtensiveQuantities
+class NewTranExtensiveQuantities
 {
     using Implementation = GetPropType<TypeTag, Properties::ExtensiveQuantities>;
 
@@ -532,8 +532,7 @@ public:
             if (upIdx[phaseIdx] == interiorDofIdx) {
 
                 // this is slightly hacky because in the automatic differentiation case, it
-                // only works for the element centered finite volume method. for ebos this
-                // does not matter, though.
+                // only works for the element centered finite volume method.
                 const auto& up = intQuantsIn;
 
                 // deal with water induced rock compaction
@@ -589,4 +588,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_NEWTRAN_FLUX_MODULE_HPP
