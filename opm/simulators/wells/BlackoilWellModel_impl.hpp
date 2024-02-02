@@ -881,47 +881,14 @@ namespace Opm {
                     }
                 }
 
-                // If a production well disallows crossflow and its
-                // (prediction type) rate control is zero, then it is effectively shut.
-                if (!well_ecl.getAllowCrossFlow() && well_ecl.isProducer() && well_ecl.predictionMode()) {
-                    const auto& summaryState = ebosSimulator_.vanguard().summaryState();
-                    const auto prod_controls = well_ecl.productionControls(summaryState);
-
-                    auto is_zero = [](const double x)
-                    {
-                        return std::isfinite(x) && !std::isnormal(x);
-                    };
-
-                    bool zero_rate_control = false;
-                    switch (prod_controls.cmode) {
-                    case Well::ProducerCMode::ORAT:
-                        zero_rate_control = is_zero(prod_controls.oil_rate);
-                        break;
-
-                    case Well::ProducerCMode::WRAT:
-                        zero_rate_control = is_zero(prod_controls.water_rate);
-                        break;
-
-                    case Well::ProducerCMode::GRAT:
-                        zero_rate_control = is_zero(prod_controls.gas_rate);
-                        break;
-
-                    case Well::ProducerCMode::LRAT:
-                        zero_rate_control = is_zero(prod_controls.liquid_rate);
-                        break;
-
-                    case Well::ProducerCMode::RESV:
-                        zero_rate_control = is_zero(prod_controls.resv_rate);
-                        break;
-                    default:
-                        // Might still have zero rate controls, but is pressure controlled.
-                        zero_rate_control = false;
-                        break;
-                    }
-
-                    if (zero_rate_control) {
+                // shut wells with zero rante constraints and disallowing
+                if (!well_ecl.getAllowCrossFlow()) {
+                    const bool any_zero_rate_constraint = well_ecl.isProducer()
+                                                  ? well_ecl.productionControls(summaryState_).anyZeroRateConstraint()
+                                                  : well_ecl.injectionControls(summaryState_).anyZeroRateConstraint();
+                    if (any_zero_rate_constraint) {
                         // Treat as shut, do not add to container.
-                        local_deferredLogger.info("  Well shut due to zero rate control and disallowing crossflow: " + well_ecl.name());
+                        local_deferredLogger.debug(fmt::format("  Well {} gets shut due to having zero rate constraint and disallowing crossflow ", well_ecl.name()) );
                         this->wellState().shutWell(w);
                         continue;
                     }
