@@ -411,7 +411,6 @@ list (APPEND TEST_DATA_FILES
 list (APPEND PUBLIC_HEADER_FILES
   ebos/ebos.hh
   ebos/eclbaseaquifermodel.hh
-  ebos/eclbasevanguard.hh
   ebos/eclcpgridvanguard.hh
   ebos/eclequilinitializer.hh
   ebos/eclfluxmodule.hh
@@ -451,6 +450,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/DummyGradientCalculator.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
+  opm/simulators/flow/FlowBaseVanguard.hpp
   opm/simulators/flow/FlowMain.hpp
   opm/simulators/flow/FlowsData.hpp
   opm/simulators/flow/GenericOutputBlackoilModule.hpp

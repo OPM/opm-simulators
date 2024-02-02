@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::EclBaseVanguard
+ * \copydoc Opm::FlowBaseVanguard
  */
-#ifndef EWOMS_ECL_BASE_VANGUARD_HH
-#define EWOMS_ECL_BASE_VANGUARD_HH
+#ifndef OPM_FLOW_BASE_VANGUARD_HPP
+#define OPM_FLOW_BASE_VANGUARD_HPP
 
 #include <ebos/eclgenericvanguard.hh>
 
@@ -49,14 +49,14 @@
 
 namespace Opm {
 template <class TypeTag>
-class EclBaseVanguard;
+class FlowBaseVanguard;
 template<typename Grid, typename GridView> struct LookUpCellCentroid;
 }
 
 namespace Opm::Properties {
 
 namespace TTag {
-struct EclBaseVanguard {};
+struct FlowBaseVanguard {};
 }
 
 // declare the properties required by the for the ecl simulator vanguard
@@ -128,77 +128,77 @@ struct AllowDistributedWells {
 };
 
 template<class TypeTag>
-struct IgnoreKeywords<TypeTag, TTag::EclBaseVanguard> {
+struct IgnoreKeywords<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr auto value = "";
 };
 template<class TypeTag>
-struct EclDeckFileName<TypeTag, TTag::EclBaseVanguard> {
+struct EclDeckFileName<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr auto value = "";
 };
 template<class TypeTag>
-struct EclOutputInterval<TypeTag, TTag::EclBaseVanguard> {
+struct EclOutputInterval<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr int value = -1;
 };
 template<class TypeTag>
-struct EnableOpmRstFile<TypeTag, TTag::EclBaseVanguard> {
+struct EnableOpmRstFile<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct ParsingStrictness<TypeTag, TTag::EclBaseVanguard> {
+struct ParsingStrictness<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr auto value = "normal";
 };
 template<class TypeTag>
-struct SchedRestart<TypeTag, TTag::EclBaseVanguard> {
+struct SchedRestart<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EdgeWeightsMethod<TypeTag, TTag::EclBaseVanguard> {
+struct EdgeWeightsMethod<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr int value = 1;
 };
 
 #if HAVE_OPENCL || HAVE_ROCSPARSE
 template<class TypeTag>
-struct NumJacobiBlocks<TypeTag, TTag::EclBaseVanguard> {
+struct NumJacobiBlocks<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr int value = 0;
 };
 #endif // HAVE_OPENCL || HAVE_ROCSPARSE
 
 template<class TypeTag>
-struct OwnerCellsFirst<TypeTag, TTag::EclBaseVanguard> {
+struct OwnerCellsFirst<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr bool value = true;
 };
 template<class TypeTag>
-struct SerialPartitioning<TypeTag, TTag::EclBaseVanguard> {
+struct SerialPartitioning<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr bool value = false;
 };
 
 template<class TypeTag>
-struct ZoltanImbalanceTol<TypeTag, TTag::EclBaseVanguard> {
+struct ZoltanImbalanceTol<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr double value = 1.1;
 };
 
 template<class TypeTag>
-struct ZoltanParams<TypeTag,TTag::EclBaseVanguard> {
+struct ZoltanParams<TypeTag,TTag::FlowBaseVanguard> {
     static constexpr auto value = "graph";
 };
 
 template <class TypeTag>
-struct ExternalPartition<TypeTag, TTag::EclBaseVanguard>
+struct ExternalPartition<TypeTag, TTag::FlowBaseVanguard>
 {
     static constexpr auto* value = "";
 };
 
 template<class TypeTag>
-struct AllowDistributedWells<TypeTag, TTag::EclBaseVanguard> {
+struct AllowDistributedWells<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr bool value = false;
 };
 
 template<class T1, class T2>
 struct UseMultisegmentWell;
 
-// Same as in BlackoilModelParametersEbos.hpp but for here.
+// Same as in BlackoilModelParameters.hpp but for here.
 template<class TypeTag>
-struct UseMultisegmentWell<TypeTag, TTag::EclBaseVanguard> {
+struct UseMultisegmentWell<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr bool value = true;
 };
 } // namespace Opm::Properties
@@ -206,13 +206,13 @@ struct UseMultisegmentWell<TypeTag, TTag::EclBaseVanguard> {
 namespace Opm {
 
 /*!
- * \ingroup EclBlackOilSimulator
+ * \ingroup BlackOilSimulator
  *
  * \brief Helper class for grid instantiation of ECL file-format using problems.
  */
 template <class TypeTag>
-class EclBaseVanguard : public BaseVanguard<TypeTag>,
-                        public EclGenericVanguard
+class FlowBaseVanguard : public BaseVanguard<TypeTag>,
+                         public EclGenericVanguard
 {
     using ParentType = BaseVanguard<TypeTag>;
     using Implementation = GetPropType<TypeTag, Properties::Vanguard>;
@@ -231,7 +231,6 @@ protected:
     static const int dimensionworld = Grid::dimensionworld;
     using Element = typename GridView::template Codim<0>::Entity;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
-
 
 public:
     /*!
@@ -286,7 +285,7 @@ public:
 #endif
         EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
                              "Allow the perforations of a well to be distributed to interior of multiple processes");
-        // register here for the use in the tests without BlackoildModelParametersEbos
+        // register here for the use in the tests without BlackoilModelParameters
         EWOMS_REGISTER_PARAM(TypeTag, bool, UseMultisegmentWell, "Use the well model for multi-segment wells instead of the one for single-segment wells");
 
     }
@@ -297,7 +296,7 @@ public:
      * This is the file format used by the commercial ECLiPSE simulator. Usually it uses
      * a cornerpoint description of the grid.
      */
-    EclBaseVanguard(Simulator& simulator)
+    FlowBaseVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
         fileName_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
@@ -649,4 +648,4 @@ protected:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_FLOW_BASE_VANGUARD_HPP

@@ -31,7 +31,6 @@
 #include <dune/alugrid/dgf.hh>
 #include <dune/alugrid/grid.hh>
 
-#include <ebos/eclbasevanguard.hh>
 #include <ebos/ecltransmissibility.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -41,6 +40,7 @@
 #include <opm/models/common/multiphasebaseproperties.hh>
 
 #include <opm/simulators/flow/AluGridCartesianIndexMapper.hpp>
+#include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 
 #include <array>
@@ -59,7 +59,7 @@ namespace Opm::Properties {
 
 namespace TTag {
 struct AluGridVanguard {
-    using InheritsFrom = std::tuple<EclBaseVanguard>;
+    using InheritsFrom = std::tuple<FlowBaseVanguard>;
 };
 }
 
@@ -86,17 +86,17 @@ struct EquilGrid<TypeTag, TTag::AluGridVanguard> {
 namespace Opm {
 
 /*!
- * \ingroup EclBlackOilSimulator
+ * \ingroup BlackOilSimulator
  *
  * \brief Helper class for grid instantiation of ECL file-format using problems.
  *
  * This class uses Dune::ALUGrid as the simulation grid.
  */
 template <class TypeTag>
-class AluGridVanguard : public EclBaseVanguard<TypeTag>
+class AluGridVanguard : public FlowBaseVanguard<TypeTag>
 {
-    friend class EclBaseVanguard<TypeTag>;
-    using ParentType = EclBaseVanguard<TypeTag>;
+    friend class FlowBaseVanguard<TypeTag>;
+    using ParentType = FlowBaseVanguard<TypeTag>;
 
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -115,7 +115,7 @@ public:
     static constexpr int dimensionworld = Grid::dimensionworld;
 
     AluGridVanguard(Simulator& simulator)
-        : EclBaseVanguard<TypeTag>(simulator)
+        : FlowBaseVanguard<TypeTag>(simulator)
     { 
       this->mpiRank = EclGenericVanguard::comm().rank();
       this->callImplementationInit();

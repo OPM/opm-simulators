@@ -29,7 +29,6 @@
 
 #include <dune/common/fvector.hh>
 
-#include <ebos/eclbasevanguard.hh>
 #include <opm/simulators/utils/moduleVersion.hpp>
 
 #include <opm/common/Exceptions.hpp>
@@ -52,6 +51,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
 
 #include <algorithm>
