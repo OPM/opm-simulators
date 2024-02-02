@@ -267,7 +267,7 @@ struct RelaxedMaxPvFraction<TypeTag, TTag::FlowModelParameters> {
 template<class TypeTag>
 struct ToleranceMb<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-6;
+    static constexpr type value = 1e-7;
 };
 template<class TypeTag>
 struct ToleranceMbRelaxed<TypeTag, TTag::FlowModelParameters> {
