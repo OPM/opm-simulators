@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::EclBaseAquiferModel
+ * \copydoc Opm::BaseAquiferModel
  */
-#ifndef EWOMS_ECL_BASE_AQUIFER_MODEL_HH
-#define EWOMS_ECL_BASE_AQUIFER_MODEL_HH
+#ifndef OPM_BASE_AQUIFER_MODEL_HPP
+#define OPM_BASE_AQUIFER_MODEL_HPP
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/basicproperties.hh>
@@ -33,14 +33,12 @@
 
 #include <opm/output/data/Aquifer.hpp>
 
-#include <exception>
 #include <stdexcept>
-#include <vector>
 
 namespace Opm {
 
 /*!
- * \ingroup EclBaseAquiferModel
+ * \ingroup BaseAquiferModel
  *
  * \brief The base class which specifies the API of aquifer models.
  *
@@ -48,13 +46,13 @@ namespace Opm {
  * anything on its own.
  */
 template <class TypeTag>
-class EclBaseAquiferModel
+class BaseAquiferModel
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
 
 public:
-    EclBaseAquiferModel(Simulator& simulator)
+    BaseAquiferModel(Simulator& simulator)
         : simulator_(simulator)
     {}
 
@@ -151,10 +149,8 @@ public:
     void deserialize(Restarter&)
     { }
 
-
     data::Aquifers aquiferData() const
     { return data::Aquifers{}; }
-
 
 protected:
     Simulator& simulator_;
@@ -162,4 +158,4 @@ protected:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_BASE_AQUIFER_MODEL_HPP
