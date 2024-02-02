@@ -19,8 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef ECL_INTERREG_FLOWS_MODULE_HPP
-#define ECL_INTERREG_FLOWS_MODULE_HPP
+#ifndef OPM_INTERREG_FLOWS_MODULE_HPP
+#define OPM_INTERREG_FLOWS_MODULE_HPP
 
 #include <opm/output/data/InterRegFlowMap.hpp>
 
@@ -38,12 +38,12 @@
 
 namespace Opm {
 
-    class EclInterRegFlowMap;
+    class InterRegFlowMap;
 
     /// Form CSR adjacency matrix representation of inter-region flow rate
     /// graph provided as a list of connections between regions on local MPI
     /// rank.  Pertains to a single FIP definition array (e.g., FIPNUM).
-    class EclInterRegFlowMapSingleFIP
+    class InterRegFlowMapSingleFIP
     {
     public:
         /// Minimal characteristics of a cell from a simulation grid.
@@ -58,12 +58,12 @@ namespace Opm {
             bool isInterior{true};
         };
 
-        friend class EclInterRegFlowMap;
+        friend class InterRegFlowMap;
 
         /// Constructor
         ///
         /// \param[in] region Local rank's FIP region definition array.
-        explicit EclInterRegFlowMapSingleFIP(const std::vector<int>& region);
+        explicit InterRegFlowMapSingleFIP(const std::vector<int>& region);
 
         /// Add flow rate connection between regions.
         ///
@@ -171,11 +171,11 @@ namespace Opm {
         bool isReadFromStream_{false};
 
         /// Default constructor.
-        EclInterRegFlowMapSingleFIP() = default;
+        InterRegFlowMapSingleFIP() = default;
     };
 
     /// Inter-region flow accumulation maps for all region definition arrays
-    class EclInterRegFlowMap
+    class InterRegFlowMap
     {
     public:
         /// Minimal representation of a single named region defintion.
@@ -190,10 +190,10 @@ namespace Opm {
         };
 
         /// Characteristics of a cell from a simulation grid.
-        using Cell = EclInterRegFlowMapSingleFIP::Cell;
+        using Cell = InterRegFlowMapSingleFIP::Cell;
 
         /// Default constructor.
-        EclInterRegFlowMap() = default;
+        InterRegFlowMap() = default;
 
         /// Special purpose constructor for global object being collected on
         /// the I/O rank.
@@ -201,7 +201,7 @@ namespace Opm {
         /// Only knows about the FIP region set names.
         ///
         /// \param[in] names Sorted sequence of FIP region names.
-        static EclInterRegFlowMap
+        static InterRegFlowMap
         createMapFromNames(std::vector<std::string> names);
 
         /// Constructor.
@@ -214,15 +214,15 @@ namespace Opm {
         /// \param[in] declaredMaxRegID Declared maximum region ID in the
         ///    run-typically from the TABDIMS and/or REGDIMS keywords.  Used
         ///    for sizing internal data structures if greater than zero.
-        explicit EclInterRegFlowMap(const std::size_t                numCells,
-                                    const std::vector<SingleRegion>& regions,
-                                    const std::size_t                declaredMaxRegID = 0);
+        explicit InterRegFlowMap(const std::size_t                numCells,
+                                 const std::vector<SingleRegion>& regions,
+                                 const std::size_t                declaredMaxRegID = 0);
 
-        EclInterRegFlowMap(const EclInterRegFlowMap& rhs) = default;
-        EclInterRegFlowMap(EclInterRegFlowMap&& rhs) noexcept = default;
+        InterRegFlowMap(const InterRegFlowMap& rhs) = default;
+        InterRegFlowMap(InterRegFlowMap&& rhs) noexcept = default;
 
-        EclInterRegFlowMap& operator=(const EclInterRegFlowMap& rhs) = default;
-        EclInterRegFlowMap& operator=(EclInterRegFlowMap&& rhs) noexcept = default;
+        InterRegFlowMap& operator=(const InterRegFlowMap& rhs) = default;
+        InterRegFlowMap& operator=(InterRegFlowMap&& rhs) noexcept = default;
 
         /// Add flow rate connection between regions for all region
         /// definitions.
@@ -336,7 +336,7 @@ namespace Opm {
                 // different number of maps).  Unexpected.  Read the values
                 // from the input stream, but do not merge with internal
                 // values.
-                auto map = EclInterRegFlowMapSingleFIP {
+                auto map = InterRegFlowMapSingleFIP {
                     std::vector<int>(this->numCells_, 1)
                 };
 
@@ -352,7 +352,7 @@ namespace Opm {
     private:
         /// Inter-region flow accumulators.  One accumulator map for each
         /// region definition array.
-        std::vector<EclInterRegFlowMapSingleFIP> regionMaps_{};
+        std::vector<InterRegFlowMapSingleFIP> regionMaps_{};
 
         /// Names of region definition arrays.  Typically "FIPNUM" and other
         /// "FIPXYZ" array names.
@@ -385,4 +385,4 @@ namespace Opm {
     };
 } // namespace Opm
 
-#endif // ECL_INTERREG_FLOWS_MODULE_HPP
+#endif // OPM_INTERREG_FLOWS_MODULE_HPP

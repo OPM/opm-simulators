@@ -741,13 +741,13 @@ private:
 
 class PackUnpackInterRegFlows : public P2PCommunicatorType::DataHandleInterface
 {
-    const EclInterRegFlowMap& localInterRegFlows_;
-    EclInterRegFlowMap&       globalInterRegFlows_;
+    const InterRegFlowMap& localInterRegFlows_;
+    InterRegFlowMap&       globalInterRegFlows_;
 
 public:
-    PackUnpackInterRegFlows(const EclInterRegFlowMap& localInterRegFlows,
-                            EclInterRegFlowMap&       globalInterRegFlows,
-                            const bool                isIORank)
+    PackUnpackInterRegFlows(const InterRegFlowMap& localInterRegFlows,
+                            InterRegFlowMap&       globalInterRegFlows,
+                            const bool             isIORank)
         : localInterRegFlows_(localInterRegFlows)
         , globalInterRegFlows_(globalInterRegFlows)
     {
@@ -850,7 +850,7 @@ CollectDataToIORank(const Grid& grid, const EquilGrid* equilGrid,
                     const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
                     const std::set<std::string>& fipRegionsInterregFlow)
     : toIORankComm_(grid.comm())
-    , globalInterRegFlows_(EclInterRegFlowMap::createMapFromNames(toVector(fipRegionsInterregFlow)))
+    , globalInterRegFlows_(InterRegFlowMap::createMapFromNames(toVector(fipRegionsInterregFlow)))
 {
     // index maps only have to be build when reordering is needed
     if (!needsReordering && !isParallel())
@@ -974,7 +974,7 @@ collect(const data::Solution&                                localCellData,
         const data::GroupAndNetworkValues&                   localGroupAndNetworkData,
         const data::Aquifers&                                localAquiferData,
         const WellTestState&                                 localWellTestState,
-        const EclInterRegFlowMap&                            localInterRegFlows,
+        const InterRegFlowMap&                               localInterRegFlows,
         const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFlowsn,
         const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFloresn)
 {

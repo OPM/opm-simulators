@@ -33,7 +33,7 @@
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
 
-#include <opm/simulators/flow/EclInterRegFlows.hpp>
+#include <opm/simulators/flow/InterRegFlows.hpp>
 
 #include <array>
 #include <cstddef>
@@ -81,7 +81,7 @@ public:
                  const data::GroupAndNetworkValues&                   localGroupAndNetworkData,
                  const data::Aquifers&                                localAquiferData,
                  const WellTestState&                                 localWellTestState,
-                 const EclInterRegFlowMap&                            interRegFlows,
+                 const InterRegFlowMap&                               interRegFlows,
                  const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFlowsn,
                  const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFloresn);
 
@@ -109,10 +109,10 @@ public:
     const WellTestState& globalWellTestState() const
     { return this->globalWellTestState_; }
 
-    EclInterRegFlowMap& globalInterRegFlows()
+    InterRegFlowMap& globalInterRegFlows()
     { return this->globalInterRegFlows_; }
 
-    const EclInterRegFlowMap& globalInterRegFlows() const
+    const InterRegFlowMap& globalInterRegFlows() const
     { return this->globalInterRegFlows_; }
 
     const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& globalFlowsn() const
@@ -147,7 +147,7 @@ public:
 
 protected:
     P2PCommunicatorType toIORankComm_;
-    EclInterRegFlowMap globalInterRegFlows_;
+    InterRegFlowMap globalInterRegFlows_;
     IndexMapType globalCartesianIndex_;
     IndexMapType localIndexMap_;
     IndexMapStorageType indexMaps_;

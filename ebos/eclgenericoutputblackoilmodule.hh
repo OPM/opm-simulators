@@ -27,7 +27,7 @@
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
-#include <opm/simulators/flow/EclInterRegFlows.hpp>
+#include <opm/simulators/flow/InterRegFlows.hpp>
 #include <opm/simulators/flow/LogOutputHelper.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -363,7 +363,7 @@ protected:
     const SummaryConfig& summaryConfig_;
     const SummaryState& summaryState_;
 
-    EclInterRegFlowMap interRegionFlows_;
+    InterRegFlowMap interRegionFlows_;
     LogOutputHelper<Scalar> logOutput_;
 
     bool enableEnergy_;
