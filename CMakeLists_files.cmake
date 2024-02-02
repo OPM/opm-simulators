@@ -409,7 +409,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/collecttoiorank.hh
   ebos/collecttoiorank_impl.hh
   ebos/ebos.hh
-  ebos/eclalugridvanguard.hh
   ebos/eclbaseaquifermodel.hh
   ebos/eclbasevanguard.hh
   ebos/eclcpgridvanguard.hh
@@ -442,6 +441,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/vtkecltracermodule.hh
   opm/simulators/flow/ActionHandler.hpp
   opm/simulators/flow/AluGridCartesianIndexMapper.hpp
+  opm/simulators/flow/AluGridVanguard.hpp
   opm/simulators/flow/Banners.hpp
   opm/simulators/flow/BlackoilModel.hpp
   opm/simulators/flow/BlackoilModelNldd.hpp
