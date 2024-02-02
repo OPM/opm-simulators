@@ -228,7 +228,7 @@ template<class TypeTag>
 struct ToleranceMb<TypeTag, Properties::TTag::FlowModelParameters>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-6;
+    static constexpr type value = 1e-7;
 };
 
 template<class TypeTag>
