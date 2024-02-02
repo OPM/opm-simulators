@@ -28,12 +28,11 @@
 #ifndef EWOMS_ECL_TRACER_MODEL_HH
 #define EWOMS_ECL_TRACER_MODEL_HH
 
-#include <ebos/eclgenerictracermodel.hh>
-
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/flow/GenericTracerModel.hpp>
 #include <opm/simulators/utils/VectorVectorDataHandle.hpp>
 
 #include <array>
@@ -60,17 +59,17 @@ namespace Opm {
  * \brief A class which handles tracers as specified in by ECL
  */
 template <class TypeTag>
-class EclTracerModel : public EclGenericTracerModel<GetPropType<TypeTag, Properties::Grid>,
-                                                    GetPropType<TypeTag, Properties::GridView>,
-                                                    GetPropType<TypeTag, Properties::DofMapper>,
-                                                    GetPropType<TypeTag, Properties::Stencil>,
-                                                    GetPropType<TypeTag, Properties::Scalar>>
+class EclTracerModel : public GenericTracerModel<GetPropType<TypeTag, Properties::Grid>,
+                                                 GetPropType<TypeTag, Properties::GridView>,
+                                                 GetPropType<TypeTag, Properties::DofMapper>,
+                                                 GetPropType<TypeTag, Properties::Stencil>,
+                                                 GetPropType<TypeTag, Properties::Scalar>>
 {
-    using BaseType = EclGenericTracerModel<GetPropType<TypeTag, Properties::Grid>,
-                                           GetPropType<TypeTag, Properties::GridView>,
-                                           GetPropType<TypeTag, Properties::DofMapper>,
-                                           GetPropType<TypeTag, Properties::Stencil>,
-                                           GetPropType<TypeTag, Properties::Scalar>>;
+    using BaseType = GenericTracerModel<GetPropType<TypeTag, Properties::Grid>,
+                                        GetPropType<TypeTag, Properties::GridView>,
+                                        GetPropType<TypeTag, Properties::DofMapper>,
+                                        GetPropType<TypeTag, Properties::Stencil>,
+                                        GetPropType<TypeTag, Properties::Scalar>>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Grid = GetPropType<TypeTag, Properties::Grid>;

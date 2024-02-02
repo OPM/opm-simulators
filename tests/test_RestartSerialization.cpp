@@ -350,10 +350,11 @@ BOOST_AUTO_TEST_CASE(BlackoilWellModelGeneric)
 }
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
-class EclGenericTracerModelTest : public Opm::EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar> {
-    using Base = Opm::EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>;
+class GenericTracerModelTest : public Opm::GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>
+{
+    using Base = Opm::GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>;
 public:
-    EclGenericTracerModelTest(const GridView& gridView,
+    GenericTracerModelTest(const GridView& gridView,
                               const Opm::EclipseState& eclState,
                               const Dune::CartesianIndexMapper<Grid>& cartMapper,
                               const DofMapper& dofMapper,
@@ -361,21 +362,21 @@ public:
         Base(gridView, eclState, cartMapper, dofMapper, centroids)
     {}
 
-    static EclGenericTracerModelTest
+    static GenericTracerModelTest
     serializationTestObject(const GridView& gridView,
                             const Opm::EclipseState& eclState,
                             const Dune::CartesianIndexMapper<Grid>& cartMapper,
                             const DofMapper& dofMapper,
                             const std::function<std::array<double,Grid::dimensionworld>(int)> centroids)
     {
-        EclGenericTracerModelTest result(gridView, eclState, cartMapper, dofMapper, centroids);
+        GenericTracerModelTest result(gridView, eclState, cartMapper, dofMapper, centroids);
         result.tracerConcentration_ = {{1.0}, {2.0}, {3.0}};
         result.wellTracerRate_.insert({{"foo", "bar"}, 4.0});
 
         return result;
     }
 
-    bool operator==(const EclGenericTracerModelTest& rhs) const
+    bool operator==(const GenericTracerModelTest& rhs) const
     {
         if (this->tracerConcentration_.size() != rhs.tracerConcentration_.size()) {
             return false;
@@ -408,11 +409,11 @@ BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
     auto gridView = grid.leafGridView();
 #endif // HAVE_DUNE_FEM
     Dune::MultipleCodimMultipleGeomTypeMapper<GridView> dofMapper(gridView, Dune::mcmgElementLayout());
-    auto data_out = EclGenericTracerModelTest<Dune::CpGrid,
-                                              GridView,
-                                              Dune::MultipleCodimMultipleGeomTypeMapper<GridView>,
-                                              Opm::EcfvStencil<double, GridView, false, false>,
-                                              double>
+    auto data_out = GenericTracerModelTest<Dune::CpGrid,
+                                           GridView,
+                                           Dune::MultipleCodimMultipleGeomTypeMapper<GridView>,
+                                           Opm::EcfvStencil<double, GridView, false, false>,
+                                           double>
         ::serializationTestObject(gridView, eclState, mapper, dofMapper, centroids);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);

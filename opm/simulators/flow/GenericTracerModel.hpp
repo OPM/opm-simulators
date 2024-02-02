@@ -23,10 +23,10 @@
 /**
  * \file
  *
- * \copydoc Opm::EclTracerModel
+ * \copydoc Opm::TracerModel
  */
-#ifndef EWOMS_ECL_GENERIC_TRACER_MODEL_HH
-#define EWOMS_ECL_GENERIC_TRACER_MODEL_HH
+#ifndef OPM_GENERIC_TRACER_MODEL_HPP
+#define OPM_GENERIC_TRACER_MODEL_HPP
 
 #include <dune/istl/bcrsmatrix.hh>
 
@@ -50,7 +50,7 @@ class EclipseState;
 class Well;
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
-class EclGenericTracerModel {
+class GenericTracerModel {
 public:
     using TracerMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
     using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar,1>>;
@@ -88,11 +88,11 @@ public:
     }
 
 protected:
-    EclGenericTracerModel(const GridView& gridView,
-                          const EclipseState& eclState,
-                          const CartesianIndexMapper& cartMapper,
-                          const DofMapper& dofMapper,
-                          const std::function<std::array<double,dimWorld>(int)> centroids);
+    GenericTracerModel(const GridView& gridView,
+                       const EclipseState& eclState,
+                       const CartesianIndexMapper& cartMapper,
+                       const DofMapper& dofMapper,
+                       const std::function<std::array<double,dimWorld>(int)> centroids);
 
     /*!
      * \brief Initialize all internal data structures needed by the tracer module
@@ -127,4 +127,4 @@ protected:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_GENERIC_TRACER_MODEL_HPP
