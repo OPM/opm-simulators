@@ -23,18 +23,16 @@
 /**
  * \file
  *
- * \copydoc Opm::EclTracerModel
+ * \copydoc Opm::TracerModel
  */
-#ifndef EWOMS_ECL_GENERIC_TRACER_MODEL_IMPL_HH
-#define EWOMS_ECL_GENERIC_TRACER_MODEL_IMPL_HH
+#ifndef OPM_GENERIC_TRACER_MODEL_IMPL_HPP
+#define OPM_GENERIC_TRACER_MODEL_IMPL_HPP
 
 #include <dune/istl/operators.hh>
 #include <dune/istl/solvers.hh>
 #include <dune/istl/schwarz.hh>
 #include <dune/istl/preconditioners.hh>
 #include <dune/istl/schwarz.hh>
-
-#include <ebos/eclgenerictracermodel.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -48,6 +46,7 @@
 
 #include <opm/models/discretization/ecfv/ecfvstencil.hh>
 
+#include <opm/simulators/flow/GenericTracerModel.hpp>
 #include <opm/simulators/linalg/ilufirstelement.hh>
 #include <opm/simulators/linalg/PropertyTree.hpp>
 #include <opm/simulators/linalg/FlexibleSolver.hpp>
@@ -56,7 +55,6 @@
 
 #include <array>
 #include <functional>
-#include <iostream>
 #include <memory>
 #include <set>
 #include <stdexcept>
@@ -100,12 +98,12 @@ createParallelFlexibleSolver(const Dune::CpGrid& grid, const Matrix& M, const Pr
 #endif
 
 template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
-EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
-EclGenericTracerModel(const GridView& gridView,
-                      const EclipseState& eclState,
-                      const CartesianIndexMapper& cartMapper,
-                      const DofMapper& dofMapper,
-                      const std::function<std::array<double,dimWorld>(int)> centroids)
+GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+GenericTracerModel(const GridView& gridView,
+                   const EclipseState& eclState,
+                   const CartesianIndexMapper& cartMapper,
+                   const DofMapper& dofMapper,
+                   const std::function<std::array<double,dimWorld>(int)> centroids)
     : gridView_(gridView)
     , eclState_(eclState)
     , cartMapper_(cartMapper)
@@ -115,7 +113,7 @@ EclGenericTracerModel(const GridView& gridView,
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
-Scalar EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+Scalar GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 tracerConcentration(int tracerIdx, int globalDofIdx) const
 {
     if (tracerConcentration_.empty())
@@ -125,42 +123,42 @@ tracerConcentration(int tracerIdx, int globalDofIdx) const
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
-void EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+void GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 setTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value)
 {
     this->tracerConcentration_[tracerIdx][globalDofIdx] = value;
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
-int EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+int GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 numTracers() const
 {
     return this->eclState_.tracer().size();
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
-std::string EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+std::string GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 fname(int tracerIdx) const
 {
     return this->eclState_.tracer()[tracerIdx].fname();
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
-double EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+double GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 currentConcentration_(const Well& eclWell, const std::string& name) const
 {
     return eclWell.getTracerProperties().getConcentration(name);
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
-const std::string& EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+const std::string& GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 name(int tracerIdx) const
 {
     return this->eclState_.tracer()[tracerIdx].name;
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
-void EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+void GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 doInit(bool rst, std::size_t numGridDof,
        std::size_t gasPhaseIdx, std::size_t oilPhaseIdx, std::size_t waterPhaseIdx)
 {
@@ -256,7 +254,7 @@ doInit(bool rst, std::size_t numGridDof,
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
-bool EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+bool GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 linearSolve_(const TracerMatrix& M, TracerVector& x, TracerVector& b)
 {
     x = 0.0;
@@ -311,7 +309,7 @@ linearSolve_(const TracerMatrix& M, TracerVector& x, TracerVector& b)
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
-bool  EclGenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+bool GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::vector<TracerVector>& b)
 {
     Scalar tolerance = 1e-2;
@@ -371,6 +369,6 @@ linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::
 #endif
 }
 
-
 } // namespace Opm
-#endif
+
+#endif // OPM_GENERIC_TRACER_MODEL_IMPL_HPP
