@@ -28,8 +28,8 @@
  *
  * \copydoc Opm::DamarisWriter
  */
-#ifndef EWOMS_DAMARIS_PROPERTIES_HH
-#define EWOMS_DAMARIS_PROPERTIES_HH
+#ifndef OPM_DAMARIS_PROPERTIES_HPP
+#define OPM_DAMARIS_PROPERTIES_HPP
 
 #include <opm/models/utils/parametersystem.hh>
 
@@ -90,4 +90,4 @@ struct DamarisDaskFile {
 
 } // namespace Opm::Properties
 
-#endif
+#endif // OPM_DAMARIS_PROPERTIES_HPP
