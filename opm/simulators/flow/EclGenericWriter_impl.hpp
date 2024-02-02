@@ -20,10 +20,8 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef EWOMS_ECL_GENERIC_WRITER_IMPL_HH
-#define EWOMS_ECL_GENERIC_WRITER_IMPL_HH
-
-#include <ebos/eclgenericwriter.hh>
+#ifndef OPM_ECL_GENERIC_WRITER_IMPL_HPP
+#define OPM_ECL_GENERIC_WRITER_IMPL_HPP
 
 #include <dune/grid/common/mcmgmapper.hh>
 
@@ -43,6 +41,8 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/RestartValue.hpp>
 #include <opm/output/eclipse/Summary.hpp>
+
+#include <opm/simulators/flow/EclGenericWriter.hpp>
 
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
@@ -674,6 +674,6 @@ globalTrans() const
     return *globalTrans_;
 }
 
-
 } // namespace Opm
-#endif
+
+#endif // OPM_ECL_GENERIC_WRITER_IMPL_HPP

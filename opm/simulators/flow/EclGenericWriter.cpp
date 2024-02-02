@@ -27,8 +27,7 @@
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
 
-#include <ebos/eclgenericwriter.hh>
-#include <ebos/eclgenericwriter_impl.hh>
+#include <opm/simulators/flow/EclGenericWriter_impl.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
