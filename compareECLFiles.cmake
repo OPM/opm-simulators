@@ -405,7 +405,7 @@ if(MPI_FOUND)
                       REL_TOL 0.0)
 
   # Single test for damaris
-  if(Damaris_FOUND)
+  if(Damaris_FOUND AND USE_DAMARIS_LIB)
       opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-damaris-regressionTest.sh "")
       add_test_compareDamarisFiles(CASENAME spe1_damaris
                       FILENAME SPE1CASE1
