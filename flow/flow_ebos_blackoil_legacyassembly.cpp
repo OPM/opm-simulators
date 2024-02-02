@@ -19,7 +19,7 @@
 #include <flow/flow_ebos_blackoil_legacyassembly.hpp>
 
 #include <opm/material/common/ResetLocale.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
 namespace Opm {

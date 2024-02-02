@@ -23,7 +23,7 @@
 #define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
 
 #include <opm/simulators/flow/Banners.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoilEbos.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/IOConfig/IOConfig.hpp>
@@ -105,7 +105,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
         using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-        using Simulator = SimulatorFullyImplicitBlackoilEbos<TypeTag>;
+        using Simulator = SimulatorFullyImplicitBlackoil<TypeTag>;
 
         FlowMainEbos(int argc, char **argv, bool output_cout, bool output_files )
             : argc_{argc}, argv_{argv},

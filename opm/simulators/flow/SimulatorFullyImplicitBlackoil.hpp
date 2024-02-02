@@ -19,8 +19,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
-#define OPM_SIMULATORFULLYIMPLICITBLACKOILEBOS_HEADER_INCLUDED
+#ifndef OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_HEADER_INCLUDED
+#define OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_HEADER_INCLUDED
 
 #include <fmt/format.h>
 
@@ -30,6 +30,7 @@
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/ExtraConvergenceOutputThread.hpp>
 #include <opm/simulators/flow/NonlinearSolver.hpp>
+#include <opm/simulators/flow/SimulatorReportBanners.hpp>
 #include <opm/simulators/flow/SimulatorSerializer.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
@@ -145,14 +146,9 @@ struct LoadStep<TypeTag, TTag::EclFlowProblem>
 
 namespace Opm {
 
-void outputReportStep(const SimulatorTimer& timer);
-void outputTimestampFIP(const SimulatorTimer& timer,
-                        const std::string& title,
-                        const std::string& version);
-
 /// a simulator for the blackoil model
 template<class TypeTag>
-class SimulatorFullyImplicitBlackoilEbos : private SerializableSim
+class SimulatorFullyImplicitBlackoil : private SerializableSim
 {
 public:
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
@@ -198,7 +194,7 @@ public:
     /// \param[in] eclipse_state the object which represents an internalized ECL deck
     /// \param[in] output_writer
     /// \param[in] threshold_pressures_by_face   if nonempty, threshold pressures that inhibit flow
-    SimulatorFullyImplicitBlackoilEbos(Simulator& ebosSimulator)
+    SimulatorFullyImplicitBlackoil(Simulator& ebosSimulator)
         : ebosSimulator_(ebosSimulator)
         , serializer_(*this,
                       EclGenericVanguard::comm(),
@@ -221,7 +217,7 @@ public:
         }
     }
 
-    ~SimulatorFullyImplicitBlackoilEbos()
+    ~SimulatorFullyImplicitBlackoil()
     {
         // Safe to call on all ranks, not just the I/O rank.
         this->endConvergenceOutputThread();
@@ -321,10 +317,11 @@ public:
         }
     }
 
-    void updateTUNING(const Tuning& tuning) {
+    void updateTUNING(const Tuning& tuning)
+    {
         modelParam_.tolerance_mb_ = tuning.XXXMBE;
         if (terminalOutput_) {
-                OpmLog::debug(fmt::format("Setting SimulatorFullyImplicitBlackoilEbos mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
+            OpmLog::debug(fmt::format("Setting SimulatorFullyImplicitBlackoil mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
         }
     }
 
@@ -350,7 +347,7 @@ public:
         }
 
         if (terminalOutput_) {
-            outputReportStep(timer);
+            details::outputReportStep(timer);
         }
 
         // write the inital state at the report stage
@@ -670,4 +667,4 @@ protected:
 
 } // namespace Opm
 
-#endif // OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_EBOS_HPP
+#endif // OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_HEADER_INCLUDED
