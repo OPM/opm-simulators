@@ -30,12 +30,13 @@
 #include <dune/common/fvector.hh>
 
 #include <ebos/eclbasevanguard.hh>
-#include <ebos/eclgenericoutputblackoilmodule.hh>
 #include <opm/simulators/utils/moduleVersion.hpp>
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
@@ -51,7 +52,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
-#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+#include <opm/simulators/flow/GenericOutputBlackoilModule.hpp>
 
 #include <algorithm>
 #include <array>
@@ -111,8 +112,8 @@ class EcfvDiscretization;
  *        ECL binary format.
  */
 template <class TypeTag>
-class EclOutputBlackOilModule : public EclGenericOutputBlackoilModule<GetPropType<TypeTag, Properties::FluidSystem>,
-                                                                      GetPropType<TypeTag, Properties::Scalar>>
+class EclOutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<TypeTag, Properties::FluidSystem>,
+                                                                   GetPropType<TypeTag, Properties::Scalar>>
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Discretization = GetPropType<TypeTag, Properties::Discretization>;
@@ -126,7 +127,7 @@ class EclOutputBlackOilModule : public EclGenericOutputBlackoilModule<GetPropTyp
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
-    using BaseType = EclGenericOutputBlackoilModule<FluidSystem, Scalar>;
+    using BaseType = GenericOutputBlackoilModule<FluidSystem, Scalar>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Dir = FaceDir::DirEnum;
 

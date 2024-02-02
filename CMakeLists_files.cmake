@@ -25,7 +25,6 @@
 list (APPEND MAIN_SOURCE_FILES
   ebos/collecttoiorank.cc
   ebos/eclgenericcpgridvanguard.cc
-  ebos/eclgenericoutputblackoilmodule.cc
   ebos/eclgenericproblem.cc
   ebos/eclgenericthresholdpressure.cc
   ebos/eclgenerictracermodel.cc
@@ -45,6 +44,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/FlowMain.cpp
+  opm/simulators/flow/GenericOutputBlackoilModule.cpp
   opm/simulators/flow/InterRegFlows.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/LogOutputHelper.cpp
@@ -420,7 +420,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclequilinitializer.hh
   ebos/eclfluxmodule.hh
   ebos/eclgenericcpgridvanguard.hh
-  ebos/eclgenericoutputblackoilmodule.hh
   ebos/eclgenericproblem.hh
   ebos/eclgenericproblem_impl.hh
   ebos/eclgenericthresholdpressure.hh
@@ -455,6 +454,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMain.hpp
   opm/simulators/flow/FlowsData.hpp
+  opm/simulators/flow/GenericOutputBlackoilModule.hpp
   opm/simulators/flow/InterRegFlows.hpp
   opm/simulators/flow/KeywordValidation.hpp
   opm/simulators/flow/LogOutputHelper.hpp
