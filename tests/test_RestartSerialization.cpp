@@ -19,7 +19,8 @@
 
 #include <config.h>
 
-#include <ebos/ebos.hh>
+#include "TestTypeTag.hpp"
+
 #include <ebos/eclgenericvanguard.hh>
 #include <ebos/femcpgridcompat.hh>
 
@@ -60,7 +61,7 @@
 namespace Opm::Properties {
     namespace TTag {
     struct TestRestartTypeTag {
-            using InheritsFrom = std::tuple<EbosTypeTag, FlowTimeSteppingParameters>;
+            using InheritsFrom = std::tuple<TestTypeTag, FlowTimeSteppingParameters>;
         };
     }
 
@@ -112,13 +113,13 @@ TEST_FOR_TYPE(SimulatorReport)
 TEST_FOR_TYPE(SimulatorReportSingle)
 TEST_FOR_TYPE(SimulatorTimer)
 
-namespace Opm { using ATS = AdaptiveTimeStepping<Properties::TTag::EbosTypeTag>; }
+namespace Opm { using ATS = AdaptiveTimeStepping<Properties::TTag::TestTypeTag>; }
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingHardcoded, serializationTestObjectHardcoded)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPID, serializationTestObjectPID)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingPIDIt, serializationTestObjectPIDIt)
 TEST_FOR_TYPE_NAMED_OBJ(ATS, AdaptiveTimeSteppingSimple, serializationTestObjectSimple)
 
-namespace Opm { using BPV = BlackOilPrimaryVariables<Properties::TTag::EbosTypeTag>; }
+namespace Opm { using BPV = BlackOilPrimaryVariables<Properties::TTag::TestTypeTag>; }
 TEST_FOR_TYPE_NAMED(BPV, BlackoilPrimaryVariables)
 
 namespace Opm {
@@ -136,7 +137,7 @@ namespace Opm {
 TEST_FOR_TYPE_NAMED(HystParam, EclHysteresisTwoPhaseLawParams)
 
 namespace Opm {
-    using Disc = Opm::FvBaseDiscretization<Opm::Properties::TTag::EbosTypeTag>;
+    using Disc = Opm::FvBaseDiscretization<Opm::Properties::TTag::TestTypeTag>;
     using BVec = typename Disc::BlockVectorWrapper;
 }
 TEST_FOR_TYPE_NAMED(BVec, BlockVectorWrapper)
@@ -427,7 +428,7 @@ BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
 
 namespace Opm {
 
-class TBatchExport : public EclTracerModel<Properties::TTag::EbosTypeTag> {
+class TBatchExport : public EclTracerModel<Properties::TTag::TestTypeTag> {
 public:
     using TBatch = TracerBatch<double>;
 };
