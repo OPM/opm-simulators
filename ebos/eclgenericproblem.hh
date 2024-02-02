@@ -28,11 +28,12 @@
 #ifndef EWOMS_GENERIC_ECL_PROBLEM_HH
 #define EWOMS_GENERIC_ECL_PROBLEM_HH
 
-#include <ebos/eclmixingratecontrols.hh>
 #include <ebos/eclsolutioncontainers.hh>
 
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
+
+#include <opm/simulators/flow/MixingRateControls.hpp>
 
 #include <array>
 #include <cstddef>
@@ -370,7 +371,7 @@ protected:
     std::vector<Scalar> solventRsw_;
     MICPSolutionContainer<Scalar> micp_;
 
-    EclMixingRateControls<FluidSystem, Scalar> mixControls_;
+    MixingRateControls<FluidSystem, Scalar> mixControls_;
 
     // time stepping parameters
     bool enableTuning_;

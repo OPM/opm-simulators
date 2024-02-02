@@ -31,7 +31,6 @@ list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenerictracermodel.cc
   ebos/eclgenericvanguard.cc
   ebos/eclgenericwriter.cc
-  ebos/eclmixingratecontrols.cc
   ebos/eclsolutioncontainers.cc
   ebos/ecltransmissibility.cc
   ebos/equil/equilibrationhelpers.cc
@@ -49,6 +48,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/LogOutputHelper.cpp
   opm/simulators/flow/Main.cpp
+  opm/simulators/flow/MixingRateControls.cpp
   opm/simulators/flow/NonlinearSolver.cpp
   opm/simulators/flow/RSTConv.cpp
   opm/simulators/flow/SimulatorReportBanners.cpp
@@ -428,7 +428,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclgenericvanguard.hh
   ebos/eclgenericwriter.hh
   ebos/eclgenericwriter_impl.hh
-  ebos/eclmixingratecontrols.hh
   ebos/eclnewtonmethod.hh
   ebos/ecloutputblackoilmodule.hh
   ebos/eclpolyhedralgridvanguard.hh
@@ -455,6 +454,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowMain.hpp
   opm/simulators/flow/InterRegFlows.hpp
   opm/simulators/flow/Main.hpp
+  opm/simulators/flow/MixingRateControls.hpp
   opm/simulators/flow/NonlinearSolver.hpp
   opm/simulators/flow/RSTConv.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp

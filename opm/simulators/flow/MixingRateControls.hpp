@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclProblem
+ * \copydoc Opm::FlowProblem
  */
-#ifndef ECL_MIXING_RATE_CONTROLS_HH
-#define ECL_MIXING_RATE_CONTROLS_HH
+#ifndef OPM_MIXING_RATE_CONTROLS_HPP
+#define OPM_MIXING_RATE_CONTROLS_HPP
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
@@ -40,17 +40,17 @@ namespace Opm {
 
 class EclipseState;
 
-//! \brief Class handling mixing rate controls for an EclProblem.
+//! \brief Class handling mixing rate controls for a FlowProblem.
 template<class FluidSystem, class Scalar>
-class EclMixingRateControls {
+class MixingRateControls {
 public:
-    EclMixingRateControls(const Schedule& schedule);
-    EclMixingRateControls(const EclMixingRateControls& rhs);
+    MixingRateControls(const Schedule& schedule);
+    MixingRateControls(const MixingRateControls& rhs);
 
-    static EclMixingRateControls serializationTestObject(const Schedule& schedule);
+    static MixingRateControls serializationTestObject(const Schedule& schedule);
 
-    bool operator==(const EclMixingRateControls& rhs) const;
-    EclMixingRateControls& operator=(const EclMixingRateControls& rhs);
+    bool operator==(const MixingRateControls& rhs) const;
+    MixingRateControls& operator=(const MixingRateControls& rhs);
 
     void init(std::size_t numDof, int episodeIdx, const unsigned ntpvt);
 
@@ -180,4 +180,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_MIXING_RATE_CONTROLS_HPP

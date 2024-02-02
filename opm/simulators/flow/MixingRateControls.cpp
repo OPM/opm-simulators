@@ -23,11 +23,11 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclProblem
+ * \copydoc Opm::FlowProblem
  */
 
 #include <config.h>
-#include <ebos/eclmixingratecontrols.hh>
+#include <opm/simulators/flow/MixingRateControls.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
@@ -37,25 +37,25 @@
 namespace Opm {
 
 template<class FluidSystem, class Scalar>
-EclMixingRateControls<FluidSystem,Scalar>::
-EclMixingRateControls(const Schedule& schedule)
+MixingRateControls<FluidSystem,Scalar>::
+MixingRateControls(const Schedule& schedule)
     : schedule_(schedule)
 {}
 
 template<class FluidSystem, class Scalar>
-EclMixingRateControls<FluidSystem,Scalar>::
-EclMixingRateControls(const EclMixingRateControls& rhs)
+MixingRateControls<FluidSystem,Scalar>::
+MixingRateControls(const MixingRateControls& rhs)
     : schedule_(rhs.schedule_)
 {
     *this = rhs;
 }
 
 template<class FluidSystem, class Scalar>
-EclMixingRateControls<FluidSystem,Scalar>
-EclMixingRateControls<FluidSystem,Scalar>::
+MixingRateControls<FluidSystem,Scalar>
+MixingRateControls<FluidSystem,Scalar>::
 serializationTestObject(const Schedule& schedule)
 {
-    EclMixingRateControls<FluidSystem,Scalar> result(schedule);
+    MixingRateControls<FluidSystem,Scalar> result(schedule);
     result.lastRv_ = {21.0};
     result.maxDRv_ = {22.0, 23.0};
     result.convectiveDrs_ = {24.0, 25.0, 26.0};
@@ -67,8 +67,8 @@ serializationTestObject(const Schedule& schedule)
 }
 
 template<class FluidSystem, class Scalar>
-bool EclMixingRateControls<FluidSystem,Scalar>::
-operator==(const EclMixingRateControls& rhs) const
+bool MixingRateControls<FluidSystem,Scalar>::
+operator==(const MixingRateControls& rhs) const
 {
     return this->lastRv_ == rhs.lastRv_ &&
            this->maxDRv_ == rhs.maxDRv_ &&
@@ -79,9 +79,9 @@ operator==(const EclMixingRateControls& rhs) const
 }
 
 template<class FluidSystem, class Scalar>
-EclMixingRateControls<FluidSystem,Scalar>&
-EclMixingRateControls<FluidSystem,Scalar>::
-operator=(const EclMixingRateControls& rhs)
+MixingRateControls<FluidSystem,Scalar>&
+MixingRateControls<FluidSystem,Scalar>::
+operator=(const MixingRateControls& rhs)
 {
     this->lastRv_ = rhs.lastRv_;
     this->maxDRv_ = rhs.maxDRv_;
@@ -94,7 +94,7 @@ operator=(const EclMixingRateControls& rhs)
 }
 
 template<class FluidSystem, class Scalar>
-void EclMixingRateControls<FluidSystem,Scalar>::
+void MixingRateControls<FluidSystem,Scalar>::
 init(std::size_t numDof, int episodeIdx, const unsigned ntpvt)
 {
     // deal with DRSDT
@@ -117,7 +117,7 @@ init(std::size_t numDof, int episodeIdx, const unsigned ntpvt)
 }
 
 template<class FluidSystem, class Scalar>
-bool EclMixingRateControls<FluidSystem,Scalar>::
+bool MixingRateControls<FluidSystem,Scalar>::
 drsdtActive(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
@@ -127,7 +127,7 @@ drsdtActive(int episodeIdx) const
 }
 
 template<class FluidSystem, class Scalar>
-bool EclMixingRateControls<FluidSystem,Scalar>::
+bool MixingRateControls<FluidSystem,Scalar>::
 drvdtActive(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
@@ -137,7 +137,7 @@ drvdtActive(int episodeIdx) const
 }
 
 template<class FluidSystem, class Scalar>
-bool EclMixingRateControls<FluidSystem,Scalar>::
+bool MixingRateControls<FluidSystem,Scalar>::
 drsdtConvective(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
@@ -147,7 +147,7 @@ drsdtConvective(int episodeIdx) const
 }
 
 template<class FluidSystem, class Scalar>
-void EclMixingRateControls<FluidSystem,Scalar>::
+void MixingRateControls<FluidSystem,Scalar>::
 updateExplicitQuantities(const int episodeIdx,
                          const Scalar timeStepSize)
 {
@@ -166,7 +166,7 @@ updateExplicitQuantities(const int episodeIdx,
 }
 
 template<class FluidSystem, class Scalar>
-void EclMixingRateControls<FluidSystem,Scalar>::
+void MixingRateControls<FluidSystem,Scalar>::
 updateLastValues(const unsigned elemIdx,
                  const Scalar Rs,
                  const Scalar Rv)
@@ -181,7 +181,7 @@ updateLastValues(const unsigned elemIdx,
 }
 
 template<class FluidSystem, class Scalar>
-void EclMixingRateControls<FluidSystem,Scalar>::
+void MixingRateControls<FluidSystem,Scalar>::
 updateMaxValues(const int episodeIdx,
                 const Scalar timeStepSize)
 {
@@ -202,7 +202,7 @@ updateMaxValues(const int episodeIdx,
 }
 
 template<class FluidSystem, class Scalar>
-Scalar EclMixingRateControls<FluidSystem,Scalar>::
+Scalar MixingRateControls<FluidSystem,Scalar>::
 drsdtcon(const unsigned elemIdx,
          int episodeIdx,
          const int pvtRegionIdx) const
@@ -219,7 +219,7 @@ drsdtcon(const unsigned elemIdx,
 }
 
 template<class FluidSystem, class Scalar>
-Scalar EclMixingRateControls<FluidSystem,Scalar>::
+Scalar MixingRateControls<FluidSystem,Scalar>::
 maxGasDissolutionFactor(const unsigned timeIdx,
                         const unsigned globalDofIdx,
                         const int episodeIdx,
@@ -244,7 +244,7 @@ maxGasDissolutionFactor(const unsigned timeIdx,
 }
 
 template<class FluidSystem, class Scalar>
-Scalar EclMixingRateControls<FluidSystem,Scalar>::
+Scalar MixingRateControls<FluidSystem,Scalar>::
 maxOilVaporizationFactor(const unsigned timeIdx,
                          const unsigned globalDofIdx,
                          const int episodeIdx,
@@ -263,7 +263,7 @@ maxOilVaporizationFactor(const unsigned timeIdx,
     }
 }
 template<class FluidSystem, class Scalar>
-void EclMixingRateControls<FluidSystem,Scalar>::
+void MixingRateControls<FluidSystem,Scalar>::
 updateConvectiveDRsDt_(const unsigned compressedDofIdx,
                        const Scalar t,
                        const Scalar p,
@@ -294,6 +294,6 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
         = permz * rssat * max(0.0, deltaDensity) * gravity / (so * visc * distZ * poro);
 }
 
-template class EclMixingRateControls<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, double>;
+template class MixingRateControls<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, double>;
 
 } // namespace Opm
