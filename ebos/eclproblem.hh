@@ -38,9 +38,6 @@
 #include <ebos/eclnewtonmethod.hh>
 #include <ebos/eclproblem_properties.hh>
 #include <ebos/ecltransmissibility.hh>
-#if HAVE_DAMARIS
-#include <ebos/damariswriter.hh>
-#endif
 
 #include <opm/common/utility/TimeService.hpp>
 
@@ -91,6 +88,10 @@
 #include <opm/utility/CopyablePtr.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+
+#if HAVE_DAMARIS
+#include <opm/simulators/flow/DamarisWriter.hpp>
+#endif
 
 #include <algorithm>
 #include <functional>

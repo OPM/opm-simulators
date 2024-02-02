@@ -28,8 +28,8 @@
  *
  * \copydoc Opm::DamarisWriter
  */
-#ifndef EWOMS_DAMARIS_WRITER_HH
-#define EWOMS_DAMARIS_WRITER_HH
+#ifndef OPM_DAMARIS_WRITER_HPP
+#define OPM_DAMARIS_WRITER_HPP
 
 #include <dune/grid/common/partitionset.hh>
 
@@ -415,4 +415,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_DAMARIS_WRITER_HPP

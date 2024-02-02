@@ -152,12 +152,13 @@ list (APPEND MAIN_SOURCE_FILES
 
 
 if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/DamarisOutputModule.cpp
-                                 opm/simulators/utils/DamarisKeywords.cpp
-                                 opm/simulators/utils/initDamarisXmlFile.cpp
-                                 ebos/damariswriter.cc
-                                 opm/simulators/utils/DamarisVar.cpp
-                                 opm/simulators/utils/GridDataOutput.cpp
+  list (APPEND MAIN_SOURCE_FILES
+    opm/simulators/flow/DamarisWriter.cpp
+    opm/simulators/utils/DamarisKeywords.cpp
+    opm/simulators/utils/DamarisOutputModule.cpp
+    opm/simulators/utils/DamarisVar.cpp
+    opm/simulators/utils/GridDataOutput.cpp
+    opm/simulators/utils/initDamarisXmlFile.cpp
   )
 endif()
 if(CUDA_FOUND)
@@ -636,13 +637,14 @@ list (APPEND PUBLIC_HEADER_FILES
   )
 
 if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
-  list (APPEND PUBLIC_HEADER_FILES opm/simulators/utils/DamarisOutputModule.hpp
-                                   opm/simulators/utils/DamarisKeywords.hpp
-                                   opm/simulators/flow/DamarisProperties.hpp
-                                   ebos/damariswriter.hh
-                                   opm/simulators/utils/DamarisVar.hpp
-                                   opm/simulators/utils/GridDataOutput.hpp
-                                   opm/simulators/utils/GridDataOutput_impl.hpp
+  list (APPEND PUBLIC_HEADER_FILES
+    opm/simulators/utils/DamarisKeywords.hpp
+    opm/simulators/utils/DamarisOutputModule.hpp
+    opm/simulators/flow/DamarisProperties.hpp
+    opm/simulators/flow/DamarisWriter.hpp
+    opm/simulators/utils/DamarisVar.hpp
+    opm/simulators/utils/GridDataOutput.hpp
+    opm/simulators/utils/GridDataOutput_impl.hpp
   )
 endif()
 
