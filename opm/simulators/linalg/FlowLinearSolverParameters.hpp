@@ -182,7 +182,7 @@ struct ScaleLinearSystem<TypeTag, Properties::TTag::FlowIstlSolverParams>
 
 template<class TypeTag>
 struct LinearSolver<TypeTag, Properties::TTag::FlowIstlSolverParams>
-{ static constexpr auto value = "ilu0"; };
+{ static constexpr auto value = "cprw"; };
 
 template<class TypeTag>
 struct LinearSolverPrintJsonDefinition<TypeTag, Properties::TTag::FlowIstlSolverParams>
@@ -267,10 +267,39 @@ struct FlowLinearSolverParameters
         cpr_reuse_setup_  = Parameters::get<TypeTag, Parameters::CprReuseSetup>();
         cpr_reuse_interval_  = Parameters::get<TypeTag, Parameters::CprReuseInterval>();
 
+<<<<<<< HEAD
         if (!Parameters::isSet<TypeTag, Parameters::LinearSolver>() && cprRequestedInDataFile) {
             linsolver_ = "cpr";
         } else {
             linsolver_ = Parameters::get<TypeTag, Parameters::LinearSolver>();
+=======
+        FlowLinearSolverParameters() { reset(); }
+
+        // set default values
+        void reset()
+        {
+            relaxed_linear_solver_reduction_ = 1e-2;
+            linear_solver_reduction_  = 1e-2;
+            linear_solver_maxiter_    = 200;
+            linear_solver_restart_    = 40;
+            linear_solver_verbosity_  = 0;
+            ilu_relaxation_           = 0.9;
+            ilu_fillin_level_         = 0;
+            ilu_milu_                 = MILU_VARIANT::ILU;
+            ilu_redblack_             = false;
+            ilu_reorder_sphere_       = false;
+            newton_use_gmres_         = false;
+            ignoreConvergenceFailure_ = false;
+            scale_linear_system_      = false;
+            linsolver_                = "cprw";
+            linear_solver_print_json_definition_ = true;
+            cpr_reuse_setup_          = 4;
+            cpr_reuse_interval_       = 30;
+            accelerator_mode_         = "none";
+            bda_device_id_            = 0;
+            opencl_platform_id_       = 0;
+            opencl_ilu_parallel_      = true;
+>>>>>>> use cprw as default linear solver
         }
 
         accelerator_mode_ = Parameters::get<TypeTag, Parameters::AcceleratorMode>();
