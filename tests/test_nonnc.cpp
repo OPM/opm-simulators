@@ -1,5 +1,5 @@
 /*
-  Copyright 2024 Dr. Blatt - HPC-Simulation-Software & Services
+  Copyright 2024 Equinor ASA
 
   This file is part of the Open Porous Media project (OPM).
 
