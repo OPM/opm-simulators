@@ -412,7 +412,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/ebos.hh
   ebos/eclbaseaquifermodel.hh
   ebos/eclbasevanguard.hh
-  ebos/eclcpgridvanguard.hh
   ebos/eclequilinitializer.hh
   ebos/eclfluxmodule.hh
   ebos/eclgenericcpgridvanguard.hh
@@ -449,6 +448,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/CollectDataOnIORank_impl.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/countGlobalCells.hpp
+  opm/simulators/flow/CpGridVanguard.hpp
   opm/simulators/flow/DummyGradientCalculator.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMain.hpp

@@ -35,7 +35,6 @@
 #include <dune/common/fmatrix.hh>
 
 #include <ebos/eclbaseaquifermodel.hh>
-#include <ebos/eclcpgridvanguard.hh>
 #include <ebos/eclequilinitializer.hh>
 #include <ebos/eclfluxmodule.hh>
 #include <ebos/eclgenericproblem.hh>
@@ -81,6 +80,7 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/simulators/flow/ActionHandler.hpp>
+#include <opm/simulators/flow/CpGridVanguard.hpp>
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>

@@ -29,7 +29,6 @@
 #define ECL_PROBLEM_PROPERTIES_HH
 
 #include <ebos/eclbaseaquifermodel.hh>
-#include <ebos/eclcpgridvanguard.hh>
 #include <ebos/eclfluxmodule.hh>
 #include <ebos/eclnewtonmethod.hh>
 #include <ebos/eclwriter.hh>
@@ -47,6 +46,7 @@
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/flow/CpGridVanguard.hpp>
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 
@@ -62,7 +62,7 @@ namespace Opm::Properties {
 namespace TTag {
 
 struct EclBaseProblem {
-  using InheritsFrom = std::tuple<VtkEclTracer, OutputBlackOil, EclCpGridVanguard>;
+  using InheritsFrom = std::tuple<VtkEclTracer, OutputBlackOil, CpGridVanguard>;
 };
 }
 
