@@ -21,8 +21,8 @@
   copyright holders.
 */
 
-#ifndef ECL_ACTION_HANDLER_HPP
-#define ECL_ACTION_HANDLER_HPP
+#ifndef OPM_ACTION_HANDLER_HPP
+#define OPM_ACTION_HANDLER_HPP
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
@@ -46,18 +46,18 @@ class SummaryState;
 class UDQState;
 
 //! \brief Class handling Action support in simulator
-class EclActionHandler
+class ActionHandler
 {
 public:
     //! \brief Function handle to update transmissiblities.
     using TransFunc = std::function<void(bool)>;
 
-    EclActionHandler(EclipseState& ecl_state,
-                     Schedule& schedule,
-                     Action::State& actionState,
-                     SummaryState& summaryState,
-                     BlackoilWellModelGeneric& wellModel,
-                     Parallel::Communication comm);
+    ActionHandler(EclipseState& ecl_state,
+                  Schedule& schedule,
+                  Action::State& actionState,
+                  SummaryState& summaryState,
+                  BlackoilWellModelGeneric& wellModel,
+                  Parallel::Communication comm);
 
     void applyActions(int reportStep,
                       double sim_time,
@@ -94,4 +94,4 @@ public:
 
 } // namespace Opm
 
-#endif // ECL_ACTION_HANDLER_HPP
+#endif // OPM_ACTION_HANDLER_HPP
