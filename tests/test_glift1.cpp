@@ -89,7 +89,7 @@ initSimulator(const char *filename)
     Opm::registerEclTimeSteppingParameters<TypeTag>();
     Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/true);
 
-    Opm::EclGenericVanguard::readDeck(filename);
+    Opm::FlowGenericVanguard::readDeck(filename);
 
     return std::make_unique<Simulator>();
 }
@@ -106,7 +106,7 @@ struct GliftFixture {
 #else
     Dune::MPIHelper::instance(argc, argv);
 #endif
-        Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+        Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
         using TypeTag = Opm::Properties::TTag::FlowProblem;
         Opm::registerAllParameters_<TypeTag>();
     }

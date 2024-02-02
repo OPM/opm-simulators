@@ -313,7 +313,7 @@ private:
         using PreProblem = GetPropType<PreTypeTag, Properties::Problem>;
 
         PreProblem::setBriefDescription("Flow, an advanced reservoir simulator for ECL-decks provided by the Open Porous Media project.");
-        int status = FlowMain<PreTypeTag>::setupParameters_(argc_, argv_, EclGenericVanguard::comm());
+        int status = FlowMain<PreTypeTag>::setupParameters_(argc_, argv_, FlowGenericVanguard::comm());
         if (status != 0) {
             // if setupParameters_ returns a value smaller than 0, there was no error, but
             // the program should abort. This is the case e.g. for the --help and the
@@ -341,7 +341,7 @@ private:
         enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
         
         // Reset to false as we cannot use Damaris if there is only one rank.
-        if ((enableDamarisOutput_ == true) && (EclGenericVanguard::comm().size() == 1)) {
+        if ((enableDamarisOutput_ == true) && (FlowGenericVanguard::comm().size() == 1)) {
             std::string msg ;
             msg = "\nUse of Damaris (command line argument --enable-damaris-output=true) has been disabled for run with only one rank.\n" ;
             OpmLog::warning(msg);
@@ -371,7 +371,7 @@ private:
             return true;
         }
         
-        int mpiRank = EclGenericVanguard::comm().rank();
+        int mpiRank = FlowGenericVanguard::comm().rank();
         outputCout_ = false;
         if (mpiRank == 0)
             outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
@@ -401,7 +401,7 @@ private:
 
         std::string cmdline_params;
         if (outputCout_) {
-            printFlowBanner(EclGenericVanguard::comm().size(),
+            printFlowBanner(FlowGenericVanguard::comm().size(),
                             getNumThreads<PreTypeTag>(),
                             Opm::moduleVersionName());
             std::ostringstream str;

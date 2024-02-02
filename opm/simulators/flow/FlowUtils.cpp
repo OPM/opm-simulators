@@ -31,7 +31,7 @@
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
 
 #if HAVE_MPI
-#include <ebos/eclgenericvanguard.hh>
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #endif
 
 #include <fmt/format.h>
@@ -88,7 +88,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 void checkAllMPIProcesses()
 {
 #if HAVE_MPI
-    const auto& comm = EclGenericVanguard::comm();
+    const auto& comm = FlowGenericVanguard::comm();
     if (comm.size() > 1)
     {
         // we try to prevent the abort here.

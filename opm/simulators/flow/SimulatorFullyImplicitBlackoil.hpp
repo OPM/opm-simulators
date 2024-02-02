@@ -187,7 +187,7 @@ public:
     SimulatorFullyImplicitBlackoil(Simulator& simulator)
         : simulator_(simulator)
         , serializer_(*this,
-                      EclGenericVanguard::comm(),
+                      FlowGenericVanguard::comm(),
                       simulator_.vanguard().eclState().getIOConfig(),
                       EWOMS_GET_PARAM(TypeTag, std::string, SaveStep),
                       EWOMS_GET_PARAM(TypeTag, int, LoadStep),

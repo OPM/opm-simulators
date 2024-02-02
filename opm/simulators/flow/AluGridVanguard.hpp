@@ -116,8 +116,8 @@ public:
 
     AluGridVanguard(Simulator& simulator)
         : FlowBaseVanguard<TypeTag>(simulator)
-    { 
-      this->mpiRank = EclGenericVanguard::comm().rank();
+    {
+      this->mpiRank = FlowGenericVanguard::comm().rank();
       this->callImplementationInit();
     }
 
@@ -305,7 +305,7 @@ protected:
         }
 
 #if HAVE_MPI
-        this->equilGrid_ = std::make_unique<Dune::CpGrid>(EclGenericVanguard::comm());
+        this->equilGrid_ = std::make_unique<Dune::CpGrid>(FlowGenericVanguard::comm());
 #else
         this->equilGrid_ = std::make_unique<Dune::CpGrid>();
 #endif

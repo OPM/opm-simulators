@@ -127,7 +127,7 @@ GenericCpGridVanguard<ElementMapper,GridView,Scalar>::GenericCpGridVanguard()
     this->mpiRank = 0;
 
 #if HAVE_MPI
-    this->mpiRank = EclGenericVanguard::comm().rank();
+    this->mpiRank = FlowGenericVanguard::comm().rank();
 #endif  // HAVE_MPI
 }
 
@@ -141,16 +141,16 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::releaseEquilGrid()
 #if HAVE_MPI
 template<class ElementMapper, class GridView, class Scalar>
 void GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
-doLoadBalance_(const Dune::EdgeWeightMethod            edgeWeightsMethod,
-               const bool                              ownersFirst,
-               const bool                              serialPartitioning,
-               const bool                              enableDistributedWells,
-               const double                            zoltanImbalanceTol,
-               const GridView&                         gridView,
-               const Schedule&                         schedule,
-               EclipseState&                           eclState1,
-               EclGenericVanguard::ParallelWellStruct& parallelWells,
-               const int                               numJacobiBlocks)
+doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
+               const bool                               ownersFirst,
+               const bool                               serialPartitioning,
+               const bool                               enableDistributedWells,
+               const double                             zoltanImbalanceTol,
+               const GridView&                          gridView,
+               const Schedule&                          schedule,
+               EclipseState&                            eclState1,
+               FlowGenericVanguard::ParallelWellStruct& parallelWells,
+               const int                                numJacobiBlocks)
 {
     if (!this->zoltanParams().empty())
         this->grid_->setZoltanParams(setupZoltanParams(this->zoltanParams()));
@@ -276,16 +276,16 @@ extractFaceTrans(const GridView& gridView) const
 template <class ElementMapper, class GridView, class Scalar>
 void
 GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
-distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
-               const bool                              ownersFirst,
-               const bool                              serialPartitioning,
-               const bool                              enableDistributedWells,
-               const double                            zoltanImbalanceTol,
-               const bool                              loadBalancerSet,
-               const std::vector<double>&              faceTrans,
-               const std::vector<Well>&                wells,
-               EclipseState&                           eclState1,
-               EclGenericVanguard::ParallelWellStruct& parallelWells)
+distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
+               const bool                               ownersFirst,
+               const bool                               serialPartitioning,
+               const bool                               enableDistributedWells,
+               const double                             zoltanImbalanceTol,
+               const bool                               loadBalancerSet,
+               const std::vector<double>&               faceTrans,
+               const std::vector<Well>&                 wells,
+               EclipseState&                            eclState1,
+               FlowGenericVanguard::ParallelWellStruct& parallelWells)
 {
     if (auto* eclState = dynamic_cast<ParallelEclipseState*>(&eclState1);
         eclState != nullptr)
@@ -312,16 +312,16 @@ distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
 template <class ElementMapper, class GridView, class Scalar>
 void
 GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
-distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
-               const bool                              ownersFirst,
-               const bool                              serialPartitioning,
-               const bool                              enableDistributedWells,
-               const double                            zoltanImbalanceTol,
-               const bool                              loadBalancerSet,
-               const std::vector<double>&              faceTrans,
-               const std::vector<Well>&                wells,
-               ParallelEclipseState*                   eclState,
-               EclGenericVanguard::ParallelWellStruct& parallelWells)
+distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
+               const bool                               ownersFirst,
+               const bool                               serialPartitioning,
+               const bool                               enableDistributedWells,
+               const double                             zoltanImbalanceTol,
+               const bool                               loadBalancerSet,
+               const std::vector<double>&               faceTrans,
+               const std::vector<Well>&                 wells,
+               ParallelEclipseState*                    eclState,
+               FlowGenericVanguard::ParallelWellStruct& parallelWells)
 {
     OPM_TIMEBLOCK(gridDistribute);
     const auto isIORank = this->grid_->comm().rank() == 0;
@@ -372,7 +372,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     }
     OPM_TIMEBLOCK(createGrids);
 #if HAVE_MPI
-    this->grid_ = std::make_unique<Dune::CpGrid>(EclGenericVanguard::comm());
+    this->grid_ = std::make_unique<Dune::CpGrid>(FlowGenericVanguard::comm());
 #else
     this->grid_ = std::make_unique<Dune::CpGrid>();
 #endif
@@ -481,7 +481,7 @@ doFilterConnections_(Schedule& schedule)
     try {
         // Broadcast another time to remove inactive peforations on
         // slave processors.
-        eclBroadcast(EclGenericVanguard::comm(), schedule);
+        eclBroadcast(FlowGenericVanguard::comm(), schedule);
     }
     catch (const std::exception& broadcast_error) {
         OpmLog::error(fmt::format("Distributing properties to all processes failed\n"

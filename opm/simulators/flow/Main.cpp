@@ -77,7 +77,7 @@ Main::~Main()
         int world_size;
         MPI_Comm_size(MPI_COMM_WORLD, &world_size);
         if (world_size > 1) {
-            MPI_Comm new_comm = EclGenericVanguard::comm();
+            MPI_Comm new_comm = FlowGenericVanguard::comm();
             int result;
             MPI_Comm_compare(MPI_COMM_WORLD, new_comm, &result);
             assert(result == MPI_UNEQUAL);
@@ -87,7 +87,7 @@ Main::~Main()
 #endif // HAVE_MPI
 
     if (ownMPI_) {
-        EclGenericVanguard::setCommunication(nullptr);
+        FlowGenericVanguard::setCommunication(nullptr);
     }
 
 #if HAVE_DAMARIS
@@ -136,22 +136,22 @@ void Main::initMPI()
 #elif HAVE_MPI
     MPI_Init(&argc_, &argv_);
 #endif
-    EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
+    FlowGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
 
     handleTestSplitCommunicatorCmdLine_();
 
 #if HAVE_MPI
-    if (test_split_comm_ && EclGenericVanguard::comm().size() > 1) {
-        int world_rank = EclGenericVanguard::comm().rank();
+    if (test_split_comm_ && FlowGenericVanguard::comm().size() > 1) {
+        int world_rank = FlowGenericVanguard::comm().rank();
         int color = (world_rank == 0);
         MPI_Comm new_comm;
-        MPI_Comm_split(EclGenericVanguard::comm(), color, world_rank, &new_comm);
+        MPI_Comm_split(FlowGenericVanguard::comm(), color, world_rank, &new_comm);
         isSimulationRank_ = (world_rank > 0);
-        EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
+        FlowGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
     }
 
 #if HAVE_CUDA
-    Opm::cuistl::setDevice(EclGenericVanguard::comm().rank(), EclGenericVanguard::comm().size());
+    Opm::cuistl::setDevice(FlowGenericVanguard::comm().rank(), FlowGenericVanguard::comm().size());
 #endif
 
 #endif // HAVE_MPI
@@ -201,7 +201,7 @@ void Main::readDeck(const std::string& deckFilename,
                               outputCout_, "STDOUT_LOGGER", allRanksDbgPrtLog);
 
     if (outputCout_) {
-        printPRTHeader(EclGenericVanguard::comm().size(), numThreads,
+        printPRTHeader(FlowGenericVanguard::comm().size(), numThreads,
                        parameters, moduleVersion, compileTimestamp);
         OpmLog::info("Reading deck file '" + deckFilename + "'");
     }
@@ -210,7 +210,7 @@ void Main::readDeck(const std::string& deckFilename,
     if (output_param >= 0)
         outputInterval = output_param;
 
-    Opm::readDeck(EclGenericVanguard::comm(),
+    Opm::readDeck(FlowGenericVanguard::comm(),
                   deckFilename,
                   eclipseState_,
                   schedule_,
@@ -224,20 +224,20 @@ void Main::readDeck(const std::string& deckFilename,
                   outputCout_,
                   outputInterval);
 
-    verifyValidCellGeometry(EclGenericVanguard::comm(), *this->eclipseState_);
+    verifyValidCellGeometry(FlowGenericVanguard::comm(), *this->eclipseState_);
 
     outputFiles_ = (omode != FileOutputMode::OUTPUT_NONE);
 }
 
 void Main::setupVanguard()
 {
-    EclGenericVanguard::modelParams_.setupTime_ = this->setupTime_;
-    EclGenericVanguard::modelParams_.actionState_ = std::move(this->actionState_);
-    EclGenericVanguard::modelParams_.eclSchedule_ = this->schedule_;
-    EclGenericVanguard::modelParams_.eclState_ = this->eclipseState_;
-    EclGenericVanguard::modelParams_.eclSummaryConfig_ = this->summaryConfig_;
-    EclGenericVanguard::modelParams_.udqState_ = std::move(udqState_);
-    EclGenericVanguard::modelParams_.wtestState_ = std::move(wtestState_);
+    FlowGenericVanguard::modelParams_.setupTime_ = this->setupTime_;
+    FlowGenericVanguard::modelParams_.actionState_ = std::move(this->actionState_);
+    FlowGenericVanguard::modelParams_.eclSchedule_ = this->schedule_;
+    FlowGenericVanguard::modelParams_.eclState_ = this->eclipseState_;
+    FlowGenericVanguard::modelParams_.eclSummaryConfig_ = this->summaryConfig_;
+    FlowGenericVanguard::modelParams_.udqState_ = std::move(udqState_);
+    FlowGenericVanguard::modelParams_.wtestState_ = std::move(wtestState_);
 }
 
 #if HAVE_DAMARIS
@@ -251,7 +251,7 @@ void Main::setupDamaris(const std::string& outputDir )
     //const auto find_replace_map;
     //const auto find_replace_map = Opm::DamarisOutput::DamarisKeywords<PreTypeTag>(EclGenericVanguard::comm(), outputDir);
     std::map<std::string, std::string> find_replace_map;
-    find_replace_map = Opm::DamarisOutput::getDamarisKeywords<PreTypeTag>(EclGenericVanguard::comm(), outputDir);
+    find_replace_map = Opm::DamarisOutput::getDamarisKeywords<PreTypeTag>(FlowGenericVanguard::comm(), outputDir);
     
     // By default EnableDamarisOutputCollective is true so all simulation results will
     // be written into one single file for each iteration using Parallel HDF5.
@@ -259,8 +259,8 @@ void Main::setupDamaris(const std::string& outputDir )
     // node are aggregated by dedicated Damaris cores and stored to separate files per Damaris core.
     // Irrespective of mode, output is written asynchronously at the end of each timestep.
     // Using the ModifyModel class to set the XML file for Damaris.
-    DamarisOutput::initializeDamaris(EclGenericVanguard::comm(), 
-                                     EclGenericVanguard::comm().rank(), 
+    DamarisOutput::initializeDamaris(FlowGenericVanguard::comm(),
+                                     FlowGenericVanguard::comm().rank(),
                                      find_replace_map);
     int is_client;
     MPI_Comm new_comm;
@@ -270,7 +270,7 @@ void Main::setupDamaris(const std::string& outputDir )
     isSimulationRank_ = (is_client > 0);
     if (isSimulationRank_ && err == DAMARIS_OK) {
         damaris_client_comm_get(&new_comm);
-        EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
+        FlowGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>(new_comm));
     }
 
     if (err != DAMARIS_OK) {

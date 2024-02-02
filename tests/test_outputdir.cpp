@@ -192,7 +192,7 @@ int main(int argc, char** argv)
     Dune::MPIHelper::instance(argcDummy, argvDummy);
 #endif
 
-    Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+    Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
 
     return boost::unit_test::unit_test_main(&init_unit_test_func, argc, argv);
 }

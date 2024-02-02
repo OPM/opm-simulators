@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::EclBaseVanguard
+ * \copydoc Opm::FlowBaseVanguard
  */
-#ifndef EWOMS_ECL_GENERIC_VANGUARD_HH
-#define EWOMS_ECL_GENERIC_VANGUARD_HH
+#ifndef OPM_FLOW_GENERIC_VANGUARD_HPP
+#define OPM_FLOW_GENERIC_VANGUARD_HPP
 
 #include <dune/common/parallel/communication.hh>
 
@@ -35,14 +35,11 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
-#include <array>
 #include <cassert>
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -60,7 +57,7 @@ class SummaryState;
 class UDQState;
 class WellTestState;
 
-class EclGenericVanguard {
+class FlowGenericVanguard {
 public:
     using ParallelWellStruct = std::vector<std::pair<std::string,bool>>;
 
@@ -81,14 +78,14 @@ public:
      * \brief Constructor.
      * \details Needs to be in compile unit.
      */
-    EclGenericVanguard();
-    explicit EclGenericVanguard(SimulationModelParams&& params);
+    FlowGenericVanguard();
+    explicit FlowGenericVanguard(SimulationModelParams&& params);
 
     /*!
      * \brief Destructor.
      * \details Empty, but needs to be in compile unit.
      */
-    ~EclGenericVanguard();
+    ~FlowGenericVanguard();
 
     static SimulationModelParams serializationTestParams();
 
@@ -267,7 +264,7 @@ public:
     void serializeOp(Serializer& serializer);
 
     // Only compares dynamic state.
-    bool operator==(const EclGenericVanguard& rhs) const;
+    bool operator==(const FlowGenericVanguard& rhs) const;
 
 protected:
     void updateOutputDir_(std::string outputDir,
@@ -333,4 +330,4 @@ protected:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_FLOW_GENERIC_VANGUARD_HPP

@@ -27,9 +27,9 @@
 #ifndef OPM_GENERIC_CPGRID_VANGUARD_HPP
 #define OPM_GENERIC_CPGRID_VANGUARD_HPP
 
-#include <ebos/eclgenericvanguard.hh>
-
 #include <opm/grid/CpGrid.hpp>
+
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 
 #include <functional>
 #include <memory>
@@ -147,43 +147,43 @@ protected:
      * (For parallel simulation runs.)
      */
 #if HAVE_MPI
-    void doLoadBalance_(const Dune::EdgeWeightMethod            edgeWeightsMethod,
-                        const bool                              ownersFirst,
-                        const bool                              serialPartitioning,
-                        const bool                              enableDistributedWells,
-                        const double                            zoltanImbalanceTol,
-                        const GridView&                         gridView,
-                        const Schedule&                         schedule,
-                        EclipseState&                           eclState,
-                        EclGenericVanguard::ParallelWellStruct& parallelWells,
-                        const int                               numJacobiBlocks);
+    void doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
+                        const bool                               ownersFirst,
+                        const bool                               serialPartitioning,
+                        const bool                               enableDistributedWells,
+                        const double                             zoltanImbalanceTol,
+                        const GridView&                          gridView,
+                        const Schedule&                          schedule,
+                        EclipseState&                            eclState,
+                        FlowGenericVanguard::ParallelWellStruct& parallelWells,
+                        const int                                numJacobiBlocks);
 
     void distributeFieldProps_(EclipseState& eclState);
 
 private:
     std::vector<double> extractFaceTrans(const GridView& gridView) const;
 
-    void distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
-                        const bool                              ownersFirst,
-                        const bool                              serialPartitioning,
-                        const bool                              enableDistributedWells,
-                        const double                            zoltanImbalanceTol,
-                        const bool                              loadBalancerSet,
-                        const std::vector<double>&              faceTrans,
-                        const std::vector<Well>&                wells,
-                        EclipseState&                           eclState,
-                        EclGenericVanguard::ParallelWellStruct& parallelWells);
+    void distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
+                        const bool                               ownersFirst,
+                        const bool                               serialPartitioning,
+                        const bool                               enableDistributedWells,
+                        const double                             zoltanImbalanceTol,
+                        const bool                               loadBalancerSet,
+                        const std::vector<double>&               faceTrans,
+                        const std::vector<Well>&                 wells,
+                        EclipseState&                            eclState,
+                        FlowGenericVanguard::ParallelWellStruct& parallelWells);
 
-    void distributeGrid(const Dune::EdgeWeightMethod            edgeWeightsMethod,
-                        const bool                              ownersFirst,
-                        const bool                              serialPartitioning,
-                        const bool                              enableDistributedWells,
-                        const double                            zoltanImbalanceTol,
-                        const bool                              loadBalancerSet,
-                        const std::vector<double>&              faceTrans,
-                        const std::vector<Well>&                wells,
-                        ParallelEclipseState*                   eclState,
-                        EclGenericVanguard::ParallelWellStruct& parallelWells);
+    void distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
+                        const bool                               ownersFirst,
+                        const bool                               serialPartitioning,
+                        const bool                               enableDistributedWells,
+                        const double                             zoltanImbalanceTol,
+                        const bool                               loadBalancerSet,
+                        const std::vector<double>&               faceTrans,
+                        const std::vector<Well>&                 wells,
+                        ParallelEclipseState*                    eclState,
+                        FlowGenericVanguard::ParallelWellStruct& parallelWells);
 
 protected:
     virtual const std::string& zoltanParams() const = 0;

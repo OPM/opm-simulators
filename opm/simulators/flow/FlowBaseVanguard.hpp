@@ -27,11 +27,10 @@
 #ifndef OPM_FLOW_BASE_VANGUARD_HPP
 #define OPM_FLOW_BASE_VANGUARD_HPP
 
-#include <ebos/eclgenericvanguard.hh>
-
 #include <opm/grid/common/GridEnums.hpp>
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 #include <opm/grid/LookUpCellCentroid.hh>
+
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
@@ -41,6 +40,7 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 
 #include <array>
 #include <cstddef>
@@ -212,7 +212,7 @@ namespace Opm {
  */
 template <class TypeTag>
 class FlowBaseVanguard : public BaseVanguard<TypeTag>,
-                         public EclGenericVanguard
+                         public FlowGenericVanguard
 {
     using ParentType = BaseVanguard<TypeTag>;
     using Implementation = GetPropType<TypeTag, Properties::Vanguard>;
@@ -323,7 +323,6 @@ public:
 
         init();
     }
-
 
     const CartesianIndexMapper& cartesianMapper() const
     {  return asImp_().cartesianIndexMapper(); }

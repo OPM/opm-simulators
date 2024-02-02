@@ -20,7 +20,6 @@
 #include <config.h>
 
 #include <ebos/ebos.hh>
-#include <ebos/eclgenericvanguard.hh>
 
 #include <opm/common/utility/Serializer.hpp>
 
@@ -32,11 +31,13 @@
 #include <opm/output/eclipse/Inplace.hpp>
 
 #include <opm/input/eclipse/EclipseState/WagHysteresisConfig.hpp>
+
 #include <opm/material/fluidmatrixinteractions/EclHysteresisTwoPhaseLawParams.hpp>
 
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
@@ -203,24 +204,24 @@ BOOST_AUTO_TEST_CASE(WGState)
 
 BOOST_AUTO_TEST_CASE(EclGenericVanguard)
 {
-    auto in_params = Opm::EclGenericVanguard::serializationTestParams();
-    Opm::EclGenericVanguard val1(std::move(in_params));
+    auto in_params = Opm::FlowGenericVanguard::serializationTestParams();
+    Opm::FlowGenericVanguard val1(std::move(in_params));
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(val1);
     const size_t pos1 = ser.position();
-    Opm::EclGenericVanguard::SimulationModelParams out_params;
+    Opm::FlowGenericVanguard::SimulationModelParams out_params;
     out_params.setupTime_ = 0.0;
     out_params.actionState_ = std::make_unique<Opm::Action::State>();
     out_params.udqState_ = std::make_unique<Opm::UDQState>();
     out_params.eclSchedule_ = std::make_shared<Opm::Schedule>();
     out_params.summaryState_ = std::make_unique<Opm::SummaryState>();
-    Opm::EclGenericVanguard val2(std::move(out_params));
+    Opm::FlowGenericVanguard val2(std::move(out_params));
     ser.unpack(val2);
     const size_t pos2 = ser.position();
 
-    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericVanguard");
-    BOOST_CHECK_MESSAGE(val1 == val2, "Deserialized EclGenericVanguard differ");
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for FlowGenericVanguard");
+    BOOST_CHECK_MESSAGE(val1 == val2, "Deserialized FlowGenericVanguard differ");
 }
 
 BOOST_AUTO_TEST_CASE(EclGenericProblem)
@@ -448,7 +449,7 @@ struct AquiferFixture {
         };
         Opm::AdaptiveTimeStepping<TT>::registerParameters();
         Opm::setupParameters_<TT>(2, argv, /*registerParams=*/true);
-        Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+        Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
     }
 };
 
@@ -460,7 +461,7 @@ BOOST_GLOBAL_FIXTURE(AquiferFixture);
 BOOST_AUTO_TEST_CASE(TYPE) \
 { \
     using TT = Opm::Properties::TTag::TestRestartTypeTag; \
-    Opm::EclGenericVanguard::readDeck("GLIFT1.DATA"); \
+    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA"); \
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>; \
     Simulator sim; \
     auto data_out = Opm::TYPE<TT>::serializationTestObject(sim); \
@@ -481,7 +482,7 @@ TEST_FOR_AQUIFER(AquiferFetkovich)
 BOOST_AUTO_TEST_CASE(AquiferNumerical)
 {
     using TT = Opm::Properties::TTag::TestRestartTypeTag;
-    Opm::EclGenericVanguard::readDeck("GLIFT1.DATA");
+    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA");
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
     Simulator sim;
     auto data_out = Opm::AquiferNumerical<TT>::serializationTestObject(sim);
@@ -499,7 +500,7 @@ BOOST_AUTO_TEST_CASE(AquiferNumerical)
 BOOST_AUTO_TEST_CASE(AquiferConstantFlux)
 {
     using TT = Opm::Properties::TTag::TestRestartTypeTag;
-    Opm::EclGenericVanguard::readDeck("GLIFT1.DATA");
+    Opm::FlowGenericVanguard::readDeck("GLIFT1.DATA");
     using Simulator = Opm::GetPropType<TT, Opm::Properties::Simulator>;
     Simulator sim;
     auto data_out = Opm::AquiferConstantFlux<TT>::serializationTestObject(sim);

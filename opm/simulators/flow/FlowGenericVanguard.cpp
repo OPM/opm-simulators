@@ -22,7 +22,7 @@
 */
 
 #include <config.h>
-#include <ebos/eclgenericvanguard.hh>
+#include <opm/simulators/flow//FlowGenericVanguard.hpp>
 
 #include <opm/common/utility/MemPacker.hpp>
 #include <opm/common/utility/Serializer.hpp>
@@ -84,21 +84,21 @@
 
 namespace Opm {
 
-std::unique_ptr<Parallel::Communication> EclGenericVanguard::comm_;
-EclGenericVanguard::SimulationModelParams EclGenericVanguard::modelParams_;
+std::unique_ptr<Parallel::Communication> FlowGenericVanguard::comm_;
+FlowGenericVanguard::SimulationModelParams FlowGenericVanguard::modelParams_;
 
-EclGenericVanguard::EclGenericVanguard()
-    : EclGenericVanguard(std::move(modelParams_))
+FlowGenericVanguard::FlowGenericVanguard()
+    : FlowGenericVanguard(std::move(modelParams_))
 {}
 
-EclGenericVanguard::EclGenericVanguard(SimulationModelParams&& params)
+FlowGenericVanguard::FlowGenericVanguard(SimulationModelParams&& params)
     : python(std::make_shared<Python>())
 {
     defineSimulationModel(std::move(params));
 }
 
-EclGenericVanguard::SimulationModelParams
-EclGenericVanguard::serializationTestParams()
+FlowGenericVanguard::SimulationModelParams
+FlowGenericVanguard::serializationTestParams()
 {
     SimulationModelParams result;
     result.actionState_ = std::make_unique<Action::State>(Action::State::serializationTestObject());
@@ -109,9 +109,9 @@ EclGenericVanguard::serializationTestParams()
     return result;
 }
 
-EclGenericVanguard::~EclGenericVanguard() = default;
+FlowGenericVanguard::~FlowGenericVanguard() = default;
 
-void EclGenericVanguard::defineSimulationModel(SimulationModelParams&& params)
+void FlowGenericVanguard::defineSimulationModel(SimulationModelParams&& params)
 {
     actionState_ = std::move(params.actionState_);
     eclSchedule_ = std::move(params.eclSchedule_);
@@ -123,7 +123,7 @@ void EclGenericVanguard::defineSimulationModel(SimulationModelParams&& params)
     summaryState_ = std::move(params.summaryState_);
 }
 
-void EclGenericVanguard::readDeck(const std::string& filename)
+void FlowGenericVanguard::readDeck(const std::string& filename)
 {
     Dune::Timer setupTimer;
     setupTimer.start();
@@ -140,7 +140,7 @@ void EclGenericVanguard::readDeck(const std::string& filename)
     modelParams_.setupTime_ = setupTimer.stop();
 }
 
-std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
+std::string FlowGenericVanguard::canonicalDeckPath(const std::string& caseName)
 {
     const auto fileExists = [](const std::filesystem::path& f) -> bool
     {
@@ -165,8 +165,8 @@ std::string EclGenericVanguard::canonicalDeckPath(const std::string& caseName)
     throw std::invalid_argument("Cannot find input case '"+caseName+"'");
 }
 
-void EclGenericVanguard::updateOutputDir_(std::string outputDir,
-                                          bool enableEclCompatFile)
+void FlowGenericVanguard::updateOutputDir_(std::string outputDir,
+                                           bool enableEclCompatFile)
 {
     // update the location for output
     auto& ioConfig = eclState_->getIOConfig();
@@ -193,7 +193,7 @@ void EclGenericVanguard::updateOutputDir_(std::string outputDir,
     ioConfig.setEclCompatibleRST(enableEclCompatFile);
 }
 
-void EclGenericVanguard::init()
+void FlowGenericVanguard::init()
 {
     // Make proper case name.
     {
@@ -228,7 +228,7 @@ void EclGenericVanguard::init()
 
     // set communicator if not set as in opm flow
     if(!comm_){
-        EclGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
+        FlowGenericVanguard::setCommunication(std::make_unique<Parallel::Communication>());
     }
     
     // set eclState if not already set as in opm flow
@@ -256,7 +256,7 @@ void EclGenericVanguard::init()
     if (enableDistributedWells() )
     {
         int hasMsWell = false;
-        const auto& comm = EclGenericVanguard::comm();
+        const auto& comm = FlowGenericVanguard::comm();
 
         if (useMultisegmentWell_)
         {
@@ -289,7 +289,7 @@ void EclGenericVanguard::init()
     }
 }
 
-bool EclGenericVanguard::drsdtconEnabled() const
+bool FlowGenericVanguard::drsdtconEnabled() const
 {
   for (const auto& schIt : this->schedule()) {
       const auto& oilVaporizationControl = schIt.oilvap();
@@ -301,13 +301,14 @@ bool EclGenericVanguard::drsdtconEnabled() const
   return false;
 }
 
-std::unordered_map<size_t, const NumericalAquiferCell*> EclGenericVanguard::allAquiferCells() const
+std::unordered_map<size_t, const NumericalAquiferCell*>
+FlowGenericVanguard::allAquiferCells() const
 {
   return this->eclState_->aquifer().numericalAquifers().allAquiferCells();
 }
 
 template<>
-void EclGenericVanguard::
+void FlowGenericVanguard::
 serializeOp<Serializer<Serialization::MemPacker>>(Serializer<Serialization::MemPacker>& serializer)
 {
     serializer(*summaryState_);
@@ -316,7 +317,7 @@ serializeOp<Serializer<Serialization::MemPacker>>(Serializer<Serialization::MemP
     serializer(*eclSchedule_);
 }
 
-bool EclGenericVanguard::operator==(const EclGenericVanguard& rhs) const
+bool FlowGenericVanguard::operator==(const FlowGenericVanguard& rhs) const
 {
     auto cmp_ptr = [](const auto& a, const auto& b)
     {

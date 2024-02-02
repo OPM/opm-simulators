@@ -25,7 +25,6 @@
 #define BOOST_TEST_MODULE Equil
 
 #include <ebos/eclproblem.hh>
-#include <ebos/eclgenericvanguard.hh>
 
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/grid/GridManager.hpp>
@@ -39,6 +38,7 @@
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -119,7 +119,7 @@ initSimulator(const char *filename)
 
     Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/false);
 
-    Opm::EclGenericVanguard::readDeck(filename);
+    Opm::FlowGenericVanguard::readDeck(filename);
 
     return std::make_unique<Simulator>();
 }
@@ -233,7 +233,7 @@ struct EquilFixture {
 #else
         Dune::MPIHelper::instance(argc, argv);
 #endif
-        Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+        Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
         Opm::BlackoilModelParameters<TypeTag>::registerParameters();
         Opm::AdaptiveTimeStepping<TypeTag>::registerParameters();
         Opm::Parameters::registerParam<TypeTag, bool>("EnableTerminalOutput",

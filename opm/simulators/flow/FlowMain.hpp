@@ -340,9 +340,10 @@ namespace Opm {
                 Dune::Timer setupTimerAfterReadingDeck;
                 setupTimerAfterReadingDeck.start();
 
-                int status = setupParameters_(this->argc_, this->argv_, EclGenericVanguard::comm());
-                if (status)
+                int status = setupParameters_(this->argc_, this->argv_, FlowGenericVanguard::comm());
+                if (status) {
                     return status;
+                }
 
                 setupParallelism();
                 setupModelSimulator();
@@ -381,7 +382,7 @@ namespace Opm {
             // determine the rank of the current process and the number of processes
             // involved in the simulation. MPI must have already been initialized
             // here. (yes, the name of this method is misleading.)
-            auto comm = EclGenericVanguard::comm();
+            auto comm = FlowGenericVanguard::comm();
             mpi_rank_ = comm.rank();
             mpi_size_ = comm.size();
 
@@ -422,7 +423,7 @@ namespace Opm {
 
         void setupModelSimulator()
         {
-            modelSimulator_ = std::make_unique<ModelSimulator>(EclGenericVanguard::comm(), /*verbose=*/false);
+            modelSimulator_ = std::make_unique<ModelSimulator>(FlowGenericVanguard::comm(), /*verbose=*/false);
             modelSimulator_->executionTimer().start();
             modelSimulator_->model().applyInitialSolution();
 
