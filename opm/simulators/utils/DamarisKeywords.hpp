@@ -20,9 +20,8 @@
 #ifndef OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 #define OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 
+#include <opm/simulators/flow/DamarisProperties.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
-
-#include <ebos/damaris_properties.hh>
 
 #include <map>
 #include <string>

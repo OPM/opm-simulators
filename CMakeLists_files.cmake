@@ -638,7 +638,7 @@ list (APPEND PUBLIC_HEADER_FILES
 if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
   list (APPEND PUBLIC_HEADER_FILES opm/simulators/utils/DamarisOutputModule.hpp
                                    opm/simulators/utils/DamarisKeywords.hpp
-                                   ebos/damaris_properties.hh
+                                   opm/simulators/flow/DamarisProperties.hpp
                                    ebos/damariswriter.hh
                                    opm/simulators/utils/DamarisVar.hpp
                                    opm/simulators/utils/GridDataOutput.hpp

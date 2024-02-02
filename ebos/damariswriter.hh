@@ -33,11 +33,11 @@
 
 #include <dune/grid/common/partitionset.hh>
 
-#include <ebos/damaris_properties.hh>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/flow/DamarisProperties.hpp>
 #include <opm/simulators/flow/EclGenericWriter.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
