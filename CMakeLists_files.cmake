@@ -149,10 +149,14 @@ list (APPEND MAIN_SOURCE_FILES
   )
 
 
-if (Damaris_FOUND AND MPI_FOUND)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/DamarisOutputModule.cpp)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/DamarisKeywords.cpp)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/initDamarisXmlFile.cpp)
+if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
+  list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/DamarisOutputModule.cpp
+                                 opm/simulators/utils/DamarisKeywords.cpp
+                                 opm/simulators/utils/initDamarisXmlFile.cpp
+                                 ebos/damariswriter.cc
+                                 opm/simulators/utils/DamarisVar.cpp
+                                 opm/simulators/utils/GridDataOutput.cpp
+  )
 endif()
 if(CUDA_FOUND)
   # CUISTL SOURCE
@@ -620,17 +624,15 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/wells/WGState.hpp
   )
 
-if (Damaris_FOUND AND MPI_FOUND)
-  list (APPEND PUBLIC_HEADER_FILES opm/simulators/utils/DamarisOutputModule.hpp)
-  list (APPEND PUBLIC_HEADER_FILES opm/simulators/utils/DamarisKeywords.hpp)
-  list (APPEND PUBLIC_HEADER_FILES ebos/damaris_properties.hh)
-  list (APPEND PUBLIC_HEADER_FILES ebos/damariswriter.hh)
-  list (APPEND PUBLIC_HEADER_FILES opm/simulators/utils/DamarisVar.hpp)
-  list (APPEND PUBLIC_HEADER_FILES opm/simulators/utils/GridDataOutput.hpp
-                                   opm/simulators/utils/GridDataOutput_impl.hpp)
-  list(APPEND MAIN_SOURCE_FILES ebos/damariswriter.cc
-                                opm/simulators/utils/DamarisVar.cpp
-                                opm/simulators/utils/GridDataOutput.cpp)
+if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
+  list (APPEND PUBLIC_HEADER_FILES opm/simulators/utils/DamarisOutputModule.hpp
+                                   opm/simulators/utils/DamarisKeywords.hpp
+                                   ebos/damaris_properties.hh
+                                   ebos/damariswriter.hh
+                                   opm/simulators/utils/DamarisVar.hpp
+                                   opm/simulators/utils/GridDataOutput.hpp
+                                   opm/simulators/utils/GridDataOutput_impl.hpp
+  )
 endif()
 
 if(HDF5_FOUND)
