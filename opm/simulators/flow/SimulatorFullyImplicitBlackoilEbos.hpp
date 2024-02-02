@@ -146,9 +146,6 @@ struct LoadStep<TypeTag, TTag::EclFlowProblem>
 namespace Opm {
 
 void outputReportStep(const SimulatorTimer& timer);
-void outputTimestampFIP(const SimulatorTimer& timer,
-                        const std::string& title,
-                        const std::string& version);
 
 /// a simulator for the blackoil model
 template<class TypeTag>
