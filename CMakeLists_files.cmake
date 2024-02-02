@@ -23,7 +23,6 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-  ebos/eclgenericproblem.cc
   opm/core/props/BlackoilPhases.cpp
   opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
@@ -34,6 +33,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/EclGenericWriter.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
+  opm/simulators/flow/FlowGenericProblem.cpp
   opm/simulators/flow/FlowGenericVanguard.cpp
   opm/simulators/flow/FlowUtils.cpp
   opm/simulators/flow/GenericCpGridVanguard.cpp
@@ -410,8 +410,6 @@ list (APPEND TEST_DATA_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
-  ebos/eclgenericproblem.hh
-  ebos/eclgenericproblem_impl.hh
   ebos/eclnewtonmethod.hh
   ebos/eclproblem.hh
   opm/simulators/flow/ActionHandler.hpp
@@ -436,6 +434,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FemCpGridCompat.hpp
   opm/simulators/flow/FIBlackoilModel.hpp
   opm/simulators/flow/FlowBaseVanguard.hpp
+  opm/simulators/flow/FlowGenericProblem.hpp
+  opm/simulators/flow/FlowGenericProblem_impl.hpp
   opm/simulators/flow/FlowGenericVanguard.hpp
   opm/simulators/flow/FlowMain.hpp
   opm/simulators/flow/FlowProblemProperties.hpp

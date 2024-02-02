@@ -25,8 +25,8 @@
  *
  * \copydoc Opm::FlowProblem
  */
-#ifndef EWOMS_GENERIC_ECL_PROBLEM_HH
-#define EWOMS_GENERIC_ECL_PROBLEM_HH
+#ifndef OPM_FLOW_GENERIC_PROBLEM_HPP
+#define OPM_FLOW_GENERIC_PROBLEM_HPP
 
 
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
@@ -60,13 +60,13 @@ int eclPositionalParameter(Dune::ParameterTree& tree,
                            int paramIdx);
 
 /*!
- * \ingroup EclBlackOilSimulator
+ * \ingroup BlackOilSimulator
  *
  * \brief This problem simulates an input file given in the data format used by the
  *        commercial ECLiPSE simulator.
  */
 template<class GridView, class FluidSystem, class Scalar>
-class EclGenericProblem
+class FlowGenericProblem
 {
 public:
     using TabulatedTwoDFunction = UniformXTabulated2DFunction<Scalar>;
@@ -77,14 +77,14 @@ public:
         Scalar compressibility;
     };
 
-    EclGenericProblem(const EclipseState& eclState,
-                      const Schedule& schedule,
-                      const GridView& gridView);
+    FlowGenericProblem(const EclipseState& eclState,
+                       const Schedule& schedule,
+                       const GridView& gridView);
 
 
-    static EclGenericProblem serializationTestObject(const EclipseState& eclState,
-                                                     const Schedule& schedule,
-                                                     const GridView& gridView);
+    static FlowGenericProblem serializationTestObject(const EclipseState& eclState,
+                                                      const Schedule& schedule,
+                                                      const GridView& gridView);
 
     /*!
      * \copydoc FvBaseProblem::helpPreamble
@@ -275,7 +275,7 @@ public:
     int numPressurePointsEquil() const
     { return numPressurePointsEquil_; }
 
-    bool operator==(const EclGenericProblem& rhs) const;
+    bool operator==(const FlowGenericProblem& rhs) const;
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -402,4 +402,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_FLOW_GENERIC_PROBLEM_HPP
