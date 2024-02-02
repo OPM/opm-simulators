@@ -25,7 +25,6 @@
 list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenericcpgridvanguard.cc
   ebos/eclgenericproblem.cc
-  ebos/eclgenericthresholdpressure.cc
   ebos/eclgenericvanguard.cc
   ebos/ecltransmissibility.cc
   ebos/equil/equilibrationhelpers.cc
@@ -42,6 +41,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/FlowUtils.cpp
   opm/simulators/flow/GenericOutputBlackoilModule.cpp
+  opm/simulators/flow/GenericThresholdPressure.cpp
   opm/simulators/flow/GenericTracerModel.cpp
   opm/simulators/flow/InterRegFlows.cpp
   opm/simulators/flow/KeywordValidation.cpp
@@ -417,8 +417,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclgenericcpgridvanguard.hh
   ebos/eclgenericproblem.hh
   ebos/eclgenericproblem_impl.hh
-  ebos/eclgenericthresholdpressure.hh
-  ebos/eclgenericthresholdpressure_impl.hh
   ebos/eclgenericvanguard.hh
   ebos/eclnewtonmethod.hh
   ebos/eclproblem.hh
@@ -449,6 +447,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowUtils.hpp
   opm/simulators/flow/FlowsData.hpp
   opm/simulators/flow/GenericOutputBlackoilModule.hpp
+  opm/simulators/flow/GenericThresholdPressure.hpp
+  opm/simulators/flow/GenericThresholdPressure_impl.hpp
   opm/simulators/flow/GenericTracerModel.hpp
   opm/simulators/flow/GenericTracerModel_impl.hpp
   opm/simulators/flow/InterRegFlows.hpp
