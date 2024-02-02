@@ -44,9 +44,6 @@
 #include <ebos/eclthresholdpressure.hh>
 #include <ebos/ecltransmissibility.hh>
 #include <ebos/eclwriter.hh>
-#if HAVE_DAMARIS
-#include <ebos/damariswriter.hh>
-#endif
 #include <ebos/ecltracermodel.hh>
 #include <ebos/FIBlackOilModel.hpp>
 #include <ebos/vtkecltracermodule.hh>
@@ -91,6 +88,10 @@
 #include <opm/utility/CopyablePtr.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
+
+#if HAVE_DAMARIS
+#include <opm/simulators/flow/DamarisWriter.hpp>
+#endif
 
 #include <algorithm>
 #include <functional>

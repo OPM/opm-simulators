@@ -33,9 +33,6 @@
 #include <ebos/eclfluxmodule.hh>
 #include <ebos/eclnewtonmethod.hh>
 #include <ebos/eclwriter.hh>
-#if HAVE_DAMARIS
-#include <ebos/damariswriter.hh>
-#endif
 #include <ebos/FIBlackOilModel.hpp>
 #include <ebos/vtkecltracermodule.hh>
 
@@ -49,6 +46,10 @@
 
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
+
+#if HAVE_DAMARIS
+#include <opm/simulators/flow/DamarisWriter.hpp>
+#endif
 
 #include <tuple>
 

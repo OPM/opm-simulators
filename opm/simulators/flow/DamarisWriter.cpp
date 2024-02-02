@@ -25,7 +25,7 @@
 */
 
 #include <config.h>
-#include <ebos/damariswriter.hh>
+#include <opm/simulators/flow/DamarisWriter.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
