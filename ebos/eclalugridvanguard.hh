@@ -31,7 +31,6 @@
 #include <dune/alugrid/dgf.hh>
 #include <dune/alugrid/grid.hh>
 
-#include <ebos/alucartesianindexmapper.hh>
 #include <ebos/eclbasevanguard.hh>
 #include <ebos/ecltransmissibility.hh>
 
@@ -41,6 +40,7 @@
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
+#include <opm/simulators/flow/AluGridCartesianIndexMapper.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 
 #include <array>

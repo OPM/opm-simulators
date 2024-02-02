@@ -38,7 +38,7 @@
 
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
-#include <ebos/alucartesianindexmapper.hh>
+#include <opm/simulators/flow/AluGridCartesianIndexMapper.hpp>
 #endif // HAVE_DUNE_ALUGRID
 
 #include <opm/grid/polyhedralgrid.hh>

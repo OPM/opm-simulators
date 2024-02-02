@@ -38,13 +38,6 @@
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #endif
 
-#if HAVE_DUNE_ALUGRID
-#include <dune/alugrid/grid.hh>
-#include <ebos/alucartesianindexmapper.hh>
-#endif // HAVE_DUNE_ALUGRID
-
-#include <opm/grid/polyhedralgrid.hh>
-
 namespace Opm {
 namespace detail {
 
