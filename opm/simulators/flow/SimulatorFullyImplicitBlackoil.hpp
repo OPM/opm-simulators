@@ -22,7 +22,11 @@
 #ifndef OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_HEADER_INCLUDED
 #define OPM_SIMULATOR_FULLY_IMPLICIT_BLACKOIL_HEADER_INCLUDED
 
-#include <fmt/format.h>
+#include <opm/common/ErrorMacros.hpp>
+
+#include <opm/input/eclipse/Units/UnitSystem.hpp>
+
+#include <opm/grid/utility/StopWatch.hpp>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/flow/BlackoilModel.hpp>
@@ -37,14 +41,13 @@
 #include <opm/simulators/utils/moduleVersion.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
-#include <opm/grid/utility/StopWatch.hpp>
+#if HAVE_HDF5
+#include <opm/simulators/utils/HDF5Serializer.hpp>
+#endif
 
-#include <opm/input/eclipse/Units/UnitSystem.hpp>
+#include <fmt/format.h>
 
-#include <opm/common/ErrorMacros.hpp>
-
-#include <boost/date_time/gregorian/gregorian.hpp>
-
+#include <cstddef>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -53,10 +56,6 @@
 #include <thread>
 #include <utility>
 #include <vector>
-
-#if HAVE_HDF5
-#include <opm/simulators/utils/HDF5Serializer.hpp>
-#endif
 
 namespace Opm::Properties {
 
