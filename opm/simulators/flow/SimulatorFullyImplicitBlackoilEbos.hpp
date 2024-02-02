@@ -30,6 +30,7 @@
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
 #include <opm/simulators/flow/ExtraConvergenceOutputThread.hpp>
 #include <opm/simulators/flow/NonlinearSolver.hpp>
+#include <opm/simulators/flow/SimulatorReportBanners.hpp>
 #include <opm/simulators/flow/SimulatorSerializer.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
@@ -144,8 +145,6 @@ struct LoadStep<TypeTag, TTag::EclFlowProblem>
 } // namespace Opm::Properties
 
 namespace Opm {
-
-void outputReportStep(const SimulatorTimer& timer);
 
 /// a simulator for the blackoil model
 template<class TypeTag>
@@ -347,7 +346,7 @@ public:
         }
 
         if (terminalOutput_) {
-            outputReportStep(timer);
+            details::outputReportStep(timer);
         }
 
         // write the inital state at the report stage

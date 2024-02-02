@@ -20,6 +20,7 @@
 */
 
 #include <config.h>
+#include <opm/simulators/flow/SimulatorReportBanners.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -30,19 +31,19 @@
 
 #include <sstream>
 
-namespace Opm {
+namespace Opm::details {
 
 void outputReportStep(const SimulatorTimer& timer)
 {
     std::ostringstream stepMsg;
     boost::posix_time::time_facet* facet = new boost::posix_time::time_facet("%d-%b-%Y");
     stepMsg.imbue(std::locale(std::locale::classic(), facet));
-    stepMsg << "\nReport step " << std::setw(2) <<timer.currentStepNum()
-          << "/" << timer.numSteps()
-          << " at day " << (double)unit::convert::to(timer.simulationTimeElapsed(), unit::day)
-          << "/" << (double)unit::convert::to(timer.totalTime(), unit::day)
-          << ", date = " << timer.currentDateTime();
+    stepMsg << "\nReport step " << std::setw(2) << timer.currentStepNum()
+            << "/" << timer.numSteps()
+            << " at day " << unit::convert::to(timer.simulationTimeElapsed(), unit::day)
+            << "/" << unit::convert::to(timer.totalTime(), unit::day)
+            << ", date = " << timer.currentDateTime();
     OpmLog::info(stepMsg.str());
 }
 
-} // namespace Opm
+} // namespace Opm::details
