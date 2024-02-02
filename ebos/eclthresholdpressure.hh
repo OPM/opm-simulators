@@ -28,8 +28,6 @@
 #ifndef EWOMS_ECL_THRESHOLD_PRESSURE_HH
 #define EWOMS_ECL_THRESHOLD_PRESSURE_HH
 
-#include <ebos/eclgenericthresholdpressure.hh>
-
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
 
@@ -37,8 +35,9 @@
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
+#include <opm/simulators/flow/GenericThresholdPressure.hpp>
+
 #include <algorithm>
-#include <vector>
 
 namespace Opm {
 
@@ -53,15 +52,15 @@ namespace Opm {
  * than the threshold pressure, it is reduced by the threshold pressure.
  */
 template <class TypeTag>
-class EclThresholdPressure : public EclGenericThresholdPressure<GetPropType<TypeTag, Properties::Grid>,
-                                                                GetPropType<TypeTag, Properties::GridView>,
-                                                                GetPropType<TypeTag, Properties::ElementMapper>,
-                                                                GetPropType<TypeTag, Properties::Scalar>>
+class EclThresholdPressure : public GenericThresholdPressure<GetPropType<TypeTag, Properties::Grid>,
+                                                             GetPropType<TypeTag, Properties::GridView>,
+                                                             GetPropType<TypeTag, Properties::ElementMapper>,
+                                                             GetPropType<TypeTag, Properties::Scalar>>
 {
-    using BaseType = EclGenericThresholdPressure<GetPropType<TypeTag, Properties::Grid>,
-                                                 GetPropType<TypeTag, Properties::GridView>,
-                                                 GetPropType<TypeTag, Properties::ElementMapper>,
-                                                 GetPropType<TypeTag, Properties::Scalar>>;
+    using BaseType = GenericThresholdPressure<GetPropType<TypeTag, Properties::Grid>,
+                                              GetPropType<TypeTag, Properties::GridView>,
+                                              GetPropType<TypeTag, Properties::ElementMapper>,
+                                              GetPropType<TypeTag, Properties::Scalar>>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;

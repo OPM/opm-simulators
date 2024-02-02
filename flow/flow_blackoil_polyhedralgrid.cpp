@@ -27,12 +27,12 @@
 
 // these are not explicitly instanced in library
 #include <ebos/eclgenericproblem_impl.hh>
-#include <ebos/eclgenericthresholdpressure_impl.hh>
 #include <ebos/eclgenerictracermodel_impl.hh>
 #include <ebos/ecltransmissibility_impl.hh>
 #include <ebos/eclgenericwriter_impl.hh>
 #include <ebos/equil/initstateequil_impl.hh>
 #include <opm/simulators/flow/CollectDataOnIORank_impl.hpp>
+#include <opm/simulators/flow/GenericThresholdPressure_impl.hpp>
 #include <opm/simulators/utils/GridDataOutput_impl.hpp>
 
 namespace Opm {

@@ -20,10 +20,8 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef EWOMS_ECL_GENERIC_THRESHOLD_PRESSURE_IMPL_HH
-#define EWOMS_ECL_GENERIC_THRESHOLD_PRESSURE_IMPL_HH
-
-#include <ebos/eclgenericthresholdpressure.hh>
+#ifndef OPM_GENERIC_THRESHOLD_PRESSURE_IMPL_HPP
+#define OPM_GENERIC_THRESHOLD_PRESSURE_IMPL_HPP
 
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/common/rangegenerators.hh>
@@ -36,10 +34,11 @@
 #include <opm/input/eclipse/EclipseState/SimulationConfig/SimulationConfig.hpp>
 #include <opm/input/eclipse/EclipseState/SimulationConfig/ThresholdPressure.hpp>
 
+#include <opm/simulators/flow/GenericThresholdPressure.hpp>
+
 #include <fmt/format.h>
 
 #include <algorithm>
-#include <cassert>
 #include <cstddef>
 #include <limits>
 #include <stdexcept>
@@ -47,11 +46,11 @@
 namespace Opm {
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
-EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
-EclGenericThresholdPressure(const CartesianIndexMapper& cartMapper,
-                            const GridView& gridView,
-                            const ElementMapper& elementMapper,
-                            const EclipseState& eclState)
+GenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
+GenericThresholdPressure(const CartesianIndexMapper& cartMapper,
+                         const GridView& gridView,
+                         const ElementMapper& elementMapper,
+                         const EclipseState& eclState)
     : cartMapper_(cartMapper)
     , gridView_(gridView)
     , elementMapper_(elementMapper)
@@ -62,7 +61,7 @@ EclGenericThresholdPressure(const CartesianIndexMapper& cartMapper,
 }
 
 template<class Grid, class GridView, class ElementMapper,class Scalar>
-Scalar EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
+Scalar GenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 thresholdPressure(int elem1Idx, int elem2Idx) const
 {
     if (!enableThresholdPressure_)
@@ -98,7 +97,7 @@ thresholdPressure(int elem1Idx, int elem2Idx) const
 }
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
-void EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
+void GenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 finishInit()
 {
     const auto& simConfig = eclState_.getSimulationConfig();
@@ -147,7 +146,7 @@ finishInit()
 }
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
-void EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
+void GenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 applyExplicitThresholdPressures_()
 {
     const SimulationConfig& simConfig = eclState_.getSimulationConfig();
@@ -195,7 +194,7 @@ applyExplicitThresholdPressures_()
 }
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
-void EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
+void GenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 configureThpresft_()
 {
     // retrieve the faults collection.
@@ -221,7 +220,7 @@ configureThpresft_()
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
 std::vector<Scalar>
-EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
+GenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 getRestartVector() const
 {
     if (!enableThresholdPressure_)
@@ -249,7 +248,7 @@ getRestartVector() const
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
 void
-EclGenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
+GenericThresholdPressure<Grid,GridView,ElementMapper,Scalar>::
 logPressures()
 {
     if (!enableThresholdPressure_)
@@ -295,4 +294,5 @@ logPressures()
 }
 
 } // namespace Opm
-#endif
+
+#endif // OPM_GENERIC_THRESHOLD_PRESSURE_IMPL_HPP

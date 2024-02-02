@@ -23,14 +23,13 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclThresholdPressure
+ * \copydoc Opm::ThresholdPressure
  */
-#ifndef EWOMS_ECL_GENERIC_THRESHOLD_PRESSURE_HH
-#define EWOMS_ECL_GENERIC_THRESHOLD_PRESSURE_HH
+#ifndef OPM_GENERIC_THRESHOLD_PRESSURE_HPP
+#define OPM_GENERIC_THRESHOLD_PRESSURE_HPP
 
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 #include <opm/grid/LookUpData.hh>
-
 
 #include <vector>
 
@@ -41,16 +40,16 @@ template<typename Grid, typename GridView> class LookUpData;
 template<typename Grid, typename GridView> class LookUpCartesianData;
 
 template<class Grid, class GridView, class ElementMapper, class Scalar>
-class EclGenericThresholdPressure {
+class GenericThresholdPressure {
 public:
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     using LookUpData = Opm::LookUpData<Grid,GridView>;
     using LookUpCartesianData = Opm::LookUpCartesianData<Grid,GridView>;
 
-    EclGenericThresholdPressure(const CartesianIndexMapper& cartMapper,
-                                const GridView& gridView,
-                                const ElementMapper& elementMapper,
-                                const EclipseState& eclState);
+    GenericThresholdPressure(const CartesianIndexMapper& cartMapper,
+                             const GridView& gridView,
+                             const ElementMapper& elementMapper,
+                             const EclipseState& eclState);
 
     /*!
      * \brief Returns the theshold pressure [Pa] for the intersection between two elements.
@@ -116,4 +115,4 @@ protected:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_GENERIC_THRESHOLD_PRESSURE_HPP
