@@ -31,7 +31,7 @@
 
 #include <opm/grid/CpGrid.hpp>
 
-#include <ebos/ecltransmissibility.hh>
+#include <opm/simulators/flow/Transmissibility.hpp>
 
 using namespace Opm;
 
@@ -40,18 +40,20 @@ const int cartDims[3] = {8,15,3};
 
 // Class extending EclTransmissibility, such that we can access the protected member trans_ to check its contents
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-class Transmissibility : public EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>
+class TestTransmissibility : public Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>
 {
-    using ParentType = EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>;
+    using ParentType = Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>;
     public:
-        Transmissibility(const EclipseState& eclState,
-                        const GridView& gridView,
-                        const CartesianIndexMapper& cartMapper,
-                        const Grid& grid,
-                        std::function<std::array<double,dimWorld>(int)> centroids,
-                        bool enableEnergy,
-                        bool enableDiffusivity,
-                        bool enableDispersivity) : ParentType(eclState,gridView,cartMapper,grid,centroids,enableEnergy,enableDiffusivity,enableDispersivity) {}
+        TestTransmissibility(const EclipseState& eclState,
+                             const GridView& gridView,
+                             const CartesianIndexMapper& cartMapper,
+                             const Grid& grid,
+                             std::function<std::array<double,dimWorld>(int)> centroids,
+                             bool enableEnergy,
+                             bool enableDiffusivity,
+                             bool enableDispersivity)
+            : ParentType(eclState,gridView,cartMapper,grid,centroids,
+                         enableEnergy,enableDiffusivity,enableDispersivity) {}
         auto getTransmissibilitymap() {
             return this->trans_;
         }
@@ -65,7 +67,7 @@ int main(int argc, char** argv )
     using GridView = Grid::LeafGridView;
     using ElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
-    using Transmissibility = Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,double>;
+    using Transmissibility = TestTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,double>;
 
     Parser parser;
 

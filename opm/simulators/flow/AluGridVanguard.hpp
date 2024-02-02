@@ -31,8 +31,6 @@
 #include <dune/alugrid/dgf.hh>
 #include <dune/alugrid/grid.hh>
 
-#include <ebos/ecltransmissibility.hh>
-
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/grid/CpGrid.hpp>
@@ -41,6 +39,7 @@
 
 #include <opm/simulators/flow/AluGridCartesianIndexMapper.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
+#include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 
 #include <array>
@@ -108,7 +107,7 @@ public:
     using GridView = GetPropType<TypeTag, Properties::GridView>;        
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     using EquilCartesianIndexMapper = Dune::CartesianIndexMapper<EquilGrid>;
-    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
+    using TransmissibilityType = Transmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
     using Factory = Dune::FromToGridFactory<Grid>;
 
     static constexpr int dimension = Grid::dimension;

@@ -24,7 +24,6 @@
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
   ebos/eclgenericproblem.cc
-  ebos/ecltransmissibility.cc
   opm/core/props/BlackoilPhases.cpp
   opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
@@ -53,6 +52,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/SolutionContainers.cpp
+  opm/simulators/flow/Transmissibility.cpp
   opm/simulators/flow/ValidationFunctions.cpp
   opm/simulators/flow/equil/EquilibrationHelpers.cpp
   opm/simulators/flow/equil/InitStateEquil.cpp
@@ -415,8 +415,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclnewtonmethod.hh
   ebos/eclproblem.hh
   ebos/eclproblem_properties.hh
-  ebos/ecltransmissibility.hh
-  ebos/ecltransmissibility_impl.hh
   opm/simulators/flow/ActionHandler.hpp
   opm/simulators/flow/AluGridCartesianIndexMapper.hpp
   opm/simulators/flow/AluGridVanguard.hpp
@@ -469,6 +467,8 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/SolutionContainers.hpp
   opm/simulators/flow/SubDomain.hpp
   opm/simulators/flow/TracerModel.hpp
+  opm/simulators/flow/Transmissibility.hpp
+  opm/simulators/flow/Transmissibility_impl.hpp
   opm/simulators/flow/ValidationFunctions.hpp
   opm/simulators/flow/VtkTracerModule.hpp
   opm/simulators/flow/equil/EquilibrationHelpers.hpp

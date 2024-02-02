@@ -20,10 +20,8 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef EWOMS_ECL_TRANSMISSIBILITY_IMPL_HH
-#define EWOMS_ECL_TRANSMISSIBILITY_IMPL_HH
-
-#include <ebos/ecltransmissibility.hh>
+#ifndef OPM_TRANSMISSIBILITY_IMPL_HPP
+#define OPM_TRANSMISSIBILITY_IMPL_HPP
 
 #include <dune/common/version.hh>
 #include <dune/grid/common/mcmgmapper.hh>
@@ -36,6 +34,8 @@
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/TransMult.hpp>
 #include <opm/input/eclipse/Units/Units.hpp>
+
+#include <opm/simulators/flow/Transmissibility.hpp>
 
 #include <fmt/format.h>
 
@@ -85,15 +85,15 @@ namespace details {
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-EclTransmissibility(const EclipseState& eclState,
-                    const GridView& gridView,
-                    const CartesianIndexMapper& cartMapper,
-                    const Grid& grid,
-                    std::function<std::array<double,dimWorld>(int)> centroids,
-                    bool enableEnergy,
-                    bool enableDiffusivity,
-                    bool enableDispersivity)
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+Transmissibility(const EclipseState& eclState,
+                 const GridView& gridView,
+                 const CartesianIndexMapper& cartMapper,
+                 const Grid& grid,
+                 std::function<std::array<double,dimWorld>(int)> centroids,
+                 bool enableEnergy,
+                 bool enableDiffusivity,
+                 bool enableDispersivity)
       : eclState_(eclState)
       , gridView_(gridView)
       , cartMapper_(cartMapper)
@@ -110,57 +110,55 @@ EclTransmissibility(const EclipseState& eclState,
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-Scalar EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 transmissibility(unsigned elemIdx1, unsigned elemIdx2) const
 {
     return trans_.at(details::isId(elemIdx1, elemIdx2));
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-Scalar EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 transmissibilityBoundary(unsigned elemIdx, unsigned boundaryFaceIdx) const
 {
     return transBoundary_.at(std::make_pair(elemIdx, boundaryFaceIdx));
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-Scalar EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 thermalHalfTrans(unsigned insideElemIdx, unsigned outsideElemIdx) const
 {
     return thermalHalfTrans_.at(details::directionalIsId(insideElemIdx, outsideElemIdx));
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-Scalar EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 thermalHalfTransBoundary(unsigned insideElemIdx, unsigned boundaryFaceIdx) const
 {
     return thermalHalfTransBoundary_.at(std::make_pair(insideElemIdx, boundaryFaceIdx));
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-Scalar EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 diffusivity(unsigned elemIdx1, unsigned elemIdx2) const
 {
     if (diffusivity_.empty())
         return 0.0;
 
     return diffusivity_.at(details::isId(elemIdx1, elemIdx2));
-
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-Scalar EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+Scalar Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 dispersivity(unsigned elemIdx1, unsigned elemIdx2) const
 {
     if (dispersivity_.empty())
         return 0.0;
 
     return dispersivity_.at(details::isId(elemIdx1, elemIdx2));
-
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 update(bool global, const std::function<unsigned int(unsigned int)>& map, const bool applyNncMultregT)
 {
     const auto& cartDims = cartMapper_.cartesianDimensions();
@@ -587,7 +585,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 extractPermeability_()
 {
     unsigned numElem = gridView_.size(/*codim=*/0);
@@ -629,7 +627,7 @@ extractPermeability_()
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 extractPermeability_(const std::function<unsigned int(unsigned int)>& map)
 {
     unsigned numElem = gridView_.size(/*codim=*/0);
@@ -672,7 +670,7 @@ extractPermeability_(const std::function<unsigned int(unsigned int)>& map)
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 extractPorosity_()
 {
     // read the intrinsic porosity from the eclState. Note that all arrays
@@ -689,7 +687,7 @@ extractPorosity_()
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 extractDispersion_()
 {
     if (!enableDispersivity_) {
@@ -701,7 +699,7 @@ extractDispersion_()
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 removeNonCartesianTransmissibilities_(bool removeAll)
 {
     const auto& cartDims = cartMapper_.cartesianDimensions();
@@ -725,7 +723,7 @@ removeNonCartesianTransmissibilities_(bool removeAll)
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper, Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper, Scalar>::
 applyAllZMultipliers_(Scalar& trans,
                       unsigned insideFaceIdx,
                       unsigned outsideFaceIdx,
@@ -776,7 +774,7 @@ applyAllZMultipliers_(Scalar& trans,
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 updateFromEclState_(bool global)
 {
     const FieldPropsManager* fp =
@@ -813,7 +811,7 @@ updateFromEclState_(bool global)
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 std::array<std::vector<double>,3>
-EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
 {
     const auto& cartDims = cartMapper_.cartesianDimensions();
@@ -880,7 +878,7 @@ createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
                                  const std::array<std::vector<double>,3>& trans)
 {
@@ -942,7 +940,7 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 template<class Intersection>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 computeFaceProperties(const Intersection& intersection,
                       const int,
                       const int,
@@ -962,10 +960,9 @@ computeFaceProperties(const Intersection& intersection,
     faceAreaNormal *= geometry.volume();
 }
 
-
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 template<class Intersection>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 computeFaceProperties(const Intersection& intersection,
                       const int insideElemIdx,
                       const int insideFaceIdx,
@@ -984,7 +981,7 @@ computeFaceProperties(const Intersection& intersection,
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void
-EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
 {
     // First scale NNCs with EDITNNC.
@@ -1052,7 +1049,7 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal)
 {
     const auto& input = eclState_.getInputNNC();
@@ -1065,7 +1062,7 @@ applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLoca
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyEditNncrToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal)
 {
     const auto& input = eclState_.getInputNNC();
@@ -1078,7 +1075,7 @@ applyEditNncrToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLoc
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& globalToLocal,
                                const std::string& keyword,
                                const std::vector<NNCdata>& nncs,
@@ -1154,7 +1151,7 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void
-EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyNncMultreg_(const std::unordered_map<std::size_t,int>& cartesianToCompressed)
 {
     const auto& inputNNC = this->eclState_.getInputNNC();
@@ -1202,7 +1199,7 @@ applyNncMultreg_(const std::unordered_map<std::size_t,int>& cartesianToCompresse
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 computeHalfTrans_(Scalar& halfTrans,
                   const DimVector& areaNormal,
                   int faceIdx, // in the reference element that contains the intersection
@@ -1223,7 +1220,7 @@ computeHalfTrans_(Scalar& halfTrans,
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 computeHalfDiffusivity_(Scalar& halfDiff,
                         const DimVector& areaNormal,
                         const DimVector& distance,
@@ -1239,8 +1236,8 @@ computeHalfDiffusivity_(Scalar& halfDiff,
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-typename EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::DimVector
-EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+typename Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::DimVector
+Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 distanceVector_(const DimVector& center,
                 int faceIdx, // in the reference element that contains the intersection
                 unsigned elemIdx,
@@ -1256,7 +1253,7 @@ distanceVector_(const DimVector& center,
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyMultipliers_(Scalar& trans,
                   unsigned faceIdx,
                   unsigned cartElemIdx,
@@ -1290,7 +1287,7 @@ applyMultipliers_(Scalar& trans,
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-void EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 applyNtg_(Scalar& trans,
           unsigned faceIdx,
           unsigned elemIdx,
@@ -1318,6 +1315,6 @@ applyNtg_(Scalar& trans,
     }
 }
 
-
 } // namespace Opm
-#endif
+
+#endif // OPM_TRANSMISSIBILITY_IMPL_HPP

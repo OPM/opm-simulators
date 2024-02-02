@@ -27,13 +27,12 @@
 #ifndef OPM_POLYHEDRAL_GRID_VANGUARD_HPP
 #define OPM_POLYHEDRAL_GRID_VANGUARD_HPP
 
-#include <ebos/ecltransmissibility.hh>
-
 #include <opm/grid/polyhedralgrid.hh>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
+#include <opm/simulators/flow/Transmissibility.hpp>
 
 #include <array>
 #include <functional>
@@ -103,8 +102,8 @@ private:
     using EquilGridPointer = EquilGrid*;
 
 public:
-    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper,
-                                                     CartesianIndexMapper, Scalar>;
+    using TransmissibilityType = Transmissibility<Grid, GridView, ElementMapper,
+                                                  CartesianIndexMapper, Scalar>;
 
     PolyhedralGridVanguard(Simulator& simulator)
         : FlowBaseVanguard<TypeTag>(simulator)

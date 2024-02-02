@@ -27,8 +27,6 @@
 #ifndef OPM_CPGRID_VANGUARD_HPP
 #define OPM_CPGRID_VANGUARD_HPP
 
-#include <ebos/ecltransmissibility.hh>
-
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
@@ -37,6 +35,7 @@
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/GenericCpGridVanguard.hpp>
+#include <opm/simulators/flow/Transmissibility.hpp>
 
 #include <array>
 #include <functional>
@@ -101,7 +100,7 @@ public:
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
-    using TransmissibilityType = EclTransmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
+    using TransmissibilityType = Transmissibility<Grid, GridView, ElementMapper, CartesianIndexMapper, Scalar>;
     static constexpr int dimensionworld = Grid::dimensionworld;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     static constexpr bool waterEnabled = Indices::waterEnabled;

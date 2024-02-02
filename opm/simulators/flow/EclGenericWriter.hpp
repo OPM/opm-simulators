@@ -28,11 +28,10 @@
 #ifndef OPM_ECL_GENERIC_WRITER_HPP
 #define OPM_ECL_GENERIC_WRITER_HPP
 
-#include <ebos/ecltransmissibility.hh>
-
 #include <opm/models/parallel/tasklets.hh>
 
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
+#include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 
 #include <map>
@@ -67,7 +66,7 @@ class EclGenericWriter
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     using EquilCartesianIndexMapper = Dune::CartesianIndexMapper<EquilGrid>;
     using CollectDataOnIORankType = CollectDataOnIORank<Grid,EquilGrid,GridView>;
-    using TransmissibilityType = EclTransmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>;
+    using TransmissibilityType = Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>;
 
 public:
     // The Simulator object should preferably have been const - the

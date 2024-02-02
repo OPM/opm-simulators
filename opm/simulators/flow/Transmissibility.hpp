@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclTransmissibility
+ * \copydoc Opm::Transmissibility
  */
-#ifndef EWOMS_ECL_TRANSMISSIBILITY_HH
-#define EWOMS_ECL_TRANSMISSIBILITY_HH
+#ifndef OPM_TRANSMISSIBILITY_HPP
+#define OPM_TRANSMISSIBILITY_HPP
 
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
@@ -39,7 +39,6 @@
 #include <functional>
 #include <map>
 #include <cstdint>
-#include <tuple>
 #include <unordered_map>
 #include <vector>
 
@@ -52,7 +51,7 @@ class TransMult;
 
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
-class EclTransmissibility {
+class Transmissibility {
     // Grid and world dimension
     enum { dimWorld = GridView::dimensionworld };
 public:
@@ -60,14 +59,14 @@ public:
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
     using DimVector = Dune::FieldVector<Scalar, dimWorld>;
 
-    EclTransmissibility(const EclipseState& eclState,
-                        const GridView& gridView,
-                        const CartesianIndexMapper& cartMapper,
-                        const Grid& grid,
-                        std::function<std::array<double,dimWorld>(int)> centroids,
-                        bool enableEnergy,
-                        bool enableDiffusivity,
-                        bool enableDispersivity);
+    Transmissibility(const EclipseState& eclState,
+                     const GridView& gridView,
+                     const CartesianIndexMapper& cartMapper,
+                     const Grid& grid,
+                     std::function<std::array<double,dimWorld>(int)> centroids,
+                     bool enableEnergy,
+                     bool enableDiffusivity,
+                     bool enableDispersivity);
 
     /*!
      * \brief Return the permeability for an element.
@@ -295,4 +294,4 @@ namespace details {
 
 } // namespace Opm
 
-#endif
+#endif // OPM_TRANSMISSIBILITY_HPP
