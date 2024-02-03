@@ -558,7 +558,7 @@ set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
 
-set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
+set(FLOW_MODELS blackoil blackoil_ecltable brine energy extbo foam gasoil gaswater
                 oilwater oilwater_brine gaswater_brine oilwater_polymer
                 oilwater_polymer_injectivity micp polymer solvent solvent_foam
                 gasoil_energy brine_saltprecipitation

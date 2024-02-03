@@ -4,7 +4,7 @@
   Copyright 2015 IRIS AS
   Copyright 2014 STATOIL ASA.
   Copyright 2023 Inria
-  
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -24,6 +24,7 @@
 #define OPM_MAIN_HEADER_INCLUDED
 
 #include <flow/flow_ebos_blackoil.hpp>
+#include <flow/flow_ebos_blackoil_ecltable.hpp>
 #include <flow/flow_ebos_blackoil_legacyassembly.hpp>
 
 #include <flow/flow_ebos_gasoil.hpp>
@@ -364,13 +365,13 @@ private:
         }
 #endif // HAVE_DAMARIS
 
-        // Guard for when the Damaris core(s) return from damaris_start() 
+        // Guard for when the Damaris core(s) return from damaris_start()
         // which happens when damaris_stop() is called in main simulation
         if (!isSimulationRank_) {
             exitCode = EXIT_SUCCESS;
             return true;
         }
-        
+
         int mpiRank = EclGenericVanguard::comm().rank();
         outputCout_ = false;
         if (mpiRank == 0)
@@ -677,10 +678,27 @@ private:
     int runBlackOil()
     {
         const bool diffusive = eclipseState_->getSimulationConfig().isDiffusive();
+
+        const bool disgas = eclipseState_->getSimulationConfig().hasDISGAS();
+        const bool vapoil = eclipseState_->getSimulationConfig().hasVAPOIL();
+        const bool vapwat = eclipseState_->getSimulationConfig().hasVAPWAT();
+        bool do_fast = disgas && vapoil && not(vapwat) && not(diffusive);
+        // Should be spesialized ?
+        //
+        //do_fast = do_fast && eclipseState_->runspec().endpointScaling().nondirection();
+        //do_fast = do_fast && eclipseState_->runspec().hysterPar().activeWag();
         if (diffusive) {
             // Use the traditional linearizer, as the TpfaLinearizer does not
             // support the diffusion module yet.
             return flowEbosBlackoilMain(argc_, argv_, outputCout_, outputFiles_);
+        } else if (do_fast){
+            // Fast version using ECL TABLE definitions of pvt
+            // pure tables evaluation for relperm should be added
+            // PVT approches now:
+            // WaterPvtApproach::ConstantCompressibilityWater
+            // OilPvtApproach::LiveOil  (Dead version could be added)
+            // GasPvtApproach::WetGas   (Dead version could be added)
+            return flowEbosBlackoilECLTABLEMain(argc_, argv_, outputCout_, outputFiles_);
         } else {
             return flowEbosBlackoilTpfaMain(argc_, argv_, outputCout_, outputFiles_);
         }
