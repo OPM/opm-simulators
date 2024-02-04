@@ -142,6 +142,7 @@ getFluidStateVariable(const std::string &name) const
         for (unsigned dof_idx = 0; dof_idx < elem_ctx.numPrimaryDof(/*timeIdx=*/0); ++dof_idx) {
             std::cout << "j=" << dof_idx << std::endl;
             const auto& int_quants = elem_ctx.intensiveQuantities(dof_idx, /*timeIdx=*/0);
+            std::cout << "j1" << std::endl;
             const auto& fs = int_quants.fluidState();
             unsigned global_dof_idx = elem_ctx.globalSpaceIndex(dof_idx, /*timeIdx=*/0);
             array[global_dof_idx] = getVariableValue_(fs, var_type, name);
