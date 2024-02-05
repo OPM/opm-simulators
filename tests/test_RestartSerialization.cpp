@@ -428,7 +428,7 @@ BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
 
 namespace Opm {
 
-class TBatchExport : public EclTracerModel<Properties::TTag::EbosTypeTag> {
+class TBatchExport : public TracerModel<Properties::TTag::EbosTypeTag> {
 public:
     using TBatch = TracerBatch<double>;
 };

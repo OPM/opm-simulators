@@ -430,7 +430,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclproblem_properties.hh
   ebos/eclsolutioncontainers.hh
   ebos/eclthresholdpressure.hh
-  ebos/ecltracermodel.hh
   ebos/ecltransmissibility.hh
   ebos/ecltransmissibility_impl.hh
   ebos/eclwriter.hh
@@ -468,6 +467,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/SimulatorReportBanners.hpp
   opm/simulators/flow/SimulatorSerializer.hpp
   opm/simulators/flow/SubDomain.hpp
+  opm/simulators/flow/TracerModel.hpp
   opm/simulators/flow/ValidationFunctions.hpp
   opm/core/props/BlackoilPhases.hpp
   opm/core/props/phaseUsageFromDeck.hpp

@@ -47,7 +47,6 @@
 #if HAVE_DAMARIS
 #include <ebos/damariswriter.hh>
 #endif
-#include <ebos/ecltracermodel.hh>
 #include <ebos/FIBlackOilModel.hpp>
 #include <ebos/vtkecltracermodule.hh>
 
@@ -83,6 +82,7 @@
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
+#include <opm/simulators/flow/TracerModel.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -194,8 +194,8 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using DamarisWriterType = DamarisWriter<TypeTag>;
 #endif
 
-    using TracerModel = EclTracerModel<TypeTag>;
-    using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
+    using TracerModel = ::Opm::TracerModel<TypeTag>;
+    using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
 
 public:
     using EclGenericProblem<GridView,FluidSystem,Scalar>::briefDescription;
@@ -923,10 +923,10 @@ public:
     EclThresholdPressure<TypeTag>& thresholdPressure()
     { return thresholdPressures_; }
 
-    const EclTracerModel<TypeTag>& tracerModel() const
+    const TracerModel& tracerModel() const
     { return tracerModel_; }
 
-    EclTracerModel<TypeTag>& tracerModel()
+    TracerModel& tracerModel()
     { return tracerModel_; }
 
     /*!
