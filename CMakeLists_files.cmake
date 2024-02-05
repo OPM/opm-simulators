@@ -421,7 +421,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclnewtonmethod.hh
   ebos/eclproblem.hh
   ebos/eclproblem_properties.hh
-  ebos/eclthresholdpressure.hh
   ebos/ecltransmissibility.hh
   ebos/ecltransmissibility_impl.hh
   opm/simulators/flow/ActionHandler.hpp
@@ -446,6 +445,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowMain.hpp
   opm/simulators/flow/FlowUtils.hpp
   opm/simulators/flow/FlowsData.hpp
+  opm/simulators/flow/FlowThresholdPressure.hpp
   opm/simulators/flow/GenericOutputBlackoilModule.hpp
   opm/simulators/flow/GenericThresholdPressure.hpp
   opm/simulators/flow/GenericThresholdPressure_impl.hpp

@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclThresholdPressure
+ * \copydoc Opm::FlowThresholdPressure
  */
-#ifndef EWOMS_ECL_THRESHOLD_PRESSURE_HH
-#define EWOMS_ECL_THRESHOLD_PRESSURE_HH
+#ifndef OPM_FLOW_THRESHOLD_PRESSURE_HPP
+#define OPM_FLOW_THRESHOLD_PRESSURE_HPP
 
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
@@ -42,7 +42,7 @@
 namespace Opm {
 
 /*!
- * \ingroup EclBlackOilSimulator
+ * \ingroup BlackOilSimulator
  *
  * \brief This class calculates the threshold pressure for grid faces according to the
  *        Eclipse Reference Manual.
@@ -52,10 +52,10 @@ namespace Opm {
  * than the threshold pressure, it is reduced by the threshold pressure.
  */
 template <class TypeTag>
-class EclThresholdPressure : public GenericThresholdPressure<GetPropType<TypeTag, Properties::Grid>,
-                                                             GetPropType<TypeTag, Properties::GridView>,
-                                                             GetPropType<TypeTag, Properties::ElementMapper>,
-                                                             GetPropType<TypeTag, Properties::Scalar>>
+class FlowThresholdPressure : public GenericThresholdPressure<GetPropType<TypeTag, Properties::Grid>,
+                                                              GetPropType<TypeTag, Properties::GridView>,
+                                                              GetPropType<TypeTag, Properties::ElementMapper>,
+                                                              GetPropType<TypeTag, Properties::Scalar>>
 {
     using BaseType = GenericThresholdPressure<GetPropType<TypeTag, Properties::Grid>,
                                               GetPropType<TypeTag, Properties::GridView>,
@@ -70,7 +70,7 @@ class EclThresholdPressure : public GenericThresholdPressure<GetPropType<TypeTag
     enum { numPhases = FluidSystem::numPhases };
 
 public:
-    EclThresholdPressure(const Simulator& simulator)
+    FlowThresholdPressure(const Simulator& simulator)
         : BaseType(simulator.vanguard().cartesianIndexMapper(),
                    simulator.vanguard().gridView(),
                    simulator.model().elementMapper(),
@@ -163,4 +163,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_FLOW_THRESHOLD_PRESSURE_HPP
