@@ -23,10 +23,10 @@
 /**
  * \file
  *
- * \copydoc Opm::EclTracerModel
+ * \copydoc Opm::TracerModel
  */
-#ifndef EWOMS_ECL_TRACER_MODEL_HH
-#define EWOMS_ECL_TRACER_MODEL_HH
+#ifndef OPM_TRACER_MODEL_HPP
+#define OPM_TRACER_MODEL_HPP
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -54,16 +54,16 @@ struct EnableTracerModel {
 namespace Opm {
 
 /*!
- * \ingroup EclBlackOilSimulator
+ * \ingroup BlackOilSimulator
  *
  * \brief A class which handles tracers as specified in by ECL
  */
 template <class TypeTag>
-class EclTracerModel : public GenericTracerModel<GetPropType<TypeTag, Properties::Grid>,
-                                                 GetPropType<TypeTag, Properties::GridView>,
-                                                 GetPropType<TypeTag, Properties::DofMapper>,
-                                                 GetPropType<TypeTag, Properties::Stencil>,
-                                                 GetPropType<TypeTag, Properties::Scalar>>
+class TracerModel : public GenericTracerModel<GetPropType<TypeTag, Properties::Grid>,
+                                              GetPropType<TypeTag, Properties::GridView>,
+                                              GetPropType<TypeTag, Properties::DofMapper>,
+                                              GetPropType<TypeTag, Properties::Stencil>,
+                                              GetPropType<TypeTag, Properties::Scalar>>
 {
     using BaseType = GenericTracerModel<GetPropType<TypeTag, Properties::Grid>,
                                         GetPropType<TypeTag, Properties::GridView>,
@@ -92,7 +92,7 @@ class EclTracerModel : public GenericTracerModel<GetPropType<TypeTag, Properties
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
 
 public:
-    EclTracerModel(Simulator& simulator)
+    TracerModel(Simulator& simulator)
         : BaseType(simulator.vanguard().gridView(),
                    simulator.vanguard().eclState(),
                    simulator.vanguard().cartesianIndexMapper(),
@@ -617,4 +617,4 @@ protected:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_TRACER_MODEL_HPP
