@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclProblem
+ * \copydoc Opm::FlowProblem
  */
-#ifndef ECL_PROBLEM_PROPERTIES_HH
-#define ECL_PROBLEM_PROPERTIES_HH
+#ifndef OPM_FLOW_PROBLEM_PROPERTIES_HPP
+#define OPM_FLOW_PROBLEM_PROPERTIES_HPP
 
 #include <ebos/eclnewtonmethod.hh>
 
@@ -155,7 +155,7 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::FlowBaseProblem> {
     using type = TTag::EcfvDiscretization;
 };
 
-//! for ebos, use automatic differentiation to linearize the system of PDEs
+// use automatic differentiation to linearize the system of PDEs
 template<class TypeTag>
 struct LocalLinearizerSplice<TypeTag, TTag::FlowBaseProblem> {
     using type = TTag::AutoDiffLocalLinearizer;
@@ -225,7 +225,7 @@ public:
     using type = typename EclThermalLawManager::ThermalConductionLaw;
 };
 
-// ebos can use a slightly faster stencil class because it does not need the normals and
+// use a slightly faster stencil class because it does not need the normals and
 // the integration points of intersections
 template<class TypeTag>
 struct Stencil<TypeTag, TTag::FlowBaseProblem>
@@ -600,4 +600,4 @@ struct ExplicitRockCompaction<TypeTag, TTag::FlowBaseProblem> {
 
 } // namespace Opm::Properties
 
-#endif // ECL_PROBLEM_PROPERTIES_HH
+#endif // OPM_FLOW_PROBLEM_PROPERTIES_HPP

@@ -28,11 +28,10 @@
 #ifndef OPM_TEST_TYPETAG_HPP
 #define OPM_TEST_TYPETAG_HPP
 
-#include <ebos/eclproblem_properties.hh>
-
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+#include <opm/simulators/flow/FlowProblemProperties.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
