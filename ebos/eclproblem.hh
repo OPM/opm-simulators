@@ -47,7 +47,6 @@
 #include <ebos/damariswriter.hh>
 #endif
 #include <ebos/ecltracermodel.hh>
-#include <ebos/FIBlackOilModel.hpp>
 #include <ebos/vtkecltracermodule.hh>
 
 #include <opm/common/utility/TimeService.hpp>
@@ -82,6 +81,7 @@
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/BaseAquiferModel.hpp>
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
+#include <opm/simulators/flow/FIBlackoilModel.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
