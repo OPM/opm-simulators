@@ -45,7 +45,6 @@
 #if HAVE_DAMARIS
 #include <ebos/damariswriter.hh>
 #endif
-#include <ebos/vtkecltracermodule.hh>
 
 #include <opm/common/utility/TimeService.hpp>
 
@@ -83,6 +82,7 @@
 #include <opm/simulators/flow/FIBlackoilModel.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
+#include <opm/simulators/flow/VtkTracerModule.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -217,7 +217,7 @@ public:
         DamarisWriterType::registerParameters();
 #endif
 
-        VtkEclTracerModule<TypeTag>::registerParameters();
+        VtkTracerModule<TypeTag>::registerParameters();
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWriteAllSolutions,
                              "Write all solutions to disk instead of only the ones for the "
@@ -294,7 +294,7 @@ public:
                          wellModel_,
                          simulator.vanguard().grid().comm())
     {
-        this->model().addOutputModule(new VtkEclTracerModule<TypeTag>(simulator));
+        this->model().addOutputModule(new VtkTracerModule<TypeTag>(simulator));
         // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
         SolventModule::initFromState(vanguard.eclState(), vanguard.schedule());

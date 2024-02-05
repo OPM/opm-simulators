@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::VtkEclTracerModule
+ * \copydoc Opm::VtkTracerModule
  */
-#ifndef EWOMS_VTK_ECL_TRACER_MODULE_HH
-#define EWOMS_VTK_ECL_TRACER_MODULE_HH
+#ifndef OPM_VTK_TRACER_MODULE_HPP
+#define OPM_VTK_TRACER_MODULE_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -42,18 +42,18 @@ namespace Opm::Properties {
 
 // create new type tag for the VTK tracer output
 namespace TTag {
-struct VtkEclTracer {};
+struct VtkTracer {};
 }
 
 // create the property tags needed for the tracer model
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteEclTracerConcentration {
+struct VtkWriteTracerConcentration {
     using type = UndefinedProperty;
 };
 
 // set default values for what quantities to output
 template<class TypeTag>
-struct VtkWriteEclTracerConcentration<TypeTag, TTag::VtkEclTracer> {
+struct VtkWriteTracerConcentration<TypeTag, TTag::VtkTracer> {
     static constexpr bool value = false;
 };
 
@@ -66,7 +66,7 @@ namespace Opm {
  * \brief VTK output module for the tracer model's parameters.
  */
     template <class TypeTag>
-    class VtkEclTracerModule : public BaseOutputModule<TypeTag>
+    class VtkTracerModule : public BaseOutputModule<TypeTag>
     {
         using ParentType = BaseOutputModule<TypeTag>;
 
@@ -85,7 +85,7 @@ namespace Opm {
         using ScalarBuffer = typename ParentType::ScalarBuffer;
 
     public:
-        VtkEclTracerModule(const Simulator& simulator)
+        VtkTracerModule(const Simulator& simulator)
             : ParentType(simulator)
         { }
 
@@ -95,7 +95,7 @@ namespace Opm {
      */
         static void registerParameters()
         {
-            EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteEclTracerConcentration,
+            EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteTracerConcentration,
                                  "Include the tracer concentration "
                                  "in the VTK output files");
         }
@@ -163,7 +163,7 @@ namespace Opm {
     private:
         static bool eclTracerConcentrationOutput_()
         {
-            static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteEclTracerConcentration);
+            static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteTracerConcentration);
             return val;
         }
 
@@ -172,4 +172,4 @@ namespace Opm {
     };
 } // namespace Opm
 
-#endif
+#endif // OPM_VTK_TRACER_MODULE_HPP
