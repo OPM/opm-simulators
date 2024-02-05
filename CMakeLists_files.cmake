@@ -451,6 +451,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/DummyGradientCalculator.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
+  opm/simulators/flow/FIBlackoilModel.hpp
   opm/simulators/flow/FlowMain.hpp
   opm/simulators/flow/FlowsData.hpp
   opm/simulators/flow/GenericOutputBlackoilModule.hpp

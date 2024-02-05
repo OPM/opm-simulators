@@ -36,7 +36,6 @@
 #if HAVE_DAMARIS
 #include <ebos/damariswriter.hh>
 #endif
-#include <ebos/FIBlackOilModel.hpp>
 #include <ebos/vtkecltracermodule.hh>
 
 #include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
@@ -48,6 +47,7 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
+#include <opm/simulators/flow/FIBlackoilModel.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 
 #include <tuple>
