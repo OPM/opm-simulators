@@ -41,7 +41,6 @@
 #include <ebos/eclgenericproblem.hh>
 #include <ebos/eclnewtonmethod.hh>
 #include <ebos/eclproblem_properties.hh>
-#include <ebos/eclthresholdpressure.hh>
 #include <ebos/ecltransmissibility.hh>
 #include <ebos/eclwriter.hh>
 #if HAVE_DAMARIS
@@ -82,6 +81,7 @@
 
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
+#include <opm/simulators/flow/FlowThresholdPressure.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
@@ -917,10 +917,10 @@ public:
     Scalar thresholdPressure(unsigned elem1Idx, unsigned elem2Idx) const
     { return thresholdPressures_.thresholdPressure(elem1Idx, elem2Idx); }
 
-    const EclThresholdPressure<TypeTag>& thresholdPressure() const
+    const FlowThresholdPressure<TypeTag>& thresholdPressure() const
     { return thresholdPressures_; }
 
-    EclThresholdPressure<TypeTag>& thresholdPressure()
+    FlowThresholdPressure<TypeTag>& thresholdPressure()
     { return thresholdPressures_; }
 
     const EclTracerModel<TypeTag>& tracerModel() const
@@ -2764,7 +2764,7 @@ private:
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
     std::shared_ptr<EclThermalLawManager> thermalLawManager_;
 
-    EclThresholdPressure<TypeTag> thresholdPressures_;
+    FlowThresholdPressure<TypeTag> thresholdPressures_;
 
     std::vector<InitialFluidState> initialFluidStates_;
 
