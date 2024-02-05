@@ -33,6 +33,8 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
 #include <stdexcept>
 
 namespace Opm

@@ -31,7 +31,7 @@
 #include <ebos/eclcpgridvanguard.hh>
 #include <ebos/eclfluxmodule.hh>
 #include <ebos/eclnewtonmethod.hh>
-#include <ebos/eclwriter.hh>
+
 #if HAVE_DAMARIS
 #include <ebos/damariswriter.hh>
 #endif
@@ -47,6 +47,7 @@
 
 #include <opm/simulators/flow/BaseAquiferModel.hpp>
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
+#include <opm/simulators/flow/EclWriter.hpp>
 #include <opm/simulators/flow/FIBlackoilModel.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 
