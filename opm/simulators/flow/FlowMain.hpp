@@ -155,11 +155,6 @@ namespace Opm {
             EWOMS_HIDE_PARAM(TypeTag, NewtonTargetIterations);
             EWOMS_HIDE_PARAM(TypeTag, NewtonVerbose);
             EWOMS_HIDE_PARAM(TypeTag, NewtonWriteConvergence);
-            EWOMS_HIDE_PARAM(TypeTag, EclNewtonSumTolerance);
-            EWOMS_HIDE_PARAM(TypeTag, EclNewtonSumToleranceExponent);
-            EWOMS_HIDE_PARAM(TypeTag, EclNewtonStrictIterations);
-            EWOMS_HIDE_PARAM(TypeTag, EclNewtonRelaxedVolumeFraction);
-            EWOMS_HIDE_PARAM(TypeTag, EclNewtonRelaxedTolerance);
 
             // the default eWoms checkpoint/restart mechanism does not work with flow
             EWOMS_HIDE_PARAM(TypeTag, RestartTime);

@@ -119,38 +119,6 @@ struct NewtonTolerance<TypeTag, TTag::TestTypeTag> {
     static constexpr type value = 1e-1;
 };
 
-// set fraction of the pore volume where the volumetric residual may be violated during
-// strict Newton iterations
-template<class TypeTag>
-struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::TestTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.05;
-};
-
-// the maximum volumetric error of a cell in the relaxed region
-template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::TestTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e6*getPropValue<TypeTag, Properties::NewtonTolerance>();
-};
-
-// the tolerated amount of "incorrect" amount of oil per time step for the complete
-// reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
-// will tolerate larger residuals.
-template<class TypeTag>
-struct EclNewtonSumTolerance<TypeTag, TTag::TestTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-5;
-};
-
-// make all Newton iterations strict, i.e., the volumetric Newton tolerance must be
-// always be upheld in the majority of the spatial domain. In this context, "majority"
-// means 1 - EclNewtonRelaxedVolumeFraction.
-template<class TypeTag>
-struct EclNewtonStrictIterations<TypeTag, TTag::TestTypeTag> {
-    static constexpr int value = 100;
-};
-
 // set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
 // relatively often)
 template<class TypeTag>

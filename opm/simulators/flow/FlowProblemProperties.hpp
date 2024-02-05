@@ -28,8 +28,6 @@
 #ifndef OPM_FLOW_PROBLEM_PROPERTIES_HPP
 #define OPM_FLOW_PROBLEM_PROPERTIES_HPP
 
-#include <ebos/eclnewtonmethod.hh>
-
 #include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
@@ -306,71 +304,6 @@ struct NewtonTolerance<TypeTag, TTag::FlowBaseProblem> {
     static constexpr type value = 1e-2;
 };
 
-// the tolerated amount of "incorrect" amount of oil per time step for the complete
-// reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
-// will tolerate larger residuals.
-template<class TypeTag>
-struct EclNewtonSumTolerance<TypeTag, TTag::FlowBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-4;
-};
-
-// set the exponent for the volume scaling of the sum tolerance: larger reservoirs can
-// tolerate a higher amount of mass lost per time step than smaller ones! since this is
-// not linear, we use the cube root of the overall pore volume by default, i.e., the
-// value specified by the NewtonSumTolerance parameter is the "incorrect" mass per
-// timestep for an reservoir that exhibits 1 m^3 of pore volume. A reservoir with a total
-// pore volume of 10^3 m^3 will tolerate 10 times as much.
-template<class TypeTag>
-struct EclNewtonSumToleranceExponent<TypeTag, TTag::FlowBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0/3.0;
-};
-
-// set number of Newton iterations where the volumetric residual is considered for
-// convergence
-template<class TypeTag>
-struct EclNewtonStrictIterations<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr int value = 8;
-};
-
-// set fraction of the pore volume where the volumetric residual may be violated during
-// strict Newton iterations
-template<class TypeTag>
-struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::FlowBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.03;
-};
-
-// the maximum volumetric error of a cell in the relaxed region
-template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::FlowBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e9;
-};
-
-// Ignore the maximum error mass for early termination of the newton method.
-template<class TypeTag>
-struct NewtonMaxError<TypeTag, TTag::FlowBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 10e9;
-};
-
-// set the maximum number of Newton iterations to 14 because the likelyhood that a time
-// step succeeds at more than 14 Newton iteration is rather small
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr int value = 14;
-};
-
-// also, reduce the target for the "optimum" number of Newton iterations to 6. Note that
-// this is only relevant if the time step is reduced from the report step size for some
-// reason. (because ebos first tries to do a report step using a single time step.)
-template<class TypeTag>
-struct NewtonTargetIterations<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr int value = 6;
-};
-
 // Disable the VTK output by default for this problem ...
 template<class TypeTag>
 struct EnableVtkOutput<TypeTag, TTag::FlowBaseProblem> {
@@ -504,13 +437,6 @@ struct GradientCalculator<TypeTag, TTag::FlowBaseProblem> {
     using type = DummyGradientCalculator<TypeTag>;
 };
 
-// Use a custom Newton-Raphson method class for ebos in order to attain more
-// sophisticated update and error computation mechanisms
-template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::FlowBaseProblem> {
-    using type = EclNewtonMethod<TypeTag>;
-};
-
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files
 template<class TypeTag>
@@ -524,7 +450,6 @@ struct RestartWritingInterval<TypeTag, TTag::FlowBaseProblem> {
 template<class TypeTag>
 struct EnableDriftCompensation<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
-
 };
 
 // By default, we enable the debugging checks if we're compiled in debug mode
