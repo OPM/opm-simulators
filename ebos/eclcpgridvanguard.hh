@@ -30,12 +30,13 @@
 #include <ebos/eclbasevanguard.hh>
 #include <ebos/eclgenericcpgridvanguard.hh>
 #include <ebos/ecltransmissibility.hh>
-#include <ebos/femcpgridcompat.hh>
 
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
+
+#include <opm/simulators/flow/FemCpGridCompat.hpp>
 
 #include <array>
 #include <functional>

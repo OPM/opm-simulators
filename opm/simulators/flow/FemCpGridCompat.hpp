@@ -23,13 +23,13 @@
 /*!
  * \file
  *
- * \brief This file ensures that ebos can be compiled in the presence of dune-fem
+ * \brief This file ensures that flow can be compiled in the presence of dune-fem
  *
  * It implements a few work-arounds for some incompatibilities with the Dune grid
  * interface of CpGrid. A better way would be to make CpGrid conforming.
  */
-#ifndef EWOMS_FEM_CPGRID_COMPAT_HH
-#define EWOMS_FEM_CPGRID_COMPAT_HH
+#ifndef OPM_FEM_CPGRID_COMPAT_HPP
+#define OPM_FEM_CPGRID_COMPAT_HPP
 
 #if HAVE_DUNE_FEM
 #include <dune/common/version.hh>
@@ -70,4 +70,4 @@ struct GridEntityAccess<Dune::cpgrid::Entity<codim> >
 
 #endif // #if HAVE_DUNE_FEM
 
-#endif // EWOMS_FEM_CPGRID_COMPAT_HH
+#endif // OPM_FEM_CPGRID_COMPAT_HPP
