@@ -18,11 +18,12 @@
 */
 #include <config.h>
 
-#include <ebos/eclpolyhedralgridvanguard.hh>
-
 #include <opm/grid/polyhedralgrid.hh>
+
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
+
+#include <opm/simulators/flow/PolyhedralGridVanguard.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
 // these are not explicitly instanced in library
@@ -64,7 +65,7 @@ namespace Properties {
 
     template<class TypeTag>
     struct Vanguard<TypeTag, TTag::FlowProblemPoly> {
-        using type = Opm::EclPolyhedralGridVanguard<TypeTag>;
+        using type = Opm::PolyhedralGridVanguard<TypeTag>;
     };
 }
 }
