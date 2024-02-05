@@ -21,7 +21,6 @@
 
 #include <ebos/ebos.hh>
 #include <ebos/eclgenericvanguard.hh>
-#include <ebos/femcpgridcompat.hh>
 
 #include <opm/common/utility/Serializer.hpp>
 
@@ -37,6 +36,7 @@
 
 #include <opm/models/blackoil/blackoilprimaryvariables.hh>
 
+#include <opm/simulators/flow/FemCpGridCompat.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>

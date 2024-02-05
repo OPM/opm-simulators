@@ -30,7 +30,7 @@
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
 #include <dune/fem/gridpart/common/gridpart2gridview.hh>
-#include <ebos/femcpgridcompat.hh>
+#include <opm/simulators/flow/FemCpGridCompat.hpp>
 #endif
 
 namespace Opm {

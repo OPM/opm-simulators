@@ -435,7 +435,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/ecltransmissibility.hh
   ebos/ecltransmissibility_impl.hh
   ebos/eclwriter.hh
-  ebos/femcpgridcompat.hh
   ebos/vtkecltracermodule.hh
   opm/simulators/flow/ActionHandler.hpp
   opm/simulators/flow/AluGridCartesianIndexMapper.hpp
@@ -451,6 +450,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/DummyGradientCalculator.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
+  opm/simulators/flow/FemCpGridCompat.hpp
   opm/simulators/flow/FlowMain.hpp
   opm/simulators/flow/FlowUtils.hpp
   opm/simulators/flow/FlowsData.hpp
