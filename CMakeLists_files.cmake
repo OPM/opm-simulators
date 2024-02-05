@@ -431,7 +431,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclgenericwriter_impl.hh
   ebos/eclmixingratecontrols.hh
   ebos/eclnewtonmethod.hh
-  ebos/ecloutputblackoilmodule.hh
   ebos/eclpolyhedralgridvanguard.hh
   ebos/eclproblem.hh
   ebos/eclproblem_properties.hh
@@ -460,6 +459,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/LogOutputHelper.hpp
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/NonlinearSolver.hpp
+  opm/simulators/flow/OutputBlackoilModule.hpp
   opm/simulators/flow/partitionCells.hpp
   opm/simulators/flow/priVarsPacking.hpp
   opm/simulators/flow/RSTConv.hpp

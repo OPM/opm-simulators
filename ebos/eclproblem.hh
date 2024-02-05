@@ -40,7 +40,6 @@
 #include <ebos/eclfluxmodule.hh>
 #include <ebos/eclgenericproblem.hh>
 #include <ebos/eclnewtonmethod.hh>
-#include <ebos/ecloutputblackoilmodule.hh>
 #include <ebos/eclproblem_properties.hh>
 #include <ebos/eclthresholdpressure.hh>
 #include <ebos/ecltransmissibility.hh>
@@ -83,6 +82,7 @@
 
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
+#include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -1799,7 +1799,7 @@ public:
 
     void setConvData(const std::vector<std::vector<int>>& data)
     {
-        eclWriter_->mutableEclOutputModule().setCnvData(data);
+        eclWriter_->mutableOutputModule().setCnvData(data);
     }
 
     template<class Serializer>
@@ -2190,8 +2190,8 @@ protected:
         for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
             auto& elemFluidState = initialFluidStates_[elemIdx];
             elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
-            eclWriter_->eclOutputModule().initHysteresisParams(simulator, elemIdx);
-            eclWriter_->eclOutputModule().assignToFluidState(elemFluidState, elemIdx);
+            eclWriter_->outputModule().initHysteresisParams(simulator, elemIdx);
+            eclWriter_->outputModule().assignToFluidState(elemFluidState, elemIdx);
 
             // Note: Function processRestartSaturations_() mutates the
             // 'ssol' argument--the value from the restart file--if solvent
@@ -2201,27 +2201,27 @@ protected:
             // into 'solventSaturation_' unless solvent is enabled.
             {
                 auto ssol = enableSolvent
-                    ? eclWriter_->eclOutputModule().getSolventSaturation(elemIdx)
+                    ? eclWriter_->outputModule().getSolventSaturation(elemIdx)
                     : Scalar(0);
 
                 processRestartSaturations_(elemFluidState, ssol);
 
                 if constexpr (enableSolvent) {
                     this->solventSaturation_[elemIdx] = ssol;
-                    this->solventRsw_[elemIdx] = eclWriter_->eclOutputModule().getSolventRsw(elemIdx);
+                    this->solventRsw_[elemIdx] = eclWriter_->outputModule().getSolventRsw(elemIdx);
                 }
             }
 
             this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
 
             if constexpr (enablePolymer)
-                 this->polymer_.concentration[elemIdx] = eclWriter_->eclOutputModule().getPolymerConcentration(elemIdx);
+                 this->polymer_.concentration[elemIdx] = eclWriter_->outputModule().getPolymerConcentration(elemIdx);
             if constexpr (enableMICP){
-                 this->micp_.microbialConcentration[elemIdx] = eclWriter_->eclOutputModule().getMicrobialConcentration(elemIdx);
-                 this->micp_.oxygenConcentration[elemIdx] = eclWriter_->eclOutputModule().getOxygenConcentration(elemIdx);
-                 this->micp_.ureaConcentration[elemIdx] = eclWriter_->eclOutputModule().getUreaConcentration(elemIdx);
-                 this->micp_.biofilmConcentration[elemIdx] = eclWriter_->eclOutputModule().getBiofilmConcentration(elemIdx);
-                 this->micp_.calciteConcentration[elemIdx] = eclWriter_->eclOutputModule().getCalciteConcentration(elemIdx);
+                 this->micp_.microbialConcentration[elemIdx] = eclWriter_->outputModule().getMicrobialConcentration(elemIdx);
+                 this->micp_.oxygenConcentration[elemIdx] = eclWriter_->outputModule().getOxygenConcentration(elemIdx);
+                 this->micp_.ureaConcentration[elemIdx] = eclWriter_->outputModule().getUreaConcentration(elemIdx);
+                 this->micp_.biofilmConcentration[elemIdx] = eclWriter_->outputModule().getBiofilmConcentration(elemIdx);
+                 this->micp_.calciteConcentration[elemIdx] = eclWriter_->outputModule().getCalciteConcentration(elemIdx);
             }
             // if we need to restart for polymer molecular weight simulation, we need to add related here
         }

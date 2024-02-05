@@ -22,10 +22,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::EclOutputBlackOilModule
+ * \copydoc Opm::OutputBlackOilModule
  */
-#ifndef EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
-#define EWOMS_ECL_OUTPUT_BLACK_OIL_MODULE_HH
+#ifndef OPM_OUTPUT_BLACK_OIL_MODULE_HPP
+#define OPM_OUTPUT_BLACK_OIL_MODULE_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -71,7 +71,7 @@ namespace Opm::Properties
 // create new type tag for the Ecl-output
 namespace TTag
 {
-    struct EclOutputBlackOil {
+    struct OutputBlackOil {
     };
 } // namespace TTag
 
@@ -81,7 +81,7 @@ struct ForceDisableFluidInPlaceOutput {
 };
 
 template <class TypeTag>
-struct ForceDisableFluidInPlaceOutput<TypeTag, TTag::EclOutputBlackOil> {
+struct ForceDisableFluidInPlaceOutput<TypeTag, TTag::OutputBlackOil> {
     static constexpr bool value = false;
 };
 
@@ -92,7 +92,7 @@ struct ForceDisableResvFluidInPlaceOutput {
 };
 
 template <class TypeTag>
-struct ForceDisableResvFluidInPlaceOutput<TypeTag, TTag::EclOutputBlackOil> {
+struct ForceDisableResvFluidInPlaceOutput<TypeTag, TTag::OutputBlackOil> {
     static constexpr bool value = false;
 };
 
@@ -106,14 +106,14 @@ template <class TypeTag>
 class EcfvDiscretization;
 
 /*!
- * \ingroup EclBlackOilSimulator
+ * \ingroup BlackOilSimulator
  *
  * \brief Output module for the results black oil model writing in
  *        ECL binary format.
  */
 template <class TypeTag>
-class EclOutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<TypeTag, Properties::FluidSystem>,
-                                                                   GetPropType<TypeTag, Properties::Scalar>>
+class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<TypeTag, Properties::FluidSystem>,
+                                                                GetPropType<TypeTag, Properties::Scalar>>
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Discretization = GetPropType<TypeTag, Properties::Discretization>;
@@ -143,8 +143,8 @@ class EclOutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<T
 
 public:
     template <class CollectDataToIORankType>
-    EclOutputBlackOilModule(const Simulator& simulator,
-                            const CollectDataToIORankType& collectToIORank)
+    OutputBlackOilModule(const Simulator& simulator,
+                         const CollectDataToIORankType& collectToIORank)
         : BaseType(simulator.vanguard().eclState(),
                    simulator.vanguard().schedule(),
                    simulator.vanguard().summaryConfig(),
@@ -1687,4 +1687,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_OUTPUT_BLACK_OIL_MODULE_HPP
