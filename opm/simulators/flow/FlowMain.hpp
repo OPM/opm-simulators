@@ -202,7 +202,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasFormationVolumeFactor);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasSaturationPressure);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteIntrinsicPermeabilities);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteEclTracerConcentration);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteTracerConcentration);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteExtrusionFactor);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteFilterVelocities);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteDensities);

@@ -37,7 +37,6 @@
 #include <ebos/damariswriter.hh>
 #endif
 #include <ebos/FIBlackOilModel.hpp>
-#include <ebos/vtkecltracermodule.hh>
 
 #include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
 
@@ -49,6 +48,7 @@
 
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
+#include <opm/simulators/flow/VtkTracerModule.hpp>
 
 #include <tuple>
 
@@ -62,7 +62,7 @@ namespace Opm::Properties {
 namespace TTag {
 
 struct EclBaseProblem {
-  using InheritsFrom = std::tuple<VtkEclTracer, OutputBlackOil, EclCpGridVanguard>;
+  using InheritsFrom = std::tuple<VtkTracer, OutputBlackOil, EclCpGridVanguard>;
 };
 }
 

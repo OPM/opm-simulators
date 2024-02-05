@@ -434,7 +434,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/ecltransmissibility_impl.hh
   ebos/eclwriter.hh
   ebos/femcpgridcompat.hh
-  ebos/vtkecltracermodule.hh
   opm/simulators/flow/ActionHandler.hpp
   opm/simulators/flow/AluGridCartesianIndexMapper.hpp
   opm/simulators/flow/AluGridVanguard.hpp
@@ -469,6 +468,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/SubDomain.hpp
   opm/simulators/flow/TracerModel.hpp
   opm/simulators/flow/ValidationFunctions.hpp
+  opm/simulators/flow/VtkTracerModule.hpp
   opm/core/props/BlackoilPhases.hpp
   opm/core/props/phaseUsageFromDeck.hpp
   opm/core/props/satfunc/RelpermDiagnostics.hpp
