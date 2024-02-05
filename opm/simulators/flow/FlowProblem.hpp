@@ -25,10 +25,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclProblem
+ * \copydoc Opm::FlowProblem
  */
-#ifndef EWOMS_ECL_PROBLEM_HH
-#define EWOMS_ECL_PROBLEM_HH
+#ifndef OPM_FLOW_PROBLEM_HPP
+#define OPM_FLOW_PROBLEM_HPP
 
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
@@ -102,16 +102,16 @@
 namespace Opm {
 
 /*!
- * \ingroup EclBlackOilSimulator
+ * \ingroup BlackOilSimulator
  *
  * \brief This problem simulates an input file given in the data format used by the
  *        commercial ECLiPSE simulator.
  */
 template <class TypeTag>
-class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
-                 , public FlowGenericProblem<GetPropType<TypeTag, Properties::GridView>,
-                                             GetPropType<TypeTag, Properties::FluidSystem>,
-                                             GetPropType<TypeTag, Properties::Scalar>>
+class FlowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+                  , public FlowGenericProblem<GetPropType<TypeTag, Properties::GridView>,
+                                              GetPropType<TypeTag, Properties::FluidSystem>,
+                                              GetPropType<TypeTag, Properties::Scalar>>
 {
     using BaseType = FlowGenericProblem<GetPropType<TypeTag, Properties::GridView>,
                                         GetPropType<TypeTag, Properties::FluidSystem>,
@@ -270,7 +270,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    EclProblem(Simulator& simulator)
+    FlowProblem(Simulator& simulator)
         : ParentType(simulator)
         , FlowGenericProblem<GridView,FluidSystem,Scalar>(simulator.vanguard().eclState(),
                                                           simulator.vanguard().schedule(),
@@ -933,7 +933,7 @@ public:
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      *
-     * For the EclProblem, this method is identical to referencePorosity(). The intensive
+     * For the FlowProblem, this method is identical to referencePorosity(). The intensive
      * quantities object may apply various multipliers (e.g. ones which model rock
      * compressibility and water induced rock compaction) to it which depend on the
      * current physical conditions.
@@ -1262,7 +1262,7 @@ public:
      *        term for the solution of the previous time step.
      *
      * For quite technical reasons, the storage term cannot be recycled if either DRSDT
-     * or DRVDT are active in ebos. Nor if the porosity is changes between timesteps
+     * or DRVDT are active. Nor if the porosity is changes between timesteps
      * using a pore volume multiplier (i.e., poreVolumeMultiplier() != 1.0)
      */
     bool recycleFirstIterationStorage() const
@@ -1876,7 +1876,7 @@ protected:
             return;
         }
 
-        this->updateProperty_("EclProblem::updateCompositionChangeLimits_()) failed:",
+        this->updateProperty_("FlowProblem::updateCompositionChangeLimits_()) failed:",
                               [this,episodeIdx,active](unsigned compressedDofIdx,
                                                        const IntensiveQuantities& iq)
                               {
@@ -1902,7 +1902,7 @@ protected:
 
         // we use VAPPARS
         if (this->vapparsActive(episodeIdx)) {
-            this->updateProperty_("EclProblem::updateMaxOilSaturation_() failed:",
+            this->updateProperty_("FlowProblem::updateMaxOilSaturation_() failed:",
                                   [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                                   {
                                       this->updateMaxOilSaturation_(compressedDofIdx,iq);
@@ -1935,7 +1935,7 @@ protected:
             return false;
 
         this->maxWaterSaturation_[/*timeIdx=*/1] = this->maxWaterSaturation_[/*timeIdx=*/0];
-        this->updateProperty_("EclProblem::updateMaxWaterSaturation_() failed:",
+        this->updateProperty_("FlowProblem::updateMaxWaterSaturation_() failed:",
                               [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                               {
                                   this->updateMaxWaterSaturation_(compressedDofIdx,iq);
@@ -1965,7 +1965,7 @@ protected:
         if (this->minRefPressure_.empty())
             return false;
 
-        this->updateProperty_("EclProblem::updateMinPressure_() failed:",
+        this->updateProperty_("FlowProblem::updateMinPressure_() failed:",
                               [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                               {
                                   this->updateMinPressure_(compressedDofIdx,iq);
@@ -2486,7 +2486,7 @@ protected:
 
         // we need to update the hysteresis data for _all_ elements (i.e., not just the
         // interior ones) to avoid desynchronization of the processes in the parallel case!
-        this->updateProperty_("EclProblem::updateHysteresis_() failed:",
+        this->updateProperty_("FlowProblem::updateHysteresis_() failed:",
                               [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                               {
                                   materialLawManager_->updateHysteresis(iq.fluidState(), compressedDofIdx);
@@ -2506,7 +2506,7 @@ protected:
     void updateMaxPolymerAdsorption_()
     {
         // we need to update the max polymer adsoption data for all elements
-        this->updateProperty_("EclProblem::updateMaxPolymerAdsorption_() failed:",
+        this->updateProperty_("FlowProblem::updateMaxPolymerAdsorption_() failed:",
                               [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                               {
                                   this->updateMaxPolymerAdsorption_(compressedDofIdx,iq);
@@ -2822,4 +2822,4 @@ private:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_FLOW_PROBLEM_HPP

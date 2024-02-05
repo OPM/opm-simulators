@@ -26,8 +26,6 @@
 
 #include <fmt/format.h>
 
-#include <ebos/eclproblem.hh>
-
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -42,6 +40,7 @@
 #include <opm/simulators/flow/BlackoilModelNldd.hpp>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/RSTConv.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>

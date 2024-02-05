@@ -27,7 +27,6 @@
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
-#include <ebos/eclproblem.hh>
 #include <opm/models/utils/start.hh>
 
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -35,6 +34,7 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/flow/BlackoilModel.hpp>
+#include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>

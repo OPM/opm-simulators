@@ -263,7 +263,7 @@ public:
     /*!
      * \brief Direct indexed access to the porosity.
      *
-     * For the EclProblem, this method is identical to referencePorosity(). The intensive
+     * For the FlowProblem, this method is identical to referencePorosity(). The intensive
      * quantities object may apply various multipliers (e.g. ones which model rock
      * compressibility and water induced rock compaction) to it which depend on the
      * current physical conditions.
@@ -303,7 +303,7 @@ protected:
     /*!
      * \brief Returns true if an eWoms restart file should be written to disk.
      *
-     * The EclProblem does not write any restart files using the ad-hoc format, only ones
+     * The FlowProblem does not write any restart files using the ad-hoc format, only ones
      * using the ECL format.
      */
     bool shouldWriteRestartFile() const

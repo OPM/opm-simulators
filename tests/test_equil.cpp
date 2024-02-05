@@ -24,8 +24,6 @@
 
 #define BOOST_TEST_MODULE Equil
 
-#include <ebos/eclproblem.hh>
-
 #include <opm/grid/UnstructuredGrid.h>
 #include <opm/grid/GridManager.hpp>
 #include <opm/grid/cpgrid/GridHelpers.hpp>
@@ -39,6 +37,7 @@
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
+#include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
