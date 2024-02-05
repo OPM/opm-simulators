@@ -426,7 +426,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclgenericwriter_impl.hh
   ebos/eclmixingratecontrols.hh
   ebos/eclnewtonmethod.hh
-  ebos/eclpolyhedralgridvanguard.hh
   ebos/eclproblem.hh
   ebos/eclproblem_properties.hh
   ebos/eclsolutioncontainers.hh
@@ -463,6 +462,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/NonlinearSolver.hpp
   opm/simulators/flow/OutputBlackoilModule.hpp
   opm/simulators/flow/partitionCells.hpp
+  opm/simulators/flow/PolyhedralGridVanguard.hpp
   opm/simulators/flow/priVarsPacking.hpp
   opm/simulators/flow/RSTConv.hpp
   opm/simulators/flow/RegionPhasePVAverage.hpp
