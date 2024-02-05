@@ -29,12 +29,12 @@
 #define EBOS_HH
 
 #include <ebos/eclproblem.hh>
-#include <ebos/ecltimesteppingparams.hh>
 
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
+#include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 namespace Opm {

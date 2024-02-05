@@ -10,8 +10,6 @@
 #include <dune/istl/ilu.hh>
 #endif
 
-#include <ebos/ecltimesteppingparams.hh>
-
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -30,6 +28,7 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp>
+#include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>

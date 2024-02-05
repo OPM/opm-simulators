@@ -20,10 +20,10 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef ECL_TIMESTEPPING_PARAMS_HH
-#define ECL_TIMESTEPPING_PARAMS_HH
+#ifndef OPM_ECL_TIMESTEPPING_PARAMS_HPP
+#define OPM_ECL_TIMESTEPPING_PARAMS_HPP
 
-#include "opm/models/utils/basicproperties.hh"
+#include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
 namespace Opm::Properties {
@@ -133,4 +133,4 @@ void registerEclTimeSteppingParameters()
 
 } // namespace Opm
 
-#endif // ECL_TIME_STEPPING_PARAMS_HH
+#endif // OPM_ECL_TIME_STEPPING_PARAMS_HPP
