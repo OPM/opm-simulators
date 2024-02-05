@@ -32,7 +32,7 @@
 #include <ebos/eclcpgridvanguard.hh>
 #include <ebos/eclfluxmodule.hh>
 #include <ebos/eclnewtonmethod.hh>
-#include <ebos/eclwriter.hh>
+
 #if HAVE_DAMARIS
 #include <ebos/damariswriter.hh>
 #endif
@@ -48,6 +48,7 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
+#include <opm/simulators/flow/EclWriter.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 
 #include <tuple>

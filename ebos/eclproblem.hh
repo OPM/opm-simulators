@@ -43,7 +43,6 @@
 #include <ebos/eclproblem_properties.hh>
 #include <ebos/eclthresholdpressure.hh>
 #include <ebos/ecltransmissibility.hh>
-#include <ebos/eclwriter.hh>
 #if HAVE_DAMARIS
 #include <ebos/damariswriter.hh>
 #endif
@@ -82,6 +81,7 @@
 
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
+#include <opm/simulators/flow/EclWriter.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
