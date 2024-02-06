@@ -26,6 +26,7 @@
 #ifndef OPM_MODELS_DIRECTIONAL_MOBILITY_HH
 #define OPM_MODELS_DIRECTIONAL_MOBILITY_HH
 
+#include <opm/models/common/multiphasebaseproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/material/densead/Evaluation.hpp>
 
