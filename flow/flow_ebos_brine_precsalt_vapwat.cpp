@@ -26,22 +26,22 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowBrinePrecsaltVapwatProblem {
+struct FlowBrinePrecsaltVapwatProblem {
     using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::EclFlowBrinePrecsaltVapwatProblem> {
+struct EnableBrine<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::EclFlowBrinePrecsaltVapwatProblem> {
+struct EnableSaltPrecipitation<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::EclFlowBrinePrecsaltVapwatProblem> {
+struct EnableVapwat<TypeTag, TTag::FlowBrinePrecsaltVapwatProblem> {
     static constexpr bool value = true;
 };
 }}
@@ -55,14 +55,14 @@ int flowEbosBrinePrecsaltVapwatMain(int argc, char** argv, bool outputCout, bool
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::EclFlowBrinePrecsaltVapwatProblem>
+    FlowMain<Properties::TTag::FlowBrinePrecsaltVapwatProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
 
 int flowEbosBrinePrecsaltVapwatMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowBrinePrecsaltVapwatProblem;
+    using TypeTag = Properties::TTag::FlowBrinePrecsaltVapwatProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
