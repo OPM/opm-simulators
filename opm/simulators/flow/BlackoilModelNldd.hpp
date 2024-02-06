@@ -545,7 +545,7 @@ private:
         const auto& model = modelSimulator.model();
         const auto& problem = modelSimulator.problem();
 
-        const auto& ebosResid = modelSimulator.model().linearizer().residual();
+        const auto& modelResid = modelSimulator.model().linearizer().residual();
 
         ElementContext elemCtx(modelSimulator);
         const auto& gridView = domain.view;
@@ -576,7 +576,7 @@ private:
                 numAquiferPvSumLocal += pvValue;
             }
 
-            model_.getMaxCoeff(cell_idx, intQuants, fs, ebosResid, pvValue,
+            model_.getMaxCoeff(cell_idx, intQuants, fs, modelResid, pvValue,
                                B_avg, R_sum, maxCoeff, maxCoeffCell);
         }
 
@@ -867,12 +867,12 @@ private:
         const auto& simulator = model_.simulator();
         const auto& model = simulator.model();
         const auto& problem = simulator.problem();
-        const auto& ebosResid = simulator.model().linearizer().residual();
+        const auto& residual = simulator.model().linearizer().residual();
 
         for (const int cell_idx : domain.cells) {
             const double pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) *
                                    model.dofTotalVolume(cell_idx);
-            const auto& cellResidual = ebosResid[cell_idx];
+            const auto& cellResidual = residual[cell_idx];
             bool cnvViolated = false;
 
             for (unsigned eqIdx = 0; eqIdx < cellResidual.size(); ++eqIdx) {
