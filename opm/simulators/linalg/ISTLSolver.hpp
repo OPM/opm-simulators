@@ -320,7 +320,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
             // update matrix entries for solvers.
             if (firstcall) {
-                // ebos will not change the matrix object. Hence simply store a pointer
+                // model will not change the matrix object. Hence simply store a pointer
                 // to the original one with a deleter that does nothing.
                 // Outch! We need to be able to scale the linear system! Hence const_cast
                 matrix_ = const_cast<Matrix*>(&M);

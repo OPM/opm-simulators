@@ -198,7 +198,7 @@ public:
 #if HAVE_OPENCL
         // update matrix entries for solvers.
         if (firstcall && bdaBridge_) {
-            // ebos will not change the matrix object. Hence simply store a pointer
+            // model will not change the matrix object. Hence simply store a pointer
             // to the original one with a deleter that does nothing.
             // Outch! We need to be able to scale the linear system! Hence const_cast
             // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
