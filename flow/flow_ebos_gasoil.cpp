@@ -31,23 +31,23 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowGasOilProblem {
+struct FlowGasOilProblem {
     using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::EclFlowGasOilProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowGasOilProblem> { using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::EclFlowGasOilProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowGasOilProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::EclFlowGasOilProblem> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::FlowGasOilProblem> { static constexpr bool value = false; };
 
 //! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::EclFlowGasOilProblem>
+struct Indices<TypeTag, TTag::FlowGasOilProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -57,15 +57,15 @@ private:
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
-  typedef BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                  getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                  getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                  getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                  getPropValue<TypeTag, Properties::EnableFoam>(),
-                                  getPropValue<TypeTag, Properties::EnableBrine>(),
-                                  /*PVOffset=*/0,
-                                  /*disabledCompIdx=*/FluidSystem::waterCompIdx,
-                                  getPropValue<TypeTag, Properties::EnableMICP>()> type;
+  using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                       getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                       getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                       getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                       getPropValue<TypeTag, Properties::EnableFoam>(),
+                                       getPropValue<TypeTag, Properties::EnableBrine>(),
+                                       /*PVOffset=*/0,
+                                       /*disabledCompIdx=*/FluidSystem::waterCompIdx,
+                                       getPropValue<TypeTag, Properties::EnableMICP>()>;
 };
 }}
 
@@ -78,14 +78,14 @@ int flowEbosGasOilMain(int argc, char** argv, bool outputCout, bool outputFiles)
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::EclFlowGasOilProblem>
+    FlowMain<Properties::TTag::FlowGasOilProblem>
         mainfunc {argc, argv, outputCout, outputFiles} ;
     return mainfunc.execute();
 }
 
 int flowEbosGasOilMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowGasOilProblem;
+    using TypeTag = Properties::TTag::FlowGasOilProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
