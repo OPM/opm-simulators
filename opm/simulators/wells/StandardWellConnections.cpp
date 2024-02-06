@@ -479,9 +479,9 @@ computeProperties(const WellState& well_state,
             double total_mobility = 0.0;
             double total_invB = 0.;
             for (int p = 0; p < np; ++p) {
-                int ebosPhaseIdx = well_.flowPhaseToEbosPhaseIdx(p);
-                total_mobility += invB(cell_idx, ebosPhaseIdx) * mobility(cell_idx, ebosPhaseIdx);
-                total_invB += invB(cell_idx, ebosPhaseIdx);
+                int modelPhaseIdx = well_.flowPhaseToModelPhaseIdx(p);
+                total_mobility += invB(cell_idx, modelPhaseIdx) * mobility(cell_idx, modelPhaseIdx);
+                total_invB += invB(cell_idx, modelPhaseIdx);
             }
             if constexpr (Indices::enableSolvent) {
                 total_mobility += solventInverseFormationVolumeFactor(cell_idx) * solventMobility(cell_idx);
@@ -494,11 +494,11 @@ computeProperties(const WellState& well_state,
             // ratios for those perforations.
             constexpr double small_value = 1.e-10;
             for (int p = 0; p < np; ++p) {
-                const int ebosPhaseIdx = well_.flowPhaseToEbosPhaseIdx(p);
+                const int modelPhaseIdx = well_.flowPhaseToModelPhaseIdx(p);
                 const auto mob_ratio = non_zero_total_mobility
-                                       ? mobility(cell_idx, ebosPhaseIdx) / total_mobility
+                                       ? mobility(cell_idx, modelPhaseIdx) / total_mobility
                                        : small_value / total_invB;
-                perfRates[perf * well_.numComponents() + p] = well_tw_fraction * invB(cell_idx, ebosPhaseIdx) * mob_ratio;
+                perfRates[perf * well_.numComponents() + p] = well_tw_fraction * invB(cell_idx, modelPhaseIdx) * mob_ratio;
             }
             if constexpr (Indices::enableSolvent) {
                 const auto mob_ratio = non_zero_total_mobility

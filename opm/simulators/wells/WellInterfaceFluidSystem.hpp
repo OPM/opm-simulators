@@ -52,7 +52,7 @@ protected:
     static constexpr int INVALIDCOMPLETION = std::numeric_limits<int>::max();
 
 public:
-    int flowPhaseToEbosPhaseIdx(const int phaseIdx) const;
+    int flowPhaseToModelPhaseIdx(const int phaseIdx) const;
 
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Oil = BlackoilPhases::Liquid;

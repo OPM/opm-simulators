@@ -224,7 +224,7 @@ checkConstraints(WellState& well_state,
 template<typename FluidSystem>
 int
 WellInterfaceFluidSystem<FluidSystem>::
-flowPhaseToEbosPhaseIdx(const int phaseIdx) const
+flowPhaseToModelPhaseIdx(const int phaseIdx) const
 {
     const auto& pu = this->phaseUsage();
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)

@@ -1429,12 +1429,12 @@ namespace Opm
             const double well_tw_fraction = this->well_index_[perf] / total_tw;
             double total_mobility = 0.0;
             for (int p = 0; p < np; ++p) {
-                int ebosPhaseIdx = this->flowPhaseToEbosPhaseIdx(p);
-                total_mobility += fs.invB(ebosPhaseIdx).value() * intQuants.mobility(ebosPhaseIdx).value();
+                int modelPhaseIdx = this->flowPhaseToModelPhaseIdx(p);
+                total_mobility += fs.invB(modelPhaseIdx).value() * intQuants.mobility(modelPhaseIdx).value();
             }
             for (int p = 0; p < np; ++p) {
-                int ebosPhaseIdx = this->flowPhaseToEbosPhaseIdx(p);
-                scaling_factor[p] += well_tw_fraction * fs.invB(ebosPhaseIdx).value() * intQuants.mobility(ebosPhaseIdx).value() / total_mobility;
+                int modelPhaseIdx = this->flowPhaseToModelPhaseIdx(p);
+                scaling_factor[p] += well_tw_fraction * fs.invB(modelPhaseIdx).value() * intQuants.mobility(modelPhaseIdx).value() / total_mobility;
             }
         }
         return scaling_factor;
@@ -1793,7 +1793,7 @@ namespace Opm
             // the reciprocal FVF.
             const auto connMob =
                 mobility[this->flowPhaseToModelCompIdx(p)]
-                    * fs.invB(this->flowPhaseToEbosPhaseIdx(p)).value();
+                    * fs.invB(this->flowPhaseToModelPhaseIdx(p)).value();
 
             connPI[p] = connPICalc(connMob);
         }
@@ -1845,7 +1845,7 @@ namespace Opm
         }
 
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), 0.0);
-        connII[phase_pos] = connIICalc(mt * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
+        connII[phase_pos] = connIICalc(mt * fs.invB(this->flowPhaseToModelPhaseIdx(phase_pos)).value());
     }
 
 } // namespace Opm
