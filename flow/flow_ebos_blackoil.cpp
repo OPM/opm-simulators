@@ -30,13 +30,13 @@ namespace Opm {
     namespace Properties {
 
         template<class TypeTag>
-        struct Linearizer<TypeTag, TTag::EclFlowProblemTPFA> { using type = TpfaLinearizer<TypeTag>; };
+        struct Linearizer<TypeTag, TTag::FlowProblemTPFA> { using type = TpfaLinearizer<TypeTag>; };
 
         template<class TypeTag>
-        struct LocalResidual<TypeTag, TTag::EclFlowProblemTPFA> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+        struct LocalResidual<TypeTag, TTag::FlowProblemTPFA> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
         template<class TypeTag>
-        struct EnableDiffusion<TypeTag, TTag::EclFlowProblemTPFA> { static constexpr bool value = false; };
+        struct EnableDiffusion<TypeTag, TTag::FlowProblemTPFA> { static constexpr bool value = false; };
 
     }
 }
@@ -44,14 +44,14 @@ namespace Opm {
 
 namespace Opm
 {
-std::unique_ptr<FlowMain<Properties::TTag::EclFlowProblemTPFA>>
+std::unique_ptr<FlowMain<Properties::TTag::FlowProblemTPFA>>
 flowEbosBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
 
-    return std::make_unique<FlowMain<Properties::TTag::EclFlowProblemTPFA>>(
+    return std::make_unique<FlowMain<Properties::TTag::FlowProblemTPFA>>(
         argc, argv, outputCout, outputFiles);
 }
 
@@ -62,14 +62,14 @@ int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool output
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::EclFlowProblemTPFA>
+    FlowMain<Properties::TTag::FlowProblemTPFA>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
 
 int flowEbosBlackoilTpfaMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowProblemTPFA;
+    using TypeTag = Properties::TTag::FlowProblemTPFA;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
