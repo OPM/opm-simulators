@@ -88,7 +88,7 @@ namespace Opm
 
         // It makes no sense adding time points. Therefore, do not 
         // overwrite the value of global_time which gets set in 
-        // NonlinearSolverEbos.hpp by the line:
+        // NonlinearSolver.hpp by the line:
         //     report.global_time = timer.simulationTimeElapsed();
     }
 
