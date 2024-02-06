@@ -88,7 +88,7 @@ struct RestartWritingInterval {
 // Enable partial compensation of systematic mass losses via the source term of the next time
 // step
 template<class TypeTag, class MyTypeTag>
-struct EclEnableDriftCompensation {
+struct EnableDriftCompensation {
     using type = UndefinedProperty;
 };
 
@@ -521,7 +521,7 @@ struct RestartWritingInterval<TypeTag, TTag::EclBaseProblem> {
 // conservation quantities are only compensated for
 // as default if experimental mode is enabled.
 template<class TypeTag>
-struct EclEnableDriftCompensation<TypeTag, TTag::EclBaseProblem> {
+struct EnableDriftCompensation<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = true;
 
 };
