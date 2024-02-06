@@ -19,22 +19,14 @@
 
 #include <memory>
 
-namespace Opm {
-    namespace Properties {
-        namespace TTag {
-
-            struct EclFlowProblem;
-
-            struct EclFlowProblemTPFA {
-            using InheritsFrom = std::tuple<EclFlowProblem>;
-            };
-
-        }
-   }
+namespace Opm::Properties::TTag {
+    struct FlowProblem;
+    struct EclFlowProblemTPFA {
+        using InheritsFrom = std::tuple<FlowProblem>;
+    };
 }
 
 namespace Opm {
-
 
 //! \brief Main function used in flow binary.
 int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFiles);

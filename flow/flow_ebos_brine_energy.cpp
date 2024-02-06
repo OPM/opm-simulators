@@ -21,7 +21,7 @@ namespace Opm {
 namespace Properties {
 namespace TTag {
 struct EclFlowBrineProblem {
-    using InheritsFrom = std::tuple<EclFlowProblem>;
+    using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 template<class TypeTag>

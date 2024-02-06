@@ -93,7 +93,7 @@ namespace Opm::Properties {
 // simulator.
 namespace TTag {
 struct FlowEarlyBird {
-    using InheritsFrom = std::tuple<EclFlowProblem>;
+    using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 

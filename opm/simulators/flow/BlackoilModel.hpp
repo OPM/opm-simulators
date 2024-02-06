@@ -74,79 +74,79 @@
 namespace Opm::Properties {
 
 namespace TTag {
-struct EclFlowProblem {
+struct FlowProblem {
     using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters,
                                     FlowNonLinearSolver, EclBaseProblem, BlackOilModel>;
 };
 }
 template<class TypeTag>
-struct OutputDir<TypeTag, TTag::EclFlowProblem> {
+struct OutputDir<TypeTag, TTag::FlowProblem> {
     static constexpr auto value = "";
 };
 template<class TypeTag>
-struct EnableDebuggingChecks<TypeTag, TTag::EclFlowProblem> {
+struct EnableDebuggingChecks<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
 // default in flow is to formulate the equations in surface volumes
 template<class TypeTag>
-struct BlackoilConserveSurfaceVolume<TypeTag, TTag::EclFlowProblem> {
+struct BlackoilConserveSurfaceVolume<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = true;
 };
 template<class TypeTag>
-struct UseVolumetricResidual<TypeTag, TTag::EclFlowProblem> {
+struct UseVolumetricResidual<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
 
 template<class TypeTag>
-struct EclAquiferModel<TypeTag, TTag::EclFlowProblem> {
+struct EclAquiferModel<TypeTag, TTag::FlowProblem> {
     using type = BlackoilAquiferModel<TypeTag>;
 };
 
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
 template<class TypeTag>
-struct EnablePolymer<TypeTag, TTag::EclFlowProblem> {
+struct EnablePolymer<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableSolvent<TypeTag, TTag::EclFlowProblem> {
+struct EnableSolvent<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableTemperature<TypeTag, TTag::EclFlowProblem> {
+struct EnableTemperature<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = true;
 };
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::EclFlowProblem> {
+struct EnableEnergy<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableFoam<TypeTag, TTag::EclFlowProblem> {
+struct EnableFoam<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::EclFlowProblem> {
+struct EnableBrine<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::EclFlowProblem> {
+struct EnableSaltPrecipitation<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableMICP<TypeTag, TTag::EclFlowProblem> {
+struct EnableMICP<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::EclFlowProblem> {
+struct EnableDispersion<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
 
 template<class TypeTag>
-struct EclWellModel<TypeTag, TTag::EclFlowProblem> {
+struct EclWellModel<TypeTag, TTag::FlowProblem> {
     using type = BlackoilWellModel<TypeTag>;
 };
 template<class TypeTag>
-struct LinearSolverSplice<TypeTag, TTag::EclFlowProblem> {
+struct LinearSolverSplice<TypeTag, TTag::FlowProblem> {
     using type = TTag::FlowIstlSolver;
 };
 

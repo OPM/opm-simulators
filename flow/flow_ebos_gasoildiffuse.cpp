@@ -31,7 +31,7 @@ namespace Opm {
 namespace Properties {
 namespace TTag {
 struct EclFlowGasOilDiffuseProblem {
-    using InheritsFrom = std::tuple<EclFlowProblem>;
+    using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 
@@ -55,7 +55,7 @@ private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
-    using BaseTypeTag = TTag::EclFlowProblem;
+    using BaseTypeTag = TTag::FlowProblem;
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
