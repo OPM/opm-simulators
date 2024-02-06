@@ -785,7 +785,7 @@ namespace Opm {
             OPM_TIMEBLOCK(localConvergenceData);
             double pvSumLocal = 0.0;
             double numAquiferPvSumLocal = 0.0;
-            const auto& ebosModel = simulator_.model();
+            const auto& model = simulator_.model();
             const auto& ebosProblem = simulator_.problem();
 
             const auto& residual = simulator_.model().linearizer().residual();
@@ -803,7 +803,7 @@ namespace Opm {
                 const auto& fs = intQuants.fluidState();
 
                 const auto pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) *
-                                     ebosModel.dofTotalVolume(cell_idx);
+                                     model.dofTotalVolume(cell_idx);
                 pvSumLocal += pvValue;
 
                 if (isNumericalAquiferCell(elem))
@@ -834,7 +834,7 @@ namespace Opm {
         {
             OPM_TIMEBLOCK(computeCnvErrorPv);
             double errorPV{};
-            const auto& ebosModel = simulator_.model();
+            const auto& model = simulator_.model();
             const auto& ebosProblem = simulator_.problem();
             const auto& residual = simulator_.model().linearizer().residual();
             const auto& gridView = simulator().gridView();
@@ -852,7 +852,7 @@ namespace Opm {
                 elemCtx.updatePrimaryStencil(elem);
                 // elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
+                const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * model.dofTotalVolume(cell_idx);
                 const auto& cellResidual = residual[cell_idx];
                 bool cnvViolated = false;
 
