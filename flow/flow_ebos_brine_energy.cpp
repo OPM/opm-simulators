@@ -20,23 +20,23 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowBrineProblem {
+struct FlowBrineEnergyProblem {
     using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::EclFlowBrineProblem> {
+struct EnableBrine<TypeTag, TTag::FlowBrineEnergyProblem> {
     static constexpr bool value = true;
 };
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::EclFlowBrineProblem> {
+struct EnableEnergy<TypeTag, TTag::FlowBrineEnergyProblem> {
     static constexpr bool value = true;
 };
 }
 
 int flowEbosBrineEnergyMain(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowBrineProblem;
+    using TypeTag = Opm::Properties::TTag::FlowBrineEnergyProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
