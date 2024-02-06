@@ -20,36 +20,35 @@
 #ifndef OPM_PY_MATERIAL_STATE_HEADER_INCLUDED
 #define OPM_PY_MATERIAL_STATE_HEADER_INCLUDED
 
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-#include <exception>
-#include <iostream>
-#include <map>
+#include <cstddef>
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace Opm::Pybind
 {
     template <class TypeTag>
     class PyMaterialState {
-        using Simulator = GetPropType<TypeTag, Opm::Properties::Simulator>;
-        using Problem = GetPropType<TypeTag, Opm::Properties::Problem>;
-        using Model = GetPropType<TypeTag, Opm::Properties::Model>;
-        using ElementContext = GetPropType<TypeTag, Opm::Properties::ElementContext>;
-        using FluidSystem = GetPropType<TypeTag, Opm::Properties::FluidSystem>;
-        using Indices = GetPropType<TypeTag, Opm::Properties::Indices>;
-        using GridView = GetPropType<TypeTag, Opm::Properties::GridView>;
+        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+        using Problem = GetPropType<TypeTag, Properties::Problem>;
+        using Model = GetPropType<TypeTag, Properties::Model>;
+        using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
+        using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+        using Indices = GetPropType<TypeTag, Properties::Indices>;
+        using GridView = GetPropType<TypeTag, Properties::GridView>;
 
     public:
-        PyMaterialState(Simulator *ebos_simulator)
-            : ebos_simulator_(ebos_simulator) { }
+        PyMaterialState(Simulator* simulator)
+            : simulator_(simulator) { }
 
         std::vector<double> getCellVolumes();
         std::vector<double> getPorosity();
         void setPorosity(const double *poro, std::size_t size);
     private:
-        Simulator *ebos_simulator_;
+        Simulator* simulator_;
     };
 
 }

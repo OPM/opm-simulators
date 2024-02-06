@@ -55,15 +55,15 @@ public:
     using typename Base::ElementMapper;
 
     AquiferCarterTracy(const std::vector<Aquancon::AquancCell>& connections,
-                       const Simulator& ebosSimulator,
+                       const Simulator& simulator,
                        const AquiferCT::AQUCT_data& aquct_data)
-        : Base(aquct_data.aquiferID, connections, ebosSimulator)
+        : Base(aquct_data.aquiferID, connections, simulator)
         , aquct_data_(aquct_data)
     {}
 
-    static AquiferCarterTracy serializationTestObject(const Simulator& ebosSimulator)
+    static AquiferCarterTracy serializationTestObject(const Simulator& simulator)
     {
-        AquiferCarterTracy result({}, ebosSimulator, {});
+        AquiferCarterTracy result({}, simulator, {});
 
         result.pressure_previous_ = {1.0, 2.0, 3.0};
         result.pressure_current_ = {4.0, 5.0};
@@ -80,10 +80,10 @@ public:
     void endTimeStep() override
     {
         for (const auto& q : this->Qai_) {
-            this->W_flux_ += q * this->ebos_simulator_.timeStepSize();
+            this->W_flux_ += q * this->simulator_.timeStepSize();
         }
         this->fluxValue_ = this->W_flux_.value();
-        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        const auto& comm = this->simulator_.vanguard().grid().comm();
         comm.sum(&this->fluxValue_, 1);
     }
 
@@ -236,7 +236,7 @@ protected:
             this->aquct_data_.initial_pressure =
                 this->calculateReservoirEquilibrium();
 
-            const auto& tables = this->ebos_simulator_.vanguard()
+            const auto& tables = this->simulator_.vanguard()
                 .eclState().getTableManager();
 
             this->aquct_data_.finishInitialisation(tables);

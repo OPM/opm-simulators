@@ -88,8 +88,8 @@ public:
     // Constructor
     AquiferAnalytical(const int aqID,
                       const std::vector<Aquancon::AquancCell>& connections,
-                      const Simulator& ebosSimulator)
-        : AquiferInterface<TypeTag>(aqID, ebosSimulator)
+                      const Simulator& simulator)
+        : AquiferInterface<TypeTag>(aqID, simulator)
         , connections_(connections)
     {
         this->initializeConnectionMappings();
@@ -148,10 +148,10 @@ public:
 
     void beginTimeStep() override
     {
-        ElementContext elemCtx(this->ebos_simulator_);
+        ElementContext elemCtx(this->simulator_);
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
-        for (const auto& elem : elements(this->ebos_simulator_.gridView())) {
+        for (const auto& elem : elements(this->simulator_.gridView())) {
             elemCtx.updatePrimaryStencil(elem);
 
             const int cellIdx = elemCtx.globalSpaceIndex(0, 0);
@@ -165,14 +165,14 @@ public:
         }
 
         OPM_END_PARALLEL_TRY_CATCH("AquiferAnalytical::beginTimeStep() failed: ",
-                                   this->ebos_simulator_.vanguard().grid().comm());
+                                   this->simulator_.vanguard().grid().comm());
     }
 
     void addToSource(RateVector& rates,
                      const unsigned cellIdx,
                      const unsigned timeIdx) override
     {
-        const auto& model = this->ebos_simulator_.model();
+        const auto& model = this->simulator_.model();
 
         const int idx = this->cellToConnectionIdx_[cellIdx];
         if (idx < 0)
@@ -182,7 +182,7 @@ public:
 
         // This is the pressure at td + dt
         this->updateCellPressure(this->pressure_current_, idx, intQuants);
-        this->calculateInflowRate(idx, this->ebos_simulator_);
+        this->calculateInflowRate(idx, this->simulator_);
 
         rates[BlackoilIndices::conti0EqIdx + compIdx_()]
             += this->Qai_[idx] / model.dofTotalVolume(cellIdx);
@@ -196,7 +196,7 @@ public:
                 typename FluidSystem::template ParameterCache<FsScalar> paramCache;
                 const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
                 paramCache.setRegionIndex(pvtRegionIdx);
-                paramCache.setMaxOilSat(this->ebos_simulator_.problem().maxOilSaturation(cellIdx));
+                paramCache.setMaxOilSat(this->simulator_.problem().maxOilSaturation(cellIdx));
                 paramCache.updatePhase(fs, this->phaseIdx_());
                 const auto& h = FluidSystem::enthalpy(fs, paramCache, this->phaseIdx_());
                 fs.setEnthalpy(this->phaseIdx_(), h);
@@ -240,7 +240,7 @@ protected:
 
     Scalar gravity_() const
     {
-        return this->ebos_simulator_.problem().gravity()[2];
+        return this->simulator_.problem().gravity()[2];
     }
 
     int compIdx_() const
@@ -290,11 +290,11 @@ protected:
 
         // total_face_area_ is the sum of the areas connected to an aquifer
         this->total_face_area_ = Scalar{0};
-        this->cellToConnectionIdx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
-        const auto& gridView = this->ebos_simulator_.vanguard().gridView();
+        this->cellToConnectionIdx_.resize(this->simulator_.gridView().size(/*codim=*/0), -1);
+        const auto& gridView = this->simulator_.vanguard().gridView();
         for (std::size_t idx = 0; idx < this->size(); ++idx) {
             const auto global_index = this->connections_[idx].global_index;
-            const int cell_index = this->ebos_simulator_.vanguard().compressedIndex(global_index);
+            const int cell_index = this->simulator_.vanguard().compressedIndex(global_index);
             if (cell_index < 0) {
                 continue;
             }
@@ -314,7 +314,7 @@ protected:
         FaceDir::DirEnum faceDirection;
 
         // Get areas for all connections
-        const auto& elemMapper = this->ebos_simulator_.model().dofMapper();
+        const auto& elemMapper = this->simulator_.model().dofMapper();
         for (const auto& elem : elements(gridView)) {
             const unsigned cell_index = elemMapper.index(elem);
             const int idx = this->cellToConnectionIdx_[cell_index];
@@ -368,9 +368,9 @@ protected:
     {
         this->cell_depth_.resize(this->size(), this->aquiferDepth());
 
-        const auto& gridView = this->ebos_simulator_.vanguard().gridView();
+        const auto& gridView = this->simulator_.vanguard().gridView();
         for (std::size_t idx = 0; idx < this->size(); ++idx) {
-            const int cell_index = this->ebos_simulator_.vanguard()
+            const int cell_index = this->simulator_.vanguard()
                 .compressedIndex(this->connections_[idx].global_index);
             if (cell_index < 0) {
                 continue;
@@ -384,7 +384,7 @@ protected:
                 continue;
             }
 
-            this->cell_depth_.at(idx) = this->ebos_simulator_.vanguard().cellCenterDepth(cell_index);
+            this->cell_depth_.at(idx) = this->simulator_.vanguard().cellCenterDepth(cell_index);
         }
     }
 
@@ -395,8 +395,8 @@ protected:
         std::vector<Scalar> pw_aquifer;
         Scalar water_pressure_reservoir;
 
-        ElementContext elemCtx(this->ebos_simulator_);
-        const auto& gridView = this->ebos_simulator_.gridView();
+        ElementContext elemCtx(this->simulator_);
+        const auto& gridView = this->simulator_.gridView();
         for (const auto& elem : elements(gridView)) {
             elemCtx.updatePrimaryStencil(elem);
 
@@ -420,7 +420,7 @@ protected:
         }
 
         // We take the average of the calculated equilibrium pressures.
-        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        const auto& comm = this->simulator_.vanguard().grid().comm();
 
         Scalar vals[2];
         vals[0] = std::accumulate(this->alphai_.begin(), this->alphai_.end(), Scalar{0});

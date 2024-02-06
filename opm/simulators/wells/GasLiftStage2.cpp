@@ -64,7 +64,7 @@ GasLiftStage2::GasLiftStage2(
     , glo_{schedule_.glo(report_step_idx_)}
 {
 //    this->time_step_idx_
-//        = this->ebos_simulator_.model().newtonMethod().currentTimeStep();
+//        = this->simulator_.model().newtonMethod().currentTimeStep();
 }
 
 /********************************************

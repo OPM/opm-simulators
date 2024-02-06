@@ -49,24 +49,24 @@
 namespace Opm {
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
-    BlackoilWellModel(Simulator& ebosSimulator, const PhaseUsage& phase_usage)
-        : BlackoilWellModelGeneric(ebosSimulator.vanguard().schedule(),
-                                   ebosSimulator.vanguard().summaryState(),
-                                   ebosSimulator.vanguard().eclState(),
+    BlackoilWellModel(Simulator& simulator, const PhaseUsage& phase_usage)
+        : BlackoilWellModelGeneric(simulator.vanguard().schedule(),
+                                   simulator.vanguard().summaryState(),
+                                   simulator.vanguard().eclState(),
                                    phase_usage,
-                                   ebosSimulator.gridView().comm())
-        , ebosSimulator_(ebosSimulator)
+                                   simulator.gridView().comm())
+        , simulator_(simulator)
     {
-        terminal_output_ = ((ebosSimulator.gridView().comm().rank() == 0) &&
+        terminal_output_ = ((simulator.gridView().comm().rank() == 0) &&
                            EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput));
 
-        local_num_cells_ = ebosSimulator_.gridView().size(0);
+        local_num_cells_ = simulator_.gridView().size(0);
 
         // Number of cells the global grid view
-        global_num_cells_ = ebosSimulator_.vanguard().globalNumCells();
+        global_num_cells_ = simulator_.vanguard().globalNumCells();
 
         {
-            auto& parallel_wells = ebosSimulator.vanguard().parallelWells();
+            auto& parallel_wells = simulator.vanguard().parallelWells();
 
             this->parallel_well_info_.reserve(parallel_wells.size());
             for( const auto& name_bool : parallel_wells) {
@@ -85,12 +85,12 @@ namespace Opm {
             {
                 using Item = PAvgDynamicSourceData::SourceDataSpan<double>::Item;
 
-                const auto* intQuants = this->ebosSimulator_.model()
+                const auto* intQuants = this->simulator_.model()
                     .cachedIntensiveQuantities(localCell, /*timeIndex = */0);
                 const auto& fs = intQuants->fluidState();
 
                 sourceTerms.set(Item::PoreVol, intQuants->porosity().value() *
-                                this->ebosSimulator_.model().dofTotalVolume(localCell));
+                                this->simulator_.model().dofTotalVolume(localCell));
 
                 constexpr auto io = FluidSystem::oilPhaseIdx;
                 constexpr auto ig = FluidSystem::gasPhaseIdx;
@@ -122,8 +122,8 @@ namespace Opm {
 
     template<typename TypeTag>
     BlackoilWellModel<TypeTag>::
-    BlackoilWellModel(Simulator& ebosSimulator) :
-        BlackoilWellModel(ebosSimulator, phaseUsageFromDeck(ebosSimulator.vanguard().eclState()))
+    BlackoilWellModel(Simulator& simulator) :
+        BlackoilWellModel(simulator, phaseUsageFromDeck(simulator.vanguard().eclState()))
     {}
 
 
@@ -135,12 +135,12 @@ namespace Opm {
         extractLegacyCellPvtRegionIndex_();
         extractLegacyDepth_();
 
-        gravity_ = ebosSimulator_.problem().gravity()[2];
+        gravity_ = simulator_.problem().gravity()[2];
 
         initial_step_ = true;
 
         // add the eWoms auxiliary module for the wells to the list
-        ebosSimulator_.model().addAuxiliaryModule(this);
+        simulator_.model().addAuxiliaryModule(this);
 
         is_cell_perforated_.resize(local_num_cells_, false);
     }
@@ -203,7 +203,7 @@ namespace Opm {
             well->apply(res);
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ",
-                                   ebosSimulator_.gridView().comm());
+                                   simulator_.gridView().comm());
     }
 
 
@@ -247,7 +247,7 @@ namespace Opm {
 
         this->initializeGroupStructure(timeStepIdx);
 
-        const auto& comm = this->ebosSimulator_.vanguard().grid().comm();
+        const auto& comm = this->simulator_.vanguard().grid().comm();
 
         OPM_BEGIN_PARALLEL_TRY_CATCH()
         {
@@ -255,7 +255,7 @@ namespace Opm {
             // purpose of RESV controls.
             this->rateConverter_ = std::make_unique<RateConverterType>
                 (this->phase_usage_, std::vector<int>(this->local_num_cells_, 0));
-            this->rateConverter_->template defineState<ElementContext>(this->ebosSimulator_);
+            this->rateConverter_->template defineState<ElementContext>(this->simulator_);
 
             // Update VFP properties.
             {
@@ -288,7 +288,7 @@ namespace Opm {
     {
         DeferredLogger local_deferredLogger{};
 
-        const auto& comm = this->ebosSimulator_.vanguard().grid().comm();
+        const auto& comm = this->simulator_.vanguard().grid().comm();
 
         // Wells_ecl_ holds this rank's wells, both open and stopped/shut.
         this->wells_ecl_ = this->getLocalWells(reportStepIdx);
@@ -332,7 +332,7 @@ namespace Opm {
     {
         DeferredLogger local_deferredLogger{};
 
-        const auto& comm = this->ebosSimulator_.vanguard().grid().comm();
+        const auto& comm = this->simulator_.vanguard().grid().comm();
 
         OPM_BEGIN_PARALLEL_TRY_CATCH()
         {
@@ -387,7 +387,7 @@ namespace Opm {
             // Reconstruct the local wells to account for the new well
             // structure.
             const auto reportStepIdx =
-                this->ebosSimulator_.episodeIndex();
+                this->simulator_.episodeIndex();
 
             // Disable WELPI scaling when well structure is updated in the
             // middle of a report step.
@@ -407,14 +407,14 @@ namespace Opm {
 
         this->resetWGState();
 
-        const int reportStepIdx = ebosSimulator_.episodeIndex();
+        const int reportStepIdx = simulator_.episodeIndex();
         updateAndCommunicateGroupData(reportStepIdx,
-                                      ebosSimulator_.model().newtonMethod().numIterations());
+                                      simulator_.model().newtonMethod().numIterations());
 
         this->wellState().updateWellsDefaultALQ(this->wells_ecl_, this->summaryState());
         this->wellState().gliftTimeStepInit();
 
-        const double simulationTime = ebosSimulator_.time();
+        const double simulationTime = simulator_.time();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
             // test wells
@@ -424,7 +424,7 @@ namespace Opm {
             createWellContainer(reportStepIdx);
 
             // Wells are active if they are active wells on at least one process.
-            const Grid& grid = ebosSimulator_.vanguard().grid();
+            const Grid& grid = simulator_.vanguard().grid();
             wells_active_ = !this->well_container_.empty();
             wells_active_ = grid.comm().max(wells_active_);
 
@@ -451,7 +451,7 @@ namespace Opm {
 
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger, "beginTimeStep() failed: ",
-                                        terminal_output_, ebosSimulator_.vanguard().grid().comm());
+                                        terminal_output_, simulator_.vanguard().grid().comm());
 
         for (auto& well : well_container_) {
             well->setVFPProperties(vfp_properties_.get());
@@ -468,7 +468,7 @@ namespace Opm {
         // we need the inj_multiplier from the previous time step
         this->initInjMult();
 
-        const auto& summaryState = ebosSimulator_.vanguard().summaryState();
+        const auto& summaryState = simulator_.vanguard().summaryState();
         if (alternative_well_rate_init_) {
             // Update the well rates of well_state_, if only single-phase rates, to
             // have proper multi-phase rates proportional to rates at bhp zero.
@@ -477,7 +477,7 @@ namespace Opm {
             for (auto& well : well_container_) {
                 const bool zero_target = well->stopppedOrZeroRateTarget(summaryState, this->wellState());
                 if (well->isProducer() && !zero_target) {
-                    well->updateWellStateRates(ebosSimulator_, this->wellState(), local_deferredLogger);
+                    well->updateWellStateRates(simulator_, this->wellState(), local_deferredLogger);
                 }
             }
         }
@@ -492,7 +492,7 @@ namespace Opm {
         try {
             updateWellPotentials(reportStepIdx,
                                  /*onlyAfterEvent*/true,
-                                 ebosSimulator_.vanguard().summaryConfig(),
+                                 simulator_.vanguard().summaryConfig(),
                                  local_deferredLogger);
         } catch ( std::runtime_error& e ) {
             const std::string msg = "A zero well potential is returned for output purposes. ";
@@ -500,7 +500,7 @@ namespace Opm {
         }
 
         //update guide rates
-        const auto& comm = ebosSimulator_.vanguard().grid().comm();
+        const auto& comm = simulator_.vanguard().grid().comm();
         std::vector<double> pot(numPhases(), 0.0);
         const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
         WellGroupHelpers::updateGuideRates(fieldGroup, schedule(), summaryState, this->phase_usage_, reportStepIdx, simulationTime,
@@ -510,9 +510,9 @@ namespace Opm {
         // update gpmaint targets
         if (schedule_[reportStepIdx].has_gpmaint()) {
             for (auto& calculator : regionalAveragePressureCalculator_) {
-                calculator.second->template defineState<ElementContext>(ebosSimulator_);
+                calculator.second->template defineState<ElementContext>(simulator_);
             }
-            const double dt = ebosSimulator_.timeStepSize();
+            const double dt = simulator_.timeStepSize();
             WellGroupHelpers::updateGpMaintTargetForGroups(fieldGroup,
                                                            schedule_, regionalAveragePressureCalculator_, reportStepIdx, dt, this->wellState(), this->groupState());
         }
@@ -531,9 +531,9 @@ namespace Opm {
 
                 if (event || dyn_status_change) {
                     try {
-                        well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), local_deferredLogger);
-                        well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), local_deferredLogger);
-                        well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), local_deferredLogger);
+                        well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), local_deferredLogger);
+                        well->calculateExplicitQuantities(simulator_, this->wellState(), local_deferredLogger);
+                        well->solveWellEquation(simulator_, this->wellState(), this->groupState(), local_deferredLogger);
                     } catch (const std::exception& e) {
                         const std::string msg = "Compute initial well solution for new well " + well->name() + " failed. Continue with zero initial rates";
                         local_deferredLogger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
@@ -579,14 +579,14 @@ namespace Opm {
 
             // initialize rates/previous rates to prevent zero fractions in vfp-interpolation
             if (well->isProducer()) {
-                well->updateWellStateRates(ebosSimulator_, this->wellState(), deferred_logger);
+                well->updateWellStateRates(simulator_, this->wellState(), deferred_logger);
             }
             if (well->isVFPActive(deferred_logger)) {
                 well->setPrevSurfaceRates(this->wellState(), this->prevWellState());
             }
 
             try {
-                well->wellTesting(ebosSimulator_, simulationTime, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
+                well->wellTesting(simulator_, simulationTime, this->wellState(), this->groupState(), wellTestState(), deferred_logger);
             } catch (const std::exception& e) {
                 const std::string msg = fmt::format("Exception during testing of well: {}. The well will not open.\n Exception message: {}", wellEcl.name(), e.what());
                 deferred_logger.warning("WELL_TESTING_FAILED", msg);
@@ -635,7 +635,7 @@ namespace Opm {
 
         // time step is finished and we are not any more at the beginning of an report step
         report_step_starts_ = false;
-        const int reportStepIdx = ebosSimulator_.episodeIndex();
+        const int reportStepIdx = simulator_.episodeIndex();
 
         DeferredLogger local_deferredLogger;
         for (const auto& well : well_container_) {
@@ -645,8 +645,8 @@ namespace Opm {
         }
         // update connection transmissibility factor and d factor (if applicable) in the wellstate
         for (const auto& well : well_container_) {
-            well->updateConnectionTransmissibilityFactor(ebosSimulator_, this->wellState().well(well->indexOfWell()));
-            well->updateConnectionDFactor(ebosSimulator_, this->wellState().well(well->indexOfWell()));
+            well->updateConnectionTransmissibilityFactor(simulator_, this->wellState().well(well->indexOfWell()));
+            well->updateConnectionDFactor(simulator_, this->wellState().well(well->indexOfWell()));
         }
 
         if (Indices::waterEnabled) {
@@ -691,13 +691,13 @@ namespace Opm {
         }
 
         // update the rate converter with current averages pressures etc in
-        rateConverter_->template defineState<ElementContext>(ebosSimulator_);
+        rateConverter_->template defineState<ElementContext>(simulator_);
 
         // calculate the well potentials
         try {
             updateWellPotentials(reportStepIdx,
                                  /*onlyAfterEvent*/false,
-                                 ebosSimulator_.vanguard().summaryConfig(),
+                                 simulator_.vanguard().summaryConfig(),
                                  local_deferredLogger);
         } catch ( std::runtime_error& e ) {
             const std::string msg = "A zero well potential is returned for output purposes. ";
@@ -709,9 +709,9 @@ namespace Opm {
         // check group sales limits at the end of the timestep
         const Group& fieldGroup = schedule_.getGroup("FIELD", reportStepIdx);
         checkGEconLimits(
-            fieldGroup, simulationTime, ebosSimulator_.episodeIndex(), local_deferredLogger);
+            fieldGroup, simulationTime, simulator_.episodeIndex(), local_deferredLogger);
         checkGconsaleLimits(fieldGroup, this->wellState(),
-                            ebosSimulator_.episodeIndex(), local_deferredLogger);
+                            simulator_.episodeIndex(), local_deferredLogger);
 
         this->calculateProductivityIndexValues(local_deferredLogger);
 
@@ -771,9 +771,9 @@ namespace Opm {
     initializeWellState(const int timeStepIdx)
     {
         std::vector<double> cellPressures(this->local_num_cells_, 0.0);
-        ElementContext elemCtx(ebosSimulator_);
+        ElementContext elemCtx(simulator_);
 
-        const auto& gridView = ebosSimulator_.vanguard().gridView();
+        const auto& gridView = simulator_.vanguard().gridView();
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
@@ -791,7 +791,7 @@ namespace Opm {
                 perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
             }
         }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::initializeWellState() failed: ", ebosSimulator_.vanguard().grid().comm());
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::initializeWellState() failed: ", simulator_.vanguard().grid().comm());
 
         this->wellState().init(cellPressures, schedule(), wells_ecl_, local_parallel_well_info_, timeStepIdx,
                                &this->prevWellState(), well_perf_data_,
@@ -846,7 +846,7 @@ namespace Opm {
                     // a timestep without the well in question, after it caused
                     // repeated timestep cuts. It should therefore not be opened,
                     // even if it was new or received new targets this report step.
-                    const bool closed_this_step = (wellTestState().lastTestTime(well_name) == ebosSimulator_.time());
+                    const bool closed_this_step = (wellTestState().lastTestTime(well_name) == simulator_.time());
                     // TODO: more checking here, to make sure this standard more specific and complete
                     // maybe there is some WCON keywords will not open the well
                     auto& events = this->wellState().well(w).events;
@@ -1025,7 +1025,7 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     doPreStepNetworkRebalance(DeferredLogger& deferred_logger) {
-        const double dt = this->ebosSimulator_.timeStepSize();
+        const double dt = this->simulator_.timeStepSize();
         // TODO: should we also have the group and network backed-up here in case the solution did not get converged?
         auto& well_state = this->wellState();
         const std::size_t max_iter = param_.network_max_iterations_;
@@ -1041,7 +1041,7 @@ namespace Opm {
             }
             ++iter;
             for (auto& well : this->well_container_) {
-                const auto& summary_state = this->ebosSimulator_.vanguard().summaryState();
+                const auto& summary_state = this->simulator_.vanguard().summaryState();
                 well->solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
             }
             this->initPrimaryVariablesEvaluation();
@@ -1078,7 +1078,7 @@ namespace Opm {
         perfTimer.start();
 
         {
-            const int episodeIdx = ebosSimulator_.episodeIndex();
+            const int episodeIdx = simulator_.episodeIndex();
             const auto& network = schedule()[episodeIdx].network();
             if ( !wellsActive() && !network.active() ) {
                 return;
@@ -1180,12 +1180,12 @@ namespace Opm {
                                        terminal_output_, grid().comm());
 
         //update guide rates
-        const int reportStepIdx = ebosSimulator_.episodeIndex();
+        const int reportStepIdx = simulator_.episodeIndex();
         if (alq_updated || BlackoilWellModelGuideRates(*this).
                            guideRateUpdateIsNeeded(reportStepIdx)) {
-            const double simulationTime = ebosSimulator_.time();
-            const auto& comm = ebosSimulator_.vanguard().grid().comm();
-            const auto& summaryState = ebosSimulator_.vanguard().summaryState();
+            const double simulationTime = simulator_.time();
+            const auto& comm = simulator_.vanguard().grid().comm();
+            const auto& summaryState = simulator_.vanguard().summaryState();
             std::vector<double> pot(numPhases(), 0.0);
             const Group& fieldGroup = schedule().getGroup("FIELD", reportStepIdx);
             WellGroupHelpers::updateGuideRates(fieldGroup, schedule(), summaryState, this->phase_usage_, reportStepIdx, simulationTime,
@@ -1210,7 +1210,7 @@ namespace Opm {
         perfTimer.start();
 
         {
-            const int episodeIdx = ebosSimulator_.episodeIndex();
+            const int episodeIdx = simulator_.episodeIndex();
             const auto& network = schedule()[episodeIdx].network();
             if ( !wellsActive() && !network.active() ) {
                 return;
@@ -1245,8 +1245,8 @@ namespace Opm {
     {
         bool do_glift_optimization = false;
         int num_wells_changed = 0;
-        const double simulation_time = ebosSimulator_.time();
-        const double min_wait = ebosSimulator_.vanguard().schedule().glo(ebosSimulator_.episodeIndex()).min_wait();
+        const double simulation_time = simulator_.time();
+        const double min_wait = simulator_.vanguard().schedule().glo(simulator_.episodeIndex()).min_wait();
         // We only optimize if a min_wait time has past.
         // If all_newton is true we still want to optimize several times pr timestep
         // i.e. we also optimize if check simulation_time == last_glift_opt_time_
@@ -1271,15 +1271,15 @@ namespace Opm {
             initGliftEclWellMap(ecl_well_map);
             GasLiftGroupInfo group_info {
                 ecl_well_map,
-                ebosSimulator_.vanguard().schedule(),
-                ebosSimulator_.vanguard().summaryState(),
-                ebosSimulator_.episodeIndex(),
-                ebosSimulator_.model().newtonMethod().numIterations(),
+                simulator_.vanguard().schedule(),
+                simulator_.vanguard().summaryState(),
+                simulator_.episodeIndex(),
+                simulator_.model().newtonMethod().numIterations(),
                 phase_usage_,
                 deferred_logger,
                 this->wellState(),
                 this->groupState(),
-                ebosSimulator_.vanguard().grid().comm(),
+                simulator_.vanguard().grid().comm(),
                 this->glift_debug
             };
             group_info.initialize();
@@ -1287,7 +1287,7 @@ namespace Opm {
                 deferred_logger, prod_wells, glift_wells, group_info, state_map);
             gasLiftOptimizationStage2(
                 deferred_logger, prod_wells, glift_wells, group_info, state_map,
-                ebosSimulator_.episodeIndex());
+                simulator_.episodeIndex());
             if (this->glift_debug) gliftDebugShowALQ(deferred_logger);
             num_wells_changed = glift_wells.size();
         }
@@ -1302,7 +1302,7 @@ namespace Opm {
         GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
         GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map)
     {
-        auto comm = ebosSimulator_.vanguard().grid().comm();
+        auto comm = simulator_.vanguard().grid().comm();
         int num_procs = comm.size();
         // NOTE: Gas lift optimization stage 1 seems to be difficult
         //  to do in parallel since the wells are optimized on different
@@ -1410,14 +1410,14 @@ namespace Opm {
         GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map,
         GLiftSyncGroups& sync_groups)
     {
-        const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+        const auto& summary_state = simulator_.vanguard().summaryState();
         std::unique_ptr<GasLiftSingleWell> glift
             = std::make_unique<GasLiftSingleWell>(
-                *well, ebosSimulator_, summary_state,
+                *well, simulator_, summary_state,
                 deferred_logger, this->wellState(), this->groupState(),
                 group_info, sync_groups, this->comm_, this->glift_debug);
         auto state = glift->runOptimize(
-            ebosSimulator_.model().newtonMethod().numIterations());
+            simulator_.model().newtonMethod().numIterations());
         if (state) {
             state_map.insert({well->name(), std::move(state)});
             glift_wells.insert({well->name(), std::move(glift)});
@@ -1445,7 +1445,7 @@ namespace Opm {
     assembleWellEq(const double dt, DeferredLogger& deferred_logger)
     {
         for (auto& well : well_container_) {
-            well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+            well->assembleWellEq(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
         }
     }
 
@@ -1457,7 +1457,7 @@ namespace Opm {
     {
         for (auto& well : well_container_) {
             if (well_domain_.at(well->name()) == domain.index) {
-                well->assembleWellEq(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+                well->assembleWellEq(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
             }
         }
     }
@@ -1469,7 +1469,7 @@ namespace Opm {
     prepareWellsBeforeAssembling(const double dt, DeferredLogger& deferred_logger)
     {
         for (auto& well : well_container_) {
-            well->prepareWellBeforeAssembling(ebosSimulator_, dt, this->wellState(), this->groupState(), deferred_logger);
+            well->prepareWellBeforeAssembling(simulator_, dt, this->wellState(), this->groupState(), deferred_logger);
         }
     }
 
@@ -1484,7 +1484,7 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         for (auto& well: well_container_) {
-            well->assembleWellEqWithoutIteration(ebosSimulator_, dt, this->wellState(), this->groupState(),
+            well->assembleWellEqWithoutIteration(simulator_, dt, this->wellState(), this->groupState(),
                                                  deferred_logger);
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(deferred_logger, "BlackoilWellModel::assembleWellEqWithoutIteration failed: ",
@@ -1620,7 +1620,7 @@ namespace Opm {
                 VectorBlockType res(0.0);
                 using MatrixBlockType = typename SparseMatrixAdapter::MatrixBlock;
                 MatrixBlockType bMat(0.0);
-                ebosSimulator_.model().linearizer().setResAndJacobi(res, bMat, rate);
+                simulator_.model().linearizer().setResAndJacobi(res, bMat, rate);
                 residual[cellIdx] += res;
                 *diagMatAddress[cellIdx] += bMat;
             }
@@ -1659,14 +1659,14 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-            const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+            const auto& summary_state = simulator_.vanguard().summaryState();
             for (auto& well : well_container_) {
                 well->recoverWellSolutionAndUpdateWellState(summary_state, x, this->wellState(), local_deferredLogger);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
                                        "recoverWellSolutionAndUpdateWellState() failed: ",
-                                       terminal_output_, ebosSimulator_.vanguard().grid().comm());
+                                       terminal_output_, simulator_.vanguard().grid().comm());
     }
 
 
@@ -1679,7 +1679,7 @@ namespace Opm {
         // try/catch here, as this function is not called in
         // parallel but for each individual domain of each rank.
         DeferredLogger local_deferredLogger;
-        const auto& summary_state = this->ebosSimulator_.vanguard().summaryState();
+        const auto& summary_state = this->simulator_.vanguard().summaryState();
         for (auto& well : well_container_) {
             if (well_domain_.at(well->name()) == domain.index) {
                 well->recoverWellSolutionAndUpdateWellState(summary_state, x,
@@ -1730,8 +1730,8 @@ namespace Opm {
                              const std::vector<Scalar>& B_avg,
                              DeferredLogger& local_deferredLogger) const
     {
-        const auto& summary_state = ebosSimulator_.vanguard().summaryState();
-        const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
+        const auto& summary_state = simulator_.vanguard().summaryState();
+        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const bool relax_tolerance = iterationIdx > param_.strict_outer_iter_wells_;
 
         ConvergenceReport report;
@@ -1778,10 +1778,10 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         // Get global (from all processes) convergence report.
         ConvergenceReport local_report;
-        const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
+        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         for (const auto& well : well_container_) {
             if (well->isOperableAndSolvable() || well->wellIsStopped()) {
-                const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+                const auto& summary_state = simulator_.vanguard().summaryState();
                 local_report += well->getWellConvergence(
                         summary_state, this->wellState(), B_avg, local_deferredLogger,
                         iterationIdx > param_.strict_outer_iter_wells_);
@@ -1829,7 +1829,7 @@ namespace Opm {
     {
         // TODO: checking isOperableAndSolvable() ?
         for (auto& well : well_container_) {
-            well->calculateExplicitQuantities(ebosSimulator_, this->wellState(), deferred_logger);
+            well->calculateExplicitQuantities(simulator_, this->wellState(), deferred_logger);
         }
     }
 
@@ -1842,14 +1842,14 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     updateWellControls(const bool mandatory_network_balance, DeferredLogger& deferred_logger, const bool relax_network_tolerance)
     {
-        const int episodeIdx = ebosSimulator_.episodeIndex();
+        const int episodeIdx = simulator_.episodeIndex();
         const auto& network = schedule()[episodeIdx].network();
         if (!wellsActive() && !network.active()) {
             return {false, false};
         }
 
-        const int iterationIdx = ebosSimulator_.model().newtonMethod().numIterations();
-        const auto& comm = ebosSimulator_.vanguard().grid().comm();
+        const int iterationIdx = simulator_.model().newtonMethod().numIterations();
+        const auto& comm = simulator_.vanguard().grid().comm();
         updateAndCommunicateGroupData(episodeIdx, iterationIdx);
 
         // network related
@@ -1880,13 +1880,13 @@ namespace Opm {
             OPM_BEGIN_PARALLEL_TRY_CATCH()
                 for (const auto& well : well_container_) {
                     const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Group;
-                    const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+                    const bool changed_well = well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), deferred_logger);
                     if (changed_well) {
                         changed_well_to_group = changed_well || changed_well_to_group;
                     }
                 }
             OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel: updating well controls failed: ",
-                                       ebosSimulator_.gridView().comm());
+                                       simulator_.gridView().comm());
         }
 
         changed_well_to_group = comm.sum(static_cast<int>(changed_well_to_group));
@@ -1903,13 +1903,13 @@ namespace Opm {
             OPM_BEGIN_PARALLEL_TRY_CATCH()
                 for (const auto& well : well_container_) {
                     const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
-                    const bool changed_well = well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+                    const bool changed_well = well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), deferred_logger);
                     if (changed_well) {
                         changed_well_individual = changed_well || changed_well_individual;
                     }
                 }
             OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel: updating well controls failed: ",
-                                       ebosSimulator_.gridView().comm());
+                                       simulator_.gridView().comm());
         }
 
         changed_well_individual = comm.sum(static_cast<int>(changed_well_individual));
@@ -1939,7 +1939,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             if (well_domain_.at(well->name()) == domain.index) {
                 const auto mode = WellInterface<TypeTag>::IndividualOrGroup::Individual;
-                well->updateWellControl(ebosSimulator_, mode, this->wellState(), this->groupState(), deferred_logger);
+                well->updateWellControl(simulator_, mode, this->wellState(), this->groupState(), deferred_logger);
             }
         }
     }
@@ -2108,10 +2108,10 @@ namespace Opm {
         OPM_BEGIN_PARALLEL_TRY_CATCH()
         // if a well or group change control it affects all wells that are under the same group
         for (const auto& well : well_container_) {
-            well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
+            well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), deferred_logger);
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::updateAndCommunicate failed: ",
-                                   ebosSimulator_.gridView().comm())
+                                   simulator_.gridView().comm())
         updateAndCommunicateGroupData(reportStepIdx, iterationIdx);
     }
 
@@ -2159,7 +2159,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             const auto& wname = well->name();
             const auto wasClosed = wellTestState.well_is_closed(wname);
-            well->checkWellOperability(ebosSimulator_, this->wellState(), local_deferredLogger);
+            well->checkWellOperability(simulator_, this->wellState(), local_deferredLogger);
             well->updateWellTestState(this->wellState().well(wname), simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
 
             if (!wasClosed && wellTestState.well_is_closed(wname)) {
@@ -2189,7 +2189,7 @@ namespace Opm {
         std::string cur_exc_msg;
         auto cur_exc_type = ExceptionType::NONE;
         try {
-            well->computeWellPotentials(ebosSimulator_, well_state_copy, potentials, deferred_logger);
+            well->computeWellPotentials(simulator_, well_state_copy, potentials, deferred_logger);
         }
         // catch all possible exception and store type and message.
         OPM_PARALLEL_CATCH_CLAUSE(cur_exc_type, cur_exc_msg);
@@ -2260,7 +2260,7 @@ namespace Opm {
     calculateProductivityIndexValues(const WellInterface<TypeTag>* wellPtr,
                                      DeferredLogger& deferred_logger)
     {
-        wellPtr->updateProductivityIndex(this->ebosSimulator_,
+        wellPtr->updateProductivityIndex(this->simulator_,
                                          this->prod_index_calc_[wellPtr->indexOfWell()],
                                          this->wellState(),
                                          deferred_logger);
@@ -2274,7 +2274,7 @@ namespace Opm {
     prepareTimeStep(DeferredLogger& deferred_logger)
     {
         // Check if there is a network with active prediction wells at this time step.
-        const auto episodeIdx = ebosSimulator_.episodeIndex();
+        const auto episodeIdx = simulator_.episodeIndex();
         this->updateNetworkActiveState(episodeIdx);
 
         // Rebalance the network initially if any wells in the network have status changes
@@ -2284,8 +2284,8 @@ namespace Opm {
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState::event_mask)) {
-                well->updateWellStateWithTarget(ebosSimulator_, this->groupState(), this->wellState(), deferred_logger);
-                const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+                well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), deferred_logger);
+                const auto& summary_state = simulator_.vanguard().summaryState();
                 well->updatePrimaryVariables(summary_state, this->wellState(), deferred_logger);
                 well->initPrimaryVariablesEvaluation();
                 // There is no new well control change input within a report step,
@@ -2299,7 +2299,7 @@ namespace Opm {
             // solve the well equation initially to improve the initial solution of the well model
             if (param_.solve_welleq_initially_ && well->isOperableAndSolvable()) {
                 try {
-                    well->solveWellEquation(ebosSimulator_, this->wellState(), this->groupState(), deferred_logger);
+                    well->solveWellEquation(simulator_, this->wellState(), this->groupState(), deferred_logger);
                 } catch (const std::exception& e) {
                     const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the previous rates";
                     deferred_logger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
@@ -2321,9 +2321,9 @@ namespace Opm {
     updateAverageFormationFactor()
     {
         std::vector< Scalar > B_avg(numComponents(), Scalar() );
-        const auto& grid = ebosSimulator_.vanguard().grid();
+        const auto& grid = simulator_.vanguard().grid();
         const auto& gridView = grid.leafGridView();
-        ElementContext elemCtx(ebosSimulator_);
+        ElementContext elemCtx(simulator_);
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
@@ -2370,7 +2370,7 @@ namespace Opm {
     updatePrimaryVariables(DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
-            const auto& summary_state = ebosSimulator_.vanguard().summaryState();
+            const auto& summary_state = simulator_.vanguard().summaryState();
             well->updatePrimaryVariables(summary_state, this->wellState(), deferred_logger);
         }
     }
@@ -2379,8 +2379,8 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::extractLegacyCellPvtRegionIndex_()
     {
-        const auto& grid = ebosSimulator_.vanguard().grid();
-        const auto& eclProblem = ebosSimulator_.problem();
+        const auto& grid = simulator_.vanguard().grid();
+        const auto& eclProblem = simulator_.problem();
         const unsigned numCells = grid.size(/*codim=*/0);
 
         pvt_region_idx_.resize(numCells);
@@ -2412,7 +2412,7 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::extractLegacyDepth_()
     {
-        const auto& eclProblem = ebosSimulator_.problem();
+        const auto& eclProblem = simulator_.problem();
         depth_.resize(local_num_cells_);
         for (unsigned cellIdx = 0; cellIdx < local_num_cells_; ++cellIdx) {
             depth_[cellIdx] = eclProblem.dofCenterDepth(cellIdx);
@@ -2456,7 +2456,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     reportStepIndex() const
     {
-        return std::max(this->ebosSimulator_.episodeIndex(), 0);
+        return std::max(this->simulator_.episodeIndex(), 0);
     }
 
 
@@ -2515,7 +2515,7 @@ namespace Opm {
             using int_type = decltype(well_perf_data_[wellID].size());
             for (int_type perf = 0, end_perf = well_perf_data_[wellID].size(); perf < end_perf; ++perf) {
                 const int cell_idx = well_perf_data_[wellID][perf].cell_index;
-                const auto& intQuants = ebosSimulator_.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
+                const auto& intQuants = simulator_.model().intensiveQuantities(cell_idx, /*timeIdx=*/0);
                 const auto& fs = intQuants.fluidState();
 
                 // we on only have one temperature pr cell any phaseIdx will do
@@ -2631,7 +2631,7 @@ namespace Opm {
             }
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::setupDomains(): well found on multiple domains.",
-                                   ebosSimulator_.gridView().comm());
+                                   simulator_.gridView().comm());
 
         // Write well/domain info to the DBG file.
         const Opm::Parallel::Communication& comm = grid().comm();
