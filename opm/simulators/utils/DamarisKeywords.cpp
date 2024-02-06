@@ -43,8 +43,8 @@
     The entries in the map below will be filled by the corresponding
     Damaris Keywords.
     
-    The command line arguments are defined in ebos/damariswriter.hh 
-    and defaults are set in ebos/eclproblem_properties.hh
+    The command line arguments are defined in opm/simulators/flow/DamarisWriter.hpp
+    and defaults are set in opm/simulators/flow/FlowProblemProperties.hpp
 */
 
 namespace Opm::DamarisOutput
