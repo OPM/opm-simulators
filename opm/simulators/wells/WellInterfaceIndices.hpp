@@ -39,7 +39,7 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Water;
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
 
-    int flowPhaseToEbosCompIdx(const int phaseIdx) const;
+    int flowPhaseToModelCompIdx(const int phaseIdx) const;
     int ebosCompIdxToFlowCompIdx(const unsigned compIdx) const;
     double scalingFactor(const int phaseIdx) const;
 
