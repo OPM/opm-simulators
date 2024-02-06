@@ -45,7 +45,7 @@ int flowEbosFoamMain(int argc, char** argv, bool outputCout, bool outputFiles)
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowFoamProblem>
+    FlowMain<Properties::TTag::EclFlowFoamProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

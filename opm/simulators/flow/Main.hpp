@@ -60,7 +60,7 @@
 #include <opm/models/utils/parametersystem.hh>
 
 #include <opm/simulators/flow/Banners.hpp>
-#include <opm/simulators/flow/FlowMainEbos.hpp>
+#include <opm/simulators/flow/FlowMain.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -113,7 +113,7 @@ int flowEbosMain(int argc, char** argv, bool outputCout, bool outputFiles)
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<TypeTag> mainfunc(argc, argv, outputCout, outputFiles);
+    FlowMain<TypeTag> mainfunc(argc, argv, outputCout, outputFiles);
     return mainfunc.execute();
 }
 
@@ -170,12 +170,12 @@ public:
         return exitCode;
     }
 
-    using FlowMainEbosType = FlowMainEbos<Properties::TTag::EclFlowProblemTPFA>;
+    using FlowMainType = FlowMain<Properties::TTag::EclFlowProblemTPFA>;
     // To be called from the Python interface code. Only do the
     // initialization and then return a pointer to the FlowEbosMain
     // object that can later be accessed directly from the Python interface
     // to e.g. advance the simulator one report step
-    std::unique_ptr<FlowMainEbosType> initFlowEbosBlackoil(int& exitCode)
+    std::unique_ptr<FlowMainType> initFlowEbosBlackoil(int& exitCode)
     {
         exitCode = EXIT_SUCCESS;
         if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
@@ -186,7 +186,7 @@ public:
                 argc_, argv_, outputCout_, outputFiles_);
         } else {
             //NOTE: exitCode was set by initialize_() above;
-            return std::unique_ptr<FlowMainEbosType>(); // nullptr
+            return std::unique_ptr<FlowMainType>(); // nullptr
         }
     }
 
@@ -313,7 +313,7 @@ private:
         using PreProblem = GetPropType<PreTypeTag, Properties::Problem>;
 
         PreProblem::setBriefDescription("Flow, an advanced reservoir simulator for ECL-decks provided by the Open Porous Media project.");
-        int status = FlowMainEbos<PreTypeTag>::setupParameters_(argc_, argv_, EclGenericVanguard::comm());
+        int status = FlowMain<PreTypeTag>::setupParameters_(argc_, argv_, EclGenericVanguard::comm());
         if (status != 0) {
             // if setupParameters_ returns a value smaller than 0, there was no error, but
             // the program should abort. This is the case e.g. for the --help and the

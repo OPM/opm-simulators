@@ -23,7 +23,7 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 #include <opm/simulators/flow/Main.hpp>
-#include <opm/simulators/flow/FlowMainEbos.hpp>
+#include <opm/simulators/flow/FlowMain.hpp>
 //#include <opm/simulators/flow/python/PyFluidState.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
 #include <opm/simulators/flow/python/PyBlackOilSimulator.hpp>
@@ -67,14 +67,14 @@ void PyBlackOilSimulator::advance(int report_step)
 
 bool PyBlackOilSimulator::checkSimulationFinished()
 {
-    return getFlowMainEbos().getSimTimer()->done();
+    return getFlowMain().getSimTimer()->done();
 }
 
 // This returns the report step number that will be executed next time step()
 //   is called.
 int PyBlackOilSimulator::currentStep()
 {
-    return getFlowMainEbos().getSimTimer()->currentStepNum();
+    return getFlowMain().getSimTimer()->currentStepNum();
     // NOTE: this->ebos_simulator_->episodeIndex() would also return the current
     // report step number, but this number is always delayed by 1 step relative
     // to this->main_ebos_->getSimTimer()->currentStepNum()
@@ -88,7 +88,7 @@ py::array_t<double> PyBlackOilSimulator::getCellVolumes() {
 }
 
 double PyBlackOilSimulator::getDT() {
-    return getFlowMainEbos().getPreviousReportStepSize();
+    return getFlowMain().getPreviousReportStepSize();
 }
 
 py::array_t<double> PyBlackOilSimulator::getPorosity()
@@ -125,14 +125,14 @@ int PyBlackOilSimulator::step()
     }
     //if (this->debug_)
     //    this->mainEbos_->getSimTimer()->report(std::cout);
-    auto result = getFlowMainEbos().executeStep();
+    auto result = getFlowMain().executeStep();
     return result;
 }
 
 int PyBlackOilSimulator::stepCleanup()
 {
     this->has_run_cleanup_ = true;
-    return getFlowMainEbos().executeStepsCleanup();
+    return getFlowMain().executeStepsCleanup();
 }
 
 int PyBlackOilSimulator::stepInit()
@@ -175,15 +175,15 @@ int PyBlackOilSimulator::stepInit()
 // Private methods alphabetically sorted
 // ------------------------------------
 
-Opm::FlowMainEbos<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
-         PyBlackOilSimulator::getFlowMainEbos() const
+Opm::FlowMain<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
+         PyBlackOilSimulator::getFlowMain() const
 {
     if (this->main_ebos_) {
         return *this->main_ebos_;
     }
     else {
         throw std::runtime_error("BlackOilSimulator not initialized: "
-            "Cannot get reference to FlowMainEbos object" );
+            "Cannot get reference to FlowMain object" );
     }
 }
 
@@ -195,7 +195,7 @@ PyBlackOilSimulator::getMaterialState() const
     }
     else {
         throw std::runtime_error("BlackOilSimulator not initialized: "
-            "Cannot get reference to FlowMainEbos object" );
+            "Cannot get reference to FlowMain object" );
     }
 }
 

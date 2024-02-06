@@ -45,7 +45,7 @@ int flowEbosPolymerMain(int argc, char** argv, bool outputCout, bool outputFiles
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowPolymerProblem>
+    FlowMain<Properties::TTag::EclFlowPolymerProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

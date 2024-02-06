@@ -85,7 +85,7 @@ int flowEbosGasWaterSaltprecVapwatMain(int argc, char** argv, bool outputCout, b
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowGasWaterSaltprecVapwatProblem>
+    FlowMain<Properties::TTag::EclFlowGasWaterSaltprecVapwatProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

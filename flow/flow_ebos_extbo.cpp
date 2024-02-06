@@ -45,7 +45,7 @@ int flowEbosExtboMain(int argc, char** argv, bool outputCout, bool outputFiles)
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowExtboProblem>
+    FlowMain<Properties::TTag::EclFlowExtboProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

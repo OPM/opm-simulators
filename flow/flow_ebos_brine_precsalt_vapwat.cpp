@@ -55,7 +55,7 @@ int flowEbosBrinePrecsaltVapwatMain(int argc, char** argv, bool outputCout, bool
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowBrinePrecsaltVapwatProblem>
+    FlowMain<Properties::TTag::EclFlowBrinePrecsaltVapwatProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

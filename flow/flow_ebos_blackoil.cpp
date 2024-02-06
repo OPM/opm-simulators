@@ -44,14 +44,14 @@ namespace Opm {
 
 namespace Opm
 {
-std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblemTPFA>>
+std::unique_ptr<FlowMain<Properties::TTag::EclFlowProblemTPFA>>
 flowEbosBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
 
-    return std::make_unique<FlowMainEbos<Properties::TTag::EclFlowProblemTPFA>>(
+    return std::make_unique<FlowMain<Properties::TTag::EclFlowProblemTPFA>>(
         argc, argv, outputCout, outputFiles);
 }
 
@@ -62,7 +62,7 @@ int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool output
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowProblemTPFA>
+    FlowMain<Properties::TTag::EclFlowProblemTPFA>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }

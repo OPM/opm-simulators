@@ -19,8 +19,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
-#define OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
+#ifndef OPM_FLOW_MAIN_HEADER_INCLUDED
+#define OPM_FLOW_MAIN_HEADER_INCLUDED
 
 #include <opm/simulators/flow/Banners.hpp>
 #include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
@@ -92,13 +92,13 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 
     class Deck;
 
-    // The FlowMain class is the ebos based black-oil simulator.
+    // The FlowMain class is the black-oil simulator.
     template <class TypeTag>
-    class FlowMainEbos
+    class FlowMain
     {
     public:
         using MaterialLawManager = typename GetProp<TypeTag, Properties::MaterialLaw>::EclMaterialLawManager;
-        using EbosSimulator = GetPropType<TypeTag, Properties::Simulator>;
+        using ModelSimulator = GetPropType<TypeTag, Properties::Simulator>;
         using Grid = GetPropType<TypeTag, Properties::Grid>;
         using GridView = GetPropType<TypeTag, Properties::GridView>;
         using Problem = GetPropType<TypeTag, Properties::Problem>;
@@ -107,7 +107,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 
         using Simulator = SimulatorFullyImplicitBlackoil<TypeTag>;
 
-        FlowMainEbos(int argc, char **argv, bool output_cout, bool output_files )
+        FlowMain(int argc, char **argv, bool output_cout, bool output_files )
             : argc_{argc}, argv_{argv},
               output_cout_{output_cout}, output_files_{output_files}
         {
@@ -138,7 +138,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 
             Simulator::registerParameters();
 
-            // register the parameters inherited from ebos
+            // register the base parameters
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
 
             // hide the parameters unused by flow. TODO: this is a pain to maintain
@@ -289,12 +289,12 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         /// input.
         int execute()
         {
-            return execute_(&FlowMainEbos::runSimulator, /*cleanup=*/true);
+            return execute_(&FlowMain::runSimulator, /*cleanup=*/true);
         }
 
         int executeInitStep()
         {
-            return execute_(&FlowMainEbos::runSimulatorInit, /*cleanup=*/false);
+            return execute_(&FlowMain::runSimulatorInit, /*cleanup=*/false);
         }
 
         // Returns true unless "EXIT" was encountered in the schedule
@@ -313,11 +313,13 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             return report.success.exit_status;
         }
 
-        EbosSimulator *getSimulatorPtr() {
-            return ebosSimulator_.get();
+        ModelSimulator* getSimulatorPtr()
+        {
+            return modelSimulator_.get();
         }
 
-        SimulatorTimer* getSimTimer() {
+        SimulatorTimer* getSimTimer()
+        {
             return simtimer_.get();
         }
 
@@ -329,7 +331,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 
     private:
         // called by execute() or executeInitStep()
-        int execute_(int (FlowMainEbos::* runOrInitFunc)(), bool cleanup)
+        int execute_(int (FlowMain::* runOrInitFunc)(), bool cleanup)
         {
             auto logger = [this](const std::exception& e, const std::string& message_start) {
                 std::ostringstream message;
@@ -357,7 +359,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                     return status;
 
                 setupParallelism();
-                setupEbosSimulator();
+                setupModelSimulator();
                 createSimulator();
 
                 // if run, do the actual work, else just initialize
@@ -420,7 +422,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             // force closing of all log files.
             OpmLog::removeAllBackends();
 
-            if (mpi_rank_ != 0 || mpi_size_ < 2 || !this->output_files_ || !ebosSimulator_) {
+            if (mpi_rank_ != 0 || mpi_size_ < 2 || !this->output_files_ || !modelSimulator_) {
                 return;
             }
 
@@ -429,11 +431,11 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                                           EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning));
         }
 
-        void setupEbosSimulator()
+        void setupModelSimulator()
         {
-            ebosSimulator_ = std::make_unique<EbosSimulator>(EclGenericVanguard::comm(), /*verbose=*/false);
-            ebosSimulator_->executionTimer().start();
-            ebosSimulator_->model().applyInitialSolution();
+            modelSimulator_ = std::make_unique<ModelSimulator>(EclGenericVanguard::comm(), /*verbose=*/false);
+            modelSimulator_->executionTimer().start();
+            modelSimulator_->model().applyInitialSolution();
 
             try {
                 // Possible to force initialization only behavior (NOSIM).
@@ -463,23 +465,23 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         }
 
         const EclipseState& eclState() const
-        { return ebosSimulator_->vanguard().eclState(); }
+        { return modelSimulator_->vanguard().eclState(); }
 
         EclipseState& eclState()
-        { return ebosSimulator_->vanguard().eclState(); }
+        { return modelSimulator_->vanguard().eclState(); }
 
         const Schedule& schedule() const
-        { return ebosSimulator_->vanguard().schedule(); }
+        { return modelSimulator_->vanguard().schedule(); }
 
         // Run the simulator.
         int runSimulator()
         {
-            return runSimulatorInitOrRun_(&FlowMainEbos::runSimulatorRunCallback_);
+            return runSimulatorInitOrRun_(&FlowMain::runSimulatorRunCallback_);
         }
 
         int runSimulatorInit()
         {
-            return runSimulatorInitOrRun_(&FlowMainEbos::runSimulatorInitCallback_);
+            return runSimulatorInitOrRun_(&FlowMain::runSimulatorInitCallback_);
         }
 
     private:
@@ -522,7 +524,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         }
 
         // Run the simulator.
-        int runSimulatorInitOrRun_(int (FlowMainEbos::* initOrRunFunc)())
+        int runSimulatorInitOrRun_(int (FlowMain::* initOrRunFunc)())
         {
 
             const auto& schedule = this->schedule();
@@ -571,14 +573,14 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         void createSimulator()
         {
             // Create the simulator instance.
-            simulator_ = std::make_unique<Simulator>(*ebosSimulator_);
+            simulator_ = std::make_unique<Simulator>(*modelSimulator_);
         }
 
         Grid& grid()
-        { return ebosSimulator_->vanguard().grid(); }
+        { return modelSimulator_->vanguard().grid(); }
 
     private:
-        std::unique_ptr<EbosSimulator> ebosSimulator_;
+        std::unique_ptr<ModelSimulator> modelSimulator_;
         int  mpi_rank_ = 0;
         int  mpi_size_ = 1;
         std::any parallel_information_;
@@ -592,4 +594,4 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
 
 } // namespace Opm
 
-#endif // OPM_FLOW_MAIN_EBOS_HEADER_INCLUDED
+#endif // OPM_FLOW_MAIN_HEADER_INCLUDED

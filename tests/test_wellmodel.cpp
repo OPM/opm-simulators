@@ -41,7 +41,7 @@
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/grid/GridHelpers.hpp>
-#include <opm/simulators/flow/FlowMainEbos.hpp>
+#include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/simulators/flow/BlackoilModel.hpp>
 
 #include <ebos/eclproblem.hh>
@@ -101,7 +101,7 @@ struct GlobalFixture {
         Dune::MPIHelper::instance(argcDummy, argvDummy);
 #endif
 
-        Opm::FlowMainEbos<Opm::Properties::TTag::EclFlowProblem>::setupParameters_(argcDummy, argvDummy, Dune::MPIHelper::getCommunication());
+        Opm::FlowMain<Opm::Properties::TTag::EclFlowProblem>::setupParameters_(argcDummy, argvDummy, Dune::MPIHelper::getCommunication());
     }
 };
 

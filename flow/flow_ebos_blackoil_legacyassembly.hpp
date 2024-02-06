@@ -21,7 +21,7 @@
 
 namespace Opm {
 
-template<class TypeTag> class FlowMainEbos;
+template<class TypeTag> class FlowMain;
 
 namespace Action {
 class State;
@@ -32,7 +32,7 @@ namespace Properties { namespace TTag { struct EclFlowProblem; } }
 int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
 //! \brief Initialization function used in flow binary and python simulator.
-std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblem>>
+std::unique_ptr<FlowMain<Properties::TTag::EclFlowProblem>>
     flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
 
 //! \brief Main function used in flow_blackoil binary.

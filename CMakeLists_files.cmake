@@ -44,7 +44,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/Banners.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
-  opm/simulators/flow/FlowMainEbos.cpp
+  opm/simulators/flow/FlowMain.cpp
   opm/simulators/flow/InterRegFlows.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/LogOutputHelper.cpp
@@ -448,7 +448,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/Banners.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
-  opm/simulators/flow/FlowMainEbos.hpp
+  opm/simulators/flow/FlowMain.hpp
   opm/simulators/flow/InterRegFlows.hpp
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/NonlinearSolver.hpp

@@ -21,7 +21,7 @@
 */
 
 #include <config.h>
-#include <opm/simulators/flow/FlowMainEbos.hpp>
+#include <opm/simulators/flow/FlowMain.hpp>
 
 #include <opm/common/utility/String.hpp>
 

@@ -24,14 +24,14 @@
 
 namespace Opm {
 
-std::unique_ptr<FlowMainEbos<Properties::TTag::EclFlowProblem>>
+std::unique_ptr<FlowMain<Properties::TTag::EclFlowProblem>>
 flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
 
-    return std::make_unique<FlowMainEbos<Properties::TTag::EclFlowProblem>>(
+    return std::make_unique<FlowMain<Properties::TTag::EclFlowProblem>>(
         argc, argv, outputCout, outputFiles);
 }
 

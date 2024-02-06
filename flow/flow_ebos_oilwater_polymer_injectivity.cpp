@@ -82,7 +82,7 @@ int flowEbosOilWaterPolymerInjectivityMain(int argc, char** argv, bool outputCou
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMainEbos<Properties::TTag::EclFlowOilWaterPolymerInjectivityProblem>
+    FlowMain<Properties::TTag::EclFlowOilWaterPolymerInjectivityProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
