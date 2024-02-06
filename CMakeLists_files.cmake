@@ -40,9 +40,9 @@ list (APPEND MAIN_SOURCE_FILES
   opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
+  opm/simulators/flow/ActionHandler.cpp
   opm/simulators/flow/Banners.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
-  opm/simulators/flow/EclActionHandler.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/FlowMainEbos.cpp
   opm/simulators/flow/InterRegFlows.cpp
@@ -439,6 +439,7 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclwriter.hh
   ebos/femcpgridcompat.hh
   ebos/vtkecltracermodule.hh
+  opm/simulators/flow/ActionHandler.hpp
   opm/simulators/flow/countGlobalCells.hpp
   opm/simulators/flow/priVarsPacking.hpp
   opm/simulators/flow/BlackoilModel.hpp
@@ -446,7 +447,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/BlackoilModelParameters.hpp
   opm/simulators/flow/Banners.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
-  opm/simulators/flow/EclActionHandler.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMainEbos.hpp
   opm/simulators/flow/InterRegFlows.hpp

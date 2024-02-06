@@ -82,7 +82,7 @@
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 
-#include <opm/simulators/flow/EclActionHandler.hpp>
+#include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
@@ -2807,7 +2807,7 @@ private:
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
 
-    EclActionHandler actionHandler_;
+    ActionHandler actionHandler_;
 
     template<class T>
     struct BCData

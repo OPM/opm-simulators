@@ -22,7 +22,7 @@
 */
 
 #include <config.h>
-#include <opm/simulators/flow/EclActionHandler.hpp>
+#include <opm/simulators/flow/ActionHandler.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/TimeService.hpp>
@@ -112,12 +112,12 @@ namespace {
 
 namespace Opm {
 
-EclActionHandler::EclActionHandler(EclipseState& ecl_state,
-                                   Schedule& schedule,
-                                   Action::State& actionState,
-                                   SummaryState& summaryState,
-                                   BlackoilWellModelGeneric& wellModel,
-                                   Parallel::Communication comm)
+ActionHandler::ActionHandler(EclipseState& ecl_state,
+                             Schedule& schedule,
+                             Action::State& actionState,
+                             SummaryState& summaryState,
+                             BlackoilWellModelGeneric& wellModel,
+                             Parallel::Communication comm)
     : ecl_state_(ecl_state)
     , schedule_(schedule)
     , actionState_(actionState)
@@ -126,9 +126,9 @@ EclActionHandler::EclActionHandler(EclipseState& ecl_state,
     , comm_(comm)
 {}
 
-void EclActionHandler::applyActions(const int reportStep,
-                                    const double sim_time,
-                                    const TransFunc& transUp)
+void ActionHandler::applyActions(const int reportStep,
+                                 const double sim_time,
+                                 const TransFunc& transUp)
 {
     OPM_TIMEBLOCK(applyActions);
     const auto& actions = schedule_[reportStep].actions();
@@ -184,10 +184,10 @@ void EclActionHandler::applyActions(const int reportStep,
     }
 }
 
-void EclActionHandler::applySimulatorUpdate(const int report_step,
-                                            const SimulatorUpdate& sim_update,
-                                            bool& commit_wellstate,
-                                            const TransFunc& updateTrans)
+void ActionHandler::applySimulatorUpdate(const int report_step,
+                                         const SimulatorUpdate& sim_update,
+                                         bool& commit_wellstate,
+                                         const TransFunc& updateTrans)
 {
     OPM_TIMEBLOCK(applySimulatorUpdate);
 
@@ -208,9 +208,9 @@ void EclActionHandler::applySimulatorUpdate(const int report_step,
 }
 
 std::unordered_map<std::string, double>
-EclActionHandler::fetchWellPI(const int reportStep,
-                              const Action::ActionX& action,
-                              const std::vector<std::string>& matching_wells) const
+ActionHandler::fetchWellPI(const int reportStep,
+                           const Action::ActionX& action,
+                           const std::vector<std::string>& matching_wells) const
 {
 
   auto wellpi_wells = action.wellpi_wells(WellMatcher(schedule_[reportStep].well_order(),
@@ -253,8 +253,8 @@ EclActionHandler::fetchWellPI(const int reportStep,
   return wellpi;
 }
 
-void EclActionHandler::evalUDQAssignments(const unsigned episodeIdx,
-                                          UDQState& udq_state)
+void ActionHandler::evalUDQAssignments(const unsigned episodeIdx,
+                                       UDQState& udq_state)
 {
     const auto& udq = schedule_[episodeIdx].udq();
 
