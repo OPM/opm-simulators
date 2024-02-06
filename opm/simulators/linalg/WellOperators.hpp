@@ -39,7 +39,7 @@ namespace Opm
 //=====================================================================
 // Implementation for ISTL-matrix based operators
 // Note: the classes WellModelMatrixAdapter and
-// WellModelGhostLastMatrixAdapter were moved from ISTLSolverEbos.hpp
+// WellModelGhostLastMatrixAdapter were moved from ISTLSolver.hpp
 // and subsequently modified.
 //=====================================================================
 
