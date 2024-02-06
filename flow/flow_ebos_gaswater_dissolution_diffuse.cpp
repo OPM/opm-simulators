@@ -34,36 +34,36 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowGasWaterDissolutionDiffuseProblem {
+struct FlowGasWaterDissolutionDiffuseProblem {
     using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::EclFlowGasWaterDissolutionDiffuseProblem> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowGasWaterDissolutionDiffuseProblem> { using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::EclFlowGasWaterDissolutionDiffuseProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowGasWaterDissolutionDiffuseProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::EclFlowGasWaterDissolutionDiffuseProblem> { static constexpr bool value = true; };
+struct EnableDiffusion<TypeTag, TTag::FlowGasWaterDissolutionDiffuseProblem> { static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::EclFlowGasWaterDissolutionDiffuseProblem> { static constexpr bool value = true; };
+struct EnableDispersion<TypeTag, TTag::FlowGasWaterDissolutionDiffuseProblem> { static constexpr bool value = true; };
 
 template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::EclFlowGasWaterDissolutionDiffuseProblem> {
+struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterDissolutionDiffuseProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::EclFlowGasWaterDissolutionDiffuseProblem> {
+struct EnableVapwat<TypeTag, TTag::FlowGasWaterDissolutionDiffuseProblem> {
     static constexpr bool value = true;
 };
 
 //! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::EclFlowGasWaterDissolutionDiffuseProblem>
+struct Indices<TypeTag, TTag::FlowGasWaterDissolutionDiffuseProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -73,15 +73,15 @@ private:
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                    getPropValue<TypeTag, Properties::EnableFoam>(),
-                                    getPropValue<TypeTag, Properties::EnableBrine>(),
-                                    /*PVOffset=*/0,
-                                    /*disabledCompIdx=*/FluidSystem::oilCompIdx,
-                                    getPropValue<TypeTag, Properties::EnableMICP>()> type;
+    using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                         getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         getPropValue<TypeTag, Properties::EnableFoam>(),
+                                         getPropValue<TypeTag, Properties::EnableBrine>(),
+                                         /*PVOffset=*/0,
+                                         /*disabledCompIdx=*/FluidSystem::oilCompIdx,
+                                         getPropValue<TypeTag, Properties::EnableMICP>()>;
 };
 }}
 
@@ -95,14 +95,14 @@ int flowEbosGasWaterDissolutionDiffuseMain(int argc, char** argv, bool outputCou
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::EclFlowGasWaterDissolutionDiffuseProblem>
+    FlowMain<Properties::TTag::FlowGasWaterDissolutionDiffuseProblem>
         mainfunc {argc, argv, outputCout, outputFiles} ;
     return mainfunc.execute();
 }
 
 int flowEbosGasWaterDissolutionDiffuseMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowGasWaterDissolutionDiffuseProblem;
+    using TypeTag = Properties::TTag::FlowGasWaterDissolutionDiffuseProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
