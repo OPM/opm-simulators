@@ -542,7 +542,7 @@ private:
 
         double pvSumLocal = 0.0;
         double numAquiferPvSumLocal = 0.0;
-        const auto& ebosModel = modelSimulator.model();
+        const auto& model = modelSimulator.model();
         const auto& ebosProblem = modelSimulator.problem();
 
         const auto& ebosResid = modelSimulator.model().linearizer().residual();
@@ -568,7 +568,7 @@ private:
             const auto& fs = intQuants.fluidState();
 
             const auto pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) *
-                                 ebosModel.dofTotalVolume(cell_idx);
+                                 model.dofTotalVolume(cell_idx);
             pvSumLocal += pvValue;
 
             if (isNumericalAquiferCell(elem))
@@ -864,14 +864,14 @@ private:
                                   const std::vector<Scalar>& B_avg, double dt) const
     {
         double errorPV{};
-        const auto& modelSimulator = model_.simulator();
-        const auto& ebosModel = modelSimulator.model();
-        const auto& ebosProblem = modelSimulator.problem();
-        const auto& ebosResid = modelSimulator.model().linearizer().residual();
+        const auto& simulator = model_.simulator();
+        const auto& model = simulator.model();
+        const auto& ebosProblem = simulator.problem();
+        const auto& ebosResid = simulator.model().linearizer().residual();
 
         for (const int cell_idx : domain.cells) {
             const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) *
-                                   ebosModel.dofTotalVolume(cell_idx);
+                                   model.dofTotalVolume(cell_idx);
             const auto& cellResidual = ebosResid[cell_idx];
             bool cnvViolated = false;
 
