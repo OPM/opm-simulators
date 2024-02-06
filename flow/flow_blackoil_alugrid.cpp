@@ -63,10 +63,6 @@ template<class TypeTag>
 struct Vanguard<TypeTag, TTag::EclFlowProblemAlugrid> {
     using type = Opm::EclAluGridVanguard<TypeTag>;
 };
-template<class TypeTag>
-struct EclEnableAquifers<TypeTag, TTag::EclFlowProblemAlugrid> {
-    static constexpr bool value = false;
-};
 }
 }
 int main(int argc, char** argv)
