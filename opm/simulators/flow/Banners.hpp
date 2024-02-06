@@ -46,4 +46,4 @@ void printFlowTrailer(int nprocs, int nthreads,
 
 } // namespace Opm
 
-#endif // OPM_FLOW_BANNERS_EBOS_HEADER_INCLUDED
+#endif // OPM_FLOW_BANNERS_HEADER_INCLUDED
