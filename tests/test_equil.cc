@@ -85,7 +85,7 @@ struct TestEquilVapwatTypeTag {
 }
 
 template<class TypeTag>
-struct EclWellModel<TypeTag, TTag::TestEquilTypeTag> {
+struct WellModel<TypeTag, TTag::TestEquilTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 };
 template<class TypeTag>
@@ -93,7 +93,7 @@ struct EnableVapwat<TypeTag, TTag::TestEquilTypeTag> {
     static constexpr bool value = true;
 };
 template<class TypeTag>
-struct EclWellModel<TypeTag, TTag::TestEquilVapwatTypeTag> {
+struct WellModel<TypeTag, TTag::TestEquilVapwatTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 };
 template<class TypeTag>

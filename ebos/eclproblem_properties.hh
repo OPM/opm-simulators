@@ -65,9 +65,9 @@ struct EclBaseProblem {
 };
 }
 
-// The class which deals with ECL wells
+// The class which deals with wells
 template<class TypeTag, class MyTypeTag>
-struct EclWellModel {
+struct WellModel {
     using type = UndefinedProperty;
 };
 

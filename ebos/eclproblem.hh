@@ -172,7 +172,7 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using EclWellModel = GetPropType<TypeTag, Properties::EclWellModel>;
+    using WellModel = GetPropType<TypeTag, Properties::WellModel>;
     using EclAquiferModel = GetPropType<TypeTag, Properties::EclAquiferModel>;
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
@@ -1493,10 +1493,10 @@ public:
      *
      * This can be used for inspecting wells outside of the problem.
      */
-    const EclWellModel& wellModel() const
+    const WellModel& wellModel() const
     { return wellModel_; }
 
-    EclWellModel& wellModel()
+    WellModel& wellModel()
     { return wellModel_; }
 
     const EclAquiferModel& aquiferModel() const
@@ -2771,7 +2771,7 @@ private:
     bool enableDriftCompensation_;
     GlobalEqVector drift_;
 
-    EclWellModel wellModel_;
+    WellModel wellModel_;
     EclAquiferModel aquiferModel_;
 
     bool enableEclOutput_;

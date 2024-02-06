@@ -66,7 +66,7 @@ struct EnableExperiments<TypeTag, TTag::EbosTypeTag> {
 
 // use flow's well model for now
 template<class TypeTag>
-struct EclWellModel<TypeTag, TTag::EbosTypeTag> {
+struct WellModel<TypeTag, TTag::EbosTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 };
 
