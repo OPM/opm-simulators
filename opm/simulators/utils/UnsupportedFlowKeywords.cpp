@@ -106,7 +106,7 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"CPIFACTL", {true, std::nullopt}},
         {"CONNECTION", {true, std::nullopt}},
         {"CONNECTION_PROBE", {true, std::nullopt}},
-        {"COORDSYS", {true, std::nullopt}},
+        {"COORDSYS", {false, std::string{"Multiple grid systems not supported, COORDSYS is ignored."}}},
         {"COPYBOX", {true, std::nullopt}},
         {"CRITPERM", {true, std::nullopt}},
         {"DATUMR", {true, std::nullopt}},
