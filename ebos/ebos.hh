@@ -103,7 +103,7 @@ struct UseVolumetricResidual<TypeTag, TTag::EbosTypeTag> {
 
 // by default use flow's aquifer model for now
 template<class TypeTag>
-struct EclAquiferModel<TypeTag, TTag::EbosTypeTag> {
+struct AquiferModel<TypeTag, TTag::EbosTypeTag> {
     using type = BlackoilAquiferModel<TypeTag>;
 };
 
