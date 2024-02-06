@@ -439,7 +439,7 @@ computeProperties(const WellState& well_state,
 
     for (int perf = 0; perf < nperf; ++perf) {
         for (int comp = 0; comp < np; ++comp) {
-            perfRates[perf * well_.numComponents() + comp] =  perf_rates_state[perf * np + well_.ebosCompIdxToFlowCompIdx(comp)];
+            perfRates[perf * well_.numComponents() + comp] =  perf_rates_state[perf * np + well_.modelCompIdxToFlowCompIdx(comp)];
         }
     }
 

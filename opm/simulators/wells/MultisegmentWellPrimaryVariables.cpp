@@ -523,7 +523,7 @@ volumeFractionScaled(const int seg,
     // For reservoir rate control, the distr in well control is used for the
     // rate conversion coefficients. For the injection well, only the distr of the injection
     // phase is not zero.
-    const double scale = well_.scalingFactor(well_.ebosCompIdxToFlowCompIdx(comp_idx));
+    const double scale = well_.scalingFactor(well_.modelCompIdxToFlowCompIdx(comp_idx));
     if (scale > 0.) {
         return this->volumeFraction(seg, comp_idx) / scale;
     }
@@ -564,17 +564,17 @@ getSegmentRateUpwinding(const int seg,
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == comp_idx
                 && phase == InjectorType::WATER)
-            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.ebosCompIdxToFlowCompIdx(comp_idx));
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.modelCompIdxToFlowCompIdx(comp_idx));
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx) == comp_idx
                 && phase == InjectorType::OIL)
-            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.ebosCompIdxToFlowCompIdx(comp_idx));
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.modelCompIdxToFlowCompIdx(comp_idx));
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)
                 && Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx) == comp_idx
                 && phase == InjectorType::GAS)
-            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.ebosCompIdxToFlowCompIdx(comp_idx));
+            return evaluation_[seg][WQTotal] / well_.scalingFactor(well_.modelCompIdxToFlowCompIdx(comp_idx));
 
         return 0.0;
     }
@@ -648,6 +648,7 @@ INSTANCE(BlackOilTwoPhaseIndices<0u,0u,2u,0u,false,false,0u,2u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>)
+
 // Blackoil
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<1u,0u,0u,0u,false,false,0u,0u>)
@@ -659,7 +660,6 @@ INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,true,0u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,1u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,true,2u,0u>)
-
 INSTANCE(BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
 
 }

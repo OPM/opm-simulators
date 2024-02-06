@@ -76,7 +76,7 @@ flowPhaseToModelCompIdx(const int phaseIdx) const
 template<class FluidSystem, class Indices, class Scalar>
 int
 WellInterfaceIndices<FluidSystem,Indices,Scalar>::
-ebosCompIdxToFlowCompIdx(const unsigned compIdx) const
+modelCompIdxToFlowCompIdx(const unsigned compIdx) const
 {
     const auto& pu = this->phaseUsage();
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == compIdx)

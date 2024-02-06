@@ -40,7 +40,7 @@ public:
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
 
     int flowPhaseToModelCompIdx(const int phaseIdx) const;
-    int ebosCompIdxToFlowCompIdx(const unsigned compIdx) const;
+    int modelCompIdxToFlowCompIdx(const unsigned compIdx) const;
     double scalingFactor(const int phaseIdx) const;
 
     template <class EvalWell>

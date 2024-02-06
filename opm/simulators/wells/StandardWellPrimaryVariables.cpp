@@ -485,7 +485,7 @@ typename StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
 StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 volumeFractionScaled(const int compIdx) const
 {
-    const int legacyCompIdx = well_.ebosCompIdxToFlowCompIdx(compIdx);
+    const int legacyCompIdx = well_.modelCompIdxToFlowCompIdx(compIdx);
     const double scal = well_.scalingFactor(legacyCompIdx);
     if (scal > 0)
         return this->volumeFraction(compIdx) / scal;
