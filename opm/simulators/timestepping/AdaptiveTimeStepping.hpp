@@ -364,8 +364,8 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                 suggestedNextTimestep_ = timestepAfterEvent_;
             }
 
-            auto& ebosSimulator = solver.model().ebosSimulator();
-            auto& ebosProblem = ebosSimulator.problem();
+            auto& modelSimulator = solver.model().simulator();
+            auto& ebosProblem = modelSimulator.problem();
 
             // create adaptive step timer with previously used sub step size
             AdaptiveSimulatorTimer substepTimer(simulatorTimer, suggestedNextTimestep_, maxTimeStep_);
@@ -432,7 +432,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                 }
 
                 //Pass substep to eclwriter for summary output
-                ebosSimulator.problem().setSubStepReport(substepReport);
+                modelSimulator.problem().setSubStepReport(substepReport);
 
                 report += substepReport;
 

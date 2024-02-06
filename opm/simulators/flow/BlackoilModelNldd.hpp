@@ -97,7 +97,7 @@ public:
     //! \param param param Model parameters
     //! \param compNames Names of the solution components
     BlackoilModelNldd(BlackoilModel<TypeTag>& model)
-        : model_(model), rank_(model_.ebosSimulator().vanguard().grid().comm().rank())
+        : model_(model), rank_(model_.simulator().vanguard().grid().comm().rank())
     {
         // Create partitions.
         const auto& [partition_vector, num_domains] = this->partitionCells();
@@ -119,7 +119,7 @@ public:
 
         // Iterate through grid once, setting the seeds of all partitions.
         // Note: owned cells only!
-        const auto& grid = model_.ebosSimulator().vanguard().grid();
+        const auto& grid = model_.simulator().vanguard().grid();
 
         std::vector<int> count(num_domains, 0);
         const auto& gridView = grid.leafGridView();
@@ -157,7 +157,7 @@ public:
             // TODO: The ISTLSolver constructor will make
             // parallel structures appropriate for the full grid
             // only. This must be addressed before going parallel.
-            const auto& eclState = model_.ebosSimulator().vanguard().eclState();
+            const auto& eclState = model_.simulator().vanguard().eclState();
             FlowLinearSolverParameters loc_param;
             loc_param.template init<TypeTag>(eclState.getSimulationConfig().useCPR());
             // Override solver type with umfpack if small domain.
@@ -170,7 +170,7 @@ public:
             }
             loc_param.linear_solver_print_json_definition_ = false;
             const bool force_serial = true;
-            domain_linsolvers_.emplace_back(model_.ebosSimulator(), loc_param, force_serial);
+            domain_linsolvers_.emplace_back(model_.simulator(), loc_param, force_serial);
         }
 
         assert(int(domains_.size()) == num_domains);
@@ -201,7 +201,7 @@ public:
 
         // -----------   If not converged, do an NLDD iteration   -----------
 
-        auto& solution = model_.ebosSimulator().model().solution(0);
+        auto& solution = model_.simulator().model().solution(0);
         auto initial_solution = solution;
         auto locally_solved = initial_solution;
 
@@ -242,7 +242,7 @@ public:
         }
 
         // Communicate and log all messages.
-        auto global_logger = gatherDeferredLogger(logger, model_.ebosSimulator().vanguard().grid().comm());
+        auto global_logger = gatherDeferredLogger(logger, model_.simulator().vanguard().grid().comm());
         global_logger.logMessages();
 
         // Accumulate local solve data.
@@ -270,7 +270,7 @@ public:
 
         if (model_.param().local_solve_approach_ == DomainSolveApproach::Jacobi) {
             solution = locally_solved;
-            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+            model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         }
 
 #if HAVE_MPI
@@ -281,9 +281,9 @@ public:
         // here. We must therefore receive the updated solution on the
         // overlap cells and update their intensive quantities before
         // we move on.
-        const auto& comm = model_.ebosSimulator().vanguard().grid().comm();
+        const auto& comm = model_.simulator().vanguard().grid().comm();
         if (comm.size() > 1) {
-            const auto* ccomm = model_.ebosSimulator().model().newtonMethod().linearSolver().comm();
+            const auto* ccomm = model_.simulator().model().newtonMethod().linearSolver().comm();
 
             // Copy numerical values from primary vars.
             ccomm->copyOwnerToAll(solution, solution);
@@ -300,7 +300,7 @@ public:
             }
 
             // Update intensive quantities for our overlap values.
-            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantitiesOverlap(/*timeIdx=*/0);
+            model_.simulator().model().invalidateAndUpdateIntensiveQuantitiesOverlap(/*timeIdx=*/0);
 
             // Make total counts of domains converged.
             comm.sum(counts.data(), counts.size());
@@ -334,10 +334,10 @@ public:
 
     void writePartitions(const std::filesystem::path& odir) const
     {
-        const auto& elementMapper = this->model_.ebosSimulator().model().elementMapper();
-        const auto& cartMapper = this->model_.ebosSimulator().vanguard().cartesianIndexMapper();
+        const auto& elementMapper = this->model_.simulator().model().elementMapper();
+        const auto& cartMapper = this->model_.simulator().vanguard().cartesianIndexMapper();
 
-        const auto& grid = this->model_.ebosSimulator().vanguard().grid();
+        const auto& grid = this->model_.simulator().vanguard().grid();
         const auto& comm = grid.comm();
         const auto nDigit = 1 + static_cast<int>(std::floor(std::log10(comm.size())));
 
@@ -361,14 +361,14 @@ private:
                 [[maybe_unused]] const int global_iteration,
                 const bool initial_assembly_required)
     {
-        auto& ebosSimulator = model_.ebosSimulator();
+        auto& modelSimulator = model_.simulator();
 
         SimulatorReportSingle report;
         Dune::Timer solveTimer;
         solveTimer.start();
         Dune::Timer detailTimer;
 
-        ebosSimulator.model().newtonMethod().setIterationIndex(0);
+        modelSimulator.model().newtonMethod().setIterationIndex(0);
 
         // When called, if assembly has already been performed
         // with the initial values, we only need to check
@@ -377,11 +377,11 @@ private:
         int iter = 0;
         if (initial_assembly_required) {
             detailTimer.start();
-            ebosSimulator.model().newtonMethod().setIterationIndex(iter);
+            modelSimulator.model().newtonMethod().setIterationIndex(iter);
             // TODO: we should have a beginIterationLocal function()
             // only handling the well model for now
-            ebosSimulator.problem().wellModel().assembleDomain(ebosSimulator.model().newtonMethod().numIterations(),
-                                                               ebosSimulator.timeStepSize(),
+            modelSimulator.problem().wellModel().assembleDomain(modelSimulator.model().newtonMethod().numIterations(),
+                                                                modelSimulator.timeStepSize(),
                                                                domain);
             // Assemble reservoir locally.
             report += this->assembleReservoirDomain(domain);
@@ -402,15 +402,15 @@ private:
         detailTimer.reset();
         detailTimer.start();
         model_.wellModel().linearizeDomain(domain,
-                                           ebosSimulator.model().linearizer().jacobian(),
-                                           ebosSimulator.model().linearizer().residual());
+                                           modelSimulator.model().linearizer().jacobian(),
+                                           modelSimulator.model().linearizer().residual());
         const double tt1 = detailTimer.stop();
         report.assemble_time += tt1;
         report.assemble_time_well += tt1;
 
         // Local Newton loop.
         const int max_iter = model_.param().max_local_solve_iterations_;
-        const auto& grid = ebosSimulator.vanguard().grid();
+        const auto& grid = modelSimulator.vanguard().grid();
         do {
             // Solve local linear system.
             // Note that x has full size, we expect it to be nonzero only for in-domain cells.
@@ -434,13 +434,13 @@ private:
             detailTimer.reset();
             detailTimer.start();
             ++iter;
-            ebosSimulator.model().newtonMethod().setIterationIndex(iter);
+            modelSimulator.model().newtonMethod().setIterationIndex(iter);
             // TODO: we should have a beginIterationLocal function()
             // only handling the well model for now
             // Assemble reservoir locally.
-            ebosSimulator.problem().wellModel().assembleDomain(ebosSimulator.model().newtonMethod().numIterations(),
-                                                               ebosSimulator.timeStepSize(),
-                                                               domain);
+            modelSimulator.problem().wellModel().assembleDomain(modelSimulator.model().newtonMethod().numIterations(),
+                                                                modelSimulator.timeStepSize(),
+                                                                domain);
             report += this->assembleReservoirDomain(domain);
             report.assemble_time += detailTimer.stop();
 
@@ -454,14 +454,14 @@ private:
             detailTimer.reset();
             detailTimer.start();
             model_.wellModel().linearizeDomain(domain,
-                                               ebosSimulator.model().linearizer().jacobian(),
-                                               ebosSimulator.model().linearizer().residual());
+                                               modelSimulator.model().linearizer().jacobian(),
+                                               modelSimulator.model().linearizer().residual());
             const double tt2 = detailTimer.stop();
             report.assemble_time += tt2;
             report.assemble_time_well += tt2;
         } while (!convreport.converged() && iter <= max_iter);
 
-        ebosSimulator.problem().endIteration();
+        modelSimulator.problem().endIteration();
 
         report.converged = convreport.converged();
         report.total_newton_iterations = iter;
@@ -475,26 +475,26 @@ private:
     SimulatorReportSingle assembleReservoirDomain(const Domain& domain)
     {
         // -------- Mass balance equations --------
-        model_.ebosSimulator().model().linearizer().linearizeDomain(domain);
+        model_.simulator().model().linearizer().linearizeDomain(domain);
         return model_.wellModel().lastReport();
     }
 
     //! \brief Solve the linearized system for a domain.
     void solveJacobianSystemDomain(const Domain& domain, BVector& global_x)
     {
-        const auto& ebosSimulator = model_.ebosSimulator();
+        const auto& modelSimulator = model_.simulator();
 
         Dune::Timer perfTimer;
         perfTimer.start();
 
-        const Mat& main_matrix = ebosSimulator.model().linearizer().jacobian().istlMatrix();
+        const Mat& main_matrix = modelSimulator.model().linearizer().jacobian().istlMatrix();
         if (domain_matrices_[domain.index]) {
             Details::copySubMatrix(main_matrix, domain.cells, *domain_matrices_[domain.index]);
         } else {
             domain_matrices_[domain.index] = std::make_unique<Mat>(Details::extractMatrix(main_matrix, domain.cells));
         }
         auto& jac = *domain_matrices_[domain.index];
-        auto res = Details::extractVector(ebosSimulator.model().linearizer().residual(),
+        auto res = Details::extractVector(modelSimulator.model().linearizer().residual(),
                                           domain.cells);
         auto x = res;
 
@@ -515,9 +515,9 @@ private:
     /// Apply an update to the primary variables.
     void updateDomainSolution(const Domain& domain, const BVector& dx)
     {
-        auto& ebosSimulator = model_.ebosSimulator();
-        auto& ebosNewtonMethod = ebosSimulator.model().newtonMethod();
-        SolutionVector& solution = ebosSimulator.model().solution(/*timeIdx=*/0);
+        auto& modelSimulator = model_.simulator();
+        auto& ebosNewtonMethod = modelSimulator.model().newtonMethod();
+        SolutionVector& solution = modelSimulator.model().solution(/*timeIdx=*/0);
 
         ebosNewtonMethod.update_(/*nextSolution=*/solution,
                                  /*curSolution=*/solution,
@@ -528,7 +528,7 @@ private:
                                                 // residual
 
         // if the solution is updated, the intensive quantities need to be recalculated
-        ebosSimulator.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
+        modelSimulator.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
     }
 
     //! \brief Get reservoir quantities on this process needed for convergence calculations.
@@ -538,16 +538,16 @@ private:
                                                          std::vector<Scalar>& B_avg,
                                                          std::vector<int>& maxCoeffCell)
     {
-        const auto& ebosSimulator = model_.ebosSimulator();
+        const auto& modelSimulator = model_.simulator();
 
         double pvSumLocal = 0.0;
         double numAquiferPvSumLocal = 0.0;
-        const auto& ebosModel = ebosSimulator.model();
-        const auto& ebosProblem = ebosSimulator.problem();
+        const auto& ebosModel = modelSimulator.model();
+        const auto& ebosProblem = modelSimulator.problem();
 
-        const auto& ebosResid = ebosSimulator.model().linearizer().residual();
+        const auto& ebosResid = modelSimulator.model().linearizer().residual();
 
-        ElementContext elemCtx(ebosSimulator);
+        ElementContext elemCtx(modelSimulator);
         const auto& gridView = domain.view;
         const auto& elemEndIt = gridView.template end</*codim=*/0>();
         IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
@@ -717,8 +717,8 @@ private:
     //! \brief Returns subdomain ordered according to method and ordering measure.
     std::vector<int> getSubdomainOrder()
     {
-        const auto& ebosSimulator = model_.ebosSimulator();
-        const auto& solution = ebosSimulator.model().solution(0);
+        const auto& modelSimulator = model_.simulator();
+        const auto& solution = modelSimulator.model().solution(0);
 
         std::vector<int> domain_order(domains_.size());
         std::iota(domain_order.begin(), domain_order.end(), 0);
@@ -755,7 +755,7 @@ private:
             }
             case DomainOrderingMeasure::Residual: {
                 // Use maximum residual to order domains.
-                const auto& residual = ebosSimulator.model().linearizer().residual();
+                const auto& residual = modelSimulator.model().linearizer().residual();
                 const int num_vars = residual[0].size();
                 for (const auto& domain : domains_) {
                     double maxres = 0.0;
@@ -797,11 +797,11 @@ private:
             auto local_solution = Details::extractVector(solution, domain.cells);
             Details::setGlobal(local_solution, domain.cells, locally_solved);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
-            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
+            model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         } else {
             model_.wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
-            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
+            model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         }
     }
 
@@ -856,7 +856,7 @@ private:
         } else {
             model_.wellModel().setPrimaryVarsDomain(domain, initial_local_well_primary_vars);
             Details::setGlobal(initial_local_solution, domain.cells, solution);
-            model_.ebosSimulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
+            model_.simulator().model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0, domain);
         }
     }
 
@@ -864,10 +864,10 @@ private:
                                   const std::vector<Scalar>& B_avg, double dt) const
     {
         double errorPV{};
-        const auto& ebosSimulator = model_.ebosSimulator();
-        const auto& ebosModel = ebosSimulator.model();
-        const auto& ebosProblem = ebosSimulator.problem();
-        const auto& ebosResid = ebosSimulator.model().linearizer().residual();
+        const auto& modelSimulator = model_.simulator();
+        const auto& ebosModel = modelSimulator.model();
+        const auto& ebosProblem = modelSimulator.problem();
+        const auto& ebosResid = modelSimulator.model().linearizer().residual();
 
         for (const int cell_idx : domain.cells) {
             const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) *
@@ -890,7 +890,7 @@ private:
 
     decltype(auto) partitionCells() const
     {
-        const auto& grid = this->model_.ebosSimulator().vanguard().grid();
+        const auto& grid = this->model_.simulator().vanguard().grid();
 
         using GridView = std::remove_cv_t<std::remove_reference_t<decltype(grid.leafGridView())>>;
         using Element = std::remove_cv_t<std::remove_reference_t<typename GridView::template Codim<0>::Entity>>;
@@ -900,13 +900,13 @@ private:
         auto zoltan_ctrl = ZoltanPartitioningControl<Element>{};
         zoltan_ctrl.domain_imbalance = param.local_domain_partition_imbalance_;
         zoltan_ctrl.index =
-            [elementMapper = &this->model_.ebosSimulator().model().elementMapper()]
+            [elementMapper = &this->model_.simulator().model().elementMapper()]
             (const Element& element)
         {
             return elementMapper->index(element);
         };
         zoltan_ctrl.local_to_global =
-            [cartMapper = &this->model_.ebosSimulator().vanguard().cartesianIndexMapper()]
+            [cartMapper = &this->model_.simulator().vanguard().cartesianIndexMapper()]
             (const int elemIdx)
         {
             return cartMapper->cartesianIndex(elemIdx);
@@ -915,7 +915,7 @@ private:
         // Forming the list of wells is expensive, so do this only if needed.
         const auto need_wells = param.local_domain_partition_method_ == "zoltan";
         const auto wells = need_wells
-            ? this->model_.ebosSimulator().vanguard().schedule().getWellsatEnd()
+            ? this->model_.simulator().vanguard().schedule().getWellsatEnd()
             : std::vector<Well>{};
 
         // If defaulted parameter for number of domains, choose a reasonable default.
@@ -932,7 +932,7 @@ private:
 
     std::vector<int> reconstitutePartitionVector() const
     {
-        const auto& grid = this->model_.ebosSimulator().vanguard().grid();
+        const auto& grid = this->model_.simulator().vanguard().grid();
 
         auto numD = std::vector<int>(grid.comm().size() + 1, 0);
         numD[grid.comm().rank() + 1] = static_cast<int>(this->domains_.size());

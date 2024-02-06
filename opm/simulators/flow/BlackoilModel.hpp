@@ -225,20 +225,20 @@ namespace Opm {
         /// \param[in] linsolver        linear solver
         /// \param[in] eclState         eclipse state
         /// \param[in] terminal_output  request output to cout/cerr
-        BlackoilModel(Simulator& ebosSimulator,
+        BlackoilModel(Simulator& simulator,
                       const ModelParameters& param,
                       BlackoilWellModel<TypeTag>& well_model,
                       const bool terminal_output)
-        : ebosSimulator_(ebosSimulator)
-        , grid_(ebosSimulator_.vanguard().grid())
+        : simulator_(simulator)
+        , grid_(simulator_.vanguard().grid())
         , phaseUsage_(phaseUsageFromDeck(eclState()))
         , param_( param )
         , well_model_ (well_model)
-        , rst_conv_(ebosSimulator_.problem().eclWriter()->collectToIORank().localIdxToGlobalIdxMapping(),
+        , rst_conv_(simulator_.problem().eclWriter()->collectToIORank().localIdxToGlobalIdxMapping(),
                     grid_.comm())
         , terminal_output_ (terminal_output)
         , current_relaxation_(1.0)
-        , dx_old_(ebosSimulator_.model().numGridDof())
+        , dx_old_(simulator_.model().numGridDof())
         {
             // compute global sum of number of cells
             global_nc_ = detail::countGlobalCells(grid_);
@@ -267,7 +267,7 @@ namespace Opm {
 
 
         const EclipseState& eclState() const
-        { return ebosSimulator_.vanguard().eclState(); }
+        { return simulator_.vanguard().eclState(); }
 
 
         /// Called once before each time step.
@@ -277,24 +277,24 @@ namespace Opm {
             SimulatorReportSingle report;
             Dune::Timer perfTimer;
             perfTimer.start();
-            // update the solution variables in ebos
+            // update the solution variables in the model
             if ( timer.lastStepFailed() ) {
-                ebosSimulator_.model().updateFailed();
+                simulator_.model().updateFailed();
             } else {
-                ebosSimulator_.model().advanceTimeLevel();
+                simulator_.model().advanceTimeLevel();
             }
 
             // Set the timestep size, episode index, and non-linear iteration index
-            // for ebos explicitly. ebos needs to know the report step/episode index
+            // for the model explicitly. The model needs to know the report step/episode index
             // because of timing dependent data despite the fact that flow uses its
             // own time stepper. (The length of the episode does not matter, though.)
-            ebosSimulator_.setTime(timer.simulationTimeElapsed());
-            ebosSimulator_.setTimeStepSize(timer.currentStepLength());
-            ebosSimulator_.model().newtonMethod().setIterationIndex(0);
+            simulator_.setTime(timer.simulationTimeElapsed());
+            simulator_.setTimeStepSize(timer.currentStepLength());
+            simulator_.model().newtonMethod().setIterationIndex(0);
 
-            ebosSimulator_.problem().beginTimeStep();
+            simulator_.problem().beginTimeStep();
 
-            unsigned numDof = ebosSimulator_.model().numGridDof();
+            unsigned numDof = simulator_.model().numGridDof();
             wasSwitched_.resize(numDof);
             std::fill(wasSwitched_.begin(), wasSwitched_.end(), false);
 
@@ -318,8 +318,8 @@ namespace Opm {
 
                 return -1;
             };
-            const auto& schedule = ebosSimulator_.vanguard().schedule();
-            rst_conv_.init(ebosSimulator_.vanguard().globalNumCells(),
+            const auto& schedule = simulator_.vanguard().schedule();
+            rst_conv_.init(simulator_.vanguard().globalNumCells(),
                            schedule[timer.reportStepNum()].rst_config(),
                            {getIdx(FluidSystem::oilPhaseIdx),
                             getIdx(FluidSystem::gasPhaseIdx),
@@ -410,7 +410,7 @@ namespace Opm {
                 result = this->nlddSolver_->nonlinearIterationNldd(iteration, timer, nonlinear_solver);
             }
 
-            rst_conv_.update(ebosSimulator_.model().linearizer().residual());
+            rst_conv_.update(simulator_.model().linearizer().residual());
 
             return result;
         }
@@ -435,7 +435,7 @@ namespace Opm {
                 report.total_newton_iterations = 1;
 
                 // Compute the nonlinear update.
-                unsigned nc = ebosSimulator_.model().numGridDof();
+                unsigned nc = simulator_.model().numGridDof();
                 BVector x(nc);
 
                 // Solve the linear system.
@@ -444,8 +444,8 @@ namespace Opm {
                     // Apply the Schur complement of the well model to
                     // the reservoir linearized equations.
                     // Note that linearize may throw for MSwells.
-                    wellModel().linearize(ebosSimulator().model().linearizer().jacobian(),
-                                          ebosSimulator().model().linearizer().residual());
+                    wellModel().linearize(simulator().model().linearizer().jacobian(),
+                                          simulator().model().linearizer().residual());
 
                     // ---- Solve linear system ----
                     solveJacobianSystem(x);
@@ -508,8 +508,8 @@ namespace Opm {
             SimulatorReportSingle report;
             Dune::Timer perfTimer;
             perfTimer.start();
-            ebosSimulator_.problem().endTimeStep();
-            ebosSimulator_.problem().setConvData(rst_conv_.getData());
+            simulator_.problem().endTimeStep();
+            simulator_.problem().setConvData(rst_conv_.getData());
             report.pre_post_time += perfTimer.stop();
             return report;
         }
@@ -519,10 +519,10 @@ namespace Opm {
                                                 const int iterationIdx)
         {
             // -------- Mass balance equations --------
-            ebosSimulator_.model().newtonMethod().setIterationIndex(iterationIdx);
-            ebosSimulator_.problem().beginIteration();
-            ebosSimulator_.model().linearizer().linearizeDomain();
-            ebosSimulator_.problem().endIteration();
+            simulator_.model().newtonMethod().setIterationIndex(iterationIdx);
+            simulator_.problem().beginIteration();
+            simulator_.model().linearizer().linearizeDomain();
+            simulator_.problem().endIteration();
             return wellModel().lastReport();
         }
 
@@ -532,11 +532,11 @@ namespace Opm {
             Scalar resultDelta = 0.0;
             Scalar resultDenom = 0.0;
 
-            const auto& elemMapper = ebosSimulator_.model().elementMapper();
-            const auto& gridView = ebosSimulator_.gridView();
+            const auto& elemMapper = simulator_.model().elementMapper();
+            const auto& gridView = simulator_.gridView();
             for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 unsigned globalElemIdx = elemMapper.index(elem);
-                const auto& priVarsNew = ebosSimulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
+                const auto& priVarsNew = simulator_.model().solution(/*timeIdx=*/0)[globalElemIdx];
 
                 Scalar pressureNew;
                 pressureNew = priVarsNew[Indices::pressureSwitchIdx];
@@ -562,7 +562,7 @@ namespace Opm {
                     saturationsNew[FluidSystem::oilPhaseIdx] = oilSaturationNew;
                 }
 
-                const auto& priVarsOld = ebosSimulator_.model().solution(/*timeIdx=*/1)[globalElemIdx];
+                const auto& priVarsOld = simulator_.model().solution(/*timeIdx=*/1)[globalElemIdx];
 
                 Scalar pressureOld;
                 pressureOld = priVarsOld[Indices::pressureSwitchIdx];
@@ -613,7 +613,7 @@ namespace Opm {
         /// Number of linear iterations used in last call to solveJacobianSystem().
         int linearIterationsLastSolve() const
         {
-            return ebosSimulator_.model().newtonMethod().linearSolver().iterations ();
+            return simulator_.model().newtonMethod().linearSolver().iterations ();
         }
 
 
@@ -629,9 +629,9 @@ namespace Opm {
         void solveJacobianSystem(BVector& x)
         {
 
-            auto& ebosJac = ebosSimulator_.model().linearizer().jacobian().istlMatrix();
-            auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-            auto& ebosSolver = ebosSimulator_.model().newtonMethod().linearSolver();
+            auto& ebosJac = simulator_.model().linearizer().jacobian().istlMatrix();
+            auto& ebosResid = simulator_.model().linearizer().residual();
+            auto& ebosSolver = simulator_.model().newtonMethod().linearSolver();
 
             const int numSolvers = ebosSolver.numAvailableSolvers();
             if ((numSolvers > 1) && (ebosSolver.getSolveCount() % 100 == 0)) {
@@ -693,8 +693,8 @@ namespace Opm {
         void updateSolution(const BVector& dx)
         {
             OPM_TIMEBLOCK(updateSolution);
-            auto& ebosNewtonMethod = ebosSimulator_.model().newtonMethod();
-            SolutionVector& solution = ebosSimulator_.model().solution(/*timeIdx=*/0);
+            auto& ebosNewtonMethod = simulator_.model().newtonMethod();
+            SolutionVector& solution = simulator_.model().solution(/*timeIdx=*/0);
 
             ebosNewtonMethod.update_(/*nextSolution=*/solution,
                                      /*curSolution=*/solution,
@@ -706,8 +706,8 @@ namespace Opm {
             // if the solution is updated, the intensive quantities need to be recalculated
             {
                 OPM_TIMEBLOCK(invalidateAndUpdateIntensiveQuantities);
-                ebosSimulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
-                ebosSimulator_.problem().eclWriter()->mutableEclOutputModule().invalidateLocalData();
+                simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+                simulator_.problem().eclWriter()->mutableEclOutputModule().invalidateLocalData();
             }
         }
 
@@ -788,13 +788,13 @@ namespace Opm {
             OPM_TIMEBLOCK(localConvergenceData);
             double pvSumLocal = 0.0;
             double numAquiferPvSumLocal = 0.0;
-            const auto& ebosModel = ebosSimulator_.model();
-            const auto& ebosProblem = ebosSimulator_.problem();
+            const auto& ebosModel = simulator_.model();
+            const auto& ebosProblem = simulator_.problem();
 
-            const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
+            const auto& ebosResid = simulator_.model().linearizer().residual();
 
-            ElementContext elemCtx(ebosSimulator_);
-            const auto& gridView = ebosSimulator().gridView();
+            ElementContext elemCtx(simulator_);
+            const auto& gridView = simulator().gridView();
             IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
             OPM_BEGIN_PARALLEL_TRY_CATCH();
             for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
@@ -837,11 +837,11 @@ namespace Opm {
         {
             OPM_TIMEBLOCK(computeCnvErrorPv);
             double errorPV{};
-            const auto& ebosModel = ebosSimulator_.model();
-            const auto& ebosProblem = ebosSimulator_.problem();
-            const auto& ebosResid = ebosSimulator_.model().linearizer().residual();
-            const auto& gridView = ebosSimulator().gridView();
-            ElementContext elemCtx(ebosSimulator_);
+            const auto& ebosModel = simulator_.model();
+            const auto& ebosProblem = simulator_.problem();
+            const auto& ebosResid = simulator_.model().linearizer().residual();
+            const auto& gridView = simulator().gridView();
+            ElementContext elemCtx(simulator_);
             IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
 
             OPM_BEGIN_PARALLEL_TRY_CATCH();
@@ -1042,11 +1042,11 @@ namespace Opm {
             return regionValues;
         }
 
-        const Simulator& ebosSimulator() const
-        { return ebosSimulator_; }
+        const Simulator& simulator() const
+        { return simulator_; }
 
-        Simulator& ebosSimulator()
-        { return ebosSimulator_; }
+        Simulator& simulator()
+        { return simulator_; }
 
         /// return the statistics if the nonlinearIteration() method failed
         const SimulatorReportSingle& failureReport() const
@@ -1071,10 +1071,10 @@ namespace Opm {
                 return;
             }
 
-            const auto& elementMapper = this->ebosSimulator().model().elementMapper();
-            const auto& cartMapper = this->ebosSimulator().vanguard().cartesianIndexMapper();
+            const auto& elementMapper = this->simulator().model().elementMapper();
+            const auto& cartMapper = this->simulator().vanguard().cartesianIndexMapper();
 
-            const auto& grid = this->ebosSimulator().vanguard().grid();
+            const auto& grid = this->simulator().vanguard().grid();
             const auto& comm = grid.comm();
             const auto nDigit = 1 + static_cast<int>(std::floor(std::log10(comm.size())));
 
@@ -1093,8 +1093,8 @@ namespace Opm {
     protected:
         // ---------  Data members  ---------
 
-        Simulator& ebosSimulator_;
-        const Grid&            grid_;
+        Simulator& simulator_;
+        const Grid& grid_;
         const PhaseUsage phaseUsage_;
         static constexpr bool has_solvent_ = getPropValue<TypeTag, Properties::EnableSolvent>();
         static constexpr bool has_extbo_ = getPropValue<TypeTag, Properties::EnableExtbo>();
@@ -1137,12 +1137,12 @@ namespace Opm {
 
         void beginReportStep()
         {
-            ebosSimulator_.problem().beginEpisode();
+            simulator_.problem().beginEpisode();
         }
 
         void endReportStep()
         {
-            ebosSimulator_.problem().endEpisode();
+            simulator_.problem().endEpisode();
         }
 
         template<class FluidState, class Residual>
