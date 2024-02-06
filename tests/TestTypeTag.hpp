@@ -28,7 +28,7 @@
 #ifndef OPM_TEST_TYPETAG_HPP
 #define OPM_TEST_TYPETAG_HPP
 
-#include <ebos/eclproblem.hh>
+#include <ebos/eclproblem_properties.hh>
 
 #include <opm/models/utils/start.hh>
 
@@ -41,7 +41,7 @@ namespace Opm::Properties {
 
 namespace TTag {
 struct TestTypeTag {
-    using InheritsFrom = std::tuple<FlowModelParameters, EclBaseProblem, BlackOilModel, EclTimeSteppingParameters>;
+    using InheritsFrom = std::tuple<FlowModelParameters, FlowBaseProblem, BlackOilModel, EclTimeSteppingParameters>;
 };
 }
 

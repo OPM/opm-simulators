@@ -70,7 +70,7 @@
 namespace Opm::Properties {
 
 template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, TTag::EclBaseProblem> {
+struct EnableTerminalOutput<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 
@@ -78,10 +78,10 @@ namespace TTag {
 
 
 struct TestEquilTypeTag {
-    using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters, EclBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters, FlowBaseProblem, BlackOilModel>;
 };
 struct TestEquilVapwatTypeTag {
-    using InheritsFrom = std::tuple<FlowModelParameters, EclBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowModelParameters, FlowBaseProblem, BlackOilModel>;
 };
 }
 

@@ -76,7 +76,7 @@ namespace Opm::Properties {
 namespace TTag {
 struct FlowProblem {
     using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters,
-                                    FlowNonLinearSolver, EclBaseProblem, BlackOilModel>;
+                                    FlowNonLinearSolver, FlowBaseProblem, BlackOilModel>;
 };
 }
 template<class TypeTag>

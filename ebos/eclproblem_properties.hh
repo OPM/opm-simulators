@@ -62,7 +62,7 @@ namespace Opm::Properties {
 
 namespace TTag {
 
-struct EclBaseProblem {
+struct FlowBaseProblem {
   using InheritsFrom = std::tuple<VtkTracer, OutputBlackOil, CpGridVanguard>;
 };
 }
@@ -140,47 +140,47 @@ struct ExplicitRockCompaction {
 
 // Set the problem property
 template<class TypeTag>
-struct Problem<TypeTag, TTag::EclBaseProblem> {
+struct Problem<TypeTag, TTag::FlowBaseProblem> {
     using type = EclProblem<TypeTag>;
 };
 
 template<class TypeTag>
-struct Model<TypeTag, TTag::EclBaseProblem> {
+struct Model<TypeTag, TTag::FlowBaseProblem> {
     using type = FIBlackOilModel<TypeTag>;
 };
 
 // Select the element centered finite volume method as spatial discretization
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::EclBaseProblem> {
+struct SpatialDiscretizationSplice<TypeTag, TTag::FlowBaseProblem> {
     using type = TTag::EcfvDiscretization;
 };
 
 //! for ebos, use automatic differentiation to linearize the system of PDEs
 template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::EclBaseProblem> {
+struct LocalLinearizerSplice<TypeTag, TTag::FlowBaseProblem> {
     using type = TTag::AutoDiffLocalLinearizer;
 };
 
 template<class TypeTag>
-struct BaseDiscretizationType<TypeTag, TTag::EclBaseProblem> {
+struct BaseDiscretizationType<TypeTag, TTag::FlowBaseProblem> {
     using type = FvBaseDiscretizationNoAdapt<TypeTag>;
 };
 
 template<class TypeTag>
-struct DiscreteFunction<TypeTag, TTag::EclBaseProblem> {
+struct DiscreteFunction<TypeTag, TTag::FlowBaseProblem> {
     using BaseDiscretization = FvBaseDiscretization<TypeTag>;
     using type = typename BaseDiscretization::BlockVectorWrapper;
 };
 
 template<class TypeTag>
-struct GridView<TypeTag, TTag::EclBaseProblem>
+struct GridView<TypeTag, TTag::FlowBaseProblem>
 {
     using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView;
 };
 
 // Set the material law for fluid fluxes
 template<class TypeTag>
-struct MaterialLaw<TypeTag, TTag::EclBaseProblem>
+struct MaterialLaw<TypeTag, TTag::FlowBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -199,7 +199,7 @@ public:
 
 // Set the material law for energy storage in rock
 template<class TypeTag>
-struct SolidEnergyLaw<TypeTag, TTag::EclBaseProblem>
+struct SolidEnergyLaw<TypeTag, TTag::FlowBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -213,7 +213,7 @@ public:
 
 // Set the material law for thermal conduction
 template<class TypeTag>
-struct ThermalConductionLaw<TypeTag, TTag::EclBaseProblem>
+struct ThermalConductionLaw<TypeTag, TTag::FlowBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -228,7 +228,7 @@ public:
 // ebos can use a slightly faster stencil class because it does not need the normals and
 // the integration points of intersections
 template<class TypeTag>
-struct Stencil<TypeTag, TTag::EclBaseProblem>
+struct Stencil<TypeTag, TTag::FlowBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -243,37 +243,37 @@ public:
 
 // by default use the dummy aquifer "model"
 template<class TypeTag>
-struct AquiferModel<TypeTag, TTag::EclBaseProblem> {
+struct AquiferModel<TypeTag, TTag::FlowBaseProblem> {
     using type = BaseAquiferModel<TypeTag>;
 };
 
 // Enable gravity
 template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::EclBaseProblem> {
+struct EnableGravity<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 
 // Enable diffusion
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::EclBaseProblem> {
+struct EnableDiffusion<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 
 // Enable dispersion
 template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::EclBaseProblem> {
+struct EnableDispersion<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
 // only write the solutions for the report steps to disk
 template<class TypeTag>
-struct EnableWriteAllSolutions<TypeTag, TTag::EclBaseProblem> {
+struct EnableWriteAllSolutions<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
 // disable API tracking
 template<class TypeTag>
-struct EnableApiTracking<TypeTag, TTag::EclBaseProblem> {
+struct EnableApiTracking<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
@@ -283,7 +283,7 @@ struct EnableApiTracking<TypeTag, TTag::EclBaseProblem> {
 // to exist. (the ECL problem will finish the simulation explicitly
 // after it simulated the last episode specified in the deck.)
 template<class TypeTag>
-struct EndTime<TypeTag, TTag::EclBaseProblem> {
+struct EndTime<TypeTag, TTag::FlowBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e100;
 };
@@ -294,14 +294,14 @@ struct EndTime<TypeTag, TTag::EclBaseProblem> {
 // one of the initial episode (if the length of the initial episode is
 // not millions of trillions of years, that is...)
 template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::EclBaseProblem> {
+struct InitialTimeStepSize<TypeTag, TTag::FlowBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 3600*24;
 };
 
 // the default for the allowed volumetric error for oil per second
 template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::EclBaseProblem> {
+struct NewtonTolerance<TypeTag, TTag::FlowBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-2;
 };
@@ -310,7 +310,7 @@ struct NewtonTolerance<TypeTag, TTag::EclBaseProblem> {
 // reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
 // will tolerate larger residuals.
 template<class TypeTag>
-struct EclNewtonSumTolerance<TypeTag, TTag::EclBaseProblem> {
+struct EclNewtonSumTolerance<TypeTag, TTag::FlowBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-4;
 };
@@ -322,7 +322,7 @@ struct EclNewtonSumTolerance<TypeTag, TTag::EclBaseProblem> {
 // timestep for an reservoir that exhibits 1 m^3 of pore volume. A reservoir with a total
 // pore volume of 10^3 m^3 will tolerate 10 times as much.
 template<class TypeTag>
-struct EclNewtonSumToleranceExponent<TypeTag, TTag::EclBaseProblem> {
+struct EclNewtonSumToleranceExponent<TypeTag, TTag::FlowBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1.0/3.0;
 };
@@ -330,28 +330,28 @@ struct EclNewtonSumToleranceExponent<TypeTag, TTag::EclBaseProblem> {
 // set number of Newton iterations where the volumetric residual is considered for
 // convergence
 template<class TypeTag>
-struct EclNewtonStrictIterations<TypeTag, TTag::EclBaseProblem> {
+struct EclNewtonStrictIterations<TypeTag, TTag::FlowBaseProblem> {
     static constexpr int value = 8;
 };
 
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
 template<class TypeTag>
-struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::EclBaseProblem> {
+struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::FlowBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.03;
 };
 
 // the maximum volumetric error of a cell in the relaxed region
 template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::EclBaseProblem> {
+struct EclNewtonRelaxedTolerance<TypeTag, TTag::FlowBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e9;
 };
 
 // Ignore the maximum error mass for early termination of the newton method.
 template<class TypeTag>
-struct NewtonMaxError<TypeTag, TTag::EclBaseProblem> {
+struct NewtonMaxError<TypeTag, TTag::FlowBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 10e9;
 };
@@ -359,7 +359,7 @@ struct NewtonMaxError<TypeTag, TTag::EclBaseProblem> {
 // set the maximum number of Newton iterations to 14 because the likelyhood that a time
 // step succeeds at more than 14 Newton iteration is rather small
 template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::EclBaseProblem> {
+struct NewtonMaxIterations<TypeTag, TTag::FlowBaseProblem> {
     static constexpr int value = 14;
 };
 
@@ -367,55 +367,55 @@ struct NewtonMaxIterations<TypeTag, TTag::EclBaseProblem> {
 // this is only relevant if the time step is reduced from the report step size for some
 // reason. (because ebos first tries to do a report step using a single time step.)
 template<class TypeTag>
-struct NewtonTargetIterations<TypeTag, TTag::EclBaseProblem> {
+struct NewtonTargetIterations<TypeTag, TTag::FlowBaseProblem> {
     static constexpr int value = 6;
 };
 
 // Disable the VTK output by default for this problem ...
 template<class TypeTag>
-struct EnableVtkOutput<TypeTag, TTag::EclBaseProblem> {
+struct EnableVtkOutput<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
 // ... but enable the ECL output by default
 template<class TypeTag>
-struct EnableEclOutput<TypeTag,TTag::EclBaseProblem> {
+struct EnableEclOutput<TypeTag,TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 #ifdef HAVE_DAMARIS
 //! Disable the Damaris HDF5 output by default
 template<class TypeTag>
-struct EnableDamarisOutput<TypeTag, TTag::EclBaseProblem> {
+struct EnableDamarisOutput<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 // If Damaris is available, write specific variable output in parallel
 template<class TypeTag>
-struct DamarisOutputHdfCollective<TypeTag, TTag::EclBaseProblem> {
+struct DamarisOutputHdfCollective<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 // Save the reservoir model mesh data to the HDF5 file (even if field data HDF5 output is disabled)
 template<class TypeTag>
-struct DamarisSaveMeshToHdf<TypeTag, TTag::EclBaseProblem> {
+struct DamarisSaveMeshToHdf<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 // Save the simulation fields (currently only PRESSURE) variables to HDF5 file
 template<class TypeTag>
-struct DamarisSaveToHdf<TypeTag, TTag::EclBaseProblem> {
+struct DamarisSaveToHdf<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 // Specify path and filename of a Python script to run on each end of iteration output
 template<class TypeTag>
-struct DamarisPythonScript<TypeTag, TTag::EclBaseProblem> {
+struct DamarisPythonScript<TypeTag, TTag::FlowBaseProblem> {
     static constexpr auto value = "";
 };
 // Specifiy a Paraview Catalyst in situ visualisation script (if Paraview is enabled in Damaris)
 template<class TypeTag>
-struct DamarisPythonParaviewScript<TypeTag, TTag::EclBaseProblem> {
+struct DamarisPythonParaviewScript<TypeTag, TTag::FlowBaseProblem> {
     static constexpr auto value = "";
 };
 // Specify a unique name for the Damaris simulation (used as prefix to HDF5 filenames)
 template<class TypeTag>
-struct DamarisSimName<TypeTag, TTag::EclBaseProblem> {
+struct DamarisSimName<TypeTag, TTag::FlowBaseProblem> {
     static constexpr auto value = "";
 };
 // Specify the number of Damaris cores (dc) to create (per-node). Must divide into the remaining ranks
@@ -426,95 +426,95 @@ struct DamarisSimName<TypeTag, TTag::EclBaseProblem> {
 // or 4 dc + 12 sim 
 // *not* 3 dc + 13 sim ranks
 template<class TypeTag>
-struct DamarisDedicatedCores<TypeTag, TTag::EclBaseProblem> {
+struct DamarisDedicatedCores<TypeTag, TTag::FlowBaseProblem> {
     static constexpr int value = 1;
 };
 // Specify the number of Damaris nodes to create 
 template<class TypeTag>
-struct DamarisDedicatedNodes<TypeTag, TTag::EclBaseProblem> {
+struct DamarisDedicatedNodes<TypeTag, TTag::FlowBaseProblem> {
     static constexpr int value = 0;
 };
 // Specify a name for the Damaris shared memory file (a unique name will be created by default)
 template<class TypeTag>
-struct DamarisSharedMemoryName<TypeTag, TTag::EclBaseProblem> {
+struct DamarisSharedMemoryName<TypeTag, TTag::FlowBaseProblem> {
     static constexpr auto value = "" ;  // default name is empty, will make unique if needed in DamarisKeywords()
 };
 // Specify the shared memory file size
 template<class TypeTag>
-struct DamarisSharedMemorySizeBytes<TypeTag, TTag::EclBaseProblem> {
+struct DamarisSharedMemorySizeBytes<TypeTag, TTag::FlowBaseProblem> {
     static constexpr long value = 536870912;  // 512 MB
 };
 // Specify the Damaris log level - if set to debug then log is flushed regularly
 template<class TypeTag>
-struct DamarisLogLevel<TypeTag, TTag::EclBaseProblem> {
+struct DamarisLogLevel<TypeTag, TTag::FlowBaseProblem> {
     static constexpr auto value = "info";
 };
 // Specify the dask file jason file that specifies the Dask scheduler etc.
 template<class TypeTag>
-struct DamarisDaskFile<TypeTag, TTag::EclBaseProblem> {
+struct DamarisDaskFile<TypeTag, TTag::FlowBaseProblem> {
     static constexpr auto value = "";
 };
 #endif
 // If available, write the ECL output in a non-blocking manner
 template<class TypeTag>
-struct EnableAsyncEclOutput<TypeTag, TTag::EclBaseProblem> {
+struct EnableAsyncEclOutput<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 
 // Write ESMRY file for fast loading of summary data
 template<class TypeTag>
-struct EnableEsmry<TypeTag, TTag::EclBaseProblem> {
+struct EnableEsmry<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
 // By default, use single precision for the ECL formated results
 template<class TypeTag>
-struct EclOutputDoublePrecision<TypeTag, TTag::EclBaseProblem> {
+struct EclOutputDoublePrecision<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
 // The default location for the ECL output files
 template<class TypeTag>
-struct OutputDir<TypeTag, TTag::EclBaseProblem> {
+struct OutputDir<TypeTag, TTag::FlowBaseProblem> {
     static constexpr auto value = ".";
 };
 
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
 template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, TTag::EclBaseProblem> {
+struct EnableIntensiveQuantityCache<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 
 // the cache for the storage term can also be used and also yields a decent speedup
 template<class TypeTag>
-struct EnableStorageCache<TypeTag, TTag::EclBaseProblem> {
+struct EnableStorageCache<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
 template<class TypeTag>
-struct FluxModule<TypeTag, TTag::EclBaseProblem> {
+struct FluxModule<TypeTag, TTag::FlowBaseProblem> {
     using type = NewTranFluxModule<TypeTag>;
 };
 
 // Use the dummy gradient calculator in order not to do unnecessary work.
 template<class TypeTag>
-struct GradientCalculator<TypeTag, TTag::EclBaseProblem> {
+struct GradientCalculator<TypeTag, TTag::FlowBaseProblem> {
     using type = DummyGradientCalculator<TypeTag>;
 };
 
 // Use a custom Newton-Raphson method class for ebos in order to attain more
 // sophisticated update and error computation mechanisms
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::EclBaseProblem> {
+struct NewtonMethod<TypeTag, TTag::FlowBaseProblem> {
     using type = EclNewtonMethod<TypeTag>;
 };
 
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files
 template<class TypeTag>
-struct RestartWritingInterval<TypeTag, TTag::EclBaseProblem> {
+struct RestartWritingInterval<TypeTag, TTag::FlowBaseProblem> {
     static constexpr int value = 0xffffff; // disable
 };
 
@@ -522,79 +522,79 @@ struct RestartWritingInterval<TypeTag, TTag::EclBaseProblem> {
 // conservation quantities are only compensated for
 // as default if experimental mode is enabled.
 template<class TypeTag>
-struct EnableDriftCompensation<TypeTag, TTag::EclBaseProblem> {
+struct EnableDriftCompensation<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 
 };
 
 // By default, we enable the debugging checks if we're compiled in debug mode
 template<class TypeTag>
-struct EnableDebuggingChecks<TypeTag, TTag::EclBaseProblem> {
+struct EnableDebuggingChecks<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 
 // store temperature (but do not conserve energy, as long as EnableEnergy is false)
 template<class TypeTag>
-struct EnableTemperature<TypeTag, TTag::EclBaseProblem> {
+struct EnableTemperature<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableMech<TypeTag, TTag::EclBaseProblem> {
+struct EnableMech<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
 template<class TypeTag>
-struct EnablePolymer<TypeTag, TTag::EclBaseProblem> {
+struct EnablePolymer<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableSolvent<TypeTag, TTag::EclBaseProblem> {
+struct EnableSolvent<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::EclBaseProblem> {
+struct EnableEnergy<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableFoam<TypeTag, TTag::EclBaseProblem> {
+struct EnableFoam<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableExtbo<TypeTag, TTag::EclBaseProblem> {
+struct EnableExtbo<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct EnableMICP<TypeTag, TTag::EclBaseProblem> {
+struct EnableMICP<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
 // disable thermal flux boundaries by default
 template<class TypeTag>
-struct EnableThermalFluxBoundaries<TypeTag, TTag::EclBaseProblem> {
+struct EnableThermalFluxBoundaries<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
-// By default, simulators derived from the EclBaseProblem are production simulators,
+// By default, simulators derived from the FlowBaseProblem are production simulators,
 // i.e., experimental features must be explicitly enabled at compile time
 template<class TypeTag>
-struct EnableExperiments<TypeTag, TTag::EclBaseProblem> {
+struct EnableExperiments<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
 template<class TypeTag>
-struct OutputMode<TypeTag, TTag::EclBaseProblem> {
+struct OutputMode<TypeTag, TTag::FlowBaseProblem> {
     static constexpr auto value = "all";
 };
 // Parameterize equilibration accuracy
 template<class TypeTag>
-struct NumPressurePointsEquil<TypeTag, TTag::EclBaseProblem> {
+struct NumPressurePointsEquil<TypeTag, TTag::FlowBaseProblem> {
     static constexpr int value = ParserKeywords::EQLDIMS::DEPTH_NODES_P::defaultValue;
 };
 // By default, use implicit pressure in rock compaction
 template<class TypeTag>
-struct ExplicitRockCompaction<TypeTag, TTag::EclBaseProblem> {
+struct ExplicitRockCompaction<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
