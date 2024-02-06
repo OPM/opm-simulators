@@ -132,17 +132,7 @@ std::string
 FlowGenericProblem<GridView,FluidSystem,Scalar>::
 briefDescription()
 {
-    if (briefDescription_.empty())
-        return
-            "The Ecl-deck Black-Oil reservoir Simulator (ebos); a hydrocarbon "
-            "reservoir simulation program that processes ECL-formatted input "
-            "files that is part of the Open Porous Media project "
-            "(https://opm-project.org).\n"
-            "\n"
-            "THE GOAL OF THE `ebos` SIMULATOR IS TO CATER FOR THE NEEDS OF "
-            "DEVELOPMENT AND RESEARCH. No guarantees are made for production use!";
-    else
-        return briefDescription_;
+    return briefDescription_;
 }
 
 template<class GridView, class FluidSystem, class Scalar>
