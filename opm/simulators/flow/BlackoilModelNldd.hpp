@@ -543,7 +543,7 @@ private:
         double pvSumLocal = 0.0;
         double numAquiferPvSumLocal = 0.0;
         const auto& model = modelSimulator.model();
-        const auto& ebosProblem = modelSimulator.problem();
+        const auto& problem = modelSimulator.problem();
 
         const auto& ebosResid = modelSimulator.model().linearizer().residual();
 
@@ -567,7 +567,7 @@ private:
             const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            const auto pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) *
+            const auto pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) *
                                  model.dofTotalVolume(cell_idx);
             pvSumLocal += pvValue;
 
@@ -866,11 +866,11 @@ private:
         double errorPV{};
         const auto& simulator = model_.simulator();
         const auto& model = simulator.model();
-        const auto& ebosProblem = simulator.problem();
+        const auto& problem = simulator.problem();
         const auto& ebosResid = simulator.model().linearizer().residual();
 
         for (const int cell_idx : domain.cells) {
-            const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) *
+            const double pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) *
                                    model.dofTotalVolume(cell_idx);
             const auto& cellResidual = ebosResid[cell_idx];
             bool cnvViolated = false;
