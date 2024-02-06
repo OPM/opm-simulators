@@ -305,7 +305,7 @@ public:
             return;
 
         const auto& problem = elemCtx.simulator().problem();
-        const auto& ebosResid = elemCtx.simulator().model().linearizer().residual();
+        const auto& modelResid = elemCtx.simulator().model().linearizer().residual();
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
@@ -608,7 +608,6 @@ public:
             // where it outputs rs and rv values calculated by the initialization. To be compatible we overwrite
             // rs and rv with the values computed in the initially.
             // Volume factors, densities and viscosities need to be recalculated with the updated rs and rv values.
-            // This can be removed when ebos has 100% controll over output
             if ((elemCtx.simulator().episodeIndex() < 0) &&
                 FluidSystem::phaseIsActive(oilPhaseIdx) &&
                 FluidSystem::phaseIsActive(gasPhaseIdx))
@@ -684,7 +683,7 @@ public:
             {
                 if (!this->residual_[phaseIdx].empty()) {
                     const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-                    this->residual_[phaseIdx][globalDofIdx] = ebosResid[globalDofIdx][activeCompIdx];
+                    this->residual_[phaseIdx][globalDofIdx] = modelResid[globalDofIdx][activeCompIdx];
                 }
             }
         }
