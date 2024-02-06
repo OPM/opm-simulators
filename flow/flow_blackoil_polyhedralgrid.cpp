@@ -38,39 +38,40 @@
 namespace Opm {
 namespace Properties {
     namespace TTag {
-        struct EclFlowProblemPoly {
+        struct FlowProblemPoly {
             using InheritsFrom = std::tuple<FlowProblem>;
         };
     }
 
     template<class TypeTag>
-    struct Linearizer<TypeTag, TTag::EclFlowProblemPoly> { using type = TpfaLinearizer<TypeTag>; };
+    struct Linearizer<TypeTag, TTag::FlowProblemPoly> { using type = TpfaLinearizer<TypeTag>; };
 
     template<class TypeTag>
-    struct LocalResidual<TypeTag, TTag::EclFlowProblemPoly> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+    struct LocalResidual<TypeTag, TTag::FlowProblemPoly> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
     template<class TypeTag>
-    struct EnableDiffusion<TypeTag, TTag::EclFlowProblemPoly> { static constexpr bool value = false; };
+    struct EnableDiffusion<TypeTag, TTag::FlowProblemPoly> { static constexpr bool value = false; };
 
     template<class TypeTag>
-    struct Grid<TypeTag, TTag::EclFlowProblemPoly> {
+    struct Grid<TypeTag, TTag::FlowProblemPoly> {
         using type = Dune::PolyhedralGrid<3, 3>;
     };
     template<class TypeTag>
-    struct EquilGrid<TypeTag, TTag::EclFlowProblemPoly> {
+    struct EquilGrid<TypeTag, TTag::FlowProblemPoly> {
         //using type = Dune::CpGrid;
         using type = GetPropType<TypeTag, Properties::Grid>;
     };
 
     template<class TypeTag>
-    struct Vanguard<TypeTag, TTag::EclFlowProblemPoly> {
+    struct Vanguard<TypeTag, TTag::FlowProblemPoly> {
         using type = Opm::EclPolyhedralGridVanguard<TypeTag>;
     };
 }
 }
+
 int main(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowProblemPoly;
+    using TypeTag = Opm::Properties::TTag::FlowProblemPoly;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
