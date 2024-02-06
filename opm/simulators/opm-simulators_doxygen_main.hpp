@@ -27,8 +27,7 @@
 <h3>Solvers and simulators</h3>
 
 The opm-simulators module is the home for the Flow reservoir
-simulator, the Ebos experimental simulator and library functionality
-on which they both depend.
+simulators and library functionality on which they depend.
 
 */
 
