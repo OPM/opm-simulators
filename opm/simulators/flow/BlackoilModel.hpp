@@ -629,7 +629,7 @@ namespace Opm {
         void solveJacobianSystem(BVector& x)
         {
             auto& jacobian = simulator_.model().linearizer().jacobian().istlMatrix();
-            auto& ebosResid = simulator_.model().linearizer().residual();
+            auto& residual = simulator_.model().linearizer().residual();
             auto& ebosSolver = simulator_.model().newtonMethod().linearSolver();
 
             const int numSolvers = ebosSolver.numAvailableSolvers();
@@ -649,10 +649,10 @@ namespace Opm {
                     BVector x0(x);
                     ebosSolver.setActiveSolver(solver);
                     perfTimer.start();
-                    ebosSolver.prepare(jacobian, ebosResid);
+                    ebosSolver.prepare(jacobian, residual);
                     setupTimes[solver] = perfTimer.stop();
                     perfTimer.reset();
-                    ebosSolver.setResidual(ebosResid);
+                    ebosSolver.setResidual(residual);
                     perfTimer.start();
                     ebosSolver.solve(x_trial[solver]);
                     times[solver] = perfTimer.stop();
@@ -676,9 +676,9 @@ namespace Opm {
 
                 Dune::Timer perfTimer;
                 perfTimer.start();
-                ebosSolver.prepare(jacobian, ebosResid);
+                ebosSolver.prepare(jacobian, residual);
                 linear_solve_setup_time_ = perfTimer.stop();
-                ebosSolver.setResidual(ebosResid);
+                ebosSolver.setResidual(residual);
                 // actually, the error needs to be calculated after setResidual in order to
                 // account for parallelization properly. since the residual of ECFV
                 // discretizations does not need to be synchronized across processes to be
@@ -790,7 +790,7 @@ namespace Opm {
             const auto& ebosModel = simulator_.model();
             const auto& ebosProblem = simulator_.problem();
 
-            const auto& ebosResid = simulator_.model().linearizer().residual();
+            const auto& residual = simulator_.model().linearizer().residual();
 
             ElementContext elemCtx(simulator_);
             const auto& gridView = simulator().gridView();
@@ -813,7 +813,7 @@ namespace Opm {
                     numAquiferPvSumLocal += pvValue;
                 }
 
-                this->getMaxCoeff(cell_idx, intQuants, fs, ebosResid, pvValue,
+                this->getMaxCoeff(cell_idx, intQuants, fs, residual, pvValue,
                                   B_avg, R_sum, maxCoeff, maxCoeffCell);
             }
 
@@ -838,7 +838,7 @@ namespace Opm {
             double errorPV{};
             const auto& ebosModel = simulator_.model();
             const auto& ebosProblem = simulator_.problem();
-            const auto& ebosResid = simulator_.model().linearizer().residual();
+            const auto& residual = simulator_.model().linearizer().residual();
             const auto& gridView = simulator().gridView();
             ElementContext elemCtx(simulator_);
             IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
@@ -855,7 +855,7 @@ namespace Opm {
                 // elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
                 const double pvValue = ebosProblem.referencePorosity(cell_idx, /*timeIdx=*/0) * ebosModel.dofTotalVolume( cell_idx );
-                const auto& cellResidual = ebosResid[cell_idx];
+                const auto& cellResidual = residual[cell_idx];
                 bool cnvViolated = false;
 
                 for (unsigned eqIdx = 0; eqIdx < cellResidual.size(); ++eqIdx)
@@ -1148,7 +1148,7 @@ namespace Opm {
         void getMaxCoeff(const unsigned cell_idx,
                          const IntensiveQuantities& intQuants,
                          const FluidState& fs,
-                         const Residual& ebosResid,
+                         const Residual& modelResid,
                          const Scalar pvValue,
                          std::vector<Scalar>& B_avg,
                          std::vector<Scalar>& R_sum,
@@ -1164,7 +1164,7 @@ namespace Opm {
                 const unsigned compIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
 
                 B_avg[compIdx] += 1.0 / fs.invB(phaseIdx).value();
-                const auto R2 = ebosResid[cell_idx][compIdx];
+                const auto R2 = modelResid[cell_idx][compIdx];
 
                 R_sum[compIdx] += R2;
                 const double Rval = std::abs(R2) / pvValue;
@@ -1176,35 +1176,35 @@ namespace Opm {
 
             if constexpr (has_solvent_) {
                 B_avg[contiSolventEqIdx] += 1.0 / intQuants.solventInverseFormationVolumeFactor().value();
-                const auto R2 = ebosResid[cell_idx][contiSolventEqIdx];
+                const auto R2 = modelResid[cell_idx][contiSolventEqIdx];
                 R_sum[contiSolventEqIdx] += R2;
                 maxCoeff[contiSolventEqIdx] = std::max(maxCoeff[contiSolventEqIdx],
                                                        std::abs(R2) / pvValue);
             }
             if constexpr (has_extbo_) {
                 B_avg[contiZfracEqIdx] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
-                const auto R2 = ebosResid[cell_idx][contiZfracEqIdx];
+                const auto R2 = modelResid[cell_idx][contiZfracEqIdx];
                 R_sum[ contiZfracEqIdx ] += R2;
                 maxCoeff[contiZfracEqIdx] = std::max(maxCoeff[contiZfracEqIdx],
                                                      std::abs(R2) / pvValue);
             }
             if constexpr (has_polymer_) {
                 B_avg[contiPolymerEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                const auto R2 = ebosResid[cell_idx][contiPolymerEqIdx];
+                const auto R2 = modelResid[cell_idx][contiPolymerEqIdx];
                 R_sum[contiPolymerEqIdx] += R2;
                 maxCoeff[contiPolymerEqIdx] = std::max(maxCoeff[contiPolymerEqIdx],
                                                        std::abs(R2) / pvValue);
             }
             if constexpr (has_foam_) {
                 B_avg[ contiFoamEqIdx ] += 1.0 / fs.invB(FluidSystem::gasPhaseIdx).value();
-                const auto R2 = ebosResid[cell_idx][contiFoamEqIdx];
+                const auto R2 = modelResid[cell_idx][contiFoamEqIdx];
                 R_sum[contiFoamEqIdx] += R2;
                 maxCoeff[contiFoamEqIdx] = std::max(maxCoeff[contiFoamEqIdx],
                                                     std::abs(R2) / pvValue);
             }
             if constexpr (has_brine_) {
                 B_avg[ contiBrineEqIdx ] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                const auto R2 = ebosResid[cell_idx][contiBrineEqIdx];
+                const auto R2 = modelResid[cell_idx][contiBrineEqIdx];
                 R_sum[contiBrineEqIdx] += R2;
                 maxCoeff[contiBrineEqIdx] = std::max(maxCoeff[contiBrineEqIdx],
                                                      std::abs(R2) / pvValue);
@@ -1217,7 +1217,7 @@ namespace Opm {
                 // the residual of the polymer molecular equation is scaled down by a 100, since molecular weight
                 // can be much bigger than 1, and this equation shares the same tolerance with other mass balance equations
                 // TODO: there should be a more general way to determine the scaling-down coefficient
-                const auto R2 = ebosResid[cell_idx][contiPolymerMWEqIdx] / 100.;
+                const auto R2 = modelResid[cell_idx][contiPolymerMWEqIdx] / 100.;
                 R_sum[contiPolymerMWEqIdx] += R2;
                 maxCoeff[contiPolymerMWEqIdx] = std::max(maxCoeff[contiPolymerMWEqIdx],
                                                          std::abs(R2) / pvValue);
@@ -1225,7 +1225,7 @@ namespace Opm {
 
             if constexpr (has_energy_) {
                 B_avg[contiEnergyEqIdx] += 1.0 / (4.182e1); // converting J -> RM3 (entalpy / (cp * deltaK * rho) assuming change of 1e-5K of water
-                const auto R2 = ebosResid[cell_idx][contiEnergyEqIdx];
+                const auto R2 = modelResid[cell_idx][contiEnergyEqIdx];
                 R_sum[contiEnergyEqIdx] += R2;
                 maxCoeff[contiEnergyEqIdx] = std::max(maxCoeff[contiEnergyEqIdx],
                                                       std::abs(R2) / pvValue);
@@ -1233,27 +1233,27 @@ namespace Opm {
 
             if constexpr (has_micp_) {
                 B_avg[contiMicrobialEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                const auto R1 = ebosResid[cell_idx][contiMicrobialEqIdx];
+                const auto R1 = modelResid[cell_idx][contiMicrobialEqIdx];
                 R_sum[contiMicrobialEqIdx] += R1;
                 maxCoeff[contiMicrobialEqIdx] = std::max(maxCoeff[contiMicrobialEqIdx],
                                                          std::abs(R1) / pvValue);
                 B_avg[contiOxygenEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                const auto R2 = ebosResid[cell_idx][contiOxygenEqIdx];
+                const auto R2 = modelResid[cell_idx][contiOxygenEqIdx];
                 R_sum[contiOxygenEqIdx] += R2;
                 maxCoeff[contiOxygenEqIdx] = std::max(maxCoeff[contiOxygenEqIdx],
                                                       std::abs(R2) / pvValue);
                 B_avg[contiUreaEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                const auto R3 = ebosResid[cell_idx][contiUreaEqIdx];
+                const auto R3 = modelResid[cell_idx][contiUreaEqIdx];
                 R_sum[contiUreaEqIdx] += R3;
                 maxCoeff[contiUreaEqIdx] = std::max(maxCoeff[contiUreaEqIdx],
                                                     std::abs(R3) / pvValue);
                 B_avg[contiBiofilmEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                const auto R4 = ebosResid[cell_idx][contiBiofilmEqIdx];
+                const auto R4 = modelResid[cell_idx][contiBiofilmEqIdx];
                 R_sum[contiBiofilmEqIdx] += R4;
                 maxCoeff[contiBiofilmEqIdx] = std::max(maxCoeff[contiBiofilmEqIdx],
                                                        std::abs(R4) / pvValue);
                 B_avg[contiCalciteEqIdx] += 1.0 / fs.invB(FluidSystem::waterPhaseIdx).value();
-                const auto R5 = ebosResid[cell_idx][contiCalciteEqIdx];
+                const auto R5 = modelResid[cell_idx][contiCalciteEqIdx];
                 R_sum[contiCalciteEqIdx] += R5;
                 maxCoeff[contiCalciteEqIdx] = std::max(maxCoeff[contiCalciteEqIdx],
                                                        std::abs(R5) / pvValue);
