@@ -28,17 +28,17 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowMICPProblem {
+struct FlowMICPProblem {
     using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 template<class TypeTag>
-struct EnableMICP<TypeTag, TTag::EclFlowMICPProblem> {
+struct EnableMICP<TypeTag, TTag::FlowMICPProblem> {
     static constexpr bool value = true;
 };
 //! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::EclFlowMICPProblem>
+struct Indices<TypeTag, TTag::FlowMICPProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
@@ -48,7 +48,7 @@ private:
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef BlackOilOnePhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+    using type = BlackOilOnePhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
                                          getPropValue<TypeTag, Properties::EnablePolymer>(),
                                          getPropValue<TypeTag, Properties::EnableEnergy>(),
@@ -56,7 +56,7 @@ public:
                                          getPropValue<TypeTag, Properties::EnableBrine>(),
                                          /*PVOffset=*/0,
                                          /*enabledCompIdx=*/FluidSystem::waterCompIdx,
-                                         5> type; //Five MICP components
+                                         5>; //Five MICP components
 };
 }}
 
@@ -69,14 +69,14 @@ int flowEbosMICPMain(int argc, char** argv, bool outputCout, bool outputFiles)
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::EclFlowMICPProblem>
+    FlowMain<Properties::TTag::FlowMICPProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
 
 int flowEbosMICPMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowMICPProblem;
+    using TypeTag = Properties::TTag::FlowMICPProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
