@@ -30,6 +30,7 @@
 
 #include <opm/input/eclipse/EclipseState/Grid/FieldData.hpp>
 
+#include <opm/simulators/utils/MPISerializer.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
 #include <dune/grid/common/datahandleif.hh>
@@ -228,5 +229,6 @@ private:
 };
 
 } // end namespace Opm
+
 #endif // HAVE_MPI
 #endif // PROPS_DATAHANDLE_HPP
