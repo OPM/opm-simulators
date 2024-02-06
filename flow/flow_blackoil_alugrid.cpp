@@ -40,13 +40,13 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowProblemAlugrid {
+struct FlowProblemAlugrid {
     using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 
 template<class TypeTag>
-struct Grid<TypeTag, TTag::EclFlowProblemAlugrid> {
+struct Grid<TypeTag, TTag::FlowProblemAlugrid> {
     static const int dim = 3;
 #if HAVE_MPI
      using type = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming,Dune::ALUGridMPIComm>;
@@ -54,20 +54,22 @@ struct Grid<TypeTag, TTag::EclFlowProblemAlugrid> {
      using type = Dune::ALUGrid<dim, dim, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
 #endif
 };
+
 // alugrid need cp grid as equilgrid
 template<class TypeTag>
-struct EquilGrid<TypeTag, TTag::EclFlowProblemAlugrid> {
+struct EquilGrid<TypeTag, TTag::FlowProblemAlugrid> {
     using type = Dune::CpGrid;
 };
 template<class TypeTag>
-struct Vanguard<TypeTag, TTag::EclFlowProblemAlugrid> {
+struct Vanguard<TypeTag, TTag::FlowProblemAlugrid> {
     using type = Opm::EclAluGridVanguard<TypeTag>;
 };
 }
 }
+
 int main(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowProblemAlugrid;
+    using TypeTag = Opm::Properties::TTag::FlowProblemAlugrid;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
