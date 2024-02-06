@@ -33,6 +33,11 @@ struct EclTimeSteppingParameters {};
 }
 
 template<class TypeTag, class MyTypeTag>
+struct EnableTuning {
+    using type = UndefinedProperty;
+};
+
+template<class TypeTag, class MyTypeTag>
 struct SolverGrowthFactor {
     using type = UndefinedProperty;
 };
@@ -60,6 +65,11 @@ struct SolverRestartFactor {
 template<class TypeTag, class MyTypeTag>
 struct TimeStepAfterEventInDays {
     using type = UndefinedProperty;
+};
+
+template<class TypeTag>
+struct EnableTuning<TypeTag, TTag::EclTimeSteppingParameters> {
+    static constexpr bool value = false;
 };
 
 template<class TypeTag>
@@ -105,6 +115,8 @@ namespace Opm {
 template<class TypeTag>
 void registerEclTimeSteppingParameters()
 {
+    EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTuning,
+                         "Honor some aspects of the TUNING keyword.");
     EWOMS_REGISTER_PARAM(TypeTag, double, SolverGrowthFactor,
                          "The factor time steps are elongated after a successful substep");
     EWOMS_REGISTER_PARAM(TypeTag, double, SolverMaxGrowth,
