@@ -26,17 +26,17 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowBrineSaltPrecipitationProblem {
+struct FlowBrineSaltPrecipitationProblem {
     using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::EclFlowBrineSaltPrecipitationProblem> {
+struct EnableBrine<TypeTag, TTag::FlowBrineSaltPrecipitationProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::EclFlowBrineSaltPrecipitationProblem> {
+struct EnableSaltPrecipitation<TypeTag, TTag::FlowBrineSaltPrecipitationProblem> {
     static constexpr bool value = true;
 };
 }}
@@ -50,14 +50,14 @@ int flowEbosBrineSaltPrecipitationMain(int argc, char** argv, bool outputCout, b
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::EclFlowBrineSaltPrecipitationProblem>
+    FlowMain<Properties::TTag::FlowBrineSaltPrecipitationProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
 
 int flowEbosBrineSaltPrecipitationMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowBrineSaltPrecipitationProblem;
+    using TypeTag = Properties::TTag::FlowBrineSaltPrecipitationProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!
