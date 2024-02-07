@@ -2185,12 +2185,18 @@ namespace Opm {
     {
         const int np = numPhases();
         std::vector<double> potentials;
-        const auto& well= well_container_[widx];
+        const auto& well = well_container_[widx];
+        std::string cur_exc_msg;
+        auto cur_exc_type = ExceptionType::NONE;
         try {
             well->computeWellPotentials(ebosSimulator_, well_state_copy, potentials, deferred_logger);
         }
         // catch all possible exception and store type and message.
-        OPM_PARALLEL_CATCH_CLAUSE(exc_type, exc_msg);
+        OPM_PARALLEL_CATCH_CLAUSE(cur_exc_type, cur_exc_msg);
+        if (cur_exc_type != ExceptionType::NONE) {
+            exc_msg += fmt::format("\nFor well {}: {}", well->name(), cur_exc_msg);
+        }
+        exc_type = std::max(exc_type, cur_exc_type);
         // Store it in the well state
         // potentials is resized and set to zero in the beginning of well->ComputeWellPotentials
         // and updated only if sucessfull. i.e. the potentials are zero for exceptions
