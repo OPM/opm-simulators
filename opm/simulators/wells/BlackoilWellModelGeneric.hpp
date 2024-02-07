@@ -179,7 +179,7 @@ public:
     data::GroupAndNetworkValues groupAndNetworkData(const int reportStepIdx) const;
 
     /// Return true if any well has a THP constraint.
-    bool hasTHPConstraints() const;
+    bool hasTHPConstraints();
 
     /// Checks if network is active (at least one network well on prediction).
     void updateNetworkActiveState(const int report_step);
@@ -213,6 +213,7 @@ public:
     void updateClosedWellsThisStep(const std::string& well_name) const {
         this->closed_this_step_.insert(well_name);
     }
+    bool wasDynamicallyShutThisTimeStep(const std::string well_name) const;
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -231,6 +232,7 @@ public:
         serializer(last_glift_opt_time_);
         serializer(switched_prod_groups_);
         serializer(switched_inj_groups_);
+        serializer(closed_offending_wells_);
     }
 
     bool operator==(const BlackoilWellModelGeneric& rhs) const
@@ -247,7 +249,8 @@ public:
                this->nupcol_wgstate_ == rhs.nupcol_wgstate_ &&
                this->last_glift_opt_time_ == rhs.last_glift_opt_time_ &&
                this->switched_prod_groups_ == rhs.switched_prod_groups_ &&
-               this->switched_inj_groups_ == rhs.switched_inj_groups_;
+               this->switched_inj_groups_ == rhs.switched_inj_groups_ &&
+               this->closed_offending_wells_ == rhs.closed_offending_wells_;            
     }
 
 protected:
@@ -584,6 +587,8 @@ protected:
 
     std::map<std::string, std::string> switched_prod_groups_;
     std::map<std::pair<std::string, Opm::Phase>, std::string> switched_inj_groups_;
+    std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
+
 
 private:
     WellInterfaceGeneric* getGenWell(const std::string& well_name);

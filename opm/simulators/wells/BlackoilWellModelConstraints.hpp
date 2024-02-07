@@ -24,7 +24,7 @@
 #define OPM_BLACKOILWELLMODEL_CONSTRAINTS_HEADER_INCLUDED
 
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
-
+#include <optional>
 #include <utility>
 
 namespace Opm {
@@ -60,9 +60,12 @@ public:
                                    DeferredLogger& deferred_logger) const;
 
     //! \brief Execute action on broken constraint for a production well group.
-    void actionOnBrokenConstraints(const Group& group,
+    bool actionOnBrokenConstraints(const Group& group,
+                                   const int reportStepIdx,
                                    const Group::GroupLimitAction group_limit_action,
                                    const Group::ProductionCMode& newControl,
+                                   const WellState& well_state,
+                                   std::optional<std::string>& worst_offending_well,
                                    GroupState& group_state,
                                    DeferredLogger& deferred_logger) const;
 
@@ -71,6 +74,7 @@ public:
                                       const int reportStepIdx,
                                       std::map<std::pair<std::string,Opm::Phase>,std::string>& switched_inj,
                                       std::map<std::string, std::string>& switched_prod,
+                                      std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                                       GroupState& group_state,
                                       WellState& well_state,
                                       DeferredLogger& deferred_logger) const;
