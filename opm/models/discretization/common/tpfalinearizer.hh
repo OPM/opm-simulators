@@ -665,6 +665,9 @@ public:
             OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);
             for (const auto& nbInfo : nbInfos) {
                 OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
+                // not for NNCs
+                if (nbInfo.res_nbinfo.dirId < 0)
+                    continue;
                 unsigned globJ = nbInfo.neighbor;
                 assert(globJ != globI);
                 adres = 0.0;
