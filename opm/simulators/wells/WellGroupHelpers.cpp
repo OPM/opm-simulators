@@ -1400,6 +1400,72 @@ namespace WellGroupHelpers
         return std::make_pair(current_rate > target_rate, scale);
     }
 
+    template <class Comm>
+    std::pair<std::optional<std::string>, double> shutWorstOffendingWell(const Group& group,
+                                                          const Schedule& schedule,
+                                                          const int reportStepIdx,
+                                                          const Group::ProductionCMode& offendedControl,
+                                                          const PhaseUsage& pu,
+                                                          const Comm& comm,
+                                                          const WellState& wellState,
+                                                          DeferredLogger& deferred_logger) 
+    {
+        std::pair<std::optional<std::string>, double> offending_well {std::nullopt, 0.0};
+        for (const std::string& child_group : group.groups()) {
+            const auto& this_group = schedule.getGroup(child_group, reportStepIdx);
+            const auto & offending_well_this = shutWorstOffendingWell(this_group, schedule, reportStepIdx, offendedControl, pu, comm, wellState, deferred_logger);
+            if (offending_well_this.second > offending_well.second) {
+                offending_well = offending_well_this;
+            }
+        }    
+
+        for (const std::string& child_well : group.wells()) {
+
+            const auto& well_index = wellState.index(child_well);
+            double rate = 0.0;
+            if (well_index.has_value() && wellState.wellIsOwned(well_index.value(), child_well))
+            {
+                const auto& ws = wellState.well(child_well);
+                switch (offendedControl){
+                    case Group::ProductionCMode::ORAT:
+                        rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
+                        break;
+                    case Group::ProductionCMode::GRAT:
+                        rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]];
+                        break;
+                    case Group::ProductionCMode::WRAT:
+                        rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
+                        break;
+                    case Group::ProductionCMode::LRAT:
+                        rate = -(ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] + ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]]);
+                        break;
+                    case Group::ProductionCMode::RESV:
+                        rate = -(ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Liquid]] 
+                                    + ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Vapour]]
+                                    + ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Aqua]]);
+                        break;
+                    case Group::ProductionCMode::NONE:
+                        break;
+                    case Group::ProductionCMode::FLD:
+                        break;
+                    case Group::ProductionCMode::PRBL:
+                        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionCMode PRBL not implemented", deferred_logger);
+                        break;    
+                    case Group::ProductionCMode::CRAT:
+                        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionCMode CRAT not implemented", deferred_logger);
+                        break;    
+
+                }
+            }
+            rate = comm.sum(rate);
+            if ( rate > offending_well.second) {
+                    offending_well = {child_well, rate};
+            }
+        }
+        return offending_well; 
+    };
+
+
     template <class AverageRegionalPressureType>
     void setRegionAveragePressureCalculator(const Group& group,
                                             const Schedule& schedule,
@@ -1575,6 +1641,16 @@ namespace WellGroupHelpers
                                             const FieldPropsManager&,
                                             const PhaseUsage&,
                                             AvgPMap&);
+
+template
+std::pair<std::optional<std::string>, double>  shutWorstOffendingWell<Parallel::Communication>( const Group& group,
+                                                        const Schedule& schedule,
+                                                        const int reportStepIdx,
+                                                        const Group::ProductionCMode& offendedControl,
+                                                        const PhaseUsage& pu,
+                                                        const Parallel::Communication& comm,
+                                                        const WellState& wellState,
+                                                        DeferredLogger& deferred_logger);
 
 } // namespace WellGroupHelpers
 

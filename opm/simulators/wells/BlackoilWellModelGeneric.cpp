@@ -653,15 +653,20 @@ checkGroupHigherConstraints(const Group& group,
                 resv_coeff,
                 deferred_logger);
             if (is_changed) {
-                switched_prod_groups_.insert_or_assign(group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD));
                 const auto group_limit_action = group.productionControls(summaryState_).group_limit_action;
-                BlackoilWellModelConstraints(*this).
-                        actionOnBrokenConstraints(group, group_limit_action,
+                std::optional<std::string> worst_offending_well = std::nullopt; 
+                changed = BlackoilWellModelConstraints(*this).
+                        actionOnBrokenConstraints(group, reportStepIdx, group_limit_action,
                                                   Group::ProductionCMode::FLD,
+                                                  this->wellState(),
+                                                  worst_offending_well,
                                                   this->groupState(),
                                                   deferred_logger);
-                WellGroupHelpers::updateWellRatesFromGroupTargetScale(scaling_factor, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
-                changed = true;
+
+                if (changed) {
+                    switched_prod_groups_.insert_or_assign(group.name(), Group::ProductionCMode2String(Group::ProductionCMode::FLD));
+                    WellGroupHelpers::updateWellRatesFromGroupTargetScale(scaling_factor, group, schedule(), reportStepIdx, /* isInjector */ false, this->groupState(), this->wellState());
+                }
             }
         }
     }
@@ -772,9 +777,17 @@ bool
 BlackoilWellModelGeneric::
 wasDynamicallyShutThisTimeStep(const int well_index) const
 {
-    return this->closed_this_step_.find(this->wells_ecl_[well_index].name()) !=
+    return wasDynamicallyShutThisTimeStep(this->wells_ecl_[well_index].name());
+}
+
+bool
+BlackoilWellModelGeneric::
+wasDynamicallyShutThisTimeStep(const std::string well_name) const
+{
+    return this->closed_this_step_.find(well_name) !=
            this->closed_this_step_.end();
 }
+
 
 void
 BlackoilWellModelGeneric::
@@ -1028,7 +1041,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
 
 bool
 BlackoilWellModelGeneric::
-hasTHPConstraints() const
+hasTHPConstraints()
 {
     return BlackoilWellModelConstraints(*this).hasTHPConstraints();
 }

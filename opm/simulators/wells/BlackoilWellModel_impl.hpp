@@ -28,7 +28,7 @@
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Well/PAvgDynamicSourceData.hpp>
-
+#include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 #include <opm/simulators/wells/BlackoilWellModelConstraints.hpp>
 #include <opm/simulators/wells/ParallelPAvgDynamicSourceData.hpp>
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
@@ -43,6 +43,7 @@
 #include <algorithm>
 #include <iomanip>
 #include <utility>
+#include <optional>
 
 #include <fmt/format.h>
 
@@ -1076,6 +1077,7 @@ namespace Opm {
         last_report_ = SimulatorReportSingle();
         Dune::Timer perfTimer;
         perfTimer.start();
+        closed_offending_wells_.clear();
 
         {
             const int episodeIdx = simulator_.episodeIndex();
@@ -2129,19 +2131,24 @@ namespace Opm {
             changed = true;
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
         }
+
+        //if (iterationIdx > 1) {
         bool changed_individual =
             BlackoilWellModelConstraints(*this).
                 updateGroupIndividualControl(group,
                                              reportStepIdx,
                                              this->switched_inj_groups_,
                                              this->switched_prod_groups_,
+                                             this->closed_offending_wells_,
                                              this->groupState(),
                                              this->wellState(),
                                              deferred_logger);
+        
         if (changed_individual) {
             changed = true;
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
         }
+        //}
         // call recursively down the group hierarchy
         for (const std::string& groupName : group.groups()) {
             bool changed_this = updateGroupControls( schedule().getGroup(groupName, reportStepIdx), deferred_logger, reportStepIdx,iterationIdx);
@@ -2169,9 +2176,29 @@ namespace Opm {
 
         const Opm::Parallel::Communication comm = grid().comm();
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
+
+        for (const auto& [group_name, to] : closed_offending_wells_) {
+            if (!this->wasDynamicallyShutThisTimeStep(to.second)) {
+                wellTestState.close_well(
+                    to.second, WellTestConfig::Reason::GROUP, simulationTime);
+                this->updateClosedWellsThisStep(to.second);
+                std::string msg = fmt::format("Procedure on exceeding {} limit is WELL for group {}. Well {} is {}.",
+                        to.first,
+                        group_name,
+                        to.second,
+                        "shut");
+                global_deferredLogger.info(msg);
+            }
+        }
+
         if (terminal_output_) {
             global_deferredLogger.logMessages();
         }
+
+
+
+
+
     }
 
 
