@@ -114,6 +114,10 @@ inline void logAndCheckForExceptionsAndThrow(Opm::DeferredLogger& deferred_logge
                                              const bool terminal_output,
                                              Opm::Parallel::Communication comm)
 {
+    // add exception message to logger in order to display message from all ranks
+    if (exc_type != Opm::ExceptionType::NONE && comm.size() > 1) {
+        deferred_logger.error("[Exception on rank " + std::to_string(comm.rank()) + "]: " + message);
+    }
     Opm::DeferredLogger global_deferredLogger = gatherDeferredLogger(deferred_logger, comm);
 
     if (terminal_output) {
