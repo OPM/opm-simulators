@@ -36,6 +36,10 @@
 #include <optional>
 #include <vector>
 
+#if HAVE_MPI
+#include <filesystem>
+#endif
+
 namespace Opm {
     class EclipseState;
     class Schedule;
@@ -44,6 +48,25 @@ namespace Opm {
 }
 
 namespace Opm {
+
+#if HAVE_MPI
+namespace details {
+class MPIPartitionFromFile
+{
+public:
+    explicit MPIPartitionFromFile(const std::filesystem::path& partitionFile)
+        : partitionFile_(partitionFile)
+    {}
+
+    std::vector<int> operator()(const Dune::CpGrid& grid) const;
+
+private:
+    std::filesystem::path partitionFile_{};
+};
+
+} // namespace Opm::details
+#endif // HAVE_MPI
+
 
 /// \brief optional functor returning external load balancing information
 ///
