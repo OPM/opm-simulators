@@ -31,6 +31,7 @@ namespace Opm::cuistl
  * This is implemented with the intention of creating communicators with generic GPUSender
  * To hide implementation that will either use GPU aware MPI or not
  * @tparam field_type is float or double
+ * @tparam OwnerOverlapCopyCommunicationType is typically a Dune::LinearOperator::communication_type
 */
 template<class field_type, class OwnerOverlapCopyCommunicationType>
 class GPUSender {
@@ -41,9 +42,28 @@ public:
 
     virtual void copyOwnerToAll(const X& source, X& dest) const = 0;
 
-    virtual void project(X& x) const = 0;
     virtual void initIndexSet() const = 0;
 
+    /**
+     * @brief project will project x to the owned subspace
+     *
+     * For each component i which is not owned, x_i will be set to 0
+     *
+     * @param[inout] x the vector to project
+     */
+    void project(X& x) const
+    {
+        std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
+        x.setZeroAtIndexSet(*m_indicesCopy);
+    }
+
+    /**
+     * @brief dot will carry out the dot product between x and y on the owned indices, then sum up the result across MPI
+     * processes.
+     * @param[out] output result will be stored here
+     *
+     * @note This uses the same interface as its DUNE equivalent.
+     */
     void dot(const X& x, const X& y, field_type& output) const
     {
         std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
@@ -68,8 +88,12 @@ public:
     }
 
 protected:
+    // Used to call the initIndexSet. Note that this is kind of a
+    // premature optimization, in the sense that we could just initialize these indices
+    // always, but they are not always used.
     mutable std::once_flag m_initializedIndices;
     mutable std::unique_ptr<CuVector<int>> m_indicesOwner;
+    mutable std::unique_ptr<CuVector<int>> m_indicesCopy;
     const OwnerOverlapCopyCommunicationType& m_cpuOwnerOverlapCopy;
 };
 
@@ -80,34 +104,6 @@ public:
     using X = CuVector<field_type>;
 
     GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy){}
-    
-    /**
-     * @brief dot will carry out the dot product between x and y on the owned indices, then sum up the result across MPI
-     * processes.
-     * @param[out] output result will be stored here
-     *
-     * @note This uses the same interface as its DUNE equivalent.
-     */
-    // void dot(const X& x, const X& y, field_type& output) const override
-    // {
-    //     std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
-
-    //     const auto dotAtRank = x.dot(y, *m_indicesOwner);
-    //     output = m_cpuOwnerOverlapCopy.communicator().sum(dotAtRank);
-    // }
-
-    /**
-     * @brief project will project x to the owned subspace
-     *
-     * For each component i which is not owned, x_i will be set to 0
-     *
-     * @param[inout] x the vector to project
-     */
-    void project(X& x) const override
-    {
-        std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
-        x.setZeroAtIndexSet(*m_indicesCopy);
-    }
 
     /**
      * @brief copyOwnerToAll will copy source to the CPU, then call OwnerOverlapCopyCommunicationType::copyOwnerToAll on
@@ -124,7 +120,7 @@ public:
         dest.copyFromHost(destAsDuneVector);
     }
 
-protected:
+private:
     void initIndexSet() const override
     {
         // We need indices that we we will use in the project, dot and norm calls.
@@ -146,17 +142,9 @@ protected:
             }
         }
 
-        m_indicesCopy = std::make_unique<CuVector<int>>(indicesCopyOnCPU);
+        this->m_indicesCopy = std::make_unique<CuVector<int>>(indicesCopyOnCPU);
         this->m_indicesOwner = std::make_unique<CuVector<int>>(indicesOwnerCPU);
     }
-
-private:
-
-    // Used to call the initIndexSet. Note that this is kind of a
-    // premature optimization, in the sense that we could just initialize these indices
-    // always, but they are not always used.
-    // mutable std::once_flag m_initializedIndices;
-    mutable std::unique_ptr<CuVector<int>> m_indicesCopy;
 };
 
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
@@ -168,33 +156,6 @@ public:
     GPUAwareMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
         : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy)
     {
-    }
-    /**
-     * @brief dot will carry out the dot product between x and y on the owned indices, then sum up the result across MPI
-     * processes.
-     * @param[out] output result will be stored here
-     *
-     * @note This uses the same interface as its DUNE equivalent.
-     */
-    // void dot(const X& x, const X& y, field_type& output) const override
-    // {
-    //     std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
-
-    //     const auto dotAtRank = x.dot(y, *this->m_indicesOwner);
-    //     output = this->m_cpuOwnerOverlapCopy.communicator().sum(dotAtRank);
-    // }
-
-    /**
-     * @brief project will project x to the owned subspace
-     *
-     * For each component i which is not owned, x_i will be set to 0
-     *
-     * @param[inout] x the vector to project
-     */
-    void project(X& x) const override
-    {
-        std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
-        x.setZeroAtIndexSet(*m_indicesCopy);
     }
 
     // Georgs new code intended to use GPU direct
@@ -270,43 +231,7 @@ public:
         dest.syncFromRecvBuf(*m_GPURecvBuf, *m_commpair_indicesCopy);
     }
 
-protected:
-    void initIndexSet() const override
-    {
-        // We need indices that we we will use in the project, dot and norm calls.
-        // TODO: [premature perf] Can this be run once per instance? Or do we need to rebuild every time?
-        const auto& pis = this->m_cpuOwnerOverlapCopy.indexSet();
-        std::vector<int> indicesCopyOnCPU;
-        std::vector<int> indicesOwnerCPU;
-        for (const auto& index : pis) {
-            if (index.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::copy) {
-                for (int component = 0; component < block_size; ++component) {
-                    indicesCopyOnCPU.push_back(index.local().local() * block_size + component);
-                }
-            }
-
-            if (index.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::owner) {
-                for (int component = 0; component < block_size; ++component) {
-                    indicesOwnerCPU.push_back(index.local().local() * block_size + component);
-                }
-            }
-        }
-
-        m_indicesCopy = std::make_unique<CuVector<int>>(indicesCopyOnCPU);
-        this->m_indicesOwner = std::make_unique<CuVector<int>>(indicesOwnerCPU);
-
-        buildCommPairIdxs();
-    }
-
 private:
-    // const OwnerOverlapCopyCommunicationType& this->m_cpuOwnerOverlapCopy;
-
-    // Used to call the initIndexSet. Note that this is kind of a
-    // premature optimization, in the sense that we could just initialize these indices
-    // always, but they are not always used.
-    mutable std::unique_ptr<CuVector<int>> m_indicesCopy;
-    // mutable std::unique_ptr<CuVector<int>> this->m_indicesOwner;
-
     mutable std::unique_ptr<CuVector<int>> m_commpair_indicesCopy;
     mutable std::unique_ptr<CuVector<int>> m_commpair_indicesOwner;
     mutable std::unique_ptr<CuVector<field_type>> m_GPUSendBuf;
@@ -394,6 +319,33 @@ private:
         m_GPUSendBuf = std::make_unique<CuVector<field_type>>(sendBufIdx * block_size);
         m_GPURecvBuf = std::make_unique<CuVector<field_type>>(recvBufIdx * block_size);
     }
+
+    void initIndexSet() const override
+    {
+        // We need indices that we we will use in the project, dot and norm calls.
+        // TODO: [premature perf] Can this be run once per instance? Or do we need to rebuild every time?
+        const auto& pis = this->m_cpuOwnerOverlapCopy.indexSet();
+        std::vector<int> indicesCopyOnCPU;
+        std::vector<int> indicesOwnerCPU;
+        for (const auto& index : pis) {
+            if (index.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::copy) {
+                for (int component = 0; component < block_size; ++component) {
+                    indicesCopyOnCPU.push_back(index.local().local() * block_size + component);
+                }
+            }
+
+            if (index.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::owner) {
+                for (int component = 0; component < block_size; ++component) {
+                    indicesOwnerCPU.push_back(index.local().local() * block_size + component);
+                }
+            }
+        }
+
+        this->m_indicesCopy = std::make_unique<CuVector<int>>(indicesCopyOnCPU);
+        this->m_indicesOwner = std::make_unique<CuVector<int>>(indicesOwnerCPU);
+
+        buildCommPairIdxs();
+    }
 };
 
 /**
@@ -401,7 +353,6 @@ private:
  *
  * This class can essentially be seen as an adapter around Dune::OwnerOverlapCopyCommunication, and should work as
  * a Dune::OwnerOverlapCopyCommunication on CuVectors
- *
  *
  * @note This currently only has the functionality to parallelize the linear solve.
  *
@@ -421,7 +372,6 @@ public:
         m_sender->copyOwnerToAll(source, dest);
     }
 
-    // TOOD: move this functionality back to this class to avoid code duplication
     void dot(const X& x, const X& y, field_type& output) const
     {
         m_sender->dot(x, y, output);
