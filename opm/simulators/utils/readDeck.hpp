@@ -24,6 +24,7 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
+#include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
@@ -60,17 +61,21 @@ enum class FileOutputMode {
 void
 ensureOutputDirExists(const std::string& cmdline_output_dir);
 
+// Prepare the result ouptut directory by removing files from previous simulation runs.
+void
+prepareResultOutputDirectory(const std::string& baseName, const std::filesystem::path& outputDir);
+
 std::unique_ptr<ParseContext> setupParseContext(const bool exitOnAllErrors);
 
 // Setup the OpmLog backends
 FileOutputMode
-setupLogging(int                mpi_rank_,
-             const std::string& deck_filename,
-             const std::string& cmdline_output_dir,
-             const std::string& cmdline_output,
-             bool               output_cout_,
-             const std::string& stdout_log_id,
-             const bool         allRanksDbgLog);
+setupLogging(Parallel::Communication& comm,
+             const std::string&       deck_filename,
+             const std::string&       cmdline_output_dir,
+             const std::string&       cmdline_output,
+             bool                     output_cout_,
+             const std::string&       stdout_log_id,
+             const bool               allRanksDbgLog);
 
 /// \brief Reads the deck and creates all necessary objects if needed
 ///

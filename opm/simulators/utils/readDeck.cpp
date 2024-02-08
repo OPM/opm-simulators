@@ -76,6 +76,7 @@
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <regex>
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
@@ -402,15 +403,28 @@ void Opm::ensureOutputDirExists(const std::string& cmdline_output_dir)
     }
 }
 
+void Opm::prepareResultOutputDirectory(const std::string&           baseName,
+                                       const std::filesystem::path& outputDir)  
+{   
+    //Loop over all files in the output directory and subdirectories and delete them if their name is baseName + a correct extension
+    std::regex r(baseName + R"(\.(F?(DBG|E?GRID|INIT|PRT|RFT|SMSPEC|UNSMRY|UNRST)|([ABCFGHSTUXYZ]\d{4})|(INFOSTEP|INFOITER|OPMRST)))");
+    for (auto& file : std::filesystem::recursive_directory_iterator(outputDir)) {
+        std::string fileName = file.path().filename();
+        if (std::regex_match(fileName, r)) {
+            std::filesystem::remove(file);
+        }
+    }
+}
+
 // Setup the OpmLog backends
 Opm::FileOutputMode
-Opm::setupLogging(const int          mpi_rank_,
-                  const std::string& deck_filename,
-                  const std::string& cmdline_output_dir,
-                  const std::string& cmdline_output,
-                  const bool         output_cout_,
-                  const std::string& stdout_log_id,
-                  const bool         allRanksDbgLog)
+Opm::setupLogging(Parallel::Communication& comm,
+                  const std::string&       deck_filename,
+                  const std::string&       cmdline_output_dir,
+                  const std::string&       cmdline_output,
+                  const bool               output_cout_,
+                  const std::string&       stdout_log_id,
+                  const bool               allRanksDbgLog)
 {
     if (!cmdline_output_dir.empty()) {
         ensureOutputDirExists(cmdline_output_dir);
@@ -439,15 +453,24 @@ Opm::setupLogging(const int          mpi_rank_,
             : std::filesystem::current_path().generic_string();
     }
 
+    // Cleans up the result output directory, we only do this on process 0
+    if (comm.rank() == 0) { 
+        prepareResultOutputDirectory(baseName, output_dir);
+    }
+    //... and the other processes need to wait for this to be finished.
+#if HAVE_MPI
+    MPI_Barrier(comm);
+#endif
+
     logFileStream << output_dir << "/" << baseName;
     debugFileStream << output_dir << "/" << baseName;
 
-    if (mpi_rank_ != 0) {
+    if (comm.rank() != 0) {
         // Added rank to log file for non-zero ranks.
         // This prevents message loss.
-        debugFileStream << "." << mpi_rank_;
+        debugFileStream << "." << comm.rank();
         // If the following file appears then there is a bug.
-        logFileStream << "." << mpi_rank_;
+        logFileStream << "." << comm.rank();
     }
     logFileStream << ".PRT";
     debugFileStream << ".DBG";
@@ -469,7 +492,7 @@ Opm::setupLogging(const int          mpi_rank_,
             std::cerr << "Value " << cmdline_output
                       << " is not a recognized output mode. Using \"all\" instead.\n";
         }
-        if (!allRanksDbgLog && mpi_rank_ != 0)
+        if (!allRanksDbgLog && comm.rank() != 0)
         {
             output = FileOutputMode::OUTPUT_NONE;
         }
@@ -488,7 +511,7 @@ Opm::setupLogging(const int          mpi_rank_,
         Opm::OpmLog::addBackend("DEBUGLOG", debugLog);
     }
 
-    if (mpi_rank_ == 0) {
+    if (comm.rank() == 0) {
         std::shared_ptr<Opm::StreamLog> streamLog = std::make_shared<Opm::StreamLog>(std::cout, Opm::Log::StdoutMessageTypes);
         Opm::OpmLog::addBackend(stdout_log_id, streamLog);
         // Set a tag limit of 10 (no category limit). Will later in
