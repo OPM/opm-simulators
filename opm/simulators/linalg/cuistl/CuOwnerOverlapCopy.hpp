@@ -41,7 +41,6 @@ public:
     GPUSender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy){}
 
     virtual void copyOwnerToAll(const X& source, X& dest) const = 0;
-
     virtual void initIndexSet() const = 0;
 
     /**
@@ -158,15 +157,14 @@ public:
     {
     }
 
-    // Georgs new code intended to use GPU direct
     void copyOwnerToAll(const X& source, X& dest) const override
     {
 
-        assert(&source == &dest); // In this context, source == dest!!!
+        OPM_ERROR_IF(&source != &dest, "The provided CuVectors' address did not match"); // In this context, source == dest!!!
         std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
 
         int rank = this->m_cpuOwnerOverlapCopy.communicator().rank();
-        dest.prepareSendBuf(*m_GPUSendBuf, *m_commpair_indicesOwner);
+        dest.prepareSendBuf(*m_GPUSendBuf, *m_commpairIndicesOwner);
 
         // Start MPI stuff here...
         // Note: This has been taken from DUNE's parallel/communicator.hh
@@ -216,24 +214,24 @@ public:
 
             if(status.MPI_ERROR!=MPI_SUCCESS) {
                 std::cerr<< rank << ": MPI_Error occurred while receiving message from "<< processMap[finished] << std::endl;
-                assert(false);
+                OPM_THROW(std::runtime_error, "MPI_Error while receiving message");
             }
         }
         MPI_Status recvStatus;
         for(i = 0; i < m_messageInformation.size(); i++) {
             if(MPI_SUCCESS!=MPI_Wait(&sendRequests[i], &recvStatus)) {
                 std::cerr << rank << ": MPI_Error occurred while sending message to " << processMap[finished] << std::endl;
-                assert(false);
+                OPM_THROW(std::runtime_error, "MPI_Error while sending message");
             }
         }
         // ...End of MPI stuff
 
-        dest.syncFromRecvBuf(*m_GPURecvBuf, *m_commpair_indicesCopy);
+        dest.syncFromRecvBuf(*m_GPURecvBuf, *m_commpairIndicesCopy);
     }
 
 private:
-    mutable std::unique_ptr<CuVector<int>> m_commpair_indicesCopy;
-    mutable std::unique_ptr<CuVector<int>> m_commpair_indicesOwner;
+    mutable std::unique_ptr<CuVector<int>> m_commpairIndicesCopy;
+    mutable std::unique_ptr<CuVector<int>> m_commpairIndicesOwner;
     mutable std::unique_ptr<CuVector<field_type>> m_GPUSendBuf;
     mutable std::unique_ptr<CuVector<field_type>> m_GPURecvBuf;
 
@@ -255,8 +253,8 @@ private:
     void buildCommPairIdxs() const
     {
         auto &ri = this->m_cpuOwnerOverlapCopy.remoteIndices();
-        std::vector<int> commpair_indicesCopyOnCPU;
-        std::vector<int> commpair_indicesOwnerCPU;
+        std::vector<int> commpairIndicesCopyOnCPU;
+        std::vector<int> commpairIndicesOwnerCPU;
 
         for(auto process : ri) {
             int size = 0;
@@ -300,12 +298,12 @@ private:
 
                 for(int x = 0; x < noSend; x++) {
                     for(int bs = 0; bs < block_size; bs++) {
-                        commpair_indicesOwnerCPU.push_back(it->second.first[x] * block_size + bs);
+                        commpairIndicesOwnerCPU.push_back(it->second.first[x] * block_size + bs);
                     }
                 }
                 for(int x = 0; x < noRecv; x++) {
                     for(int bs = 0; bs < block_size; bs++) {
-                        commpair_indicesCopyOnCPU.push_back(it->second.second[x] * block_size + bs);
+                        commpairIndicesCopyOnCPU.push_back(it->second.second[x] * block_size + bs);
                     }
                 }
                 sendBufIdx += noSend;
@@ -313,8 +311,8 @@ private:
             }
         }
 
-        m_commpair_indicesCopy = std::make_unique<CuVector<int>>(commpair_indicesCopyOnCPU);
-        m_commpair_indicesOwner = std::make_unique<CuVector<int>>(commpair_indicesOwnerCPU);
+        m_commpairIndicesCopy = std::make_unique<CuVector<int>>(commpairIndicesCopyOnCPU);
+        m_commpairIndicesOwner = std::make_unique<CuVector<int>>(commpairIndicesOwnerCPU);
 
         m_GPUSendBuf = std::make_unique<CuVector<field_type>>(sendBufIdx * block_size);
         m_GPURecvBuf = std::make_unique<CuVector<field_type>>(recvBufIdx * block_size);
