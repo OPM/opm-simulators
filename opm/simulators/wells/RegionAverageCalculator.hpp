@@ -81,13 +81,11 @@ namespace Opm {
 
 
             /**
-             * Compute pore volume averaged hydrocarbon state pressure,              *
+             * Compute pore volume averaged hydrocarbon state pressure
              */
-            template <typename ElementContext, class EbosSimulator>
-            void defineState(const EbosSimulator& simulator)
+            template <typename ElementContext, class Simulator>
+            void defineState(const Simulator& simulator)
             {
-
-
                 int numRegions = 0;
                 const auto& gridView = simulator.gridView();
                 const auto& comm = gridView.comm();

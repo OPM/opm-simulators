@@ -90,8 +90,8 @@ namespace Opm {
              * reservoir voidage rate.
              *
              */
-            template <typename ElementContext, class EbosSimulator>
-            void defineState(const EbosSimulator& simulator)
+            template <typename ElementContext, class Simulator>
+            void defineState(const Simulator& simulator)
             {
                 // create map from cell to region and set all attributes to
                 // zero
