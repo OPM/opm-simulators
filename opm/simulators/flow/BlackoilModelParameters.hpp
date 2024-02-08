@@ -62,6 +62,10 @@ struct ToleranceMb {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
+struct ToleranceMbRelaxed {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
 struct ToleranceCnv {
     using type = UndefinedProperty;
 };
@@ -91,6 +95,10 @@ struct MaxSinglePrecisionDays {
 };
 template<class TypeTag, class MyTypeTag>
 struct MinStrictCnvIter {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
+struct MinStrictMbIter {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -261,6 +269,11 @@ struct ToleranceMb<TypeTag, TTag::FlowModelParameters> {
     static constexpr type value = 1e-6;
 };
 template<class TypeTag>
+struct ToleranceMbRelaxed<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-6;
+};
+template<class TypeTag>
 struct ToleranceCnv<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-2;
@@ -296,6 +309,10 @@ struct MaxSinglePrecisionDays<TypeTag, TTag::FlowModelParameters> {
 template<class TypeTag>
 struct MinStrictCnvIter<TypeTag, TTag::FlowModelParameters> {
     static constexpr int value = 0;
+};
+template<class TypeTag>
+struct MinStrictMbIter<TypeTag, TTag::FlowModelParameters> {
+    static constexpr int value = 19;
 };
 template<class TypeTag>
 struct SolveWelleqInitially<TypeTag, TTag::FlowModelParameters> {
@@ -480,6 +497,8 @@ namespace Opm
         double relaxed_max_pv_fraction_;
         /// Relative mass balance tolerance (total mass balance error).
         double tolerance_mb_;
+        /// Relaxed mass balance tolerance (can be used when iter >= min_strict_mb_iter_).
+        double tolerance_mb_relaxed_;
         /// Local convergence tolerance (max of local saturation errors).
         double tolerance_cnv_;
         /// Relaxed local convergence tolerance (can be used when iter >= min_strict_cnv_iter_ && cnvViolatedPV < relaxed_max_pv_fraction_).
@@ -530,6 +549,9 @@ namespace Opm
 
         /// Minimum number of Newton iterations before we can use relaxed CNV convergence criterion
         int min_strict_cnv_iter_;
+
+        /// Minimum number of Newton iterations before we can use relaxed MB convergence criterion
+        int min_strict_mb_iter_;
 
         /// Solve well equation initially
         bool solve_welleq_initially_;
@@ -602,6 +624,7 @@ namespace Opm
             max_residual_allowed_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxResidualAllowed);
             relaxed_max_pv_fraction_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedMaxPvFraction);
             tolerance_mb_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceMb);
+            tolerance_mb_relaxed_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceMbRelaxed);
             tolerance_cnv_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceCnv);
             tolerance_cnv_relaxed_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceCnvRelaxed);
             tolerance_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceWells);
@@ -621,6 +644,7 @@ namespace Opm
             max_inner_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, MaxInnerIterWells);
             maxSinglePrecisionTimeStep_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays) *24*60*60;
             min_strict_cnv_iter_ = EWOMS_GET_PARAM(TypeTag, int, MinStrictCnvIter);
+            min_strict_mb_iter_ = EWOMS_GET_PARAM(TypeTag, int, MinStrictMbIter);
             solve_welleq_initially_ = EWOMS_GET_PARAM(TypeTag, bool, SolveWelleqInitially);
             update_equations_scaling_ = EWOMS_GET_PARAM(TypeTag, bool, UpdateEquationsScaling);
             use_update_stabilization_ = EWOMS_GET_PARAM(TypeTag, bool, UseUpdateStabilization);
@@ -663,6 +687,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, RelaxedMaxPvFraction, "The fraction of the pore volume of the reservoir "
                                  "where the volumetric error (CNV) may be voilated during strict Newton iterations.");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceMb, "Tolerated mass balance error relative to total mass present");
+            EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceMbRelaxed, "Relaxed tolerated mass balance error that applies for iterations after the iterations with the strict tolerance");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceCnv, "Local convergence tolerance (Maximum of local saturation errors)");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceCnvRelaxed, "Relaxed local convergence tolerance that applies for iterations after the iterations with the strict tolerance");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, ToleranceWells, "Well convergence tolerance");
@@ -683,6 +708,7 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, RegularizationFactorWells, "Regularization factor for wells");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays, "Maximum time step size where single precision floating point arithmetic can be used solving for the linear systems of equations");
             EWOMS_REGISTER_PARAM(TypeTag, int, MinStrictCnvIter, "Minimum number of Newton iterations before relaxed tolerances can be used for the CNV convergence criterion");
+            EWOMS_REGISTER_PARAM(TypeTag, int, MinStrictMbIter, "Minimum number of Newton iterations before relaxed tolerances can be used for the MB convergence criterion");
             EWOMS_REGISTER_PARAM(TypeTag, bool, SolveWelleqInitially, "Fully solve the well equations before each iteration of the reservoir model");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UpdateEquationsScaling, "Update scaling factors for mass balance equations during the run");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseUpdateStabilization, "Try to detect and correct oscillations or stagnation during the Newton method");
