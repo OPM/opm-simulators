@@ -40,6 +40,12 @@ public:
 
     GPUSender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy){}
 
+    /**
+     * @brief copyOwnerToAll will copy source to the CPU, then call OwnerOverlapCopyCommunicationType::copyOwnerToAll on
+     * the copied data, and copy the result back to the GPU
+     * @param[in] source
+     * @param[out] dest
+     */
     virtual void copyOwnerToAll(const X& source, X& dest) const = 0;
     virtual void initIndexSet() const = 0;
 
@@ -96,20 +102,24 @@ protected:
     const OwnerOverlapCopyCommunicationType& m_cpuOwnerOverlapCopy;
 };
 
+/**
+ * @brief Derived class of GPUSender that handles MPI calls that should NOT use GPU direct communicatoin
+ * The implementation moves data fromthe GPU to the CPU and then sends it using regular MPI
+ * @tparam field_type is float or double
+ * @tparam block_size is the blocksize of the blockelements in the matrix
+ * @tparam OwnerOverlapCopyCommunicationType is typically a Dune::LinearOperator::communication_type
+*/
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
 class GPUObliviousMPISender : public GPUSender<field_type, OwnerOverlapCopyCommunicationType> 
 {
 public:
     using X = CuVector<field_type>;
 
-    GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy){}
+    GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) 
+        : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy)
+        {
+        }
 
-    /**
-     * @brief copyOwnerToAll will copy source to the CPU, then call OwnerOverlapCopyCommunicationType::copyOwnerToAll on
-     * the copied data, and copy the result back to the GPU
-     * @param[in] source
-     * @param[out] dest
-     */
     void copyOwnerToAll(const X& source, X& dest) const override {
         // TODO: [perf] Can we reduce copying from the GPU here?
         // TODO: [perf] Maybe create a global buffer instead?
@@ -146,6 +156,14 @@ private:
     }
 };
 
+/**
+ * @brief Derived class of GPUSender that handles MPI made with CUDA aware MPI
+ * The copOwnerToAll function uses MPI calls refering to data that resides on the GPU in order
+ * to send it directly to other GPUs, skipping the staging step on the CPU
+ * @tparam field_type is float or double
+ * @tparam block_size is the blocksize of the blockelements in the matrix
+ * @tparam OwnerOverlapCopyCommunicationType is typically a Dune::LinearOperator::communication_type
+*/
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
 class GPUAwareMPISender : public GPUSender<field_type, OwnerOverlapCopyCommunicationType>
 {
