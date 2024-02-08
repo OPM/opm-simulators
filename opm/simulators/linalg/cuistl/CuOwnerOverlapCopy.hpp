@@ -193,40 +193,45 @@ public:
 
         using const_iterator =  typename InformationMap::const_iterator;
         const const_iterator end = m_messageInformation.end();
-        size_t i = 0;
-        for(const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
-            processMap[i]=info->first;
-            if(info->second.second.size_) {
-                MPI_Irecv(m_GPURecvBuf->data()+info->second.second.start_,
-                          info->second.second.size_,
-                          MPI_BYTE,
-                          info->first,
-                          m_commTag,
-                          this->m_cpuOwnerOverlapCopy.communicator(),
-                          &recvRequests[i]);
-                numberOfRealRecvRequests += 1;
-            } else {
-                recvRequests[i]=MPI_REQUEST_NULL;
+
+        {
+            size_t i = 0;
+            for(const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
+                processMap[i]=info->first;
+                if(info->second.second.size_) {
+                    MPI_Irecv(m_GPURecvBuf->data()+info->second.second.start_,
+                            info->second.second.size_,
+                            MPI_BYTE,
+                            info->first,
+                            m_commTag,
+                            this->m_cpuOwnerOverlapCopy.communicator(),
+                            &recvRequests[i]);
+                    numberOfRealRecvRequests += 1;
+                } else {
+                    recvRequests[i]=MPI_REQUEST_NULL;
+                }
             }
         }
 
-        i = 0;
-        for(const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
-            if(info->second.first.size_) {
-                MPI_Issend(m_GPUSendBuf->data()+info->second.first.start_,
-                           info->second.first.size_,
-                           MPI_BYTE,
-                           info->first,
-                           m_commTag,
-                           this->m_cpuOwnerOverlapCopy.communicator(),
-                           &sendRequests[i]);
-            } else {
-                sendRequests[i]=MPI_REQUEST_NULL;
+        {
+            size_t i = 0;
+            for(const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
+                if(info->second.first.size_) {
+                    MPI_Issend(m_GPUSendBuf->data()+info->second.first.start_,
+                            info->second.first.size_,
+                            MPI_BYTE,
+                            info->first,
+                            m_commTag,
+                            this->m_cpuOwnerOverlapCopy.communicator(),
+                            &sendRequests[i]);
+                } else {
+                    sendRequests[i]=MPI_REQUEST_NULL;
+                }
             }
         }
         int finished = MPI_UNDEFINED;
         MPI_Status status;
-        for(i = 0; i < numberOfRealRecvRequests; i++) {
+        for(size_t i = 0; i < numberOfRealRecvRequests; i++) {
             status.MPI_ERROR=MPI_SUCCESS;
             MPI_Waitany(m_messageInformation.size(), recvRequests.data(), &finished, &status);
 
@@ -236,7 +241,7 @@ public:
             }
         }
         MPI_Status recvStatus;
-        for(i = 0; i < m_messageInformation.size(); i++) {
+        for(size_t i = 0; i < m_messageInformation.size(); i++) {
             if(MPI_SUCCESS!=MPI_Wait(&sendRequests[i], &recvStatus)) {
                 std::cerr << rank << ": MPI_Error occurred while sending message to " << processMap[finished] << std::endl;
                 OPM_THROW(std::runtime_error, "MPI_Error while sending message");
