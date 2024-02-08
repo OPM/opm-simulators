@@ -26,29 +26,60 @@
 
 namespace Opm::cuistl
 {
-
-// CuOwnerOverlapCopy is instansiated with a GPUSender object
-// This class contains a virtual function that is overriden by one of two possible subclasses
-// One handles the case using GPU direct, the other sends messages over MPI through the CPU
-template<class field_type>
+/**
+ * @brief GPUSender is a wrapper class for classes which will implement copOwnerToAll
+ * This is implemented with the intention of creating communicators with generic GPUSender
+ * To hide implementation that will either use GPU aware MPI or not
+ * @tparam field_type is float or double
+*/
+template<class field_type, class OwnerOverlapCopyCommunicationType>
 class GPUSender {
 public:
     using X = CuVector<field_type>;
 
+    GPUSender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy){}
+
     virtual void copyOwnerToAll(const X& source, X& dest) const = 0;
 
-    virtual void dot(const X& x, const X& y, field_type& output) const = 0;
-    virtual field_type norm(const X& x) const = 0;
     virtual void project(X& x) const = 0;
+    virtual void initIndexSet() const = 0;
+
+    void dot(const X& x, const X& y, field_type& output) const
+    {
+        std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
+
+        const auto dotAtRank = x.dot(y, *m_indicesOwner);
+        output = m_cpuOwnerOverlapCopy.communicator().sum(dotAtRank);
+    }
+    
+    /**
+     * @brief norm computes the l^2-norm of x across processes.
+     *
+     * This will compute the dot product of x with itself on owned indices, then
+     * sum the result across process and return the square root of the sum.
+     */
+    field_type norm(const X& x) const
+    {
+        auto xDotX = field_type(0);
+        this->dot(x, x, xDotX);
+
+        // using std::sqrt;
+        return std::sqrt(xDotX);
+    }
+
+protected:
+    mutable std::once_flag m_initializedIndices;
+    mutable std::unique_ptr<CuVector<int>> m_indicesOwner;
+    const OwnerOverlapCopyCommunicationType& m_cpuOwnerOverlapCopy;
 };
 
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
-class GPUObliviousMPISender : public GPUSender<field_type> 
+class GPUObliviousMPISender : public GPUSender<field_type, OwnerOverlapCopyCommunicationType> 
 {
 public:
     using X = CuVector<field_type>;
 
-    GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy){}
+    GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy){}
     
     /**
      * @brief dot will carry out the dot product between x and y on the owned indices, then sum up the result across MPI
@@ -57,28 +88,13 @@ public:
      *
      * @note This uses the same interface as its DUNE equivalent.
      */
-    void dot(const X& x, const X& y, field_type& output) const override
-    {
-        std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
+    // void dot(const X& x, const X& y, field_type& output) const override
+    // {
+    //     std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
 
-        const auto dotAtRank = x.dot(y, *m_indicesOwner);
-        output = m_cpuOwnerOverlapCopy.communicator().sum(dotAtRank);
-    }
-
-    /**
-     * @brief norm computes the l^2-norm of x across processes.
-     *
-     * This will compute the dot product of x with itself on owned indices, then
-     * sum the result across process and return the square root of the sum.
-     */
-    field_type norm(const X& x) const override
-    {
-        auto xDotX = field_type(0);
-        this->dot(x, x, xDotX);
-
-        using std::sqrt;
-        return sqrt(xDotX);
-    }
+    //     const auto dotAtRank = x.dot(y, *m_indicesOwner);
+    //     output = m_cpuOwnerOverlapCopy.communicator().sum(dotAtRank);
+    // }
 
     /**
      * @brief project will project x to the owned subspace
@@ -89,7 +105,7 @@ public:
      */
     void project(X& x) const override
     {
-        std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
+        std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
         x.setZeroAtIndexSet(*m_indicesCopy);
     }
 
@@ -104,26 +120,16 @@ public:
         // TODO: [perf] Maybe create a global buffer instead?
         auto sourceAsDuneVector = source.template asDuneBlockVector<block_size>();
         auto destAsDuneVector = dest.template asDuneBlockVector<block_size>();
-        m_cpuOwnerOverlapCopy.copyOwnerToAll(sourceAsDuneVector, destAsDuneVector);
+        this->m_cpuOwnerOverlapCopy.copyOwnerToAll(sourceAsDuneVector, destAsDuneVector);
         dest.copyFromHost(destAsDuneVector);
     }
 
-private:
-    const OwnerOverlapCopyCommunicationType& m_cpuOwnerOverlapCopy;
-
-
-    // Used to call the initIndexSet. Note that this is kind of a
-    // premature optimization, in the sense that we could just initialize these indices
-    // always, but they are not always used.
-    mutable std::once_flag m_initializedIndices;
-    mutable std::unique_ptr<CuVector<int>> m_indicesCopy;
-    mutable std::unique_ptr<CuVector<int>> m_indicesOwner;
-
-    void initIndexSet() const
+protected:
+    void initIndexSet() const override
     {
         // We need indices that we we will use in the project, dot and norm calls.
         // TODO: [premature perf] Can this be run once per instance? Or do we need to rebuild every time?
-        const auto& pis = m_cpuOwnerOverlapCopy.indexSet();
+        const auto& pis = this->m_cpuOwnerOverlapCopy.indexSet();
         std::vector<int> indicesCopyOnCPU;
         std::vector<int> indicesOwnerCPU;
         for (const auto& index : pis) {
@@ -141,18 +147,26 @@ private:
         }
 
         m_indicesCopy = std::make_unique<CuVector<int>>(indicesCopyOnCPU);
-        m_indicesOwner = std::make_unique<CuVector<int>>(indicesOwnerCPU);
+        this->m_indicesOwner = std::make_unique<CuVector<int>>(indicesOwnerCPU);
     }
+
+private:
+
+    // Used to call the initIndexSet. Note that this is kind of a
+    // premature optimization, in the sense that we could just initialize these indices
+    // always, but they are not always used.
+    // mutable std::once_flag m_initializedIndices;
+    mutable std::unique_ptr<CuVector<int>> m_indicesCopy;
 };
 
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
-class GPUAwareMPISender : public GPUSender<field_type>
+class GPUAwareMPISender : public GPUSender<field_type, OwnerOverlapCopyCommunicationType>
 {
 public:
     using X = CuVector<field_type>;
 
     GPUAwareMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
-        : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy)
+        : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy)
     {
     }
     /**
@@ -162,28 +176,13 @@ public:
      *
      * @note This uses the same interface as its DUNE equivalent.
      */
-    void dot(const X& x, const X& y, field_type& output) const override
-    {
-        std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
+    // void dot(const X& x, const X& y, field_type& output) const override
+    // {
+    //     std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
 
-        const auto dotAtRank = x.dot(y, *m_indicesOwner);
-        output = m_cpuOwnerOverlapCopy.communicator().sum(dotAtRank);
-    }
-
-    /**
-     * @brief norm computes the l^2-norm of x across processes.
-     *
-     * This will compute the dot product of x with itself on owned indices, then
-     * sum the result across process and return the square root of the sum.
-     */
-    field_type norm(const X& x) const override
-    {
-        auto xDotX = field_type(0);
-        this->dot(x, x, xDotX);
-
-        using std::sqrt;
-        return sqrt(xDotX);
-    }
+    //     const auto dotAtRank = x.dot(y, *this->m_indicesOwner);
+    //     output = this->m_cpuOwnerOverlapCopy.communicator().sum(dotAtRank);
+    // }
 
     /**
      * @brief project will project x to the owned subspace
@@ -194,7 +193,7 @@ public:
      */
     void project(X& x) const override
     {
-        std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
+        std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
         x.setZeroAtIndexSet(*m_indicesCopy);
     }
 
@@ -203,31 +202,30 @@ public:
     {
 
         assert(&source == &dest); // In this context, source == dest!!!
-        std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
+        std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
 
-        int rank;
-        MPI_Comm_rank(m_cpuOwnerOverlapCopy.communicator(), &rank);
+        int rank = this->m_cpuOwnerOverlapCopy.communicator().rank();
         dest.prepareSendBuf(*m_GPUSendBuf, *m_commpair_indicesOwner);
 
         // Start MPI stuff here...
         // Note: This has been taken from DUNE's parallel/communicator.hh
-        std::vector<MPI_Request> sendRequests(messageInformation_.size());
-        std::vector<MPI_Request> recvRequests(messageInformation_.size());
-        std::vector<int> processMap(messageInformation_.size());
+        std::vector<MPI_Request> sendRequests(m_messageInformation.size());
+        std::vector<MPI_Request> recvRequests(m_messageInformation.size());
+        std::vector<int> processMap(m_messageInformation.size());
         size_t numberOfRealRecvRequests = 0;
 
-        typedef typename InformationMap::const_iterator const_iterator;
-        const const_iterator end = messageInformation_.end();
-        size_t i=0;
-        for(const_iterator info = messageInformation_.begin(); info != end; ++info, ++i) {
+        using const_iterator =  typename InformationMap::const_iterator;
+        const const_iterator end = m_messageInformation.end();
+        size_t i = 0;
+        for(const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
             processMap[i]=info->first;
             if(info->second.second.size_) {
                 MPI_Irecv(m_GPURecvBuf->data()+info->second.second.start_,
                           info->second.second.size_,
                           MPI_BYTE,
                           info->first,
-                          commTag_,
-                          m_cpuOwnerOverlapCopy.communicator(),
+                          m_commTag,
+                          this->m_cpuOwnerOverlapCopy.communicator(),
                           &recvRequests[i]);
                 numberOfRealRecvRequests += 1;
             } else {
@@ -235,26 +233,25 @@ public:
             }
         }
 
-        i=0;
-        for(const_iterator info = messageInformation_.begin(); info != end; ++info, ++i) {
+        i = 0;
+        for(const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
             if(info->second.first.size_) {
                 MPI_Issend(m_GPUSendBuf->data()+info->second.first.start_,
                            info->second.first.size_,
                            MPI_BYTE,
                            info->first,
-                           commTag_,
-                           m_cpuOwnerOverlapCopy.communicator(),
+                           m_commTag,
+                           this->m_cpuOwnerOverlapCopy.communicator(),
                            &sendRequests[i]);
             } else {
                 sendRequests[i]=MPI_REQUEST_NULL;
             }
         }
-        i=0;
         int finished = MPI_UNDEFINED;
         MPI_Status status;
-        for(i=0; i< numberOfRealRecvRequests; i++) {
+        for(i = 0; i < numberOfRealRecvRequests; i++) {
             status.MPI_ERROR=MPI_SUCCESS;
-            MPI_Waitany(messageInformation_.size(), recvRequests.data(), &finished, &status);
+            MPI_Waitany(m_messageInformation.size(), recvRequests.data(), &finished, &status);
 
             if(status.MPI_ERROR!=MPI_SUCCESS) {
                 std::cerr<< rank << ": MPI_Error occurred while receiving message from "<< processMap[finished] << std::endl;
@@ -262,7 +259,7 @@ public:
             }
         }
         MPI_Status recvStatus;
-        for(i=0; i< messageInformation_.size(); i++) {
+        for(i = 0; i < m_messageInformation.size(); i++) {
             if(MPI_SUCCESS!=MPI_Wait(&sendRequests[i], &recvStatus)) {
                 std::cerr << rank << ": MPI_Error occurred while sending message to " << processMap[finished] << std::endl;
                 assert(false);
@@ -273,17 +270,42 @@ public:
         dest.syncFromRecvBuf(*m_GPURecvBuf, *m_commpair_indicesCopy);
     }
 
+protected:
+    void initIndexSet() const override
+    {
+        // We need indices that we we will use in the project, dot and norm calls.
+        // TODO: [premature perf] Can this be run once per instance? Or do we need to rebuild every time?
+        const auto& pis = this->m_cpuOwnerOverlapCopy.indexSet();
+        std::vector<int> indicesCopyOnCPU;
+        std::vector<int> indicesOwnerCPU;
+        for (const auto& index : pis) {
+            if (index.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::copy) {
+                for (int component = 0; component < block_size; ++component) {
+                    indicesCopyOnCPU.push_back(index.local().local() * block_size + component);
+                }
+            }
 
+            if (index.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::owner) {
+                for (int component = 0; component < block_size; ++component) {
+                    indicesOwnerCPU.push_back(index.local().local() * block_size + component);
+                }
+            }
+        }
+
+        m_indicesCopy = std::make_unique<CuVector<int>>(indicesCopyOnCPU);
+        this->m_indicesOwner = std::make_unique<CuVector<int>>(indicesOwnerCPU);
+
+        buildCommPairIdxs();
+    }
 
 private:
-    const OwnerOverlapCopyCommunicationType& m_cpuOwnerOverlapCopy;
+    // const OwnerOverlapCopyCommunicationType& this->m_cpuOwnerOverlapCopy;
 
     // Used to call the initIndexSet. Note that this is kind of a
     // premature optimization, in the sense that we could just initialize these indices
     // always, but they are not always used.
-    mutable std::once_flag m_initializedIndices;
     mutable std::unique_ptr<CuVector<int>> m_indicesCopy;
-    mutable std::unique_ptr<CuVector<int>> m_indicesOwner;
+    // mutable std::unique_ptr<CuVector<int>> this->m_indicesOwner;
 
     mutable std::unique_ptr<CuVector<int>> m_commpair_indicesCopy;
     mutable std::unique_ptr<CuVector<int>> m_commpair_indicesOwner;
@@ -298,39 +320,36 @@ private:
         size_t size_;  // size in bytes
     };
 
-    typedef std::map<int,std::pair<MessageInformation,MessageInformation> > InformationMap;
-    mutable InformationMap messageInformation_;
-    typedef std::map<int,std::pair<std::vector<int>,std::vector<int> > > IM;
+    using InformationMap = std::map<int,std::pair<MessageInformation,MessageInformation> >;
+    mutable InformationMap m_messageInformation;
+    using IM = std::map<int,std::pair<std::vector<int>,std::vector<int> > >;
     mutable IM m_im;
 
-    constexpr static int commTag_ = 0; // So says DUNE
+    constexpr static int m_commTag = 0; // So says DUNE
 
     void buildCommPairIdxs() const
     {
-        int rank;
-        MPI_Comm_rank(m_cpuOwnerOverlapCopy.communicator(), &rank);
-        auto &ri = m_cpuOwnerOverlapCopy.remoteIndices();
-        auto end = ri.end();
+        auto &ri = this->m_cpuOwnerOverlapCopy.remoteIndices();
         std::vector<int> commpair_indicesCopyOnCPU;
         std::vector<int> commpair_indicesOwnerCPU;
 
-        for(auto process = ri.begin(); process != end; ++process) {
+        for(auto process : ri) {
             int size = 0;
-            m_im[process->first] = std::pair(std::vector<int>(), std::vector<int>());
+            m_im[process.first] = std::pair(std::vector<int>(), std::vector<int>());
             for(int send = 0; send < 2; ++send) {
-                auto remoteEnd = send ? process->second.first->end()
-                                      : process->second.second->end();
-                auto remote = send ? process->second.first->begin()
-                                   : process->second.second->begin();
+                auto remoteEnd = send ? process.second.first->end()
+                                      : process.second.second->end();
+                auto remote = send ? process.second.first->begin()
+                                   : process.second.second->begin();
 
                 while(remote != remoteEnd) {
                     if (send ? (remote->localIndexPair().local().attribute() == 1)
                              : (remote->attribute() == 1)) {
                         ++size;
                         if (send) {
-                            m_im[process->first].first.push_back(remote->localIndexPair().local().local()); 
+                            m_im[process.first].first.push_back(remote->localIndexPair().local().local()); 
                         } else {
-                            m_im[process->first].second.push_back(remote->localIndexPair().local().local());
+                            m_im[process.first].second.push_back(remote->localIndexPair().local().local());
                         }
                     }
                     ++remote;
@@ -345,7 +364,7 @@ private:
             int noRecv = it->second.second.size();
 
             if (noSend + noRecv > 0) {
-                messageInformation_.insert(
+                m_messageInformation.insert(
                         std::make_pair(it->first,
                                        std::make_pair(MessageInformation(
                                                         sendBufIdx * block_size,
@@ -375,33 +394,6 @@ private:
         m_GPUSendBuf = std::make_unique<CuVector<field_type>>(sendBufIdx * block_size);
         m_GPURecvBuf = std::make_unique<CuVector<field_type>>(recvBufIdx * block_size);
     }
-
-    void initIndexSet() const
-    {
-        // We need indices that we we will use in the project, dot and norm calls.
-        // TODO: [premature perf] Can this be run once per instance? Or do we need to rebuild every time?
-        const auto& pis = m_cpuOwnerOverlapCopy.indexSet();
-        std::vector<int> indicesCopyOnCPU;
-        std::vector<int> indicesOwnerCPU;
-        for (const auto& index : pis) {
-            if (index.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::copy) {
-                for (int component = 0; component < block_size; ++component) {
-                    indicesCopyOnCPU.push_back(index.local().local() * block_size + component);
-                }
-            }
-
-            if (index.local().attribute() == Dune::OwnerOverlapCopyAttributeSet::owner) {
-                for (int component = 0; component < block_size; ++component) {
-                    indicesOwnerCPU.push_back(index.local().local() * block_size + component);
-                }
-            }
-        }
-
-        m_indicesCopy = std::make_unique<CuVector<int>>(indicesCopyOnCPU);
-        m_indicesOwner = std::make_unique<CuVector<int>>(indicesOwnerCPU);
-
-        buildCommPairIdxs();
-    }
 };
 
 /**
@@ -423,12 +415,11 @@ class CuOwnerOverlapCopy
 public:
     using X = CuVector<field_type>;
 
-    CuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type>> sender) : m_sender(sender){}
+    CuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> sender) : m_sender(sender){}
 
     void copyOwnerToAll(const X& source, X& dest) const {
         m_sender->copyOwnerToAll(source, dest);
     }
-
 
     // TOOD: move this functionality back to this class to avoid code duplication
     void dot(const X& x, const X& y, field_type& output) const
@@ -447,7 +438,7 @@ public:
     }
 
 private:
-    std::shared_ptr<GPUSender<field_type>> m_sender;
+    std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> m_sender;
 };
 } // namespace Opm::cuistl
 #endif

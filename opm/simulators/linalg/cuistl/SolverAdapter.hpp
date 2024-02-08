@@ -173,7 +173,8 @@ private:
                 mpi_might_be_supported_during_runtime = false;
             #endif /* MPIX_CUDA_AWARE_SUPPORT */
 
-            std::shared_ptr<Opm::cuistl::GPUSender<real_type>> gpuComm;
+            // TODO add typename Operator communication type as a named type with using
+            std::shared_ptr<Opm::cuistl::GPUSender<real_type, typename Operator::communication_type>> gpuComm;
             if (mpi_might_be_supported_during_compilation && mpi_might_be_supported_during_runtime){
                 gpuComm = std::make_shared<Opm::cuistl::GPUAwareMPISender<real_type, block_size, typename Operator::communication_type>>(communication);
             }
