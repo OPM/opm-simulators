@@ -40,7 +40,10 @@ void printPRTHeader(const int nprocs, const int nthreads,
 void printFlowBanner(int nprocs, int threads, std::string_view moduleVersionName);
 
 // Print flow application trailer.
-void printFlowTrailer(int nprocs, int nthreads,
+void printFlowTrailer(int nprocs,
+                      int nthreads,
+                      const double total_setup_time,
+                      const double deck_read_time,
                       const SimulatorReport& report,
                       const SimulatorReportSingle& localsolves_report);
 
