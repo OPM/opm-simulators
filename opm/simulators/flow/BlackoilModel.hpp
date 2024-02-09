@@ -335,6 +335,7 @@ namespace Opm {
         void initialLinearization(SimulatorReportSingle& report,
                                   const int iteration,
                                   const int minIter,
+                                  const int maxIter,
                                   const SimulatorTimerInterface& timer)
         {
             // -----------   Set up reports and timer   -----------
@@ -361,7 +362,7 @@ namespace Opm {
             perfTimer.start();
             // the step is not considered converged until at least minIter iterations is done
             {
-                auto convrep = getConvergence(timer, iteration, residual_norms);
+                auto convrep = getConvergence(timer, iteration, maxIter, residual_norms);
                 report.converged = convrep.converged() && iteration >= minIter;
                 ConvergenceReport::Severity severity = convrep.severityOfWorstFailure();
                 convergence_reports_.back().report.push_back(std::move(convrep));
@@ -426,7 +427,7 @@ namespace Opm {
             SimulatorReportSingle report;
             Dune::Timer perfTimer;
 
-            this->initialLinearization(report, iteration, nonlinear_solver.minIter(), timer);
+            this->initialLinearization(report, iteration, nonlinear_solver.minIter(), nonlinear_solver.maxIter(), timer);
 
             // -----------   If not converged, solve linear system and do Newton update  -----------
             if (!report.converged) {
@@ -886,6 +887,7 @@ namespace Opm {
         ConvergenceReport getReservoirConvergence(const double reportTime,
                                                   const double dt,
                                                   const int iteration,
+                                                  const int maxIter,
                                                   std::vector<Scalar>& B_avg,
                                                   std::vector<Scalar>& residual_norms)
         {
@@ -910,10 +912,25 @@ namespace Opm {
             // Default value of relaxed_max_pv_fraction_ is 0.03 and min_strict_cnv_iter_ is 0.
             // For each iteration, we need to determine whether to use the relaxed CNV tolerance.
             // To disable the usage of relaxed CNV tolerance, you can set the relaxed_max_pv_fraction_ to be 0.
-            const bool use_relaxed_cnv = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ && iteration >= param_.min_strict_cnv_iter_;
-            const double tol_cnv = use_relaxed_cnv ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
+            bool use_relaxed_cnv = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ && iteration >= param_.min_strict_cnv_iter_;
+            bool use_relaxed_mb = param_.min_strict_mb_iter_ < 0? false : iteration >= param_.min_strict_mb_iter_;
 
-            const bool use_relaxed_mb = iteration >= param_.min_strict_mb_iter_;
+            if  ((iteration + 1) == maxIter) {
+                use_relaxed_mb = true;
+                use_relaxed_cnv = true;
+                if ( terminal_output_ ) {
+                    std::ostringstream ss;
+                    ss << "Number of newton iterations reached its maximum try to continue with relaxed tolerances:";
+                    const std::streamsize oprec = ss.precision(3);
+                    const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
+                    ss << " CNV TOL: " << param_.tolerance_cnv_relaxed_;
+                    ss << " MB TOL: "  << param_.tolerance_mb_relaxed_;
+                    ss.precision(oprec);
+                    ss.flags(oflags);
+                    OpmLog::debug(ss.str());
+                }
+            }
+            const double tol_cnv = use_relaxed_cnv ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
             const double tol_mb  = use_relaxed_mb ? param_.tolerance_mb_relaxed_ : param_.tolerance_mb_;
 
             // Finish computation
@@ -997,9 +1014,11 @@ namespace Opm {
         /// residual mass balance (tol_cnv).
         /// \param[in]   timer       simulation timer
         /// \param[in]   iteration   current iteration number
+        /// \param[in]   maxIter     maximum number of iterations
         /// \param[out]  residual_norms   CNV residuals by phase
         ConvergenceReport getConvergence(const SimulatorTimerInterface& timer,
                                          const int iteration,
+                                         const int maxIter,
                                          std::vector<double>& residual_norms)
         {
             OPM_TIMEBLOCK(getConvergence);
@@ -1007,7 +1026,7 @@ namespace Opm {
             std::vector<Scalar> B_avg(numEq, 0.0);
             auto report = getReservoirConvergence(timer.simulationTimeElapsed(),
                                                   timer.currentStepLength(),
-                                                  iteration, B_avg, residual_norms);
+                                                  iteration, maxIter, B_avg, residual_norms);
             {
                 OPM_TIMEBLOCK(getWellConvergence);
                 report += wellModel().getWellConvergence(B_avg, /*checkWellGroupControls*/report.converged());

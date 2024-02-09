@@ -193,7 +193,7 @@ public:
         SimulatorReportSingle report;
         Dune::Timer perfTimer;
 
-        model_.initialLinearization(report, iteration, nonlinear_solver.minIter(), timer);
+        model_.initialLinearization(report, iteration, nonlinear_solver.minIter(), nonlinear_solver.maxIter(), timer);
 
         if (report.converged) {
             return report;

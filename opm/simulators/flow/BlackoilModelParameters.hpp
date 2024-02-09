@@ -312,7 +312,7 @@ struct MinStrictCnvIter<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct MinStrictMbIter<TypeTag, TTag::FlowModelParameters> {
-    static constexpr int value = 19;
+    static constexpr int value = -1;
 };
 template<class TypeTag>
 struct SolveWelleqInitially<TypeTag, TTag::FlowModelParameters> {
@@ -708,7 +708,8 @@ namespace Opm
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, RegularizationFactorWells, "Regularization factor for wells");
             EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays, "Maximum time step size where single precision floating point arithmetic can be used solving for the linear systems of equations");
             EWOMS_REGISTER_PARAM(TypeTag, int, MinStrictCnvIter, "Minimum number of Newton iterations before relaxed tolerances can be used for the CNV convergence criterion");
-            EWOMS_REGISTER_PARAM(TypeTag, int, MinStrictMbIter, "Minimum number of Newton iterations before relaxed tolerances can be used for the MB convergence criterion");
+            EWOMS_REGISTER_PARAM(TypeTag, int, MinStrictMbIter, "Minimum number of Newton iterations before relaxed tolerances can be used for the MB convergence criterion. "
+                                "Default -1 means that the relaxed tolerance is used when maximum number of Newton iterations are reached.");
             EWOMS_REGISTER_PARAM(TypeTag, bool, SolveWelleqInitially, "Fully solve the well equations before each iteration of the reservoir model");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UpdateEquationsScaling, "Update scaling factors for mass balance equations during the run");
             EWOMS_REGISTER_PARAM(TypeTag, bool, UseUpdateStabilization, "Try to detect and correct oscillations or stagnation during the Newton method");
