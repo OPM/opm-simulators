@@ -496,7 +496,7 @@ private:
                                                      bf.area(),
                                                      bf.integrationPos()[dimWorld - 1],
                                                      exFluidState};
-                        boundaryInfo_.push_back({myIdx, dir_id, bcdata});
+                        boundaryInfo_.push_back({myIdx, dir_id, bfIndex, bcdata});
                     }
                 }
             }
@@ -663,11 +663,9 @@ public:
             // Flux term.
             {
             OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachCell);
+            short loc = 0;
             for (const auto& nbInfo : nbInfos) {
                 OPM_TIMEBLOCK_LOCAL(fluxCalculationForEachFace);
-                // not for NNCs
-                if (nbInfo.res_nbinfo.dirId < 0)
-                    continue;
                 unsigned globJ = nbInfo.neighbor;
                 assert(globJ != globI);
                 adres = 0.0;
@@ -676,30 +674,35 @@ public:
                 LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo);
                 adres *= nbInfo.res_nbinfo.faceArea;
                 if (enableFlows) {
-                    for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
-                        flowsInfo_[globI][nbInfo.res_nbinfo.dirId].flow[phaseIdx] = adres[phaseIdx].value();
+                    for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
+                        flowsInfo_[globI][loc].flow[eqIdx] = adres[eqIdx].value();
                     }
                 }
                 if (enableFlores) {
-                    for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
-                        floresInfo_[globI][nbInfo.res_nbinfo.dirId].flow[phaseIdx] = darcyFlux[phaseIdx].value();
+                    for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
+                        floresInfo_[globI][loc].flow[eqIdx] = darcyFlux[eqIdx].value();
                     }
                 }
+                ++loc;
             }
             }
         }
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
         for (const auto& bdyInfo : boundaryInfo_) {
+            if (bdyInfo.bcdata.type == BCType::NONE)
+                continue;
+
             ADVectorBlock adres(0.0);
             const unsigned globI = bdyInfo.cell;
+            const auto& nbInfos = neighborInfo_[globI];
             const IntensiveQuantities& insideIntQuants = model_().intensiveQuantities(globI, /*timeIdx*/ 0);
             LocalResidual::computeBoundaryFlux(adres, problem_(), bdyInfo.bcdata, insideIntQuants, globI);
             adres *= bdyInfo.bcdata.faceArea;
-
+            const unsigned bfIndex = bdyInfo.bfIndex;
             if (enableFlows) {
-                for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
-                    flowsInfo_[globI][bdyInfo.dir].flow[phaseIdx] = adres[phaseIdx].value();
+                for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
+                    flowsInfo_[globI][nbInfos.size() + bfIndex].flow[eqIdx] = adres[eqIdx].value();
                 }
             }
             // TODO also store Flores?
@@ -848,6 +851,9 @@ private:
 
         // Boundary terms. Only looping over cells with nontrivial bcs.
         for (const auto& bdyInfo : boundaryInfo_) {
+            if (bdyInfo.bcdata.type == BCType::NONE)
+                continue;
+
             VectorBlock res(0.0);
             MatrixBlock bMat(0.0);
             ADVectorBlock adres(0.0);
@@ -934,6 +940,7 @@ private:
     {
         unsigned int cell;
         int dir;
+        unsigned int bfIndex;
         BoundaryConditionData bcdata;
     };
     std::vector<BoundaryInfo> boundaryInfo_;
