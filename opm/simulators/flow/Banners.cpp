@@ -123,8 +123,8 @@ void printFlowTrailer(int nprocs,
     ss << "\n\n================    End of simulation     ===============\n\n";
     ss << fmt::format("Number of MPI processes: {:9}\n", nprocs);
     ss << fmt::format("Threads per MPI process: {:9}\n", nthreads);
-    ss << fmt::format("Setup time (sec):           {:9.2f}\n", total_setup_time);
-    ss << fmt::format("  Deck input (sec):         {:9.2f}\n", deck_read_time);
+    ss << fmt::format("Setup time:                 {:9.2f} s\n", total_setup_time);
+    ss << fmt::format("  Deck input:               {:9.2f} s\n", deck_read_time);
     report.reportFullyImplicit(ss);
 
     if (localsolves_report.total_linearizations > 0) {
