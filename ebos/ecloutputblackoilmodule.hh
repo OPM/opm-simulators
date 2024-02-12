@@ -875,13 +875,25 @@ public:
                             val.second = getValue(fs.invB(gasPhaseIdx)) * getValue(fs.saturation(gasPhaseIdx));
 
                             if (key.first == "BGIP") {
-                                val.second += getValue(fs.Rs()) * getValue(fs.invB(oilPhaseIdx))
-                                    * getValue(fs.saturation(oilPhaseIdx));
+                                if (!FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                                    val.second += getValue(fs.Rsw()) * getValue(fs.invB(waterPhaseIdx))
+                                        * getValue(fs.saturation(waterPhaseIdx));
+                                }
+                                else {
+                                    val.second += getValue(fs.Rs()) * getValue(fs.invB(oilPhaseIdx))
+                                        * getValue(fs.saturation(oilPhaseIdx));
+                                }
                             }
                         }
                         else if (key.first == "BGIPL") {
-                            val.second = getValue(fs.Rs()) * getValue(fs.invB(oilPhaseIdx))
-                                * getValue(fs.saturation(oilPhaseIdx));
+                            if (!FluidSystem::phaseIsActive(oilPhaseIdx)) {
+                                val.second = getValue(fs.Rsw()) * getValue(fs.invB(waterPhaseIdx))
+                                    * getValue(fs.saturation(waterPhaseIdx));
+                            }
+                            else {
+                                val.second = getValue(fs.Rs()) * getValue(fs.invB(oilPhaseIdx))
+                                    * getValue(fs.saturation(oilPhaseIdx));
+                            }
                         }
                         else { // BWIP
                             val.second = getValue(fs.invB(waterPhaseIdx)) * getValue(fs.saturation(waterPhaseIdx));
