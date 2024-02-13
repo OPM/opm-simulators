@@ -31,6 +31,7 @@
 #include <ebos/ecltransmissibility.hh>
 
 #include <opm/grid/polyhedralgrid.hh>
+#include <opm/grid/LookUpData.hh>
 
 #include <opm/models/common/multiphasebaseproperties.hh>
 
@@ -229,6 +230,18 @@ public:
     {
         // not required for this type of grid yet (only from bdaBridge??)
         return {};
+    }
+
+     /*!
+     * \brief Returns function that assigns a field proprety of type int on the leaf grid view.
+     */
+    std::function<std::vector<int>(const FieldPropsManager&, const std::string&, bool)> fieldPropIntOnLeafAssigner_() const
+    {
+        return [this](const FieldPropsManager& fieldPropManager, const std::string& propString, bool needsTranslation)
+        {
+            LookUpData<Grid,GridView> lookup(this->grid().leafGridView());
+            return lookup.template assignFieldPropsIntOnLeaf<int>(fieldPropManager, propString, needsTranslation);
+        };
     }
 
 protected:

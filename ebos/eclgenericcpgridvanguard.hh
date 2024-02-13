@@ -142,15 +142,11 @@ public:
         return this->cell_part_;
     }
 
-    std::function<std::vector<int>(const FieldPropsManager&, const std::string&, bool)>
-    fieldPropIntOnLeafAssigner_() const
-    {
-        return [this](const FieldPropsManager& fieldPropManager, const std::string& propString, bool needsTranslation)
-        {
-            LookUpData<Dune::CpGrid,GridView> lookup(this->grid().leafGridView());
-            return lookup.template assignFieldPropsIntOnLeaf<int>(fieldPropManager, propString, needsTranslation);
-        };
-    }
+     /*!
+     * \brief Returns function that assigns a field proprety of type int on the leaf grid view.
+     */
+    std::function<std::vector<int>(const FieldPropsManager&, const std::string&, bool)> fieldPropIntOnLeafAssigner_() const;
+
 protected:
     /*!
      * \brief Distribute the simulation grid over multiple processes

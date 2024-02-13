@@ -209,10 +209,8 @@ EclGenericOutputBlackoilModule(const EclipseState& eclState,
     const auto& fp = eclState_.fieldProps();
 
     this->regions_["FIPNUM"] = this->fieldPropIntOnLeafAssigner_(fp, "FIPNUM", true /*needs translation*/);
-    std::cout<< "FIPNUM size from genericOutputBlackOilMod constructor: " << regions_["FIPNUM"].size() << std::endl;
     for (const auto& region : fp.fip_regions()) {
         this->regions_[region] = this->fieldPropIntOnLeafAssigner_(fp, region, true /*needs translation*/);
-        std::cout<< "REGION in for-loop size from genericOutputBlackOilMod constructor: " << regions_[region].size() << std::endl;
     }
 
     this->RPRNodes_  = summaryConfig_.keywords("RPR*");

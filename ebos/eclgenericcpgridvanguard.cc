@@ -500,6 +500,17 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::createCpGridWithLg
 };
 
 template<class ElementMapper, class GridView, class Scalar>
+std::function<std::vector<int>(const FieldPropsManager&, const std::string&, bool)>
+EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::fieldPropIntOnLeafAssigner_() const
+{
+    return [this](const FieldPropsManager& fieldPropManager, const std::string& propString, bool needsTranslation)
+    {
+        LookUpData<Dune::CpGrid,GridView> lookup(this->grid().leafGridView());
+        return lookup.template assignFieldPropsIntOnLeaf<int>(fieldPropManager, propString, needsTranslation);
+    };
+}
+
+template<class ElementMapper, class GridView, class Scalar>
 void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doFilterConnections_(Schedule& schedule)
 {
     // We only filter if we hold the global grid. Otherwise the filtering
