@@ -354,6 +354,9 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             try {
                 // deal with some administrative boilerplate
 
+                Dune::Timer setupTimerAfterReadingDeck;
+                setupTimerAfterReadingDeck.start();
+
                 int status = setupParameters_(this->argc_, this->argv_, EclGenericVanguard::comm());
                 if (status)
                     return status;
@@ -361,6 +364,9 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                 setupParallelism();
                 setupModelSimulator();
                 createSimulator();
+
+                this->deck_read_time_ = modelSimulator_->vanguard().setupTime();
+                this->total_setup_time_ = setupTimerAfterReadingDeck.elapsed() + this->deck_read_time_;
 
                 // if run, do the actual work, else just initialize
                 int exitCode = (this->*runOrInitFunc)();
@@ -514,7 +520,7 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                 = omp_get_max_threads();
 #endif
 
-            printFlowTrailer(mpi_size_, threads, report, simulator_->model().localAccumulatedReports());
+            printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report, simulator_->model().localAccumulatedReports());
 
             detail::handleExtraConvergenceOutput(report,
                                                  EWOMS_GET_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo),
@@ -590,6 +596,8 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
         char **argv_;
         bool output_cout_;
         bool output_files_;
+        double total_setup_time_ = 0.0;
+        double deck_read_time_ = 0.0;
     };
 
 } // namespace Opm

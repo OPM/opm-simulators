@@ -114,68 +114,70 @@ namespace Opm
                 return decltype(val){1};
             return val;
         };
-        os << fmt::format("Total time (seconds):       {:9.2f} \n", total_time);
+        // Disabling this output as it is redundant with the solver_time, now
+        // output as "Simulation time". Usually very small difference between them.
+        // os << fmt::format("Total time:                 {:9.2f} s\n", total_time);
 
-         os << fmt::format("Solver time (seconds):      {:9.2f} \n",
+        os << fmt::format("Simulation time:            {:9.2f} s\n",
                           solver_time + (failureReport ? failureReport->solver_time : 0.0));
 
         if (assemble_time > 0.0 || linear_solve_time > 0.0) {
 
             double t = assemble_time + (failureReport ? failureReport->assemble_time : 0.0);
-            os << fmt::format(" Assembly time (seconds):   {:9.2f}", t);
+            os << fmt::format("  Assembly time:            {:9.2f} s", t);
 
             if (failureReport) {
-              os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
+              os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
                                 failureReport->assemble_time,
                                 100*failureReport->assemble_time/noZero(t));
              }
             os << std::endl;
 
             t = assemble_time_well + (failureReport ? failureReport->assemble_time_well : 0.0);
-            os << fmt::format("   Well assembly (seconds):   {:7.2f}", t);
+            os << fmt::format("    Well assembly:            {:7.2f} s", t);
             if (failureReport) {
-              os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
+              os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
                                 failureReport->assemble_time_well,
                                 100*failureReport->assemble_time_well/noZero(t));
             }
             os << std::endl;
 
             t = linear_solve_time + (failureReport ? failureReport->linear_solve_time : 0.0);
-            os << fmt::format(" Linear solve time (seconds):{:8.2f}", t);
+            os << fmt::format("  Linear solve time:        {:9.2f} s", t);
             if (failureReport) {
-              os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
+              os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
                                 failureReport->linear_solve_time,
                                 100*failureReport->linear_solve_time/noZero(t));
             }
             os << std::endl;
 
             t = linear_solve_setup_time + (failureReport ? failureReport->linear_solve_setup_time : 0.0);
-            os << fmt::format("   Linear setup (seconds):    {:7.2f}", t);
+            os << fmt::format("    Linear setup:             {:7.2f} s", t);
             if (failureReport) {
-              os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
+              os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
                                 failureReport->linear_solve_setup_time,
                                 100*failureReport->linear_solve_setup_time/noZero(t));
             }
             os << std::endl;
 
             t = update_time + (failureReport ? failureReport->update_time : 0.0);
-            os << fmt::format(" Update time (seconds):       {:7.2f}", t);
+            os << fmt::format("  Props/update time:          {:7.2f} s", t);
             if (failureReport) {
-              os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
+              os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
                                 failureReport->update_time,
                                 100*failureReport->update_time/noZero(t));
             }
             os << std::endl;
             t = pre_post_time + (failureReport ? failureReport->pre_post_time : 0.0);
-            os << fmt::format(" Pre/post step (seconds):     {:7.2f}", t);
+            os << fmt::format("  Pre/post step:              {:7.2f} s", t);
             if (failureReport) {
-              os << fmt::format(" (Failed: {:2.1f}; {:2.1f}%)",
+              os << fmt::format(" (Wasted: {:2.1f} s; {:2.1f}%)",
                                 failureReport->pre_post_time,
                                 100*failureReport->pre_post_time/noZero(t));
             }
             os << std::endl;
 
-            os << fmt::format(" Output write time (seconds): {:7.2f}", 
+            os << fmt::format("  Output write time:          {:7.2f} s",
                               output_write_time + (failureReport ? failureReport->output_write_time : 0.0));
             os << std::endl;
         }
@@ -183,7 +185,7 @@ namespace Opm
         int n = total_linearizations + (failureReport ? failureReport->total_linearizations : 0);
         os << fmt::format("Overall Linearizations:    {:7}", n);
         if (failureReport) {
-          os << fmt::format("    (Failed: {:3}; {:2.1f}%)",
+          os << fmt::format("      (Wasted: {:5}; {:2.1f}%)",
                             failureReport->total_linearizations,
                             100.0*failureReport->total_linearizations/noZero(n));
         }
@@ -192,7 +194,7 @@ namespace Opm
         n = total_newton_iterations + (failureReport ? failureReport->total_newton_iterations : 0);
         os << fmt::format("Overall Newton Iterations: {:7}", n);
         if (failureReport) {
-          os << fmt::format("    (Failed: {:3}; {:2.1f}%)",
+          os << fmt::format("      (Wasted: {:5}; {:2.1f}%)",
                             failureReport->total_newton_iterations,
                             100.0*failureReport->total_newton_iterations/noZero(n));
         }
@@ -201,7 +203,7 @@ namespace Opm
         n = total_linear_iterations + (failureReport ? failureReport->total_linear_iterations : 0);
         os << fmt::format("Overall Linear Iterations: {:7}", n);
         if (failureReport) {
-          os << fmt::format("    (Failed: {:3}; {:2.1f}%)",
+          os << fmt::format("      (Wasted: {:5}; {:2.1f}%)",
                             failureReport->total_linear_iterations,
                             100.0*failureReport->total_linear_iterations/noZero(n));
         }

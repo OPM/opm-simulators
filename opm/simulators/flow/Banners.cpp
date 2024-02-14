@@ -112,7 +112,10 @@ void printFlowBanner(int nprocs, int nthreads, std::string_view moduleVersionNam
     std::cout << "Using "<< nprocs << " MPI processes with "<< nthreads <<" OMP threads on each \n\n";
 }
 
-void printFlowTrailer(int nprocs, int nthreads,
+void printFlowTrailer(int nprocs,
+                      int nthreads,
+                      const double total_setup_time,
+                      const double deck_read_time,
                       const SimulatorReport& report,
                       const SimulatorReportSingle& localsolves_report)
 {
@@ -120,6 +123,8 @@ void printFlowTrailer(int nprocs, int nthreads,
     ss << "\n\n================    End of simulation     ===============\n\n";
     ss << fmt::format("Number of MPI processes: {:9}\n", nprocs);
     ss << fmt::format("Threads per MPI process: {:9}\n", nthreads);
+    ss << fmt::format("Setup time:                 {:9.2f} s\n", total_setup_time);
+    ss << fmt::format("  Deck input:               {:9.2f} s\n", deck_read_time);
     report.reportFullyImplicit(ss);
 
     if (localsolves_report.total_linearizations > 0) {
