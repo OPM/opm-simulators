@@ -909,25 +909,34 @@ namespace Opm {
             auto cnvErrorPvFraction = computeCnvErrorPv(B_avg, dt);
             cnvErrorPvFraction /= (pvSum - numAquiferPvSum);
 
-            // Default value of relaxed_max_pv_fraction_ is 0.03 and min_strict_cnv_iter_ is 0.
-            // For each iteration, we need to determine whether to use the relaxed CNV tolerance.
-            // To disable the usage of relaxed CNV tolerance, you can set the relaxed_max_pv_fraction_ to be 0.
-            bool use_relaxed_cnv = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_ && iteration >= param_.min_strict_cnv_iter_;
-            bool use_relaxed_mb = param_.min_strict_mb_iter_ < 0? false : iteration >= param_.min_strict_mb_iter_;
 
-            if  ((iteration + 1) == maxIter) {
-                use_relaxed_mb = true;
-                use_relaxed_cnv = true;
+            // For each iteration, we need to determine whether to use the relaxed tolerances.
+            // To disable the usage of relaxed tolerances, you can set the relaxed tolerances as the strict tolerances.
+
+            // If min_strict_mb_iter = -1 (default) we use a relaxed tolerance for the mass balance for the last iterations
+            // For positive values we use the relaxed tolerance after the given number of iterations
+            const bool relax_final_iteration_mb = (param_.min_strict_mb_iter_ < 0) && (iteration == maxIter);
+            const bool use_relaxed_mb = relax_final_iteration_mb || (param_.min_strict_mb_iter_ >= 0 && iteration >= param_.min_strict_mb_iter_);
+
+
+            // If min_strict_cnv_iter = -1 we use a relaxed tolerance for the cnv for the last iterations
+            // For positive values we use the relaxed tolerance after the given number of iterations
+            // We also use relaxed tolerances for cells with total poro volume less than relaxed_max_pv_fraction_
+            // Default value of relaxed_max_pv_fraction_ is 0.03
+            const bool relax_final_iteration_cnv = (param_.min_strict_cnv_iter_ < 0) && (iteration == maxIter);
+            const bool relax_iter_cnv = param_.min_strict_mb_iter_ >= 0 && iteration >= param_.min_strict_mb_iter_;
+            const bool relax_pv_fraction_cnv = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_;
+            const bool use_relaxed_cnv = relax_final_iteration_cnv || relax_pv_fraction_cnv || relax_iter_cnv;
+
+            if  (relax_final_iteration_mb || relax_final_iteration_cnv)  {
                 if ( terminal_output_ ) {
-                    std::ostringstream ss;
-                    ss << "Number of newton iterations reached its maximum try to continue with relaxed tolerances:";
-                    const std::streamsize oprec = ss.precision(3);
-                    const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
-                    ss << " CNV TOL: " << param_.tolerance_cnv_relaxed_;
-                    ss << " MB TOL: "  << param_.tolerance_mb_relaxed_;
-                    ss.precision(oprec);
-                    ss.flags(oflags);
-                    OpmLog::debug(ss.str());
+                    std::string message = "Number of newton iterations reached its maximum try to continue with relaxed tolerances:";
+                    if (relax_final_iteration_mb)
+                        message += fmt::format("  MB: {:.1e}", param_.tolerance_mb_relaxed_);
+                    if (relax_final_iteration_cnv)
+                        message += fmt::format(" CNV: {:.1e}", param_.tolerance_cnv_relaxed_);
+
+                    OpmLog::debug(message);
                 }
             }
             const double tol_cnv = use_relaxed_cnv ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
