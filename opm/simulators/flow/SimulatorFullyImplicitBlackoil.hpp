@@ -310,7 +310,7 @@ public:
             if (isRestart()) {
                 // For restarts the ebosSimulator may have gotten some information
                 // about the next timestep size from the OPMEXTRA field
-                adaptiveTimeStepping_->setSuggestedNextStep(ebosSimulator_.timeStepSize());
+                adaptiveTimeStepping_->setSuggestedNextStep(ebosSimulator_.timeStepSize(), terminalOutput_);
             }
         }
     }
