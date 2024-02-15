@@ -164,7 +164,6 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
             EWOMS_HIDE_PARAM(TypeTag, MinTimeStepSize);
             EWOMS_HIDE_PARAM(TypeTag, PredeterminedTimeStepsFile);
 
-            EWOMS_HIDE_PARAM(TypeTag, EclEnableTuning);
 
             // flow also does not use the eWoms Newton method
             EWOMS_HIDE_PARAM(TypeTag, NewtonMaxError);

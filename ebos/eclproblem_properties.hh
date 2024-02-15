@@ -127,7 +127,7 @@ struct EclEnableAquifers {
 
 // time stepping parameters
 template<class TypeTag, class MyTypeTag>
-struct EclEnableTuning {
+struct EnableTuning {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
@@ -600,7 +600,7 @@ struct EnableExperiments<TypeTag, TTag::EclBaseProblem> {
 
 // set defaults for the time stepping parameters
 template<class TypeTag>
-struct EclEnableTuning<TypeTag, TTag::EclBaseProblem> {
+struct EnableTuning<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = false;
 };
 

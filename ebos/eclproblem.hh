@@ -238,7 +238,8 @@ public:
         if constexpr (enableExperiments)
             EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableAquifers,
                                  "Enable analytic and numeric aquifer models");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableTuning,
+
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTuning,
                              "Honor some aspects of the TUNING keyword from the ECL deck.");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
                              "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
