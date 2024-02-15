@@ -85,11 +85,11 @@ namespace Opm {
             {
                 using Item = PAvgDynamicSourceData::SourceDataSpan<double>::Item;
 
-                const auto* intQuants = this->ebosSimulator_.model()
-                    .cachedIntensiveQuantities(localCell, /*timeIndex = */0);
-                const auto& fs = intQuants->fluidState();
+                const auto& intQuants = this->ebosSimulator_.model()
+                    .intensiveQuantities(localCell, /*timeIndex = */0);
+                const auto& fs = intQuants.fluidState();
 
-                sourceTerms.set(Item::PoreVol, intQuants->porosity().value() *
+                sourceTerms.set(Item::PoreVol, intQuants.porosity().value() *
                                 this->ebosSimulator_.model().dofTotalVolume(localCell));
 
                 constexpr auto io = FluidSystem::oilPhaseIdx;
