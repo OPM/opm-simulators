@@ -468,13 +468,18 @@ beginEpisode_(bool enableExperiments,
 
     const auto& events = schedule_[episodeIdx].events();
 
-    // react to TUNING changes
-    if (episodeIdx > 0 && enableTuning_ && events.hasEvent(ScheduleEvents::TUNING_CHANGE))
+    // react to TUNING / NEXTSTEP changes
+    if (episodeIdx > 0 && events.hasEvent(ScheduleEvents::TUNING_CHANGE))
     {
+        // NEXTSTEP should have  effects even without TUNING
         const auto& sched_state = schedule_[episodeIdx];
-        const auto& tuning = sched_state.tuning();
         initialTimeStepSize_ = sched_state.max_next_tstep();
-        maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
+        if (enableTuning_)
+        {
+            const auto& tuning = sched_state.tuning();
+            maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
+        }
+
         return true;
     }
 
