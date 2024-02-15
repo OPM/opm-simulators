@@ -24,7 +24,6 @@
 #include <config.h>
 
 #include <ebos/eclgenericcpgridvanguard.hh>
-#include <ebos/eclcpgridvanguard.hh>
 
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
@@ -39,6 +38,7 @@
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/LgrCollection.hpp>
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/utility/ActiveGridCells.hpp>
@@ -318,7 +318,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
         OpmLog::info("\nProcessing grid");
     }
 
-    // --- Create grid without LGRs ---
+    // --- Create grid ---
     OPM_TIMEBLOCK(createGrids);
 #if HAVE_MPI
     this->grid_ = std::make_unique<Dune::CpGrid>(EclGenericVanguard::comm());
@@ -357,14 +357,14 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
 
     cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
 
-    // --- Create grid with LGRs ---
+    // --- Add LGRs and update Leaf Grid View ---
     // Check if input file contains Lgrs.
     const auto& lgrs = eclState.getLgrs();
     const auto lgrsSize = lgrs.size();
     // If there are lgrs, create the grid with them, and update the leaf grid view.
     if (lgrsSize)
     {
-        this->createCpGridWithLgrs(lgrs, lgrsSize);
+        this->addLgrsUpdateLeafView(lgrs, lgrsSize);
     }
 
 #if HAVE_MPI
@@ -422,7 +422,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Ecl
 }
 
 template<class ElementMapper, class GridView, class Scalar>
-void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::createCpGridWithLgrs(const LgrCollection& lgrCollection, const int lgrsSize)
+void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView(const LgrCollection& lgrCollection, const int lgrsSize)
 {
     std::vector<std::array<int,3>> cells_per_dim_vec;
     std::vector<std::array<int,3>> startIJK_vec;
