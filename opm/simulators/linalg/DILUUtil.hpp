@@ -25,30 +25,34 @@
 namespace Opm::DILUUtils{
 
 // TODO: make proper doxygen
-// This function is intended to be used by parallel DILU implementations to
-// explore how parallelizable different linear systems are. The results
-// are for now written to a file from where flow is run
+/// @brief This function writes to a file a sparse table and the sizes of each row
+/// The intended use is to be called from a DILU preconditioner to explore how
+/// parallelizable the upper and lower solves are. For now the function creats a file
+/// in the directory from which flow was called, only intended to be done when verbosity>0
+/// @tparam T Any type, it does not matter what objects are stored in the table
+/// @param sparse_table A pointer to a SparseTable, this function does not change the object
 template <class T>
-void writeSparseTableRowSizesToFile(const Opm::SparseTable<T> *sparseTable){
+void writeSparseTableRowSizesToFile(const Opm::SparseTable<T> *sparse_table){
 
         int rank = 0;
-        int size = sparseTable->size();
+        int size = sparse_table->size();
 #ifdef HAVE_MPI
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif
         std::string filename = "DILU_parallelism_distribution_on_rank_" + std::to_string(rank) + ".txt";
         std::ofstream file(filename);
 
-        file << "PRINTING NUMBER OF LEVEL SETS, THEN NUMBER OF LEVELS IN EACH SET" << std::endl;
+        // print brief exeplenation of how to interpret the data in the file
+        file << "First is the number of levels, then the size of each level set" << std::endl;
         file << size << std::endl;
 
         for (int i = 0; i < size; i++){
-            file << sparseTable->rowSize(i) << std::endl;
+            file << sparse_table->rowSize(i) << std::endl;
         }
 }
 
 template void writeSparseTableRowSizesToFile(const Opm::SparseTable<size_t>*);
 
-} // END NAMESPACE OPM
+} // namespace Opm::DILUUtils
 
 #endif
