@@ -506,6 +506,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/linalg/bda/WellContributions.hpp
   opm/simulators/linalg/amgcpr.hh
   opm/simulators/linalg/DILU.hpp
+  opm/simulators/linalg/DILUUtil.hpp
   opm/simulators/linalg/twolevelmethodcpr.hh
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp
   opm/simulators/linalg/ExtraSmoothers.hpp
