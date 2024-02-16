@@ -238,8 +238,6 @@ public:
         if constexpr (enableExperiments)
             EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableAquifers,
                                  "Enable analytic and numeric aquifer models");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableTuning,
-                             "Honor some aspects of the TUNING keyword from the ECL deck.");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
                              "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
         EWOMS_REGISTER_PARAM(TypeTag, int, NumPressurePointsEquil,
@@ -327,7 +325,7 @@ public:
         else
             enableAquifers_ = true;
 
-        this->enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableTuning);
+        this->enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
         this->initialTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
         this->maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, double, TimeStepAfterEventInDays)*24*60*60;
 

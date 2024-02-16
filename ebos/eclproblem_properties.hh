@@ -125,11 +125,6 @@ struct EclEnableAquifers {
     using type = UndefinedProperty;
 };
 
-// time stepping parameters
-template<class TypeTag, class MyTypeTag>
-struct EclEnableTuning {
-    using type = UndefinedProperty;
-};
 template<class TypeTag, class MyTypeTag>
 struct OutputMode {
     using type = UndefinedProperty;
@@ -595,12 +590,6 @@ struct EnableThermalFluxBoundaries<TypeTag, TTag::EclBaseProblem> {
 // i.e., experimental features must be explicitly enabled at compile time
 template<class TypeTag>
 struct EnableExperiments<TypeTag, TTag::EclBaseProblem> {
-    static constexpr bool value = false;
-};
-
-// set defaults for the time stepping parameters
-template<class TypeTag>
-struct EclEnableTuning<TypeTag, TTag::EclBaseProblem> {
     static constexpr bool value = false;
 };
 
