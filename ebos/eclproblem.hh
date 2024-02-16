@@ -328,7 +328,7 @@ public:
         else
             enableAquifers_ = true;
 
-        this->enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableTuning);
+        this->enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
         this->initialTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
         this->maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, double, TimeStepAfterEventInDays)*24*60*60;
 
