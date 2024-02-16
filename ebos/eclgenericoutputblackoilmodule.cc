@@ -1137,9 +1137,9 @@ doAllocBuffers(const unsigned bufferSize,
                 if (numOutputNnc > 0) {
                     enableFlowsn_ = true;
 
-                    flowsn_[compIdxs[ii]].first = rstName[ii];
-                    flowsn_[compIdxs[ii]].second.first.resize(numOutputNnc, -1);
-                    flowsn_[compIdxs[ii]].second.second.resize(numOutputNnc, 0.0);
+                    flowsn_[compIdxs[ii]].name = rstName[ii];
+                    flowsn_[compIdxs[ii]].indices.resize(numOutputNnc, -1);
+                    flowsn_[compIdxs[ii]].values.resize(numOutputNnc, 0.0);
                 }
             }
         }
@@ -1173,9 +1173,9 @@ doAllocBuffers(const unsigned bufferSize,
                 if (numOutputNnc > 0) {
                     enableFloresn_ = true;
 
-                    floresn_[compIdxs[ii]].first = rstName[ii];
-                    floresn_[compIdxs[ii]].second.first.resize(numOutputNnc, -1);
-                    floresn_[compIdxs[ii]].second.second.resize(numOutputNnc, 0.0);
+                    floresn_[compIdxs[ii]].name = rstName[ii];
+                    floresn_[compIdxs[ii]].indices.resize(numOutputNnc, -1);
+                    floresn_[compIdxs[ii]].values.resize(numOutputNnc, 0.0);
                 }
             }
         }

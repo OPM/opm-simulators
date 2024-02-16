@@ -505,24 +505,24 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive,
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-doWriteOutput(const int                     reportStepNum,
-              const bool                    isSubStep,
-              data::Solution&&              localCellData,
-              data::Wells&&                 localWellData,
-              data::GroupAndNetworkValues&& localGroupAndNetworkData,
-              data::Aquifers&&              localAquiferData,
-              WellTestState&&               localWTestState,
-              const Action::State& actionState,
-              const UDQState& udqState,
-              const SummaryState& summaryState,
-              const std::vector<Scalar>& thresholdPressure,
-              Scalar curTime,
-              Scalar nextStepSize,
-              bool doublePrecision,
-              bool isFlowsn,
-              std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>&& flowsn,
-              bool isFloresn,
-              std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>&& floresn)
+doWriteOutput(const int                          reportStepNum,
+              const bool                         isSubStep,
+              data::Solution&&                   localCellData,
+              data::Wells&&                      localWellData,
+              data::GroupAndNetworkValues&&      localGroupAndNetworkData,
+              data::Aquifers&&                   localAquiferData,
+              WellTestState&&                    localWTestState,
+              const Action::State&               actionState,
+              const UDQState&                    udqState,
+              const SummaryState&                summaryState,
+              const std::vector<Scalar>&         thresholdPressure,
+              Scalar                             curTime,
+              Scalar                             nextStepSize,
+              bool                               doublePrecision,
+              bool                               isFlowsn,
+              std::array<FlowsData<double>, 3>&& flowsn,
+              bool                               isFloresn,
+              std::array<FlowsData<double>, 3>&& floresn)
 {
     const auto isParallel = this->collectToIORank_.isParallel();
     const bool needsReordering = this->collectToIORank_.doesNeedReordering();
@@ -556,22 +556,22 @@ doWriteOutput(const int                     reportStepNum,
     if (isFlowsn) {
         const auto flowsn_global = isParallel ? this->collectToIORank_.globalFlowsn() : std::move(flowsn);
         for (const auto& flows : flowsn_global) {
-            if (flows.first.empty())
+            if (flows.name.empty())
                 continue;
-            if (flows.first == "FLOGASN+") {
-                restartValue.addExtra(flows.first, UnitSystem::measure::gas_surface_rate, flows.second.second);
-            }
-            else {
-                restartValue.addExtra(flows.first, UnitSystem::measure::liquid_surface_rate, flows.second.second);
+            if (flows.name == "FLOGASN+") {
+                restartValue.addExtra(flows.name, UnitSystem::measure::gas_surface_rate, flows.values);
+            } else {
+                restartValue.addExtra(flows.name, UnitSystem::measure::liquid_surface_rate, flows.values);
             }
         }
     }
     if (isFloresn) {
         const auto floresn_global = isParallel ? this->collectToIORank_.globalFloresn() : std::move(floresn);
         for (const auto& flores : floresn_global) {
-            if (flores.first.empty())
+            if (flores.name.empty()) {
                 continue;
-            restartValue.addExtra(flores.first, UnitSystem::measure::rate, flores.second.second);
+            }
+            restartValue.addExtra(flores.name, UnitSystem::measure::rate, flores.values);
         }
     }
 

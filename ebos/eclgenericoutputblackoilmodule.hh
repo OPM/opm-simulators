@@ -23,6 +23,7 @@
 #ifndef EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 
+#include "opm/simulators/flow/FlowsData.hpp"
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
@@ -194,7 +195,7 @@ public:
         return 0;
     }
 
-    const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& getFlowsn() const
+    const std::array<FlowsData<double>, 3>& getFlowsn() const
     {
         return this->flowsn_;
     }
@@ -219,7 +220,7 @@ public:
         return anyFlows_;
     }
 
-    const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& getFloresn() const
+    const std::array<FlowsData<double>, 3>& getFloresn() const
     {
         return this->floresn_;
     }
@@ -493,8 +494,8 @@ protected:
     std::array<std::array<ScalarBuffer, numPhases>, 6> flows_;
     std::array<std::array<ScalarBuffer, numPhases>, 6> flores_;
 
-    std::array<std::pair<std::string, std::pair<std::vector<int>, ScalarBuffer>>, 3> floresn_;
-    std::array<std::pair<std::string, std::pair<std::vector<int>, ScalarBuffer>>, 3> flowsn_;
+    std::array<FlowsData<double>, 3> floresn_;
+    std::array<FlowsData<double>, 3> flowsn_;
 
     std::map<std::size_t, Scalar> oilConnectionPressures_;
     std::map<std::size_t, Scalar> waterConnectionSaturations_;

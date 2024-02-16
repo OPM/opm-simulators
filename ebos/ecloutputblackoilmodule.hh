@@ -688,19 +688,19 @@ public:
                         }
                     }
                     if (flowsInfo.faceId == -2) {
-                        if (!this->flowsn_[gasCompIdx].second.first.empty()) {
-                            this->flowsn_[gasCompIdx].second.first[flowsInfo.nncId] = flowsInfo.nncId;
-                            this->flowsn_[gasCompIdx].second.second[flowsInfo.nncId]
+                        if (!this->flowsn_[gasCompIdx].indices.empty()) {
+                            this->flowsn_[gasCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
+                            this->flowsn_[gasCompIdx].values[flowsInfo.nncId]
                                 = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
                         }
-                        if (!this->flowsn_[oilCompIdx].second.first.empty()) {
-                            this->flowsn_[oilCompIdx].second.first[flowsInfo.nncId] = flowsInfo.nncId;
-                            this->flowsn_[oilCompIdx].second.second[flowsInfo.nncId]
+                        if (!this->flowsn_[oilCompIdx].indices.empty()) {
+                            this->flowsn_[oilCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
+                            this->flowsn_[oilCompIdx].values[flowsInfo.nncId]
                                 = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
                         }
-                        if (!this->flowsn_[waterCompIdx].second.first.empty()) {
-                            this->flowsn_[waterCompIdx].second.first[flowsInfo.nncId] = flowsInfo.nncId;
-                            this->flowsn_[waterCompIdx].second.second[flowsInfo.nncId]
+                        if (!this->flowsn_[waterCompIdx].indices.empty()) {
+                            this->flowsn_[waterCompIdx].indices[flowsInfo.nncId] = flowsInfo.nncId;
+                            this->flowsn_[waterCompIdx].values[flowsInfo.nncId]
                                 = flowsInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
                         }
                     }
@@ -728,19 +728,19 @@ public:
                     }
                    
                     if (floresInfo.faceId == -2) {
-                        if (!this->floresn_[gasCompIdx].second.first.empty()) {
-                            this->floresn_[gasCompIdx].second.first[floresInfo.nncId] = floresInfo.nncId;
-                            this->floresn_[gasCompIdx].second.second[floresInfo.nncId]
+                        if (!this->floresn_[gasCompIdx].indices.empty()) {
+                            this->floresn_[gasCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
+                            this->floresn_[gasCompIdx].values[floresInfo.nncId]
                                 = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(gasCompIdx)];
                         }
-                        if (!this->floresn_[oilCompIdx].second.first.empty()) {
-                            this->floresn_[oilCompIdx].second.first[floresInfo.nncId] = floresInfo.nncId;
-                            this->floresn_[oilCompIdx].second.second[floresInfo.nncId]
+                        if (!this->floresn_[oilCompIdx].indices.empty()) {
+                            this->floresn_[oilCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
+                            this->floresn_[oilCompIdx].values[floresInfo.nncId]
                                 = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(oilCompIdx)];
                         }
-                        if (!this->floresn_[waterCompIdx].second.first.empty()) {
-                            this->floresn_[waterCompIdx].second.first[floresInfo.nncId] = floresInfo.nncId;
-                            this->floresn_[waterCompIdx].second.second[floresInfo.nncId]
+                        if (!this->floresn_[waterCompIdx].indices.empty()) {
+                            this->floresn_[waterCompIdx].indices[floresInfo.nncId] = floresInfo.nncId;
+                            this->floresn_[waterCompIdx].values[floresInfo.nncId]
                                 = floresInfo.flow[conti0EqIdx + Indices::canonicalToActiveComponentIndex(waterCompIdx)];
                         }
                     }

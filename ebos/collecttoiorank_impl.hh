@@ -33,7 +33,6 @@
 #include <dune/grid/common/mcmgmapper.hh>
 #include <dune/grid/common/partitionset.hh>
 
-
 #include <algorithm>
 #include <cassert>
 #include <stdexcept>
@@ -782,13 +781,13 @@ public:
 
 class PackUnpackFlows : public P2PCommunicatorType::DataHandleInterface
 {
-    const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFlows_;
-    std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& globalFlows_;
+    const std::array<FlowsData<double>, 3>& localFlows_;
+    std::array<FlowsData<double>, 3>& globalFlows_;
 
 public:
-    PackUnpackFlows(const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3> & localFlows,
-                     std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& globalFlows,
-                     const bool isIORank)
+    PackUnpackFlows(const std::array<FlowsData<double>, 3> & localFlows,
+                    std::array<FlowsData<double>, 3>& globalFlows,
+                    const bool isIORank)
         : localFlows_(localFlows)
         , globalFlows_(globalFlows)
     {
@@ -807,14 +806,14 @@ public:
         if (link != 0)
             throw std::logic_error("link in method pack is not 0 as expected");
         for (int i = 0; i < 3; ++i) {
-            const auto& name = localFlows_[i].first;
+            const auto& name = localFlows_[i].name;
             buffer.write(name);
-            unsigned int size = localFlows_[i].second.first.size();
+            const std::size_t size = localFlows_[i].indices.size();
             buffer.write(size);
-            for (unsigned int j = 0; j < size; ++j) {
-                const auto& nncIdx = localFlows_[i].second.first[j];
+            for (std::size_t j = 0; j < size; ++j) {
+                const auto& nncIdx = localFlows_[i].indices[j];
                 buffer.write(nncIdx);
-                const auto& flows = localFlows_[i].second.second[j];
+                const auto& flows = localFlows_[i].values[j];
                 buffer.write(flows);
             }
         }
@@ -825,7 +824,7 @@ public:
         for (int i = 0; i < 3; ++i) {
             std::string name;
             buffer.read(name);
-            globalFlows_[i].first = name;
+            globalFlows_[i].name = name;
             unsigned int size = 0;
             buffer.read(size);
             for (unsigned int j = 0; j < size; ++j) {
@@ -836,7 +835,7 @@ public:
                 if (nncIdx < 0)
                     continue;
                 // This array is initialized in the collect(...) method below
-                globalFlows_[i].second.second[nncIdx] = data;
+                globalFlows_[i].values[nncIdx] = data;
             }
         }
     }
@@ -975,8 +974,8 @@ collect(const data::Solution&                                localCellData,
         const data::Aquifers&                                localAquiferData,
         const WellTestState&                                 localWellTestState,
         const InterRegFlowMap&                               localInterRegFlows,
-        const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFlowsn,
-        const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFloresn)
+        const std::array<FlowsData<double>, 3>&              localFlowsn,
+        const std::array<FlowsData<double>, 3>&              localFloresn)
 {
     globalCellData_ = {};
     globalBlockData_.clear();
@@ -1010,12 +1009,10 @@ collect(const data::Solution&                                localCellData,
 
     // Set the right sizes for Flowsn and Floresn
     for (int i = 0; i < 3; ++i) {
-        unsigned int sizeFlr = localFloresn[i].second.first.size();
-        globalFloresn_[i].second.first.resize(sizeFlr, 0);
-        globalFloresn_[i].second.second.resize(sizeFlr, 0.0);
-        unsigned int sizeFlo = localFlowsn[i].second.first.size();
-        globalFlowsn_[i].second.first.resize(sizeFlo, 0);
-        globalFlowsn_[i].second.second.resize(sizeFlo, 0.0);
+        const std::size_t sizeFlr = localFloresn[i].indices.size();
+        globalFloresn_[i].resize(sizeFlr);
+        const std::size_t sizeFlo = localFlowsn[i].indices.size();
+        globalFlowsn_[i].resize(sizeFlo);
     }
 
     PackUnPackWellData packUnpackWellData {
