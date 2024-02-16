@@ -374,8 +374,8 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                 op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-            DUNE_UNUSED_PARAMETER(prm);
-            return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat());
+            const int preconditioner_verbosity = prm.get<int>("verbosity", 0);
+            return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat(), preconditioner_verbosity);
         });
         F::addCreator("Jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("repeats", 1);

@@ -29,7 +29,7 @@ namespace Opm::DILUUtils{
 // explore how parallelizable different linear systems are. The results
 // are for now written to a file from where flow is run
 template <class T>
-void writeSparseTableRowSizesToFile(Opm::SparseTable<T> *sparseTable){
+void writeSparseTableRowSizesToFile(const Opm::SparseTable<T> *sparseTable){
 
         int rank = 0;
         int size = sparseTable->size();
@@ -47,7 +47,7 @@ void writeSparseTableRowSizesToFile(Opm::SparseTable<T> *sparseTable){
         }
 }
 
-template void writeSparseTableRowSizesToFile(Opm::SparseTable<size_t>*);
+template void writeSparseTableRowSizesToFile(const Opm::SparseTable<size_t>*);
 
 } // END NAMESPACE OPM
 

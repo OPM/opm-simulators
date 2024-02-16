@@ -19,6 +19,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
+#include <opm/simulators/linalg/DILUUtil.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 
 #include <dune/common/fmatrix.hh>
@@ -36,9 +37,14 @@
 #include <omp.h>
 #endif
 
+static std::once_flag print_dilu_parallelism;
+
 // TODO: rewrite factory and constructor to keep track of a number of threads variable
 namespace Dune
 {
+
+// Global variable in this file to ensure that the parallelism strucutre of the matrix
+// is only printed once.
 
 /*! \brief The OpenMP thread parallelized DILU preconditioner.
  *  \details Safe to run serially without OpenMP. When run in parallel
@@ -71,10 +77,10 @@ public:
         OPM_TIMEBLOCK(prec_construct);
         // TODO: rewrite so this value is set by an argument to the constructor
 #if HAVE_OPENMP
-        use_multithreading = omp_get_max_threads() > 1;
+        use_multithreading_ = omp_get_max_threads() > 1;
 #endif
 
-        if (use_multithreading) {
+        if (use_multithreading_) {
             A_reordered_.emplace(A_.N(), A_.N(), A_.nonzeroes(), M::row_wise);
 
             //! Assuming symmetric matrices using a lower triangular coloring to construct
@@ -103,6 +109,12 @@ public:
         update();
     }
 
+    MultithreadDILU(const M& A, int verbosity) : MultithreadDILU(A){
+        if (verbosity > 0 && use_multithreading_){
+            std::call_once(print_dilu_parallelism, Opm::DILUUtils::writeSparseTableRowSizesToFile<size_t>, &level_sets_);
+        }
+    }
+
     /*!
        \brief Update the preconditioner.
        \copydoc Preconditioner::update()
@@ -110,7 +122,7 @@ public:
     void update() override
     {
         OPM_TIMEBLOCK(prec_update);
-        if (use_multithreading) {
+        if (use_multithreading_) {
             parallelUpdate();
         } else {
             serialUpdate();
@@ -135,7 +147,7 @@ public:
     void apply(X& v, const Y& d) override
     {
         OPM_TIMEBLOCK(prec_apply);
-        if (use_multithreading) {
+        if (use_multithreading_) {
             parallelApply(v, d);
         } else {
             serialApply(v, d);
@@ -177,7 +189,7 @@ private:
     //! \brief converts from index in natural ordered structure to index reordered strucutre
     std::vector<std::size_t> natural_to_reorder_;
     //! \brief Boolean value describing whether or not to use multithreaded version of functions
-    bool use_multithreading{false};
+    bool use_multithreading_{false};
 
     void serialUpdate()
     {
