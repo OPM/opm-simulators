@@ -177,8 +177,8 @@ struct StandardPreconditioners
           return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
-          DUNE_UNUSED_PARAMETER(prm);
-          return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
+          const int preconditioner_verbosity = prm.get<int>("verbosity", 0);
+          return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat(), preconditioner_verbosity);
         });
         F::addCreator("Jac", [](const O& op, const P& prm, const std::function<V()>&,
                      std::size_t, const C& comm) {
