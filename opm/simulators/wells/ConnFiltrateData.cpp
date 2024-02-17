@@ -26,40 +26,41 @@
 
 namespace Opm {
 
-    void ConnFiltrateData::resize(std::size_t num_perf) {
-        this->rates.resize(num_perf);
-        this->total.resize(num_perf);
-        this->skin_factor.resize(num_perf);
-        this->thickness.resize(num_perf);
-        this->perm.resize(num_perf);
-        this->poro.resize(num_perf);
-        this->radius.resize(num_perf);
-        this->area_of_flow.resize(num_perf);
-    }
+void ConnFiltrateData::resize(std::size_t num_perf) {
+    this->rates.resize(num_perf);
+    this->total.resize(num_perf);
+    this->skin_factor.resize(num_perf);
+    this->thickness.resize(num_perf);
+    this->perm.resize(num_perf);
+    this->poro.resize(num_perf);
+    this->radius.resize(num_perf);
+    this->area_of_flow.resize(num_perf);
+}
 
-    ConnFiltrateData ConnFiltrateData::serializationTestObject()
-    {
-        ConnFiltrateData result;
-        result.rates = {8.};
-        result.total = {100.};
-        result.skin_factor = {0.5};
-        result.thickness = {0.05};
-        result.perm = {0.00001};
-        result.poro = {0.3};
-        result.radius = {0.05};
-        result.area_of_flow = {0.7};
-        return result;
-    }
+ConnFiltrateData ConnFiltrateData::serializationTestObject()
+{
+    ConnFiltrateData result;
+    result.rates = {8.};
+    result.total = {100.};
+    result.skin_factor = {0.5};
+    result.thickness = {0.05};
+    result.perm = {0.00001};
+    result.poro = {0.3};
+    result.radius = {0.05};
+    result.area_of_flow = {0.7};
+    return result;
+}
 
-    bool ConnFiltrateData::operator==(const ConnFiltrateData& rhs) const
-    {
-        return this->rates == rhs.rates &&
-               this->total == rhs.total &&
-               this->skin_factor == rhs.skin_factor &&
-               this->thickness == rhs.thickness &&
-               this->perm == rhs.perm &&
-               this->poro == rhs.poro &&
-               this->radius == rhs.radius &&
-               this->area_of_flow == rhs.area_of_flow;
-    }
+bool ConnFiltrateData::operator==(const ConnFiltrateData& rhs) const
+{
+    return this->rates == rhs.rates &&
+           this->total == rhs.total &&
+           this->skin_factor == rhs.skin_factor &&
+           this->thickness == rhs.thickness &&
+           this->perm == rhs.perm &&
+           this->poro == rhs.poro &&
+           this->radius == rhs.radius &&
+           this->area_of_flow == rhs.area_of_flow;
+}
+
 }
