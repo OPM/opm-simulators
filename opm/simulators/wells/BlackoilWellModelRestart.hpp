@@ -40,7 +40,7 @@ class GuideRate;
 class GuideRateConfig;
 struct PerforationData;
 struct PhaseUsage;
-class SingleWellState;
+template<class Scalar> class SingleWellState;
 class WellState;
 
 /// Class for restarting the blackoil well model.
@@ -76,13 +76,13 @@ private:
     void loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
                                    const data::Well&                    rst_well,
                                    const std::vector<PerforationData>&  old_perf_data,
-                                   SingleWellState&                     ws) const;
+                                   SingleWellState<double>&             ws) const;
 
     //! \brief Loads per-segment data from restart structures.
     void loadRestartSegmentData(const std::string&                   well_name,
                                 const std::vector<data::Rates::opt>& phs,
                                 const data::Well&                    rst_well,
-                                SingleWellState&                     ws) const;
+                                SingleWellState<double>&             ws) const;
 
     //! \brief Loads per-well data from restart structures.
     void loadRestartWellData(const std::string&                   well_name,
@@ -90,7 +90,7 @@ private:
                              const std::vector<data::Rates::opt>& phs,
                              const data::Well&                    rst_well,
                              const std::vector<PerforationData>&  old_perf_data,
-                             SingleWellState&                     ws) const;
+                             SingleWellState<double>&             ws) const;
 
     //! \brief Loads per-group data from restart structures.
     void loadRestartGroupData(const std::string&     group,

@@ -28,13 +28,15 @@
 
 namespace Opm {
 
-SingleWellState::SingleWellState(const std::string& name_,
-                                 const ParallelWellInfo& pinfo,
-                                 bool is_producer,
-                                 double pressure_first_connection,
-                                 const std::vector<PerforationData>& perf_input,
-                                 const PhaseUsage& pu_,
-                                 double temp)
+template<class Scalar>
+SingleWellState<Scalar>::
+SingleWellState(const std::string& name_,
+                const ParallelWellInfo& pinfo,
+                bool is_producer,
+                Scalar pressure_first_connection,
+                const std::vector<PerforationData>& perf_input,
+                const PhaseUsage& pu_,
+                Scalar temp)
     : name(name_)
     , parallel_info(pinfo)
     , producer(is_producer)
@@ -59,15 +61,19 @@ SingleWellState::SingleWellState(const std::string& name_,
     }
 }
 
-SingleWellState SingleWellState::serializationTestObject(const ParallelWellInfo& pinfo)
+template<class Scalar>
+SingleWellState<Scalar> SingleWellState<Scalar>::
+serializationTestObject(const ParallelWellInfo& pinfo)
 {
     SingleWellState result("testing", pinfo, true, 1.0, {}, PhaseUsage{}, 2.0);
-    result.perf_data = PerfData<double>::serializationTestObject();
+    result.perf_data = PerfData<Scalar>::serializationTestObject();
 
     return result;
 }
 
-void SingleWellState::init_timestep(const SingleWellState& other) {
+template<class Scalar>
+void SingleWellState<Scalar>::init_timestep(const SingleWellState& other)
+{
     if (this->producer != other.producer)
         return;
 
@@ -82,8 +88,9 @@ void SingleWellState::init_timestep(const SingleWellState& other) {
     this->temperature = other.temperature;
 }
 
-
-void SingleWellState::shut() {
+template<class Scalar>
+void SingleWellState<Scalar>::shut()
+{
     this->bhp = 0;
     this->thp = 0;
     this->status = Well::Status::SHUT;
@@ -98,16 +105,22 @@ void SingleWellState::shut() {
     connpi.assign(connpi.size(), 0);
 }
 
-void SingleWellState::stop() {
+template<class Scalar>
+void SingleWellState<Scalar>::stop()
+{
     this->thp = 0;
     this->status = Well::Status::STOP;
 }
 
-void SingleWellState::open() {
+template<class Scalar>
+void SingleWellState<Scalar>::open()
+{
     this->status = Well::Status::OPEN;
 }
 
-void SingleWellState::updateStatus(Well::Status new_status) {
+template<class Scalar>
+void SingleWellState<Scalar>::updateStatus(Well::Status new_status)
+{
     switch (new_status) {
     case Well::Status::OPEN:
         this->open();
@@ -123,8 +136,11 @@ void SingleWellState::updateStatus(Well::Status new_status) {
     }
 }
 
-void SingleWellState::reset_connection_factors(const std::vector<PerforationData>& new_perf_data) {
-    if (this->perf_data.size() != new_perf_data.size()) {
+template<class Scalar>
+void SingleWellState<Scalar>::
+reset_connection_factors(const std::vector<PerforationData>& new_perf_data)
+{
+   if (this->perf_data.size() != new_perf_data.size()) {
         throw std::invalid_argument {
             "Size mismatch for perforation data in well " + this->name
         };
@@ -152,39 +168,52 @@ void SingleWellState::reset_connection_factors(const std::vector<PerforationData
     }
 }
 
-
-double SingleWellState::sum_connection_rates(const std::vector<double>& connection_rates) const {
+template<class Scalar>
+Scalar SingleWellState<Scalar>::
+sum_connection_rates(const std::vector<Scalar>& connection_rates) const
+{
     return this->parallel_info.get().sumPerfValues(connection_rates.begin(), connection_rates.end());
 }
 
-double SingleWellState::sum_brine_rates() const {
+template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_brine_rates() const
+{
     return this->sum_connection_rates(this->perf_data.brine_rates);
 }
 
-
-double SingleWellState::sum_polymer_rates() const {
+template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_polymer_rates() const
+{
     return this->sum_connection_rates(this->perf_data.polymer_rates);
 }
 
-
-double SingleWellState::sum_solvent_rates() const {
+template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_solvent_rates() const
+{
     return this->sum_connection_rates(this->perf_data.solvent_rates);
 }
 
-double SingleWellState::sum_filtrate_rate() const {
+template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_filtrate_rate() const
+{
     if (this->producer) return 0.;
 
     return this->sum_connection_rates(this->perf_data.filtrate_data.rates);
 }
 
-double SingleWellState::sum_filtrate_total() const {
+template<class Scalar>
+Scalar SingleWellState<Scalar>::sum_filtrate_total() const
+{
     if (this->producer) return 0.;
 
     return this->sum_connection_rates(this->perf_data.filtrate_data.total);
 }
 
-void SingleWellState::update_producer_targets(const Well& ecl_well, const SummaryState& st) {
-    const double bhp_safety_factor = 0.99;
+template<class Scalar>
+void SingleWellState<Scalar>::
+update_producer_targets(const Well& ecl_well, const SummaryState& st)
+{
+    constexpr Scalar bhp_safety_factor = 0.99;
     const auto& prod_controls = ecl_well.productionControls(st);
 
     auto cmode_is_bhp = (prod_controls.cmode == Well::ProducerCMode::BHP);
@@ -239,11 +268,13 @@ void SingleWellState::update_producer_targets(const Well& ecl_well, const Summar
         this->bhp = bhp_limit;
     else
         this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
-
 }
 
-void SingleWellState::update_injector_targets(const Well& ecl_well, const SummaryState& st) {
-    const double bhp_safety_factor = 1.01;
+template<class Scalar>
+void SingleWellState<Scalar>::
+update_injector_targets(const Well& ecl_well, const SummaryState& st)
+{
+    const Scalar bhp_safety_factor = 1.01;
     const auto& inj_controls = ecl_well.injectionControls(st);
 
     if (inj_controls.hasControl(Well::InjectorCMode::THP))
@@ -262,7 +293,7 @@ void SingleWellState::update_injector_targets(const Well& ecl_well, const Summar
     }
 
     // we initialize all open wells with a rate to avoid singularities
-    double inj_surf_rate = 10.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
+    Scalar inj_surf_rate = 10.0 * Opm::unit::cubic(Opm::unit::meter) / Opm::unit::day;
     if (inj_controls.cmode == Well::InjectorCMode::RATE) {
         inj_surf_rate = inj_controls.surface_rate;
     }
@@ -291,14 +322,18 @@ void SingleWellState::update_injector_targets(const Well& ecl_well, const Summar
         this->bhp = this->perf_data.pressure_first_connection * bhp_safety_factor;
 }
 
-void SingleWellState::update_targets(const Well& ecl_well, const SummaryState& st) {
+template<class Scalar>
+void SingleWellState<Scalar>::
+update_targets(const Well& ecl_well, const SummaryState& st)
+{
     if (this->producer)
         this->update_producer_targets(ecl_well, st);
     else
         this->update_injector_targets(ecl_well, st);
 }
 
-bool SingleWellState::operator==(const SingleWellState& rhs) const
+template<class Scalar>
+bool SingleWellState<Scalar>::operator==(const SingleWellState& rhs) const
 {
     return this->name == rhs.name &&
            this->status == rhs.status &&
@@ -322,5 +357,7 @@ bool SingleWellState::operator==(const SingleWellState& rhs) const
            this->injection_cmode == rhs.injection_cmode &&
            this->production_cmode == rhs.production_cmode;
 }
+
+template class SingleWellState<double>;
 
 }

@@ -43,7 +43,7 @@ class SummaryState;
 class VFPProperties;
 class WellTestState;
 class WellState;
-class SingleWellState;
+template<class Scalar> class SingleWellState;
 class GroupState;
 class Group;
 class Schedule;
@@ -193,13 +193,13 @@ public:
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
-    void reportWellSwitching(const SingleWellState& ws, DeferredLogger& deferred_logger) const;
+    void reportWellSwitching(const SingleWellState<double>& ws, DeferredLogger& deferred_logger) const;
 
     bool changedToOpenThisStep() const {
         return this->changed_to_open_this_step_;
     }
 
-    void updateWellTestState(const SingleWellState& ws,
+    void updateWellTestState(const SingleWellState<double>& ws,
                              const double& simulationTime,
                              const bool& writeMessageToOPMLog,
                              WellTestState& wellTestState,

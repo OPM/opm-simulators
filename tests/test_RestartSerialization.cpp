@@ -148,7 +148,7 @@ TEST_FOR_TYPE_NAMED(BVec, BlockVectorWrapper)
 BOOST_AUTO_TEST_CASE(SingleWellState)
 {
     Opm::ParallelWellInfo dummy;
-    auto data_out = Opm::SingleWellState::serializationTestObject(dummy);
+    auto data_out = Opm::SingleWellState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(data_out);

@@ -1206,7 +1206,7 @@ updateNetworkPressures(const int reportStepIdx)
                 // set the dynamic THP constraint of the well accordingly.
                 const double new_limit = it->second;
                 well->setDynamicThpLimit(new_limit);
-                SingleWellState& ws = this->wellState()[well->indexOfWell()];
+                SingleWellState<double>& ws = this->wellState()[well->indexOfWell()];
                 const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
                 // TODO: not sure why the thp is NOT updated properly elsewhere
                 if (thp_is_limit) {

@@ -71,7 +71,7 @@ void BlackoilWellModelRestart::
 loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
                           const data::Well&                    rst_well,
                           const std::vector<PerforationData>&  old_perf_data,
-                          SingleWellState&                     ws) const
+                          SingleWellState<double>&             ws) const
 {
     auto& perf_data        = ws.perf_data;
     auto  perf_pressure    = perf_data.pressure.begin();
@@ -95,7 +95,7 @@ void BlackoilWellModelRestart::
 loadRestartSegmentData(const std::string&                   well_name,
                        const std::vector<data::Rates::opt>& phs,
                        const data::Well&                    rst_well,
-                       SingleWellState&                     ws) const
+                       SingleWellState<double>&             ws) const
 {
     const auto& segment_set = wellModel_.getWellEcl(well_name).getSegments();
     const auto& rst_segments = rst_well.segments;
@@ -128,7 +128,7 @@ loadRestartWellData(const std::string&                   well_name,
                     const std::vector<data::Rates::opt>& phs,
                     const data::Well&                    rst_well,
                     const std::vector<PerforationData>&  old_perf_data,
-                    SingleWellState&                     ws) const
+                    SingleWellState<double>&             ws) const
 {
     const auto np = phs.size();
 

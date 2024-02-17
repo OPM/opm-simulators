@@ -130,7 +130,7 @@ WellState::WellState(const ParallelWellInfo& pinfo)
     : phase_usage_{}
 {
     wells_.add("test4",
-               SingleWellState{"dummy", pinfo, false, 0.0, {}, phase_usage_, 0.0});
+               SingleWellState<double>{"dummy", pinfo, false, 0.0, {}, phase_usage_, 0.0});
 }
 
 WellState WellState::serializationTestObject(const ParallelWellInfo& pinfo)
@@ -138,7 +138,7 @@ WellState WellState::serializationTestObject(const ParallelWellInfo& pinfo)
     WellState result(PhaseUsage{});
     result.alq_state = ALQState::serializationTestObject();
     result.well_rates = {{"test2", {true, {1.0}}}, {"test3", {false, {2.0}}}};
-    result.wells_.add("test4", SingleWellState::serializationTestObject(pinfo));
+    result.wells_.add("test4", SingleWellState<double>::serializationTestObject(pinfo));
 
     return result;
 }
@@ -173,13 +173,13 @@ void WellState::initSingleProducer(const Well& well,
     const double temp = 273.15 + 15.56;
 
     auto& ws = this->wells_.add(well.name(),
-                                SingleWellState{well.name(),
-                                                well_info,
-                                                true,
-                                                pressure_first_connection,
-                                                well_perf_data,
-                                                pu,
-                                                temp});
+                                SingleWellState<double>{well.name(),
+                                                        well_info,
+                                                        true,
+                                                        pressure_first_connection,
+                                                        well_perf_data,
+                                                        pu,
+                                                        temp});
 
     // the rest of the code needs to executed even if ws.perf_data is empty
     // as this does not say anything for the whole well if it is distributed.
@@ -200,13 +200,13 @@ void WellState::initSingleInjector(const Well& well,
     const auto& pu = this->phase_usage_;
     const double temp = well.temperature();
 
-    auto& ws = this->wells_.add(well.name(), SingleWellState{well.name(),
-                                                             well_info,
-                                                             false,
-                                                             pressure_first_connection,
-                                                             well_perf_data,
-                                                             pu,
-                                                             temp});
+    auto& ws = this->wells_.add(well.name(), SingleWellState<double>{well.name(),
+                                                                     well_info,
+                                                                     false,
+                                                                     pressure_first_connection,
+                                                                     well_perf_data,
+                                                                     pu,
+                                                                     temp});
 
     // the rest of the code needs to executed even if ws.perf_data is empty
     // as this does not say anything for the whole well if it is distributed.

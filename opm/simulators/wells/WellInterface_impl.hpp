@@ -1494,10 +1494,10 @@ namespace Opm
     template <typename TypeTag>
     std::vector<double>
     WellInterface<TypeTag>::
-    wellIndex(const int                  perf,
-              const IntensiveQuantities& intQuants,
-              const double               trans_mult,
-              const SingleWellState&     ws) const
+    wellIndex(const int                      perf,
+              const IntensiveQuantities&     intQuants,
+              const double                   trans_mult,
+              const SingleWellState<double>& ws) const
     {
         // Add a Forchheimer term to the gas phase CTF if the run uses
         // either of the WDFAC or the WDFACCOR keywords.
@@ -1572,7 +1572,8 @@ namespace Opm
     template <typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateConnectionDFactor(const Simulator& simulator, SingleWellState& ws) const
+    updateConnectionDFactor(const Simulator& simulator,
+                            SingleWellState<double>& ws) const
     {
         if (! this->well_ecl_.getWDFAC().useDFactor()) {
             return;
@@ -1591,9 +1592,9 @@ namespace Opm
     template <typename TypeTag>
     double 
     WellInterface<TypeTag>::
-    computeConnectionDFactor(const int                  perf,
-                             const IntensiveQuantities& intQuants,
-                             const SingleWellState&     ws) const
+    computeConnectionDFactor(const int                      perf,
+                             const IntensiveQuantities&     intQuants,
+                             const SingleWellState<double>& ws) const
     {
         auto rhoGS = [regIdx = this->pvtRegionIdx()]() {
             return FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, regIdx);
@@ -1633,7 +1634,8 @@ namespace Opm
     template <typename TypeTag>
     void
     WellInterface<TypeTag>::
-    updateConnectionTransmissibilityFactor(const Simulator& simulator, SingleWellState& ws) const
+    updateConnectionTransmissibilityFactor(const Simulator& simulator,
+                                           SingleWellState<double>& ws) const
     {
         auto connCF = [&connIx = std::as_const(ws.perf_data.ecl_index),
                        &conns = this->well_ecl_.getConnections()]

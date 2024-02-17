@@ -353,11 +353,16 @@ public:
         return 0;
     }
 
-    std::vector<double> wellIndex(const int perf, const IntensiveQuantities& intQuants, const double trans_mult, const SingleWellState& ws) const;
+    std::vector<double> wellIndex(const int perf,
+                                  const IntensiveQuantities& intQuants,
+                                  const double trans_mult,
+                                  const SingleWellState<double>& ws) const;
 
-    void updateConnectionDFactor(const Simulator& simulator, SingleWellState& ws) const;
+    void updateConnectionDFactor(const Simulator& simulator,
+                                 SingleWellState<double>& ws) const;
 
-    void updateConnectionTransmissibilityFactor(const Simulator& simulator, SingleWellState& ws) const;
+    void updateConnectionTransmissibilityFactor(const Simulator& simulator,
+                                                SingleWellState<double>& ws) const;
 
 
 protected:
@@ -492,7 +497,7 @@ protected:
 
     double computeConnectionDFactor(const int perf,
                                     const IntensiveQuantities& intQuants,
-                                    const SingleWellState& ws) const;
+                                    const SingleWellState<double>& ws) const;
 
 };
 

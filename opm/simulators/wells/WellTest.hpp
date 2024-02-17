@@ -32,7 +32,7 @@ namespace Opm
 
 class DeferredLogger;
 struct PhaseUsage;
-class SingleWellState;
+template<class Scalar> class SingleWellState;
 class WellEconProductionLimits;
 class WellInterfaceGeneric;
 class WellTestState;
@@ -43,7 +43,7 @@ public:
     //! \brief Constructor sets reference to well.
     WellTest(const WellInterfaceGeneric& well) : well_(well) {}
 
-    void updateWellTestStateEconomic(const SingleWellState& ws,
+    void updateWellTestStateEconomic(const SingleWellState<double>& ws,
                                      const double simulation_time,
                                      const bool write_message_to_opmlog,
                                      WellTestState& well_test_state,
@@ -63,24 +63,24 @@ private:
     };
 
     void checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                          const SingleWellState& ws,
+                          const SingleWellState<double>& ws,
                           RatioLimitCheckReport& report) const;
 
     void checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                          const SingleWellState& ws,
+                          const SingleWellState<double>& ws,
                           RatioLimitCheckReport& report) const;
 
     void checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                               const SingleWellState& ws,
+                               const SingleWellState<double>& ws,
                                RatioLimitCheckReport& report) const;
 
     template<class RatioFunc>
-    bool checkMaxRatioLimitWell(const SingleWellState& ws,
+    bool checkMaxRatioLimitWell(const SingleWellState<double>& ws,
                                 const double max_ratio_limit,
                                 const RatioFunc& ratioFunc) const;
 
     template<class RatioFunc>
-    void checkMaxRatioLimitCompletions(const SingleWellState& ws,
+    void checkMaxRatioLimitCompletions(const SingleWellState<double>& ws,
                                        const double max_ratio_limit,
                                        const RatioFunc& ratioFunc,
                                        RatioLimitCheckReport& report) const;
@@ -91,7 +91,7 @@ private:
 
     RatioLimitCheckReport
     checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                         const SingleWellState& ws,
+                         const SingleWellState<double>& ws,
                          DeferredLogger& deferred_logger) const;
 
 

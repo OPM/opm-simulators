@@ -67,7 +67,7 @@ WellInterfaceFluidSystem(const Well& well,
 template <typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
-calculateReservoirRates(SingleWellState& ws) const
+calculateReservoirRates(SingleWellState<double>& ws) const
 {
     const int np = number_of_phases_;
     const auto& pu = this->phaseUsage();
@@ -156,7 +156,7 @@ calculateReservoirRates(SingleWellState& ws) const
 template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkIndividualConstraints(SingleWellState& ws,
+checkIndividualConstraints(SingleWellState<double>& ws,
                            const SummaryState& summaryState,
                            DeferredLogger& deferred_logger,
                            const std::optional<Well::InjectionControls>& inj_controls,

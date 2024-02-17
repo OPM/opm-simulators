@@ -272,7 +272,7 @@ bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryStat
     return WellBhpThpCalculator(*this).wellHasTHPConstraints(summaryState);
 }
 
-void WellInterfaceGeneric::updateWellTestState(const SingleWellState& ws,
+void WellInterfaceGeneric::updateWellTestState(const SingleWellState<double>& ws,
                                                const double& simulationTime,
                                                const bool& writeMessageToOPMLog,
                                                WellTestState& wellTestState,
@@ -514,7 +514,8 @@ double WellInterfaceGeneric::getALQ(const WellState& well_state) const
     return well_state.getALQ(name());
 }
 
-void WellInterfaceGeneric::reportWellSwitching(const SingleWellState& ws, DeferredLogger& deferred_logger) const
+void WellInterfaceGeneric::reportWellSwitching(const SingleWellState<double> &ws,
+                                               DeferredLogger& deferred_logger) const
 {
     if (well_control_log_.empty())
         return;

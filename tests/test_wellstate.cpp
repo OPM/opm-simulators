@@ -587,9 +587,9 @@ BOOST_AUTO_TEST_CASE(TestSingleWellState) {
     // This is totally bonkers, but the pu needs a complete deck to initialize properly
     pu.num_phases = 3;
 
-    Opm::SingleWellState ws1("W1", pinfo, true,  100, connections, pu, 1);
-    Opm::SingleWellState ws2("W2", pinfo, true,  100, connections, pu, 2);
-    Opm::SingleWellState ws3("W3", pinfo, false, 100, connections, pu, 3);
+    Opm::SingleWellState ws1("W1", pinfo, true,  100.0, connections, pu, 1.0);
+    Opm::SingleWellState ws2("W2", pinfo, true,  100.0, connections, pu, 2.0);
+    Opm::SingleWellState ws3("W3", pinfo, false, 100.0, connections, pu, 3.0);
 
     ws1.bhp = 100;
     ws1.thp = 200;

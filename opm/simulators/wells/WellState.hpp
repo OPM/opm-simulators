@@ -251,35 +251,43 @@ public:
         return this->wells_.well_index(well_name);
     }
 
-    const SingleWellState& operator[](std::size_t well_index) const {
+    const SingleWellState<double>& operator[](std::size_t well_index) const
+    {
         return this->wells_[well_index];
     }
 
-    const SingleWellState& operator[](const std::string& well_name) const {
+    const SingleWellState<double>& operator[](const std::string& well_name) const
+    {
         return this->wells_[well_name];
     }
 
-    SingleWellState& operator[](std::size_t well_index) {
+    SingleWellState<double>& operator[](std::size_t well_index)
+    {
         return this->wells_[well_index];
     }
 
-    SingleWellState& operator[](const std::string& well_name) {
+    SingleWellState<double>& operator[](const std::string& well_name)
+    {
         return this->wells_[well_name];
     }
 
-    const SingleWellState& well(std::size_t well_index) const {
+    const SingleWellState<double>& well(std::size_t well_index) const
+    {
         return this->operator[](well_index);
     }
 
-    const SingleWellState& well(const std::string& well_name) const {
+    const SingleWellState<double>& well(const std::string& well_name) const
+    {
         return this->operator[](well_name);
     }
 
-    SingleWellState& well(std::size_t well_index) {
+    SingleWellState<double>& well(std::size_t well_index)
+    {
         return this->operator[](well_index);
     }
 
-    SingleWellState& well(const std::string& well_name) {
+    SingleWellState<double>& well(const std::string& well_name)
+    {
         return this->operator[](well_name);
     }
 
@@ -314,7 +322,7 @@ private:
     // The wells_ variable is essentially a map of all the wells on the current
     // process. Observe that since a well can be split over several processes a
     // well might appear in the WellContainer on different processes.
-    WellContainer<SingleWellState> wells_;
+    WellContainer<SingleWellState<double>> wells_;
 
     // The members alq_state, global_well_info and well_rates are map like
     // structures which will have entries for *all* the wells in the system.

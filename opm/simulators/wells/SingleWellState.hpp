@@ -37,15 +37,16 @@ struct PerforationData;
 class SummaryState;
 class Well;
 
+template<class Scalar>
 class SingleWellState {
 public:
     SingleWellState(const std::string& name,
                     const ParallelWellInfo& pinfo,
                     bool is_producer,
-                    double presssure_first_connection,
+                    Scalar presssure_first_connection,
                     const std::vector<PerforationData>& perf_input,
                     const PhaseUsage& pu,
-                    double temp);
+                    Scalar temp);
 
     static SingleWellState serializationTestObject(const ParallelWellInfo& pinfo);
 
@@ -83,14 +84,14 @@ public:
     WellStatus status{WellStatus::OPEN};
     bool producer;
     PhaseUsage pu;
-    double bhp{0};
-    double thp{0};
-    double temperature{0};
+    Scalar bhp{0};
+    Scalar thp{0};
+    Scalar temperature{0};
 
     // filtration injection concentration
-    double filtrate_conc{0};
+    Scalar filtrate_conc{0};
 
-    std::array<double,4> phase_mixing_rates{};
+    std::array<Scalar,4> phase_mixing_rates{};
     enum RateIndices {
       dissolved_gas = 0,
       dissolved_gas_in_water = 1,
@@ -98,16 +99,16 @@ public:
       vaporized_water = 3
     };
 
-    std::vector<double> well_potentials;
-    std::vector<double> productivity_index;
-    std::vector<double> implicit_ipr_a;
-    std::vector<double> implicit_ipr_b;    
-    std::vector<double> surface_rates;
-    std::vector<double> reservoir_rates;
-    std::vector<double> prev_surface_rates;
-    PerfData<double> perf_data;
+    std::vector<Scalar> well_potentials;
+    std::vector<Scalar> productivity_index;
+    std::vector<Scalar> implicit_ipr_a;
+    std::vector<Scalar> implicit_ipr_b;
+    std::vector<Scalar> surface_rates;
+    std::vector<Scalar> reservoir_rates;
+    std::vector<Scalar> prev_surface_rates;
+    PerfData<Scalar> perf_data;
     bool trivial_target;
-    SegmentState<double> segments;
+    SegmentState<Scalar> segments;
     Events events;
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};
@@ -132,20 +133,17 @@ public:
     // The sum_xxx_rates() functions sum over all connection rates of pertinent
     // types. In the case of distributed wells this involves an MPI
     // communication.
-    double sum_solvent_rates() const;
-    double sum_polymer_rates() const;
-    double sum_brine_rates() const;
+    Scalar sum_solvent_rates() const;
+    Scalar sum_polymer_rates() const;
+    Scalar sum_brine_rates() const;
 
-    double sum_filtrate_rate() const;
-    double sum_filtrate_total() const;
+    Scalar sum_filtrate_rate() const;
+    Scalar sum_filtrate_total() const;
 
 private:
-    double sum_connection_rates(const std::vector<double>& connection_rates) const;
+    Scalar sum_connection_rates(const std::vector<Scalar>& connection_rates) const;
 };
 
-
 }
-
-
 
 #endif
