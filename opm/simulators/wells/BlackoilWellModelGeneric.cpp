@@ -633,7 +633,7 @@ checkGroupHigherConstraints(const Group& group,
                                                                        deferred_logger);
                 if (is_changed) {
                     switched_inj_groups_.insert_or_assign({group.name(), phase}, Group::InjectionCMode2String(Group::InjectionCMode::FLD));
-                    BlackoilWellModelConstraints(*this).
+                    BlackoilWellModelConstraints<double>(*this).
                         actionOnBrokenConstraints(group, Group::InjectionCMode::FLD,
                                                   phase, this->groupState(),
                                                   deferred_logger);
@@ -686,7 +686,7 @@ checkGroupHigherConstraints(const Group& group,
             if (is_changed) {
                 const auto group_limit_action = group.productionControls(summaryState_).group_limit_action;
                 std::optional<std::string> worst_offending_well = std::nullopt; 
-                changed = BlackoilWellModelConstraints(*this).
+                changed = BlackoilWellModelConstraints<double>(*this).
                         actionOnBrokenConstraints(group, reportStepIdx, group_limit_action,
                                                   Group::ProductionCMode::FLD,
                                                   this->wellState(),
@@ -1133,7 +1133,7 @@ bool
 BlackoilWellModelGeneric::
 hasTHPConstraints() const
 {
-    return BlackoilWellModelConstraints(*this).hasTHPConstraints();
+    return BlackoilWellModelConstraints<double>(*this).hasTHPConstraints();
 }
 
 void

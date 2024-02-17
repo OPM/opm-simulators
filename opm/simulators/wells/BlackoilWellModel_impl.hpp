@@ -2170,7 +2170,7 @@ namespace Opm {
         }
 
         bool changed_individual =
-            BlackoilWellModelConstraints(*this).
+            BlackoilWellModelConstraints<double>(*this).
                 updateGroupIndividualControl(group,
                                              reportStepIdx,
                                              this->switched_inj_groups_,

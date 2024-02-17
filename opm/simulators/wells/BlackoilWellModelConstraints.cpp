@@ -37,7 +37,8 @@
 
 namespace Opm {
 
-bool BlackoilWellModelConstraints::
+template<class Scalar>
+bool BlackoilWellModelConstraints<Scalar>::
 hasTHPConstraints() const
 {
     int local_result = false;
@@ -49,8 +50,9 @@ hasTHPConstraints() const
     return wellModel_.comm().max(local_result);
 }
 
-std::pair<Group::InjectionCMode, double>
-BlackoilWellModelConstraints::
+template<class Scalar>
+std::pair<Group::InjectionCMode, Scalar>
+BlackoilWellModelConstraints<Scalar>::
 checkGroupInjectionConstraints(const Group& group,
                                const int reportStepIdx,
                                const Phase& phase) const
@@ -73,8 +75,8 @@ checkGroupInjectionConstraints(const Group& group,
     {
         if (currentControl != Group::InjectionCMode::RATE)
         {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+            Scalar current_rate = 0.0;
+            current_rate += WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
@@ -85,13 +87,13 @@ checkGroupInjectionConstraints(const Group& group,
             current_rate = wellModel_.comm().sum(current_rate);
 
             const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-            double target = controls.surface_max_rate;
+            Scalar target = controls.surface_max_rate;
 
             if (group.has_gpmaint_control(phase, Group::InjectionCMode::RATE))
                 target = wellModel_.groupState().gpmaint_target(group.name());
 
             if (target < current_rate) {
-                double scale = 1.0;
+                Scalar scale = 1.0;
                 if (current_rate > 1e-12)
                     scale = target / current_rate;
                 return std::make_pair(Group::InjectionCMode::RATE, scale);
@@ -102,8 +104,8 @@ checkGroupInjectionConstraints(const Group& group,
     {
         if (currentControl != Group::InjectionCMode::RESV)
         {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers<double>::sumWellResRates(group,
+            Scalar current_rate = 0.0;
+            current_rate += WellGroupHelpers<Scalar>::sumWellResRates(group,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
@@ -113,13 +115,13 @@ checkGroupInjectionConstraints(const Group& group,
             current_rate = wellModel_.comm().sum(current_rate);
 
             const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
-            double target = controls.resv_max_rate;
+            Scalar target = controls.resv_max_rate;
 
             if (group.has_gpmaint_control(phase, Group::InjectionCMode::RESV))
                 target = wellModel_.groupState().gpmaint_target(group.name());
 
             if (target < current_rate) {
-                double scale = 1.0;
+                Scalar scale = 1.0;
                 if (current_rate > 1e-12)
                     scale = target / current_rate;
                 return std::make_pair(Group::InjectionCMode::RESV, scale);
@@ -130,10 +132,10 @@ checkGroupInjectionConstraints(const Group& group,
     {
         if (currentControl != Group::InjectionCMode::REIN)
         {
-            double production_Rate = 0.0;
+            Scalar production_Rate = 0.0;
             const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
             const Group& groupRein = wellModel_.schedule().getGroup(controls.reinj_group, reportStepIdx);
-            production_Rate += WellGroupHelpers<double>::sumWellSurfaceRates(groupRein,
+            production_Rate += WellGroupHelpers<Scalar>::sumWellSurfaceRates(groupRein,
                                                                              wellModel_.schedule(),
                                                                              well_state,
                                                                              reportStepIdx,
@@ -143,8 +145,8 @@ checkGroupInjectionConstraints(const Group& group,
             // sum over all nodes
             production_Rate = wellModel_.comm().sum(production_Rate);
 
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+            Scalar current_rate = 0.0;
+            current_rate += WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
@@ -155,7 +157,7 @@ checkGroupInjectionConstraints(const Group& group,
             current_rate = wellModel_.comm().sum(current_rate);
 
             if (controls.target_reinj_fraction*production_Rate < current_rate) {
-                double scale = 1.0;
+                Scalar scale = 1.0;
                 if (current_rate > 1e-12)
                     scale = controls.target_reinj_fraction*production_Rate / current_rate;
                 return std::make_pair(Group::InjectionCMode::REIN, scale);
@@ -166,22 +168,22 @@ checkGroupInjectionConstraints(const Group& group,
     {
         if (currentControl != Group::InjectionCMode::VREP)
         {
-            double voidage_rate = 0.0;
+            Scalar voidage_rate = 0.0;
             const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
             const Group& groupVoidage = wellModel_.schedule().getGroup(controls.voidage_group, reportStepIdx);
-            voidage_rate += WellGroupHelpers<double>::sumWellResRates(groupVoidage,
+            voidage_rate += WellGroupHelpers<Scalar>::sumWellResRates(groupVoidage,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
                                                                       pu.phase_pos[BlackoilPhases::Aqua],
                                                                       false);
-            voidage_rate += WellGroupHelpers<double>::sumWellResRates(groupVoidage,
+            voidage_rate += WellGroupHelpers<Scalar>::sumWellResRates(groupVoidage,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
                                                                       pu.phase_pos[BlackoilPhases::Liquid],
                                                                       false);
-            voidage_rate += WellGroupHelpers<double>::sumWellResRates(groupVoidage,
+            voidage_rate += WellGroupHelpers<Scalar>::sumWellResRates(groupVoidage,
                                                                       wellModel_.schedule(),
                                                                       well_state, reportStepIdx,
                                                                       pu.phase_pos[BlackoilPhases::Vapour],
@@ -190,20 +192,20 @@ checkGroupInjectionConstraints(const Group& group,
             // sum over all nodes
             voidage_rate = wellModel_.comm().sum(voidage_rate);
 
-            double total_rate = 0.0;
-            total_rate += WellGroupHelpers<double>::sumWellResRates(group,
+            Scalar total_rate = 0.0;
+            total_rate += WellGroupHelpers<Scalar>::sumWellResRates(group,
                                                                     wellModel_.schedule(),
                                                                     well_state,
                                                                     reportStepIdx,
                                                                     pu.phase_pos[BlackoilPhases::Aqua],
                                                                     true);
-            total_rate += WellGroupHelpers<double>::sumWellResRates(group,
+            total_rate += WellGroupHelpers<Scalar>::sumWellResRates(group,
                                                                     wellModel_.schedule(),
                                                                     well_state,
                                                                     reportStepIdx,
                                                                     pu.phase_pos[BlackoilPhases::Liquid],
                                                                     true);
-            total_rate += WellGroupHelpers<double>::sumWellResRates(group,
+            total_rate += WellGroupHelpers<Scalar>::sumWellResRates(group,
                                                                     wellModel_.schedule(),
                                                                     well_state,
                                                                     reportStepIdx,
@@ -214,7 +216,7 @@ checkGroupInjectionConstraints(const Group& group,
             total_rate = wellModel_.comm().sum(total_rate);
 
             if (controls.target_void_fraction*voidage_rate < total_rate) {
-                double scale = 1.0;
+                Scalar scale = 1.0;
                 if (total_rate > 1e-12)
                     scale = controls.target_void_fraction*voidage_rate / total_rate;
                 return std::make_pair(Group::InjectionCMode::VREP, scale);
@@ -224,8 +226,9 @@ checkGroupInjectionConstraints(const Group& group,
     return std::make_pair(Group::InjectionCMode::NONE, 1.0);
 }
 
-std::pair<Group::ProductionCMode, double>
-BlackoilWellModelConstraints::
+template<class Scalar>
+std::pair<Group::ProductionCMode, Scalar>
+BlackoilWellModelConstraints<Scalar>::
 checkGroupProductionConstraints(const Group& group,
                                 const int reportStepIdx,
                                 DeferredLogger& deferred_logger) const
@@ -240,8 +243,8 @@ checkGroupProductionConstraints(const Group& group,
     {
         if (currentControl != Group::ProductionCMode::ORAT)
         {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+            Scalar current_rate = 0.0;
+            current_rate += WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
@@ -252,7 +255,7 @@ checkGroupProductionConstraints(const Group& group,
             current_rate = wellModel_.comm().sum(current_rate);
 
             if (controls.oil_target < current_rate  ) {
-                double scale = 1.0;
+                Scalar scale = 1.0;
                 if (current_rate > 1e-12)
                     scale = controls.oil_target / current_rate;
                 return std::make_pair(Group::ProductionCMode::ORAT, scale);
@@ -264,8 +267,8 @@ checkGroupProductionConstraints(const Group& group,
     {
         if (currentControl != Group::ProductionCMode::WRAT)
         {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+            Scalar current_rate = 0.0;
+            current_rate += WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
@@ -276,7 +279,7 @@ checkGroupProductionConstraints(const Group& group,
             current_rate = wellModel_.comm().sum(current_rate);
 
             if (controls.water_target < current_rate  ) {
-                double scale = 1.0;
+                Scalar scale = 1.0;
                 if (current_rate > 1e-12)
                     scale = controls.water_target / current_rate;
                 return std::make_pair(Group::ProductionCMode::WRAT, scale);
@@ -287,8 +290,8 @@ checkGroupProductionConstraints(const Group& group,
     {
         if (currentControl != Group::ProductionCMode::GRAT)
         {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+            Scalar current_rate = 0.0;
+            current_rate += WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
@@ -298,7 +301,7 @@ checkGroupProductionConstraints(const Group& group,
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
             if (controls.gas_target < current_rate  ) {
-                double scale = 1.0;
+                Scalar scale = 1.0;
                 if (current_rate > 1e-12)
                     scale = controls.gas_target / current_rate;
                 return std::make_pair(Group::ProductionCMode::GRAT, scale);
@@ -309,14 +312,14 @@ checkGroupProductionConstraints(const Group& group,
     {
         if (currentControl != Group::ProductionCMode::LRAT)
         {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+            Scalar current_rate = 0.0;
+            current_rate += WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
                                                                           pu.phase_pos[BlackoilPhases::Liquid],
                                                                           false);
-            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+            current_rate += WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                           wellModel_.schedule(),
                                                                           well_state,
                                                                           reportStepIdx,
@@ -328,7 +331,7 @@ checkGroupProductionConstraints(const Group& group,
 
             bool skip = false;
             if (controls.liquid_target == controls.oil_target) {
-                double current_water_rate = WellGroupHelpers<double>::sumWellSurfaceRates(group,
+                Scalar current_water_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
                                                                                           wellModel_.schedule(),
                                                                                           well_state,
                                                                                           reportStepIdx,
@@ -342,7 +345,7 @@ checkGroupProductionConstraints(const Group& group,
             }
 
             if (!skip && controls.liquid_target < current_rate ) {
-                double scale = 1.0;
+                Scalar scale = 1.0;
                 if (current_rate > 1e-12)
                     scale = controls.liquid_target / current_rate;
                 return std::make_pair(Group::ProductionCMode::LRAT, scale);
@@ -358,20 +361,20 @@ checkGroupProductionConstraints(const Group& group,
     {
         if (currentControl != Group::ProductionCMode::RESV)
         {
-            double current_rate = 0.0;
-            current_rate += WellGroupHelpers<double>::sumWellResRates(group,
+            Scalar current_rate = 0.0;
+            current_rate += WellGroupHelpers<Scalar>::sumWellResRates(group,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
                                                                       pu.phase_pos[BlackoilPhases::Aqua],
                                                                       false);
-            current_rate += WellGroupHelpers<double>::sumWellResRates(group,
+            current_rate += WellGroupHelpers<Scalar>::sumWellResRates(group,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
                                                                       pu.phase_pos[BlackoilPhases::Liquid],
                                                                       false);
-            current_rate += WellGroupHelpers<double>::sumWellResRates(group,
+            current_rate += WellGroupHelpers<Scalar>::sumWellResRates(group,
                                                                       wellModel_.schedule(),
                                                                       well_state,
                                                                       reportStepIdx,
@@ -381,12 +384,12 @@ checkGroupProductionConstraints(const Group& group,
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
 
-            double target = controls.resv_target;
+            Scalar target = controls.resv_target;
             if (group.has_gpmaint_control(Group::ProductionCMode::RESV))
                 target = wellModel_.groupState().gpmaint_target(group.name());
 
             if ( target < current_rate ) {
-                double scale = 1.0;
+                Scalar scale = 1.0;
                 if (current_rate > 1e-12)
                     scale = target / current_rate;
                 return std::make_pair(Group::ProductionCMode::RESV, scale);
@@ -397,10 +400,11 @@ checkGroupProductionConstraints(const Group& group,
     {
         OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "PRBL control for production groups not implemented", deferred_logger);
     }
-    return std::make_pair(Group::ProductionCMode::NONE, 1.0);
+    return std::make_pair(Group::ProductionCMode::NONE, Scalar(1.0));
 }
 
-bool BlackoilWellModelConstraints::
+template<class Scalar>
+bool BlackoilWellModelConstraints<Scalar>::
 checkGroupConstraints(const Group& group,
                       const int reportStepIdx,
                       DeferredLogger& deferred_logger) const
@@ -437,11 +441,12 @@ checkGroupConstraints(const Group& group,
     return violated;
 }
 
-void BlackoilWellModelConstraints::
+template<class Scalar>
+void BlackoilWellModelConstraints<Scalar>::
 actionOnBrokenConstraints(const Group& group,
                           const Group::InjectionCMode& newControl,
                           const Phase& controlPhase,
-                          GroupState<double>& group_state,
+                          GroupState<Scalar>& group_state,
                           DeferredLogger& deferred_logger) const
 {
     auto oldControl = wellModel_.groupState().injection_control(group.name(), controlPhase);
@@ -459,14 +464,15 @@ actionOnBrokenConstraints(const Group& group,
     }
 }
 
-bool BlackoilWellModelConstraints::
+template<class Scalar>
+bool BlackoilWellModelConstraints<Scalar>::
 actionOnBrokenConstraints(const Group& group,
                           const int reportStepIdx,
                           const Group::GroupLimitAction group_limit_action,
                           const Group::ProductionCMode& newControl,
-                          const WellState<double>& well_state,
+                          const WellState<Scalar>& well_state,
                           std::optional<std::string>& worst_offending_well,
-                          GroupState<double>& group_state,
+                          GroupState<Scalar>& group_state,
                           DeferredLogger& deferred_logger) const
 {
 
@@ -475,7 +481,7 @@ actionOnBrokenConstraints(const Group& group,
         wellModel_.groupState().production_control(group.name());
 
     std::string ss;
-    switch(group_limit_action.allRates) {
+    switch (group_limit_action.allRates) {
     case Group::ExceedAction::NONE: {
         if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
             if ((group_limit_action.water == Group::ExceedAction::RATE &&
@@ -517,7 +523,7 @@ actionOnBrokenConstraints(const Group& group,
     }
     case Group::ExceedAction::WELL: {
         std::tie(worst_offending_well, std::ignore) =
-            WellGroupHelpers<double>::worstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
+            WellGroupHelpers<Scalar>::worstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
                                                          newControl, wellModel_.phaseUsage(),
                                                          wellModel_.comm(), well_state, deferred_logger);
         break;
@@ -551,14 +557,15 @@ actionOnBrokenConstraints(const Group& group,
     return changed;
 }
 
-bool BlackoilWellModelConstraints::
+template<class Scalar>
+bool BlackoilWellModelConstraints<Scalar>::
 updateGroupIndividualControl(const Group& group,
                              const int reportStepIdx,
-                             std::map<std::pair<std::string,Opm::Phase>,std::string>& switched_inj,
+                             std::map<std::pair<std::string,Phase>,std::string>& switched_inj,
                              std::map<std::string, std::string>& switched_prod,
                              std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
-                             GroupState<double>& group_state,
-                             WellState<double>& well_state,
+                             GroupState<Scalar>& group_state,
+                             WellState<Scalar>& well_state,
                              DeferredLogger& deferred_logger) const
 {
     bool changed = false;
@@ -578,7 +585,7 @@ updateGroupIndividualControl(const Group& group,
                                      Group::InjectionCMode2String(changed_this.first));
                 this->actionOnBrokenConstraints(group, changed_this.first, phase,
                                                 group_state, deferred_logger);
-                WellGroupHelpers<double>::updateWellRatesFromGroupTargetScale(changed_this.second,
+                WellGroupHelpers<Scalar>::updateWellRatesFromGroupTargetScale(changed_this.second,
                                                                               group,
                                                                               wellModel_.schedule(),
                                                                               reportStepIdx,
@@ -607,7 +614,7 @@ updateGroupIndividualControl(const Group& group,
             if(changed) {
                 switched_prod.insert_or_assign(group.name(),
                                     Group::ProductionCMode2String(changed_this.first));
-                WellGroupHelpers<double>::updateWellRatesFromGroupTargetScale(changed_this.second,
+                WellGroupHelpers<Scalar>::updateWellRatesFromGroupTargetScale(changed_this.second,
                                                                               group,
                                                                               wellModel_.schedule(),
                                                                               reportStepIdx,
@@ -623,5 +630,7 @@ updateGroupIndividualControl(const Group& group,
 
     return changed;
 }
+
+template class BlackoilWellModelConstraints<double>;
 
 }
