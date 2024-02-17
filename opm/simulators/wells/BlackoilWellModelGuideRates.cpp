@@ -283,8 +283,8 @@ const Opm::Well& GroupTreeWalker::getWell(std::string_view well) const
 
 namespace Opm {
 
-void
-BlackoilWellModelGuideRates::
+template<class Scalar>
+void BlackoilWellModelGuideRates<Scalar>::
 getGuideRateValues(const GuideRate::RateVector& qs,
                    const bool                   is_inj,
                    const std::string&           wgname,
@@ -309,8 +309,9 @@ getGuideRateValues(const GuideRate::RateVector& qs,
     }
 }
 
+template<class Scalar>
 data::GuideRateValue
-BlackoilWellModelGuideRates::
+BlackoilWellModelGuideRates<Scalar>::
 getGuideRateValues(const Well& well) const
 {
     auto grval = data::GuideRateValue{};
@@ -328,7 +329,7 @@ getGuideRateValues(const Well& well) const
         return grval;
     }
 
-    const auto qs = WellGroupHelpers<double>::
+    const auto qs = WellGroupHelpers<Scalar>::
         getWellRateVector(wellModel_.wellState(), wellModel_.phaseUsage(), wname);
 
     this->getGuideRateValues(qs, well.isInjector(), wname, grval);
@@ -336,8 +337,9 @@ getGuideRateValues(const Well& well) const
     return grval;
 }
 
+template<class Scalar>
 data::GuideRateValue
-BlackoilWellModelGuideRates::
+BlackoilWellModelGuideRates<Scalar>::
 getGuideRateValues(const Group& group) const
 {
     auto grval = data::GuideRateValue{};
@@ -355,7 +357,7 @@ getGuideRateValues(const Group& group) const
         return grval;
     }
 
-    const auto qs = WellGroupHelpers<double>::
+    const auto qs = WellGroupHelpers<Scalar>::
         getProductionGroupRateVector(wellModel_.groupState(), wellModel_.phaseUsage(), gname);
 
     const auto is_inj = false; // This procedure only applies to G*PGR.
@@ -364,8 +366,9 @@ getGuideRateValues(const Group& group) const
     return grval;
 }
 
+template<class Scalar>
 data::GuideRateValue
-BlackoilWellModelGuideRates::
+BlackoilWellModelGuideRates<Scalar>::
 getGuideRateInjectionGroupValues(const Group& group) const
 {
     auto grval = data::GuideRateValue{};
@@ -384,7 +387,8 @@ getGuideRateInjectionGroupValues(const Group& group) const
     return grval;
 }
 
-void BlackoilWellModelGuideRates::
+template<class Scalar>
+void BlackoilWellModelGuideRates<Scalar>::
 assignWellGuideRates(data::Wells& wsrpt,
                      const int    reportStepIdx) const
 {
@@ -433,7 +437,7 @@ assignWellGuideRates(data::Wells& wsrpt,
         const auto get_gr = parent
             || RetrieveWellGuideRate{wellModel_.guideRate(), wname};
 
-        const auto qs = WellGroupHelpers<double>::
+        const auto qs = WellGroupHelpers<Scalar>::
             getWellRateVector(wellModel_.wellState(), wellModel_.phaseUsage(), wname);
 
         auto getGR = [this, &wname, &qs](const GuideRateModel::Target t)
@@ -482,8 +486,9 @@ assignWellGuideRates(data::Wells& wsrpt,
     }
 }
 
+template<class Scalar>
 std::unordered_map<std::string, data::GroupGuideRates>
-BlackoilWellModelGuideRates::
+BlackoilWellModelGuideRates<Scalar>::
 calculateAllGroupGuideRates(const int reportStepIdx) const
 {
     auto gr = std::unordered_map<std::string, data::GroupGuideRates>{};
@@ -542,7 +547,8 @@ calculateAllGroupGuideRates(const int reportStepIdx) const
     return gr;
 }
 
-void BlackoilWellModelGuideRates::
+template<class Scalar>
+void BlackoilWellModelGuideRates<Scalar>::
 assignGroupGuideRates(const Group& group,
                       const std::unordered_map<std::string, data::GroupGuideRates>& groupGuideRates,
                       data::GroupData& gdata) const
@@ -569,7 +575,8 @@ assignGroupGuideRates(const Group& group,
     }
 }
 
-bool BlackoilWellModelGuideRates::
+template<class Scalar>
+bool BlackoilWellModelGuideRates<Scalar>::
 guideRateUpdateIsNeeded(const int reportStepIdx) const
 {
     const auto& genWells = wellModel_.genericWells();
@@ -594,5 +601,7 @@ guideRateUpdateIsNeeded(const int reportStepIdx) const
     }
     return wellModel_.comm().max(static_cast<int>(need_update));
 }
+
+template class BlackoilWellModelGuideRates<double>;
 
 } // namespace Opm

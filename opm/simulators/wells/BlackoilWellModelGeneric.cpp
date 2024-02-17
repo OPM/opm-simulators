@@ -971,14 +971,14 @@ assignGroupValues(const int                               reportStepIdx,
                   std::map<std::string, data::GroupData>& gvalues) const
 {
     const auto groupGuideRates =
-        BlackoilWellModelGuideRates(*this).calculateAllGroupGuideRates(reportStepIdx);
+        BlackoilWellModelGuideRates<double>(*this).calculateAllGroupGuideRates(reportStepIdx);
 
     for (const auto& gname : schedule_.groupNames(reportStepIdx)) {
         const auto& grup = schedule_.getGroup(gname, reportStepIdx);
 
         auto& gdata = gvalues[gname];
         this->assignGroupControl(grup, gdata);
-        BlackoilWellModelGuideRates(*this).assignGroupGuideRates(grup, groupGuideRates, gdata);
+        BlackoilWellModelGuideRates<double>(*this).assignGroupGuideRates(grup, groupGuideRates, gdata);
     }
 }
 

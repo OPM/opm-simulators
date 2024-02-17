@@ -1211,8 +1211,8 @@ namespace Opm {
 
         //update guide rates
         const int reportStepIdx = simulator_.episodeIndex();
-        if (alq_updated || BlackoilWellModelGuideRates(*this).
-                           guideRateUpdateIsNeeded(reportStepIdx)) {
+        if (alq_updated || BlackoilWellModelGuideRates<double>(*this).
+                              guideRateUpdateIsNeeded(reportStepIdx)) {
             const double simulationTime = simulator_.time();
             const auto& comm = simulator_.vanguard().grid().comm();
             const auto& summaryState = simulator_.vanguard().summaryState();

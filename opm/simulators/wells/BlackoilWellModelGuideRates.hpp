@@ -41,6 +41,7 @@ class Group;
 class Well;
 
 /// Class for handling the guide rates in the blackoil well model.
+template<class Scalar>
 class BlackoilWellModelGuideRates
 {
 public:

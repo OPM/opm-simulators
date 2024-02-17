@@ -263,7 +263,7 @@ namespace Opm {
                 this->assignWellTracerRates(wsrpt, tracerRates);
 
 
-                BlackoilWellModelGuideRates(*this).assignWellGuideRates(wsrpt, this->reportStepIndex());
+                BlackoilWellModelGuideRates<double>(*this).assignWellGuideRates(wsrpt, this->reportStepIndex());
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
 
                 return wsrpt;
