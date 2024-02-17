@@ -333,7 +333,7 @@ namespace Opm
                                    const Well::InjectionControls& inj_controls,
                                    const Well::ProductionControls& prod_controls,
                                    WellState<Scalar>& well_state,
-                                   const GroupState& group_state,
+                                   const GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger)
     {
         // TODO: only_wells should be put back to save some computation
@@ -359,7 +359,7 @@ namespace Opm
                                        const Well::InjectionControls& inj_controls,
                                        const Well::ProductionControls& prod_controls,
                                        WellState<Scalar>& well_state,
-                                       const GroupState& group_state,
+                                       const GroupState<Scalar>& group_state,
                                        DeferredLogger& deferred_logger)
     {
         // try to regularize equation if the well does not converge
@@ -2283,7 +2283,7 @@ namespace Opm
                              const Well::InjectionControls& inj_controls,
                              const Well::ProductionControls& prod_controls,
                              WellState<Scalar>& well_state,
-                             const GroupState& group_state,
+                             const GroupState<Scalar>& group_state,
                              DeferredLogger& deferred_logger)
     {
         const int max_iter = this->param_.max_inner_iter_wells_;
@@ -2330,7 +2330,7 @@ namespace Opm
                                const Well::InjectionControls& inj_controls,
                                const Well::ProductionControls& prod_controls,
                                WellState<Scalar>& well_state,
-                               const GroupState& group_state,
+                               const GroupState<Scalar>& group_state,
                                DeferredLogger& deferred_logger, 
                                const bool fixed_control /*false*/, 
                                const bool fixed_status /*false*/)

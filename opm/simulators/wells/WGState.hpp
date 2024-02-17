@@ -42,7 +42,7 @@ struct WGState {
     void wtest_state(WellTestState wtest_state);
 
     WellState<double> well_state;
-    GroupState group_state;
+    GroupState<double> group_state;
     WellTestState well_test_state;
 
     bool operator==(const WGState&) const;

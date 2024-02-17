@@ -187,7 +187,7 @@ namespace Opm
     updateWellControl(const Simulator& simulator,
                       const IndividualOrGroup iog,
                       WellState<Scalar>& well_state,
-                      const GroupState& group_state,
+                      const GroupState<Scalar>& group_state,
                       DeferredLogger& deferred_logger) /* const */
     {
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -263,7 +263,7 @@ namespace Opm
     WellInterface<TypeTag>::
     updateWellControlAndStatusLocalIteration(const Simulator& simulator,
                                              WellState<Scalar>& well_state,
-                                             const GroupState& group_state,
+                                             const GroupState<Scalar>& group_state,
                                              const Well::InjectionControls& inj_controls,
                                              const Well::ProductionControls& prod_controls,
                                              const double wqTotal,
@@ -348,7 +348,7 @@ namespace Opm
     wellTesting(const Simulator& simulator,
                 const double simulation_time,
                 /* const */ WellState<Scalar>& well_state,
-                const GroupState& group_state,
+                const GroupState<Scalar>& group_state,
                 WellTestState& well_test_state,
                 DeferredLogger& deferred_logger)
     {
@@ -446,7 +446,7 @@ namespace Opm
     iterateWellEquations(const Simulator& simulator,
                          const double dt,
                          WellState<Scalar>& well_state,
-                         const GroupState& group_state,
+                         const GroupState<Scalar>& group_state,
                          DeferredLogger& deferred_logger)
     {
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -481,7 +481,7 @@ namespace Opm
                                const Well::InjectionControls& inj_controls,
                                const Well::ProductionControls& prod_controls,
                                WellState<Scalar>& well_state,
-                               const GroupState& group_state,
+                               const GroupState<Scalar>& group_state,
                                DeferredLogger& deferred_logger)
     {
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -595,8 +595,8 @@ namespace Opm
                      WellState<Scalar>& well_state,
                      DeferredLogger& deferred_logger)
     {   
-        // Solve a well using single bhp-constraint (but close if not operable under this) 
-        auto group_state = GroupState(); // empty group
+        // Solve a well using single bhp-constraint (but close if not operable under this)
+        auto group_state = GroupState<Scalar>(); // empty group
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0); 
         auto& ws = well_state.well(this->index_of_well_);
@@ -634,7 +634,7 @@ namespace Opm
         const auto well_status_orig = this->wellStatus_;
         this->stopWell();
         
-        auto group_state = GroupState(); // empty group
+        auto group_state = GroupState<Scalar>(); // empty group
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0); 
         const bool converged =  this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger, /*fixed_control*/true, /*fixed_status*/ true);
@@ -647,7 +647,7 @@ namespace Opm
     WellInterface<TypeTag>::
     solveWellForTesting(const Simulator& simulator,
                         WellState<Scalar>& well_state,
-                        const GroupState& group_state,
+                        const GroupState<Scalar>& group_state,
                         DeferredLogger& deferred_logger)
     {
         // keep a copy of the original well state
@@ -682,7 +682,7 @@ namespace Opm
     WellInterface<TypeTag>::
     solveWellEquation(const Simulator& simulator,
                       WellState<Scalar>& well_state,
-                      const GroupState& group_state,
+                      const GroupState<Scalar>& group_state,
                       DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped())
@@ -740,7 +740,7 @@ namespace Opm
     assembleWellEq(const Simulator& simulator,
                    const double dt,
                    WellState<Scalar>& well_state,
-                   const GroupState& group_state,
+                   const GroupState<Scalar>& group_state,
                    DeferredLogger& deferred_logger)
     {
 
@@ -757,7 +757,7 @@ namespace Opm
     assembleWellEqWithoutIteration(const Simulator& simulator,
                                    const double dt,
                                    WellState<Scalar>& well_state,
-                                   const GroupState& group_state,
+                                   const GroupState<Scalar>& group_state,
                                    DeferredLogger& deferred_logger)
     {
         const auto& summary_state = simulator.vanguard().summaryState();
@@ -776,7 +776,7 @@ namespace Opm
     prepareWellBeforeAssembling(const Simulator& simulator,
                                 const double dt,
                                 WellState<Scalar>& well_state,
-                                const GroupState& group_state,
+                                const GroupState<Scalar>& group_state,
                                 DeferredLogger& deferred_logger)
     {
         const bool old_well_operable = this->operability_status_.isOperableAndSolvable();
@@ -893,7 +893,7 @@ namespace Opm
         const Simulator& simulator,
         const double dt,
         WellState<Scalar>& well_state,
-        const GroupState &group_state,
+        const GroupState<Scalar>& group_state,
         DeferredLogger& deferred_logger)
     {
         const auto& well_name = this->name();
@@ -1023,7 +1023,7 @@ namespace Opm
     void
     WellInterface<TypeTag>::
     updateWellStateWithTarget(const Simulator& simulator,
-                              const GroupState& group_state,
+                              const GroupState<Scalar>& group_state,
                               WellState<Scalar>& well_state,
                               DeferredLogger& deferred_logger) const
     {

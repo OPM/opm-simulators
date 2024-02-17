@@ -47,7 +47,7 @@ namespace Opm
             const SummaryState &summary_state,
             DeferredLogger &deferred_logger,
             WellState<Scalar>& well_state,
-            const GroupState& group_state,
+            const GroupState<Scalar>& group_state,
             GasLiftGroupInfo &group_info,
             GLiftSyncGroups &sync_groups,
             const Parallel::Communication& comm,

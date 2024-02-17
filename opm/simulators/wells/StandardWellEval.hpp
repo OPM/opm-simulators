@@ -36,7 +36,6 @@ namespace Opm
 
 class ConvergenceReport;
 class DeferredLogger;
-class GroupState;
 class Schedule;
 class SummaryState;
 class WellContributions;

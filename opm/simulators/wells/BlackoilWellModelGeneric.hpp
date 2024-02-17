@@ -114,7 +114,7 @@ public:
     std::vector<Well> getLocalWells(const int timeStepIdx) const;
     const Schedule& schedule() const { return schedule_; }
     const PhaseUsage& phaseUsage() const { return phase_usage_; }
-    const GroupState& groupState() const { return this->active_wgstate_.group_state; }
+    const GroupState<double>& groupState() const { return this->active_wgstate_.group_state; }
     std::vector<const WellInterfaceGeneric*> genericWells() const
     { return {well_container_generic_.begin(), well_container_generic_.end()}; }
 
@@ -142,7 +142,7 @@ public:
     {
         return this->nupcol_wgstate_.well_state;
     }
-    GroupState& groupState() { return this->active_wgstate_.group_state; }
+    GroupState<double>& groupState() { return this->active_wgstate_.group_state; }
 
     WellTestState& wellTestState() { return this->active_wgstate_.well_test_state; }
 

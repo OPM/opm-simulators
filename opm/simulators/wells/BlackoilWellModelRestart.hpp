@@ -35,7 +35,7 @@ namespace data {
 struct GroupData;
 class GroupAndNetworkValues;
 }
-class GroupState;
+template<class Scalar> class GroupState;
 class GuideRate;
 class GuideRateConfig;
 struct PerforationData;
@@ -69,7 +69,7 @@ public:
                          const data::GroupAndNetworkValues& grpNwrkValues,
                          const bool                         handle_ms_well,
                          WellState<double>&                 well_state,
-                         GroupState&                        grpState) const;
+                         GroupState<double>&                grpState) const;
 
 private:
     //! \brief Loads per-connection data from restart structures.
@@ -95,7 +95,7 @@ private:
     //! \brief Loads per-group data from restart structures.
     void loadRestartGroupData(const std::string&     group,
                               const data::GroupData& value,
-                              GroupState& grpState) const;
+                              GroupState<double>&    grpState) const;
 
     const BlackoilWellModelGeneric& wellModel_; //!< Reference to well model
 };

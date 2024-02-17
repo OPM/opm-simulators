@@ -37,7 +37,7 @@ namespace RateConverter
 }
 
 class Group;
-class GroupState;
+template<class Scalar> class GroupState;
 class Schedule;
 struct RatioLimitCheckReport;
 template<class Scalar> class SingleWellState;
@@ -84,13 +84,13 @@ protected:
                                     const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
     bool checkGroupConstraints(WellState<double>& well_state,
-                               const GroupState& group_state,
+                               const GroupState<double>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                DeferredLogger& deferred_logger) const;
 
     bool checkConstraints(WellState<double>& well_state,
-                          const GroupState& group_state,
+                          const GroupState<double>& group_state,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
                           DeferredLogger& deferred_logger) const;
@@ -98,7 +98,7 @@ protected:
     std::optional<double>
     getGroupInjectionTargetRate(const Group& group,
                                 const WellState<double>& well_state,
-                                const GroupState& group_state,
+                                const GroupState<double>& group_state,
                                 const Schedule& schedule,
                                 const SummaryState& summaryState,
                                 const InjectorType& injectorType,
@@ -108,7 +108,7 @@ protected:
     double
     getGroupProductionTargetRate(const Group& group,
                                  const WellState<double>& well_state,
-                                 const GroupState& group_state,
+                                 const GroupState<double>& group_state,
                                  const Schedule& schedule,
                                  const SummaryState& summaryState,
                                  double efficiencyFactor,

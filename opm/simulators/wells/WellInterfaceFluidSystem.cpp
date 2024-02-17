@@ -178,7 +178,7 @@ template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
 checkGroupConstraints(WellState<double>& well_state,
-                      const GroupState& group_state,
+                      const GroupState<double>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       DeferredLogger& deferred_logger) const
@@ -205,7 +205,7 @@ template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
 checkConstraints(WellState<double>& well_state,
-                 const GroupState& group_state,
+                 const GroupState<double>& group_state,
                  const Schedule& schedule,
                  const SummaryState& summaryState,
                  DeferredLogger& deferred_logger) const
@@ -240,7 +240,7 @@ std::optional<double>
 WellInterfaceFluidSystem<FluidSystem>::
 getGroupInjectionTargetRate(const Group& group,
                             const WellState<double>& well_state,
-                            const GroupState& group_state,
+                            const GroupState<double>& group_state,
                             const Schedule& schedule,
                             const SummaryState& summaryState,
                             const InjectorType& injectorType,
@@ -268,7 +268,7 @@ double
 WellInterfaceFluidSystem<FluidSystem>::
 getGroupProductionTargetRate(const Group& group,
                              const WellState<double>& well_state,
-                             const GroupState& group_state,
+                             const GroupState<double>& group_state,
                              const Schedule& schedule,
                              const SummaryState& summaryState,
                              double efficiencyFactor,

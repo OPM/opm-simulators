@@ -84,7 +84,7 @@ private:
 template<class FluidSystem, class Indices>
 void MultisegmentWellAssemble<FluidSystem,Indices>::
 assembleControlEq(const WellState<Scalar>& well_state,
-                  const GroupState& group_state,
+                  const GroupState<Scalar>& group_state,
                   const Schedule& schedule,
                   const SummaryState& summaryState,
                   const Well::InjectionControls& inj_controls,

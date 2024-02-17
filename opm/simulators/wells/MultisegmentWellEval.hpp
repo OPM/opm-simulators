@@ -38,7 +38,6 @@ namespace Opm
 {
 
 class ConvergenceReport;
-class GroupState;
 class Schedule;
 class WellContributions;
 class SummaryState;

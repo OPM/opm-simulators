@@ -29,11 +29,13 @@
 
 namespace Opm {
 
-GroupState::GroupState(std::size_t np) :
+template<class Scalar>
+GroupState<Scalar>::GroupState(std::size_t np) :
     num_phases(np)
 {}
 
-GroupState GroupState::serializationTestObject()
+template<class Scalar>
+GroupState<Scalar> GroupState<Scalar>::serializationTestObject()
 {
     GroupState result(3);
     result.m_production_rates = {{"test1", {1.0, 2.0}}};
@@ -52,7 +54,9 @@ GroupState GroupState::serializationTestObject()
     return result;
 }
 
-bool GroupState::operator==(const GroupState& other) const {
+template<class Scalar>
+bool GroupState<Scalar>::operator==(const GroupState& other) const
+{
     return this->m_production_rates == other.m_production_rates &&
            this->production_controls == other.production_controls &&
            this->prod_red_rates == other.prod_red_rates &&
@@ -68,19 +72,27 @@ bool GroupState::operator==(const GroupState& other) const {
 
 //-------------------------------------------------------------------------
 
-bool GroupState::has_production_rates(const std::string& gname) const {
+template<class Scalar>
+bool GroupState<Scalar>::has_production_rates(const std::string& gname) const
+{
     auto group_iter = this->m_production_rates.find(gname);
     return (group_iter != this->m_production_rates.end());
 }
 
-void GroupState::update_production_rates(const std::string& gname, const std::vector<double>& rates) {
+template<class Scalar>
+void GroupState<Scalar>::update_production_rates(const std::string& gname,
+                                                 const std::vector<Scalar>& rates)
+{
     if (rates.size() != this->num_phases)
         throw std::logic_error("Wrong number of phases");
 
     this->m_production_rates[gname] = rates;
 }
 
-const std::vector<double>& GroupState::production_rates(const std::string& gname) const {
+template<class Scalar>
+const std::vector<Scalar>&
+GroupState<Scalar>::production_rates(const std::string& gname) const
+{
     auto group_iter = this->m_production_rates.find(gname);
     if (group_iter == this->m_production_rates.end())
         throw std::logic_error("No such group");
@@ -90,19 +102,29 @@ const std::vector<double>& GroupState::production_rates(const std::string& gname
 
 //-------------------------------------------------------------------------
 
-bool GroupState::has_production_reduction_rates(const std::string& gname) const {
+template<class Scalar>
+bool GroupState<Scalar>::
+has_production_reduction_rates(const std::string& gname) const
+{
     auto group_iter = this->prod_red_rates.find(gname);
     return (group_iter != this->prod_red_rates.end());
 }
 
-void GroupState::update_production_reduction_rates(const std::string& gname, const std::vector<double>& rates) {
+template<class Scalar>
+void GroupState<Scalar>::
+update_production_reduction_rates(const std::string& gname,
+                                  const std::vector<Scalar>& rates)
+{
     if (rates.size() != this->num_phases)
         throw std::logic_error("Wrong number of phases");
 
     this->prod_red_rates[gname] = rates;
 }
 
-const std::vector<double>& GroupState::production_reduction_rates(const std::string& gname) const {
+template<class Scalar>
+const std::vector<Scalar>&
+GroupState<Scalar>::production_reduction_rates(const std::string& gname) const
+{
     auto group_iter = this->prod_red_rates.find(gname);
     if (group_iter == this->prod_red_rates.end())
         throw std::logic_error("No such group");
@@ -112,19 +134,29 @@ const std::vector<double>& GroupState::production_reduction_rates(const std::str
 
 //-------------------------------------------------------------------------
 
-bool GroupState::has_injection_reduction_rates(const std::string& gname) const {
+template<class Scalar>
+bool GroupState<Scalar>::
+has_injection_reduction_rates(const std::string& gname) const
+{
     auto group_iter = this->inj_red_rates.find(gname);
     return (group_iter != this->inj_red_rates.end());
 }
 
-void GroupState::update_injection_reduction_rates(const std::string& gname, const std::vector<double>& rates) {
+template<class Scalar>
+void GroupState<Scalar>::
+update_injection_reduction_rates(const std::string& gname,
+                                 const std::vector<Scalar>& rates)
+{
     if (rates.size() != this->num_phases)
         throw std::logic_error("Wrong number of phases");
 
     this->inj_red_rates[gname] = rates;
 }
 
-const std::vector<double>& GroupState::injection_reduction_rates(const std::string& gname) const {
+template<class Scalar>
+const std::vector<Scalar>&
+GroupState<Scalar>::injection_reduction_rates(const std::string& gname) const
+{
     auto group_iter = this->inj_red_rates.find(gname);
     if (group_iter == this->inj_red_rates.end())
         throw std::logic_error("No such group");
@@ -133,19 +165,30 @@ const std::vector<double>& GroupState::injection_reduction_rates(const std::stri
 }
 //-------------------------------------------------------------------------
 
-bool GroupState::has_injection_surface_rates(const std::string& gname) const {
+template<class Scalar>
+bool GroupState<Scalar>::
+has_injection_surface_rates(const std::string& gname) const
+{
     auto group_iter = this->inj_surface_rates.find(gname);
     return (group_iter != this->inj_surface_rates.end());
 }
 
-void GroupState::update_injection_surface_rates(const std::string& gname, const std::vector<double>& rates) {
+template<class Scalar>
+void GroupState<Scalar>::
+update_injection_surface_rates(const std::string& gname,
+                               const std::vector<Scalar>& rates)
+{
     if (rates.size() != this->num_phases)
         throw std::logic_error("Wrong number of phases");
 
     this->inj_surface_rates[gname] = rates;
 }
 
-const std::vector<double>& GroupState::injection_surface_rates(const std::string& gname) const {
+template<class Scalar>
+const std::vector<Scalar>&
+GroupState<Scalar>::
+injection_surface_rates(const std::string& gname) const
+{
     auto group_iter = this->inj_surface_rates.find(gname);
     if (group_iter == this->inj_surface_rates.end())
         throw std::logic_error("No such group");
@@ -155,19 +198,29 @@ const std::vector<double>& GroupState::injection_surface_rates(const std::string
 
 //-------------------------------------------------------------------------
 
-bool GroupState::has_injection_reservoir_rates(const std::string& gname) const {
+template<class Scalar>
+bool GroupState<Scalar>::
+has_injection_reservoir_rates(const std::string& gname) const
+{
     auto group_iter = this->inj_resv_rates.find(gname);
     return (group_iter != this->inj_resv_rates.end());
 }
 
-void GroupState::update_injection_reservoir_rates(const std::string& gname, const std::vector<double>& rates) {
+template<class Scalar>
+void GroupState<Scalar>::
+update_injection_reservoir_rates(const std::string& gname,
+                                 const std::vector<Scalar>& rates)
+{
     if (rates.size() != this->num_phases)
         throw std::logic_error("Wrong number of phases");
 
     this->inj_resv_rates[gname] = rates;
 }
 
-const std::vector<double>& GroupState::injection_reservoir_rates(const std::string& gname) const {
+template<class Scalar>
+const std::vector<Scalar>&
+GroupState<Scalar>::injection_reservoir_rates(const std::string& gname) const
+{
     auto group_iter = this->inj_resv_rates.find(gname);
     if (group_iter == this->inj_resv_rates.end())
         throw std::logic_error("No such group");
@@ -177,14 +230,22 @@ const std::vector<double>& GroupState::injection_reservoir_rates(const std::stri
 
 //-------------------------------------------------------------------------
 
-void GroupState::update_injection_rein_rates(const std::string& gname, const std::vector<double>& rates) {
+template<class Scalar>
+void GroupState<Scalar>::
+update_injection_rein_rates(const std::string& gname,
+                            const std::vector<Scalar>& rates)
+{
     if (rates.size() != this->num_phases)
         throw std::logic_error("Wrong number of phases");
 
     this->inj_rein_rates[gname] = rates;
 }
 
-const std::vector<double>& GroupState::injection_rein_rates(const std::string& gname) const {
+template<class Scalar>
+const std::vector<Scalar>&
+GroupState<Scalar>::
+injection_rein_rates(const std::string& gname) const
+{
     auto group_iter = this->inj_rein_rates.find(gname);
     if (group_iter == this->inj_rein_rates.end())
         throw std::logic_error("No such group");
@@ -194,11 +255,17 @@ const std::vector<double>& GroupState::injection_rein_rates(const std::string& g
 
 //-------------------------------------------------------------------------
 
-void GroupState::update_injection_vrep_rate(const std::string& gname, double rate) {
+template<class Scalar>
+void GroupState<Scalar>::
+update_injection_vrep_rate(const std::string& gname, Scalar rate)
+{
     this->inj_vrep_rate[gname] = rate;
 }
 
-double GroupState::injection_vrep_rate(const std::string& gname) const {
+template<class Scalar>
+Scalar GroupState<Scalar>::
+injection_vrep_rate(const std::string& gname) const
+{
     auto group_iter = this->inj_vrep_rate.find(gname);
     if (group_iter == this->inj_vrep_rate.end())
         throw std::logic_error("No such group");
@@ -208,11 +275,17 @@ double GroupState::injection_vrep_rate(const std::string& gname) const {
 
 //-------------------------------------------------------------------------
 
-void GroupState::update_grat_sales_target(const std::string& gname, double target) {
+template<class Scalar>
+void GroupState<Scalar>::
+update_grat_sales_target(const std::string& gname, Scalar target)
+{
     this->m_grat_sales_target[gname] = target;
 }
 
-double GroupState::grat_sales_target(const std::string& gname) const {
+template<class Scalar>
+Scalar GroupState<Scalar>::
+grat_sales_target(const std::string& gname) const
+{
     auto group_iter = this->m_grat_sales_target.find(gname);
     if (group_iter == this->m_grat_sales_target.end())
         throw std::logic_error("No such group");
@@ -220,13 +293,19 @@ double GroupState::grat_sales_target(const std::string& gname) const {
     return group_iter->second;
 }
 
-bool GroupState::has_grat_sales_target(const std::string& gname) const {
+template<class Scalar>
+bool GroupState<Scalar>::
+has_grat_sales_target(const std::string& gname) const
+{
     return (this->m_grat_sales_target.count(gname) > 0);
 }
 
 //-------------------------------------------------------------------------
 
-bool GroupState::has_production_control(const std::string& gname) const {
+template<class Scalar>
+bool GroupState<Scalar>::
+has_production_control(const std::string& gname) const
+{
     auto group_iter = this->production_controls.find(gname);
     if (group_iter == this->production_controls.end())
         return false;
@@ -234,11 +313,18 @@ bool GroupState::has_production_control(const std::string& gname) const {
     return true;
 }
 
-void GroupState::production_control(const std::string& gname, Group::ProductionCMode cmode) {
+template<class Scalar>
+void GroupState<Scalar>::
+production_control(const std::string& gname,
+                   Group::ProductionCMode cmode)
+{
     this->production_controls[gname] = cmode;
 }
 
-Group::ProductionCMode GroupState::production_control(const std::string& gname) const {
+template<class Scalar>
+Group::ProductionCMode
+GroupState<Scalar>::production_control(const std::string& gname) const
+{
     auto group_iter = this->production_controls.find(gname);
     if (group_iter == this->production_controls.end())
         throw std::logic_error("Could not find any control for production group: " + gname);
@@ -248,15 +334,26 @@ Group::ProductionCMode GroupState::production_control(const std::string& gname) 
 
 //-------------------------------------------------------------------------
 
-bool GroupState::has_injection_control(const std::string& gname, Phase phase) const {
+template<class Scalar>
+bool GroupState<Scalar>::
+has_injection_control(const std::string& gname, Phase phase) const
+{
     return this->injection_controls.count(std::make_pair(phase, gname)) > 0;
 }
 
-void GroupState::injection_control(const std::string& gname, Phase phase, Group::InjectionCMode cmode) {
+template<class Scalar>
+void GroupState<Scalar>::
+injection_control(const std::string& gname,
+                  Phase phase, Group::InjectionCMode cmode)
+{
     this->injection_controls[ std::make_pair(phase, gname) ] = cmode;
 }
 
-Group::InjectionCMode GroupState::injection_control(const std::string& gname, Phase phase) const {
+template<class Scalar>
+Group::InjectionCMode
+GroupState<Scalar>::
+injection_control(const std::string& gname, Phase phase) const
+{
     auto key = std::make_pair(phase, gname);
     auto group_iter = this->injection_controls.find( key );
     if (group_iter == this->injection_controls.end())
@@ -267,7 +364,9 @@ Group::InjectionCMode GroupState::injection_control(const std::string& gname, Ph
 
 //-------------------------------------------------------------------------
 
-GPMaint::State& GroupState::gpmaint(const std::string& gname) {
+template<class Scalar>
+GPMaint::State& GroupState<Scalar>::gpmaint(const std::string& gname)
+{
     if (!this->gpmaint_state.has(gname))
         this->gpmaint_state.add(gname, GPMaint::State{});
     return this->gpmaint_state[gname];
@@ -276,11 +375,16 @@ GPMaint::State& GroupState::gpmaint(const std::string& gname) {
 
 //-------------------------------------------------------------------------
 
-void GroupState::update_gpmaint_target(const std::string& gname, double target) {
+template<class Scalar>
+void GroupState<Scalar>::
+update_gpmaint_target(const std::string& gname, Scalar target)
+{
     this->m_gpmaint_target[gname] = target;
 }
 
-double GroupState::gpmaint_target(const std::string& gname) const {
+template<class Scalar>
+Scalar GroupState<Scalar>::gpmaint_target(const std::string& gname) const
+{
     auto group_iter = this->m_gpmaint_target.find(gname);
     if (group_iter == this->m_gpmaint_target.end())
         throw std::logic_error("No such group");
@@ -288,8 +392,13 @@ double GroupState::gpmaint_target(const std::string& gname) const {
     return group_iter->second;
 }
 
-bool GroupState::has_gpmaint_target(const std::string& gname) const {
+template<class Scalar>
+bool GroupState<Scalar>::
+has_gpmaint_target(const std::string& gname) const
+{
     return (this->m_gpmaint_target.count(gname) > 0);
 }
+
+template class GroupState<double>;
 
 }

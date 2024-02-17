@@ -28,7 +28,7 @@ namespace Opm
 {
 
 class DeferredLogger;
-class GroupState;
+template<class Scalar> class GroupState;
 template<class Scalar> class WellState;
 
 class GasLiftCommon
@@ -39,7 +39,7 @@ public:
 protected:
     GasLiftCommon(
         WellState<double>& well_state,
-        const GroupState &group_state,
+        const GroupState<double>& group_state,
         DeferredLogger &deferred_logger,
         const Parallel::Communication& comm,
         bool debug
@@ -55,7 +55,7 @@ protected:
         MessageType msg_type = MessageType::INFO) const;
 
     WellState<double>& well_state_;
-    const GroupState& group_state_;
+    const GroupState<double>& group_state_;
     DeferredLogger &deferred_logger_;
     const Parallel::Communication& comm_;
     bool debug;

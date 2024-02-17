@@ -30,7 +30,7 @@ namespace Opm
 {
 
 class DeferredLogger;
-class GroupState;
+template<class Scalar> class GroupState;
 template<class Scalar, int numWellEq, int numEq> class MultisegmentWellEquations;
 template<class FluidSystem, class Indices> class MultisegmentWellPrimaryVariables;
 class Schedule;
@@ -71,7 +71,7 @@ public:
 
     //! \brief Assemble control equation.
     void assembleControlEq(const WellState<Scalar>& well_state,
-                           const GroupState& group_state,
+                           const GroupState<Scalar>& group_state,
                            const Schedule& schedule,
                            const SummaryState& summaryState,
                            const Well::InjectionControls& inj_controls,

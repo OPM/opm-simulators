@@ -34,7 +34,7 @@ namespace Opm::WellGroupHelpers {
 
 FractionCalculator::FractionCalculator(const Schedule& schedule,
                                        const WellState<double>& well_state,
-                                       const GroupState& group_state,
+                                       const GroupState<double>& group_state,
                                        const int report_step,
                                        const GuideRate* guide_rate,
                                        const GuideRateModel::Target target,

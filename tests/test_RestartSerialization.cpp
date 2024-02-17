@@ -103,7 +103,8 @@ BOOST_AUTO_TEST_CASE(NAME) \
 
 namespace Opm { using ALQS = ALQState<double>; }
 TEST_FOR_TYPE_NAMED(ALQS, ALQState)
-TEST_FOR_TYPE(GroupState)
+namespace Opm { using GroupS = GroupState<double>; }
+TEST_FOR_TYPE_NAMED(GroupS, GroupState)
 TEST_FOR_TYPE(HardcodedTimeStepControl)
 TEST_FOR_TYPE(Inplace)
 namespace Opm { using PerfD = PerfData<double>; }

@@ -42,7 +42,7 @@ GasLiftGroupInfo(
     const PhaseUsage &phase_usage,
     DeferredLogger &deferred_logger,
     WellState<double>& well_state,
-    const GroupState &group_state,
+    const GroupState<double>& group_state,
     const Communication &comm,
     bool glift_debug
 ) :

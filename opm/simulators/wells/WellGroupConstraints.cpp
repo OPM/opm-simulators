@@ -37,7 +37,7 @@ std::pair<bool, double>
 WellGroupConstraints::
 checkGroupConstraintsInj(const Group& group,
                          const WellState<double>& well_state,
-                         const GroupState& group_state,
+                         const GroupState<double>& group_state,
                          const double efficiencyFactor,
                          const Schedule& schedule,
                          const SummaryState& summaryState,
@@ -95,7 +95,7 @@ std::pair<bool, double>
 WellGroupConstraints::
 checkGroupConstraintsProd(const Group& group,
                           const WellState<double>& well_state,
-                          const GroupState& group_state,
+                          const GroupState<double>& group_state,
                           const double efficiencyFactor,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
@@ -125,7 +125,7 @@ checkGroupConstraintsProd(const Group& group,
 
 bool WellGroupConstraints::
 checkGroupConstraints(WellState<double>& well_state,
-                      const GroupState& group_state,
+                      const GroupState<double>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const RateConvFunc& rateConverter,

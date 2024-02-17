@@ -78,32 +78,32 @@ namespace Opm
                          const int index_of_well,
                          const std::vector<PerforationData>& perf_data);
 
-        virtual void init(const PhaseUsage* phase_usage_arg,
-                          const std::vector<double>& depth_arg,
-                          const double gravity_arg,
-                          const int num_cells,
-                          const std::vector< Scalar >& B_avg,
-                          const bool changed_to_open_this_step) override;
+        void init(const PhaseUsage* phase_usage_arg,
+                  const std::vector<double>& depth_arg,
+                  const double gravity_arg,
+                  const int num_cells,
+                  const std::vector<Scalar>& B_avg,
+                  const bool changed_to_open_this_step) override;
 
         void initPrimaryVariablesEvaluation() override;
 
         /// updating the well state based the current control mode
-        virtual void updateWellStateWithTarget(const Simulator& simulator,
-                                               const GroupState& group_state,
-                                               WellState<Scalar>& well_state,
-                                               DeferredLogger& deferred_logger) const override;
+        void updateWellStateWithTarget(const Simulator& simulator,
+                                       const GroupState<Scalar>& group_state,
+                                       WellState<Scalar>& well_state,
+                                       DeferredLogger& deferred_logger) const override;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const SummaryState& summary_state,
-                                                     const WellState<Scalar>& well_state,
-                                                     const std::vector<double>& B_avg,
-                                                     DeferredLogger& deferred_logger,
-                                                     const bool relax_tolerance) const override;
+        ConvergenceReport getWellConvergence(const SummaryState& summary_state,
+                                             const WellState<Scalar>& well_state,
+                                             const std::vector<double>& B_avg,
+                                             DeferredLogger& deferred_logger,
+                                             const bool relax_tolerance) const override;
 
         /// Ax = Ax - C D^-1 B x
-        virtual void apply(const BVector& x, BVector& Ax) const override;
+        void apply(const BVector& x, BVector& Ax) const override;
         /// r = r - C D^-1 Rw
-        virtual void apply(BVector& r) const override;
+        void apply(BVector& r) const override;
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
@@ -259,7 +259,7 @@ namespace Opm
                                               const Well::InjectionControls& inj_controls,
                                               const Well::ProductionControls& prod_controls,
                                               WellState<Scalar>& well_state,
-                                              const GroupState& group_state,
+                                              const GroupState<Scalar>& group_state,
                                               DeferredLogger& deferred_logger) override;
 
         virtual bool iterateWellEqWithSwitching(const Simulator& simulator,
@@ -267,7 +267,7 @@ namespace Opm
                                                 const Well::InjectionControls& inj_controls,
                                                 const Well::ProductionControls& prod_controls,
                                                 WellState<Scalar>& well_state,
-                                                const GroupState& group_state,
+                                                const GroupState<Scalar>& group_state,
                                                 DeferredLogger& deferred_logger, 
                                                 const bool fixed_control = false, 
                                                 const bool fixed_status = false) override;
@@ -277,7 +277,7 @@ namespace Opm
                                                     const Well::InjectionControls& inj_controls,
                                                     const Well::ProductionControls& prod_controls,
                                                     WellState<Scalar>& well_state,
-                                                    const GroupState& group_state,
+                                                    const GroupState<Scalar>& group_state,
                                                     DeferredLogger& deferred_logger) override;
 
         virtual void updateWaterThroughput(const double dt, WellState<Scalar>& well_state) const override;

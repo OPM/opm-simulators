@@ -26,7 +26,7 @@
 #include <string>
 
 namespace Opm {
-class GroupState;
+template<class Scalar> class GroupState;
 struct PhaseUsage;
 class Schedule;
 template<class Scalar> class WellState;
@@ -39,7 +39,7 @@ class FractionCalculator
 public:
     FractionCalculator(const Schedule& schedule,
                        const WellState<double>& well_state,
-                       const GroupState& group_state,
+                       const GroupState<double>& group_state,
                        const int report_step,
                        const GuideRate* guide_rate,
                        const GuideRateModel::Target target,
@@ -63,7 +63,7 @@ private:
     GuideRate::RateVector getGroupRateVector(const std::string& group_name);
     const Schedule& schedule_;
     const WellState<double>& well_state_;
-    const GroupState& group_state_;
+    const GroupState<double>& group_state_;
     int report_step_;
     const GuideRate* guide_rate_;
     GuideRateModel::Target target_;

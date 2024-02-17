@@ -34,7 +34,7 @@ namespace Opm
 
 class DeferredLogger;
 class Group;
-class GroupState;
+template<class Scalar> class GroupState;
 enum class InjectorType;
 using RegionId = int;
 class Schedule;
@@ -53,7 +53,7 @@ public:
     template<class EvalWell>
     void getGroupInjectionControl(const Group& group,
                                   const WellState<double>& well_state,
-                                  const GroupState& group_state,
+                                  const GroupState<double>& group_state,
                                   const Schedule& schedule,
                                   const SummaryState& summaryState,
                                   const InjectorType& injectorType,
@@ -67,7 +67,7 @@ public:
     std::optional<double>
     getGroupInjectionTargetRate(const Group& group,
                                 const WellState<double>& well_state,
-                                const GroupState& group_state,
+                                const GroupState<double>& group_state,
                                 const Schedule& schedule,
                                 const SummaryState& summaryState,
                                 const InjectorType& injectorType,
@@ -78,7 +78,7 @@ public:
     template<class EvalWell>
     void getGroupProductionControl(const Group& group,
                                    const WellState<double>& well_state,
-                                   const GroupState& group_state,
+                                   const GroupState<double>& group_state,
                                    const Schedule& schedule,
                                    const SummaryState& summaryState,
                                    const EvalWell& bhp,
@@ -90,7 +90,7 @@ public:
 
     double getGroupProductionTargetRate(const Group& group,
                                         const WellState<double>& well_state,
-                                        const GroupState& group_state,
+                                        const GroupState<double>& group_state,
                                         const Schedule& schedule,
                                         const SummaryState& summaryState,
                                         const RateConvFunc& rateConverter,

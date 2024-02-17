@@ -35,7 +35,7 @@ namespace Opm
 
 class DeferredLogger;
 class Group;
-class GroupState;
+template<class Scalar> class GroupState;
 enum class InjectorType;
 using RegionId = int;
 class Schedule;
@@ -52,7 +52,7 @@ public:
     using RateConvFunc = std::function<void(const RegionId, const int, const std::optional<std::string>&, std::vector<double>&)>;
 
     bool checkGroupConstraints(WellState<double>& well_state,
-                               const GroupState& group_state,
+                               const GroupState<double>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const RateConvFunc& rateConverter,
@@ -62,7 +62,7 @@ private:
     std::pair<bool, double>
     checkGroupConstraintsInj(const Group& group,
                              const WellState<double>& well_state,
-                             const GroupState& group_state,
+                             const GroupState<double>& group_state,
                              const double efficiencyFactor,
                              const Schedule& schedule,
                              const SummaryState& summaryState,
@@ -72,7 +72,7 @@ private:
     std::pair<bool, double>
     checkGroupConstraintsProd(const Group& group,
                               const WellState<double>& well_state,
-                              const GroupState& group_state,
+                              const GroupState<double>& group_state,
                               const double efficiencyFactor,
                               const Schedule& schedule,
                               const SummaryState& summaryState,

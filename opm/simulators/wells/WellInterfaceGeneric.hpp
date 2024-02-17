@@ -44,7 +44,6 @@ class VFPProperties;
 class WellTestState;
 template<class Scalar> class WellState;
 template<class Scalar> class SingleWellState;
-class GroupState;
 class Group;
 class Schedule;
 

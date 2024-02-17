@@ -158,7 +158,7 @@ loadRestartWellData(const std::string&                   well_name,
 void BlackoilWellModelRestart::
 loadRestartGroupData(const std::string&     group,
                      const data::GroupData& value,
-                     GroupState& grpState) const
+                     GroupState<double>&    grpState) const
 {
     using GPMode = Group::ProductionCMode;
     using GIMode = Group::InjectionCMode;
@@ -224,7 +224,7 @@ loadRestartData(const data::Wells&                 rst_wells,
                 const data::GroupAndNetworkValues& grpNwrkValues,
                 const bool                         handle_ms_well,
                 WellState<double>&                 well_state,
-                GroupState&                        grpState) const
+                GroupState<double>&                grpState) const
 {
     using rt = data::Rates::opt;
     const auto& phases = wellModel_.phaseUsage();

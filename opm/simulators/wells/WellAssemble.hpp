@@ -36,7 +36,7 @@ namespace Opm
 
 class DeferredLogger;
 class Group;
-class GroupState;
+template<class Scalar> class GroupState;
 class Schedule;
 class SummaryState;
 template<class FluidSystem> class WellInterfaceFluidSystem;
@@ -56,7 +56,7 @@ public:
 
     template<class EvalWell>
     void assembleControlEqProd(const WellState<Scalar>& well_state,
-                               const GroupState& group_state,
+                               const GroupState<Scalar>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const WellProductionControls& controls,
@@ -68,7 +68,7 @@ public:
 
     template<class EvalWell>
     void assembleControlEqInj(const WellState<Scalar>& well_state,
-                              const GroupState& group_state,
+                              const GroupState<Scalar>& group_state,
                               const Schedule& schedule,
                               const SummaryState& summaryState,
                               const WellInjectionControls& controls,

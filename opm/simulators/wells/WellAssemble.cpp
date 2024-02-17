@@ -54,7 +54,7 @@ template<class EvalWell>
 void
 WellAssemble<FluidSystem>::
 assembleControlEqProd(const WellState<Scalar>& well_state,
-                      const GroupState& group_state,
+                      const GroupState<Scalar>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       const Well::ProductionControls& controls,
@@ -190,7 +190,7 @@ template<class EvalWell>
 void
 WellAssemble<FluidSystem>::
 assembleControlEqInj(const WellState<Scalar>& well_state,
-                     const GroupState& group_state,
+                     const GroupState<Scalar>& group_state,
                      const Schedule& schedule,
                      const SummaryState& summaryState,
                      const Well::InjectionControls& controls,
@@ -278,7 +278,7 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
 #define INSTANCE_METHODS(A,...) \
 template void WellAssemble<A>:: \
 assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar>&, \
-                                   const GroupState&, \
+                                   const GroupState<typename A::Scalar>&, \
                                    const Schedule&, \
                                    const SummaryState&, \
                                    const Well::ProductionControls&, \
@@ -289,7 +289,7 @@ assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar>&, \
                                    DeferredLogger&) const; \
 template void WellAssemble<A>:: \
 assembleControlEqInj<__VA_ARGS__>(const WellState<typename A::Scalar>&, \
-                                  const GroupState&, \
+                                  const GroupState<typename A::Scalar>&, \
                                   const Schedule&, \
                                   const SummaryState&, \
                                   const Well::InjectionControls&, \
