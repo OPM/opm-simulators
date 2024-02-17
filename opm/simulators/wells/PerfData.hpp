@@ -102,7 +102,7 @@ public:
     std::vector<double> skin_pressure{};
     std::vector<double> water_velocity{};
 
-    ConnFiltrateData filtrate_data{};
+    ConnFiltrateData<double> filtrate_data{};
 };
 
 } // namespace Opm

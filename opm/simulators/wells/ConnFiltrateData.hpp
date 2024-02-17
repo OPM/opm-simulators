@@ -25,9 +25,8 @@
 
 namespace Opm {
 
+template<class Scalar>
 struct ConnFiltrateData {
-
-    ConnFiltrateData() = default;
 
     void resize(std::size_t num_perf);
 
@@ -47,14 +46,14 @@ struct ConnFiltrateData {
 
     bool operator==(const ConnFiltrateData& rhs) const;
 
-    std::vector<double> rates;
-    std::vector<double> total;
-    std::vector<double> skin_factor;
-    std::vector<double> thickness;
-    std::vector<double> perm;
-    std::vector<double> poro;
-    std::vector<double> radius;
-    std::vector<double> area_of_flow;
+    std::vector<Scalar> rates;
+    std::vector<Scalar> total;
+    std::vector<Scalar> skin_factor;
+    std::vector<Scalar> thickness;
+    std::vector<Scalar> perm;
+    std::vector<Scalar> poro;
+    std::vector<Scalar> radius;
+    std::vector<Scalar> area_of_flow;
 };
 
 }

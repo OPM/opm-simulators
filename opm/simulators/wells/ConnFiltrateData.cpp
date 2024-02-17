@@ -26,7 +26,9 @@
 
 namespace Opm {
 
-void ConnFiltrateData::resize(std::size_t num_perf) {
+template<class Scalar>
+void ConnFiltrateData<Scalar>::resize(std::size_t num_perf)
+{
     this->rates.resize(num_perf);
     this->total.resize(num_perf);
     this->skin_factor.resize(num_perf);
@@ -37,7 +39,9 @@ void ConnFiltrateData::resize(std::size_t num_perf) {
     this->area_of_flow.resize(num_perf);
 }
 
-ConnFiltrateData ConnFiltrateData::serializationTestObject()
+template<class Scalar>
+ConnFiltrateData<Scalar>
+ConnFiltrateData<Scalar>::serializationTestObject()
 {
     ConnFiltrateData result;
     result.rates = {8.};
@@ -51,7 +55,8 @@ ConnFiltrateData ConnFiltrateData::serializationTestObject()
     return result;
 }
 
-bool ConnFiltrateData::operator==(const ConnFiltrateData& rhs) const
+template<class Scalar>
+bool ConnFiltrateData<Scalar>::operator==(const ConnFiltrateData& rhs) const
 {
     return this->rates == rhs.rates &&
            this->total == rhs.total &&
@@ -62,5 +67,7 @@ bool ConnFiltrateData::operator==(const ConnFiltrateData& rhs) const
            this->radius == rhs.radius &&
            this->area_of_flow == rhs.area_of_flow;
 }
+
+template struct ConnFiltrateData<double>;
 
 }

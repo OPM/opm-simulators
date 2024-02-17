@@ -79,7 +79,7 @@ PerfData PerfData::serializationTestObject()
     result.water_throughput = {25.0, 26.0};
     result.skin_pressure = {27.0, 28.0};
     result.water_velocity = {29.0, 30.0};
-    result.filtrate_data = ConnFiltrateData::serializationTestObject();
+    result.filtrate_data = ConnFiltrateData<double>::serializationTestObject();
 
     return result;
 }
