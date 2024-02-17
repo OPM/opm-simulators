@@ -567,7 +567,7 @@ protected:
     std::unordered_map<std::string, std::vector<double>> prev_inj_multipliers_;
 
     // Handling for filter cake injection multipliers
-    std::unordered_map<std::string, WellFilterCake> filter_cake_;
+    std::unordered_map<std::string, WellFilterCake<double>> filter_cake_;
 
     /*
       The various wellState members should be accessed and modified

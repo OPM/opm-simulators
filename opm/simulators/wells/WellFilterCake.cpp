@@ -34,12 +34,13 @@
 
 namespace Opm {
 
-void WellFilterCake::
+template<class Scalar>
+void WellFilterCake<Scalar>::
 updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
                                const double dt,
-                               const double conc,
+                               const Scalar conc,
                                const std::size_t water_index,
-                               WellState<double>& well_state)
+                               WellState<Scalar>& well_state)
 {
     if (!well.isInjector()) {
         return;
@@ -67,17 +68,18 @@ updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
     const std::size_t np = well_state.numPhases();
     for (int perf = 0; perf < well.numPerfs(); ++perf) {
         // not considering the production water
-        const double water_rates = std::max(0., connection_rates[perf * np + water_index]);
-        const double filtrate_rate = water_rates * conc;
+        const Scalar water_rates = std::max(0., connection_rates[perf * np + water_index]);
+        const Scalar filtrate_rate = water_rates * conc;
         filtration_particle_volume_[perf] += filtrate_rate * dt;
         ws.perf_data.filtrate_data.rates[perf] = filtrate_rate;
         ws.perf_data.filtrate_data.total[perf] = filtration_particle_volume_[perf];
     }
 }
 
-void WellFilterCake::
+template<class Scalar>
+void WellFilterCake<Scalar>::
 updateInjFCMult(const WellInterfaceGeneric& well,
-                WellState<double>& well_state,
+                WellState<Scalar>& well_state,
                 DeferredLogger& deferred_logger)
 {
     if (inj_fc_multiplier_.empty()) {
@@ -92,14 +94,14 @@ updateInjFCMult(const WellInterfaceGeneric& well,
         const auto& connection = connections[perf_ecl_index];
         if (well.isInjector() && connection.filterCakeActive()) {
             const auto& filter_cake = connection.getFilterCake();
-            const double area = connection.getFilterCakeArea();
-            const double poro = filter_cake.poro;
-            const double perm = filter_cake.perm;
-            const double rw = connection.getFilterCakeRadius();
-            const double K = connection.Kh() / connection.connectionLength();
-            const double factor = filter_cake.sf_multiplier;
+            const Scalar area = connection.getFilterCakeArea();
+            const Scalar poro = filter_cake.poro;
+            const Scalar perm = filter_cake.perm;
+            const Scalar rw = connection.getFilterCakeRadius();
+            const Scalar K = connection.Kh() / connection.connectionLength();
+            const Scalar factor = filter_cake.sf_multiplier;
             // the thickness of the filtration cake
-            const double thickness = filtration_particle_volume_[perf] / (area * (1. - poro));
+            const Scalar thickness = filtration_particle_volume_[perf] / (area * (1. - poro));
             auto& filtrate_data = perf_data.filtrate_data;
             filtrate_data.thickness[perf] = thickness;
             filtrate_data.poro[perf] = poro;
@@ -107,14 +109,14 @@ updateInjFCMult(const WellInterfaceGeneric& well,
             filtrate_data.radius[perf] = connection.getFilterCakeRadius();
             filtrate_data.area_of_flow[perf] = connection.getFilterCakeArea();
 
-            double skin_factor = 0.;
+            Scalar skin_factor = 0.;
             switch (filter_cake.geometry) {
                 case FilterCake::FilterCakeGeometry::LINEAR: {
                     skin_factor = thickness / rw * K / perm * factor;
                     break;
                 }
                 case FilterCake::FilterCakeGeometry::RADIAL: {
-                    const double rc = std::sqrt(rw * rw + 2. * rw * thickness);
+                    const Scalar rc = std::sqrt(rw * rw + 2. * rw * thickness);
                     skin_factor = K / perm * std::log(rc / rw) * factor;
                     break;
                 }
@@ -136,5 +138,7 @@ updateInjFCMult(const WellInterfaceGeneric& well,
         }
     }
 }
+
+template class WellFilterCake<double>;
 
 } // namespace Opm

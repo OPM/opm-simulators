@@ -30,30 +30,31 @@ class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 //! \brief Class for well calculations related to filter cakes.
+template<class Scalar>
 class WellFilterCake {
 public:
     //! \brief Update the water injection volume.
     //! \details Used for calculation related to cake filtration due to injection activity.
     void updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
                                         const double dt,
-                                        const double conc,
+                                        const Scalar conc,
                                         const std::size_t water_index,
-                                        WellState<double>& well_state);
+                                        WellState<Scalar>& well_state);
 
     //! \brief Update the multiplier for well transmissbility due to cake filtration.
     void updateInjFCMult(const WellInterfaceGeneric& well,
-                         WellState<double>& well_state,
+                         WellState<Scalar>& well_state,
                          DeferredLogger& deferred_logger);
 
     //! \brief Returns a const-ref to multipliers.
-    const std::vector<double>& multipliers() const
+    const std::vector<Scalar>& multipliers() const
     {
         return inj_fc_multiplier_;
     }
 
 private:
-    std::vector<double> filtration_particle_volume_; //!<// Volume of filtration particles during water injection
-    std::vector<double> inj_fc_multiplier_; //!< Multiplier due to injection filtration cake
+    std::vector<Scalar> filtration_particle_volume_; //!<// Volume of filtration particles during water injection
+    std::vector<Scalar> inj_fc_multiplier_; //!< Multiplier due to injection filtration cake
 };
 
 }
