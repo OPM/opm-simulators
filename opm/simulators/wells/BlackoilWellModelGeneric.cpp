@@ -210,22 +210,27 @@ initFromRestartFile(const RestartValue& restartValues,
                              this->schedule(), handle_ms_well, numCells,
                              this->well_perf_data_, this->summaryState_);
 
-    BlackoilWellModelRestart(*this).loadRestartData(restartValues.wells,
-                                                    restartValues.grp_nwrk,
-                                                    handle_ms_well,
-                                                    this->wellState(),
-                                                    this->groupState());
+    BlackoilWellModelRestart<double>(*this).
+        loadRestartData(restartValues.wells,
+                        restartValues.grp_nwrk,
+                        handle_ms_well,
+                        this->wellState(),
+                        this->groupState());
 
     if (config.has_model()) {
-        BlackoilWellModelRestart(*this).loadRestartGuideRates(report_step,
-                                                              config.model().target(),
-                                                              restartValues.wells,
-                                                              this->guideRate_);
+        BlackoilWellModelRestart<double>(*this).
+            loadRestartGuideRates(report_step,
+                                  config.model().target(),
+                                  restartValues.wells,
+                                  this->guideRate_);
+    }
 
-        BlackoilWellModelRestart(*this).loadRestartGuideRates(report_step,
-                                                              config,
-                                                              restartValues.grp_nwrk.groupData,
-                                                              this->guideRate_);
+    if (config.has_model()) {
+        BlackoilWellModelRestart<double>(*this).
+            loadRestartGuideRates(report_step,
+                                  config,
+                                  restartValues.grp_nwrk.groupData,
+                                  this->guideRate_);
 
         this->guideRate_.updateGuideRateExpiration(this->schedule().seconds(report_step), report_step);
     }

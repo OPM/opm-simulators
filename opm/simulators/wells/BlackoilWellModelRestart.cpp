@@ -67,11 +67,12 @@ namespace {
 
 namespace Opm {
 
-void BlackoilWellModelRestart::
+template<class Scalar>
+void BlackoilWellModelRestart<Scalar>::
 loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
                           const data::Well&                    rst_well,
                           const std::vector<PerforationData>&  old_perf_data,
-                          SingleWellState<double>&             ws) const
+                          SingleWellState<Scalar>&             ws) const
 {
     auto& perf_data        = ws.perf_data;
     auto  perf_pressure    = perf_data.pressure.begin();
@@ -91,11 +92,12 @@ loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
     }
 }
 
-void BlackoilWellModelRestart::
+template<class Scalar>
+void BlackoilWellModelRestart<Scalar>::
 loadRestartSegmentData(const std::string&                   well_name,
                        const std::vector<data::Rates::opt>& phs,
                        const data::Well&                    rst_well,
-                       SingleWellState<double>&             ws) const
+                       SingleWellState<Scalar>&             ws) const
 {
     const auto& segment_set = wellModel_.getWellEcl(well_name).getSegments();
     const auto& rst_segments = rst_well.segments;
@@ -122,13 +124,14 @@ loadRestartSegmentData(const std::string&                   well_name,
     }
 }
 
-void BlackoilWellModelRestart::
+template<class Scalar>
+void BlackoilWellModelRestart<Scalar>::
 loadRestartWellData(const std::string&                   well_name,
                     const bool                           handle_ms_well,
                     const std::vector<data::Rates::opt>& phs,
                     const data::Well&                    rst_well,
                     const std::vector<PerforationData>&  old_perf_data,
-                    SingleWellState<double>&             ws) const
+                    SingleWellState<Scalar>&             ws) const
 {
     const auto np = phs.size();
 
@@ -155,10 +158,11 @@ loadRestartWellData(const std::string&                   well_name,
     }
 }
 
-void BlackoilWellModelRestart::
+template<class Scalar>
+void BlackoilWellModelRestart<Scalar>::
 loadRestartGroupData(const std::string&     group,
                      const data::GroupData& value,
-                     GroupState<double>&    grpState) const
+                     GroupState<Scalar>&    grpState) const
 {
     using GPMode = Group::ProductionCMode;
     using GIMode = Group::InjectionCMode;
@@ -180,7 +184,8 @@ loadRestartGroupData(const std::string&     group,
     }
 }
 
-void BlackoilWellModelRestart::
+template<class Scalar>
+void BlackoilWellModelRestart<Scalar>::
 loadRestartGuideRates(const int                    report_step,
                       const GuideRateModel::Target target,
                       const data::Wells&           rst_wells,
@@ -196,7 +201,8 @@ loadRestartGuideRates(const int                    report_step,
     }
 }
 
-void BlackoilWellModelRestart::
+template<class Scalar>
+void BlackoilWellModelRestart<Scalar>::
 loadRestartGuideRates(const int                                     report_step,
                       const GuideRateConfig&                        config,
                       const std::map<std::string, data::GroupData>& rst_groups,
@@ -219,12 +225,13 @@ loadRestartGuideRates(const int                                     report_step,
     }
 }
 
-void BlackoilWellModelRestart::
+template<class Scalar>
+void BlackoilWellModelRestart<Scalar>::
 loadRestartData(const data::Wells&                 rst_wells,
                 const data::GroupAndNetworkValues& grpNwrkValues,
                 const bool                         handle_ms_well,
-                WellState<double>&                 well_state,
-                GroupState<double>&                grpState) const
+                WellState<Scalar>&                 well_state,
+                GroupState<Scalar>&                grpState) const
 {
     using rt = data::Rates::opt;
     const auto& phases = wellModel_.phaseUsage();
@@ -259,5 +266,7 @@ loadRestartData(const data::Wells&                 rst_wells,
         this->loadRestartGroupData(group, value, grpState);
     }
 }
+
+template class BlackoilWellModelRestart<double>;
 
 } // namespace Opm
