@@ -39,7 +39,7 @@ updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
                                const double dt,
                                const double conc,
                                const std::size_t water_index,
-                               WellState& well_state)
+                               WellState<double>& well_state)
 {
     if (!well.isInjector()) {
         return;
@@ -77,7 +77,7 @@ updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
 
 void WellFilterCake::
 updateInjFCMult(const WellInterfaceGeneric& well,
-                WellState& well_state,
+                WellState<double>& well_state,
                 DeferredLogger& deferred_logger)
 {
     if (inj_fc_multiplier_.empty()) {

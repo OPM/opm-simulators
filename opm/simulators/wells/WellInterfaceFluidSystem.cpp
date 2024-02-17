@@ -40,9 +40,6 @@
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
-#include <cassert>
-#include <cmath>
-
 namespace Opm
 {
 
@@ -180,7 +177,7 @@ checkIndividualConstraints(SingleWellState<double>& ws,
 template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkGroupConstraints(WellState& well_state,
+checkGroupConstraints(WellState<double>& well_state,
                       const GroupState& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
@@ -207,7 +204,7 @@ checkGroupConstraints(WellState& well_state,
 template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkConstraints(WellState& well_state,
+checkConstraints(WellState<double>& well_state,
                  const GroupState& group_state,
                  const Schedule& schedule,
                  const SummaryState& summaryState,
@@ -242,7 +239,7 @@ template<typename FluidSystem>
 std::optional<double>
 WellInterfaceFluidSystem<FluidSystem>::
 getGroupInjectionTargetRate(const Group& group,
-                            const WellState& well_state,
+                            const WellState<double>& well_state,
                             const GroupState& group_state,
                             const Schedule& schedule,
                             const SummaryState& summaryState,
@@ -270,12 +267,12 @@ template<typename FluidSystem>
 double
 WellInterfaceFluidSystem<FluidSystem>::
 getGroupProductionTargetRate(const Group& group,
-                          const WellState& well_state,
-                          const GroupState& group_state,
-                          const Schedule& schedule,
-                          const SummaryState& summaryState,
-                          double efficiencyFactor,
-                          DeferredLogger& deferred_logger) const
+                             const WellState<double>& well_state,
+                             const GroupState& group_state,
+                             const Schedule& schedule,
+                             const SummaryState& summaryState,
+                             double efficiencyFactor,
+                             DeferredLogger& deferred_logger) const
 {
     auto rCoeff = [this, &group_state](const RegionId id, const int region, const std::optional<std::string>& prod_gname, std::vector<double>& coeff)
     {

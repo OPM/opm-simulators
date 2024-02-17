@@ -34,7 +34,7 @@ namespace Opm
 class BlackoilWellModelGeneric;
 class DeferredLogger;
 class Group;
-class WellState;
+template<class Scalar> class WellState;
 class WellTestState;
 
     class GroupEconomicLimitsChecker
@@ -74,7 +74,7 @@ class WellTestState;
         DeferredLogger &deferred_logger_;
         const std::string date_string_;
         const UnitSystem& unit_system_;
-        const WellState &well_state_;
+        const WellState<double>& well_state_;
         WellTestState &well_test_state_;
         const Schedule &schedule_;
         GroupEconProductionLimits::GEconGroupProp gecon_props_;

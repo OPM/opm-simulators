@@ -67,7 +67,8 @@ init()
 
 template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
-update(const WellState& well_state, const bool stop_or_zero_rate_target)
+update(const WellState<Scalar>& well_state,
+       const bool stop_or_zero_rate_target)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
     static constexpr int Gas = BlackoilPhases::Vapour;
@@ -214,7 +215,7 @@ void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                 const double rho,
                 const bool stop_or_zero_rate_target,
-                WellState& well_state,
+                WellState<Scalar>& well_state,
                 const SummaryState& summary_state,
                 DeferredLogger& deferred_logger) const
 {

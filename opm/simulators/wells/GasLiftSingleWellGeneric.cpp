@@ -38,7 +38,7 @@ namespace Opm
 {
 
 GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(DeferredLogger& deferred_logger,
-                                                   WellState& well_state,
+                                                   WellState<double>& well_state,
                                                    const GroupState& group_state,
                                                    const Well& ecl_well,
                                                    const SummaryState& summary_state,

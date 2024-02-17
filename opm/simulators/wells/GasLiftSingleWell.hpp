@@ -36,6 +36,7 @@ namespace Opm
     template<class TypeTag>
     class GasLiftSingleWell : public GasLiftSingleWellGeneric
     {
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
 
@@ -45,7 +46,7 @@ namespace Opm
             const Simulator& simulator,
             const SummaryState &summary_state,
             DeferredLogger &deferred_logger,
-            WellState &well_state,
+            WellState<Scalar>& well_state,
             const GroupState& group_state,
             GasLiftGroupInfo &group_info,
             GLiftSyncGroups &sync_groups,

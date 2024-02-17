@@ -78,7 +78,7 @@ initMatrixAndVectors(const int num_cells)
 template<typename FluidSystem, typename Indices>
 ConvergenceReport
 MultisegmentWellEval<FluidSystem,Indices>::
-getWellConvergence(const WellState& well_state,
+getWellConvergence(const WellState<Scalar>& well_state,
                    const std::vector<double>& B_avg,
                    DeferredLogger& deferred_logger,
                    const double max_residual_allowed,
@@ -199,7 +199,7 @@ template<typename FluidSystem, typename Indices>
 void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleAccelerationPressureLoss(const int seg,
-                                 WellState& well_state)
+                                 WellState<Scalar>& well_state)
 {
     // Computes and assembles p-drop due to acceleration
     assert(seg != 0); // top segment can not enter here
@@ -246,7 +246,7 @@ template<typename FluidSystem, typename Indices>
 void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleDefaultPressureEq(const int seg,
-                          WellState& well_state,
+                          WellState<Scalar>& well_state,
                           const bool use_average_density)
 {
     assert(seg != 0); // not top segment
@@ -293,7 +293,7 @@ void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleICDPressureEq(const int seg,
                       const UnitSystem& unit_system,
-                      WellState& well_state,
+                      WellState<Scalar>& well_state,
                       const SummaryState& summary_state,
                       const bool use_average_density,
                       DeferredLogger& deferred_logger)
@@ -377,7 +377,7 @@ template<typename FluidSystem, typename Indices>
 void
 MultisegmentWellEval<FluidSystem,Indices>::
 assembleAccelerationAndHydroPressureLosses(const int seg,
-                                           WellState& well_state,
+                                           WellState<Scalar>& well_state,
                                            const bool use_average_density)
 {
     if (this->accelerationalPressureLossConsidered()) {
@@ -409,7 +409,7 @@ void
 MultisegmentWellEval<FluidSystem,Indices>::
 assemblePressureEq(const int seg,
                    const UnitSystem& unit_system,
-                   WellState& well_state,
+                   WellState<Scalar>& well_state,
                    const SummaryState& summary_state,
                    const bool use_average_density,
                    DeferredLogger& deferred_logger)
@@ -473,7 +473,7 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
 template<typename FluidSystem, typename Indices>
 double
 MultisegmentWellEval<FluidSystem,Indices>::
-getControlTolerance(const WellState& well_state,
+getControlTolerance(const WellState<Scalar>& well_state,
                     const double tolerance_wells,
                     const double tolerance_pressure_ms_wells,
                     DeferredLogger& deferred_logger) const
@@ -540,7 +540,7 @@ getControlTolerance(const WellState& well_state,
 template<typename FluidSystem, typename Indices>
 double
 MultisegmentWellEval<FluidSystem,Indices>::
-getResidualMeasureValue(const WellState& well_state,
+getResidualMeasureValue(const WellState<Scalar>& well_state,
                         const std::vector<double>& residuals,
                         const double tolerance_wells,
                         const double tolerance_pressure_ms_wells,

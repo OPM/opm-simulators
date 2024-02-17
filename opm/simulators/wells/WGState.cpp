@@ -35,7 +35,7 @@ WGState::WGState(const PhaseUsage& pu) :
 WGState WGState::serializationTestObject(const ParallelWellInfo& pinfo)
 {
     WGState result(PhaseUsage{});
-    result.well_state = WellState::serializationTestObject(pinfo);
+    result.well_state = WellState<double>::serializationTestObject(pinfo);
     result.group_state = GroupState::serializationTestObject();
     result.well_test_state = WellTestState::serializationTestObject();
 

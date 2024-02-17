@@ -41,7 +41,7 @@ class GuideRateConfig;
 struct PerforationData;
 struct PhaseUsage;
 template<class Scalar> class SingleWellState;
-class WellState;
+template<class Scalar> class WellState;
 
 /// Class for restarting the blackoil well model.
 class BlackoilWellModelRestart
@@ -68,7 +68,7 @@ public:
     void loadRestartData(const data::Wells&                 rst_wells,
                          const data::GroupAndNetworkValues& grpNwrkValues,
                          const bool                         handle_ms_well,
-                         WellState&                         well_state,
+                         WellState<double>&                 well_state,
                          GroupState&                        grpState) const;
 
 private:

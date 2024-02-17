@@ -349,8 +349,8 @@ void WellInterfaceGeneric::setVFPProperties(const VFPProperties* vfp_properties_
     vfp_properties_ = vfp_properties_arg;
 }
 
-void WellInterfaceGeneric::setPrevSurfaceRates(WellState& well_state,
-                                               const WellState& prev_well_state) const
+void WellInterfaceGeneric::setPrevSurfaceRates(WellState<double>& well_state,
+                                               const WellState<double>& prev_well_state) const
     {
         auto& ws = well_state.well(this->index_of_well_);
         auto& ws_prev = prev_well_state.well(this->index_of_well_);
@@ -505,7 +505,7 @@ bool WellInterfaceGeneric::thpLimitViolatedButNotSwitched() const
     return operability_status_.thp_limit_violated_but_not_switched;
 }
 
-double WellInterfaceGeneric::getALQ(const WellState& well_state) const
+double WellInterfaceGeneric::getALQ(const WellState<double>& well_state) const
 {
     // no alq for injectors.
     if (isInjector())
@@ -534,7 +534,7 @@ void WellInterfaceGeneric::reportWellSwitching(const SingleWellState<double> &ws
     }
 }
 
-bool WellInterfaceGeneric::isPressureControlled(const WellState& well_state) const
+bool WellInterfaceGeneric::isPressureControlled(const WellState<double>& well_state) const
 {
     const auto& ws = well_state.well(this->index_of_well_);
     if (this->isInjector()) {
@@ -551,7 +551,7 @@ bool WellInterfaceGeneric::isPressureControlled(const WellState& well_state) con
 
 
 bool WellInterfaceGeneric::wellUnderZeroRateTarget(const SummaryState& summary_state,
-                                                   const WellState& well_state) const
+                                                   const WellState<double>& well_state) const
 {
     if (this->isProducer()) { // producers
         const auto prod_controls = this->well_ecl_.productionControls(summary_state);
@@ -565,7 +565,7 @@ bool WellInterfaceGeneric::wellUnderZeroRateTarget(const SummaryState& summary_s
 }
 
 bool WellInterfaceGeneric::stopppedOrZeroRateTarget(const SummaryState& summary_state,
-                                                    const WellState& well_state) const
+                                                    const WellState<double>& well_state) const
 {
     return (this->wellIsStopped() || this->wellUnderZeroRateTarget(summary_state, well_state));
 
@@ -675,7 +675,7 @@ int WellInterfaceGeneric::polymerInjTable_() const
 
 std::pair<bool,bool> WellInterfaceGeneric::
 computeWellPotentials(std::vector<double>& well_potentials,
-                      const WellState& well_state)
+                      const WellState<double>& well_state)
 {
     const int np = this->number_of_phases_;
     well_potentials.resize(np, 0.0);
@@ -752,7 +752,7 @@ checkNegativeWellPotentials(std::vector<double>& well_potentials,
 
 void WellInterfaceGeneric::
 prepareForPotentialCalculations(const SummaryState& summary_state,
-                                WellState& well_state, 
+                                WellState<double>& well_state,
                                 Well::InjectionControls& inj_controls,
                                 Well::ProductionControls& prod_controls) const
 {

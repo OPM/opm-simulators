@@ -126,28 +126,32 @@ void PackUnpackXConn::unpack([[maybe_unused]] const int link,
 
 namespace Opm {
 
-WellState::WellState(const ParallelWellInfo& pinfo)
+template<class Scalar>
+WellState<Scalar>::WellState(const ParallelWellInfo& pinfo)
     : phase_usage_{}
 {
     wells_.add("test4",
-               SingleWellState<double>{"dummy", pinfo, false, 0.0, {}, phase_usage_, 0.0});
+               SingleWellState<Scalar>{"dummy", pinfo, false, 0.0, {}, phase_usage_, 0.0});
 }
 
-WellState WellState::serializationTestObject(const ParallelWellInfo& pinfo)
+template<class Scalar>
+WellState<Scalar> WellState<Scalar>::
+serializationTestObject(const ParallelWellInfo& pinfo)
 {
     WellState result(PhaseUsage{});
-    result.alq_state = ALQState<double>::serializationTestObject();
+    result.alq_state = ALQState<Scalar>::serializationTestObject();
     result.well_rates = {{"test2", {true, {1.0}}}, {"test3", {false, {2.0}}}};
-    result.wells_.add("test4", SingleWellState<double>::serializationTestObject(pinfo));
+    result.wells_.add("test4", SingleWellState<Scalar>::serializationTestObject(pinfo));
 
     return result;
 }
 
-void WellState::base_init(const std::vector<double>& cellPressures,
-                          const std::vector<Well>& wells_ecl,
-                          const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
-                          const std::vector<std::vector<PerforationData>>& well_perf_data,
-                          const SummaryState& summary_state)
+template<class Scalar>
+void WellState<Scalar>::base_init(const std::vector<Scalar>& cellPressures,
+                                  const std::vector<Well>& wells_ecl,
+                                  const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
+                                  const std::vector<std::vector<PerforationData>>& well_perf_data,
+                                  const SummaryState& summary_state)
 {
     // clear old name mapping
     this->wells_.clear();
@@ -164,22 +168,24 @@ void WellState::base_init(const std::vector<double>& cellPressures,
     }
 }
 
-void WellState::initSingleProducer(const Well& well,
-                                   const ParallelWellInfo& well_info,
-                                   double pressure_first_connection,
-                                   const std::vector<PerforationData>& well_perf_data,
-                                   const SummaryState& summary_state) {
+template<class Scalar>
+void WellState<Scalar>::initSingleProducer(const Well& well,
+                                           const ParallelWellInfo& well_info,
+                                           Scalar pressure_first_connection,
+                                           const std::vector<PerforationData>& well_perf_data,
+                                           const SummaryState& summary_state)
+{
     const auto& pu = this->phase_usage_;
-    const double temp = 273.15 + 15.56;
+    const Scalar temp = 273.15 + 15.56;
 
     auto& ws = this->wells_.add(well.name(),
-                                SingleWellState<double>{well.name(),
-                                                        well_info,
-                                                        true,
-                                                        pressure_first_connection,
-                                                        well_perf_data,
-                                                        pu,
-                                                        temp});
+                                SingleWellState{well.name(),
+                                                well_info,
+                                                true,
+                                                pressure_first_connection,
+                                                well_perf_data,
+                                                pu,
+                                                temp});
 
     // the rest of the code needs to executed even if ws.perf_data is empty
     // as this does not say anything for the whole well if it is distributed.
@@ -191,16 +197,17 @@ void WellState::initSingleProducer(const Well& well,
     ws.update_producer_targets(well, summary_state);
 }
 
-void WellState::initSingleInjector(const Well& well,
-                                   const ParallelWellInfo& well_info,
-                                   double pressure_first_connection,
-                                   const std::vector<PerforationData>& well_perf_data,
-                                   const SummaryState& summary_state) {
-
+template<class Scalar>
+void WellState<Scalar>::initSingleInjector(const Well& well,
+                                           const ParallelWellInfo& well_info,
+                                           Scalar pressure_first_connection,
+                                           const std::vector<PerforationData>& well_perf_data,
+                                           const SummaryState& summary_state)
+{
     const auto& pu = this->phase_usage_;
-    const double temp = well.temperature();
+    const Scalar temp = well.temperature();
 
-    auto& ws = this->wells_.add(well.name(), SingleWellState<double>{well.name(),
+    auto& ws = this->wells_.add(well.name(), SingleWellState<Scalar>{well.name(),
                                                                      well_info,
                                                                      false,
                                                                      pressure_first_connection,
@@ -218,13 +225,14 @@ void WellState::initSingleInjector(const Well& well,
     ws.update_injector_targets(well, summary_state);
 }
 
-void WellState::initSingleWell(const std::vector<double>& cellPressures,
-                               const Well& well,
-                               const std::vector<PerforationData>& well_perf_data,
-                               const ParallelWellInfo& well_info,
-                               const SummaryState& summary_state)
+template<class Scalar>
+void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
+                                       const Well& well,
+                                       const std::vector<PerforationData>& well_perf_data,
+                                       const ParallelWellInfo& well_info,
+                                       const SummaryState& summary_state)
 {
-    double pressure_first_connection = -1;
+    Scalar pressure_first_connection = -1;
     if (!well_perf_data.empty())
         pressure_first_connection = cellPressures[well_perf_data[0].cell_index];
     pressure_first_connection = well_info.broadcastFirstPerforationValue(pressure_first_connection);
@@ -238,14 +246,15 @@ void WellState::initSingleWell(const std::vector<double>& cellPressures,
     }
 }
 
-void WellState::init(const std::vector<double>& cellPressures,
-                     const Schedule& schedule,
-                     const std::vector<Well>& wells_ecl,
-                     const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
-                     const int report_step,
-                     const WellState* prevState,
-                     const std::vector<std::vector<PerforationData>>& well_perf_data,
-                     const SummaryState& summary_state)
+template<class Scalar>
+void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
+                             const Schedule& schedule,
+                             const std::vector<Well>& wells_ecl,
+                             const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
+                             const int report_step,
+                             const WellState* prevState,
+                             const std::vector<std::vector<PerforationData>>& well_perf_data,
+                             const SummaryState& summary_state)
 {
     // call init on base class
     this->base_init(cellPressures, wells_ecl, parallel_well_info,
@@ -255,7 +264,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                                                                 wells_ecl);
     for (const auto& wname : schedule.wellNames(report_step))
     {
-        well_rates.insert({wname, std::make_pair(false, std::vector<double>(this->numPhases()))});
+        well_rates.insert({wname, std::make_pair(false, std::vector<Scalar>(this->numPhases()))});
     }
     for (const auto& winfo: parallel_well_info)
     {
@@ -291,7 +300,7 @@ void WellState::init(const std::vector<double>& cellPressures,
         for (int perf = 0; perf < num_perf_this_well; ++perf) {
             if (wells_ecl[w].getStatus() == Well::Status::OPEN) {
                 for (int p = 0; p < this->numPhases(); ++p) {
-                    perf_data.phase_rates[this->numPhases()*perf + p] = ws.surface_rates[p] / double(global_num_perf_this_well);
+                    perf_data.phase_rates[this->numPhases()*perf + p] = ws.surface_rates[p] / Scalar(global_num_perf_this_well);
                 }
             }
             perf_data.pressure[perf] = cellPressures[well_perf_data[w][perf].cell_index];
@@ -317,7 +326,6 @@ void WellState::init(const std::vector<double>& cellPressures,
             }
         }
     }
-
 
     for (int w = 0; w < nw; ++w) {
         switch (wells_ecl[w].getStatus()) {
@@ -390,7 +398,7 @@ void WellState::init(const std::vector<double>& cellPressures,
                     auto& target_rates = perf_data.phase_rates;
                     for (int perf_index = 0; perf_index < num_perf_this_well; perf_index++) {
                         for (int p = 0; p < np; ++p) {
-                            target_rates[perf_index*np + p] = new_well.surface_rates[p] / double(global_num_perf_this_well);
+                            target_rates[perf_index*np + p] = new_well.surface_rates[p] / Scalar(global_num_perf_this_well);
                         }
                     }
                 }
@@ -406,19 +414,19 @@ void WellState::init(const std::vector<double>& cellPressures,
         }
     }
 
-
     updateWellsDefaultALQ(wells_ecl, summary_state);
 }
 
-void WellState::resize(const std::vector<Well>& wells_ecl,
-                       const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
-                       const Schedule& schedule,
-                       const bool handle_ms_well,
-                       const std::size_t numCells,
-                       const std::vector<std::vector<PerforationData>>& well_perf_data,
-                       const SummaryState& summary_state)
+template<class Scalar>
+void WellState<Scalar>::resize(const std::vector<Well>& wells_ecl,
+                               const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
+                               const Schedule& schedule,
+                               const bool handle_ms_well,
+                               const std::size_t numCells,
+                               const std::vector<std::vector<PerforationData>>& well_perf_data,
+                               const SummaryState& summary_state)
 {
-    const std::vector<double> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
+    const std::vector<Scalar> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
     init(tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state);
 
     if (handle_ms_well) {
@@ -426,8 +434,9 @@ void WellState::resize(const std::vector<Well>& wells_ecl,
     }
 }
 
-const std::vector<double>&
-WellState::currentWellRates(const std::string& wellName) const
+template<class Scalar>
+const std::vector<Scalar>&
+WellState<Scalar>::currentWellRates(const std::string& wellName) const
 {
     auto it = well_rates.find(wellName);
 
@@ -438,7 +447,8 @@ WellState::currentWellRates(const std::string& wellName) const
     return it->second.second;
 }
 
-void WellState::
+template<class Scalar>
+void WellState<Scalar>::
 gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
                     std::vector<data::Connection>& to_connections,
                     const Parallel::Communication& comm) const
@@ -463,9 +473,10 @@ gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
     toOwnerComm.exchange(lineariser);
 }
 
+template<class Scalar>
 data::Wells
-WellState::report(const int* globalCellIdxMap,
-                  const std::function<bool(const int)>& wasDynamicallyClosed) const
+WellState<Scalar>::report(const int* globalCellIdxMap,
+                          const std::function<bool(const int)>& wasDynamicallyClosed) const
 {
     if (this->numWells() == 0) {
         return {};
@@ -573,10 +584,11 @@ WellState::report(const int* globalCellIdxMap,
     return res;
 }
 
-void WellState::reportConnections(std::vector<data::Connection>& connections,
-                                  const PhaseUsage &pu,
-                                  std::size_t well_index,
-                                  const int* globalCellIdxMap) const
+template<class Scalar>
+void WellState<Scalar>::reportConnections(std::vector<data::Connection>& connections,
+                                          const PhaseUsage &pu,
+                                          std::size_t well_index,
+                                          const int* globalCellIdxMap) const
 {
     using rt = data::Rates::opt;
     const auto& ws = this->well(well_index);
@@ -655,8 +667,9 @@ void WellState::reportConnections(std::vector<data::Connection>& connections,
     }
 }
 
-void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
-                                    const WellState* prev_well_state)
+template<class Scalar>
+void WellState<Scalar>::initWellStateMSWell(const std::vector<Well>& wells_ecl,
+                                            const WellState* prev_well_state)
 {
     // still using the order in wells
     const int nw = wells_ecl.size();
@@ -677,7 +690,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             // assuming the order of the perforations in well_ecl is the same with Wells
             const WellConnections& completion_set = well_ecl.getConnections();
             // number of segment for this single well
-            ws.segments = SegmentState<double>{np, segment_set};
+            ws.segments = SegmentState<Scalar>{np, segment_set};
             const int well_nseg = segment_set.size();
             int n_activeperf = 0;
 
@@ -728,7 +741,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             }
 
             const auto& perf_rates = perf_data.phase_rates;
-            std::vector<double> perforation_rates(perf_rates.begin(), perf_rates.end());
+            std::vector<Scalar> perforation_rates(perf_rates.begin(), perf_rates.end());
 
             calculateSegmentRates(segment_inlets, segment_perforations, perforation_rates, np, 0 /* top segment */, ws.segments.rates);
             // for the segment pressure, the segment pressure is the same with the first perforation belongs to the segment
@@ -784,12 +797,13 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
     }
 }
 
-void
-WellState::calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets,
-                                 const std::vector<std::vector<int>>& segment_perforations,
-                                 const std::vector<double>& perforation_rates,
-                                 const int np, const int segment,
-                                 std::vector<double>& segment_rates)
+template<class Scalar>
+void WellState<Scalar>::
+calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets,
+                      const std::vector<std::vector<int>>& segment_perforations,
+                      const std::vector<Scalar>& perforation_rates,
+                      const int np, const int segment,
+                      std::vector<Scalar>& segment_rates)
 {
     // the rate of the segment equals to the sum of the contribution from the perforations and inlet segment rates.
     // the first segment is always the top segment, its rates should be equal to the well rates.
@@ -812,31 +826,36 @@ WellState::calculateSegmentRates(const std::vector<std::vector<int>>& segment_in
     }
 }
 
-void WellState::stopWell(int well_index)
+template<class Scalar>
+void WellState<Scalar>::stopWell(int well_index)
 {
     auto& ws = this->well(well_index);
     ws.stop();
 }
 
-void WellState::openWell(int well_index)
+template<class Scalar>
+void WellState<Scalar>::openWell(int well_index)
 {
     auto& ws = this->well(well_index);
     ws.open();
 }
 
-void WellState::shutWell(int well_index)
+template<class Scalar>
+void WellState<Scalar>::shutWell(int well_index)
 {
     auto& ws = this->well(well_index);
     ws.shut();
 }
 
-void WellState::updateStatus(int well_index, WellStatus status)
+template<class Scalar>
+void WellState<Scalar>::updateStatus(int well_index, WellStatus status)
 {
     auto& ws = this->well(well_index);
     ws.updateStatus(status);
 }
 
-void WellState::communicateGroupRates(const Parallel::Communication& comm)
+template<class Scalar>
+void WellState<Scalar>::communicateGroupRates(const Parallel::Communication& comm)
 {
     // Compute the size of the data.
     std::size_t sz = 0;
@@ -848,9 +867,8 @@ void WellState::communicateGroupRates(const Parallel::Communication& comm)
     }
     sz += this->alq_state.pack_size();
 
-
     // Make a vector and collect all data into it.
-    std::vector<double> data(sz);
+    std::vector<Scalar> data(sz);
     std::size_t pos = 0;
     for (const auto& [_, owner_rates] : this->well_rates) {
         (void)_;
@@ -884,7 +902,8 @@ void WellState::communicateGroupRates(const Parallel::Communication& comm)
     assert(pos == sz);
 }
 
-void WellState::updateGlobalIsGrup(const Parallel::Communication& comm)
+template<class Scalar>
+void WellState<Scalar>::updateGlobalIsGrup(const Parallel::Communication& comm)
 {
     this->global_well_info.value().clear();
     for (std::size_t well_index = 0; well_index < this->size(); well_index++) {
@@ -897,10 +916,11 @@ void WellState::updateGlobalIsGrup(const Parallel::Communication& comm)
     this->global_well_info.value().communicate(comm);
 }
 
+template<class Scalar>
 data::Segment
-WellState::reportSegmentResults(const int well_id,
-                                const int seg_ix,
-                                const int seg_no) const
+WellState<Scalar>::reportSegmentResults(const int well_id,
+                                        const int seg_ix,
+                                        const int seg_no) const
 {
     using PhaseQuant = data::SegmentPhaseQuantity::Item;
     using PhaseDensity = data::SegmentPhaseDensity::Item;
@@ -976,8 +996,9 @@ WellState::reportSegmentResults(const int well_id,
     return seg_res;
 }
 
-bool WellState::wellIsOwned(std::size_t well_index,
-                            [[maybe_unused]] const std::string& wellName) const
+template<class Scalar>
+bool WellState<Scalar>::wellIsOwned(std::size_t well_index,
+                                    [[maybe_unused]] const std::string& wellName) const
 {
     const auto& well_info = this->parallelWellInfo(well_index);
     assert(well_info.name() == wellName);
@@ -985,7 +1006,8 @@ bool WellState::wellIsOwned(std::size_t well_index,
     return well_info.isOwner();
 }
 
-bool WellState::wellIsOwned(const std::string& wellName) const
+template<class Scalar>
+bool WellState<Scalar>::wellIsOwned(const std::string& wellName) const
 {
     const auto& well_index = this->index(wellName);
     if (!well_index.has_value()) {
@@ -996,7 +1018,10 @@ bool WellState::wellIsOwned(const std::string& wellName) const
     return wellIsOwned(well_index.value(), wellName);
 }
 
-void WellState::updateWellsDefaultALQ(const std::vector<Well>& wells_ecl, const SummaryState& summary_state)
+template<class Scalar>
+void WellState<Scalar>::
+updateWellsDefaultALQ(const std::vector<Well>& wells_ecl,
+                      const SummaryState& summary_state)
 {
     const int nw = wells_ecl.size();
     for (int i = 0; i<nw; i++) {
@@ -1009,18 +1034,23 @@ void WellState::updateWellsDefaultALQ(const std::vector<Well>& wells_ecl, const 
     }
 }
 
-bool WellState::operator==(const WellState& rhs) const
+template<class Scalar>
+bool WellState<Scalar>::operator==(const WellState& rhs) const
 {
     return this->alq_state == rhs.alq_state &&
            this->well_rates == rhs.well_rates &&
            this->wells_ == rhs.wells_;
 }
 
+template<class Scalar>
 const ParallelWellInfo&
-WellState::parallelWellInfo(std::size_t well_index) const
+WellState<Scalar>::parallelWellInfo(std::size_t well_index) const
 {
     const auto& ws = this->well(well_index);
     return ws.parallel_info;
 }
+
+
+template class WellState<double>;
 
 } // namespace Opm

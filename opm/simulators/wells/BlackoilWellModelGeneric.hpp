@@ -66,7 +66,7 @@ namespace Opm {
     class SummaryConfig;
     class VFPProperties;
     class WellInterfaceGeneric;
-    class WellState;
+    template<class Scalar> class WellState;
 } // namespace Opm
 
 namespace Opm { namespace data {
@@ -121,7 +121,7 @@ public:
     /*
       Immutable version of the currently active wellstate.
     */
-    const WellState& wellState() const
+    const WellState<double>& wellState() const
     {
         return this->active_wgstate_.well_state;
     }
@@ -129,7 +129,7 @@ public:
     /*
       Mutable version of the currently active wellstate.
     */
-    WellState& wellState()
+    WellState<double>& wellState()
     {
         return this->active_wgstate_.well_state;
     }
@@ -138,7 +138,7 @@ public:
       Will return the currently active nupcolWellState; must initialize
       the internal nupcol wellstate with initNupcolWellState() first.
     */
-    const WellState& nupcolWellState() const
+    const WellState<double>& nupcolWellState() const
     {
         return this->nupcol_wgstate_.well_state;
     }
@@ -283,7 +283,7 @@ protected:
       prevWellState() must have been stored with the commitWellState()
       function first.
     */
-    const WellState& prevWellState() const
+    const WellState<double>& prevWellState() const
     {
         return this->last_valid_wgstate_.well_state;
     }
@@ -339,7 +339,7 @@ protected:
 
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,
-                        const WellState& wellState);
+                        const WellState<double>& wellState);
     void setWsolvent(const Group& group,
                      const int reportStepIdx,
                      double wsolvent);
@@ -362,7 +362,7 @@ protected:
     void calculateEfficiencyFactors(const int reportStepIdx);
 
     void checkGconsaleLimits(const Group& group,
-                             WellState& well_state,
+                             WellState<double>& well_state,
                              const int reportStepIdx,
                              DeferredLogger& deferred_logger);
 
@@ -395,7 +395,7 @@ protected:
                                    const int episodeIndex);
 
     virtual void computePotentials(const std::size_t widx,
-                                   const WellState& well_state_copy,
+                                   const WellState<double>& well_state_copy,
                                    std::string& exc_msg,
                                    ExceptionType::ExcEnum& exc_type,
                                    DeferredLogger& deferred_logger) = 0;

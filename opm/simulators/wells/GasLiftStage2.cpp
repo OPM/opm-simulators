@@ -45,7 +45,7 @@ GasLiftStage2::GasLiftStage2(
     const Schedule& schedule,
     const SummaryState& summary_state,
     DeferredLogger &deferred_logger,
-    WellState &well_state,
+    WellState<double>& well_state,
     const GroupState &group_state,
     GLiftProdWells &prod_wells,
     GLiftOptWells &glift_wells,

@@ -40,7 +40,7 @@ using RegionId = int;
 class Schedule;
 class SummaryState;
 class WellInterfaceGeneric;
-class WellState;
+template<class Scalar> class WellState;
 
 //! \brief Class for computing well group controls.
 class WellGroupControls {
@@ -52,7 +52,7 @@ public:
 
     template<class EvalWell>
     void getGroupInjectionControl(const Group& group,
-                                  const WellState& well_state,
+                                  const WellState<double>& well_state,
                                   const GroupState& group_state,
                                   const Schedule& schedule,
                                   const SummaryState& summaryState,
@@ -66,7 +66,7 @@ public:
 
     std::optional<double>
     getGroupInjectionTargetRate(const Group& group,
-                                const WellState& well_state,
+                                const WellState<double>& well_state,
                                 const GroupState& group_state,
                                 const Schedule& schedule,
                                 const SummaryState& summaryState,
@@ -77,7 +77,7 @@ public:
 
     template<class EvalWell>
     void getGroupProductionControl(const Group& group,
-                                   const WellState& well_state,
+                                   const WellState<double>& well_state,
                                    const GroupState& group_state,
                                    const Schedule& schedule,
                                    const SummaryState& summaryState,
@@ -89,7 +89,7 @@ public:
                                    DeferredLogger& deferred_logger) const;
 
     double getGroupProductionTargetRate(const Group& group,
-                                        const WellState& well_state,
+                                        const WellState<double>& well_state,
                                         const GroupState& group_state,
                                         const Schedule& schedule,
                                         const SummaryState& summaryState,

@@ -41,7 +41,7 @@ using RegionId = int;
 class Schedule;
 class SummaryState;
 class WellInterfaceGeneric;
-class WellState;
+template<class Scalar> class WellState;
 
 //! \brief Class for computing well group constraints.
 class WellGroupConstraints {
@@ -51,7 +51,7 @@ public:
 
     using RateConvFunc = std::function<void(const RegionId, const int, const std::optional<std::string>&, std::vector<double>&)>;
 
-    bool checkGroupConstraints(WellState& well_state,
+    bool checkGroupConstraints(WellState<double>& well_state,
                                const GroupState& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
@@ -61,7 +61,7 @@ public:
 private:
     std::pair<bool, double>
     checkGroupConstraintsInj(const Group& group,
-                             const WellState& well_state,
+                             const WellState<double>& well_state,
                              const GroupState& group_state,
                              const double efficiencyFactor,
                              const Schedule& schedule,
@@ -71,7 +71,7 @@ private:
 
     std::pair<bool, double>
     checkGroupConstraintsProd(const Group& group,
-                              const WellState& well_state,
+                              const WellState<double>& well_state,
                               const GroupState& group_state,
                               const double efficiencyFactor,
                               const Schedule& schedule,

@@ -80,8 +80,6 @@ struct NewtonRelaxationType<TypeTag, TTag::FlowNonLinearSolver> {
 
 namespace Opm {
 
-class WellState;
-
 // Available relaxation scheme types.
 enum class NonlinearRelaxType {
     Dampen,
@@ -167,9 +165,6 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
 
         };
 
-        // Forwarding types from PhysicalModel.
-        //typedef typename PhysicalModel::WellState WellState;
-
         // ---------  Public methods  ---------
 
         /// Construct solver for a given model.
@@ -180,7 +175,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         /// \param[in]      param   parameters controlling nonlinear process
         /// \param[in, out] model   physical simulation model.
         NonlinearSolver(const SolverParameters& param,
-                            std::unique_ptr<PhysicalModel> model)
+                        std::unique_ptr<PhysicalModel> model)
             : param_(param)
             , model_(std::move(model))
             , linearizations_(0)

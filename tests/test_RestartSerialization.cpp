@@ -178,7 +178,7 @@ BOOST_AUTO_TEST_CASE(WellContainer)
 BOOST_AUTO_TEST_CASE(WellState)
 {
     Opm::ParallelWellInfo dummy;
-    auto data_out = Opm::WellState::serializationTestObject(dummy);
+    auto data_out = Opm::WellState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(data_out);
@@ -199,7 +199,7 @@ BOOST_AUTO_TEST_CASE(WGState)
     ser.pack(data_out);
     const size_t pos1 = ser.position();
     decltype(data_out) data_in(Opm::PhaseUsage{});
-    data_in.well_state = Opm::WellState(dummy);
+    data_in.well_state = Opm::WellState<double>(dummy);
     ser.unpack(data_in);
     const size_t pos2 = ser.position();
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for WGState");
@@ -271,9 +271,9 @@ public:
                                    eclState, phase_usage, comm)
     {
         if (deserialize) {
-            active_wgstate_.well_state = WellState(dummy);
-            last_valid_wgstate_.well_state = WellState(dummy);
-            nupcol_wgstate_.well_state = WellState(dummy);
+            active_wgstate_.well_state = WellState<double>(dummy);
+            last_valid_wgstate_.well_state = WellState<double>(dummy);
+            nupcol_wgstate_.well_state = WellState<double>(dummy);
         }
     }
 
@@ -302,7 +302,7 @@ public:
     {}
 
     void computePotentials(const std::size_t,
-                           const WellState&,
+                           const WellState<double>&,
                            std::string&,
                            ExceptionType::ExcEnum&,
                            DeferredLogger&) override

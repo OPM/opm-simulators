@@ -36,7 +36,7 @@ namespace Opm
 std::pair<bool, double>
 WellGroupConstraints::
 checkGroupConstraintsInj(const Group& group,
-                         const WellState& well_state,
+                         const WellState<double>& well_state,
                          const GroupState& group_state,
                          const double efficiencyFactor,
                          const Schedule& schedule,
@@ -94,7 +94,7 @@ checkGroupConstraintsInj(const Group& group,
 std::pair<bool, double>
 WellGroupConstraints::
 checkGroupConstraintsProd(const Group& group,
-                          const WellState& well_state,
+                          const WellState<double>& well_state,
                           const GroupState& group_state,
                           const double efficiencyFactor,
                           const Schedule& schedule,
@@ -124,7 +124,7 @@ checkGroupConstraintsProd(const Group& group,
 }
 
 bool WellGroupConstraints::
-checkGroupConstraints(WellState& well_state,
+checkGroupConstraints(WellState<double>& well_state,
                       const GroupState& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,

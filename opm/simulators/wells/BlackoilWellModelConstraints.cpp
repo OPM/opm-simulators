@@ -405,7 +405,7 @@ actionOnBrokenConstraints(const Group& group,
                           const int reportStepIdx,
                           const Group::GroupLimitAction group_limit_action,
                           const Group::ProductionCMode& newControl,
-                          const WellState& well_state,
+                          const WellState<double>& well_state,
                           std::optional<std::string>& worst_offending_well,
                           GroupState& group_state,
                           DeferredLogger& deferred_logger) const
@@ -500,7 +500,7 @@ updateGroupIndividualControl(const Group& group,
                              std::map<std::string, std::string>& switched_prod,
                              std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                              GroupState& group_state,
-                             WellState& well_state,
+                             WellState<double>& well_state,
                              DeferredLogger& deferred_logger) const
 {
     bool changed = false;

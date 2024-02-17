@@ -27,7 +27,7 @@ namespace Opm {
 
 class DeferredLogger;
 class WellInterfaceGeneric;
-class WellState;
+template<class Scalar> class WellState;
 
 //! \brief Class for well calculations related to filter cakes.
 class WellFilterCake {
@@ -38,11 +38,11 @@ public:
                                         const double dt,
                                         const double conc,
                                         const std::size_t water_index,
-                                        WellState& well_state);
+                                        WellState<double>& well_state);
 
     //! \brief Update the multiplier for well transmissbility due to cake filtration.
     void updateInjFCMult(const WellInterfaceGeneric& well,
-                         WellState& well_state,
+                         WellState<double>& well_state,
                          DeferredLogger& deferred_logger);
 
     //! \brief Returns a const-ref to multipliers.

@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE(G1)
     //using EclProblem = Opm::EclProblem<TypeTag>;
     //using EclWellModel = typename EclProblem::EclWellModel;
     using WellModel = Opm::BlackoilWellModel<TypeTag>;
-    using WellState = Opm::WellState;
+    using WellState = Opm::WellState<double>;
     using StdWell = Opm::StandardWell<TypeTag>;
     using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
     using GasLiftGroupInfo = Opm::GasLiftGroupInfo;

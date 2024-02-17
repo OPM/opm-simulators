@@ -223,7 +223,7 @@ void BlackoilWellModelRestart::
 loadRestartData(const data::Wells&                 rst_wells,
                 const data::GroupAndNetworkValues& grpNwrkValues,
                 const bool                         handle_ms_well,
-                WellState&                         well_state,
+                WellState<double>&                 well_state,
                 GroupState&                        grpState) const
 {
     using rt = data::Rates::opt;

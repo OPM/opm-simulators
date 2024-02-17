@@ -55,7 +55,7 @@ void
 MultisegmentWellGeneric<Scalar>::
 scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inlets,
                                const std::vector<std::vector<int>>& segment_perforations,
-                               WellState& well_state) const
+                               WellState<Scalar>& well_state) const
 {
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;
@@ -84,10 +84,10 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
             }
 
             std::vector<double> rates;
-            WellState::calculateSegmentRates(segment_inlets,
-                                             segment_perforations,
-                                             perforation_rates,
-                                             num_single_phase, 0, rates);
+            WellState<Scalar>::calculateSegmentRates(segment_inlets,
+                                                     segment_perforations,
+                                                     perforation_rates,
+                                                     num_single_phase, 0, rates);
             for (int seg = 0; seg < numberOfSegments(); ++seg) {
                 segment_rates[baseif_.numPhases() * seg + phase] = rates[seg];
             }
@@ -98,7 +98,7 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
 template <typename Scalar>
 void
 MultisegmentWellGeneric<Scalar>::
-scaleSegmentPressuresWithBhp(WellState& well_state) const
+scaleSegmentPressuresWithBhp(WellState<Scalar>& well_state) const
 {
     auto& ws = well_state.well(baseif_.indexOfWell());
     auto& segments = ws.segments;

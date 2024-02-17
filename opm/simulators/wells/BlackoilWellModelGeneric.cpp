@@ -426,7 +426,7 @@ checkGEconLimits(
 void
 BlackoilWellModelGeneric::
 checkGconsaleLimits(const Group& group,
-                    WellState& well_state,
+                    WellState<double>& well_state,
                     const int reportStepIdx,
                     DeferredLogger& deferred_logger)
 {
@@ -793,7 +793,7 @@ void
 BlackoilWellModelGeneric::
 updateWsolvent(const Group& group,
                const int reportStepIdx,
-               const WellState& wellState)
+               const WellState<double>& wellState)
 {
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule_.getGroup(groupName, reportStepIdx);

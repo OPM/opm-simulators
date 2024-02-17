@@ -57,6 +57,7 @@ enum class WellStatus;
 
 /// The state of a set of wells, tailored for use by the fully
 /// implicit blackoil simulator.
+template<class Scalar>
 class WellState
 {
 public:
@@ -75,14 +76,15 @@ public:
 
     static WellState serializationTestObject(const ParallelWellInfo& pinfo);
 
-    std::size_t size() const {
+    std::size_t size() const
+    {
         return this->wells_.size();
     }
 
-    std::vector<std::string> wells() const {
+    std::vector<std::string> wells() const
+    {
         return this->wells_.wells();
     }
-
 
     int numWells() const
     {
@@ -91,12 +93,10 @@ public:
 
     const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const;
 
-
-
     /// Allocate and initialize if wells is non-null.  Also tries
     /// to give useful initial values to the bhp(), wellRates()
     /// and perfPhaseRatesORG() fields, depending on controls
-    void init(const std::vector<double>& cellPressures,
+    void init(const std::vector<Scalar>& cellPressures,
               const Schedule& schedule,
               const std::vector<Well>& wells_ecl,
               const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
@@ -113,15 +113,18 @@ public:
                 const std::vector<std::vector<PerforationData>>& well_perf_data,
                 const SummaryState& summary_state);
 
-    void setCurrentWellRates(const std::string& wellName, const std::vector<double>& new_rates ) {
+    void setCurrentWellRates(const std::string& wellName,
+                             const std::vector<Scalar>& new_rates)
+    {
         auto& [owner, rates] = this->well_rates.at(wellName);
         if (owner)
             rates = new_rates;
     }
 
-    const std::vector<double>& currentWellRates(const std::string& wellName) const;
+    const std::vector<Scalar>& currentWellRates(const std::string& wellName) const;
 
-    bool hasWellRates(const std::string& wellName) const {
+    bool hasWellRates(const std::string& wellName) const
+    {
         return this->well_rates.find(wellName) != this->well_rates.end();
     }
 
@@ -130,15 +133,16 @@ public:
         this->well_rates.clear();
     }
 
-    void gatherVectorsOnRoot(const std::vector< data::Connection >& from_connections,
-                             std::vector< data::Connection >& to_connections,
+    void gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
+                             std::vector<data::Connection>& to_connections,
                              const Parallel::Communication& comm) const;
 
     data::Wells
     report(const int* globalCellIdxMap,
            const std::function<bool(const int)>& wasDynamicallyClosed) const;
 
-    void reportConnections(std::vector<data::Connection>& connections, const PhaseUsage &pu,
+    void reportConnections(std::vector<data::Connection>& connections,
+                           const PhaseUsage &pu,
                            std::size_t well_index,
                            const int* globalCellIdxMap) const;
 
@@ -146,61 +150,75 @@ public:
     void initWellStateMSWell(const std::vector<Well>& wells_ecl,
                              const WellState* prev_well_state);
 
-    static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets, const std::vector<std::vector<int>>&segment_perforations,
-                                      const std::vector<double>& perforation_rates, const int np, const int segment, std::vector<double>& segment_rates);
+    static void calculateSegmentRates(const std::vector<std::vector<int>>& segment_inlets, const
+                                      std::vector<std::vector<int>>&       segment_perforations,
+                                      const std::vector<Scalar>&           perforation_rates,
+                                      const int                            np,
+                                      const int                            segment,
+                                      std::vector<Scalar>&                 segment_rates);
 
 
     void communicateGroupRates(const Parallel::Communication& comm);
 
     void updateGlobalIsGrup(const Parallel::Communication& comm);
 
-    bool isInjectionGrup(const std::string& name) const {
+    bool isInjectionGrup(const std::string& name) const
+    {
         return this->global_well_info.value().in_injecting_group(name);
     }
 
-    bool isProductionGrup(const std::string& name) const {
+    bool isProductionGrup(const std::string& name) const
+    {
         return this->global_well_info.value().in_producing_group(name);
     }
 
-    double getALQ( const std::string& name) const
+    Scalar getALQ(const std::string& name) const
     {
         return this->alq_state.get(name);
     }
 
-    void setALQ( const std::string& name, double value)
+    void setALQ(const std::string& name, Scalar value)
     {
         this->alq_state.set(name, value);
     }
 
-    int gliftGetDebugCounter() {
+    int gliftGetDebugCounter()
+    {
         return this->alq_state.get_debug_counter();
     }
 
-    void gliftSetDebugCounter(int value) {
+    void gliftSetDebugCounter(int value)
+    {
         return this->alq_state.set_debug_counter(value);
     }
 
-    int gliftUpdateDebugCounter() {
+    int gliftUpdateDebugCounter()
+    {
         return this->alq_state.update_debug_counter();
     }
 
-    bool gliftCheckAlqOscillation(const std::string &name) const {
+    bool gliftCheckAlqOscillation(const std::string &name) const
+    {
         return this->alq_state.oscillation(name);
     }
 
-    int gliftGetAlqDecreaseCount(const std::string &name) {
+    int gliftGetAlqDecreaseCount(const std::string &name)
+    {
         return this->alq_state.get_decrement_count(name);
     }
 
-    int gliftGetAlqIncreaseCount(const std::string &name) {
+    int gliftGetAlqIncreaseCount(const std::string &name)
+    {
         return this->alq_state.get_increment_count(name);
     }
 
-    void gliftUpdateAlqIncreaseCount(const std::string &name, bool increase) {
+    void gliftUpdateAlqIncreaseCount(const std::string &name, bool increase)
+    {
         this->alq_state.update_count(name, increase);
     }
 
-    void gliftTimeStepInit() {
+    void gliftTimeStepInit()
+    {
         this->alq_state.reset_count();
     }
 
@@ -208,13 +226,16 @@ public:
     // reset current_alq and update default_alq. ALQ is used for
     // constant lift gas injection and for gas lift optimization
     // (THP controlled wells).
-    void updateWellsDefaultALQ(const std::vector<Well>& wells_ecl, const SummaryState& summary_state);
+    void updateWellsDefaultALQ(const std::vector<Well>& wells_ecl,
+                               const SummaryState& summary_state);
 
-    int wellNameToGlobalIdx(const std::string &name) {
+    int wellNameToGlobalIdx(const std::string& name)
+    {
         return this->global_well_info.value().well_index(name);
     }
 
-    std::string globalIdxToWellName(const int index) {
+    std::string globalIdxToWellName(const int index)
+    {
         return this->global_well_info.value().well_name(index);
     }
 
@@ -235,63 +256,69 @@ public:
         return this->phase_usage_.num_phases;
     }
 
-    const PhaseUsage& phaseUsage() const {
+    const PhaseUsage& phaseUsage() const
+    {
         return this->phase_usage_;
     }
 
     /// One rate per well and phase.
-    std::vector<double>& wellRates(std::size_t well_index) { return this->wells_[well_index].surface_rates; }
-    const std::vector<double>& wellRates(std::size_t well_index) const { return this->wells_[well_index].surface_rates; }
+    std::vector<Scalar>& wellRates(std::size_t well_index)
+    { return this->wells_[well_index].surface_rates; }
+    const std::vector<Scalar>& wellRates(std::size_t well_index) const
+    { return this->wells_[well_index].surface_rates; }
 
-    const std::string& name(std::size_t well_index) const {
+    const std::string& name(std::size_t well_index) const
+    {
         return this->wells_.well_name(well_index);
     }
 
-    std::optional<std::size_t> index(const std::string& well_name) const {
+    std::optional<std::size_t> index(const std::string& well_name) const
+    {
         return this->wells_.well_index(well_name);
     }
 
-    const SingleWellState<double>& operator[](std::size_t well_index) const
+    const SingleWellState<Scalar>& operator[](std::size_t well_index) const
     {
         return this->wells_[well_index];
     }
 
-    const SingleWellState<double>& operator[](const std::string& well_name) const
+    const SingleWellState<Scalar>& operator[](const std::string& well_name) const
     {
         return this->wells_[well_name];
     }
 
-    SingleWellState<double>& operator[](std::size_t well_index)
+    SingleWellState<Scalar>& operator[](std::size_t well_index)
     {
         return this->wells_[well_index];
     }
 
-    SingleWellState<double>& operator[](const std::string& well_name)
+    SingleWellState<Scalar>& operator[](const std::string& well_name)
     {
         return this->wells_[well_name];
     }
 
-    const SingleWellState<double>& well(std::size_t well_index) const
+    const SingleWellState<Scalar>& well(std::size_t well_index) const
     {
         return this->operator[](well_index);
     }
 
-    const SingleWellState<double>& well(const std::string& well_name) const
+    const SingleWellState<Scalar>& well(const std::string& well_name) const
     {
         return this->operator[](well_name);
     }
 
-    SingleWellState<double>& well(std::size_t well_index)
+    SingleWellState<Scalar>& well(std::size_t well_index)
     {
         return this->operator[](well_index);
     }
 
-    SingleWellState<double>& well(const std::string& well_name)
+    SingleWellState<Scalar>& well(const std::string& well_name)
     {
         return this->operator[](well_name);
     }
 
-    bool has(const std::string& well_name) const {
+    bool has(const std::string& well_name) const
+    {
         return this->wells_.has(well_name);
     }
 
@@ -322,7 +349,7 @@ private:
     // The wells_ variable is essentially a map of all the wells on the current
     // process. Observe that since a well can be split over several processes a
     // well might appear in the WellContainer on different processes.
-    WellContainer<SingleWellState<double>> wells_;
+    WellContainer<SingleWellState<Scalar>> wells_;
 
     // The members alq_state, global_well_info and well_rates are map like
     // structures which will have entries for *all* the wells in the system.
@@ -331,12 +358,12 @@ private:
     // WellStateFullyImplicitBlackoil class should be default constructible,
     // whereas the GlobalWellInfo is not.
     std::optional<GlobalWellInfo> global_well_info;
-    ALQState<double> alq_state;
+    ALQState<Scalar> alq_state;
 
     // The well_rates variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or
     // not.
-    std::map<std::string, std::pair<bool, std::vector<double>>> well_rates;
+    std::map<std::string, std::pair<bool, std::vector<Scalar>>> well_rates;
 
     data::Segment
     reportSegmentResults(const int         well_id,
@@ -349,13 +376,13 @@ private:
     /// wellRates() fields, depending on controls.  The
     /// perfRates() field is filled with zero, and perfPress()
     /// with -1e100.
-    void base_init(const std::vector<double>& cellPressures,
+    void base_init(const std::vector<Scalar>& cellPressures,
                    const std::vector<Well>& wells_ecl,
                    const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
                    const std::vector<std::vector<PerforationData>>& well_perf_data,
                    const SummaryState& summary_state);
 
-    void initSingleWell(const std::vector<double>& cellPressures,
+    void initSingleWell(const std::vector<Scalar>& cellPressures,
                         const Well& well,
                         const std::vector<PerforationData>& well_perf_data,
                         const ParallelWellInfo& well_info,
@@ -363,19 +390,17 @@ private:
 
     void initSingleProducer(const Well& well,
                             const ParallelWellInfo& well_info,
-                            double pressure_first_connection,
+                            Scalar pressure_first_connection,
                             const std::vector<PerforationData>& well_perf_data,
                             const SummaryState& summary_state);
 
     void initSingleInjector(const Well& well,
                             const ParallelWellInfo& well_info,
-                            double pressure_first_connection,
+                            Scalar pressure_first_connection,
                             const std::vector<PerforationData>& well_perf_data,
                             const SummaryState& summary_state);
-
 };
 
 } // namespace Opm
-
 
 #endif // OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
