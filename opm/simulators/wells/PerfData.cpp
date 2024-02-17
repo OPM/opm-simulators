@@ -21,16 +21,17 @@
 #if HAVE_CONFIG_H
 #include "config.h"
 #endif // HAVE_CONFIG_H
+#include <opm/simulators/wells/PerfData.hpp>
 
 #include <opm/simulators/wells/ConnFiltrateData.hpp>
-#include <opm/simulators/wells/PerfData.hpp>
 
 namespace Opm {
 
-PerfData::PerfData(const std::size_t num_perf,
-                   const double pressure_first_connection_,
-                   const bool injector_,
-                   const std::size_t num_phases)
+template<class Scalar>
+PerfData<Scalar>::PerfData(const std::size_t num_perf,
+                           const Scalar pressure_first_connection_,
+                           const bool injector_,
+                           const std::size_t num_phases)
     : injector(injector_)
     , pressure_first_connection(pressure_first_connection_)
     , pressure(num_perf)
@@ -57,7 +58,8 @@ PerfData::PerfData(const std::size_t num_perf,
     }
 }
 
-PerfData PerfData::serializationTestObject()
+template<class Scalar>
+PerfData<Scalar> PerfData<Scalar>::serializationTestObject()
 {
     PerfData result;
     result.pressure_first_connection = 1.0;
@@ -79,22 +81,25 @@ PerfData PerfData::serializationTestObject()
     result.water_throughput = {25.0, 26.0};
     result.skin_pressure = {27.0, 28.0};
     result.water_velocity = {29.0, 30.0};
-    result.filtrate_data = ConnFiltrateData<double>::serializationTestObject();
+    result.filtrate_data = ConnFiltrateData<Scalar>::serializationTestObject();
 
     return result;
 }
 
-std::size_t PerfData::size() const
+template<class Scalar>
+std::size_t PerfData<Scalar>::size() const
 {
     return this->pressure.size();
 }
 
-bool PerfData::empty() const
+template<class Scalar>
+bool PerfData<Scalar>::empty() const
 {
     return this->pressure.empty();
 }
 
-bool PerfData::try_assign(const PerfData& other)
+template<class Scalar>
+bool PerfData<Scalar>::try_assign(const PerfData& other)
 {
     if (this->size() != other.size()) {
         return false;
@@ -122,7 +127,8 @@ bool PerfData::try_assign(const PerfData& other)
     return true;
 }
 
-bool PerfData::operator==(const PerfData& rhs) const
+template<class Scalar>
+bool PerfData<Scalar>::operator==(const PerfData& rhs) const
 {
     return (this->pressure_first_connection == rhs.pressure_first_connection)
         && (this->pressure == rhs.pressure)
@@ -146,5 +152,7 @@ bool PerfData::operator==(const PerfData& rhs) const
         && (this->filtrate_data == rhs.filtrate_data)
         ;
 }
+
+template class PerfData<double>;
 
 } // namespace Opm

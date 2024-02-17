@@ -105,7 +105,7 @@ public:
     std::vector<double> surface_rates;
     std::vector<double> reservoir_rates;
     std::vector<double> prev_surface_rates;
-    PerfData perf_data;
+    PerfData<double> perf_data;
     bool trivial_target;
     SegmentState segments;
     Events events;

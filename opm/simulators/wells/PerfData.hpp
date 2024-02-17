@@ -28,6 +28,7 @@
 
 namespace Opm {
 
+template<class Scalar>
 class PerfData
 {
 private:
@@ -36,7 +37,7 @@ private:
 public:
     PerfData() = default;
     PerfData(std::size_t num_perf,
-             double pressure_first_connection_,
+             Scalar pressure_first_connection_,
              bool injector_,
              std::size_t num_phases);
 
@@ -79,30 +80,30 @@ public:
     // if you're adding a new member representing a dynamically calculated
     // result, e.g., a flow rate, then please update try_assign() as well.
 
-    double pressure_first_connection{};
-    std::vector<double> pressure{};
-    std::vector<double> rates{};
-    std::vector<double> phase_rates{};
-    std::vector<std::array<double,4>> phase_mixing_rates{};
-    std::vector<double> solvent_rates{};
-    std::vector<double> polymer_rates{};
-    std::vector<double> brine_rates{};
-    std::vector<double> prod_index{};
-    std::vector<double> micp_rates{};
+    Scalar pressure_first_connection{};
+    std::vector<Scalar> pressure{};
+    std::vector<Scalar> rates{};
+    std::vector<Scalar> phase_rates{};
+    std::vector<std::array<Scalar,4>> phase_mixing_rates{};
+    std::vector<Scalar> solvent_rates{};
+    std::vector<Scalar> polymer_rates{};
+    std::vector<Scalar> brine_rates{};
+    std::vector<Scalar> prod_index{};
+    std::vector<Scalar> micp_rates{};
     std::vector<std::size_t> cell_index{};
-    std::vector<double> connection_transmissibility_factor{};
-    std::vector<double> connection_d_factor{};
-    std::vector<double> connection_compaction_tmult{};
+    std::vector<Scalar> connection_transmissibility_factor{};
+    std::vector<Scalar> connection_d_factor{};
+    std::vector<Scalar> connection_compaction_tmult{};
     std::vector<int> satnum_id{};
     std::vector<std::size_t> ecl_index{};
 
     // The water_throughput, skin_pressure and water_velocity variables are
     // only used for injectors to check the injectivity.
-    std::vector<double> water_throughput{};
-    std::vector<double> skin_pressure{};
-    std::vector<double> water_velocity{};
+    std::vector<Scalar> water_throughput{};
+    std::vector<Scalar> skin_pressure{};
+    std::vector<Scalar> water_velocity{};
 
-    ConnFiltrateData<double> filtrate_data{};
+    ConnFiltrateData<Scalar> filtrate_data{};
 };
 
 } // namespace Opm

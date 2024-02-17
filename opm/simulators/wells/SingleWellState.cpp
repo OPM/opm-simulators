@@ -62,7 +62,7 @@ SingleWellState::SingleWellState(const std::string& name_,
 SingleWellState SingleWellState::serializationTestObject(const ParallelWellInfo& pinfo)
 {
     SingleWellState result("testing", pinfo, true, 1.0, {}, PhaseUsage{}, 2.0);
-    result.perf_data = PerfData::serializationTestObject();
+    result.perf_data = PerfData<double>::serializationTestObject();
 
     return result;
 }
