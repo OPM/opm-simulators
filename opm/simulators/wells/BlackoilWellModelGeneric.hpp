@@ -289,7 +289,7 @@ protected:
     }
 
 
-    const WGState& prevWGState() const
+    const WGState<double>& prevWGState() const
     {
         return this->last_valid_wgstate_;
     }
@@ -301,7 +301,7 @@ protected:
       last_valid_well_state_ member, that state can then be recovered
       with a subsequent call to resetWellState().
     */
-    void commitWGState(WGState wgstate)
+    void commitWGState(WGState<double> wgstate)
     {
         this->last_valid_wgstate_ = std::move(wgstate);
     }
@@ -575,9 +575,9 @@ protected:
       commitWellState(), resetWellState(), nupcolWellState() and
       updateNupcolWellState().
     */
-    WGState active_wgstate_;
-    WGState last_valid_wgstate_;
-    WGState nupcol_wgstate_;
+    WGState<double> active_wgstate_;
+    WGState<double> last_valid_wgstate_;
+    WGState<double> nupcol_wgstate_;
 
     bool glift_debug = false;
 

@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE(WellState)
 BOOST_AUTO_TEST_CASE(WGState)
 {
     Opm::ParallelWellInfo dummy;
-    auto data_out = Opm::WGState::serializationTestObject(dummy);
+    auto data_out = Opm::WGState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(data_out);
@@ -287,9 +287,9 @@ public:
         closed_this_step_ = {"test1", "test2"};
         guideRate_.setSerializationTestData();
         node_pressures_ = {{"test3", 4.0}};
-        active_wgstate_ = WGState::serializationTestObject(dummy);
-        last_valid_wgstate_ = WGState::serializationTestObject(dummy);
-        nupcol_wgstate_ = WGState::serializationTestObject(dummy);
+        active_wgstate_ = WGState<double>::serializationTestObject(dummy);
+        last_valid_wgstate_ = WGState<double>::serializationTestObject(dummy);
+        nupcol_wgstate_ = WGState<double>::serializationTestObject(dummy);
         last_glift_opt_time_ = 5.0;
         switched_prod_groups_ = {{"test4", "test5"}};
         switched_inj_groups_ = {{{"test4", Phase::SOLVENT}, "test5"}};

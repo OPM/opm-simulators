@@ -34,15 +34,17 @@ class ParallelWellInfo;
 
 struct PhaseUsage;
 
-struct WGState {
+template<class Scalar>
+struct WGState
+{
     WGState(const PhaseUsage& pu);
 
     static WGState serializationTestObject(const ParallelWellInfo& pinfo);
 
     void wtest_state(WellTestState wtest_state);
 
-    WellState<double> well_state;
-    GroupState<double> group_state;
+    WellState<Scalar> well_state;
+    GroupState<Scalar> group_state;
     WellTestState well_test_state;
 
     bool operator==(const WGState&) const;
