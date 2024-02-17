@@ -136,7 +136,7 @@ WellState::WellState(const ParallelWellInfo& pinfo)
 WellState WellState::serializationTestObject(const ParallelWellInfo& pinfo)
 {
     WellState result(PhaseUsage{});
-    result.alq_state = ALQState::serializationTestObject();
+    result.alq_state = ALQState<double>::serializationTestObject();
     result.well_rates = {{"test2", {true, {1.0}}}, {"test3", {false, {2.0}}}};
     result.wells_.add("test4", SingleWellState<double>::serializationTestObject(pinfo));
 

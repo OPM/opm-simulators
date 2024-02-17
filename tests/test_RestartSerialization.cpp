@@ -101,7 +101,8 @@ BOOST_AUTO_TEST_CASE(NAME) \
 #define TEST_FOR_TYPE(TYPE) \
     TEST_FOR_TYPE_NAMED(TYPE, TYPE)
 
-TEST_FOR_TYPE(ALQState)
+namespace Opm { using ALQS = ALQState<double>; }
+TEST_FOR_TYPE_NAMED(ALQS, ALQState)
 TEST_FOR_TYPE(GroupState)
 TEST_FOR_TYPE(HardcodedTimeStepControl)
 TEST_FOR_TYPE(Inplace)

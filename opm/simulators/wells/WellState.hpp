@@ -331,7 +331,7 @@ private:
     // WellStateFullyImplicitBlackoil class should be default constructible,
     // whereas the GlobalWellInfo is not.
     std::optional<GlobalWellInfo> global_well_info;
-    ALQState alq_state;
+    ALQState<double> alq_state;
 
     // The well_rates variable is defined for all wells on all processors. The
     // bool in the value pair is whether the current process owns the well or
