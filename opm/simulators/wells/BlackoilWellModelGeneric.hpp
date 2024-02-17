@@ -46,7 +46,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -79,6 +78,7 @@ namespace Opm { namespace data {
 namespace Opm {
 
 /// Class for handling the blackoil well model.
+template<class Scalar>
 class BlackoilWellModelGeneric
 {
 public:
@@ -114,14 +114,14 @@ public:
     std::vector<Well> getLocalWells(const int timeStepIdx) const;
     const Schedule& schedule() const { return schedule_; }
     const PhaseUsage& phaseUsage() const { return phase_usage_; }
-    const GroupState<double>& groupState() const { return this->active_wgstate_.group_state; }
+    const GroupState<Scalar>& groupState() const { return this->active_wgstate_.group_state; }
     std::vector<const WellInterfaceGeneric*> genericWells() const
     { return {well_container_generic_.begin(), well_container_generic_.end()}; }
 
     /*
       Immutable version of the currently active wellstate.
     */
-    const WellState<double>& wellState() const
+    const WellState<Scalar>& wellState() const
     {
         return this->active_wgstate_.well_state;
     }
@@ -129,7 +129,7 @@ public:
     /*
       Mutable version of the currently active wellstate.
     */
-    WellState<double>& wellState()
+    WellState<Scalar>& wellState()
     {
         return this->active_wgstate_.well_state;
     }
@@ -138,19 +138,18 @@ public:
       Will return the currently active nupcolWellState; must initialize
       the internal nupcol wellstate with initNupcolWellState() first.
     */
-    const WellState<double>& nupcolWellState() const
+    const WellState<Scalar>& nupcolWellState() const
     {
         return this->nupcol_wgstate_.well_state;
     }
-    GroupState<double>& groupState() { return this->active_wgstate_.group_state; }
+    GroupState<Scalar>& groupState() { return this->active_wgstate_.group_state; }
 
     WellTestState& wellTestState() { return this->active_wgstate_.well_test_state; }
 
     const WellTestState& wellTestState() const { return this->active_wgstate_.well_test_state; }
 
-
-    double wellPI(const int well_index) const;
-    double wellPI(const std::string& well_name) const;
+    Scalar wellPI(const int well_index) const;
+    Scalar wellPI(const std::string& well_name) const;
 
     void updateEclWells(const int timeStepIdx,
                         const SimulatorUpdate& sim_update,
@@ -210,7 +209,8 @@ public:
     bool shouldBalanceNetwork(const int reportStepIndex,
                               const int iterationIdx) const;
 
-    void updateClosedWellsThisStep(const std::string& well_name) const {
+    void updateClosedWellsThisStep(const std::string& well_name) const
+    {
         this->closed_this_step_.insert(well_name);
     }
     bool wasDynamicallyShutThisTimeStep(const std::string& well_name) const;
@@ -254,7 +254,6 @@ public:
     }
 
 protected:
-
     /*
       The dynamic state of the well model is maintained with an instance
       of the WellState class. Currently we have
@@ -275,7 +274,6 @@ protected:
            nupcol_well_state_ and the initNupcolWellState() function.
     */
 
-
     /*
       Will return the last good wellstate. This is typcially used when
       initializing a new report step where the Schedule object might
@@ -283,25 +281,22 @@ protected:
       prevWellState() must have been stored with the commitWellState()
       function first.
     */
-    const WellState<double>& prevWellState() const
+    const WellState<Scalar>& prevWellState() const
     {
         return this->last_valid_wgstate_.well_state;
     }
 
-
-    const WGState<double>& prevWGState() const
+    const WGState<Scalar>& prevWGState() const
     {
         return this->last_valid_wgstate_;
     }
-
-
 
     /*
       Will store a copy of the input argument well_state in the
       last_valid_well_state_ member, that state can then be recovered
       with a subsequent call to resetWellState().
     */
-    void commitWGState(WGState<double> wgstate)
+    void commitWGState(WGState<Scalar> wgstate)
     {
         this->last_valid_wgstate_ = std::move(wgstate);
     }
@@ -328,28 +323,29 @@ protected:
 
     /// \brief Create the parallel well information
     /// \param localWells The local wells from ECL schedule
-    std::vector<std::reference_wrapper<ParallelWellInfo>> createLocalParallelWellInfo(const std::vector<Well>& wells);
+    std::vector<std::reference_wrapper<ParallelWellInfo>>
+    createLocalParallelWellInfo(const std::vector<Well>& wells);
 
     void initializeWellProdIndCalculators();
     void initializeWellPerfData();
 
     bool wasDynamicallyShutThisTimeStep(const int well_index) const;
 
-    double updateNetworkPressures(const int reportStepIdx);
+    Scalar updateNetworkPressures(const int reportStepIdx);
 
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,
-                        const WellState<double>& wellState);
+                        const WellState<Scalar>& wellState);
     void setWsolvent(const Group& group,
                      const int reportStepIdx,
-                     double wsolvent);
+                     Scalar wsolvent);
     virtual void calcRates(const int fipnum,
                            const int pvtreg,
-                           const std::vector<double>& production_rates,
-                           std::vector<double>& resv_coeff) = 0;
+                           const std::vector<Scalar>& production_rates,
+                           std::vector<Scalar>& resv_coeff) = 0;
     virtual void calcInjRates(const int fipnum,
-                           const int pvtreg,
-                           std::vector<double>& resv_coeff) = 0;
+                              const int pvtreg,
+                              std::vector<Scalar>& resv_coeff) = 0;
 
     void assignShutConnections(data::Wells& wsrpt,
                                const int reportStepIndex) const;
@@ -357,12 +353,13 @@ protected:
                             data::GroupData& gdata) const;
     void assignGroupValues(const int reportStepIdx,
                            std::map<std::string, data::GroupData>& gvalues) const;
-    void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues, const int reportStepIdx) const;
+    void assignNodeValues(std::map<std::string, data::NodeData>& nodevalues,
+                          const int reportStepIdx) const;
 
     void calculateEfficiencyFactors(const int reportStepIdx);
 
     void checkGconsaleLimits(const Group& group,
-                             WellState<double>& well_state,
+                             WellState<Scalar>& well_state,
                              const int reportStepIdx,
                              DeferredLogger& deferred_logger);
 
@@ -395,7 +392,7 @@ protected:
                                    const int episodeIndex);
 
     virtual void computePotentials(const std::size_t widx,
-                                   const WellState<double>& well_state_copy,
+                                   const WellState<Scalar>& well_state_copy,
                                    std::string& exc_msg,
                                    ExceptionType::ExcEnum& exc_type,
                                    DeferredLogger& deferred_logger) = 0;
@@ -408,11 +405,11 @@ protected:
 
     void initInjMult();
 
-
     void updateInjMult(DeferredLogger& deferred_logger);
     void updateInjFCMult(DeferredLogger& deferred_logger);
 
-    void updateFiltrationParticleVolume(const double dt, const std::size_t water_index);
+    void updateFiltrationParticleVolume(const double dt,
+                                        const std::size_t water_index);
 
     // create the well container
     virtual void createWellContainer(const int time_step) = 0;
@@ -434,7 +431,7 @@ protected:
     std::vector<std::string> getWellsForTesting(const int timeStepIdx,
                                                 const double simulationTime);
 
-    using WellTracerRates = std::map<std::pair<std::string, std::string>, double>;
+    using WellTracerRates = std::map<std::pair<std::string, std::string>, Scalar>;
     void assignWellTracerRates(data::Wells& wsrpt,
                                const WellTracerRates& wellTracerRates) const;
 
@@ -561,13 +558,13 @@ protected:
 
     GuideRate guideRate_;
     std::unique_ptr<VFPProperties> vfp_properties_{};
-    std::map<std::string, double> node_pressures_; // Storing network pressures for output.
+    std::map<std::string, Scalar> node_pressures_; // Storing network pressures for output.
 
     // previous injection multiplier, it is used in the injection multiplier calculation for WINJMULT keyword
-    std::unordered_map<std::string, std::vector<double>> prev_inj_multipliers_;
+    std::unordered_map<std::string, std::vector<Scalar>> prev_inj_multipliers_;
 
     // Handling for filter cake injection multipliers
-    std::unordered_map<std::string, WellFilterCake<double>> filter_cake_;
+    std::unordered_map<std::string, WellFilterCake<Scalar>> filter_cake_;
 
     /*
       The various wellState members should be accessed and modified
@@ -575,9 +572,9 @@ protected:
       commitWellState(), resetWellState(), nupcolWellState() and
       updateNupcolWellState().
     */
-    WGState<double> active_wgstate_;
-    WGState<double> last_valid_wgstate_;
-    WGState<double> nupcol_wgstate_;
+    WGState<Scalar> active_wgstate_;
+    WGState<Scalar> last_valid_wgstate_;
+    WGState<Scalar> nupcol_wgstate_;
 
     bool glift_debug = false;
 
@@ -587,10 +584,9 @@ protected:
 
     // Store maps of group name and new group controls for output
     std::map<std::string, std::string> switched_prod_groups_;
-    std::map<std::pair<std::string, Opm::Phase>, std::string> switched_inj_groups_;
+    std::map<std::pair<std::string, Phase>, std::string> switched_inj_groups_;
     // Store map of group name and close offending well for output
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
-
 
 private:
     WellInterfaceGeneric* getGenWell(const std::string& well_name);

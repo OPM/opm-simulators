@@ -54,7 +54,7 @@ std::string simTimeToString(const std::time_t start_time, const double sim_time)
 
 template<class Scalar>
 GroupEconomicLimitsChecker<Scalar>::
-GroupEconomicLimitsChecker(const BlackoilWellModelGeneric& well_model,
+GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<Scalar>& well_model,
                            WellTestState& well_test_state,
                            const Group& group,
                            const double simulation_time,

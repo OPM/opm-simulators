@@ -92,7 +92,8 @@ namespace Opm {
         /// Class for handling the blackoil well model.
         template<typename TypeTag>
         class BlackoilWellModel : public BaseAuxiliaryModule<TypeTag>
-                                , public BlackoilWellModelGeneric
+                                , public BlackoilWellModelGeneric<GetPropType<TypeTag,
+                                                                              Properties::Scalar>>
         {
         public:
             // ---------      Types      ---------
@@ -109,10 +110,10 @@ namespace Opm {
             using GlobalEqVector = GetPropType<TypeTag, Properties::GlobalEqVector>;
             using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
             using GasLiftSingleWell = typename WellInterface<TypeTag>::GasLiftSingleWell;
-            using GLiftOptWells = typename BlackoilWellModelGeneric::GLiftOptWells;
-            using GLiftProdWells = typename BlackoilWellModelGeneric::GLiftProdWells;
+            using GLiftOptWells = typename BlackoilWellModelGeneric<Scalar>::GLiftOptWells;
+            using GLiftProdWells = typename BlackoilWellModelGeneric<Scalar>::GLiftProdWells;
             using GLiftWellStateMap =
-                typename BlackoilWellModelGeneric::GLiftWellStateMap;
+                typename BlackoilWellModelGeneric<Scalar>::GLiftWellStateMap;
             using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
             using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
             constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
@@ -234,7 +235,7 @@ namespace Opm {
 
             using WellInterfacePtr = std::shared_ptr<WellInterface<TypeTag> >;
 
-            using BlackoilWellModelGeneric::initFromRestartFile;
+            using BlackoilWellModelGeneric<Scalar>::initFromRestartFile;
             void initFromRestartFile(const RestartValue& restartValues)
             {
                 initFromRestartFile(restartValues,
@@ -243,7 +244,7 @@ namespace Opm {
                                     param_.use_multisegment_well_);
             }
 
-            using BlackoilWellModelGeneric::prepareDeserialize;
+            using BlackoilWellModelGeneric<Scalar>::prepareDeserialize;
             void prepareDeserialize(const int report_step)
             {
                 prepareDeserialize(report_step, grid().size(0),
