@@ -109,7 +109,8 @@ namespace Opm { using PerfD = PerfData<double>; }
 TEST_FOR_TYPE_NAMED(PerfD, PerfData)
 TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
-TEST_FOR_TYPE(SegmentState)
+namespace Opm { using SegmState = SegmentState<double>; }
+TEST_FOR_TYPE_NAMED(SegmState, SegmentState)
 TEST_FOR_TYPE(SimpleIterationCountTimeStepControl)
 TEST_FOR_TYPE(SimulatorReport)
 TEST_FOR_TYPE(SimulatorReportSingle)

@@ -107,7 +107,7 @@ public:
     std::vector<double> prev_surface_rates;
     PerfData<double> perf_data;
     bool trivial_target;
-    SegmentState segments;
+    SegmentState<double> segments;
     Events events;
     WellInjectorCMode injection_cmode{WellInjectorCMode::CMODE_UNDEFINED};
     WellProducerCMode production_cmode{WellProducerCMode::CMODE_UNDEFINED};

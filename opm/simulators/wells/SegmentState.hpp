@@ -23,14 +23,13 @@
 #include <cstddef>
 #include <vector>
 
-namespace Opm
-{
+namespace Opm {
 class WellSegments;
 } // namespace Opm
 
-namespace Opm
-{
+namespace Opm {
 
+template<class Scalar>
 class SegmentState
 {
 public:
@@ -39,9 +38,9 @@ public:
 
     static SegmentState serializationTestObject();
 
-    double pressure_drop(std::size_t index) const;
+    Scalar pressure_drop(std::size_t index) const;
     bool empty() const;
-    void scale_pressure(double bhp);
+    void scale_pressure(Scalar bhp);
 
     const std::vector<int>& segment_number() const;
     std::size_t size() const;
@@ -66,21 +65,21 @@ public:
 
     bool operator==(const SegmentState&) const;
 
-    std::vector<double> rates;
-    std::vector<double> dissolved_gas_rate;
-    std::vector<double> vaporized_oil_rate;
+    std::vector<Scalar> rates;
+    std::vector<Scalar> dissolved_gas_rate;
+    std::vector<Scalar> vaporized_oil_rate;
 
     /// Segment condition volume flow rates through segment (per phase)
-    std::vector<double> phase_resv_rates;
+    std::vector<Scalar> phase_resv_rates;
 
     /// Segment condition flow velocity through segment (per phase)
-    std::vector<double> phase_velocity;
+    std::vector<Scalar> phase_velocity;
 
     /// Segment condition holdup fractions through segment (per phase)
-    std::vector<double> phase_holdup;
+    std::vector<Scalar> phase_holdup;
 
     /// Segment condition phase viscosities.
-    std::vector<double> phase_viscosity;
+    std::vector<Scalar> phase_viscosity;
 
     /// Segment condition phase densities.
     ///
@@ -98,12 +97,12 @@ public:
     ///    { p0, p1, ..., (np - 1), mixture, mixture_with_exponents },
     ///    ...
     ///    { p0, p1, ..., (np - 1), mixture, mixture_with_exponents }]
-    std::vector<double> phase_density;
+    std::vector<Scalar> phase_density;
 
-    std::vector<double> pressure;
-    std::vector<double> pressure_drop_friction;
-    std::vector<double> pressure_drop_hydrostatic;
-    std::vector<double> pressure_drop_accel;
+    std::vector<Scalar> pressure;
+    std::vector<Scalar> pressure_drop_friction;
+    std::vector<Scalar> pressure_drop_hydrostatic;
+    std::vector<Scalar> pressure_drop_accel;
 
 private:
     std::vector<int>    m_segment_number;

@@ -31,7 +31,7 @@ namespace Opm {
 
     class  AutoICD;
     struct PhaseUsage;
-    class  SegmentState;
+    template<class Scalar> class SegmentState;
     class  UnitSystem;
     class  WellInterfaceGeneric;
     class  SummaryState;
@@ -131,7 +131,7 @@ public:
     }
 
     void copyPhaseDensities(const PhaseUsage& pu,
-                            SegmentState&     segSol) const;
+                            SegmentState<Scalar>& segSol) const;
 
 private:
     // TODO: trying to use the information from the Well opm-parser as much
@@ -141,8 +141,8 @@ private:
     // the completions's ids are their index in the vector well_index_, well_cell_
     // This is also assuming the order of the completions in Well is the same with
     // the order of the completions in wells.
-    // it is for convinience reason. we can just calcuate the inforation for segment once then using it for all the perofrations
-    // belonging to this segment
+    // it is for convenience reason. we can just calculate the information for segment once
+    // then using it for all the perforations belonging to this segment
     std::vector<std::vector<int>> perforations_;
 
     // depth difference between the segment and the perforation

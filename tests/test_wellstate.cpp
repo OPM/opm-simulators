@@ -511,8 +511,8 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState) {
     const Setup setup{ "msw.data" };
     const auto& well = setup.sched.getWell("PROD01", 0);
     const auto& segments = well.getSegments();
-    Opm::SegmentState ss1(3, segments);
-    Opm::SegmentState ss2;
+    Opm::SegmentState<double> ss1(3, segments);
+    Opm::SegmentState<double> ss2;
 
 
     ss1.pressure_drop_hydrostatic[0] = 1;

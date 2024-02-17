@@ -677,7 +677,7 @@ void WellState::initWellStateMSWell(const std::vector<Well>& wells_ecl,
             // assuming the order of the perforations in well_ecl is the same with Wells
             const WellConnections& completion_set = well_ecl.getConnections();
             // number of segment for this single well
-            ws.segments = SegmentState{np, segment_set};
+            ws.segments = SegmentState<double>{np, segment_set};
             const int well_nseg = segment_set.size();
             int n_activeperf = 0;
 
