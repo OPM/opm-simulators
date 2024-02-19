@@ -40,7 +40,8 @@
 
 namespace Opm {
 
-std::string simTimeToString(const std::time_t start_time, const double sim_time) {
+std::string simTimeToString(const std::time_t start_time, const double sim_time)
+{
     const auto start_timep = std::chrono::system_clock::from_time_t(start_time);
     const auto sim_duration = std::chrono::duration_cast<std::chrono::system_clock::duration>(
         std::chrono::duration<double>(sim_time)
@@ -52,26 +53,24 @@ std::string simTimeToString(const std::time_t start_time, const double sim_time)
 }
 
 GroupEconomicLimitsChecker::
-GroupEconomicLimitsChecker(
-    const BlackoilWellModelGeneric &well_model,
-    WellTestState &well_test_state,
-    const Group &group,
-    const double simulation_time,
-    const int report_step_idx,
-    DeferredLogger &deferred_logger
-) :
-    well_model_{well_model}
-  , group_{group}
-  , simulation_time_{simulation_time}
-  , report_step_idx_{report_step_idx}
-  , deferred_logger_{deferred_logger}
-  , date_string_{simTimeToString(well_model.schedule().getStartTime(),simulation_time)}
-  , unit_system_{well_model.eclipseState().getUnits()}
-  , well_state_{well_model.wellState()}
-  , well_test_state_{well_test_state}
-  , schedule_{well_model.schedule()}
-  , gecon_props_{schedule_[report_step_idx_].gecon().get_group_prop(
-                 schedule_, well_model_.summaryState(), group_.name())}
+GroupEconomicLimitsChecker(const BlackoilWellModelGeneric& well_model,
+                           WellTestState& well_test_state,
+                           const Group& group,
+                           const double simulation_time,
+                           const int report_step_idx,
+                           DeferredLogger& deferred_logger)
+    : well_model_{well_model}
+    , group_{group}
+    , simulation_time_{simulation_time}
+    , report_step_idx_{report_step_idx}
+    , deferred_logger_{deferred_logger}
+    , date_string_{simTimeToString(well_model.schedule().getStartTime(),simulation_time)}
+    , unit_system_{well_model.eclipseState().getUnits()}
+    , well_state_{well_model.wellState()}
+    , well_test_state_{well_test_state}
+    , schedule_{well_model.schedule()}
+    , gecon_props_{schedule_[report_step_idx_].gecon().get_group_prop(
+                   schedule_, well_model_.summaryState(), group_.name())}
 {
     for (std::size_t i = 0; i < this->phase_idx_map_.size(); i++) {
         auto phase_idx = this->phase_idx_map_[i];
@@ -397,4 +396,5 @@ throwNotImplementedError(const std::string &error) const
     const std::string msg = fmt::format("Group: {} : GECON : {} not implemented", this->group_.name(), error);
     OPM_DEFLOG_THROW(std::runtime_error, msg, this->deferred_logger_);
 }
+
 } // namespace Opm
