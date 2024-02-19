@@ -32,55 +32,58 @@
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
-namespace Opm
-{
+namespace Opm {
 
+template<class Scalar>
 template<class RatioFunc>
-bool WellTest::checkMaxRatioLimitWell(const SingleWellState<double>& ws,
-                                      const double max_ratio_limit,
-                                      const RatioFunc& ratioFunc) const
+bool WellTest<Scalar>::
+checkMaxRatioLimitWell(const SingleWellState<Scalar>& ws,
+                       const Scalar max_ratio_limit,
+                       const RatioFunc& ratioFunc) const
 {
     const int np = well_.numPhases();
 
-    std::vector<double> well_rates(np, 0.0);
+    std::vector<Scalar> well_rates(np, 0.0);
     for (int p = 0; p < np; ++p) {
         well_rates[p] = ws.surface_rates[p];
     }
 
-    const double well_ratio = ratioFunc(well_rates, well_.phaseUsage());
+    const Scalar well_ratio = ratioFunc(well_rates, well_.phaseUsage());
     return (well_ratio > max_ratio_limit);
 }
 
+template<class Scalar>
 template<class RatioFunc>
-void WellTest::checkMaxRatioLimitCompletions(const SingleWellState<double>& ws,
-                                             const double max_ratio_limit,
-                                             const RatioFunc& ratioFunc,
-                                             RatioLimitCheckReport& report) const
+void WellTest<Scalar>::
+checkMaxRatioLimitCompletions(const SingleWellState<Scalar>& ws,
+                              const Scalar max_ratio_limit,
+                              const RatioFunc& ratioFunc,
+                              RatioLimitCheckReport& report) const
 {
     int worst_offending_completion = RatioLimitCheckReport::INVALIDCOMPLETION;
 
     // the maximum water cut value of the completions
     // it is used to identify the most offending completion
-    double max_ratio_completion = 0;
+    Scalar max_ratio_completion = 0;
     const int np = well_.numPhases();
 
     const auto& perf_data = ws.perf_data;
     const auto& perf_phase_rates = perf_data.phase_rates;
     // look for the worst_offending_completion
     for (const auto& completion : well_.getCompletions()) {
-        std::vector<double> completion_rates(np, 0.0);
+        std::vector<Scalar> completion_rates(np, 0.0);
 
         // looping through the connections associated with the completion
         const std::vector<int>& conns = completion.second;
         for (const int c : conns) {
             for (int p = 0; p < np; ++p) {
-                const double connection_rate = perf_phase_rates[c * np + p];
+                const Scalar connection_rate = perf_phase_rates[c * np + p];
                 completion_rates[p] += connection_rate;
             }
         } // end of for (const int c : conns)
 
         well_.parallelWellInfo().communication().sum(completion_rates.data(), completion_rates.size());
-        const double ratio_completion = ratioFunc(completion_rates, well_.phaseUsage());
+        const Scalar ratio_completion = ratioFunc(completion_rates, well_.phaseUsage());
 
         if (ratio_completion > max_ratio_completion) {
             worst_offending_completion = completion.first;
@@ -88,7 +91,7 @@ void WellTest::checkMaxRatioLimitCompletions(const SingleWellState<double>& ws,
         }
     } // end of for (const auto& completion : completions_)
 
-    const double violation_extent = max_ratio_completion / max_ratio_limit;
+    const Scalar violation_extent = max_ratio_completion / max_ratio_limit;
 
     if (violation_extent > report.violation_extent) {
         report.worst_offending_completion = worst_offending_completion;
@@ -96,27 +99,30 @@ void WellTest::checkMaxRatioLimitCompletions(const SingleWellState<double>& ws,
     }
 }
 
-void WellTest::checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                                const SingleWellState<double>& ws,
-                                RatioLimitCheckReport& report) const
+template<class Scalar>
+void WellTest<Scalar>::
+checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
+                 const SingleWellState<Scalar>& ws,
+                 RatioLimitCheckReport& report) const
 {
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Gas = BlackoilPhases::Vapour;
 
     // function to calculate gor based on rates
-    auto gor = [](const std::vector<double>& rates,
-                  const PhaseUsage& pu) {
-        const double oil_rate = -rates[pu.phase_pos[Oil]];
-        const double gas_rate = -rates[pu.phase_pos[Gas]];
+    auto gor = [](const std::vector<Scalar>& rates,
+                  const PhaseUsage& pu)
+    {
+        const Scalar oil_rate = -rates[pu.phase_pos[Oil]];
+        const Scalar gas_rate = -rates[pu.phase_pos[Gas]];
         if (gas_rate <= 0.)
-            return 0.;
+            return Scalar{0};
         else if (oil_rate <= 0.)
-            return 1.e100; // big value to mark it as violated
+            return Scalar{1e30}; // big value to mark it as violated
         else
             return (gas_rate / oil_rate);
     };
 
-    const double max_gor_limit = econ_production_limits.maxGasOilRatio();
+    const Scalar max_gor_limit = econ_production_limits.maxGasOilRatio();
     assert(max_gor_limit > 0.);
 
     const bool gor_limit_violated = this->checkMaxRatioLimitWell(ws, max_gor_limit, gor);
@@ -127,28 +133,30 @@ void WellTest::checkMaxGORLimit(const WellEconProductionLimits& econ_production_
     }
 }
 
-void WellTest::checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                                const SingleWellState<double>& ws,
-                                RatioLimitCheckReport& report) const
+template<class Scalar>
+void WellTest<Scalar>::
+checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
+                 const SingleWellState<Scalar>& ws,
+                 RatioLimitCheckReport& report) const
 {
     static constexpr int Gas = BlackoilPhases::Vapour;
     static constexpr int Water = BlackoilPhases::Aqua;
 
     // function to calculate wgr based on rates
-    auto wgr = [](const std::vector<double>& rates,
-                  const PhaseUsage& pu) {
-
-        const double water_rate = -rates[pu.phase_pos[Water]];
-        const double gas_rate = -rates[pu.phase_pos[Gas]];
+    auto wgr = [](const std::vector<Scalar>& rates,
+                  const PhaseUsage& pu)
+    {
+        const Scalar water_rate = -rates[pu.phase_pos[Water]];
+        const Scalar gas_rate = -rates[pu.phase_pos[Gas]];
         if (water_rate <= 0.)
-            return 0.;
+            return Scalar{0};
         else if (gas_rate <= 0.)
-            return 1.e100; // big value to mark it as violated
+            return Scalar{1e30}; // big value to mark it as violated
         else
             return (water_rate / gas_rate);
     };
 
-    const double max_wgr_limit = econ_production_limits.maxWaterGasRatio();
+    const Scalar max_wgr_limit = econ_production_limits.maxWaterGasRatio();
     assert(max_wgr_limit > 0.);
 
     const bool wgr_limit_violated = this->checkMaxRatioLimitWell(ws, max_wgr_limit, wgr);
@@ -159,31 +167,34 @@ void WellTest::checkMaxWGRLimit(const WellEconProductionLimits& econ_production_
     }
 }
 
-void WellTest::checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                                     const SingleWellState<double>& ws,
-                                     RatioLimitCheckReport& report) const
+template<class Scalar>
+void WellTest<Scalar>::
+checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
+                      const SingleWellState<Scalar>& ws,
+                      RatioLimitCheckReport& report) const
 {
     static constexpr int Oil = BlackoilPhases::Liquid;
     static constexpr int Water = BlackoilPhases::Aqua;
 
     // function to calculate water cut based on rates
-    auto waterCut = [](const std::vector<double>& rates,
-                       const PhaseUsage& pu) {
-        const double oil_rate = -rates[pu.phase_pos[Oil]];
-        const double water_rate = -rates[pu.phase_pos[Water]];
-        const double liquid_rate = oil_rate + water_rate;
+    auto waterCut = [](const std::vector<Scalar>& rates,
+                       const PhaseUsage& pu)
+    {
+        const Scalar oil_rate = -rates[pu.phase_pos[Oil]];
+        const Scalar water_rate = -rates[pu.phase_pos[Water]];
+        const Scalar liquid_rate = oil_rate + water_rate;
         if (liquid_rate <= 0.)
-            return 0.;
+            return Scalar{0};
         else if (water_rate < 0)
-            return 0.;
+            return Scalar{0};
         else if (oil_rate < 0)
-            return 1.;
+            return Scalar{1};
         else
             return (water_rate / liquid_rate);
 
     };
 
-    const double max_water_cut_limit = econ_production_limits.maxWaterCut();
+    const Scalar max_water_cut_limit = econ_production_limits.maxWaterCut();
     assert(max_water_cut_limit > 0.);
 
     const bool watercut_limit_violated =
@@ -196,9 +207,11 @@ void WellTest::checkMaxWaterCutLimit(const WellEconProductionLimits& econ_produc
     }
 }
 
-bool WellTest::checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
-                                   const std::vector<double>& rates_or_potentials,
-                                   DeferredLogger& deferred_logger) const
+template<class Scalar>
+bool WellTest<Scalar>::
+checkRateEconLimits(const WellEconProductionLimits& econ_production_limits,
+                    const std::vector<Scalar>& rates_or_potentials,
+                    DeferredLogger& deferred_logger) const
 {
     static constexpr int Gas = BlackoilPhases::Vapour;
     static constexpr int Oil = BlackoilPhases::Liquid;
@@ -207,26 +220,26 @@ bool WellTest::checkRateEconLimits(const WellEconProductionLimits& econ_producti
     const PhaseUsage& pu = well_.phaseUsage();
 
     if (econ_production_limits.onMinOilRate()) {
-        const double oil_rate = rates_or_potentials[pu.phase_pos[Oil]];
-        const double min_oil_rate = econ_production_limits.minOilRate();
+        const Scalar oil_rate = rates_or_potentials[pu.phase_pos[Oil]];
+        const Scalar min_oil_rate = econ_production_limits.minOilRate();
         if (std::abs(oil_rate) < min_oil_rate) {
             return true;
         }
     }
 
     if (econ_production_limits.onMinGasRate() ) {
-        const double gas_rate = rates_or_potentials[pu.phase_pos[Gas]];
-        const double min_gas_rate = econ_production_limits.minGasRate();
+        const Scalar gas_rate = rates_or_potentials[pu.phase_pos[Gas]];
+        const Scalar min_gas_rate = econ_production_limits.minGasRate();
         if (std::abs(gas_rate) < min_gas_rate) {
             return true;
         }
     }
 
     if (econ_production_limits.onMinLiquidRate() ) {
-        const double oil_rate = rates_or_potentials[pu.phase_pos[Oil]];
-        const double water_rate = rates_or_potentials[pu.phase_pos[Water]];
-        const double liquid_rate = oil_rate + water_rate;
-        const double min_liquid_rate = econ_production_limits.minLiquidRate();
+        const Scalar oil_rate = rates_or_potentials[pu.phase_pos[Oil]];
+        const Scalar water_rate = rates_or_potentials[pu.phase_pos[Water]];
+        const Scalar liquid_rate = oil_rate + water_rate;
+        const Scalar min_liquid_rate = econ_production_limits.minLiquidRate();
         if (std::abs(liquid_rate) < min_liquid_rate) {
             return true;
         }
@@ -239,9 +252,11 @@ bool WellTest::checkRateEconLimits(const WellEconProductionLimits& econ_producti
     return false;
 }
 
-WellTest::RatioLimitCheckReport WellTest::
+template<class Scalar>
+typename WellTest<Scalar>::RatioLimitCheckReport
+WellTest<Scalar>::
 checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                     const SingleWellState<double>& ws,
+                     const SingleWellState<Scalar>& ws,
                      DeferredLogger& deferred_logger) const
 {
     // TODO: not sure how to define the worst-offending completion when more than one
@@ -289,11 +304,13 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
     return report;
 }
 
-void WellTest::updateWellTestStateEconomic(const SingleWellState<double>& ws,
-                                           const double simulation_time,
-                                           const bool write_message_to_opmlog,
-                                           WellTestState& well_test_state,
-                                           DeferredLogger& deferred_logger) const
+template<class Scalar>
+void WellTest<Scalar>::
+updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
+                            const double simulation_time,
+                            const bool write_message_to_opmlog,
+                            WellTestState& well_test_state,
+                            DeferredLogger& deferred_logger) const
 {
     if (well_.wellIsStopped())
         return;
@@ -440,10 +457,12 @@ void WellTest::updateWellTestStateEconomic(const SingleWellState<double>& ws,
     }
 }
 
-void WellTest::updateWellTestStatePhysical(const double simulation_time,
-                                           const bool write_message_to_opmlog,
-                                           WellTestState& well_test_state,
-                                           DeferredLogger& deferred_logger) const
+template<class Scalar>
+void WellTest<Scalar>::
+updateWellTestStatePhysical(const double simulation_time,
+                            const bool write_message_to_opmlog,
+                            WellTestState& well_test_state,
+                            DeferredLogger& deferred_logger) const
 {
     if (well_test_state.well_is_closed(well_.name())) {
         // Already closed, do nothing.
@@ -457,5 +476,7 @@ void WellTest::updateWellTestStatePhysical(const double simulation_time,
         }
     }
 }
+
+template class WellTest<double>;
 
 } // namespace Opm
