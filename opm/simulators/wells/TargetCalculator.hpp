@@ -76,15 +76,16 @@ private:
 
 /// Based on a group control mode, extract or calculate rates, and
 /// provide other conveniences.
+template<class Scalar>
 class InjectionTargetCalculator
 {
 public:
     InjectionTargetCalculator(const Group::InjectionCMode& cmode,
                               const PhaseUsage& pu,
-                              const std::vector<double>& resv_coeff,
+                              const std::vector<Scalar>& resv_coeff,
                               const std::string& group_name,
-                              const double sales_target,
-                              const GroupState<double>& group_state,
+                              const Scalar sales_target,
+                              const GroupState<Scalar>& group_state,
                               const Phase& injection_phase,
                               const bool use_gpmaint,
                               DeferredLogger& deferred_logger);
@@ -95,17 +96,18 @@ public:
         return rates[pos_];
     }
 
-    double groupTarget(const std::optional<Group::InjectionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const;
+    Scalar groupTarget(const std::optional<Group::InjectionControls>& ctrl,
+                       DeferredLogger& deferred_logger) const;
 
     GuideRateModel::Target guideTargetMode() const;
 
 private:
     Group::InjectionCMode cmode_;
     const PhaseUsage& pu_;
-    const std::vector<double>& resv_coeff_;
+    const std::vector<Scalar>& resv_coeff_;
     const std::string& group_name_;
-    double sales_target_;
-    const GroupState<double>& group_state_;
+    Scalar sales_target_;
+    const GroupState<Scalar>& group_state_;
     bool use_gpmaint_;
     int pos_;
     GuideRateModel::Target target_;

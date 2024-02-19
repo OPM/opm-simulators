@@ -154,15 +154,17 @@ TargetCalculator<Scalar>::guideTargetMode() const
     }
 }
 
-InjectionTargetCalculator::InjectionTargetCalculator(const Group::InjectionCMode& cmode,
-                                                     const PhaseUsage& pu,
-                                                     const std::vector<double>& resv_coeff,
-                                                     const std::string& group_name,
-                                                     const double sales_target,
-                                                     const GroupState<double>& group_state,
-                                                     const Phase& injection_phase,
-                                                     const bool use_gpmaint,
-                                                     DeferredLogger& deferred_logger)
+template<class Scalar>
+InjectionTargetCalculator<Scalar>::
+InjectionTargetCalculator(const Group::InjectionCMode& cmode,
+                          const PhaseUsage& pu,
+                          const std::vector<Scalar>& resv_coeff,
+                          const std::string& group_name,
+                          const Scalar sales_target,
+                          const GroupState<Scalar>& group_state,
+                          const Phase& injection_phase,
+                          const bool use_gpmaint,
+                          DeferredLogger& deferred_logger)
     : cmode_(cmode)
     , pu_(pu)
     , resv_coeff_(resv_coeff)
@@ -199,8 +201,10 @@ InjectionTargetCalculator::InjectionTargetCalculator(const Group::InjectionCMode
     }
 }
 
-
-double InjectionTargetCalculator::groupTarget(const std::optional<Group::InjectionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const
+template<class Scalar>
+Scalar InjectionTargetCalculator<Scalar>::
+groupTarget(const std::optional<Group::InjectionControls>& ctrl,
+            DeferredLogger& deferred_logger) const
 {
     if (!ctrl && !use_gpmaint_) {
         OPM_DEFLOG_THROW(std::logic_error,
@@ -210,32 +214,32 @@ double InjectionTargetCalculator::groupTarget(const std::optional<Group::Injecti
     }
     switch (cmode_) {
     case Group::InjectionCMode::RATE:
-        if(use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
+        if (use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
             return this->group_state_.gpmaint_target(this->group_name_);
 
         return ctrl->surface_max_rate;
     case Group::InjectionCMode::RESV:
-        if(use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
+        if (use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
             return this->group_state_.gpmaint_target(this->group_name_) / resv_coeff_[pos_];
 
         return ctrl->resv_max_rate / resv_coeff_[pos_];
     case Group::InjectionCMode::REIN: {
-        double production_rate = this->group_state_.injection_rein_rates(ctrl->reinj_group)[pos_];
+        Scalar production_rate = this->group_state_.injection_rein_rates(ctrl->reinj_group)[pos_];
         return ctrl->target_reinj_fraction * production_rate;
     }
     case Group::InjectionCMode::VREP: {
-        const std::vector<double>& group_injection_reductions = this->group_state_.injection_reduction_rates(this->group_name_);
-        double voidage_rate = group_state_.injection_vrep_rate(ctrl->voidage_group) * ctrl->target_void_fraction;
-        double inj_reduction = 0.0;
+        const std::vector<Scalar>& group_injection_reductions = this->group_state_.injection_reduction_rates(this->group_name_);
+        Scalar voidage_rate = group_state_.injection_vrep_rate(ctrl->voidage_group) * ctrl->target_void_fraction;
+        Scalar inj_reduction = 0.0;
         if (ctrl->phase != Phase::WATER)
             inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Aqua]]
-                    * resv_coeff_[pu_.phase_pos[BlackoilPhases::Aqua]];
+                           * resv_coeff_[pu_.phase_pos[BlackoilPhases::Aqua]];
         if (ctrl->phase != Phase::OIL)
             inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Liquid]]
-                    * resv_coeff_[pu_.phase_pos[BlackoilPhases::Liquid]];
+                           * resv_coeff_[pu_.phase_pos[BlackoilPhases::Liquid]];
         if (ctrl->phase != Phase::GAS)
             inj_reduction += group_injection_reductions[pu_.phase_pos[BlackoilPhases::Vapour]]
-                    * resv_coeff_[pu_.phase_pos[BlackoilPhases::Vapour]];
+                           * resv_coeff_[pu_.phase_pos[BlackoilPhases::Vapour]];
         voidage_rate -= inj_reduction;
         return voidage_rate / resv_coeff_[pos_];
     }
@@ -243,7 +247,7 @@ double InjectionTargetCalculator::groupTarget(const std::optional<Group::Injecti
         assert(pos_ == pu_.phase_pos[BlackoilPhases::Vapour]);
         // Gas injection rate = Total gas production rate + gas import rate - gas consumption rate - sales rate;
         // Gas import and consumption is already included in the REIN rates
-        double inj_rate = group_state_.injection_rein_rates(this->group_name_)[pos_];
+        Scalar inj_rate = group_state_.injection_rein_rates(this->group_name_)[pos_];
         inj_rate -= sales_target_;
         return inj_rate;
     }
@@ -255,7 +259,9 @@ double InjectionTargetCalculator::groupTarget(const std::optional<Group::Injecti
     }
 }
 
-GuideRateModel::Target InjectionTargetCalculator::guideTargetMode() const
+template<class Scalar>
+GuideRateModel::Target
+InjectionTargetCalculator<Scalar>::guideTargetMode() const
 {
     return target_;
 }
@@ -264,6 +270,7 @@ GuideRateModel::Target InjectionTargetCalculator::guideTargetMode() const
 template __VA_ARGS__ TargetCalculator<double>::calcModeRateFromRates<__VA_ARGS__>(const __VA_ARGS__* rates) const;
 
 template class TargetCalculator<double>;
+template class InjectionTargetCalculator<double>;
 
 INSTANCE_TARGET_CALCULATOR(double)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,3,0>)
