@@ -736,6 +736,18 @@ if (BUILD_FLOW)
     PASS_REGULAR_EXPRESSION "${${project}_LABEL}")
 endif()
 
+if(BUILD_FLOW_FLOAT_VARIANTS)
+  opm_add_test(flow_blackoil_float
+    ONLY_COMPILE
+    ALWAYS_ENABLE
+    DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+    DEPENDS opmsimulators
+    LIBRARIES opmsimulators
+    SOURCES
+    flow/flow_blackoil_float_main.cpp
+    $<TARGET_OBJECTS:moduleVersion>)
+endif()
+
 if (OPM_ENABLE_PYTHON)
   add_subdirectory(python)
 endif()
