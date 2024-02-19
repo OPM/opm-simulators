@@ -38,85 +38,11 @@
 #include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <array>
-#include <filesystem>
-#include <fstream>
 #include <functional>
-#include <iterator>
 #include <memory>
 #include <stdexcept>
 #include <tuple>
-#include <unordered_map>
 #include <vector>
-
-#include <fmt/format.h>
-
-#if HAVE_MPI
-
-namespace Opm { namespace details {
-    class MPIPartitionFromFile
-    {
-    public:
-        explicit MPIPartitionFromFile(const std::filesystem::path& partitionFile)
-            : partitionFile_(partitionFile)
-        {}
-
-        std::vector<int> operator()(const Dune::CpGrid& grid) const;
-
-    private:
-        std::filesystem::path partitionFile_{};
-    };
-
-    inline std::vector<int>
-    MPIPartitionFromFile::operator()(const Dune::CpGrid& grid) const
-    {
-        std::ifstream pfile { this->partitionFile_ };
-
-        auto partition = std::vector<int> {
-            std::istream_iterator<int> { pfile },
-            std::istream_iterator<int> {}
-        };
-
-        const auto nc =
-            static_cast<std::vector<int>::size_type>(grid.size(0));
-
-        if (partition.size() == nc) {
-            // Input is one process ID for each active cell
-            return partition;
-        }
-
-        if (partition.size() == 3 * nc) {
-            // Partition file is of the form
-            //
-            //   Process_ID   Cartesian_Idx   NLDD_Domain
-            //
-            // with one row for each active cell.  Select first column.
-            auto g2l = std::unordered_map<int, int>{};
-            auto locCell = 0;
-            for (const auto& globCell : grid.globalCell()) {
-                g2l.insert_or_assign(globCell, locCell++);
-            }
-
-            auto filtered_partition = std::vector<int>(nc);
-            for (auto c = 0*nc; c < nc; ++c) {
-                auto pos = g2l.find(partition[3*c + 1]);
-                if (pos != g2l.end()) {
-                    filtered_partition[pos->second] = partition[3*c + 0];
-                }
-            }
-
-            return filtered_partition;
-        }
-
-        throw std::invalid_argument {
-            fmt::format("Partition file '{}' with {} values does "
-                        "not match CpGrid instance with {} cells",
-                        this->partitionFile_.generic_string(),
-                        partition.size(), nc)
-        };
-    }
-}} // namespace Opm::details
-
-#endif // HAVE_MPI
 
 namespace Opm {
 template <class TypeTag>
