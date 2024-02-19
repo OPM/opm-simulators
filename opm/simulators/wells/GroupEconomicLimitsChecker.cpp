@@ -52,7 +52,8 @@ std::string simTimeToString(const std::time_t start_time, const double sim_time)
     return ss.str();
 }
 
-GroupEconomicLimitsChecker::
+template<class Scalar>
+GroupEconomicLimitsChecker<Scalar>::
 GroupEconomicLimitsChecker(const BlackoilWellModelGeneric& well_model,
                            WellTestState& well_test_state,
                            const Group& group,
@@ -76,7 +77,7 @@ GroupEconomicLimitsChecker(const BlackoilWellModelGeneric& well_model,
         auto phase_idx = this->phase_idx_map_[i];
         this->phase_idx_reverse_map_[phase_idx] = static_cast<int>(i);
         auto phase_pos = this->well_model_.phaseUsage().phase_pos[phase_idx];
-        double production_rate = WellGroupHelpers::sumWellSurfaceRates(
+        Scalar production_rate = WellGroupHelpers::sumWellSurfaceRates(
             this->group_, this->schedule_, this->well_state_,
             this->report_step_idx_, phase_pos, /*isInjector*/false);
         this->production_rates_[i] = this->well_model_.comm().sum(production_rate);
@@ -87,22 +88,22 @@ GroupEconomicLimitsChecker(const BlackoilWellModelGeneric& well_model,
  * Public methods in alphabetical order
  ****************************************/
 
-void
-GroupEconomicLimitsChecker::
+template<class Scalar>
+void GroupEconomicLimitsChecker<Scalar>::
 activateEndRun()
 {
     displayDebugMessage("activate end run");
 }
 
-void
-GroupEconomicLimitsChecker::
+template<class Scalar>
+void GroupEconomicLimitsChecker<Scalar>::
 closeWells()
 {
     closeWellsRecursive(this->group_);
 }
 
-void
-GroupEconomicLimitsChecker::
+template<class Scalar>
+void GroupEconomicLimitsChecker<Scalar>::
 doWorkOver()
 {
     if (this->gecon_props_.workover() != GroupEconProductionLimits::EconWorkover::NONE) {
@@ -110,8 +111,8 @@ doWorkOver()
     }
 }
 
-bool
-GroupEconomicLimitsChecker::
+template<class Scalar>
+bool GroupEconomicLimitsChecker<Scalar>::
 endRun()
 {
     if (this->gecon_props_.endRun()) {
@@ -120,15 +121,15 @@ endRun()
     return false;
 }
 
-bool
-GroupEconomicLimitsChecker::
+template<class Scalar>
+bool GroupEconomicLimitsChecker<Scalar>::
 GOR()
 {
     auto oil_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Liquid];
     auto gas_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Vapour];
     auto oil_rate = this->production_rates_[oil_phase_idx];
     auto gas_rate = this->production_rates_[gas_phase_idx];
-    double gor;
+    Scalar gor;
     if (gas_rate <= 0.0) {
         gor = 0.0;
     }
@@ -154,8 +155,8 @@ GOR()
     return false;
 }
 
-bool
-GroupEconomicLimitsChecker::
+template<class Scalar>
+bool GroupEconomicLimitsChecker<Scalar>::
 minGasRate()
 {
     auto phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Vapour];
@@ -181,8 +182,8 @@ minGasRate()
     return false;
 }
 
-bool
-GroupEconomicLimitsChecker::
+template<class Scalar>
+bool GroupEconomicLimitsChecker<Scalar>::
 minOilRate()
 {
     auto phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Liquid];
@@ -208,22 +209,22 @@ minOilRate()
     return false;
 }
 
-int
-GroupEconomicLimitsChecker::
+template<class Scalar>
+int GroupEconomicLimitsChecker<Scalar>::
 numProducersOpen()
 {
     return 1;
 }
 
-int
-GroupEconomicLimitsChecker::
+template<class Scalar>
+int GroupEconomicLimitsChecker<Scalar>::
 numProducersOpenInitially()
 {
     return 1;
 }
 
-bool
-GroupEconomicLimitsChecker::
+template<class Scalar>
+bool GroupEconomicLimitsChecker<Scalar>::
 waterCut()
 {
     auto oil_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Liquid];
@@ -231,7 +232,7 @@ waterCut()
     auto oil_rate = this->production_rates_[oil_phase_idx];
     auto water_rate = this->production_rates_[water_phase_idx];
     auto liquid_rate = oil_rate + water_rate;
-    double water_cut;
+    Scalar water_cut;
     if (liquid_rate == 0.0) {
         water_cut = 0.0;
     }
@@ -262,15 +263,15 @@ waterCut()
     return false;
 }
 
-bool
-GroupEconomicLimitsChecker::
+template<class Scalar>
+bool GroupEconomicLimitsChecker<Scalar>::
 WGR()
 {
     auto water_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Aqua];
     auto gas_phase_idx = this->phase_idx_reverse_map_[BlackoilPhases::Vapour];
     auto water_rate = this->production_rates_[water_phase_idx];
     auto gas_rate = this->production_rates_[gas_phase_idx];
-    double wgr;
+    Scalar wgr;
     if (water_rate <= 0.0) {
         wgr = 0.0;
     }
@@ -300,9 +301,9 @@ WGR()
  * Private methods in alphabetical order
  ****************************************/
 
-void
-GroupEconomicLimitsChecker::
-displayDebugMessage(const std::string &msg) const
+template<class Scalar>
+void GroupEconomicLimitsChecker<Scalar>::
+displayDebugMessage(const std::string& msg) const
 {
     if (this->debug_) {
         const std::string msg2 = fmt::format(
@@ -311,9 +312,12 @@ displayDebugMessage(const std::string &msg) const
     }
 }
 
-void
-GroupEconomicLimitsChecker::
-addPrintMessage(const std::string &msg, const double value, const double limit, const UnitSystem::measure measure)
+template<class Scalar>
+void GroupEconomicLimitsChecker<Scalar>::
+addPrintMessage(const std::string& msg,
+                const Scalar value,
+                const Scalar limit,
+                const UnitSystem::measure measure)
 {
     const std::string header = fmt::format(
         "{}\nAt time = {:.2f} {} (date = {}): Group {} will close because: \n", this->message_separator(),
@@ -331,8 +335,8 @@ addPrintMessage(const std::string &msg, const double value, const double limit, 
     this->message_ += message;
 }
 
-bool
-GroupEconomicLimitsChecker::
+template<class Scalar>
+bool GroupEconomicLimitsChecker<Scalar>::
 closeWellsRecursive(const Group& group, int level)
 {
     bool wells_closed = false;
@@ -389,12 +393,14 @@ closeWellsRecursive(const Group& group, int level)
     return wells_closed;
 }
 
-void
-GroupEconomicLimitsChecker::
-throwNotImplementedError(const std::string &error) const
+template<class Scalar>
+void GroupEconomicLimitsChecker<Scalar>::
+throwNotImplementedError(const std::string& error) const
 {
     const std::string msg = fmt::format("Group: {} : GECON : {} not implemented", this->group_.name(), error);
     OPM_DEFLOG_THROW(std::runtime_error, msg, this->deferred_logger_);
 }
+
+template class GroupEconomicLimitsChecker<double>;
 
 } // namespace Opm

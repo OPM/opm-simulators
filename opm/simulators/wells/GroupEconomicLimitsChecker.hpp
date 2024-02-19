@@ -37,6 +37,7 @@ class Group;
 template<class Scalar> class WellState;
 class WellTestState;
 
+template<class Scalar>
 class GroupEconomicLimitsChecker
 {
 public:
@@ -66,8 +67,8 @@ public:
 private:
     void displayDebugMessage(const std::string& msg) const;
     void addPrintMessage(const std::string& msg,
-                         const double value,
-                         const double limit,
+                         const Scalar value,
+                         const Scalar limit,
                          const UnitSystem::measure measure);
     bool closeWellsRecursive(const Group& group, int level = 0);
     void throwNotImplementedError(const std::string& error) const;
@@ -79,12 +80,12 @@ private:
     DeferredLogger& deferred_logger_;
     const std::string date_string_;
     const UnitSystem& unit_system_;
-    const WellState<double>& well_state_;
+    const WellState<Scalar>& well_state_;
     WellTestState& well_test_state_;
     const Schedule& schedule_;
     GroupEconProductionLimits::GEconGroupProp gecon_props_;
     bool debug_ = true;
-    std::array<double,NUM_PHASES> production_rates_;
+    std::array<Scalar,NUM_PHASES> production_rates_;
     std::map<int, BlackoilPhases::PhaseIndex> phase_idx_map_ = {
         {0, BlackoilPhases::Liquid},
         {1, BlackoilPhases::Vapour},

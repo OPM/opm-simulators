@@ -407,7 +407,7 @@ checkGEconLimits(
         return;
     }
 
-    GroupEconomicLimitsChecker checker {
+    GroupEconomicLimitsChecker<double> checker {
         *this, wellTestState(), group, simulation_time, report_step_idx, deferred_logger
     };
     if (checker.minOilRate() || checker.minGasRate()) {
