@@ -41,7 +41,7 @@ class SummaryState;
 class Well;
 template<class Scalar> class WellState;
 
-class GasLiftGroupInfo : public GasLiftCommon
+class GasLiftGroupInfo : public GasLiftCommon<double>
 {
 protected:
     class GroupRates;

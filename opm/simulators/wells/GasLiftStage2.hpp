@@ -42,7 +42,7 @@ class Schedule;
 class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
-class GasLiftStage2 : public GasLiftCommon {
+class GasLiftStage2 : public GasLiftCommon<double> {
     using GasLiftSingleWell = GasLiftSingleWellGeneric;
     using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
     using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;

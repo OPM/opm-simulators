@@ -45,7 +45,7 @@ class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 template<class Scalar> class GroupState;
 
-class GasLiftSingleWellGeneric : public GasLiftCommon
+class GasLiftSingleWellGeneric : public GasLiftCommon<double>
 {
 protected:
     static constexpr int Water = BlackoilPhases::Aqua;
