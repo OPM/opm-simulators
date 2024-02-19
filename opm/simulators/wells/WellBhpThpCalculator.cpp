@@ -1021,10 +1021,9 @@ bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
                   DeferredLogger& deferred_logger)
 {
     bool bracket_found = false;
-    // bool approximate_solution_found = false;
     low = range[0];
     high = range[1];
-    const int sample_number = 300;//10000; //300; //10000;
+    const int sample_number = 300;
     const double interval = (high - low) / sample_number;
     double eq_low = eq(low);
     double eq_high = 0.0;
@@ -1032,7 +1031,6 @@ bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
         high = range[0] + interval * i;
         eq_high = eq(high);
         if ( (std::fabs(eq_high) < limit)) {
-            // approximate_solution_found = true;
             approximate_solution = high;
             break;
         }

@@ -935,7 +935,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                     OpmLog::debug(oss.str());
 #endif
                 } else {
-                   // Table number specified as 9999 in the deck, no pressure loss.
+                    // Table number specified as 9999 in the deck, no pressure loss.
                     if (network.node(node).as_choke()){
                         // Node pressure is set to the common THP of the wells.
                         // The choke pressure must be non-negative therefore the node pressure of 
