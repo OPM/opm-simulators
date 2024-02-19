@@ -1497,3 +1497,10 @@ if(dune-alugrid_FOUND AND BUILD_FLOW_ALU_GRID)
                            DIR spe1)
 endif()
 
+if(BUILD_FLOW_FLOAT_VARIANTS)
+  add_test_compareECLFiles(CASENAME spe1_float
+                           FILENAME SPE1CASE1
+                           SIMULATOR flow_blackoil_float
+                           ABS_TOL ${abs_tol}
+                           REL_TOL ${rel_tol})
+endif()
