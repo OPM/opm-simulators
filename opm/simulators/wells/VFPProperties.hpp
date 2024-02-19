@@ -68,7 +68,8 @@ public:
     /**
      * Returns the VFP properties for production wells
      */
-    const VFPProdProperties* getProd() const {
+    const VFPProdProperties<double>* getProd() const
+    {
         return &m_prod;
     }
 
@@ -94,7 +95,7 @@ public:
 
 private:
     VFPInjProperties<double> m_inj;
-    VFPProdProperties m_prod;
+    VFPProdProperties<double> m_prod;
     const WellState<double>& well_state_;
 };
 

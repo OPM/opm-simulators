@@ -208,7 +208,7 @@ struct TrivialFixture {
                                           alq_axis,
                                           data));
 
-        properties = std::make_shared<Opm::VFPProdProperties>();
+        properties = std::make_shared<Opm::VFPProdProperties<double>>();
         properties->addTable( *table );
     }
 
@@ -219,7 +219,7 @@ struct TrivialFixture {
 
 
 
-    std::shared_ptr<Opm::VFPProdProperties> properties;
+    std::shared_ptr<Opm::VFPProdProperties<double>> properties;
     std::shared_ptr<Opm::VFPProdTable> table;
     std::vector<int> table_ids;
 
@@ -612,7 +612,7 @@ VFPPROD \n\
     auto deck = parser.parseString(table_str);
     bool gaslift_active = false;
     Opm::VFPProdTable table(deck["VFPPROD"].front(), gaslift_active, units);
-    Opm::VFPProdProperties properties;
+    Opm::VFPProdProperties<double> properties;
     properties.addTable( table );
 
     const int n = 5; //Number of points to check per axis
@@ -673,7 +673,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
 
     bool gaslift_active = false;
     Opm::VFPProdTable table(deck["VFPPROD"].front(), gaslift_active, units);
-    Opm::VFPProdProperties properties;
+    Opm::VFPProdProperties<double> properties;
     properties.addTable(table);
 
     //Do some rudimentary testing
