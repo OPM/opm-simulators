@@ -37,7 +37,7 @@ GasLiftSingleWell(const WellInterface<TypeTag> &well,
                   DeferredLogger &deferred_logger,
                   WellState<Scalar>& well_state,
                   const GroupState<Scalar>& group_state,
-                  GasLiftGroupInfo &group_info,
+                  GasLiftGroupInfo<Scalar>& group_info,
                   GLiftSyncGroups &sync_groups,
                   const Parallel::Communication& comm,
                   bool glift_debug

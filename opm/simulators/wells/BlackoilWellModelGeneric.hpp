@@ -53,7 +53,7 @@
 namespace Opm {
     class DeferredLogger;
     class EclipseState;
-    class GasLiftGroupInfo;
+    template<class Scalar> class GasLiftGroupInfo;
     class GasLiftSingleWellGeneric;
     class GasLiftWellState;
     class Group;
@@ -387,7 +387,7 @@ protected:
     void gasLiftOptimizationStage2(DeferredLogger& deferred_logger,
                                    GLiftProdWells& prod_wells,
                                    GLiftOptWells& glift_wells,
-                                   GasLiftGroupInfo& group_info,
+                                   GasLiftGroupInfo<Scalar>& group_info,
                                    GLiftWellStateMap& map,
                                    const int episodeIndex);
 

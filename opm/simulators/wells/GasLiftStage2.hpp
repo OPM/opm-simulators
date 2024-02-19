@@ -66,7 +66,7 @@ public:
         const GroupState<double>& group_state,
         GLiftProdWells& prod_wells,
         GLiftOptWells& glift_wells,
-        GasLiftGroupInfo& group_info,
+        GasLiftGroupInfo<double>& group_info,
         GLiftWellStateMap& state_map,
         bool glift_debug
     );
@@ -119,7 +119,7 @@ protected:
 
     GLiftProdWells& prod_wells_;
     GLiftOptWells& stage1_wells_;
-    GasLiftGroupInfo& group_info_;
+    GasLiftGroupInfo<double>& group_info_;
     GLiftWellStateMap& well_state_map_;
 
     int report_step_idx_;

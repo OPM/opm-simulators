@@ -49,7 +49,7 @@ GasLiftStage2::GasLiftStage2(
     const GroupState<double>& group_state,
     GLiftProdWells &prod_wells,
     GLiftOptWells &glift_wells,
-    GasLiftGroupInfo& group_info,
+    GasLiftGroupInfo<double>& group_info,
     GLiftWellStateMap &state_map,
     bool glift_debug
 ) :

@@ -42,7 +42,7 @@ GasLiftSingleWellGeneric::GasLiftSingleWellGeneric(DeferredLogger& deferred_logg
                                                    const GroupState<double>& group_state,
                                                    const Well& ecl_well,
                                                    const SummaryState& summary_state,
-                                                   GasLiftGroupInfo& group_info,
+                                                   GasLiftGroupInfo<double>& group_info,
                                                    const PhaseUsage& phase_usage,
                                                    const Schedule& schedule,
                                                    const int report_step_idx,
@@ -254,7 +254,7 @@ GasLiftSingleWellGeneric::checkGroupTargetsViolated(const BasicRates& rates, con
                         const std::string msg
                             = fmt::format("Group {} : {} rate {} exceeds target {}. Stopping iteration",
                                           group_name,
-                                          GasLiftGroupInfo::rateToString(rate_type),
+                                          GasLiftGroupInfo<double>::rateToString(rate_type),
                                           new_group_rate,
                                           *target_opt);
                         displayDebugMessage_(msg);
@@ -434,7 +434,7 @@ GasLiftSingleWellGeneric::debugShowLimitingTargets_(const LimitedRates& rates) c
         if (rates.oil_is_limited) {
             const std::string msg = fmt::format("oil rate {} is limited by {} target",
                                                 rates.oil,
-                                                GasLiftGroupInfo::rateToString(*(rates.oil_limiting_target)));
+                                                GasLiftGroupInfo<double>::rateToString(*(rates.oil_limiting_target)));
             displayDebugMessage_(msg);
         }
         if (rates.gas_is_limited) {
@@ -444,7 +444,7 @@ GasLiftSingleWellGeneric::debugShowLimitingTargets_(const LimitedRates& rates) c
         if (rates.water_is_limited) {
             const std::string msg = fmt::format("water rate {} is limited by {} target",
                                                 rates.water,
-                                                GasLiftGroupInfo::rateToString(*(rates.water_limiting_target)));
+                                                GasLiftGroupInfo<double>::rateToString(*(rates.water_limiting_target)));
             displayDebugMessage_(msg);
         }
     } else {
@@ -628,7 +628,7 @@ GasLiftSingleWellGeneric::getRateWithLimit_(Rate rate_type, const BasicRates& ra
         if (new_rate > target) {
             const std::string msg = fmt::format("limiting {} rate to target: "
                                                 "computed rate: {}, target: {}",
-                                                GasLiftGroupInfo::rateToString(rate_type),
+                                                GasLiftGroupInfo<double>::rateToString(rate_type),
                                                 new_rate,
                                                 target);
             displayDebugMessage_(msg);
@@ -663,7 +663,7 @@ GasLiftSingleWellGeneric::getRateWithLimit_(Rate rate_type, const BasicRates& ra
             target_type = Rate::liquid;
             const std::string msg = fmt::format("limiting {} rate to {} due to LRAT target: "
                                                 "computed LRAT: {}, target LRAT: {}",
-                                                GasLiftGroupInfo::rateToString(rate_type),
+                                                GasLiftGroupInfo<double>::rateToString(rate_type),
                                                 new_rate,
                                                 liq_rate,
                                                 liq_target);
@@ -790,7 +790,7 @@ GasLiftSingleWellGeneric::getRateWithGroupLimit_(Rate rate_type, const double ne
             if (this->debug) {
                 const std::string msg = fmt::format("limiting {} rate from {} to {} to meet group target {} "
                                                     "for group {}. Computed group rate was: {}",
-                                                    GasLiftGroupInfo::rateToString(rate_type),
+                                                    GasLiftGroupInfo<double>::rateToString(rate_type),
                                                     new_rate,
                                                     limited_rate,
                                                     gr_target,
@@ -1455,7 +1455,7 @@ GasLiftSingleWellGeneric::debugInfoGroupRatesExceedTarget(Rate rate_type,
 {
     const std::string msg = fmt::format("{} rate for group {} exceeds target: "
                                         "rate = {}, target = {}, the old rate is kept.",
-                                        GasLiftGroupInfo::rateToString(rate_type),
+                                        GasLiftGroupInfo<double>::rateToString(rate_type),
                                         gr_name,
                                         rate,
                                         target);
@@ -1706,13 +1706,13 @@ GasLiftSingleWellGeneric::OptimizeState::checkRatesViolated(const LimitedRates& 
             std::string target_type;
             std::string rate_type;
             if (rates.oil_is_limited) {
-                target_type = GasLiftGroupInfo::rateToString(*(rates.oil_limiting_target));
+                target_type = GasLiftGroupInfo<double>::rateToString(*(rates.oil_limiting_target));
                 rate_type = "oil";
             } else if (rates.gas_is_limited) {
                 target_type = "gas";
                 rate_type = "gas";
             } else if (rates.water_is_limited) {
-                target_type = GasLiftGroupInfo::rateToString(*(rates.water_limiting_target));
+                target_type = GasLiftGroupInfo<double>::rateToString(*(rates.water_limiting_target));
                 rate_type = "water";
             }
             const std::string msg = fmt::format("iteration {} : {} rate was limited due to {} {} target. "

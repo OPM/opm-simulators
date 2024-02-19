@@ -56,7 +56,7 @@ protected:
 
 public:
     using GLiftSyncGroups = std::set<int>;
-    using Rate = GasLiftGroupInfo::Rate;
+    using Rate = GasLiftGroupInfo<double>::Rate;
     struct GradInfo
     {
         GradInfo() { }
@@ -108,7 +108,7 @@ protected:
         const GroupState<double>& group_state,
         const Well& ecl_well,
         const SummaryState& summary_state,
-        GasLiftGroupInfo& group_info,
+        GasLiftGroupInfo<double>& group_info,
         const PhaseUsage& phase_usage,
         const Schedule& schedule,
         const int report_step_idx,
@@ -332,7 +332,7 @@ protected:
 
     const Well& ecl_well_;
     const SummaryState& summary_state_;
-    GasLiftGroupInfo& group_info_;
+    GasLiftGroupInfo<double>& group_info_;
     const PhaseUsage& phase_usage_;
     GLiftSyncGroups& sync_groups_;
     const WellProductionControls controls_;
