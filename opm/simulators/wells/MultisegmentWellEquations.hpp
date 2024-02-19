@@ -41,7 +41,7 @@ template<class Scalar> class MultisegmentWellGeneric;
 #if COMPILE_BDA_BRIDGE
 class WellContributions;
 #endif
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 template<class Scalar, int numWellEq, int numEq>
@@ -118,7 +118,7 @@ public:
                                   const BVector& weights,
                                   const int pressureVarIndex,
                                   const bool /*use_well_weights*/,
-                                  const WellInterfaceGeneric& well,
+                                  const WellInterfaceGeneric<Scalar>& well,
                                   const int seg_pressure_var_ind,
                                   const WellState<Scalar>& well_state) const;
 

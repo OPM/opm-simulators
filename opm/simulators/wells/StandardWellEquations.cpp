@@ -291,7 +291,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const BVector& weights,
                          const int pressureVarIndex,
                          const bool use_well_weights,
-                         const WellInterfaceGeneric& well,
+                         const WellInterfaceGeneric<Scalar>& well,
                          const int bhp_var_index,
                          const WellState<Scalar>& well_state) const
 {
@@ -413,7 +413,7 @@ template void StandardWellEquations<double,N>:: \
                              const typename StandardWellEquations<double,N>::BVector&, \
                              const int, \
                              const bool, \
-                             const WellInterfaceGeneric&, \
+                             const WellInterfaceGeneric<double>&, \
                              const int, \
                              const WellState<double>&) const;
 

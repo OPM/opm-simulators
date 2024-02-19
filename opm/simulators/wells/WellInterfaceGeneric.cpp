@@ -49,17 +49,18 @@
 #include <cstddef>
 #include <stdexcept>
 
-namespace Opm
-{
+namespace Opm {
 
-WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
-                                           const ParallelWellInfo& pw_info,
-                                           const int time_step,
-                                           const int pvtRegionIdx,
-                                           const int num_components,
-                                           const int num_phases,
-                                           const int index_of_well,
-                                           const std::vector<PerforationData>& perf_data)
+template<class Scalar>
+WellInterfaceGeneric<Scalar>::
+WellInterfaceGeneric(const Well& well,
+                     const ParallelWellInfo& pw_info,
+                     const int time_step,
+                     const int pvtRegionIdx,
+                     const int num_components,
+                     const int num_phases,
+                     const int index_of_well,
+                     const std::vector<PerforationData>& perf_data)
       : well_ecl_(well)
       , parallel_well_info_(pw_info)
       , current_step_(time_step)
@@ -121,7 +122,9 @@ WellInterfaceGeneric::WellInterfaceGeneric(const Well& well,
 //  value in VFPPROD record 5 (GFR values) and supplying a dummy input value
 //  for the gas rate to the methods in VFPProdProperties.cpp, we can extend
 //  the VFP calculations to the two-phase oil-water case.
-void WellInterfaceGeneric::adaptRatesForVFP(std::vector<double>& rates) const
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+adaptRatesForVFP(std::vector<Scalar>& rates) const
 {
     const auto& pu = this->phaseUsage();
     if (pu.num_phases == 2) {
@@ -139,73 +142,91 @@ void WellInterfaceGeneric::adaptRatesForVFP(std::vector<double>& rates) const
     }
 }
 
-const std::vector<PerforationData>& WellInterfaceGeneric::perforationData() const
+template<class Scalar>
+const std::vector<PerforationData>&
+WellInterfaceGeneric<Scalar>::perforationData() const
 {
     return *perf_data_;
 }
 
-const std::string& WellInterfaceGeneric::name() const
+template<class Scalar>
+const std::string&
+WellInterfaceGeneric<Scalar>::name() const
 {
     return well_ecl_.name();
 }
 
-bool WellInterfaceGeneric::isInjector() const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::isInjector() const
 {
     return well_ecl_.isInjector();
 }
 
-bool WellInterfaceGeneric::isProducer() const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::isProducer() const
 {
     return well_ecl_.isProducer();
 }
 
-int WellInterfaceGeneric::indexOfWell() const
+template<class Scalar>
+int WellInterfaceGeneric<Scalar>::indexOfWell() const
 {
     return index_of_well_;
 }
 
-bool WellInterfaceGeneric::getAllowCrossFlow() const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::getAllowCrossFlow() const
 {
     return well_ecl_.getAllowCrossFlow();
 }
 
-const Well& WellInterfaceGeneric::wellEcl() const
+template<class Scalar>
+const Well& WellInterfaceGeneric<Scalar>::wellEcl() const
 {
     return well_ecl_;
 }
 
-Well& WellInterfaceGeneric::wellEcl()
+template<class Scalar>
+Well& WellInterfaceGeneric<Scalar>::wellEcl()
 {
     return well_ecl_;
 }
 
-const PhaseUsage& WellInterfaceGeneric::phaseUsage() const
+template<class Scalar>
+const PhaseUsage& WellInterfaceGeneric<Scalar>::phaseUsage() const
 {
     assert(phase_usage_ != nullptr);
 
     return *phase_usage_;
 }
 
-double WellInterfaceGeneric::wsolvent() const
+template<class Scalar>
+Scalar WellInterfaceGeneric<Scalar>::wsolvent() const
 {
     return wsolvent_;
 }
 
-double WellInterfaceGeneric::rsRvInj() const
+template<class Scalar>
+Scalar WellInterfaceGeneric<Scalar>::rsRvInj() const
 {
     return well_ecl_.getInjectionProperties().rsRvInj;
 }
 
-void WellInterfaceGeneric::initInjMult(const std::vector<double>& max_inj_mult)
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+initInjMult(const std::vector<Scalar>& max_inj_mult)
 {
     // prev_inj_multiplier_ will stay unchanged during the time step
     // while inj_multiplier_ might be updated during the time step
     this->prev_inj_multiplier_ = max_inj_mult;
     // initializing the inj_multipler_ to be 1.0
-    this->inj_multiplier_ = std::vector<double>(max_inj_mult.size(), 1.);
+    this->inj_multiplier_ = std::vector<Scalar>(max_inj_mult.size(), 1.);
 }
 
-void WellInterfaceGeneric::updateInjMult(std::vector<double>& inj_multipliers, DeferredLogger& deferred_logger) const
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+updateInjMult(std::vector<Scalar>& inj_multipliers,
+              DeferredLogger& deferred_logger) const
 {
     if (inj_multipliers.size() != this->inj_multiplier_.size()) {
         OPM_DEFLOG_THROW(std::runtime_error,
@@ -217,15 +238,15 @@ void WellInterfaceGeneric::updateInjMult(std::vector<double>& inj_multipliers, D
     inj_multipliers = this->inj_multiplier_;
 }
 
-
-
-double WellInterfaceGeneric::getInjMult(const int perf,
-                                        const double bhp,
-                                        const double perf_pres) const
+template<class Scalar>
+Scalar WellInterfaceGeneric<Scalar>::
+getInjMult(const int perf,
+           const Scalar bhp,
+           const Scalar perf_pres) const
 {
     assert(!this->isProducer());
 
-    double multiplier = 1.;
+    Scalar multiplier = 1.;
 
     const auto perf_ecl_index = this->perforationData()[perf].ecl_index;
     const bool is_wrev = this->well_ecl_.getInjMultMode() == Well::InjMultMode::WREV;
@@ -236,7 +257,7 @@ double WellInterfaceGeneric::getInjMult(const int perf,
     if (active_injmult) {
         const auto& injmult= is_wrev ? this->well_ecl_.getWellInjMult()
                                                   : this->well_ecl_.getConnections()[perf_ecl_index].injmult();
-        const double pres = is_wrev ? bhp : perf_pres;
+        const Scalar pres = is_wrev ? bhp : perf_pres;
 
         const auto frac_press = injmult.fracture_pressure;
         const auto gradient = injmult.multiplier_gradient;
@@ -255,10 +276,9 @@ double WellInterfaceGeneric::getInjMult(const int perf,
     return multiplier;
 }
 
-
-
-
-bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryState) const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::
+wellHasTHPConstraints(const SummaryState& summaryState) const
 {
     // only wells under prediction mode can have THP constraint
     if (!this->wellEcl().predictionMode()) {
@@ -272,11 +292,13 @@ bool WellInterfaceGeneric::wellHasTHPConstraints(const SummaryState& summaryStat
     return WellBhpThpCalculator(*this).wellHasTHPConstraints(summaryState);
 }
 
-void WellInterfaceGeneric::updateWellTestState(const SingleWellState<double>& ws,
-                                               const double& simulationTime,
-                                               const bool& writeMessageToOPMLog,
-                                               WellTestState& wellTestState,
-                                               DeferredLogger& deferred_logger) const
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+updateWellTestState(const SingleWellState<Scalar>& ws,
+                    const double& simulationTime,
+                    const bool& writeMessageToOPMLog,
+                    WellTestState& wellTestState,
+                    DeferredLogger& deferred_logger) const
 {
     // updating well test state based on Economic limits for operable wells
     if (this->isOperableAndSolvable()) {
@@ -289,7 +311,9 @@ void WellInterfaceGeneric::updateWellTestState(const SingleWellState<double>& ws
     // TODO: well can be shut/closed due to other reasons
 }
 
-double WellInterfaceGeneric::getTHPConstraint(const SummaryState& summaryState) const
+template<class Scalar>
+Scalar WellInterfaceGeneric<Scalar>::
+getTHPConstraint(const SummaryState& summaryState) const
 {
     if (dynamic_thp_limit_) {
         return *dynamic_thp_limit_;
@@ -298,12 +322,14 @@ double WellInterfaceGeneric::getTHPConstraint(const SummaryState& summaryState) 
     return WellBhpThpCalculator(*this).getTHPConstraint(summaryState);
 }
 
-bool WellInterfaceGeneric::underPredictionMode() const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::underPredictionMode() const
 {
     return well_ecl_.predictionMode();
 }
 
-void WellInterfaceGeneric::initCompletions()
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::initCompletions()
 {
     assert(completions_.empty() );
 
@@ -330,7 +356,9 @@ void WellInterfaceGeneric::initCompletions()
     assert(my_next_perf == perf_data_->end());
 }
 
-void WellInterfaceGeneric::closeCompletions(const WellTestState& wellTestState)
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+closeCompletions(const WellTestState& wellTestState)
 {
     const auto& connections = well_ecl_.getConnections();
     int perfIdx = 0;
@@ -344,46 +372,55 @@ void WellInterfaceGeneric::closeCompletions(const WellTestState& wellTestState)
     }
 }
 
-void WellInterfaceGeneric::setVFPProperties(const VFPProperties* vfp_properties_arg)
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+setVFPProperties(const VFPProperties* vfp_properties_arg)
 {
     vfp_properties_ = vfp_properties_arg;
 }
 
-void WellInterfaceGeneric::setPrevSurfaceRates(WellState<double>& well_state,
-                                               const WellState<double>& prev_well_state) const
-    {
-        auto& ws = well_state.well(this->index_of_well_);
-        auto& ws_prev = prev_well_state.well(this->index_of_well_);
-        // The logic here is a bit fragile:
-        // We need non-zero prev_surface_rates for the purpose of providing explicit fractions
-        // (if needed) for vfp interpolation.
-        // We assume that current surface rates either are initialized from previous step
-        // or (if newly opened) from updateWellStateRates. This is fine unless well was
-        // stopped in previous step in which case it's rates will be zero. In this case,
-        // we select the previous rates of the previous well state (and hope for the best).
-        const bool zero_rates = std::all_of(ws.surface_rates.begin(), ws.surface_rates.end(),
-                [](double rate) {
-                    return rate == 0.; // TODO: should we use a threshhold for comparison?
-                } );
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+setPrevSurfaceRates(WellState<Scalar>& well_state,
+                    const WellState<Scalar>& prev_well_state) const
+{
+    auto& ws = well_state.well(this->index_of_well_);
+    auto& ws_prev = prev_well_state.well(this->index_of_well_);
+    // The logic here is a bit fragile:
+    // We need non-zero prev_surface_rates for the purpose of providing explicit fractions
+    // (if needed) for vfp interpolation.
+    // We assume that current surface rates either are initialized from previous step
+    // or (if newly opened) from updateWellStateRates. This is fine unless well was
+    // stopped in previous step in which case it's rates will be zero. In this case,
+    // we select the previous rates of the previous well state (and hope for the best).
+    const bool zero_rates = std::all_of(ws.surface_rates.begin(), ws.surface_rates.end(),
+            [](Scalar rate) {
+                return rate == 0.; // TODO: should we use a threshhold for comparison?
+            } );
 
-        if (zero_rates) {
-            ws.prev_surface_rates = ws_prev.prev_surface_rates;
-        } else {
-            ws.prev_surface_rates = ws.surface_rates;
-        }
+    if (zero_rates) {
+        ws.prev_surface_rates = ws_prev.prev_surface_rates;
+    } else {
+        ws.prev_surface_rates = ws.surface_rates;
     }
+}
 
-void WellInterfaceGeneric::setGuideRate(const GuideRate* guide_rate_arg)
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+setGuideRate(const GuideRate* guide_rate_arg)
 {
     guide_rate_ = guide_rate_arg;
 }
 
-void WellInterfaceGeneric::setWellEfficiencyFactor(const double efficiency_factor)
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+setWellEfficiencyFactor(const Scalar efficiency_factor)
 {
     well_efficiency_factor_ = efficiency_factor;
 }
 
-void WellInterfaceGeneric::setRepRadiusPerfLength()
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::setRepRadiusPerfLength()
 {
     const int nperf = number_of_perforations_;
 
@@ -411,10 +448,10 @@ void WellInterfaceGeneric::setRepRadiusPerfLength()
         assert(my_next_perf->ecl_index == c);
         const auto& connection = connections[c];
         if (connection.state() == Connection::State::OPEN) {
-            double radius = connection.rw();
-            double re = connection.re(); // area equivalent radius of the grid block
-            double perf_length = connection.connectionLength(); // the length of the well perforation
-            const double repR = std::sqrt(re * radius);
+            Scalar radius = connection.rw();
+            Scalar re = connection.re(); // area equivalent radius of the grid block
+            Scalar perf_length = connection.connectionLength(); // the length of the well perforation
+            const Scalar repR = std::sqrt(re * radius);
             perf_rep_radius_.push_back(repR);
             perf_length_.push_back(perf_length);
             bore_diameters_.push_back(2. * radius);
@@ -426,30 +463,39 @@ void WellInterfaceGeneric::setRepRadiusPerfLength()
     assert(num_active_connections == nperf);
 }
 
-void WellInterfaceGeneric::setWsolvent(const double wsolvent)
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+setWsolvent(const Scalar wsolvent)
 {
     wsolvent_ = wsolvent;
 }
 
-void WellInterfaceGeneric::setDynamicThpLimit(const double thp_limit)
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+setDynamicThpLimit(const Scalar thp_limit)
 {
     dynamic_thp_limit_ = thp_limit;
 }
 
-std::optional<double> WellInterfaceGeneric::getDynamicThpLimit() const
+template<class Scalar>
+std::optional<Scalar>
+WellInterfaceGeneric<Scalar>::getDynamicThpLimit() const
 {
     return dynamic_thp_limit_;
 }
 
-void WellInterfaceGeneric::updatePerforatedCell(std::vector<bool>& is_cell_perforated)
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+updatePerforatedCell(std::vector<bool>& is_cell_perforated)
 {
-
-    for (int perf_idx = 0; perf_idx<number_of_perforations_; ++perf_idx) {
+    for (int perf_idx = 0; perf_idx < number_of_perforations_; ++perf_idx) {
         is_cell_perforated[well_cells_[perf_idx]] = true;
     }
 }
 
-bool WellInterfaceGeneric::isVFPActive(DeferredLogger& deferred_logger) const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::
+isVFPActive(DeferredLogger& deferred_logger) const
 {
     // since the well_controls only handles the VFP number when THP constraint/target is there.
     // we need to get the table number through the parser, in case THP constraint/target is not there.
@@ -489,23 +535,28 @@ bool WellInterfaceGeneric::isVFPActive(DeferredLogger& deferred_logger) const
     }
 }
 
-bool WellInterfaceGeneric::isOperableAndSolvable() const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::isOperableAndSolvable() const
 {
     return operability_status_.isOperableAndSolvable();
 }
 
-bool WellInterfaceGeneric::useVfpExplicit() const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::useVfpExplicit() const
 {
     const auto& wvfpexp = well_ecl_.getWVFPEXP();
     return (wvfpexp.explicit_lookup() || operability_status_.use_vfpexplicit);
 }
 
-bool WellInterfaceGeneric::thpLimitViolatedButNotSwitched() const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::thpLimitViolatedButNotSwitched() const
 {
     return operability_status_.thp_limit_violated_but_not_switched;
 }
 
-double WellInterfaceGeneric::getALQ(const WellState<double>& well_state) const
+template<class Scalar>
+Scalar WellInterfaceGeneric<Scalar>::
+getALQ(const WellState<Scalar>& well_state) const
 {
     // no alq for injectors.
     if (isInjector())
@@ -514,8 +565,10 @@ double WellInterfaceGeneric::getALQ(const WellState<double>& well_state) const
     return well_state.getALQ(name());
 }
 
-void WellInterfaceGeneric::reportWellSwitching(const SingleWellState<double> &ws,
-                                               DeferredLogger& deferred_logger) const
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+reportWellSwitching(const SingleWellState<Scalar> &ws,
+                    DeferredLogger& deferred_logger) const
 {
     if (well_control_log_.empty())
         return;
@@ -534,7 +587,9 @@ void WellInterfaceGeneric::reportWellSwitching(const SingleWellState<double> &ws
     }
 }
 
-bool WellInterfaceGeneric::isPressureControlled(const WellState<double>& well_state) const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::
+isPressureControlled(const WellState<Scalar>& well_state) const
 {
     const auto& ws = well_state.well(this->index_of_well_);
     if (this->isInjector()) {
@@ -548,10 +603,10 @@ bool WellInterfaceGeneric::isPressureControlled(const WellState<double>& well_st
     }
 }
 
-
-
-bool WellInterfaceGeneric::wellUnderZeroRateTarget(const SummaryState& summary_state,
-                                                   const WellState<double>& well_state) const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::
+wellUnderZeroRateTarget(const SummaryState& summary_state,
+                        const WellState<Scalar>& well_state) const
 {
     if (this->isProducer()) { // producers
         const auto prod_controls = this->well_ecl_.productionControls(summary_state);
@@ -564,25 +619,29 @@ bool WellInterfaceGeneric::wellUnderZeroRateTarget(const SummaryState& summary_s
     }
 }
 
-bool WellInterfaceGeneric::stopppedOrZeroRateTarget(const SummaryState& summary_state,
-                                                    const WellState<double>& well_state) const
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::
+stopppedOrZeroRateTarget(const SummaryState& summary_state,
+                         const WellState<Scalar>& well_state) const
 {
     return (this->wellIsStopped() || this->wellUnderZeroRateTarget(summary_state, well_state));
 
 }
 
-void WellInterfaceGeneric::resetWellOperability()
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::resetWellOperability()
 {
     this->operability_status_.resetOperability();
 }
 
-double WellInterfaceGeneric::wmicrobes_() const
+template<class Scalar>
+Scalar WellInterfaceGeneric<Scalar>::wmicrobes_() const
 {
     auto injectorType = this->well_ecl_.injectorType();
 
     if (injectorType == InjectorType::WATER) {
         WellMICPProperties microbes = this->well_ecl_.getMICPProperties();
-        const double microbial_injection_concentration = microbes.m_microbialConcentration;
+        const Scalar microbial_injection_concentration = microbes.m_microbialConcentration;
         return microbial_injection_concentration;
     } else {
         // Not a water injection well => no microbes.
@@ -590,7 +649,8 @@ double WellInterfaceGeneric::wmicrobes_() const
     }
 }
 
-double WellInterfaceGeneric::wfoam_() const
+template<class Scalar>
+Scalar WellInterfaceGeneric<Scalar>::wfoam_() const
 {
     auto injectorType = this->well_ecl_.injectorType();
 
@@ -603,7 +663,8 @@ double WellInterfaceGeneric::wfoam_() const
     }
 }
 
-double WellInterfaceGeneric::wsalt_() const
+template<class Scalar>
+Scalar WellInterfaceGeneric<Scalar>::wsalt_() const
 {
     auto injectorType = this->well_ecl_.injectorType();
 
@@ -616,13 +677,14 @@ double WellInterfaceGeneric::wsalt_() const
     }
 }
 
-double WellInterfaceGeneric::woxygen_() const
+template<class Scalar>
+Scalar WellInterfaceGeneric<Scalar>::woxygen_() const
 {
     auto injectorType = this->well_ecl_.injectorType();
 
     if (injectorType == InjectorType::WATER) {
         WellMICPProperties oxygen = this->well_ecl_.getMICPProperties();
-        const double oxygen_injection_concentration = oxygen.m_oxygenConcentration;
+        const Scalar oxygen_injection_concentration = oxygen.m_oxygenConcentration;
         return oxygen_injection_concentration;
     } else {
         // Not a water injection well => no oxygen.
@@ -630,13 +692,14 @@ double WellInterfaceGeneric::woxygen_() const
     }
 }
 
-double WellInterfaceGeneric::wpolymer_() const
+template<class Scalar>
+Scalar WellInterfaceGeneric<Scalar>::wpolymer_() const
 {
     auto injectorType = this->well_ecl_.injectorType();
 
     if (injectorType == InjectorType::WATER) {
         WellPolymerProperties polymer = this->well_ecl_.getPolymerProperties();
-        const double polymer_injection_concentration = polymer.m_polymerConcentration;
+        const Scalar polymer_injection_concentration = polymer.m_polymerConcentration;
         return polymer_injection_concentration;
     } else {
         // Not a water injection well => no polymer.
@@ -644,13 +707,14 @@ double WellInterfaceGeneric::wpolymer_() const
     }
 }
 
-double WellInterfaceGeneric::wurea_() const
+template<class Scalar>
+Scalar WellInterfaceGeneric<Scalar>::wurea_() const
 {
     auto injectorType = this->well_ecl_.injectorType();
 
     if (injectorType == InjectorType::WATER) {
         WellMICPProperties urea = this->well_ecl_.getMICPProperties();
-        const double urea_injection_concentration = urea.m_ureaConcentration / 10.; //Dividing by scaling factor 10
+        const Scalar urea_injection_concentration = urea.m_ureaConcentration / 10.; //Dividing by scaling factor 10
         return urea_injection_concentration;
     } else {
         // Not a water injection well => no urea.
@@ -658,24 +722,28 @@ double WellInterfaceGeneric::wurea_() const
     }
 }
 
-int WellInterfaceGeneric::polymerTable_() const
+template<class Scalar>
+int WellInterfaceGeneric<Scalar>::polymerTable_() const
 {
     return this->well_ecl_.getPolymerProperties().m_skprpolytable;
 }
 
-int WellInterfaceGeneric::polymerWaterTable_() const
+template<class Scalar>
+int WellInterfaceGeneric<Scalar>::polymerWaterTable_() const
 {
     return this->well_ecl_.getPolymerProperties().m_skprwattable;
 }
 
-int WellInterfaceGeneric::polymerInjTable_() const
+template<class Scalar>
+int WellInterfaceGeneric<Scalar>::polymerInjTable_() const
 {
     return this->well_ecl_.getPolymerProperties().m_plymwinjtable;
 }
 
-std::pair<bool,bool> WellInterfaceGeneric::
-computeWellPotentials(std::vector<double>& well_potentials,
-                      const WellState<double>& well_state)
+template<class Scalar>
+std::pair<bool,bool> WellInterfaceGeneric<Scalar>::
+computeWellPotentials(std::vector<Scalar>& well_potentials,
+                      const WellState<Scalar>& well_state)
 {
     const int np = this->number_of_phases_;
     well_potentials.resize(np, 0.0);
@@ -711,8 +779,8 @@ computeWellPotentials(std::vector<double>& well_potentials,
 
     if (!this->changed_to_open_this_step_ &&
         (thp_controlled_well || bhp_controlled_well)) {
-        double total_rate = 0.0;
-        const double sign = this->isInjector() ? 1.0 : -1.0;
+        Scalar total_rate = 0.0;
+        const Scalar sign = this->isInjector() ? 1.0 : -1.0;
         for (int phase = 0; phase < np; ++phase){
             total_rate += sign * ws.surface_rates[phase];
         }
@@ -730,13 +798,14 @@ computeWellPotentials(std::vector<double>& well_potentials,
     return {compute_potential, bhp_controlled_well};
 }
 
-void WellInterfaceGeneric::
-checkNegativeWellPotentials(std::vector<double>& well_potentials,
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
+checkNegativeWellPotentials(std::vector<Scalar>& well_potentials,
                             const bool checkOperability,
                             DeferredLogger& deferred_logger)
 {
-    const double sign = this->isInjector() ? 1.0 : -1.0;
-    double total_potential = 0.0;
+    const Scalar sign = this->isInjector() ? 1.0 : -1.0;
+    Scalar total_potential = 0.0;
     for (int phase = 0; phase < this->number_of_phases_; ++phase) {
         well_potentials[phase] *= sign;
         total_potential += well_potentials[phase];
@@ -750,9 +819,10 @@ checkNegativeWellPotentials(std::vector<double>& well_potentials,
     }
 }
 
-void WellInterfaceGeneric::
+template<class Scalar>
+void WellInterfaceGeneric<Scalar>::
 prepareForPotentialCalculations(const SummaryState& summary_state,
-                                WellState<double>& well_state,
+                                WellState<Scalar>& well_state,
                                 Well::InjectionControls& inj_controls,
                                 Well::ProductionControls& prod_controls) const
 {
@@ -792,5 +862,7 @@ prepareForPotentialCalculations(const SummaryState& summary_state,
         } 
     }    
 }
+
+template class WellInterfaceGeneric<double>;
 
 } // namespace Opm

@@ -36,7 +36,7 @@ namespace Opm {
 
 template<class Scalar>
 void WellFilterCake<Scalar>::
-updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
+updateFiltrationParticleVolume(const WellInterfaceGeneric<Scalar>& well,
                                const double dt,
                                const Scalar conc,
                                const std::size_t water_index,
@@ -78,7 +78,7 @@ updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
 
 template<class Scalar>
 void WellFilterCake<Scalar>::
-updateInjFCMult(const WellInterfaceGeneric& well,
+updateInjFCMult(const WellInterfaceGeneric<Scalar>& well,
                 WellState<Scalar>& well_state,
                 DeferredLogger& deferred_logger)
 {

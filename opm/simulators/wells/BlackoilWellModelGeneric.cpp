@@ -1334,14 +1334,14 @@ calculateEfficiencyFactors(const int reportStepIdx)
 }
 
 template<class Scalar>
-WellInterfaceGeneric*
+WellInterfaceGeneric<Scalar>*
 BlackoilWellModelGeneric<Scalar>::
 getGenWell(const std::string& well_name)
 {
     // finding the iterator of the well in wells_ecl
     auto well = std::find_if(well_container_generic_.begin(),
                              well_container_generic_.end(),
-                                 [&well_name](const WellInterfaceGeneric* elem)->bool {
+                                [&well_name](const WellInterfaceGeneric<Scalar>* elem)->bool {
                                      return elem->name() == well_name;
                                  });
 

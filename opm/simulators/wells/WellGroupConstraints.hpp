@@ -40,16 +40,19 @@ enum class InjectorType;
 using RegionId = int;
 class Schedule;
 class SummaryState;
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 //! \brief Class for computing well group constraints.
 class WellGroupConstraints {
 public:
     //! \brief Constructor sets reference to well.
-    WellGroupConstraints(const WellInterfaceGeneric& well) : well_(well) {}
+    WellGroupConstraints(const WellInterfaceGeneric<double>& well) : well_(well) {}
 
-    using RateConvFunc = std::function<void(const RegionId, const int, const std::optional<std::string>&, std::vector<double>&)>;
+    using RateConvFunc = std::function<void(const RegionId,
+                                            const int,
+                                            const std::optional<std::string>&,
+                                            std::vector<double>&)>;
 
     bool checkGroupConstraints(WellState<double>& well_state,
                                const GroupState<double>& group_state,
@@ -79,7 +82,7 @@ private:
                               const RateConvFunc& rateConverter,
                               DeferredLogger& deferred_logger) const;
 
-    const WellInterfaceGeneric& well_; //!< Reference to well interface
+    const WellInterfaceGeneric<double>& well_; //!< Reference to well interface
 };
 
 }

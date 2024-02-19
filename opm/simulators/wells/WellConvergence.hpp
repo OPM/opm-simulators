@@ -30,13 +30,13 @@ namespace Opm
 
 class ConvergenceReport;
 class DeferredLogger;
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 class WellConvergence
 {
 public:
-    WellConvergence(const WellInterfaceGeneric& well)
+    WellConvergence(const WellInterfaceGeneric<double>& well)
         : well_(well)
     {}
 
@@ -62,7 +62,7 @@ public:
                                 ConvergenceReport& report) const;
 
 private:
-    const WellInterfaceGeneric& well_;
+    const WellInterfaceGeneric<double>& well_;
 };
 
 }

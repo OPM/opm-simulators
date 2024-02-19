@@ -35,14 +35,14 @@ namespace Opm
 class DeferredLogger;
 class SummaryState;
 class Well;
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 //! \brief Class for computing BHP limits.
 class WellBhpThpCalculator {
 public:
     //! \brief Constructor sets reference to well.
-    WellBhpThpCalculator(const WellInterfaceGeneric& well) : well_(well) {}
+    WellBhpThpCalculator(const WellInterfaceGeneric<double>& well) : well_(well) {}
 
     //! \brief Checks if well has THP constraints.
     bool wellHasTHPConstraints(const SummaryState& summaryState) const;
@@ -168,7 +168,7 @@ private:
                                      const double dp,
                                      DeferredLogger& deferred_logger) const;
 
-    const WellInterfaceGeneric& well_; //!< Reference to well interface
+    const WellInterfaceGeneric<double>& well_; //!< Reference to well interface
 };
 
 }

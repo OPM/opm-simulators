@@ -287,7 +287,7 @@ namespace Opm
                           DeferredLogger& deferred_logger)
     {
         const auto [compute_potential, bhp_controlled_well] =
-            this->WellInterfaceGeneric::computeWellPotentials(well_potentials, well_state);
+            this->WellInterfaceGeneric<Scalar>::computeWellPotentials(well_potentials, well_state);
 
         if (!compute_potential) {
             return;

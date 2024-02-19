@@ -44,7 +44,7 @@ template<class Scalar> class SingleWellState;
 template<class Scalar> class WellState;
 
 template<class FluidSystem>
-class WellInterfaceFluidSystem : public WellInterfaceGeneric {
+class WellInterfaceFluidSystem : public WellInterfaceGeneric<double> {
 protected:
     using RateConverterType = RateConverter::
     SurfaceToReservoirVoidage<FluidSystem, std::vector<int>>;

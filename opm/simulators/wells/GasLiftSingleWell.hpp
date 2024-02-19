@@ -51,7 +51,7 @@ public:
                       const Parallel::Communication& comm,
                       bool glift_debug);
 
-    const WellInterfaceGeneric& getWell() const override { return well_; }
+    const WellInterfaceGeneric<Scalar>& getWell() const override { return well_; }
 
 private:
     std::optional<Scalar>

@@ -582,7 +582,7 @@ guideRateUpdateIsNeeded(const int reportStepIdx) const
     const auto& genWells = wellModel_.genericWells();
     auto need_update =
     std::any_of(genWells.begin(), genWells.end(),
-    [](const WellInterfaceGeneric* well)
+                [](const WellInterfaceGeneric<Scalar>* well)
     {
         return well->changedToOpenThisStep();
     });
@@ -594,7 +594,7 @@ guideRateUpdateIsNeeded(const int reportStepIdx) const
             + ScheduleEvents::NEW_WELL;
 
         need_update = std::any_of(genWells.begin(), genWells.end(),
-            [&events](const WellInterfaceGeneric* well)
+            [&events](const WellInterfaceGeneric<Scalar>* well)
         {
             return events.hasEvent(well->name(), effective_events_mask);
         });

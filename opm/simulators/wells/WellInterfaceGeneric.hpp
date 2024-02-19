@@ -47,6 +47,7 @@ template<class Scalar> class SingleWellState;
 class Group;
 class Schedule;
 
+template<class Scalar>
 class WellInterfaceGeneric {
 public:
     WellInterfaceGeneric(const Well& well,
@@ -76,7 +77,7 @@ public:
     /// Index of well in the wells struct and wellState
     int indexOfWell() const;
 
-    void adaptRatesForVFP(std::vector<double>& rates) const;
+    void adaptRatesForVFP(std::vector<Scalar>& rates) const;
 
     const Well& wellEcl() const;
     Well& wellEcl();
@@ -94,127 +95,91 @@ public:
     void closeCompletions(const WellTestState& wellTestState);
 
     void setVFPProperties(const VFPProperties* vfp_properties_arg);
-    void setPrevSurfaceRates(WellState<double>& well_state,
-                             const WellState<double>& prev_well_state) const;
+    void setPrevSurfaceRates(WellState<Scalar>& well_state,
+                             const WellState<Scalar>& prev_well_state) const;
     void setGuideRate(const GuideRate* guide_rate_arg);
-    void setWellEfficiencyFactor(const double efficiency_factor);
+    void setWellEfficiencyFactor(const Scalar efficiency_factor);
     void setRepRadiusPerfLength();
-    void setWsolvent(const double wsolvent);
-    void setDynamicThpLimit(const double thp_limit);
-    std::optional<double> getDynamicThpLimit() const;
+    void setWsolvent(const Scalar wsolvent);
+    void setDynamicThpLimit(const Scalar thp_limit);
+    std::optional<Scalar> getDynamicThpLimit() const;
     void updatePerforatedCell(std::vector<bool>& is_cell_perforated);
 
     /// Returns true if the well has one or more THP limits/constraints.
     bool wellHasTHPConstraints(const SummaryState& summaryState) const;
 
-    void stopWell() {
-        this->wellStatus_ = Well::Status::STOP;
-    }
+    void stopWell() { this->wellStatus_ = Well::Status::STOP; }
+    void openWell() { this->wellStatus_ = Well::Status::OPEN; }
 
-    void openWell() {
-        this->wellStatus_ = Well::Status::OPEN;
-    }
+    bool wellIsStopped() const { return this->wellStatus_ == Well::Status::STOP; }
 
-    bool wellIsStopped() const {
-        return this->wellStatus_ == Well::Status::STOP;
-    }
+    int currentStep() const { return this->current_step_; }
 
-    int currentStep() const {
-        return this->current_step_;
-    }
+    int pvtRegionIdx() const { return pvtRegionIdx_; }
 
-    int pvtRegionIdx() const {
-        return pvtRegionIdx_;
-    }
+    const GuideRate* guideRate() const { return guide_rate_; }
 
-    const GuideRate* guideRate() const {
-        return guide_rate_;
-    }
+    int numComponents() const { return num_components_; }
 
-    int numComponents() const {
-        return num_components_;
-    }
+    int numPhases() const { return number_of_phases_; }
 
-    int numPhases() const {
-        return number_of_phases_;
-    }
+    int numPerfs() const { return number_of_perforations_; }
 
-    int numPerfs() const {
-        return number_of_perforations_;
-    }
+    Scalar refDepth() const { return ref_depth_; }
 
-    double refDepth() const {
-        return ref_depth_;
-    }
+    Scalar gravity() const { return gravity_; }
 
-    double gravity() const {
-        return gravity_;
-    }
+    const VFPProperties* vfpProperties() const { return vfp_properties_; }
 
-    const VFPProperties* vfpProperties() const {
-        return vfp_properties_;
-    }
+    const ParallelWellInfo& parallelWellInfo() const { return parallel_well_info_; }
 
-    const ParallelWellInfo& parallelWellInfo() const {
-        return parallel_well_info_;
-    }
+    const std::vector<Scalar>& perfDepth() const { return perf_depth_; }
 
-    const std::vector<double>& perfDepth() const {
-        return perf_depth_;
-    }
+    std::vector<Scalar>& perfDepth() { return perf_depth_; }
 
-    std::vector<double>& perfDepth() {
-        return perf_depth_;
-    }
+    const std::vector<Scalar>& wellIndex() const { return well_index_; }
 
-    const std::vector<double>& wellIndex() const {
-        return well_index_;
-    }
+    const std::map<int,std::vector<int>>& getCompletions() const { return completions_; }
 
-    const std::map<int,std::vector<int>>& getCompletions() const {
-        return completions_;
-    }
-
-    double getTHPConstraint(const SummaryState& summaryState) const;
-    double getALQ(const WellState<double>& well_state) const;
-    double wsolvent() const;
-    double rsRvInj() const;
+    Scalar getTHPConstraint(const SummaryState& summaryState) const;
+    Scalar getALQ(const WellState<Scalar>& well_state) const;
+    Scalar wsolvent() const;
+    Scalar rsRvInj() const;
 
     // at the beginning of the time step, we check what inj_multiplier from the previous running
-    void initInjMult(const std::vector<double>& max_inj_mult);
+    void initInjMult(const std::vector<Scalar>& max_inj_mult);
 
     // update the InjMult information at the end of the time step, so it can be used for later.
-    void updateInjMult(std::vector<double>& inj_multipliers, DeferredLogger& deferred_logger) const;
+    void updateInjMult(std::vector<Scalar>& inj_multipliers,
+                       DeferredLogger& deferred_logger) const;
 
     // Note:: for multisegment wells, bhp is actually segment pressure in practice based on observation
     // it might change in the future
-    double getInjMult(const int perf, const double bhp, const double perf_pres) const;
+    Scalar getInjMult(const int perf, const Scalar bhp, const Scalar perf_pres) const;
 
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
-    void reportWellSwitching(const SingleWellState<double>& ws, DeferredLogger& deferred_logger) const;
+    void reportWellSwitching(const SingleWellState<Scalar>& ws,
+                             DeferredLogger& deferred_logger) const;
 
-    bool changedToOpenThisStep() const {
-        return this->changed_to_open_this_step_;
-    }
+    bool changedToOpenThisStep() const { return this->changed_to_open_this_step_; }
 
-    void updateWellTestState(const SingleWellState<double>& ws,
+    void updateWellTestState(const SingleWellState<Scalar>& ws,
                              const double& simulationTime,
                              const bool& writeMessageToOPMLog,
                              WellTestState& wellTestState,
                              DeferredLogger& deferred_logger) const;
 
-    bool isPressureControlled(const WellState<double>& well_state) const;
+    bool isPressureControlled(const WellState<Scalar>& well_state) const;
 
     bool stopppedOrZeroRateTarget(const SummaryState& summary_state,
-                                  const WellState<double>& well_state) const;
+                                  const WellState<Scalar>& well_state) const;
 
-    double wellEfficiencyFactor() const
-    { return well_efficiency_factor_; }
+    Scalar wellEfficiencyFactor() const { return well_efficiency_factor_; }
 
     //! \brief Update filter cake multipliers.
-    void updateFilterCakeMultipliers(const std::vector<double>& inj_fc_multiplier)
+    void updateFilterCakeMultipliers(const std::vector<Scalar>& inj_fc_multiplier)
     {
         inj_fc_multiplier_ = inj_fc_multiplier;
     }
@@ -224,36 +189,38 @@ public:
 protected:
     bool getAllowCrossFlow() const;
 
-    double wmicrobes_() const;
-    double wfoam_() const;
-    double woxygen_() const;
-    double wpolymer_() const;
-    double wsalt_() const;
-    double wurea_() const;
+    Scalar wmicrobes_() const;
+    Scalar wfoam_() const;
+    Scalar woxygen_() const;
+    Scalar wpolymer_() const;
+    Scalar wsalt_() const;
+    Scalar wurea_() const;
 
     int polymerTable_() const;
     int polymerInjTable_() const;
     int polymerWaterTable_() const;
 
     bool wellUnderZeroRateTarget(const SummaryState& summary_state,
-                                 const WellState<double>& well_state) const;
+                                 const WellState<Scalar>& well_state) const;
 
     std::pair<bool,bool>
-    computeWellPotentials(std::vector<double>& well_potentials,
-                          const WellState<double>& well_state);
+    computeWellPotentials(std::vector<Scalar>& well_potentials,
+                          const WellState<Scalar>& well_state);
 
-    void checkNegativeWellPotentials(std::vector<double>& well_potentials,
+    void checkNegativeWellPotentials(std::vector<Scalar>& well_potentials,
                                      const bool checkOperability,
                                      DeferredLogger& deferred_logger);
 
     void prepareForPotentialCalculations(const SummaryState& summary_state,
-                                         WellState<double>& well_state,
+                                         WellState<Scalar>& well_state,
                                          Well::InjectionControls& inj_controls,
                                          Well::ProductionControls& prod_controls) const;
 
     // definition of the struct OperabilityStatus
-    struct OperabilityStatus {
-        bool isOperableAndSolvable() const {
+    struct OperabilityStatus
+    {
+        bool isOperableAndSolvable() const
+        {
             if (!operable_under_only_bhp_limit || !solvable || has_negative_potentials) {
                 return false;
             } else {
@@ -261,15 +228,18 @@ protected:
             }
         }
 
-        bool isOperableUnderBHPLimit() const {
+        bool isOperableUnderBHPLimit() const
+        {
             return operable_under_only_bhp_limit && obey_thp_limit_under_bhp_limit;
         }
 
-        bool isOperableUnderTHPLimit() const {
+        bool isOperableUnderTHPLimit() const
+        {
             return can_obtain_bhp_with_thp_limit && obey_bhp_limit_with_thp_limit;
         }
 
-        void resetOperability() {
+        void resetOperability()
+        {
             operable_under_only_bhp_limit = true;
             obey_thp_limit_under_bhp_limit = true;
             can_obtain_bhp_with_thp_limit = true;
@@ -322,29 +292,29 @@ protected:
     // Q = IPR_A - BHP * IPR_B
     // TODO: it minght need to go to WellInterface, let us implement it in StandardWell first
     // it is only updated and used for producers for now
-    mutable std::vector<double> ipr_a_;
-    mutable std::vector<double> ipr_b_;
+    mutable std::vector<Scalar> ipr_a_;
+    mutable std::vector<Scalar> ipr_b_;
 
     // cell index for each well perforation
     std::vector<int> well_cells_;
 
     // well index for each perforation
-    std::vector<double> well_index_;
+    std::vector<Scalar> well_index_;
 
     // number of the perforations for this well
     int number_of_perforations_;
 
     // depth for each perforation
-    std::vector<double> perf_depth_;
+    std::vector<Scalar> perf_depth_;
 
     // representative radius of the perforations, used in shear calculation
-    std::vector<double> perf_rep_radius_;
+    std::vector<Scalar> perf_rep_radius_;
 
     // length of the perforations, use in shear calculation
-    std::vector<double> perf_length_;
+    std::vector<Scalar> perf_length_;
 
     // well bore diameter
-    std::vector<double> bore_diameters_;
+    std::vector<Scalar> bore_diameters_;
 
     /*
      *  completions_ contains the mapping from completion id to connection indices
@@ -364,7 +334,7 @@ protected:
     std::map<int, std::vector<int>> completions_;
 
     // reference depth for the BHP
-    double ref_depth_;
+    Scalar ref_depth_;
 
     // saturation table nubmer for each well perforation
     std::vector<int> saturation_table_number_;
@@ -373,25 +343,25 @@ protected:
 
     const PhaseUsage* phase_usage_;
 
-    double gravity_;
-    double wsolvent_;
-    std::optional<double> dynamic_thp_limit_;
+    Scalar gravity_;
+    Scalar wsolvent_;
+    std::optional<Scalar> dynamic_thp_limit_;
 
     // recording the multiplier calculate from the keyword WINJMULT during the time step
-    mutable std::vector<double> inj_multiplier_;
+    mutable std::vector<Scalar> inj_multiplier_;
 
     // the injection multiplier from the previous running, it is mostly used for CIRR mode
     // which intends to keep the fracturing open
-    std::vector<double> prev_inj_multiplier_;
+    std::vector<Scalar> prev_inj_multiplier_;
 
     // the multiplier due to injection filtration cake
-    std::vector<double> inj_fc_multiplier_;
+    std::vector<Scalar> inj_fc_multiplier_;
 
-    double well_efficiency_factor_;
+    Scalar well_efficiency_factor_;
     const VFPProperties* vfp_properties_;
     const GuideRate* guide_rate_;
 
-    std::vector< std::string> well_control_log_;
+    std::vector<std::string> well_control_log_;
 
     bool changed_to_open_this_step_ = true;
 };
