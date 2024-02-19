@@ -25,39 +25,50 @@
 
 namespace Opm {
 
+template<class Scalar>
 class GasLiftWellState
 {
 public:
-    //GasLiftWellState() { }
-    GasLiftWellState(double oil_rate, bool oil_is_limited,
-                 double gas_rate, bool gas_is_limited,
-        double alq, bool alq_is_limited, double water_rate, bool water_is_limited, std::optional<bool> increase) :
-            oil_rate_{oil_rate},
-            oil_is_limited_{oil_is_limited},
-            gas_rate_{gas_rate},
-            gas_is_limited_{gas_is_limited},
-            alq_{alq},
-            alq_is_limited_{alq_is_limited},
-            water_rate_{water_rate},
-            water_is_limited_{water_is_limited},
-            increase_{increase}
+    GasLiftWellState(Scalar oil_rate,
+                     bool oil_is_limited,
+                     Scalar gas_rate,
+                     bool gas_is_limited,
+                     Scalar alq,
+                     bool alq_is_limited,
+                     Scalar water_rate,
+                     bool water_is_limited,
+                     std::optional<bool> increase)
+        : oil_rate_{oil_rate}
+        , oil_is_limited_{oil_is_limited}
+        , gas_rate_{gas_rate}
+        , gas_is_limited_{gas_is_limited}
+        , alq_{alq}
+        , alq_is_limited_{alq_is_limited}
+        , water_rate_{water_rate}
+        , water_is_limited_{water_is_limited}
+        , increase_{increase}
     {}
-    double alq() const { return alq_; }
+
+    Scalar alq() const { return alq_; }
     bool alqChanged() { return increase_.has_value(); }
     bool alqIsLimited() const { return alq_is_limited_; }
     bool gasIsLimited() const { return gas_is_limited_; }
-    double gasRate() const { return gas_rate_; }
-    std::pair<double, double> getRates() { return {oil_rate_, gas_rate_}; }
+    Scalar gasRate() const { return gas_rate_; }
+    std::pair<Scalar, Scalar> getRates() { return {oil_rate_, gas_rate_}; }
     std::optional<bool> increase() const { return increase_; }
     bool oilIsLimited() const { return oil_is_limited_; }
-    double oilRate() const { return oil_rate_; }
-    double waterRate() const { return water_rate_; }
+    Scalar oilRate() const { return oil_rate_; }
+    Scalar waterRate() const { return water_rate_; }
     bool waterIsLimited() const { return water_is_limited_; }
-    void update(double oil_rate, bool oil_is_limited,
-        double gas_rate, bool gas_is_limited,
-        double alq, bool alq_is_limited, double water_rate,
-        double water_is_limited,
-        bool increase)
+    void update(Scalar oil_rate,
+                bool oil_is_limited,
+                Scalar gas_rate,
+                bool gas_is_limited,
+                Scalar alq,
+                bool alq_is_limited,
+                Scalar water_rate,
+                Scalar water_is_limited,
+                bool increase)
     {
         oil_rate_ = oil_rate;
         oil_is_limited_ = oil_is_limited;
@@ -69,14 +80,15 @@ public:
         water_is_limited_ = water_is_limited;
         increase_ = increase;
     }
+
 private:
-    double oil_rate_;
+    Scalar oil_rate_;
     bool oil_is_limited_;
-    double gas_rate_;
+    Scalar gas_rate_;
     bool gas_is_limited_;
-    double alq_;
+    Scalar alq_;
     bool alq_is_limited_;
-    double water_rate_;
+    Scalar water_rate_;
     bool water_is_limited_;
     std::optional<bool> increase_;
 };

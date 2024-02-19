@@ -109,7 +109,7 @@ addOrRemoveALQincrement_(GradMap &grad_map, const std::string& well_name, bool a
     if (it == this->well_state_map_.end())
         return;
 
-    GasLiftWellState &state = *(it->second.get());
+    GasLiftWellState<double>& state = *(it->second.get());
     const GradInfo &gi = grad_map.at(well_name);
     if (this->debug) {
         auto new_alq = gi.alq;
@@ -145,7 +145,7 @@ calcIncOrDecGrad_(
     // only applies to wells in the well_state_map (i.e. wells on this rank)
     if(this->well_state_map_.count(well_name) == 0)
         return std::nullopt;
-    GasLiftWellState &state = *(this->well_state_map_.at(well_name).get());
+    GasLiftWellState<double>& state = *(this->well_state_map_.at(well_name).get());
     if (checkRateAlreadyLimited_(well_name, state, increase)) {
         return std::nullopt;
     }
@@ -181,7 +181,9 @@ calcIncOrDecGrad_(
 
 bool
 GasLiftStage2::
-checkRateAlreadyLimited_(const std::string& well_name, GasLiftWellState &state, bool increase)
+checkRateAlreadyLimited_(const std::string& well_name,
+                         GasLiftWellState<double>& state,
+                         bool increase)
 {
     auto current_increase = state.increase();
     bool do_check = false;
@@ -1082,7 +1084,7 @@ computeDelta(const std::string &well_name)
     // compute the delta on wells on own rank
     if (this->parent.well_state_map_.count(well_name) > 0) {
         const GradInfo &gi = this->parent.dec_grads_.at(well_name);
-        GasLiftWellState &state = *(this->parent.well_state_map_.at(well_name).get());
+        GasLiftWellState<double>& state = *(this->parent.well_state_map_.at(well_name).get());
         GasLiftSingleWell &gs_well = *(this->parent.stage1_wells_.at(well_name).get());
         const WellInterfaceGeneric &well = gs_well.getWell();
         // only get deltas for wells owned by this rank

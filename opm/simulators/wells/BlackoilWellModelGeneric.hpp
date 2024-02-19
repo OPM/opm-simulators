@@ -55,7 +55,7 @@ namespace Opm {
     class EclipseState;
     template<class Scalar> class GasLiftGroupInfo;
     class GasLiftSingleWellGeneric;
-    class GasLiftWellState;
+    template<class Scalar> class GasLiftWellState;
     class Group;
     class GuideRateConfig;
     class ParallelWellInfo;
@@ -85,7 +85,7 @@ public:
     // ---------      Types      ---------
     using GLiftOptWells = std::map<std::string, std::unique_ptr<GasLiftSingleWellGeneric>>;
     using GLiftProdWells = std::map<std::string, const WellInterfaceGeneric*>;
-    using GLiftWellStateMap = std::map<std::string, std::unique_ptr<GasLiftWellState>>;
+    using GLiftWellStateMap = std::map<std::string, std::unique_ptr<GasLiftWellState<Scalar>>>;
 
     BlackoilWellModelGeneric(Schedule& schedule,
                              const SummaryState& summaryState,

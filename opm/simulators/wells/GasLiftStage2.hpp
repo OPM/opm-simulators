@@ -35,7 +35,7 @@ namespace Opm
 
 class DeferredLogger;
 class GasLiftOpt;
-class GasLiftWellState;
+template<class Scalar> class GasLiftWellState;
 class Group;
 template<class Scalar> class GroupState;
 class Schedule;
@@ -46,7 +46,7 @@ class GasLiftStage2 : public GasLiftCommon<double> {
     using GasLiftSingleWell = GasLiftSingleWellGeneric;
     using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
     using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
-    using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState>>;
+    using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState<double>>>;
     using GradPair = std::pair<std::string, double>;
     using GradPairItr = std::vector<GradPair>::iterator;
     using GradInfo = typename GasLiftSingleWellGeneric::GradInfo;
@@ -76,7 +76,9 @@ protected:
         GradMap& grad_map, const std::string& well_name, bool add);
     std::optional<GradInfo> calcIncOrDecGrad_(
         const std::string name, const GasLiftSingleWell& gs_well, const std::string& gr_name_dont_limit, bool increase);
-    bool checkRateAlreadyLimited_(const std::string& well_name, GasLiftWellState& state, bool increase);
+    bool checkRateAlreadyLimited_(const std::string& well_name,
+                                  GasLiftWellState<double>& state,
+                                  bool increase);
     GradInfo deleteDecGradItem_(const std::string& name);
     GradInfo deleteIncGradItem_(const std::string& name);
     GradInfo deleteGrad_(const std::string& name, bool increase);

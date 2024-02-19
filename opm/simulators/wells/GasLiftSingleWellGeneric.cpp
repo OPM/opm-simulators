@@ -131,10 +131,10 @@ GasLiftSingleWellGeneric::calcIncOrDecGradient( double oil_rate,
     }
 }
 
-std::unique_ptr<GasLiftWellState>
+std::unique_ptr<GasLiftWellState<double>>
 GasLiftSingleWellGeneric::runOptimize(const int iteration_idx)
 {
-    std::unique_ptr<GasLiftWellState> state;
+    std::unique_ptr<GasLiftWellState<double>> state;
     if (this->optimize_) {
         if (this->debug_limit_increase_decrease_) {
             state = runOptimize1_();
@@ -1154,12 +1154,12 @@ GasLiftSingleWellGeneric::reduceALQtoWellTarget_(const double orig_alq, const Li
 //
 //  - return value: a new GasLiftWellState or nullptr
 //
-std::unique_ptr<GasLiftWellState>
+std::unique_ptr<GasLiftWellState<double>>
 GasLiftSingleWellGeneric::runOptimizeLoop_(bool increase)
 {
     if (this->debug)
         debugShowProducerControlMode();
-    std::unique_ptr<GasLiftWellState> ret_value; // nullptr initially
+    std::unique_ptr<GasLiftWellState<double>> ret_value; // nullptr initially
     auto [rates, cur_alq] = getInitialRatesWithLimit_();
     if (!rates)
         return ret_value;
@@ -1252,22 +1252,22 @@ GasLiftSingleWellGeneric::runOptimizeLoop_(bool increase)
     } else {
         increase_opt = std::nullopt;
     }
-    ret_value = std::make_unique<GasLiftWellState>(new_rates.oil,
-                                                   new_rates.oil_is_limited,
-                                                   new_rates.gas,
-                                                   new_rates.gas_is_limited,
-                                                   cur_alq,
-                                                   alq_is_limited,
-                                                   new_rates.water,
-                                                   new_rates.water_is_limited,
-                                                   increase_opt);
+    ret_value = std::make_unique<GasLiftWellState<double>>(new_rates.oil,
+                                                           new_rates.oil_is_limited,
+                                                           new_rates.gas,
+                                                           new_rates.gas_is_limited,
+                                                           cur_alq,
+                                                           alq_is_limited,
+                                                           new_rates.water,
+                                                           new_rates.water_is_limited,
+                                                           increase_opt);
     return ret_value;
 }
 
-std::unique_ptr<GasLiftWellState>
+std::unique_ptr<GasLiftWellState<double>>
 GasLiftSingleWellGeneric::runOptimize1_()
 {
-    std::unique_ptr<GasLiftWellState> state;
+    std::unique_ptr<GasLiftWellState<double>> state;
     int inc_count = this->well_state_.gliftGetAlqIncreaseCount(this->well_name_);
     int dec_count = this->well_state_.gliftGetAlqDecreaseCount(this->well_name_);
     if (dec_count == 0 && inc_count == 0) {
@@ -1285,10 +1285,10 @@ GasLiftSingleWellGeneric::runOptimize1_()
     return state;
 }
 
-std::unique_ptr<GasLiftWellState>
+std::unique_ptr<GasLiftWellState<double>>
 GasLiftSingleWellGeneric::runOptimize2_()
 {
-    std::unique_ptr<GasLiftWellState> state;
+    std::unique_ptr<GasLiftWellState<double>> state;
     state = tryIncreaseLiftGas_();
     if (!state || !(state->alqChanged())) {
         state = tryDecreaseLiftGas_();
@@ -1296,13 +1296,13 @@ GasLiftSingleWellGeneric::runOptimize2_()
     return state;
 }
 
-std::unique_ptr<GasLiftWellState>
+std::unique_ptr<GasLiftWellState<double>>
 GasLiftSingleWellGeneric::tryDecreaseLiftGas_()
 {
     return runOptimizeLoop_(/*increase=*/false);
 }
 
-std::unique_ptr<GasLiftWellState>
+std::unique_ptr<GasLiftWellState<double>>
 GasLiftSingleWellGeneric::tryIncreaseLiftGas_()
 {
     return runOptimizeLoop_(/*increase=*/true);

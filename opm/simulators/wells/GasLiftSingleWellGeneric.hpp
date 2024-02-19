@@ -38,7 +38,7 @@ namespace Opm
 
 class DeferredLogger;
 class GasLiftWell;
-class GasLiftWellState;
+template<class Scalar> class GasLiftWellState;
 class Schedule;
 class SummaryState;
 class WellInterfaceGeneric;
@@ -97,7 +97,7 @@ public:
                                                  bool debug_output = true
                                                  ) const;
 
-    std::unique_ptr<GasLiftWellState> runOptimize(const int iteration_idx);
+    std::unique_ptr<GasLiftWellState<double>> runOptimize(const int iteration_idx);
 
     virtual const WellInterfaceGeneric& getWell() const = 0;
 
@@ -312,12 +312,12 @@ protected:
                         double alq, const LimitedRates& rates) const;
     std::pair<LimitedRates, double> reduceALQtoWellTarget_(
                         double alq, const LimitedRates& rates) const;
-    std::unique_ptr<GasLiftWellState> runOptimize1_();
-    std::unique_ptr<GasLiftWellState> runOptimize2_();
-    std::unique_ptr<GasLiftWellState> runOptimizeLoop_(bool increase);
+    std::unique_ptr<GasLiftWellState<double>> runOptimize1_();
+    std::unique_ptr<GasLiftWellState<double>> runOptimize2_();
+    std::unique_ptr<GasLiftWellState<double>> runOptimizeLoop_(bool increase);
     void setAlqMinRate_(const GasLiftWell& well);
-    std::unique_ptr<GasLiftWellState> tryIncreaseLiftGas_();
-    std::unique_ptr<GasLiftWellState> tryDecreaseLiftGas_();
+    std::unique_ptr<GasLiftWellState<double>> tryIncreaseLiftGas_();
+    std::unique_ptr<GasLiftWellState<double>> tryDecreaseLiftGas_();
     void updateGroupRates_(
         const LimitedRates& rates,
         const LimitedRates& new_rates,
