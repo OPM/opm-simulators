@@ -1226,7 +1226,6 @@ namespace Opm {
             if (this->terminal_output_ && (network_update_iteration == iteration_to_relax) ) {
                 local_deferredLogger.info(" we begin using relaxed tolerance for network update now after " + std::to_string(iteration_to_relax) + " iterations ");
             }
-           
             const bool relax_network_balance = network_update_iteration >= iteration_to_relax;
             std::tie(do_network_update, well_group_control_changed) =
                     updateWellControlsAndNetworkIteration(mandatory_network_balance, relax_network_balance, dt,local_deferredLogger);
@@ -2674,10 +2673,10 @@ namespace Opm {
                     const std::string msg = "Compute initial well solution for " + well->name() + " initially failed. Continue with the previous rates";
                     deferred_logger.warning("WELL_INITIAL_SOLVE_FAILED", msg);
                 }
-                // If we're using local well solves that include control switches, they also update
-                // operability, so reset before main iterations begin
-                well->resetWellOperability();
             }
+            // If we're using local well solves that include control switches, they also update
+            // operability, so reset before main iterations begin
+            well->resetWellOperability();
         }
         updatePrimaryVariables(deferred_logger);
 

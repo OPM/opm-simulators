@@ -940,7 +940,7 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                     OpmLog::debug(oss.str());
 #endif
                 } else {
-                   // Table number specified as 9999 in the deck, no pressure loss.
+                    // Table number specified as 9999 in the deck, no pressure loss.
                     if (network.node(node).as_choke()){
                         // Node pressure is set to the group THP.
                         node_pressures[node] = group_state.well_group_thp(node);
