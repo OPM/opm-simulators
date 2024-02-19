@@ -23,7 +23,7 @@
 
 #include <opm/input/eclipse/Schedule/Group/GuideRate.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldPropsManager.hpp>
-
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <map>
 #include <string>
@@ -90,7 +90,6 @@ namespace WellGroupHelpers
                                     GroupState& group_state,
                                     std::vector<double>& groupTargetReduction);
 
-    template <class Comm>
     void updateGuideRates(const Group& group,
                           const Schedule& schedule,
                           const SummaryState& summary_state,
@@ -99,12 +98,11 @@ namespace WellGroupHelpers
                           double sim_time,
                           WellState& well_state,
                           const GroupState& group_state,
-                          const Comm& comm,
+                          const Parallel::Communication& comm,
                           GuideRate* guide_rate,
                           std::vector<double>& pot,
                           Opm::DeferredLogger& deferred_logge);
 
-    template <class Comm>
     void updateGuideRateForProductionGroups(const Group& group,
                                             const Schedule& schedule,
                                             const PhaseUsage& pu,
@@ -112,17 +110,16 @@ namespace WellGroupHelpers
                                             const double& simTime,
                                             WellState& wellState,
                                             const GroupState& group_state,
-                                            const Comm& comm,
+                                            const Parallel::Communication& comm,
                                             GuideRate* guideRate,
                                             std::vector<double>& pot);
 
-    template <class Comm>
     void updateGuideRatesForWells(const Schedule& schedule,
                                   const PhaseUsage& pu,
                                   const int reportStepIdx,
                                   const double& simTime,
                                   const WellState& wellState,
-                                  const Comm& comm,
+                                  const Parallel::Communication& comm,
                                   GuideRate* guideRate);
 
     void updateGuideRatesForInjectionGroups(const Group& group,
