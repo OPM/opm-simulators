@@ -26,7 +26,6 @@
 #include <opm/simulators/wells/VFPHelpers.hpp>
 
 #include <cstddef>
-#include <map>
 
 namespace Opm {
 
@@ -61,7 +60,8 @@ public:
     /**
      * Returns the VFP properties for injection wells
      */
-    const VFPInjProperties* getInj() const {
+    const VFPInjProperties<double>* getInj() const
+    {
         return &m_inj;
     }
 
@@ -93,13 +93,11 @@ public:
     }
 
 private:
-    VFPInjProperties m_inj;
+    VFPInjProperties<double> m_inj;
     VFPProdProperties m_prod;
     const WellState<double>& well_state_;
-
 };
 
-
-} //Namespace
+} // namespace Opm
 
 #endif /* OPM_AUTODIFF_VFPPROPERTIES_HPP_ */
