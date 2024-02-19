@@ -249,6 +249,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
 
         //! \brief contructor taking parameter object
         AdaptiveTimeStepping(const UnitSystem& unitSystem,
+                             const double max_next_tstep = -1.0,
                              const bool terminalOutput = true)
             : timeStepControl_()
             , restartFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverRestartFactor)) // 0.33
@@ -260,7 +261,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
             , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
-            , suggestedNextTimestep_(EWOMS_GET_PARAM(TypeTag, double, InitialTimeStepInDays)*24*60*60) // 1.0
+            , suggestedNextTimestep_((max_next_tstep <= 0 ? EWOMS_GET_PARAM(TypeTag, double, InitialTimeStepInDays) : max_next_tstep)*24*60*60) // 1.0
             , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FullTimeStepInitially)) // false
             , timestepAfterEvent_(EWOMS_GET_PARAM(TypeTag, double, TimeStepAfterEventInDays)*24*60*60) // 1e30
             , useNewtonIteration_(false)
@@ -289,7 +290,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
             , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
             , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
             , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
-            , suggestedNextTimestep_(max_next_tstep <= 0 ? EWOMS_GET_PARAM(TypeTag, double, InitialTimeStepInDays)*86400 : max_next_tstep) // 1.0
+            , suggestedNextTimestep_(max_next_tstep <= 0 ? EWOMS_GET_PARAM(TypeTag, double, InitialTimeStepInDays)*24*60*60 : max_next_tstep) // 1.0
             , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FullTimeStepInitially)) // false
             , timestepAfterEvent_(tuning.TMAXWC) // 1e30
             , useNewtonIteration_(false)
@@ -625,11 +626,16 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
             growthFactor_ = tuning.TFDIFF;
             maxGrowth_ = tuning.TSFMAX;
             maxTimeStep_ = tuning.TSMAXZ;
+            updateNEXTSTEP(max_next_tstep);
+            timestepAfterEvent_ = tuning.TMAXWC;
+        }
+
+        void updateNEXTSTEP(double max_next_tstep)
+        {
              // \Note Only update next suggested step if TSINIT was explicitly set in TUNING or NEXTSTEP is active. 
             if (max_next_tstep > 0) {
                 suggestedNextTimestep_ = max_next_tstep;
             }
-            timestepAfterEvent_ = tuning.TMAXWC;
         }
 
         template<class Serializer>
