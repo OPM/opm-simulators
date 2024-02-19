@@ -74,7 +74,12 @@ checkGroupInjectionConstraints(const Group& group,
         if (currentControl != Group::InjectionCMode::RATE)
         {
             double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
+            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+                                                                          wellModel_.schedule(),
+                                                                          well_state,
+                                                                          reportStepIdx,
+                                                                          phasePos,
+                                                                          /*isInjector*/true);
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -98,7 +103,12 @@ checkGroupInjectionConstraints(const Group& group,
         if (currentControl != Group::InjectionCMode::RESV)
         {
             double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(), well_state, reportStepIdx, phasePos, /*isInjector*/true);
+            current_rate += WellGroupHelpers<double>::sumWellResRates(group,
+                                                                      wellModel_.schedule(),
+                                                                      well_state,
+                                                                      reportStepIdx,
+                                                                      phasePos,
+                                                                      /*isInjector*/true);
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
 
@@ -123,17 +133,23 @@ checkGroupInjectionConstraints(const Group& group,
             double production_Rate = 0.0;
             const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
             const Group& groupRein = wellModel_.schedule().getGroup(controls.reinj_group, reportStepIdx);
-            production_Rate += WellGroupHelpers::sumWellSurfaceRates(groupRein, wellModel_.schedule(),
-                                                                     well_state, reportStepIdx,
-                                                                     phasePos, /*isInjector*/false);
+            production_Rate += WellGroupHelpers<double>::sumWellSurfaceRates(groupRein,
+                                                                             wellModel_.schedule(),
+                                                                             well_state,
+                                                                             reportStepIdx,
+                                                                             phasePos,
+                                                                             /*isInjector*/false);
 
             // sum over all nodes
             production_Rate = wellModel_.comm().sum(production_Rate);
 
             double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
-                                                                  well_state, reportStepIdx,
-                                                                  phasePos, /*isInjector*/true);
+            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+                                                                          wellModel_.schedule(),
+                                                                          well_state,
+                                                                          reportStepIdx,
+                                                                          phasePos,
+                                                                          /*isInjector*/true);
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -153,29 +169,46 @@ checkGroupInjectionConstraints(const Group& group,
             double voidage_rate = 0.0;
             const auto& controls = group.injectionControls(phase, wellModel_.summaryState());
             const Group& groupVoidage = wellModel_.schedule().getGroup(controls.voidage_group, reportStepIdx);
-            voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, wellModel_.schedule(),
-                                                              well_state, reportStepIdx,
-                                                              pu.phase_pos[BlackoilPhases::Aqua], false);
-            voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, wellModel_.schedule(),
-                                                              well_state, reportStepIdx,
-                                                              pu.phase_pos[BlackoilPhases::Liquid], false);
-            voidage_rate += WellGroupHelpers::sumWellResRates(groupVoidage, wellModel_.schedule(),
-                                                              well_state, reportStepIdx,
-                                                              pu.phase_pos[BlackoilPhases::Vapour], false);
+            voidage_rate += WellGroupHelpers<double>::sumWellResRates(groupVoidage,
+                                                                      wellModel_.schedule(),
+                                                                      well_state,
+                                                                      reportStepIdx,
+                                                                      pu.phase_pos[BlackoilPhases::Aqua],
+                                                                      false);
+            voidage_rate += WellGroupHelpers<double>::sumWellResRates(groupVoidage,
+                                                                      wellModel_.schedule(),
+                                                                      well_state,
+                                                                      reportStepIdx,
+                                                                      pu.phase_pos[BlackoilPhases::Liquid],
+                                                                      false);
+            voidage_rate += WellGroupHelpers<double>::sumWellResRates(groupVoidage,
+                                                                      wellModel_.schedule(),
+                                                                      well_state, reportStepIdx,
+                                                                      pu.phase_pos[BlackoilPhases::Vapour],
+                                                                      false);
 
             // sum over all nodes
             voidage_rate = wellModel_.comm().sum(voidage_rate);
 
             double total_rate = 0.0;
-            total_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
-                                                            well_state, reportStepIdx,
-                                                            pu.phase_pos[BlackoilPhases::Aqua], true);
-            total_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
-                                                            well_state, reportStepIdx,
-                                                            pu.phase_pos[BlackoilPhases::Liquid], true);
-            total_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
-                                                            well_state, reportStepIdx,
-                                                            pu.phase_pos[BlackoilPhases::Vapour], true);
+            total_rate += WellGroupHelpers<double>::sumWellResRates(group,
+                                                                    wellModel_.schedule(),
+                                                                    well_state,
+                                                                    reportStepIdx,
+                                                                    pu.phase_pos[BlackoilPhases::Aqua],
+                                                                    true);
+            total_rate += WellGroupHelpers<double>::sumWellResRates(group,
+                                                                    wellModel_.schedule(),
+                                                                    well_state,
+                                                                    reportStepIdx,
+                                                                    pu.phase_pos[BlackoilPhases::Liquid],
+                                                                    true);
+            total_rate += WellGroupHelpers<double>::sumWellResRates(group,
+                                                                    wellModel_.schedule(),
+                                                                    well_state,
+                                                                    reportStepIdx,
+                                                                    pu.phase_pos[BlackoilPhases::Vapour],
+                                                                    true);
 
             // sum over all nodes
             total_rate = wellModel_.comm().sum(total_rate);
@@ -208,9 +241,12 @@ checkGroupProductionConstraints(const Group& group,
         if (currentControl != Group::ProductionCMode::ORAT)
         {
             double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
-                                                                  well_state, reportStepIdx,
-                                                                  pu.phase_pos[BlackoilPhases::Liquid], false);
+            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+                                                                          wellModel_.schedule(),
+                                                                          well_state,
+                                                                          reportStepIdx,
+                                                                          pu.phase_pos[BlackoilPhases::Liquid],
+                                                                          false);
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -228,11 +264,13 @@ checkGroupProductionConstraints(const Group& group,
     {
         if (currentControl != Group::ProductionCMode::WRAT)
         {
-
             double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
-                                                                  well_state, reportStepIdx,
-                                                                  pu.phase_pos[BlackoilPhases::Aqua], false);
+            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+                                                                          wellModel_.schedule(),
+                                                                          well_state,
+                                                                          reportStepIdx,
+                                                                          pu.phase_pos[BlackoilPhases::Aqua],
+                                                                          false);
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -250,9 +288,12 @@ checkGroupProductionConstraints(const Group& group,
         if (currentControl != Group::ProductionCMode::GRAT)
         {
             double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
-                                                                  well_state, reportStepIdx,
-                                                                  pu.phase_pos[BlackoilPhases::Vapour], false);
+            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+                                                                          wellModel_.schedule(),
+                                                                          well_state,
+                                                                          reportStepIdx,
+                                                                          pu.phase_pos[BlackoilPhases::Vapour],
+                                                                          false);
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -269,21 +310,30 @@ checkGroupProductionConstraints(const Group& group,
         if (currentControl != Group::ProductionCMode::LRAT)
         {
             double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
-                                                                  well_state, reportStepIdx,
-                                                                  pu.phase_pos[BlackoilPhases::Liquid], false);
-            current_rate += WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
-                                                                  well_state, reportStepIdx,
-                                                                  pu.phase_pos[BlackoilPhases::Aqua], false);
+            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+                                                                          wellModel_.schedule(),
+                                                                          well_state,
+                                                                          reportStepIdx,
+                                                                          pu.phase_pos[BlackoilPhases::Liquid],
+                                                                          false);
+            current_rate += WellGroupHelpers<double>::sumWellSurfaceRates(group,
+                                                                          wellModel_.schedule(),
+                                                                          well_state,
+                                                                          reportStepIdx,
+                                                                          pu.phase_pos[BlackoilPhases::Aqua],
+                                                                          false);
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
 
             bool skip = false;
             if (controls.liquid_target == controls.oil_target) {
-                double current_water_rate = WellGroupHelpers::sumWellSurfaceRates(group, wellModel_.schedule(),
-                                                                                  well_state, reportStepIdx,
-                                                                                  pu.phase_pos[BlackoilPhases::Aqua], false);
+                double current_water_rate = WellGroupHelpers<double>::sumWellSurfaceRates(group,
+                                                                                          wellModel_.schedule(),
+                                                                                          well_state,
+                                                                                          reportStepIdx,
+                                                                                          pu.phase_pos[BlackoilPhases::Aqua],
+                                                                                          false);
                 current_water_rate = wellModel_.comm().sum(current_water_rate);
                 if (std::abs(current_water_rate) < 1e-12) {
                     skip = true;
@@ -309,15 +359,24 @@ checkGroupProductionConstraints(const Group& group,
         if (currentControl != Group::ProductionCMode::RESV)
         {
             double current_rate = 0.0;
-            current_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
-                                                              well_state, reportStepIdx,
-                                                              pu.phase_pos[BlackoilPhases::Aqua], false);
-            current_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
-                                                              well_state, reportStepIdx,
-                                                              pu.phase_pos[BlackoilPhases::Liquid], false);
-            current_rate += WellGroupHelpers::sumWellResRates(group, wellModel_.schedule(),
-                                                              well_state, reportStepIdx,
-                                                              pu.phase_pos[BlackoilPhases::Vapour], false);
+            current_rate += WellGroupHelpers<double>::sumWellResRates(group,
+                                                                      wellModel_.schedule(),
+                                                                      well_state,
+                                                                      reportStepIdx,
+                                                                      pu.phase_pos[BlackoilPhases::Aqua],
+                                                                      false);
+            current_rate += WellGroupHelpers<double>::sumWellResRates(group,
+                                                                      wellModel_.schedule(),
+                                                                      well_state,
+                                                                      reportStepIdx,
+                                                                      pu.phase_pos[BlackoilPhases::Liquid],
+                                                                      false);
+            current_rate += WellGroupHelpers<double>::sumWellResRates(group,
+                                                                      wellModel_.schedule(),
+                                                                      well_state,
+                                                                      reportStepIdx,
+                                                                      pu.phase_pos[BlackoilPhases::Vapour],
+                                                                      false);
 
             // sum over all nodes
             current_rate = wellModel_.comm().sum(current_rate);
@@ -457,11 +516,10 @@ actionOnBrokenConstraints(const Group& group,
         break;
     }
     case Group::ExceedAction::WELL: {
-
         std::tie(worst_offending_well, std::ignore) =
-            WellGroupHelpers::worstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
-                                                 newControl, wellModel_.phaseUsage(),
-                                                 wellModel_.comm(), well_state, deferred_logger);
+            WellGroupHelpers<double>::worstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
+                                                         newControl, wellModel_.phaseUsage(),
+                                                         wellModel_.comm(), well_state, deferred_logger);
         break;
     }
     case Group::ExceedAction::PLUG: {
@@ -520,13 +578,13 @@ updateGroupIndividualControl(const Group& group,
                                      Group::InjectionCMode2String(changed_this.first));
                 this->actionOnBrokenConstraints(group, changed_this.first, phase,
                                                 group_state, deferred_logger);
-                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second,
-                                                                      group,
-                                                                      wellModel_.schedule(),
-                                                                      reportStepIdx,
-                                                                      /* isInjector */ false,
-                                                                      wellModel_.groupState(),
-                                                                      well_state);
+                WellGroupHelpers<double>::updateWellRatesFromGroupTargetScale(changed_this.second,
+                                                                              group,
+                                                                              wellModel_.schedule(),
+                                                                              reportStepIdx,
+                                                                              /* isInjector */ false,
+                                                                              wellModel_.groupState(),
+                                                                              well_state);
                 changed = true;
             }
         }
@@ -549,13 +607,13 @@ updateGroupIndividualControl(const Group& group,
             if(changed) {
                 switched_prod.insert_or_assign(group.name(),
                                     Group::ProductionCMode2String(changed_this.first));
-                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second,
-                                                                    group,
-                                                                    wellModel_.schedule(),
-                                                                    reportStepIdx,
-                                                                    /* isInjector */ false,
-                                                                    wellModel_.groupState(),
-                                                                    well_state);
+                WellGroupHelpers<double>::updateWellRatesFromGroupTargetScale(changed_this.second,
+                                                                              group,
+                                                                              wellModel_.schedule(),
+                                                                              reportStepIdx,
+                                                                              /* isInjector */ false,
+                                                                              wellModel_.groupState(),
+                                                                              well_state);
             } else if (worst_offending_well) {
                 closed_offending_wells.insert_or_assign(group.name(), 
                             std::make_pair(Group::ProductionCMode2String(changed_this.first), *worst_offending_well));

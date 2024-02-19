@@ -74,21 +74,21 @@ checkGroupConstraintsInj(const Group& group,
 
     const auto& ws = well_state.well(well_.indexOfWell());
     // Call check for the well's injection phase.
-    return WellGroupHelpers::checkGroupConstraintsInj(well_.name(),
-                                                      well_.wellEcl().groupName(),
-                                                      group,
-                                                      well_state,
-                                                      group_state,
-                                                      well_.currentStep(),
-                                                      well_.guideRate(),
-                                                      ws.surface_rates.data(),
-                                                      injectionPhase,
-                                                      well_.phaseUsage(),
-                                                      efficiencyFactor,
-                                                      schedule,
-                                                      summaryState,
-                                                      resv_coeff,
-                                                      deferred_logger);
+    return WellGroupHelpers<double>::checkGroupConstraintsInj(well_.name(),
+                                                              well_.wellEcl().groupName(),
+                                                              group,
+                                                              well_state,
+                                                              group_state,
+                                                              well_.currentStep(),
+                                                              well_.guideRate(),
+                                                              ws.surface_rates.data(),
+                                                              injectionPhase,
+                                                              well_.phaseUsage(),
+                                                              efficiencyFactor,
+                                                              schedule,
+                                                              summaryState,
+                                                              resv_coeff,
+                                                              deferred_logger);
 }
 
 std::pair<bool, double>
@@ -107,20 +107,20 @@ checkGroupConstraintsProd(const Group& group,
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     const auto& ws = well_state.well(well_.indexOfWell());
-    return WellGroupHelpers::checkGroupConstraintsProd(well_.name(),
-                                                       well_.wellEcl().groupName(),
-                                                       group,
-                                                       well_state,
-                                                       group_state,
-                                                       well_.currentStep(),
-                                                       well_.guideRate(),
-                                                       ws.surface_rates.data(),
-                                                       well_.phaseUsage(),
-                                                       efficiencyFactor,
-                                                       schedule,
-                                                       summaryState,
-                                                       resv_coeff,
-                                                       deferred_logger);
+    return WellGroupHelpers<double>::checkGroupConstraintsProd(well_.name(),
+                                                               well_.wellEcl().groupName(),
+                                                               group,
+                                                               well_state,
+                                                               group_state,
+                                                               well_.currentStep(),
+                                                               well_.guideRate(),
+                                                               ws.surface_rates.data(),
+                                                               well_.phaseUsage(),
+                                                               efficiencyFactor,
+                                                               schedule,
+                                                               summaryState,
+                                                               resv_coeff,
+                                                               deferred_logger);
 }
 
 bool WellGroupConstraints::

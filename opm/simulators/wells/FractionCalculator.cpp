@@ -144,8 +144,8 @@ guideRate(const std::string& name,
           const std::string& always_included_child)
 {
     if (schedule_.hasWell(name, report_step_)) {
-        return WellGroupHelpers::getGuideRate(name, schedule_, well_state_, group_state_,
-                                              report_step_, guide_rate_, target_, pu_);
+        return WellGroupHelpers<Scalar>::getGuideRate(name, schedule_, well_state_, group_state_,
+                                                      report_step_, guide_rate_, target_, pu_);
     } else {
         if (groupControlledWells(name, always_included_child) > 0) {
             if (is_producer_ && guide_rate_->has(name)) {
@@ -171,14 +171,14 @@ int FractionCalculator<Scalar>::
 groupControlledWells(const std::string& group_name,
                      const std::string& always_included_child)
 {
-    return WellGroupHelpers::groupControlledWells(schedule_,
-                                                  well_state_,
-                                                  this->group_state_,
-                                                  report_step_,
-                                                  group_name,
-                                                  always_included_child,
-                                                  is_producer_,
-                                                  injection_phase_);
+    return WellGroupHelpers<Scalar>::groupControlledWells(schedule_,
+                                                          well_state_,
+                                                          this->group_state_,
+                                                          report_step_,
+                                                          group_name,
+                                                          always_included_child,
+                                                          is_producer_,
+                                                          injection_phase_);
 }
 
 template<class Scalar>
@@ -186,9 +186,9 @@ GuideRate::RateVector FractionCalculator<Scalar>::
 getGroupRateVector(const std::string& group_name)
 {
     assert(is_producer_);
-    return WellGroupHelpers::getProductionGroupRateVector(this->group_state_,
-                                                          this->pu_,
-                                                          group_name);
+    return WellGroupHelpers<Scalar>::getProductionGroupRateVector(this->group_state_,
+                                                                  this->pu_,
+                                                                  group_name);
 }
 
 template class FractionCalculator<double>;
