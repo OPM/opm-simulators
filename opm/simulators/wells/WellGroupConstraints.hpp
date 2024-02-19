@@ -44,45 +44,46 @@ template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 //! \brief Class for computing well group constraints.
+template<class Scalar>
 class WellGroupConstraints {
 public:
     //! \brief Constructor sets reference to well.
-    WellGroupConstraints(const WellInterfaceGeneric<double>& well) : well_(well) {}
+    WellGroupConstraints(const WellInterfaceGeneric<Scalar>& well) : well_(well) {}
 
     using RateConvFunc = std::function<void(const RegionId,
                                             const int,
                                             const std::optional<std::string>&,
-                                            std::vector<double>&)>;
+                                            std::vector<Scalar>&)>;
 
-    bool checkGroupConstraints(WellState<double>& well_state,
-                               const GroupState<double>& group_state,
+    bool checkGroupConstraints(WellState<Scalar>& well_state,
+                               const GroupState<Scalar>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                const RateConvFunc& rateConverter,
                                DeferredLogger& deferred_logger) const;
 
 private:
-    std::pair<bool, double>
+    std::pair<bool, Scalar>
     checkGroupConstraintsInj(const Group& group,
-                             const WellState<double>& well_state,
-                             const GroupState<double>& group_state,
-                             const double efficiencyFactor,
+                             const WellState<Scalar>& well_state,
+                             const GroupState<Scalar>& group_state,
+                             const Scalar efficiencyFactor,
                              const Schedule& schedule,
                              const SummaryState& summaryState,
                              const RateConvFunc& rateConverter,
                              DeferredLogger& deferred_logger) const;
 
-    std::pair<bool, double>
+    std::pair<bool, Scalar>
     checkGroupConstraintsProd(const Group& group,
-                              const WellState<double>& well_state,
-                              const GroupState<double>& group_state,
-                              const double efficiencyFactor,
+                              const WellState<Scalar>& well_state,
+                              const GroupState<Scalar>& group_state,
+                              const Scalar efficiencyFactor,
                               const Schedule& schedule,
                               const SummaryState& summaryState,
                               const RateConvFunc& rateConverter,
                               DeferredLogger& deferred_logger) const;
 
-    const WellInterfaceGeneric<double>& well_; //!< Reference to well interface
+    const WellInterfaceGeneric<Scalar>& well_; //!< Reference to well interface
 };
 
 }
