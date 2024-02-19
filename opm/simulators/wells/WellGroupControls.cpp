@@ -41,21 +41,21 @@
 #include <cstddef>
 #include <cassert>
 
-namespace Opm
-{
+namespace Opm {
 
+template<class Scalar>
 template<class EvalWell>
-void WellGroupControls::
+void WellGroupControls<Scalar>::
 getGroupInjectionControl(const Group& group,
-                         const WellState<double>& well_state,
-                         const GroupState<double>& group_state,
+                         const WellState<Scalar>& well_state,
+                         const GroupState<Scalar>& group_state,
                          const Schedule& schedule,
                          const SummaryState& summaryState,
                          const InjectorType& injectorType,
                          const EvalWell& bhp,
                          const EvalWell& injection_rate,
                          const RateConvFunc& rateConverter,
-                         double efficiencyFactor,
+                         Scalar efficiencyFactor,
                          EvalWell& control_eq,
                          DeferredLogger& deferred_logger) const
 {
@@ -128,10 +128,10 @@ getGroupInjectionControl(const Group& group,
     // This is the group containing the control we will check against.
 
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<double> resv_coeff(pu.num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), std::nullopt, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
-    double sales_target = 0;
+    Scalar sales_target = 0;
     if (schedule[well_.currentStep()].gconsale().has(group.name())) {
         const auto& gconsale = schedule[well_.currentStep()].gconsale().get(group.name(), summaryState);
         sales_target = gconsale.sales_target;
@@ -163,7 +163,7 @@ getGroupInjectionControl(const Group& group,
     };
 
     auto localReduction = [&](const std::string& group_name) {
-        const std::vector<double>& groupTargetReductions = group_state.injection_reduction_rates(group_name);
+        const std::vector<Scalar>& groupTargetReductions = group_state.injection_reduction_rates(group_name);
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
@@ -171,13 +171,12 @@ getGroupInjectionControl(const Group& group,
     if (!group.has_gpmaint_control(injectionPhase, currentGroupControl))
         ctrl = group.injectionControls(injectionPhase, summaryState);
 
-    const double orig_target = tcalc.groupTarget(ctrl,
-                                                deferred_logger);
-    const auto chain = WellGroupHelpers<double>::groupChainTopBot(well_.name(), group.name(),
+    const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
+    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(), group.name(),
                                                                   schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
-    double target = orig_target;
+    Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || well_.guideRate()->has(chain[ii], injectionPhase)) {
             // Apply local reductions only at the control level
@@ -188,22 +187,23 @@ getGroupInjectionControl(const Group& group,
         target *= localFraction(chain[ii+1]);
     }
     // Avoid negative target rates coming from too large local reductions.
-    const double target_rate = std::max(0.0, target / efficiencyFactor);
+    const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
     const auto current_rate = injection_rate;
 
     control_eq = current_rate - target_rate;
 }
 
-std::optional<double>
-WellGroupControls::
+template<class Scalar>
+std::optional<Scalar>
+WellGroupControls<Scalar>::
 getGroupInjectionTargetRate(const Group& group,
-                            const WellState<double>& well_state,
-                            const GroupState<double>& group_state,
+                            const WellState<Scalar>& well_state,
+                            const GroupState<Scalar>& group_state,
                             const Schedule& schedule,
                             const SummaryState& summaryState,
                             const InjectorType& injectorType,
                             const RateConvFunc& rateConverter,
-                            double efficiencyFactor,
+                            Scalar efficiencyFactor,
                             DeferredLogger& deferred_logger) const
 {
     // Setting some defaults to silence warnings below.
@@ -262,10 +262,10 @@ getGroupInjectionTargetRate(const Group& group,
     // This is the group containing the control we will check against.
 
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<double> resv_coeff(pu.num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), std::nullopt, resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
-    double sales_target = 0;
+    Scalar sales_target = 0;
     if (schedule[well_.currentStep()].gconsale().has(group.name())) {
         const auto& gconsale = schedule[well_.currentStep()].gconsale().get(group.name(), summaryState);
         sales_target = gconsale.sales_target;
@@ -296,7 +296,7 @@ getGroupInjectionTargetRate(const Group& group,
     };
 
     auto localReduction = [&](const std::string& group_name) {
-        const std::vector<double>& groupTargetReductions = group_state.injection_reduction_rates(group_name);
+        const std::vector<Scalar>& groupTargetReductions = group_state.injection_reduction_rates(group_name);
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
@@ -304,15 +304,15 @@ getGroupInjectionTargetRate(const Group& group,
     if (!group.has_gpmaint_control(injectionPhase, currentGroupControl))
         ctrl = group.injectionControls(injectionPhase, summaryState);
 
-    const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
+    const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
 
-    const auto chain = WellGroupHelpers<double>::groupChainTopBot(well_.name(),
+    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(),
                                                                   group.name(),
                                                                   schedule,
                                                                   well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
-    double target = orig_target;
+    Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || well_.guideRate()->has(chain[ii], injectionPhase)) {
             // Apply local reductions only at the control level
@@ -322,21 +322,23 @@ getGroupInjectionTargetRate(const Group& group,
         }
         target *= localFraction(chain[ii+1]);
     }
-    return std::max(0.0, target / efficiencyFactor);
+    return std::max(Scalar(0.0), target / efficiencyFactor);
 }
 
+template<class Scalar>
 template<class EvalWell>
-void WellGroupControls::getGroupProductionControl(const Group& group,
-                                                  const WellState<double>& well_state,
-                                                  const GroupState<double>& group_state,
-                                                  const Schedule& schedule,
-                                                  const SummaryState& summaryState,
-                                                  const EvalWell& bhp,
-                                                  const std::vector<EvalWell>& rates,
-                                                  const RateConvFunc& rateConverter,
-                                                  double efficiencyFactor,
-                                                  EvalWell& control_eq,
-                                                  DeferredLogger& deferred_logger) const
+void WellGroupControls<Scalar>::
+getGroupProductionControl(const Group& group,
+                          const WellState<Scalar>& well_state,
+                          const GroupState<Scalar>& group_state,
+                          const Schedule& schedule,
+                          const SummaryState& summaryState,
+                          const EvalWell& bhp,
+                          const std::vector<EvalWell>& rates,
+                          const RateConvFunc& rateConverter,
+                          Scalar efficiencyFactor,
+                          EvalWell& control_eq,
+                          DeferredLogger& deferred_logger) const
 {
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
     if (currentGroupControl == Group::ProductionCMode::FLD ||
@@ -379,12 +381,12 @@ void WellGroupControls::getGroupProductionControl(const Group& group,
     // This is the group containing the control we will check against.
 
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     // gconsale may adjust the grat target.
     // the adjusted rates is send to the targetCalculator
-    double gratTargetFromSales = 0.0;
+    Scalar gratTargetFromSales = 0.0;
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
@@ -411,7 +413,7 @@ void WellGroupControls::getGroupProductionControl(const Group& group,
     };
 
     auto localReduction = [&](const std::string& group_name) {
-        const std::vector<double>& groupTargetReductions = group_state.production_reduction_rates(group_name);
+        const std::vector<Scalar>& groupTargetReductions = group_state.production_reduction_rates(group_name);
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
@@ -419,12 +421,12 @@ void WellGroupControls::getGroupProductionControl(const Group& group,
     if (!group.has_gpmaint_control(currentGroupControl))
         ctrl = group.productionControls(summaryState);
 
-    const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = WellGroupHelpers<double>::groupChainTopBot(well_.name(), group.name(),
+    const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
+    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(), group.name(),
                                                                   schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
-    double target = orig_target;
+    Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
             // Apply local reductions only at the control level
@@ -435,19 +437,20 @@ void WellGroupControls::getGroupProductionControl(const Group& group,
         target *= localFraction(chain[ii+1]);
     }
     // Avoid negative target rates coming from too large local reductions.
-    const double target_rate = std::max(0.0, target / efficiencyFactor);
+    const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
     const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
     control_eq = current_rate - target_rate;
 }
 
-double WellGroupControls::
+template<class Scalar>
+Scalar WellGroupControls<Scalar>::
 getGroupProductionTargetRate(const Group& group,
-                             const WellState<double>& well_state,
-                             const GroupState<double>& group_state,
+                             const WellState<Scalar>& well_state,
+                             const GroupState<Scalar>& group_state,
                              const Schedule& schedule,
                              const SummaryState& summaryState,
                              const RateConvFunc& rateConverter,
-                             double efficiencyFactor,
+                             Scalar efficiencyFactor,
                              DeferredLogger& deferred_logger) const
 {
     const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
@@ -476,12 +479,12 @@ getGroupProductionTargetRate(const Group& group,
     // This is the group containing the control we will check against.
 
     // Make conversion factors for RESV <-> surface rates.
-    std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    std::vector<Scalar> resv_coeff(well_.phaseUsage().num_phases, 1.0);
     rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
 
     // gconsale may adjust the grat target.
     // the adjusted rates is send to the targetCalculator
-    double gratTargetFromSales = 0.0;
+    Scalar gratTargetFromSales = 0.0;
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
@@ -508,7 +511,7 @@ getGroupProductionTargetRate(const Group& group,
     };
 
     auto localReduction = [&](const std::string& group_name) {
-        const std::vector<double>& groupTargetReductions = group_state.production_reduction_rates(group_name);
+        const std::vector<Scalar>& groupTargetReductions = group_state.production_reduction_rates(group_name);
         return tcalc.calcModeRateFromRates(groupTargetReductions);
     };
 
@@ -516,12 +519,12 @@ getGroupProductionTargetRate(const Group& group,
     if (!group.has_gpmaint_control(currentGroupControl))
         ctrl = group.productionControls(summaryState);
 
-    const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const auto chain = WellGroupHelpers<double>::groupChainTopBot(well_.name(), group.name(),
+    const Scalar orig_target = tcalc.groupTarget(ctrl, deferred_logger);
+    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(well_.name(), group.name(),
                                                                   schedule, well_.currentStep());
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
-    double target = orig_target;
+    Scalar target = orig_target;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
             // Apply local reductions only at the control level
@@ -532,22 +535,24 @@ getGroupProductionTargetRate(const Group& group,
         target *= localFraction(chain[ii+1]);
     }
     // Avoid negative target rates coming from too large local reductions.
-    const double target_rate = std::max(0.0, target / efficiencyFactor);
+    const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
     const auto& ws = well_state.well(well_.indexOfWell());
     const auto& rates = ws.surface_rates;
     const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
-    double scale = 1.0;
+    Scalar scale = 1.0;
     if (target_rate == 0.0) {
         return 0.0;
     }
 
     if (current_rate > 1e-14)
-        scale = target_rate/current_rate;
+        scale = target_rate / current_rate;
     return scale;
 }
 
+template class WellGroupControls<double>;
+
 #define INSTANCE(...) \
-template void WellGroupControls:: \
+template void WellGroupControls<double>:: \
 getGroupInjectionControl<__VA_ARGS__>(const Group&, \
                                       const WellState<double>&, \
                                       const GroupState<double>&, \
@@ -560,7 +565,7 @@ getGroupInjectionControl<__VA_ARGS__>(const Group&, \
                                       double efficiencyFactor, \
                                       __VA_ARGS__& control_eq, \
                                       DeferredLogger& deferred_logger) const; \
-template void WellGroupControls:: \
+template void WellGroupControls<double>:: \
 getGroupProductionControl<__VA_ARGS__>(const Group&, \
                                        const WellState<double>&, \
                                        const GroupState<double>&, \

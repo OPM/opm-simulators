@@ -37,7 +37,6 @@
 #include <opm/simulators/wells/WellState.hpp>
 
 #include <cassert>
-#include <cmath>
 #include <stdexcept>
 
 namespace Opm
@@ -161,15 +160,17 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
                 well_.rateConverter().calcCoeff(id, region, coeff);
 
         };
-        WellGroupControls(well_).getGroupProductionControl(group, well_state,
-                                                             group_state,
-                                                             schedule,
-                                                             summaryState,
-                                                             bhp, active_rates,
-                                                             rCoeff,
-                                                             efficiencyFactor,
-                                                             control_eq,
-                                                             deferred_logger);
+        WellGroupControls(well_).getGroupProductionControl(group,
+                                                           well_state,
+                                                           group_state,
+                                                           schedule,
+                                                           summaryState,
+                                                           bhp,
+                                                           active_rates,
+                                                           rCoeff,
+                                                           efficiencyFactor,
+                                                           control_eq,
+                                                           deferred_logger);
         break;
     }
     case Well::ProducerCMode::CMODE_UNDEFINED: {
@@ -255,18 +256,18 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
                 well_.rateConverter().calcInjCoeff(id, region, coeff);
             }
         };
-        WellGroupControls(well_).getGroupInjectionControl(group,
-                                                            well_state,
-                                                            group_state,
-                                                            schedule,
-                                                            summaryState,
-                                                            injectorType,
-                                                            bhp,
-                                                            injection_rate,
-                                                            rCoeff,
-                                                            efficiencyFactor,
-                                                            control_eq,
-                                                            deferred_logger);
+        WellGroupControls<double>(well_).getGroupInjectionControl(group,
+                                                                  well_state,
+                                                                  group_state,
+                                                                  schedule,
+                                                                  summaryState,
+                                                                  injectorType,
+                                                                  bhp,
+                                                                  injection_rate,
+                                                                  rCoeff,
+                                                                  efficiencyFactor,
+                                                                  control_eq,
+                                                                  deferred_logger);
         break;
     }
     case Well::InjectorCMode::CMODE_UNDEFINED: {
@@ -318,4 +319,5 @@ INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,8u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,9u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,10u>)
 INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,11u>)
+
 } // namespace Opm
