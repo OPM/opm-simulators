@@ -32,15 +32,17 @@
 
 namespace Opm::WGHelpers {
 
-FractionCalculator::FractionCalculator(const Schedule& schedule,
-                                       const WellState<double>& well_state,
-                                       const GroupState<double>& group_state,
-                                       const int report_step,
-                                       const GuideRate* guide_rate,
-                                       const GuideRateModel::Target target,
-                                       const PhaseUsage& pu,
-                                       const bool is_producer,
-                                       const Phase injection_phase)
+template<class Scalar>
+FractionCalculator<Scalar>::
+FractionCalculator(const Schedule& schedule,
+                   const WellState<Scalar>& well_state,
+                   const GroupState<Scalar>& group_state,
+                   const int report_step,
+                   const GuideRate* guide_rate,
+                   const GuideRateModel::Target target,
+                   const PhaseUsage& pu,
+                   const bool is_producer,
+                   const Phase injection_phase)
     : schedule_(schedule)
     , well_state_(well_state)
     , group_state_(group_state)
@@ -53,11 +55,13 @@ FractionCalculator::FractionCalculator(const Schedule& schedule,
 {
 }
 
-double FractionCalculator::fraction(const std::string& name,
-                                    const std::string& control_group_name,
-                                    const bool always_include_this)
+template<class Scalar>
+Scalar FractionCalculator<Scalar>::
+fraction(const std::string& name,
+         const std::string& control_group_name,
+         const bool always_include_this)
 {
-    double fraction = 1.0;
+    Scalar fraction = 1.0;
     std::string current = name;
     while (current != control_group_name) {
         fraction *= localFraction(current, always_include_this ? name : "");
@@ -66,17 +70,19 @@ double FractionCalculator::fraction(const std::string& name,
     return fraction;
 }
 
-double FractionCalculator::localFraction(const std::string& name,
-                                         const std::string& always_included_child)
+template<class Scalar>
+Scalar FractionCalculator<Scalar>::
+localFraction(const std::string& name,
+              const std::string& always_included_child)
 {
-    const double my_guide_rate = guideRate(name, always_included_child);
+    const Scalar my_guide_rate = guideRate(name, always_included_child);
     const Group& parent_group = schedule_.getGroup(parent(name), report_step_);
-    const double total_guide_rate = guideRateSum(parent_group, always_included_child);
+    const Scalar total_guide_rate = guideRateSum(parent_group, always_included_child);
 
     // the total guide gate is the same as my_guide rate
     // the well/group is probably on its own, i.e. return 1
     // even is its guide_rate is zero
-    const double guide_rate_epsilon = 1e-12;
+    const Scalar guide_rate_epsilon = 1e-12;
     if ( std::abs(my_guide_rate - total_guide_rate) < guide_rate_epsilon )
         return 1.0;
 
@@ -84,7 +90,9 @@ double FractionCalculator::localFraction(const std::string& name,
     return my_guide_rate / total_guide_rate;
 }
 
-std::string FractionCalculator::parent(const std::string& name)
+template<class Scalar>
+std::string FractionCalculator<Scalar>::
+parent(const std::string& name)
 {
     if (schedule_.hasWell(name)) {
         return schedule_.getWell(name, report_step_).groupName();
@@ -93,10 +101,12 @@ std::string FractionCalculator::parent(const std::string& name)
     }
 }
 
-double FractionCalculator::guideRateSum(const Group& group,
-                                        const std::string& always_included_child)
+template<class Scalar>
+Scalar FractionCalculator<Scalar>::
+guideRateSum(const Group& group,
+             const std::string& always_included_child)
 {
-    double total_guide_rate = 0.0;
+    Scalar total_guide_rate = 0.0;
     for (const std::string& child_group : group.groups()) {
         bool included = (child_group == always_included_child);
         if (is_producer_) {
@@ -128,7 +138,10 @@ double FractionCalculator::guideRateSum(const Group& group,
     return total_guide_rate;
 }
 
-double FractionCalculator::guideRate(const std::string& name, const std::string& always_included_child)
+template<class Scalar>
+Scalar FractionCalculator<Scalar>::
+guideRate(const std::string& name,
+          const std::string& always_included_child)
 {
     if (schedule_.hasWell(name, report_step_)) {
         return WellGroupHelpers::getGuideRate(name, schedule_, well_state_, group_state_,
@@ -153,8 +166,10 @@ double FractionCalculator::guideRate(const std::string& name, const std::string&
     }
 }
 
-int FractionCalculator::groupControlledWells(const std::string& group_name,
-                                             const std::string& always_included_child)
+template<class Scalar>
+int FractionCalculator<Scalar>::
+groupControlledWells(const std::string& group_name,
+                     const std::string& always_included_child)
 {
     return WellGroupHelpers::groupControlledWells(schedule_,
                                                   well_state_,
@@ -166,12 +181,16 @@ int FractionCalculator::groupControlledWells(const std::string& group_name,
                                                   injection_phase_);
 }
 
-GuideRate::RateVector FractionCalculator::getGroupRateVector(const std::string& group_name)
+template<class Scalar>
+GuideRate::RateVector FractionCalculator<Scalar>::
+getGroupRateVector(const std::string& group_name)
 {
     assert(is_producer_);
     return WellGroupHelpers::getProductionGroupRateVector(this->group_state_,
                                                           this->pu_,
                                                           group_name);
 }
+
+template class FractionCalculator<double>;
 
 } // namespace Opm::WGHelpers

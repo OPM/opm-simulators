@@ -34,36 +34,37 @@ template<class Scalar> class WellState;
 
 namespace Opm::WGHelpers {
 
+template<class Scalar>
 class FractionCalculator
 {
 public:
     FractionCalculator(const Schedule& schedule,
-                       const WellState<double>& well_state,
-                       const GroupState<double>& group_state,
+                       const WellState<Scalar>& well_state,
+                       const GroupState<Scalar>& group_state,
                        const int report_step,
                        const GuideRate* guide_rate,
                        const GuideRateModel::Target target,
                        const PhaseUsage& pu,
                        const bool is_producer,
                        const Phase injection_phase);
-    double fraction(const std::string& name,
+    Scalar fraction(const std::string& name,
                     const std::string& control_group_name,
                     const bool always_include_this);
-    double localFraction(const std::string& name,
+    Scalar localFraction(const std::string& name,
                          const std::string& always_included_child);
 
 private:
     std::string parent(const std::string& name);
-    double guideRateSum(const Group& group,
+    Scalar guideRateSum(const Group& group,
                         const std::string& always_included_child);
-    double guideRate(const std::string& name,
+    Scalar guideRate(const std::string& name,
                      const std::string& always_included_child);
     int groupControlledWells(const std::string& group_name,
                              const std::string& always_included_child);
     GuideRate::RateVector getGroupRateVector(const std::string& group_name);
     const Schedule& schedule_;
-    const WellState<double>& well_state_;
-    const GroupState<double>& group_state_;
+    const WellState<Scalar>& well_state_;
+    const GroupState<Scalar>& group_state_;
     int report_step_;
     const GuideRate* guide_rate_;
     GuideRateModel::Target target_;
