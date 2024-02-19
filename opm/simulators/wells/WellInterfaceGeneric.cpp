@@ -374,7 +374,7 @@ closeCompletions(const WellTestState& wellTestState)
 
 template<class Scalar>
 void WellInterfaceGeneric<Scalar>::
-setVFPProperties(const VFPProperties* vfp_properties_arg)
+setVFPProperties(const VFPProperties<Scalar>* vfp_properties_arg)
 {
     vfp_properties_ = vfp_properties_arg;
 }

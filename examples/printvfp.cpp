@@ -46,7 +46,7 @@ struct Setup
     std::shared_ptr<Python> python;
     std::unique_ptr<const Schedule> schedule;
     std::unique_ptr<SummaryState> summary_state;
-    std::unique_ptr<VFPProperties> vfp_properties;
+    std::unique_ptr<VFPProperties<double>> vfp_properties;
 
     Setup(const std::string& file)
     {
@@ -63,7 +63,9 @@ struct Setup
         const int step = 0;
         const auto& sched_state = schedule->operator[](step);
         WellState<double> well_state(phaseUsage(runspec.phases()));
-        vfp_properties = std::make_unique<VFPProperties>(sched_state.vfpinj(), sched_state.vfpprod(), well_state);
+        vfp_properties = std::make_unique<VFPProperties<double>>(sched_state.vfpinj(),
+                                                                 sched_state.vfpprod(),
+                                                                 well_state);
     };
 };
 

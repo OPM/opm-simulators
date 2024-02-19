@@ -36,6 +36,7 @@ class VFPProdTable;
  * A thin wrapper class that holds one VFPProdProperties and one
  * VFPInjProperties object.
  */
+template<class Scalar>
 class VFPProperties {
 public:
     /**
@@ -47,8 +48,8 @@ public:
 
     VFPProperties(const std::vector<std::reference_wrapper<const VFPInjTable>>& inj_tables,
                   const std::vector<std::reference_wrapper<const VFPProdTable>>& prod_tables,
-                  const WellState<double>& well_state)
-                  :well_state_(well_state)
+                  const WellState<Scalar>& well_state)
+        : well_state_(well_state)
     {
         for (const auto& vfpinj : inj_tables)
             this->m_inj.addTable( vfpinj );
@@ -60,7 +61,7 @@ public:
     /**
      * Returns the VFP properties for injection wells
      */
-    const VFPInjProperties<double>* getInj() const
+    const VFPInjProperties<Scalar>* getInj() const
     {
         return &m_inj;
     }
@@ -68,12 +69,13 @@ public:
     /**
      * Returns the VFP properties for production wells
      */
-    const VFPProdProperties<double>* getProd() const
+    const VFPProdProperties<Scalar>* getProd() const
     {
         return &m_prod;
     }
 
-    double getExplicitWFR(const int table_id, const std::size_t well_index) const {
+    Scalar getExplicitWFR(const int table_id, const std::size_t well_index) const
+    {
         const auto& rates = well_state_.well(well_index).prev_surface_rates;
         const auto& pu = well_state_.phaseUsage();
         const auto& aqua = pu.phase_used[BlackoilPhases::Aqua]? rates[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
@@ -83,7 +85,8 @@ public:
         return detail::getWFR(table, aqua, liquid, vapour);
     }
 
-    double getExplicitGFR(const int table_id, const std::size_t well_index) const {
+    Scalar getExplicitGFR(const int table_id, const std::size_t well_index) const
+    {
         const auto& rates = well_state_.well(well_index).prev_surface_rates;
         const auto& pu = well_state_.phaseUsage();
         const auto& aqua = pu.phase_used[BlackoilPhases::Aqua]? rates[pu.phase_pos[BlackoilPhases::Aqua]]:0.0;
@@ -94,9 +97,9 @@ public:
     }
 
 private:
-    VFPInjProperties<double> m_inj;
-    VFPProdProperties<double> m_prod;
-    const WellState<double>& well_state_;
+    VFPInjProperties<Scalar> m_inj;
+    VFPProdProperties<Scalar> m_prod;
+    const WellState<Scalar>& well_state_;
 };
 
 } // namespace Opm

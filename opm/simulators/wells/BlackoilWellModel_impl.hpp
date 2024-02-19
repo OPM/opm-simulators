@@ -275,7 +275,7 @@ namespace Opm {
             {
                 const auto& sched_state = this->schedule()[timeStepIdx];
 
-                this->vfp_properties_ = std::make_unique<VFPProperties>
+                this->vfp_properties_ = std::make_unique<VFPProperties<Scalar>>
                     (sched_state.vfpinj(), sched_state.vfpprod(), this->wellState());
             }
         }
