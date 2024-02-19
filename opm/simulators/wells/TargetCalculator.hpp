@@ -28,88 +28,87 @@
 #include <string>
 #include <vector>
 
-namespace Opm
-{
+namespace Opm {
 
 class DeferredLogger;
 template<class Scalar> class GroupState;
 struct PhaseUsage;
 
-namespace WellGroupHelpers
+namespace WellGroupHelpers {
+
+/// Based on a group control mode, extract or calculate rates, and
+/// provide other conveniences.
+class TargetCalculator
 {
+public:
+    TargetCalculator(const Group::ProductionCMode cmode,
+                     const PhaseUsage& pu,
+                     const std::vector<double>& resv_coeff,
+                     const double group_grat_target_from_sales,
+                     const std::string& group_name,
+                     const GroupState<double>& group_state,
+                     const bool use_gpmaint);
 
-    /// Based on a group control mode, extract or calculate rates, and
-    /// provide other conveniences.
-    class TargetCalculator
+    template <typename RateType>
+    RateType calcModeRateFromRates(const std::vector<RateType>& rates) const
     {
-    public:
-        TargetCalculator(const Group::ProductionCMode cmode,
-                         const PhaseUsage& pu,
-                         const std::vector<double>& resv_coeff,
-                         const double group_grat_target_from_sales,
-                         const std::string& group_name,
-                         const GroupState<double>& group_state,
-                         const bool use_gpmaint);
+      return calcModeRateFromRates(rates.data());
+    }
 
-        template <typename RateType>
-        RateType calcModeRateFromRates(const std::vector<RateType>& rates) const
-        {
-          return calcModeRateFromRates(rates.data());
-        }
+    template <typename RateType>
+    RateType calcModeRateFromRates(const RateType* rates) const;
 
-        template <typename RateType>
-        RateType calcModeRateFromRates(const RateType* rates) const;
+    double groupTarget(const std::optional<Group::ProductionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const;
 
-        double groupTarget(const std::optional<Group::ProductionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const;
+    GuideRateModel::Target guideTargetMode() const;
 
-        GuideRateModel::Target guideTargetMode() const;
+private:
+    Group::ProductionCMode cmode_;
+    const PhaseUsage& pu_;
+    const std::vector<double>& resv_coeff_;
+    const double group_grat_target_from_sales_;
+    const std::string& group_name_;
+    const GroupState<double>& group_state_;
+    bool use_gpmaint_;
+};
 
-    private:
-        Group::ProductionCMode cmode_;
-        const PhaseUsage& pu_;
-        const std::vector<double>& resv_coeff_;
-        const double group_grat_target_from_sales_;
-        const std::string& group_name_;
-        const GroupState<double>& group_state_;
-        bool use_gpmaint_;
-    };
+/// Based on a group control mode, extract or calculate rates, and
+/// provide other conveniences.
+class InjectionTargetCalculator
+{
+public:
+    InjectionTargetCalculator(const Group::InjectionCMode& cmode,
+                              const PhaseUsage& pu,
+                              const std::vector<double>& resv_coeff,
+                              const std::string& group_name,
+                              const double sales_target,
+                              const GroupState<double>& group_state,
+                              const Phase& injection_phase,
+                              const bool use_gpmaint,
+                              DeferredLogger& deferred_logger);
 
-    /// Based on a group control mode, extract or calculate rates, and
-    /// provide other conveniences.
-    class InjectionTargetCalculator
+    template <typename RateVec>
+    auto calcModeRateFromRates(const RateVec& rates) const
     {
-    public:
-        InjectionTargetCalculator(const Group::InjectionCMode& cmode,
-                                  const PhaseUsage& pu,
-                                  const std::vector<double>& resv_coeff,
-                                  const std::string& group_name,
-                                  const double sales_target,
-                                  const GroupState<double>& group_state,
-                                  const Phase& injection_phase,
-                                  const bool use_gpmaint,
-                                  DeferredLogger& deferred_logger);
+        return rates[pos_];
+    }
 
-        template <typename RateVec>
-        auto calcModeRateFromRates(const RateVec& rates) const
-        {
-            return rates[pos_];
-        }
+    double groupTarget(const std::optional<Group::InjectionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const;
 
-        double groupTarget(const std::optional<Group::InjectionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const;
+    GuideRateModel::Target guideTargetMode() const;
 
-        GuideRateModel::Target guideTargetMode() const;
+private:
+    Group::InjectionCMode cmode_;
+    const PhaseUsage& pu_;
+    const std::vector<double>& resv_coeff_;
+    const std::string& group_name_;
+    double sales_target_;
+    const GroupState<double>& group_state_;
+    bool use_gpmaint_;
+    int pos_;
+    GuideRateModel::Target target_;
+};
 
-    private:
-        Group::InjectionCMode cmode_;
-        const PhaseUsage& pu_;
-        const std::vector<double>& resv_coeff_;
-        const std::string& group_name_;
-        double sales_target_;
-        const GroupState<double>& group_state_;
-        bool use_gpmaint_;
-        int pos_;
-        GuideRateModel::Target target_;
-    };
 } // namespace WellGroupHelpers
 
 } // namespace Opm
