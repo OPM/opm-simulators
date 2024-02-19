@@ -1363,12 +1363,12 @@ namespace Opm
                 const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
                 const double efficiencyFactor = well.getEfficiencyFactor();
                 double scale = this->getGroupProductionTargetRate(group,
-                                                        well_state,
-                                                        group_state,
-                                                        schedule,
-                                                        summaryState,
-                                                        efficiencyFactor,
-                                                        deferred_logger);
+                                                          well_state,
+                                                          group_state,
+                                                          schedule,
+                                                          summaryState,
+                                                          efficiencyFactor,
+                                                          deferred_logger);
 
                 // we don't want to scale with zero and get zero rates.
                 if (scale > 0) {
@@ -1377,10 +1377,10 @@ namespace Opm
                     }
                     ws.trivial_target = false;
                 } else {
-                        ws.trivial_target = true;
+                    ws.trivial_target = true;
                 }
                 break;
-            }   
+            }
             case Well::ProducerCMode::CMODE_UNDEFINED:
             case Well::ProducerCMode::NONE:
             {

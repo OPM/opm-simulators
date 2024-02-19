@@ -42,8 +42,6 @@
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
-// #include <opm/simulators/wells/WellInterface.hpp>
-// #include <opm/simulators/wells/StandardWell.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -909,16 +907,11 @@ namespace WellGroupHelpers
                     } else {
                         // Table number specified as 9999 in the deck, no pressure loss.
                         if (network.node(node).as_choke()){
-                            // Node pressure is set to the common THP of the wells
-                            const auto up_branch = network.uptree_branch(node);
-                            assert(up_branch);
-                            const auto up_pressure = node_pressures[(*up_branch).uptree_node()];
+                            // Node pressure is set to the common THP of the wells.
+                            // The choke pressure must be non-negative therefore the node pressure of 
+                            // the auto-choke node must be larger or equal to the pressure of the uptree node of its branch 
                             const auto group_thp = group_state.well_group_thp(node);
-                            if (group_thp >= up_pressure){
-                                node_pressures[node] = group_thp;
-                            } else {
-                                node_pressures[node] = up_press;
-                            }
+                            node_pressures[node] = group_thp >= up_press ? group_thp : up_press;
                         } else {
                              node_pressures[node] = up_press;
                         }

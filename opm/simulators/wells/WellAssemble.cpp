@@ -163,14 +163,14 @@ assembleControlEqProd(const WellState& well_state,
 
         };
         WellGroupControls(well_).getGroupProductionControl(group, well_state,
-                                                        group_state,
-                                                        schedule,
-                                                        summaryState,
-                                                        bhp, active_rates,
-                                                        rCoeff,
-                                                        efficiencyFactor,
-                                                        control_eq,
-                                                        deferred_logger);
+                                                             group_state,
+                                                             schedule,
+                                                             summaryState,
+                                                             bhp, active_rates,
+                                                             rCoeff,
+                                                             efficiencyFactor,
+                                                             control_eq,
+                                                             deferred_logger);
         break;
     }
     case Well::ProducerCMode::CMODE_UNDEFINED: {
