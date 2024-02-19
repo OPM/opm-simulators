@@ -32,7 +32,7 @@ class Schedule;
 template<class Scalar> class WellState;
 }
 
-namespace Opm::WellGroupHelpers {
+namespace Opm::WGHelpers {
 
 class FractionCalculator
 {
@@ -72,6 +72,6 @@ private:
     Phase injection_phase_;
 };
 
-} // namespace Opm::WellGroupHelpers
+} // namespace Opm::WGHelpers
 
 #endif // OPM_FRACTION_CALCULATOR_HEADER_INCLUDED

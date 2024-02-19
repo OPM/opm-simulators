@@ -34,7 +34,7 @@ class DeferredLogger;
 template<class Scalar> class GroupState;
 struct PhaseUsage;
 
-namespace WellGroupHelpers {
+namespace WGHelpers {
 
 /// Based on a group control mode, extract or calculate rates, and
 /// provide other conveniences.
@@ -109,7 +109,7 @@ private:
     GuideRateModel::Target target_;
 };
 
-} // namespace WellGroupHelpers
+} // namespace WGHelpers
 
 } // namespace Opm
 

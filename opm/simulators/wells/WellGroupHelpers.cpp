@@ -1165,8 +1165,23 @@ std::pair<bool, double> checkGroupConstraintsProd(const std::string& name,
     if (group_state.has_grat_sales_target(group.name()))
         gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-    TargetCalculator tcalc(currentGroupControl, pu, resv_coeff, gratTargetFromSales, group.name(), group_state, group.has_gpmaint_control(currentGroupControl));
-    FractionCalculator fcalc(schedule, wellState, group_state, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu, true, Phase::OIL);
+    WGHelpers::TargetCalculator tcalc(currentGroupControl,
+                                      pu,
+                                      resv_coeff,
+                                      gratTargetFromSales,
+                                      group.name(),
+                                      group_state,
+                                      group.has_gpmaint_control(currentGroupControl));
+
+    WGHelpers::FractionCalculator fcalc(schedule,
+                                        wellState,
+                                        group_state,
+                                        reportStepIdx,
+                                        guideRate,
+                                        tcalc.guideTargetMode(),
+                                        pu,
+                                        true,
+                                        Phase::OIL);
 
     auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, name); };
 
@@ -1311,8 +1326,26 @@ std::pair<bool, double> checkGroupConstraintsInj(const std::string& name,
         const auto& gconsale = schedule[reportStepIdx].gconsale().get(group.name(), summaryState);
         sales_target = gconsale.sales_target;
     }
-    InjectionTargetCalculator tcalc(currentGroupControl, pu, resv_coeff, group.name(), sales_target, group_state, injectionPhase, group.has_gpmaint_control(injectionPhase, currentGroupControl), deferred_logger);
-    FractionCalculator fcalc(schedule, wellState, group_state, reportStepIdx, guideRate, tcalc.guideTargetMode(), pu, false, injectionPhase);
+    WGHelpers::InjectionTargetCalculator tcalc(currentGroupControl,
+                                               pu,
+                                               resv_coeff,
+                                               group.name(),
+                                               sales_target,
+                                               group_state,
+                                               injectionPhase,
+                                               group.has_gpmaint_control(injectionPhase,
+                                                                         currentGroupControl),
+                                               deferred_logger);
+
+    WGHelpers::FractionCalculator fcalc(schedule,
+                                        wellState,
+                                        group_state,
+                                        reportStepIdx,
+                                        guideRate,
+                                        tcalc.guideTargetMode(),
+                                        pu,
+                                        false,
+                                        injectionPhase);
 
     auto localFraction = [&](const std::string& child) { return fcalc.localFraction(child, name); };
 

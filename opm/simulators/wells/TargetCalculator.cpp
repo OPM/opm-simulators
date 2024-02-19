@@ -26,16 +26,10 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 
-#include <algorithm>
 #include <cassert>
 #include <stdexcept>
-#include <type_traits>
 
-namespace Opm
-{
-
-namespace WellGroupHelpers
-{
+namespace Opm::WGHelpers {
 
 TargetCalculator::TargetCalculator(const Group::ProductionCMode cmode,
                                    const PhaseUsage& pu,
@@ -279,6 +273,4 @@ INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,9>)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,10>)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,-1,11>)
 
-} // namespace WellGroupHelpers
-
-} // namespace Opm
+} // namespace Opm::WGHelpers

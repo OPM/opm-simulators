@@ -30,7 +30,7 @@
 
 #include <cassert>
 
-namespace Opm::WellGroupHelpers {
+namespace Opm::WGHelpers {
 
 FractionCalculator::FractionCalculator(const Schedule& schedule,
                                        const WellState<double>& well_state,
