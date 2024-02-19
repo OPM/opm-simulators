@@ -31,13 +31,15 @@
 
 namespace Opm::WGHelpers {
 
-TargetCalculator::TargetCalculator(const Group::ProductionCMode cmode,
-                                   const PhaseUsage& pu,
-                                   const std::vector<double>& resv_coeff,
-                                   const double group_grat_target_from_sales,
-                                   const std::string& group_name,
-                                   const GroupState<double>& group_state,
-                                   const bool use_gpmaint)
+template<class Scalar>
+TargetCalculator<Scalar>::
+TargetCalculator(const Group::ProductionCMode cmode,
+                 const PhaseUsage& pu,
+                 const std::vector<Scalar>& resv_coeff,
+                 const Scalar group_grat_target_from_sales,
+                 const std::string& group_name,
+                 const GroupState<Scalar>& group_state,
+                 const bool use_gpmaint)
     : cmode_(cmode)
     , pu_(pu)
     , resv_coeff_(resv_coeff)
@@ -49,8 +51,9 @@ TargetCalculator::TargetCalculator(const Group::ProductionCMode cmode,
 {
 }
 
+template<class Scalar>
 template <typename RateType>
-RateType TargetCalculator::calcModeRateFromRates(const RateType* rates) const
+RateType TargetCalculator<Scalar>::calcModeRateFromRates(const RateType* rates) const
 {
     switch (cmode_) {
     case Group::ProductionCMode::ORAT: {
@@ -89,7 +92,10 @@ RateType TargetCalculator::calcModeRateFromRates(const RateType* rates) const
     }
 }
 
-double TargetCalculator::groupTarget(const std::optional<Group::ProductionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const
+template<class Scalar>
+Scalar TargetCalculator<Scalar>::
+groupTarget(const std::optional<Group::ProductionControls>& ctrl,
+            DeferredLogger& deferred_logger) const
 {
     if (!ctrl && !use_gpmaint_) {
         OPM_DEFLOG_THROW(std::logic_error,
@@ -105,7 +111,7 @@ double TargetCalculator::groupTarget(const std::optional<Group::ProductionContro
     case Group::ProductionCMode::GRAT:
     {
         // gas target may have been adjusted by GCONSALE
-        if ( group_grat_target_from_sales_ > 0)
+        if (group_grat_target_from_sales_ > 0)
             return group_grat_target_from_sales_;
 
         return ctrl->gas_target;
@@ -114,7 +120,7 @@ double TargetCalculator::groupTarget(const std::optional<Group::ProductionContro
         return ctrl->liquid_target;
     case Group::ProductionCMode::RESV:
     {
-        if(use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
+        if (use_gpmaint_ && this->group_state_.has_gpmaint_target(this->group_name_))
             return this->group_state_.gpmaint_target(this->group_name_);
 
         return ctrl->resv_target;
@@ -126,7 +132,9 @@ double TargetCalculator::groupTarget(const std::optional<Group::ProductionContro
     }
 }
 
-GuideRateModel::Target TargetCalculator::guideTargetMode() const
+template<class Scalar>
+GuideRateModel::Target
+TargetCalculator<Scalar>::guideTargetMode() const
 {
     switch (cmode_) {
     case Group::ProductionCMode::ORAT:
@@ -253,7 +261,9 @@ GuideRateModel::Target InjectionTargetCalculator::guideTargetMode() const
 }
 
 #define INSTANCE_TARGET_CALCULATOR(...) \
-template __VA_ARGS__ TargetCalculator::calcModeRateFromRates<__VA_ARGS__>(const __VA_ARGS__* rates) const;
+template __VA_ARGS__ TargetCalculator<double>::calcModeRateFromRates<__VA_ARGS__>(const __VA_ARGS__* rates) const;
+
+template class TargetCalculator<double>;
 
 INSTANCE_TARGET_CALCULATOR(double)
 INSTANCE_TARGET_CALCULATOR(DenseAd::Evaluation<double,3,0>)

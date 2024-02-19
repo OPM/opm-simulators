@@ -38,15 +38,16 @@ namespace WGHelpers {
 
 /// Based on a group control mode, extract or calculate rates, and
 /// provide other conveniences.
+template<class Scalar>
 class TargetCalculator
 {
 public:
     TargetCalculator(const Group::ProductionCMode cmode,
                      const PhaseUsage& pu,
-                     const std::vector<double>& resv_coeff,
-                     const double group_grat_target_from_sales,
+                     const std::vector<Scalar>& resv_coeff,
+                     const Scalar group_grat_target_from_sales,
                      const std::string& group_name,
-                     const GroupState<double>& group_state,
+                     const GroupState<Scalar>& group_state,
                      const bool use_gpmaint);
 
     template <typename RateType>
@@ -58,17 +59,18 @@ public:
     template <typename RateType>
     RateType calcModeRateFromRates(const RateType* rates) const;
 
-    double groupTarget(const std::optional<Group::ProductionControls>& ctrl, Opm::DeferredLogger& deferred_logger) const;
+    Scalar groupTarget(const std::optional<Group::ProductionControls>& ctrl,
+                       DeferredLogger& deferred_logger) const;
 
     GuideRateModel::Target guideTargetMode() const;
 
 private:
     Group::ProductionCMode cmode_;
     const PhaseUsage& pu_;
-    const std::vector<double>& resv_coeff_;
-    const double group_grat_target_from_sales_;
+    const std::vector<Scalar>& resv_coeff_;
+    const Scalar group_grat_target_from_sales_;
     const std::string& group_name_;
-    const GroupState<double>& group_state_;
+    const GroupState<Scalar>& group_state_;
     bool use_gpmaint_;
 };
 
