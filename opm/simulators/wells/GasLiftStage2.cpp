@@ -322,7 +322,7 @@ GasLiftStage2::getGroupMaxTotalGas_(const Group &group)
 // NOTE: This means that wells are located at the leaf nodes of the tree, and
 //       groups are located at the other nodes (not leaf nodes) of the tree
 //
-std::vector<GasLiftSingleWellGeneric*>
+std::vector<GasLiftSingleWellGeneric<double>*>
 GasLiftStage2::
 getGroupGliftWells_(const Group &group)
 {

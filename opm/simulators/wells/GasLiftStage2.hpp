@@ -43,13 +43,13 @@ class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 class GasLiftStage2 : public GasLiftCommon<double> {
-    using GasLiftSingleWell = GasLiftSingleWellGeneric;
+    using GasLiftSingleWell = GasLiftSingleWellGeneric<double>;
     using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
     using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
     using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState<double>>>;
     using GradPair = std::pair<std::string, double>;
     using GradPairItr = std::vector<GradPair>::iterator;
-    using GradInfo = typename GasLiftSingleWellGeneric::GradInfo;
+    using GradInfo = typename GasLiftSingleWellGeneric<double>::GradInfo;
     using GradMap = std::map<std::string, GradInfo>;
     using MPIComm = typename Dune::MPIHelper::MPICommunicator;
     static const int Water = BlackoilPhases::Aqua;

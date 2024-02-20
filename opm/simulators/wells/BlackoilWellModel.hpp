@@ -115,7 +115,7 @@ namespace Opm {
             using GLiftWellStateMap =
                 typename BlackoilWellModelGeneric<Scalar>::GLiftWellStateMap;
             using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
-            using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
+            using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
             constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
             typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 

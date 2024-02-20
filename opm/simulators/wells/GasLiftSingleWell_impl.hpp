@@ -44,7 +44,7 @@ GasLiftSingleWell(const WellInterface<TypeTag> &well,
                  )
     // The parent class GasLiftSingleWellGeneric contains all stuff
     //   that is not dependent on TypeTag
-    : GasLiftSingleWellGeneric(
+    : GasLiftSingleWellGeneric<Scalar>(
         deferred_logger,
         well_state,
         group_state,
@@ -61,9 +61,9 @@ GasLiftSingleWell(const WellInterface<TypeTag> &well,
    , simulator_{simulator}
    , well_{well}
 {
-    const auto& gl_well = *gl_well_;
-    if(useFixedAlq_(gl_well)) {
-        updateWellStateAlqFixedValue_(gl_well);
+    const auto& gl_well = *this->gl_well_;
+    if (this->useFixedAlq_(gl_well)) {
+        this->updateWellStateAlqFixedValue_(gl_well);
         this->optimize_ = false; // lift gas supply is fixed
     }
     else {
@@ -78,13 +78,13 @@ GasLiftSingleWell(const WellInterface<TypeTag> &well,
     //   default value is used.
     this->orig_alq_ = this->well_state_.getALQ(this->well_name_);
     if(this->optimize_) {
-        setAlqMinRate_(gl_well);
+        this->setAlqMinRate_(gl_well);
         // NOTE: According to item 4 in WLIFTOPT, this value does not
         //    have to be positive.
         // TODO: Does it make sense to have a negative value?
         this->alpha_w_ = gl_well.weight_factor();
         if (this->alpha_w_ <= 0 ) {
-            displayWarning_("Nonpositive value for alpha_w ignored");
+            this->displayWarning_("Nonpositive value for alpha_w ignored");
             this->alpha_w_ = 1.0;
         }
 
@@ -107,11 +107,11 @@ GasLiftSingleWell(const WellInterface<TypeTag> &well,
  ****************************************/
 
 template<typename TypeTag>
-GasLiftSingleWellGeneric::BasicRates
+typename GasLiftSingleWell<TypeTag>::BasicRates
 GasLiftSingleWell<TypeTag>::
 computeWellRates_( double bhp, bool bhp_is_limited, bool debug_output ) const
 {
-    std::vector<double> potentials(NUM_PHASES, 0.0);
+    std::vector<double> potentials(this->NUM_PHASES, 0.0);
     this->well_.computeWellRatesWithBhp(
         this->simulator_, bhp, potentials, this->deferred_logger_);
     if (debug_output) {
@@ -119,7 +119,7 @@ computeWellRates_( double bhp, bool bhp_is_limited, bool debug_output ) const
             "oil: {}, gas: {}, water: {}", bhp,
             -potentials[this->oil_pos_], -potentials[this->gas_pos_],
             -potentials[this->water_pos_]);
-        displayDebugMessage_(msg);
+        this->displayDebugMessage_(msg);
     }
 
     for (auto& potential : potentials) {
@@ -150,7 +150,7 @@ computeBhpAtThpLimit_(double alq, bool debug_output) const
                     " Using bhp limit instead",
                     *bhp_at_thp_limit, this->controls_.bhp_limit, alq
                 );
-                displayDebugMessage_(msg);
+                this->displayDebugMessage_(msg);
             }
             bhp_at_thp_limit = this->controls_.bhp_limit;
         }
@@ -159,7 +159,7 @@ computeBhpAtThpLimit_(double alq, bool debug_output) const
     else {
         const std::string msg = fmt::format(
             "Failed in getting converged bhp potential from thp limit (ALQ = {})", alq);
-        displayDebugMessage_(msg);
+        this->displayDebugMessage_(msg);
     }
     return bhp_at_thp_limit;
 }
@@ -198,9 +198,9 @@ setupPhaseVariables_()
         }
     }
     assert(num_phases_ok);
-    this->oil_pos_ = pu.phase_pos[Oil];
-    this->gas_pos_ = pu.phase_pos[Gas];
-    this->water_pos_ = pu.phase_pos[Water];
+    this->oil_pos_ = pu.phase_pos[this->Oil];
+    this->gas_pos_ = pu.phase_pos[this->Gas];
+    this->water_pos_ = pu.phase_pos[this->Water];
 }
 
 template<typename TypeTag>
@@ -240,7 +240,7 @@ checkThpControl_() const
     thp_control = thp_control || well.thpLimitViolatedButNotSwitched();
     if (this->debug) {
         if (!thp_control) {
-            displayDebugMessage_("Well is not under THP control, skipping iteration..");
+            this->displayDebugMessage_("Well is not under THP control, skipping iteration..");
         }
     }
     return thp_control;

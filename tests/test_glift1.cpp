@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(G1)
     using StdWell = Opm::StandardWell<TypeTag>;
     using GasLiftSingleWell = Opm::GasLiftSingleWell<TypeTag>;
     using GasLiftGroupInfo = Opm::GasLiftGroupInfo<double>;
-    using GasLiftSingleWellGeneric = Opm::GasLiftSingleWellGeneric;
+    using GasLiftSingleWellGeneric = Opm::GasLiftSingleWellGeneric<double>;
     using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
     const std::string filename = "GLIFT1.DATA";
     using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;

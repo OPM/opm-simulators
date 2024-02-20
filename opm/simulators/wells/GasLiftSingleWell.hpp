@@ -34,11 +34,12 @@
 namespace Opm
 {
     template<class TypeTag>
-    class GasLiftSingleWell : public GasLiftSingleWellGeneric
+    class GasLiftSingleWell : public GasLiftSingleWellGeneric<GetPropType<TypeTag, Properties::Scalar>>
     {
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-        using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
+        using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
+        using BasicRates = typename GasLiftSingleWellGeneric<Scalar>::BasicRates;
 
     public:
         GasLiftSingleWell(
