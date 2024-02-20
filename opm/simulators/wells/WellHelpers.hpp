@@ -26,8 +26,6 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/common/dynmatrix.hh>
 
-#include <array>
-
 namespace Opm {
 
 class ParallelWellInfo;
@@ -70,10 +68,11 @@ private:
     const ParallelWellInfo& parallel_well_info_;
 };
 
-double computeHydrostaticCorrection(const double well_ref_depth,
-                                    const double vfp_ref_depth,
-                                    const double rho, const double gravity);
-
+template<class Scalar>
+Scalar computeHydrostaticCorrection(const Scalar well_ref_depth,
+                                    const Scalar vfp_ref_depth,
+                                    const Scalar rho,
+                                    const Scalar gravity);
 
 /// \brief Sums entries of the diagonal Matrix for distributed wells
 template<typename Scalar, typename Comm>
