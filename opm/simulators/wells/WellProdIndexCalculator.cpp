@@ -34,66 +34,68 @@
 #include <vector>
 
 namespace {
-    void checkSizeCompatibility(const Opm::WellProdIndexCalculator& wellPICalc,
-                                const std::vector<double>&          connMobility)
+
+void checkSizeCompatibility(const Opm::WellProdIndexCalculator& wellPICalc,
+                            const std::vector<double>&          connMobility)
+{
+    if (connMobility.size() != wellPICalc.numConnections()) {
+        throw std::logic_error {
+            "Mobility vector size does not match expected number of connections"
+        };
+    }
+}
+
+double logRescale(const double r0, const double rw, const double rd, const double S)
+{
+    const auto numerator = std::log(r0 / rw) + S;
+    const auto denom     = std::log(rd / rw) + S;
+
+    return numerator / denom;
+}
+
+void standardConnFactorsExplicitDrainRadius(const Opm::Well&     well,
+                                            std::vector<double>& stdConnFact)
+{
+    const auto& connections = well.getConnections();
+    const auto rdrain = well.getDrainageRadius();
+
+    std::transform(connections.begin(), connections.end(), stdConnFact.begin(),
+        [rdrain](const Opm::Connection& conn)
     {
-        if (connMobility.size() != wellPICalc.numConnections()) {
-            throw std::logic_error {
-                "Mobility vector size does not match expected number of connections"
-            };
-        }
+        return conn.CF() * logRescale(conn.r0(), conn.rw(), rdrain, conn.skinFactor());
+    });
+}
+
+void standardConnFactorsDrainIsEquivalent(const Opm::Well&     well,
+                                          std::vector<double>& stdConnFact)
+{
+    const auto& connections = well.getConnections();
+
+    std::transform(connections.begin(), connections.end(), stdConnFact.begin(),
+        [](const Opm::Connection& conn)
+    {
+        return conn.CF();
+    });
+}
+
+std::vector<double> calculateStandardConnFactors(const Opm::Well& well)
+{
+    std::vector<double> stdConnFact(well.getConnections().size());
+
+    if (well.getDrainageRadius() > 0.0) {
+        // Well has an explicit drainage radius.  Apply logarithmic
+        // scaling to the CTFs.
+        standardConnFactorsExplicitDrainRadius(well, stdConnFact);
+    }
+    else {
+        // Unspecified drainage radius.  Standard mobility connection
+        // scaling factors are just the regular CTFs.
+        standardConnFactorsDrainIsEquivalent(well, stdConnFact);
     }
 
-    double logRescale(const double r0, const double rw, const double rd, const double S)
-    {
-        const auto numerator = std::log(r0 / rw) + S;
-        const auto denom     = std::log(rd / rw) + S;
+    return stdConnFact;
+}
 
-        return numerator / denom;
-    }
-
-    void standardConnFactorsExplicitDrainRadius(const Opm::Well&     well,
-                                                std::vector<double>& stdConnFact)
-    {
-        const auto& connections = well.getConnections();
-        const auto rdrain = well.getDrainageRadius();
-
-        std::transform(connections.begin(), connections.end(), stdConnFact.begin(),
-            [rdrain](const Opm::Connection& conn)
-        {
-            return conn.CF() * logRescale(conn.r0(), conn.rw(), rdrain, conn.skinFactor());
-        });
-    }
-
-    void standardConnFactorsDrainIsEquivalent(const Opm::Well&     well,
-                                              std::vector<double>& stdConnFact)
-    {
-        const auto& connections = well.getConnections();
-
-        std::transform(connections.begin(), connections.end(), stdConnFact.begin(),
-            [](const Opm::Connection& conn)
-        {
-            return conn.CF();
-        });
-    }
-
-    std::vector<double> calculateStandardConnFactors(const Opm::Well& well)
-    {
-        std::vector<double> stdConnFact(well.getConnections().size());
-
-        if (well.getDrainageRadius() > 0.0) {
-            // Well has an explicit drainage radius.  Apply logarithmic
-            // scaling to the CTFs.
-            standardConnFactorsExplicitDrainRadius(well, stdConnFact);
-        }
-        else {
-            // Unspecified drainage radius.  Standard mobility connection
-            // scaling factors are just the regular CTFs.
-            standardConnFactorsDrainIsEquivalent(well, stdConnFact);
-        }
-
-        return stdConnFact;
-    }
 } // namespace Anonymous
 
 Opm::WellProdIndexCalculator::WellProdIndexCalculator(const Well& well)

@@ -29,87 +29,88 @@ namespace Opm {
 
 namespace Opm {
 
-    /// Collect per-connection static information to enable calculating
-    /// connection-level or well-level productivity index values when
-    /// incorporating dynamic phase mobilities.
-    class WellProdIndexCalculator
+/// Collect per-connection static information to enable calculating
+/// connection-level or well-level productivity index values when
+/// incorporating dynamic phase mobilities.
+class WellProdIndexCalculator
+{
+public:
+    /// Constructor
+    ///
+    /// \param[in] well Individual well for which to collect
+    ///   per-connection static data.
+    explicit WellProdIndexCalculator(const Well& well);
+
+    /// Reinitialization operation
+    ///
+    /// Needed to repopulate the internal data members in case of
+    /// changes to the Well's properties, e.g., as a result of the
+    /// Well's CTFs being rescaled due to WELPI.
+    ///
+    /// \param[in] well Individual well for which to collect
+    ///   per-connection static data.
+    void reInit(const Well& well);
+
+    /// Compute connection-level steady-state productivity index value
+    /// using dynamic phase mobility.
+    ///
+    /// \param[in] connIdx Linear connection index.  Must be in the
+    ///   range 0..numConnections() - 1.
+    ///
+    /// \param[in] connMobility Phase mobility at connection \p connIdx.
+    ///   Typically derived from dynamic flow state conditions in cell
+    ///   intersected by well's connection \p connIdx.
+    ///
+    /// \return Connection-level steady-state productivity index.
+    double connectionProdIndStandard(const std::size_t connIdx,
+                                     const double      connMobility) const;
+
+    /// Number of connections in this well.
+    ///
+    /// Used primarily for consistency checks.
+    std::size_t numConnections() const
     {
-    public:
-        /// Constructor
-        ///
-        /// \param[in] well Individual well for which to collect
-        ///   per-connection static data.
-        explicit WellProdIndexCalculator(const Well& well);
+        return this->standardConnFactors_.size();
+    }
 
-        /// Reinitialization operation
-        ///
-        /// Needed to repopulate the internal data members in case of
-        /// changes to the Well's properties, e.g., as a result of the
-        /// Well's CTFs being rescaled due to WELPI.
-        ///
-        /// \param[in] well Individual well for which to collect
-        ///   per-connection static data.
-        void reInit(const Well& well);
+private:
+    /// Static, per-connection multiplicative PI factors.
+    ///
+    /// Corresponds to the well's connection transmissibility factors,
+    /// multiplied by a ratio of logarithms if the well has an explicit,
+    /// positive drainage radius.
+    std::vector<double> standardConnFactors_{};
+};
 
-        /// Compute connection-level steady-state productivity index value
-        /// using dynamic phase mobility.
-        ///
-        /// \param[in] connIdx Linear connection index.  Must be in the
-        ///   range 0..numConnections() - 1.
-        ///
-        /// \param[in] connMobility Phase mobility at connection \p connIdx.
-        ///   Typically derived from dynamic flow state conditions in cell
-        ///   intersected by well's connection \p connIdx.
-        ///
-        /// \return Connection-level steady-state productivity index.
-        double connectionProdIndStandard(const std::size_t connIdx,
-                                         const double      connMobility) const;
+/// Compute connection-level productivity index values for all
+/// connections in a well.
+///
+/// \param[in] wellPICalc Productivity index calculator.
+///
+/// \param[in] connMobility Phase mobility for each connection.
+///   Typically derived from dynamic flow state conditions in cells
+///   intersected by well's connections.  Must have one value for each
+///   \code wellPICalc.numConnections() \endcode well connection.
+///
+/// \return Connection-level steady-state productivity index values for
+///   all connections.
+std::vector<double>
+connectionProdIndStandard(const WellProdIndexCalculator& wellPICalc,
+                          const std::vector<double>&     connMobility);
 
-        /// Number of connections in this well.
-        ///
-        /// Used primarily for consistency checks.
-        std::size_t numConnections() const
-        {
-            return this->standardConnFactors_.size();
-        }
+/// Compute well-level productivity index value.
+///
+/// \param[in] wellPICalc Productivity index calculator.
+///
+/// \param[in] connMobility Phase mobility for each connection.
+///   Typically derived from dynamic flow state conditions in cells
+///   intersected by well's connections.  Must have one value for each
+///   \code wellPICalc.numConnections() \endcode well connection.
+///
+/// \return Well-level steady-state productivity index value.
+double wellProdIndStandard(const WellProdIndexCalculator& wellPICalc,
+                           const std::vector<double>&     connMobility);
 
-    private:
-        /// Static, per-connection multiplicative PI factors.
-        ///
-        /// Corresponds to the well's connection transmissibility factors,
-        /// multiplied by a ratio of logarithms if the well has an explicit,
-        /// positive drainage radius.
-        std::vector<double> standardConnFactors_{};
-    };
-
-    /// Compute connection-level productivity index values for all
-    /// connections in a well.
-    ///
-    /// \param[in] wellPICalc Productivity index calculator.
-    ///
-    /// \param[in] connMobility Phase mobility for each connection.
-    ///   Typically derived from dynamic flow state conditions in cells
-    ///   intersected by well's connections.  Must have one value for each
-    ///   \code wellPICalc.numConnections() \endcode well connection.
-    ///
-    /// \return Connection-level steady-state productivity index values for
-    ///   all connections.
-    std::vector<double>
-    connectionProdIndStandard(const WellProdIndexCalculator& wellPICalc,
-                              const std::vector<double>&     connMobility);
-
-    /// Compute well-level productivity index value.
-    ///
-    /// \param[in] wellPICalc Productivity index calculator.
-    ///
-    /// \param[in] connMobility Phase mobility for each connection.
-    ///   Typically derived from dynamic flow state conditions in cells
-    ///   intersected by well's connections.  Must have one value for each
-    ///   \code wellPICalc.numConnections() \endcode well connection.
-    ///
-    /// \return Well-level steady-state productivity index value.
-    double wellProdIndStandard(const WellProdIndexCalculator& wellPICalc,
-                               const std::vector<double>&     connMobility);
 } // namespace Opm
 
 #endif // OPM_WELLPRODINDEXCALCULATOR_HEADER_INCLUDED
