@@ -47,10 +47,10 @@
 
 namespace {
 
-template <typename ValueType>
+template <typename ValueType, typename Scalar>
 ValueType haalandFormular(const ValueType& re,
-                          const double diameter,
-                          const double roughness)
+                          const Scalar diameter,
+                          const Scalar roughness)
 {
     const ValueType value = -3.6 * log10(6.9 / re + std::pow(roughness / (3.7 * diameter), 10. / 9.) );
 
@@ -62,10 +62,10 @@ ValueType haalandFormular(const ValueType& re,
 
 // water in oil emulsion viscosity
 // TODO: maybe it should be two different ValueTypes. When we calculate the viscosity for transitional zone
-template <typename ValueType>
+template <typename ValueType, typename Scalar>
 ValueType WIOEmulsionViscosity(const ValueType& oil_viscosity,
                                const ValueType& water_liquid_fraction,
-                               const double max_visco_ratio)
+                               const Scalar max_visco_ratio)
 {
     const ValueType temp_value = 1. / (1. - (0.8415 / 0.7480 * water_liquid_fraction) );
     const ValueType viscosity_ratio = pow(temp_value, 2.5);
@@ -78,10 +78,10 @@ ValueType WIOEmulsionViscosity(const ValueType& oil_viscosity,
 }
 
 // oil in water emulsion viscosity
-template <typename ValueType>
+template <typename ValueType, typename Scalar>
 ValueType OIWEmulsionViscosity(const ValueType& water_viscosity,
                                const ValueType& water_liquid_fraction,
-                               const double max_visco_ratio)
+                               const Scalar max_visco_ratio)
 {
     const ValueType temp_value = 1. / (1. - (0.6019 / 0.6410) * (1. - water_liquid_fraction) );
     const ValueType viscosity_ratio = pow(temp_value, 2.5);
@@ -95,10 +95,7 @@ ValueType OIWEmulsionViscosity(const ValueType& water_viscosity,
 
 }
 
-namespace Opm {
-
-namespace mswellhelpers
-{
+namespace Opm::mswellhelpers {
 
     /// Applies umfpack and checks for singularity
 template <typename MatrixType, typename VectorType>
@@ -212,17 +209,17 @@ invDX(const MatrixType& D, VectorType x, DeferredLogger& deferred_logger)
     return y;
 }
 
-template <typename ValueType>
-ValueType frictionPressureLoss(const double l, const double diameter,
-                               const double area, const double roughness,
+template <typename ValueType, typename Scalar>
+ValueType frictionPressureLoss(const Scalar l, const Scalar diameter,
+                               const Scalar area, const Scalar roughness,
                                const ValueType& density,
                                const ValueType& w, const ValueType& mu)
 {
     // Reynolds number
     const ValueType re = abs( diameter * w / (area * mu));
 
-    constexpr double re_value1 = 2000.;
-    constexpr double re_value2 = 4000.;
+    constexpr Scalar re_value1 = 2000.;
+    constexpr Scalar re_value2 = 4000.;
 
     if (re < re_value1) {
         // not using the formula directly because of the division with very small w
@@ -234,7 +231,7 @@ ValueType frictionPressureLoss(const double l, const double diameter,
     if (re > re_value2) {
         f = haalandFormular(re, diameter, roughness);
     } else { // in between
-        constexpr double f1 = 16. / re_value1;
+        constexpr Scalar f1 = 16. / re_value1;
         const ValueType f2 = haalandFormular(re_value2, diameter, roughness);
         f = (f2 - f1) / (re_value2 - re_value1) * (re - re_value1) + f1;
     }
@@ -242,19 +239,19 @@ ValueType frictionPressureLoss(const double l, const double diameter,
     return 2. * f * l * w * w / (area * area * diameter * density);
 }
 
-template <typename ValueType>
+template <typename ValueType, typename Scalar>
 ValueType valveContrictionPressureLoss(const ValueType& mass_rate,
                                        const ValueType& density,
-                                       const double area_con, const double cv)
+                                       const Scalar area_con, const Scalar cv)
 {
     // the formulation is adjusted a little bit for convinience
     // velocity = mass_rate / (density * area) is applied to the original formulation
-    const double area = (area_con > 1.e-10 ? area_con : 1.e-10);
+    const Scalar area = (area_con > 1.e-10 ? area_con : 1.e-10);
     return mass_rate * mass_rate / (2. * density * cv * cv * area * area);
 }
 
-template <typename ValueType>
-ValueType velocityHead(const double area, const ValueType& mass_rate,
+template <typename ValueType, typename Scalar>
+ValueType velocityHead(const Scalar area, const ValueType& mass_rate,
                        const ValueType& density)
 {
     // \Note: a factor of 2 is added to the formulation in order to match results from the
@@ -262,21 +259,21 @@ ValueType velocityHead(const double area, const ValueType& mass_rate,
     return (mass_rate * mass_rate / (area * area * density));
 }
 
-template <typename ValueType>
+template <typename ValueType, typename Scalar>
 ValueType emulsionViscosity(const ValueType& water_fraction,
                             const ValueType& water_viscosity,
                             const ValueType& oil_fraction,
                             const ValueType& oil_viscosity,
                             const SICD& sicd)
 {
-    const double width_transition = sicd.widthTransitionRegion();
+    const Scalar width_transition = sicd.widthTransitionRegion();
 
     // it is just for now, we should be able to treat it.
     if (width_transition <= 0.) {
         OPM_THROW(std::runtime_error, "Not handling non-positive transition width now");
     }
 
-    const double critical_value = sicd.criticalValue();
+    const Scalar critical_value = sicd.criticalValue();
     const ValueType transition_start_value = critical_value - width_transition / 2.0;
     const ValueType transition_end_value = critical_value + width_transition / 2.0;
 
@@ -288,7 +285,7 @@ ValueType emulsionViscosity(const ValueType& water_fraction,
 
     const ValueType water_liquid_fraction = water_fraction / liquid_fraction;
 
-    const double max_visco_ratio = sicd.maxViscosityRatio();
+    const Scalar max_visco_ratio = sicd.maxViscosityRatio();
     if (water_liquid_fraction <= transition_start_value) {
         return WIOEmulsionViscosity(oil_viscosity, water_liquid_fraction, max_visco_ratio);
     } else if (water_liquid_fraction >= transition_end_value) {
@@ -317,30 +314,30 @@ INSTANCE_UMF(2)
 INSTANCE_UMF(3)
 INSTANCE_UMF(4)
 
-#define INSTANCE_IMPL(...) \
+#define INSTANCE_IMPL(T,...) \
     template __VA_ARGS__ \
-    frictionPressureLoss<__VA_ARGS__>(const double, \
-                                      const double, \
-                                      const double, \
-                                      const double, \
-                                      const __VA_ARGS__&, \
-                                      const __VA_ARGS__&, \
-                                      const __VA_ARGS__&); \
+    frictionPressureLoss(const T, \
+                         const T, \
+                         const T, \
+                         const T, \
+                         const __VA_ARGS__&, \
+                         const __VA_ARGS__&, \
+                         const __VA_ARGS__&); \
     template  __VA_ARGS__ \
-    valveContrictionPressureLoss<__VA_ARGS__>(const __VA_ARGS__& mass_rate, \
-                                              const __VA_ARGS__& density, \
-                                              const double, const double); \
+    valveContrictionPressureLoss(const __VA_ARGS__& mass_rate, \
+                                 const __VA_ARGS__& density, \
+                                 const T, const T); \
     template __VA_ARGS__ \
-    velocityHead<__VA_ARGS__>(const double, const __VA_ARGS__&, const __VA_ARGS__&); \
+    velocityHead(const T, const __VA_ARGS__&, const __VA_ARGS__&); \
     template __VA_ARGS__ \
-    emulsionViscosity<__VA_ARGS__>(const __VA_ARGS__&,  \
-                                   const __VA_ARGS__&, \
-                                   const __VA_ARGS__&, \
-                                   const __VA_ARGS__&, \
-                                   const SICD&);
+    emulsionViscosity<__VA_ARGS__,T>(const __VA_ARGS__&,  \
+                                     const __VA_ARGS__&, \
+                                     const __VA_ARGS__&, \
+                                     const __VA_ARGS__&, \
+                                     const SICD&);
 
 #define INSTANCE_EVAL(Dim) \
-    INSTANCE_IMPL(DenseAd::Evaluation<double,Dim>)
+    INSTANCE_IMPL(double, DenseAd::Evaluation<double,Dim>)
 
 INSTANCE_EVAL(3)
 INSTANCE_EVAL(4)
@@ -350,6 +347,4 @@ INSTANCE_EVAL(7)
 INSTANCE_EVAL(8)
 INSTANCE_EVAL(9)
 
-} // namespace mswellhelpers
-
-} // namespace Opm
+} // namespace Opm::mswellhelpers
