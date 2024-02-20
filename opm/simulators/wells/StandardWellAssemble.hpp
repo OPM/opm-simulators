@@ -59,7 +59,7 @@ public:
                            const Well::InjectionControls& inj_controls,
                            const Well::ProductionControls& prod_controls,
                            const PrimaryVariables& primary_variables,
-                           const double rho,
+                           const Scalar rho,
                            StandardWellEquations<Scalar,Indices::numEq>& eqns,
                            DeferredLogger& deferred_logger) const;
 
