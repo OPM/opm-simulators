@@ -233,7 +233,7 @@ namespace {
                 return localIdx;
             }
 
-            Opm::ParallelWBPCalculation::EvaluatorFactory connSource()
+            Opm::ParallelWBPCalculation<double>::EvaluatorFactory connSource()
             {
                 return []() {
                     auto rho = std::vector { 0.1, 0.12, 0.14, };
@@ -373,7 +373,7 @@ namespace {
                 return localIdx;
             }
 
-            Opm::ParallelWBPCalculation::EvaluatorFactory connSource()
+            Opm::ParallelWBPCalculation<double>::EvaluatorFactory connSource()
             {
                 return []() {
                     auto rho = std::vector { 0.16, 0.18, 0.2, };
@@ -483,22 +483,22 @@ namespace {
         return pwi;
     }
 
-    void setCallbacksTop(Opm::ParallelWBPCalculation& wbpCalcService)
+    void setCallbacksTop(Opm::ParallelWBPCalculation<double>& wbpCalcService)
     {
         wbpCalcService
             .localCellIndex(&Rank::Top::globalToLocal)
             .evalCellSource(&Rank::Top::cellSource);
     }
 
-    void setCallbacksBottom(Opm::ParallelWBPCalculation& wbpCalcService)
+    void setCallbacksBottom(Opm::ParallelWBPCalculation<double>& wbpCalcService)
     {
         wbpCalcService
             .localCellIndex(&Rank::Bottom::globalToLocal)
             .evalCellSource(&Rank::Bottom::cellSource);
     }
 
-    void setCallbacks(const int                    rank,
-                      Opm::ParallelWBPCalculation& wbpCalcService)
+    void setCallbacks(const int                            rank,
+                      Opm::ParallelWBPCalculation<double>& wbpCalcService)
     {
         if (rank == 0) {
             setCallbacksTop(wbpCalcService);
@@ -508,7 +508,7 @@ namespace {
         }
     }
 
-    Opm::ParallelWBPCalculation::EvaluatorFactory connSource(const int rank)
+    Opm::ParallelWBPCalculation<double>::EvaluatorFactory connSource(const int rank)
     {
         if (rank == 0) {
             return Rank::Top::connSource();
@@ -551,7 +551,7 @@ namespace {
 
         Opm::Parallel::Communication comm;
         Opm::GridDims cellIndexMap;
-        Opm::ParallelWBPCalculation wbpCalcService;
+        Opm::ParallelWBPCalculation<double> wbpCalcService;
         Opm::ParallelWellInfo<double> pwi;
     };
 
@@ -566,7 +566,7 @@ BOOST_AUTO_TEST_CASE(Create)
     BOOST_REQUIRE_EQUAL(comm.size(), 2);
 
     const Opm::GridDims dims{5, 5, 10};
-    auto wbpCalcService = Opm::ParallelWBPCalculation {
+    auto wbpCalcService = Opm::ParallelWBPCalculation<double> {
         dims, comm
     };
 

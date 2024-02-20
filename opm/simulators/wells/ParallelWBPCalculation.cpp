@@ -47,13 +47,14 @@
 #include <utility>
 #include <vector>
 
-Opm::ParallelWBPCalculation::
+template<class Scalar>
+Opm::ParallelWBPCalculation<Scalar>::
 LocalConnSet::LocalConnSet(const std::vector<int>& localConnIdx)
     : localConnIdx_ { localConnIdx }
 {}
 
-int
-Opm::ParallelWBPCalculation::
+template<class Scalar>
+int Opm::ParallelWBPCalculation<Scalar>::
 LocalConnSet::localIndex(const std::size_t connIdx) const
 {
     return (connIdx >= this->localConnIdx_.size())
@@ -63,40 +64,45 @@ LocalConnSet::localIndex(const std::size_t connIdx) const
 
 // ---------------------------------------------------------------------------
 
-Opm::ParallelWBPCalculation::SourceData::SourceData(const Parallel::Communication& comm)
+template<class Scalar>
+Opm::ParallelWBPCalculation<Scalar>::SourceData::
+SourceData(const Parallel::Communication& comm)
     : comm_ { comm }
 {}
 
-Opm::ParallelWBPCalculation::SourceData&
-Opm::ParallelWBPCalculation::SourceData::
+template<class Scalar>
+typename Opm::ParallelWBPCalculation<Scalar>::SourceData&
+Opm::ParallelWBPCalculation<Scalar>::SourceData::
 localIndex(GlobalToLocal localIdx)
 {
     this->localIdx_ = std::move(localIdx);
     return *this;
 }
 
-Opm::ParallelWBPCalculation::SourceData&
-Opm::ParallelWBPCalculation::SourceData::
+template<class Scalar>
+typename Opm::ParallelWBPCalculation<Scalar>::SourceData&
+Opm::ParallelWBPCalculation<Scalar>::SourceData::
 evaluator(Evaluator eval)
 {
     this->eval_ = std::move(eval);
     return *this;
 }
 
-Opm::ParallelWBPCalculation::SourceData&
-Opm::ParallelWBPCalculation::SourceData::
+template<class Scalar>
+typename Opm::ParallelWBPCalculation<Scalar>::SourceData&
+Opm::ParallelWBPCalculation<Scalar>::SourceData::
 evaluatorFactory(EvaluatorFactory evalFactory)
 {
     this->evalFactory_ = std::move(evalFactory);
     return *this;
 }
 
-void
-Opm::ParallelWBPCalculation::SourceData::
+template<class Scalar>
+void Opm::ParallelWBPCalculation<Scalar>::SourceData::
 buildStructure(const std::vector<std::size_t>& sourceLocations)
 {
     if (this->srcData_ == nullptr) {
-        this->srcData_ = std::make_unique<ParallelPAvgDynamicSourceData<double>>
+        this->srcData_ = std::make_unique<ParallelPAvgDynamicSourceData<Scalar>>
             (this->comm_, sourceLocations, this->localIdx_);
     }
     else {
@@ -104,7 +110,9 @@ buildStructure(const std::vector<std::size_t>& sourceLocations)
     }
 }
 
-void Opm::ParallelWBPCalculation::SourceData::collectDynamicValues()
+template<class Scalar>
+void Opm::ParallelWBPCalculation<Scalar>::SourceData::
+collectDynamicValues()
 {
     if (this->srcData_ == nullptr) {
         throw std::logic_error {
@@ -132,8 +140,9 @@ void Opm::ParallelWBPCalculation::SourceData::collectDynamicValues()
     this->srcData_->synchroniseSources();
 }
 
+template<class Scalar>
 std::vector<int>
-Opm::ParallelWBPCalculation::SourceData::
+Opm::ParallelWBPCalculation<Scalar>::SourceData::
 getLocalIndex(const std::vector<std::size_t>& globalIndex) const
 {
     auto localIdx = std::vector<int>(globalIndex.size());
@@ -149,37 +158,43 @@ getLocalIndex(const std::vector<std::size_t>& globalIndex) const
 
 // ===========================================================================
 
-Opm::ParallelWBPCalculation::ParallelWBPCalculation(const GridDims&                cellIndexMap,
-                                                    const Parallel::Communication& gridComm)
+template<class Scalar>
+Opm::ParallelWBPCalculation<Scalar>::
+ParallelWBPCalculation(const GridDims&                cellIndexMap,
+                       const Parallel::Communication& gridComm)
     : cellIndexMap_{ cellIndexMap }
     , reservoirSrc_{ gridComm }
 {}
 
-Opm::ParallelWBPCalculation&
-Opm::ParallelWBPCalculation::localCellIndex(GlobalToLocal localCellIdx)
+template<class Scalar>
+Opm::ParallelWBPCalculation<Scalar>&
+Opm::ParallelWBPCalculation<Scalar>::
+localCellIndex(GlobalToLocal localCellIdx)
 {
     this->reservoirSrc_.localIndex(std::move(localCellIdx));
     return *this;
 }
 
-Opm::ParallelWBPCalculation&
-Opm::ParallelWBPCalculation::evalCellSource(Evaluator evalCellSrc)
+template<class Scalar>
+Opm::ParallelWBPCalculation<Scalar>&
+Opm::ParallelWBPCalculation<Scalar>::
+evalCellSource(Evaluator evalCellSrc)
 {
     this->reservoirSrc_.evaluator(std::move(evalCellSrc));
     return *this;
 }
 
-std::size_t
-Opm::ParallelWBPCalculation::
+template<class Scalar>
+std::size_t Opm::ParallelWBPCalculation<Scalar>::
 createCalculator(const Well&             well,
-                 const ParallelWellInfo<double>& parallelWellInfo,
+                 const ParallelWellInfo<Scalar>& parallelWellInfo,
                  const std::vector<int>& localConnIdx,
                  EvaluatorFactory        makeWellSourceEvaluator)
 {
     assert (this->wellConnSrc_.size() == this->localConnSet_.size());
 
     const auto ix = this->calculators_
-                    .setCalculator(well.seqIndex(), std::make_unique<ParallelPAvgCalculator<double>>
+                    .setCalculator(well.seqIndex(), std::make_unique<ParallelPAvgCalculator<Scalar>>
                        (parallelWellInfo.communication(),
                         this->cellIndexMap_, well.getConnections()));
 
@@ -204,7 +219,9 @@ createCalculator(const Well&             well,
     return ix;
 }
 
-void Opm::ParallelWBPCalculation::defineCommunication()
+template<class Scalar>
+void Opm::ParallelWBPCalculation<Scalar>::
+defineCommunication()
 {
     assert (this->calculators_.numCalculators() == this->wellConnSrc_.size());
 
@@ -218,7 +235,9 @@ void Opm::ParallelWBPCalculation::defineCommunication()
     }
 }
 
-void Opm::ParallelWBPCalculation::collectDynamicValues()
+template<class Scalar>
+void Opm::ParallelWBPCalculation<Scalar>::
+collectDynamicValues()
 {
     this->reservoirSrc_.collectDynamicValues();
 
@@ -227,25 +246,29 @@ void Opm::ParallelWBPCalculation::collectDynamicValues()
     }
 }
 
-void
-Opm::ParallelWBPCalculation::
+template<class Scalar>
+void Opm::ParallelWBPCalculation<Scalar>::
 inferBlockAveragePressures(const std::size_t calcIndex,
                            const PAvg&       controls,
-                           const double      gravity,
-                           const double      refDepth)
+                           const Scalar      gravity,
+                           const Scalar      refDepth)
 {
     this->calculators_[calcIndex]
         .inferBlockAveragePressures(this->makeEvaluationSources(calcIndex),
                                     controls, gravity, refDepth);
 }
 
-const Opm::PAvgCalculator<double>::Result&
-Opm::ParallelWBPCalculation::averagePressures(const std::size_t calcIndex) const
+template<class Scalar>
+const typename Opm::PAvgCalculator<Scalar>::Result&
+Opm::ParallelWBPCalculation<Scalar>::
+averagePressures(const std::size_t calcIndex) const
 {
     return this->calculators_[calcIndex].averagePressures();
 }
 
-void Opm::ParallelWBPCalculation::pruneInactiveWBPCells()
+template<class Scalar>
+void Opm::ParallelWBPCalculation<Scalar>::
+pruneInactiveWBPCells()
 {
     if (this->reservoirSrc_.comm().size() == 1) {
         this->pruneInactiveWBPCellsSerial();
@@ -255,7 +278,9 @@ void Opm::ParallelWBPCalculation::pruneInactiveWBPCells()
     }
 }
 
-void Opm::ParallelWBPCalculation::pruneInactiveWBPCellsSerial()
+template<class Scalar>
+void Opm::ParallelWBPCalculation<Scalar>::
+pruneInactiveWBPCellsSerial()
 {
     this->calculators_.pruneInactiveWBPCells
         ([this](const std::vector<std::size_t>& globalWBPCellIdx)
@@ -275,7 +300,9 @@ void Opm::ParallelWBPCalculation::pruneInactiveWBPCellsSerial()
     });
 }
 
-void Opm::ParallelWBPCalculation::pruneInactiveWBPCellsParallel()
+template<class Scalar>
+void Opm::ParallelWBPCalculation<Scalar>::
+pruneInactiveWBPCellsParallel()
 {
     this->calculators_.pruneInactiveWBPCells(
         [this](const std::vector<std::size_t>& globalWBPCellIdx)
@@ -314,7 +341,9 @@ void Opm::ParallelWBPCalculation::pruneInactiveWBPCellsParallel()
     });
 }
 
-void Opm::ParallelWBPCalculation::defineReservoirCommunication()
+template<class Scalar>
+void Opm::ParallelWBPCalculation<Scalar>::
+defineReservoirCommunication()
 {
     auto sourceCells = std::vector<std::size_t>{};
 
@@ -327,16 +356,22 @@ void Opm::ParallelWBPCalculation::defineReservoirCommunication()
     this->reservoirSrc_.buildStructure({sourceCells.begin(), u});
 }
 
-void Opm::ParallelWBPCalculation::defineWellCommunication(const std::size_t well)
+template<class Scalar>
+void Opm::ParallelWBPCalculation<Scalar>::
+defineWellCommunication(const std::size_t well)
 {
     this->wellConnSrc_[well]
         .buildStructure(this->calculators_[well].allWellConnections());
 }
 
-Opm::PAvgCalculator<double>::Sources
-Opm::ParallelWBPCalculation::makeEvaluationSources(const WellID well) const
+template<class Scalar>
+typename Opm::PAvgCalculator<Scalar>::Sources
+Opm::ParallelWBPCalculation<Scalar>::
+makeEvaluationSources(const WellID well) const
 {
-    return PAvgCalculator<double>::Sources{}
+    return typename PAvgCalculator<Scalar>::Sources{}
         .wellBlocks(this->reservoirSrc_)
         .wellConns (this->wellConnSrc_[well]);
 }
+
+template class Opm::ParallelWBPCalculation<double>;

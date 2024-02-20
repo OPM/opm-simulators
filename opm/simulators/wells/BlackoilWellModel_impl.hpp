@@ -2075,14 +2075,14 @@ namespace Opm {
 
 
     template <typename TypeTag>
-    ParallelWBPCalculation::EvaluatorFactory
+    typename ParallelWBPCalculation<typename BlackoilWellModel<TypeTag>::Scalar>::EvaluatorFactory
     BlackoilWellModel<TypeTag>::
     makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
     {
         using Span = typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
         using Item = typename Span::Item;
 
-        return [wellIdx, this]() -> ParallelWBPCalculation::Evaluator
+        return [wellIdx, this]() -> typename ParallelWBPCalculation<Scalar>::Evaluator
         {
             if (! this->wbpCalcMap_[wellIdx].openWellIdx_.has_value()) {
                 // Well is stopped/shut.  Return evaluator for stopped wells.

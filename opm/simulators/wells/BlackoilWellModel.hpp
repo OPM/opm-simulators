@@ -488,7 +488,7 @@ class WellContributions;
             data::WellBlockAveragePressures
             computeWellBlockAveragePressures() const;
 
-            ParallelWBPCalculation::EvaluatorFactory
+            typename ParallelWBPCalculation<Scalar>::EvaluatorFactory
             makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const;
 
             void registerOpenWellsForWBPCalculation();

@@ -46,15 +46,16 @@ namespace Opm {
 /// Parallel facility for managing the on-rank collection and global
 /// distribution of WBPn source values as well as local calculation and
 /// distributed reduction of the inferred WBPn report values.
+template<class Scalar>
 class ParallelWBPCalculation
 {
 public:
     /// Callback for inferring the source locations which are active on the
     /// current MPI rank.
-    using GlobalToLocal = ParallelPAvgDynamicSourceData<double>::GlobalToLocal;
+    using GlobalToLocal = typename ParallelPAvgDynamicSourceData<Scalar>::GlobalToLocal;
 
     /// Callback for evaluating WBPn source terms on the current MPI rank.
-    using Evaluator = ParallelPAvgDynamicSourceData<double>::Evaluator;
+    using Evaluator = typename ParallelPAvgDynamicSourceData<Scalar>::Evaluator;
 
     /// Callback for constructing a source term evaluation function on the
     /// current MPI rank.  Needed for deferred construction of per-well
@@ -112,7 +113,7 @@ public:
     ///   well.
     std::size_t
     createCalculator(const Well&             well,
-                     const ParallelWellInfo<double>& parallelWellInfo,
+                     const ParallelWellInfo<Scalar>& parallelWellInfo,
                      const std::vector<int>& localConnIdx,
                      EvaluatorFactory        makeWellSourceEvaluator);
 
@@ -152,8 +153,8 @@ public:
     ///   Well::getWPaveRefDepth() \endcode.
     void inferBlockAveragePressures(const std::size_t calcIndex,
                                     const PAvg&       controls,
-                                    const double      gravity,
-                                    const double      refDepth);
+                                    const Scalar      gravity,
+                                    const Scalar      refDepth);
 
     /// Retrieve results from most recent WBPn value calculation for
     /// specified well.
@@ -163,7 +164,7 @@ public:
     ///
     /// \return Result set from most recent call to member function \c
     ///   inferBlockAveragePressures() for \c calcIndex.
-    const PAvgCalculator<double>::Result&
+    const typename PAvgCalculator<Scalar>::Result&
     averagePressures(const std::size_t calcIndex) const;
 
 private:
@@ -213,7 +214,7 @@ private:
         ///
         /// Enables transparent usage of this object as an argument to \code
         /// PAvgCalculator::inferBlockAveragePressures() \endcode.
-        operator const ParallelPAvgDynamicSourceData<double>&() const
+        operator const ParallelPAvgDynamicSourceData<Scalar>&() const
         {
             return *this->srcData_;
         }
@@ -294,7 +295,7 @@ private:
 
     private:
         /// Type of wrapped object.
-        using DataPtr = std::unique_ptr<ParallelPAvgDynamicSourceData<double>>;
+        using DataPtr = std::unique_ptr<ParallelPAvgDynamicSourceData<Scalar>>;
 
         /// MPI communicator for this source data object.
         std::reference_wrapper<const Parallel::Communication> comm_;
@@ -316,7 +317,7 @@ private:
     };
 
     /// Calculation object IDs.
-    using WellID = std::vector<SourceData>::size_type;
+    using WellID = typename std::vector<SourceData>::size_type;
 
     /// Cell index triple map ((I,J,K) <-> global).
     std::reference_wrapper<const GridDims> cellIndexMap_;
@@ -326,7 +327,7 @@ private:
 
     /// Collection of WBPn calculation objects.  One object for each well on
     /// rank.
-    PAvgCalculatorCollection<double> calculators_{};
+    PAvgCalculatorCollection<Scalar> calculators_{};
 
     /// Source term objects for each well on rank.
     std::vector<SourceData> wellConnSrc_{};
@@ -360,7 +361,8 @@ private:
     /// terms.
     ///
     /// \return WBPn source terms aggregated for \p well.
-    PAvgCalculator<double>::Sources makeEvaluationSources(const WellID well) const;
+    typename PAvgCalculator<Scalar>::Sources
+    makeEvaluationSources(const WellID well) const;
 };
 
 } // namespace Opm
