@@ -32,8 +32,7 @@
 #include <utility>
 #include <vector>
 
-namespace Opm
-{
+namespace Opm {
 
 class ConvergenceReport;
 class Schedule;
@@ -100,13 +99,13 @@ protected:
 
     /// check whether the well equations get converged for this well
     ConvergenceReport getWellConvergence(const WellState<Scalar>& well_state,
-                                         const std::vector<double>& B_avg,
+                                         const std::vector<Scalar>& B_avg,
                                          DeferredLogger& deferred_logger,
-                                         const double max_residual_allowed,
-                                         const double tolerance_wells,
-                                         const double relaxed_inner_tolerance_flow_ms_well,
-                                         const double tolerance_pressure_ms_wells,
-                                         const double relaxed_inner_tolerance_pressure_ms_well,
+                                         const Scalar max_residual_allowed,
+                                         const Scalar tolerance_wells,
+                                         const Scalar relaxed_inner_tolerance_flow_ms_well,
+                                         const Scalar tolerance_pressure_ms_wells,
+                                         const Scalar relaxed_inner_tolerance_pressure_ms_well,
                                          const bool relax_tolerance, 
                                          const bool well_is_stopped) const;
 
@@ -114,15 +113,15 @@ protected:
     getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
                            DeferredLogger& deferred_logger) const;
 
-    double getControlTolerance(const WellState<Scalar>& well_state,
-                               const double tolerance_wells,
-                               const double tolerance_pressure_ms_wells,
+    Scalar getControlTolerance(const WellState<Scalar>& well_state,
+                               const Scalar tolerance_wells,
+                               const Scalar tolerance_pressure_ms_wells,
                                DeferredLogger& deferred_logger) const;
 
-    double getResidualMeasureValue(const WellState<Scalar>& well_state,
-                                   const std::vector<double>& residuals,
-                                   const double tolerance_wells,
-                                   const double tolerance_pressure_ms_wells,
+    Scalar getResidualMeasureValue(const WellState<Scalar>& well_state,
+                                   const std::vector<Scalar>& residuals,
+                                   const Scalar tolerance_wells,
+                                   const Scalar tolerance_pressure_ms_wells,
                                    DeferredLogger& deferred_logger) const;
 
     void assembleAccelerationPressureLoss(const int seg,
@@ -141,10 +140,10 @@ protected:
     MSWSegments segments_; //!< Segment properties
 
     // depth difference between perforations and the perforated grid cells
-    std::vector<double> cell_perforation_depth_diffs_;
+    std::vector<Scalar> cell_perforation_depth_diffs_;
     // pressure correction due to the different depth of the perforation and
     // center depth of the grid block
-    std::vector<double> cell_perforation_pressure_diffs_;
+    std::vector<Scalar> cell_perforation_pressure_diffs_;
 };
 
 }

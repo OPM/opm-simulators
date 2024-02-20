@@ -79,35 +79,35 @@ template<typename FluidSystem, typename Indices>
 ConvergenceReport
 MultisegmentWellEval<FluidSystem,Indices>::
 getWellConvergence(const WellState<Scalar>& well_state,
-                   const std::vector<double>& B_avg,
+                   const std::vector<Scalar>& B_avg,
                    DeferredLogger& deferred_logger,
-                   const double max_residual_allowed,
-                   const double tolerance_wells,
-                   const double relaxed_inner_tolerance_flow_ms_well,
-                   const double tolerance_pressure_ms_wells,
-                   const double relaxed_inner_tolerance_pressure_ms_well,
+                   const Scalar max_residual_allowed,
+                   const Scalar tolerance_wells,
+                   const Scalar relaxed_inner_tolerance_flow_ms_well,
+                   const Scalar tolerance_pressure_ms_wells,
+                   const Scalar relaxed_inner_tolerance_pressure_ms_well,
                    const bool relax_tolerance, 
                    const bool well_is_stopped) const
 {
     assert(int(B_avg.size()) == baseif_.numComponents());
 
     // checking if any residual is NaN or too large. The two large one is only handled for the well flux
-    std::vector<std::vector<double>> abs_residual(this->numberOfSegments(),
-                                                  std::vector<double>(numWellEq, 0.0));
+    std::vector<std::vector<Scalar>> abs_residual(this->numberOfSegments(),
+                                                  std::vector<Scalar>(numWellEq, 0.0));
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
             abs_residual[seg][eq_idx] = std::abs(linSys_.residual()[seg][eq_idx]);
         }
     }
 
-    std::vector<double> maximum_residual(numWellEq, 0.0);
+    std::vector<Scalar> maximum_residual(numWellEq, 0.0);
 
     ConvergenceReport report;
     // TODO: the following is a little complicated, maybe can be simplified in some way?
     for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
         for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
             if (eq_idx < baseif_.numComponents()) { // phase or component mass equations
-                const double flux_residual = B_avg[eq_idx] * abs_residual[seg][eq_idx];
+                const Scalar flux_residual = B_avg[eq_idx] * abs_residual[seg][eq_idx];
                 if (flux_residual > maximum_residual[eq_idx]) {
                     maximum_residual[eq_idx] = flux_residual;
                 }
@@ -115,7 +115,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
                 // for the top segment (seg == 0), it is control equation, will be checked later separately
                 if (seg > 0) {
                     // Pressure equation
-                    const double pressure_residual = abs_residual[seg][eq_idx];
+                    const Scalar pressure_residual = abs_residual[seg][eq_idx];
                     if (pressure_residual > maximum_residual[eq_idx]) {
                         maximum_residual[eq_idx] = pressure_residual;
                     }
@@ -127,7 +127,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
     using CR = ConvergenceReport;
     for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
         if (eq_idx < baseif_.numComponents()) { // phase or component mass equations
-            const double flux_residual = maximum_residual[eq_idx];
+            const Scalar flux_residual = maximum_residual[eq_idx];
             // TODO: the report can not handle the segment number yet.
 
             if (std::isnan(flux_residual)) {
@@ -140,7 +140,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
                 report.setWellFailed({CR::WellFailure::Type::MassBalance, CR::Severity::Normal, eq_idx, baseif_.name()});
             }
         } else { // pressure equation
-            const double pressure_residual = maximum_residual[eq_idx];
+            const Scalar pressure_residual = maximum_residual[eq_idx];
             const int dummy_component = -1;
             if (std::isnan(pressure_residual)) {
                 report.setWellFailed({CR::WellFailure::Type::Pressure, CR::Severity::NotANumber, dummy_component, baseif_.name()});
@@ -170,7 +170,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
     // for BHP or THP controlled wells, we need to make sure the flow direction is correct
     if (!well_is_stopped && baseif_.isPressureControlled(well_state)) {
         // checking the flow direction
-        const double sign = baseif_.isProducer() ? -1. : 1.;
+        const Scalar sign = baseif_.isProducer() ? -1. : 1.;
         const auto weight_total_flux = this->primary_variables_.getWQTotal() * sign;
         constexpr int dummy_phase = -1;
         if (weight_total_flux < 0.) {
@@ -207,7 +207,7 @@ assembleAccelerationPressureLoss(const int seg,
     const auto& segment_set = this->segmentSet();
 
     // Add segment head
-    const double seg_area = segment_set[seg].crossArea();
+    const Scalar seg_area = segment_set[seg].crossArea();
     const EvalWell signed_velocity_head = segments_.accelerationPressureLossContribution(seg, seg_area);
     segments.pressure_drop_accel[seg] = signed_velocity_head.value();
     
@@ -225,7 +225,8 @@ assembleAccelerationPressureLoss(const int seg,
     // Subtract inlet head(s), opposite signs from above
     for (const int inlet : segments_.inlets(seg)) {
         // area used in formula is max of areas
-        const double inlet_area = std::max(seg_area, segment_set[inlet].crossArea());
+        const Scalar inlet_area = std::max(seg_area,
+                                           static_cast<Scalar>(segment_set[inlet].crossArea()));
         const EvalWell signed_velocity_head_inlet = segments_.accelerationPressureLossContribution(inlet, inlet_area);
         segments.pressure_drop_accel[seg] -= signed_velocity_head_inlet.value();
 
@@ -437,7 +438,7 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
 
     for (int seg = 0; seg < this->numberOfSegments(); ++seg) {
         for (int eq_idx = 0; eq_idx < numWellEq; ++eq_idx) {
-            double residual = 0.;
+            Scalar residual = 0.;
             if (eq_idx < baseif_.numComponents()) {
                 residual = std::abs(linSys_.residual()[seg][eq_idx]) * B_avg[eq_idx];
             } else {
@@ -459,7 +460,7 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
 
     // handling the control equation residual
     {
-        const double control_residual = std::abs(linSys_.residual()[0][numWellEq - 1]);
+        const Scalar control_residual = std::abs(linSys_.residual()[0][numWellEq - 1]);
         if (std::isnan(control_residual) || std::isinf(control_residual)) {
            deferred_logger.debug(fmt::format("nan or inf value for control residual for well {}", baseif_.name()));
            return {false, residuals};
@@ -471,14 +472,14 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
 }
 
 template<typename FluidSystem, typename Indices>
-double
+typename MultisegmentWellEval<FluidSystem,Indices>::Scalar
 MultisegmentWellEval<FluidSystem,Indices>::
 getControlTolerance(const WellState<Scalar>& well_state,
-                    const double tolerance_wells,
-                    const double tolerance_pressure_ms_wells,
+                    const Scalar tolerance_wells,
+                    const Scalar tolerance_pressure_ms_wells,
                     DeferredLogger& deferred_logger) const
 {
-    double control_tolerance = 0.;
+    Scalar control_tolerance = 0.;
 
     const int well_index = baseif_.indexOfWell();
     const auto& ws = well_state.well(well_index);
@@ -538,19 +539,19 @@ getControlTolerance(const WellState<Scalar>& well_state,
 }
 
 template<typename FluidSystem, typename Indices>
-double
+typename MultisegmentWellEval<FluidSystem,Indices>::Scalar
 MultisegmentWellEval<FluidSystem,Indices>::
 getResidualMeasureValue(const WellState<Scalar>& well_state,
-                        const std::vector<double>& residuals,
-                        const double tolerance_wells,
-                        const double tolerance_pressure_ms_wells,
+                        const std::vector<Scalar>& residuals,
+                        const Scalar tolerance_wells,
+                        const Scalar tolerance_pressure_ms_wells,
                         DeferredLogger& deferred_logger) const
 {
     assert(int(residuals.size()) == numWellEq + 1);
 
-    const double rate_tolerance = tolerance_wells;
+    const Scalar rate_tolerance = tolerance_wells;
     [[maybe_unused]] int count = 0;
-    double sum = 0;
+    Scalar sum = 0;
     for (int eq_idx = 0; eq_idx < numWellEq - 1; ++eq_idx) {
         if (residuals[eq_idx] > rate_tolerance) {
             sum += residuals[eq_idx] / rate_tolerance;
@@ -558,13 +559,13 @@ getResidualMeasureValue(const WellState<Scalar>& well_state,
         }
     }
 
-    const double pressure_tolerance = tolerance_pressure_ms_wells;
+    const Scalar pressure_tolerance = tolerance_pressure_ms_wells;
     if (residuals[SPres] > pressure_tolerance) {
         sum += residuals[SPres] / pressure_tolerance;
         ++count;
     }
 
-    const double control_tolerance = getControlTolerance(well_state,
+    const Scalar control_tolerance = getControlTolerance(well_state,
                                                          tolerance_wells,
                                                          tolerance_pressure_ms_wells,
                                                          deferred_logger);
