@@ -36,7 +36,7 @@ namespace Opm
 
 class DeferredLogger;
 class GuideRate;
-class ParallelWellInfo;
+template<class Scalar> class ParallelWellInfo;
 template<class Scalar> struct PerforationData;
 struct PhaseUsage;
 class SummaryState;
@@ -51,7 +51,7 @@ template<class Scalar>
 class WellInterfaceGeneric {
 public:
     WellInterfaceGeneric(const Well& well,
-                         const ParallelWellInfo& parallel_well_info,
+                         const ParallelWellInfo<Scalar>& parallel_well_info,
                          const int time_step,
                          const int pvtRegionIdx,
                          const int num_components,
@@ -131,7 +131,7 @@ public:
 
     const VFPProperties<Scalar>* vfpProperties() const { return vfp_properties_; }
 
-    const ParallelWellInfo& parallelWellInfo() const { return parallel_well_info_; }
+    const ParallelWellInfo<Scalar>& parallelWellInfo() const { return parallel_well_info_; }
 
     const std::vector<Scalar>& perfDepth() const { return perf_depth_; }
 
@@ -271,7 +271,7 @@ protected:
 
     Well well_ecl_;
 
-    const ParallelWellInfo& parallel_well_info_;
+    const ParallelWellInfo<Scalar>& parallel_well_info_;
     const int current_step_;
 
     // The pvt region of the well. We assume

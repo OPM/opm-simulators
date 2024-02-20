@@ -457,10 +457,10 @@ namespace {
         return w;
     }
 
-    Opm::ParallelWellInfo
+    Opm::ParallelWellInfo<double>
     parallelWellInfo(const Opm::Parallel::Communication& comm)
     {
-        auto pwi = Opm::ParallelWellInfo {
+        auto pwi = Opm::ParallelWellInfo<double> {
             std::pair { std::string{ "P" }, true }, comm
         };
 
@@ -469,7 +469,7 @@ namespace {
         const auto numLocalPerf = 3;
         const auto perfOffset = comm.rank() * numLocalPerf;
 
-        auto prev = Opm::ParallelWellInfo::INVALID_ECL_INDEX;
+        auto prev = Opm::ParallelWellInfo<double>::INVALID_ECL_INDEX;
         for (auto perf = 0; perf < numLocalPerf; ++perf) {
             const auto curr = perfOffset + perf;
             pwi.pushBackEclIndex(prev, curr);
@@ -552,7 +552,7 @@ namespace {
         Opm::Parallel::Communication comm;
         Opm::GridDims cellIndexMap;
         Opm::ParallelWBPCalculation wbpCalcService;
-        Opm::ParallelWellInfo pwi;
+        Opm::ParallelWellInfo<double> pwi;
     };
 
 } // Anonymous namespace

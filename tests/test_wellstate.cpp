@@ -139,7 +139,7 @@ struct Setup
 namespace {
     Opm::WellState<double>
     buildWellState(const Setup& setup, const std::size_t timeStep,
-                   std::vector<Opm::ParallelWellInfo>& pinfos)
+                   std::vector<Opm::ParallelWellInfo<double>>& pinfos)
     {
         auto state  = Opm::WellState<double>{setup.pu};
 
@@ -149,7 +149,7 @@ namespace {
 
         auto wells = setup.sched.getWells(timeStep);
         pinfos.resize(wells.size());
-        std::vector<std::reference_wrapper<Opm::ParallelWellInfo>> ppinfos;
+        std::vector<std::reference_wrapper<Opm::ParallelWellInfo<double>>> ppinfos;
         auto pw = pinfos.begin();
 
         for (const auto& well : wells)
@@ -259,7 +259,7 @@ BOOST_AUTO_TEST_CASE(Linearisation)
     const Setup setup{ "msw.data" };
     const auto tstep = std::size_t{0};
 
-    std::vector<Opm::ParallelWellInfo> pinfos;
+    std::vector<Opm::ParallelWellInfo<double>> pinfos;
     const auto wstate = buildWellState(setup, tstep, pinfos);
     const auto& ws = wstate.well("PROD01");
 
@@ -276,7 +276,7 @@ BOOST_AUTO_TEST_CASE(Pressure)
     const Setup setup{ "msw.data" };
     const auto tstep = std::size_t{0};
 
-    std::vector<Opm::ParallelWellInfo> pinfos;
+    std::vector<Opm::ParallelWellInfo<double>> pinfos;
     auto wstate = buildWellState(setup, tstep, pinfos);
 
     const auto& wells = setup.sched.getWells(tstep);
@@ -315,7 +315,7 @@ BOOST_AUTO_TEST_CASE(Rates)
     const Setup setup{ "msw.data" };
     const auto tstep = std::size_t{0};
 
-    std::vector<Opm::ParallelWellInfo> pinfos;
+    std::vector<Opm::ParallelWellInfo<double>> pinfos;
     auto wstate = buildWellState(setup, tstep, pinfos);
 
     const auto wells = setup.sched.getWells(tstep);
@@ -368,7 +368,7 @@ BOOST_AUTO_TEST_CASE(STOP_well)
     */
     const Setup setup{ "wells_manager_data_wellSTOP.data" };
 
-    std::vector<Opm::ParallelWellInfo> pinfos;
+    std::vector<Opm::ParallelWellInfo<double>> pinfos;
     auto wstate = buildWellState(setup, 0, pinfos);
     for (std::size_t well_index = 0; well_index < setup.sched.numWells(0); well_index++) {
         const auto& ws = wstate.well(well_index);
@@ -525,7 +525,7 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState) {
 
 BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
     const Setup setup{ "msw.data" };
-    std::vector<Opm::ParallelWellInfo> pinfo;
+    std::vector<Opm::ParallelWellInfo<double>> pinfo;
     const auto wstate = buildWellState(setup, 0, pinfo);
     const auto& well = setup.sched.getWell("PROD01", 0);
     const auto& ws = wstate.well("PROD01");
@@ -581,7 +581,7 @@ BOOST_AUTO_TEST_CASE(TESTPerfData) {
 
 
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
-    Opm::ParallelWellInfo pinfo;
+    Opm::ParallelWellInfo<double> pinfo;
     std::vector<Opm::PerforationData<double>> connections = {{0,1,1,0,0},{1,1,1,0,1},{2,1,1,0,2}};
     Opm::PhaseUsage pu;
 

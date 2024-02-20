@@ -50,7 +50,7 @@
 namespace Opm
 {
 
-class ParallelWellInfo;
+template<class Scalar> class ParallelWellInfo;
 template<class Scalar> struct PerforationData;
 class Schedule;
 enum class WellStatus;
@@ -68,13 +68,13 @@ public:
     static const int Gas = BlackoilPhases::Vapour;
 
     // Only usable for testing purposes
-    explicit WellState(const ParallelWellInfo& pinfo);
+    explicit WellState(const ParallelWellInfo<Scalar>& pinfo);
 
     explicit WellState(const PhaseUsage& pu)
         : phase_usage_(pu)
     {}
 
-    static WellState serializationTestObject(const ParallelWellInfo& pinfo);
+    static WellState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
 
     std::size_t size() const
     {
@@ -91,7 +91,7 @@ public:
         return this->size();
     }
 
-    const ParallelWellInfo& parallelWellInfo(std::size_t well_index) const;
+    const ParallelWellInfo<Scalar>& parallelWellInfo(std::size_t well_index) const;
 
     /// Allocate and initialize if wells is non-null.  Also tries
     /// to give useful initial values to the bhp(), wellRates()
@@ -99,14 +99,14 @@ public:
     void init(const std::vector<Scalar>& cellPressures,
               const Schedule& schedule,
               const std::vector<Well>& wells_ecl,
-              const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
+              const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
               const int report_step,
               const WellState* prevState,
               const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
               const SummaryState& summary_state);
 
     void resize(const std::vector<Well>& wells_ecl,
-                const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
+                const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
                 const Schedule& schedule,
                 const bool handle_ms_well,
                 const std::size_t numCells,
@@ -378,24 +378,24 @@ private:
     /// with -1e100.
     void base_init(const std::vector<Scalar>& cellPressures,
                    const std::vector<Well>& wells_ecl,
-                   const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
+                   const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
                    const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
                    const SummaryState& summary_state);
 
     void initSingleWell(const std::vector<Scalar>& cellPressures,
                         const Well& well,
                         const std::vector<PerforationData<Scalar>>& well_perf_data,
-                        const ParallelWellInfo& well_info,
+                        const ParallelWellInfo<Scalar>& well_info,
                         const SummaryState& summary_state);
 
     void initSingleProducer(const Well& well,
-                            const ParallelWellInfo& well_info,
+                            const ParallelWellInfo<Scalar>& well_info,
                             Scalar pressure_first_connection,
                             const std::vector<PerforationData<Scalar>>& well_perf_data,
                             const SummaryState& summary_state);
 
     void initSingleInjector(const Well& well,
-                            const ParallelWellInfo& well_info,
+                            const ParallelWellInfo<Scalar>& well_info,
                             Scalar pressure_first_connection,
                             const std::vector<PerforationData<Scalar>>& well_perf_data,
                             const SummaryState& summary_state);

@@ -54,7 +54,7 @@ namespace Opm {
 template<class Scalar>
 WellInterfaceGeneric<Scalar>::
 WellInterfaceGeneric(const Well& well,
-                     const ParallelWellInfo& pw_info,
+                     const ParallelWellInfo<Scalar>& pw_info,
                      const int time_step,
                      const int pvtRegionIdx,
                      const int num_components,

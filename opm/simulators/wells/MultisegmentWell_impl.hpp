@@ -57,7 +57,7 @@ namespace Opm
     template <typename TypeTag>
     MultisegmentWell<TypeTag>::
     MultisegmentWell(const Well& well,
-                     const ParallelWellInfo& pw_info,
+                     const ParallelWellInfo<Scalar>& pw_info,
                      const int time_step,
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,

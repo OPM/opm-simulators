@@ -41,14 +41,14 @@ template<class Scalar>
 class SingleWellState {
 public:
     SingleWellState(const std::string& name,
-                    const ParallelWellInfo& pinfo,
+                    const ParallelWellInfo<Scalar>& pinfo,
                     bool is_producer,
                     Scalar presssure_first_connection,
                     const std::vector<PerforationData<Scalar>>& perf_input,
                     const PhaseUsage& pu,
                     Scalar temp);
 
-    static SingleWellState serializationTestObject(const ParallelWellInfo& pinfo);
+    static SingleWellState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -79,7 +79,7 @@ public:
     bool operator==(const SingleWellState&) const;
 
     std::string name;
-    std::reference_wrapper<const ParallelWellInfo> parallel_info;
+    std::reference_wrapper<const ParallelWellInfo<Scalar>> parallel_info;
 
     WellStatus status{WellStatus::OPEN};
     bool producer;

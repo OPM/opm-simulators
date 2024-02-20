@@ -36,7 +36,7 @@
 
 namespace Opm {
     class GridDims;
-    class ParallelWellInfo;
+    template<class Scalar> class ParallelWellInfo;
     class PAvg;
     class Well;
 }
@@ -112,7 +112,7 @@ public:
     ///   well.
     std::size_t
     createCalculator(const Well&             well,
-                     const ParallelWellInfo& parallelWellInfo,
+                     const ParallelWellInfo<double>& parallelWellInfo,
                      const std::vector<int>& localConnIdx,
                      EvaluatorFactory        makeWellSourceEvaluator);
 

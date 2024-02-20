@@ -274,11 +274,11 @@ getLocalWells(const int timeStepIdx) const
 }
 
 template<class Scalar>
-std::vector<std::reference_wrapper<ParallelWellInfo>>
+std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>
 BlackoilWellModelGeneric<Scalar>::
 createLocalParallelWellInfo(const std::vector<Well>& wells)
 {
-    std::vector<std::reference_wrapper<ParallelWellInfo>> local_parallel_well_info;
+    std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>> local_parallel_well_info;
     local_parallel_well_info.reserve(wells.size());
     for (const auto& well : wells)
     {
@@ -318,7 +318,7 @@ initializeWellPerfData()
         int connection_index = 0;
 
         // INVALID_ECL_INDEX marks no above perf available
-        int connection_index_above = ParallelWellInfo::INVALID_ECL_INDEX;
+        int connection_index_above = ParallelWellInfo<Scalar>::INVALID_ECL_INDEX;
 
         well_perf_data_[well_index].clear();
         well_perf_data_[well_index].reserve(well.getConnections().size());

@@ -36,7 +36,7 @@ namespace Opm
 template<class FluidSystem, class Indices>
 WellInterfaceIndices<FluidSystem,Indices>::
 WellInterfaceIndices(const Well& well,
-                     const ParallelWellInfo& parallel_well_info,
+                     const ParallelWellInfo<Scalar>& parallel_well_info,
                      const int time_step,
                      const typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType& rate_converter,
                      const int pvtRegionIdx,

@@ -58,7 +58,7 @@ namespace Opm {
     template<class Scalar> class GasLiftWellState;
     class Group;
     class GuideRateConfig;
-    class ParallelWellInfo;
+    template<class Scalar> class ParallelWellInfo;
     class RestartValue;
     class Schedule;
     struct SimulatorUpdate;
@@ -323,7 +323,7 @@ protected:
 
     /// \brief Create the parallel well information
     /// \param localWells The local wells from ECL schedule
-    std::vector<std::reference_wrapper<ParallelWellInfo>>
+    std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>
     createLocalParallelWellInfo(const std::vector<Well>& wells);
 
     void initializeWellProdIndCalculators();
@@ -546,8 +546,8 @@ protected:
 
     std::vector<int> local_shut_wells_{};
 
-    std::vector<ParallelWellInfo> parallel_well_info_;
-    std::vector<std::reference_wrapper<ParallelWellInfo>> local_parallel_well_info_;
+    std::vector<ParallelWellInfo<Scalar>> parallel_well_info_;
+    std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>> local_parallel_well_info_;
 
     std::vector<WellProdIndexCalculator> prod_index_calc_;
     mutable ParallelWBPCalculation wbpCalculationService_;

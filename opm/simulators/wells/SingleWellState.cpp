@@ -31,7 +31,7 @@ namespace Opm {
 template<class Scalar>
 SingleWellState<Scalar>::
 SingleWellState(const std::string& name_,
-                const ParallelWellInfo& pinfo,
+                const ParallelWellInfo<Scalar>& pinfo,
                 bool is_producer,
                 Scalar pressure_first_connection,
                 const std::vector<PerforationData<Scalar>>& perf_input,
@@ -63,7 +63,7 @@ SingleWellState(const std::string& name_,
 
 template<class Scalar>
 SingleWellState<Scalar> SingleWellState<Scalar>::
-serializationTestObject(const ParallelWellInfo& pinfo)
+serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 {
     SingleWellState result("testing", pinfo, true, 1.0, {}, PhaseUsage{}, 2.0);
     result.perf_data = PerfData<Scalar>::serializationTestObject();

@@ -41,7 +41,8 @@ namespace wellhelpers {
 
 template<typename Scalar>
 ParallelStandardWellB<Scalar>::
-ParallelStandardWellB(const Matrix& B, const ParallelWellInfo& parallel_well_info)
+ParallelStandardWellB(const Matrix& B,
+                      const ParallelWellInfo<Scalar>& parallel_well_info)
     : B_(B), parallel_well_info_(parallel_well_info)
 {}
 

@@ -42,7 +42,7 @@ namespace Opm
 
 template<class Scalar, int numEq>
 StandardWellEquations<Scalar,numEq>::
-StandardWellEquations(const ParallelWellInfo& parallel_well_info)
+StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info)
     : parallelB_(duneB_, parallel_well_info)
 {
     duneB_.setBuildMode(OffDiagMatWell::row_wise);
