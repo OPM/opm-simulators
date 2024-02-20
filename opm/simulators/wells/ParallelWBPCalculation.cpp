@@ -42,7 +42,6 @@
 #include <cassert>
 #include <cstddef>
 #include <memory>
-#include <numeric>
 #include <stdexcept>
 #include <tuple>
 #include <utility>
@@ -97,7 +96,7 @@ Opm::ParallelWBPCalculation::SourceData::
 buildStructure(const std::vector<std::size_t>& sourceLocations)
 {
     if (this->srcData_ == nullptr) {
-        this->srcData_ = std::make_unique<ParallelPAvgDynamicSourceData>
+        this->srcData_ = std::make_unique<ParallelPAvgDynamicSourceData<double>>
             (this->comm_, sourceLocations, this->localIdx_);
     }
     else {

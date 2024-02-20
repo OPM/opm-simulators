@@ -32,13 +32,15 @@ namespace Opm {
 
 /// Dynamic source data for block-average pressure calculations.
 /// Specialisation for parallel runs.
-class ParallelPAvgDynamicSourceData : public PAvgDynamicSourceData<double>
+template<class Scalar>
+class ParallelPAvgDynamicSourceData : public PAvgDynamicSourceData<Scalar>
 {
 public:
     /// Translate globally unique, linearised Cartesian cell indices to
     /// local, on-rank, cell indices.  Assumed to return a negative value
     /// result if the input cell index is not owned by the current rank.
     using GlobalToLocal = std::function<int(const std::size_t)>;
+    template<class T> using SourceDataSpan = typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<T>;
 
     /// Collect source term contributions from local, on-rank, cell.
     ///
@@ -49,7 +51,7 @@ public:
     /// in which \c cellIndex is the local, on-rank, cell index in the range
     /// 0 to #active cells on rank - 1.  Function \c eval is expected to
     /// fill in/assign all \c sourceTerm items for this cell.
-    using Evaluator = std::function<void(int, SourceDataSpan<double>)>;
+    using Evaluator = std::function<void(int, SourceDataSpan<Scalar>)>;
 
     /// Constructor
     ///
@@ -117,11 +119,11 @@ private:
     std::vector<LocalLocation> locations_{};
 
     /// Source data values owned by current rank.
-    std::vector<double> localSrc_{};
+    std::vector<Scalar> localSrc_{};
 
     /// Translation map from element index to storage index in
     /// PAvgDynamicSourceData::src_.
-    std::vector<std::vector<double>::size_type> storageIndex_{};
+    std::vector<typename std::vector<Scalar>::size_type> storageIndex_{};
 
     /// Receive size from all ranks (allgatherv()).
     std::vector<int> allSizes_{}; // Type int to meet API requirements.
@@ -136,8 +138,8 @@ private:
     /// \param[in] elemIndex Source element index.
     ///
     /// \return Storage (starting) index in PAvgDynamicSourceData::src_.
-    [[nodiscard]] std::vector<double>::size_type
-    storageIndex(std::vector<double>::size_type elemIndex) const override;
+    [[nodiscard]] typename std::vector<Scalar>::size_type
+    storageIndex(typename std::vector<Scalar>::size_type elemIndex) const override;
 
     /// Identify local source term elements on rank and build communication
     /// pattern for all source terms.
@@ -159,7 +161,7 @@ private:
     /// \param[in] localIx Logical element index into \c localSrc_.
     ///
     /// \return Mutable view into \c localSrc_.
-    [[nodiscard]] SourceDataSpan<double>
+    [[nodiscard]] SourceDataSpan<Scalar>
     localSourceTerm(const std::size_t localIx);
 
     /// Build communication pattern for all source terms.

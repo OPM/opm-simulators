@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(Eval_and_collect)
 
     const auto num_src_loc = std::size_t{50};
 
-    auto source_data = Opm::ParallelPAvgDynamicSourceData {
+    auto source_data = Opm::ParallelPAvgDynamicSourceData<double> {
         comm, sourceLocations(num_src_loc),
         LocalCellIndex { comm_rank, comm_size }
     };

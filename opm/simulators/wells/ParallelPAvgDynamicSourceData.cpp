@@ -33,31 +33,34 @@
 #include <utility>
 #include <vector>
 
-Opm::ParallelPAvgDynamicSourceData::
+template<class Scalar>
+Opm::ParallelPAvgDynamicSourceData<Scalar>::
 ParallelPAvgDynamicSourceData(const Parallel::Communication&  comm,
                               const std::vector<std::size_t>& sourceLocations,
                               GlobalToLocal                   localCellIdx)
-    : PAvgDynamicSourceData { sourceLocations }
+    : PAvgDynamicSourceData<Scalar> { sourceLocations }
     , comm_                 { comm }
 {
     this->finaliseConstruction(sourceLocations, std::move(localCellIdx));
 }
 
-void Opm::ParallelPAvgDynamicSourceData::setToZero()
+template<class Scalar>
+void Opm::ParallelPAvgDynamicSourceData<Scalar>::setToZero()
 {
     std::fill_n(this->localSrc_.begin(), this->localSrc_.size(), 0.0);
 }
 
-void
-Opm::ParallelPAvgDynamicSourceData::
+template<class Scalar>
+void Opm::ParallelPAvgDynamicSourceData<Scalar>::
 reconstruct(const std::vector<std::size_t>& sourceLocations,
             GlobalToLocal                   localCellIdx)
 {
-    PAvgDynamicSourceData::reconstruct(sourceLocations); // Reconstruct base
+    PAvgDynamicSourceData<Scalar>::reconstruct(sourceLocations); // Reconstruct base
     this->finaliseConstruction(sourceLocations, std::move(localCellIdx));
 }
 
-void Opm::ParallelPAvgDynamicSourceData::collectLocalSources(Evaluator eval)
+template<class Scalar>
+void Opm::ParallelPAvgDynamicSourceData<Scalar>::collectLocalSources(Evaluator eval)
 {
     auto localIx = std::size_t{0};
 
@@ -66,7 +69,8 @@ void Opm::ParallelPAvgDynamicSourceData::collectLocalSources(Evaluator eval)
     }
 }
 
-void Opm::ParallelPAvgDynamicSourceData::synchroniseSources()
+template<class Scalar>
+void Opm::ParallelPAvgDynamicSourceData<Scalar>::synchroniseSources()
 {
     this->comm_.get()
         .allgatherv(this->localSrc_.data(),       // Input (from)
@@ -76,15 +80,16 @@ void Opm::ParallelPAvgDynamicSourceData::synchroniseSources()
                     this->startPointers_.data()); // Output offsets
 }
 
-std::vector<double>::size_type
-Opm::ParallelPAvgDynamicSourceData::
-storageIndex(const std::vector<double>::size_type elemIndex) const
+template<class Scalar>
+typename std::vector<Scalar>::size_type
+Opm::ParallelPAvgDynamicSourceData<Scalar>::
+storageIndex(const typename std::vector<Scalar>::size_type elemIndex) const
 {
     return this->storageIndex_[elemIndex];
 }
 
-void
-Opm::ParallelPAvgDynamicSourceData::
+template<class Scalar>
+void Opm::ParallelPAvgDynamicSourceData<Scalar>::
 finaliseConstruction(const std::vector<std::size_t>& sourceLocations,
                      GlobalToLocal                   localCellIdx)
 {
@@ -100,18 +105,20 @@ finaliseConstruction(const std::vector<std::size_t>& sourceLocations,
         ix += 1;
     }
 
-    this->localSrc_.assign(numSpanItems() * this->locations_.size(), 0.0);
+    this->localSrc_.assign(this->numSpanItems() * this->locations_.size(), 0.0);
 
     this->defineCommunication();
 }
 
-Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>
-Opm::ParallelPAvgDynamicSourceData::localSourceTerm(const std::size_t localIx)
+template<class Scalar>
+typename Opm::PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>
+Opm::ParallelPAvgDynamicSourceData<Scalar>::localSourceTerm(const std::size_t localIx)
 {
     return this->sourceTerm(localIx, this->localSrc_);
 }
 
-void Opm::ParallelPAvgDynamicSourceData::defineCommunication()
+template<class Scalar>
+void Opm::ParallelPAvgDynamicSourceData<Scalar>::defineCommunication()
 {
     // 1) Determine origins/owning ranks for all source terms.
     auto ixVec = std::vector<std::size_t>(this->locations_.size());
@@ -119,7 +126,7 @@ void Opm::ParallelPAvgDynamicSourceData::defineCommunication()
                    ixVec.begin(),
                    [](const auto& location) { return location.ix; });
 
-    constexpr auto numItems = numSpanItems();
+    constexpr auto numItems = ParallelPAvgDynamicSourceData<Scalar>::numSpanItems();
 
     const auto& [allIndices, allIxStart] = allGatherv(ixVec, this->comm_.get());
 
@@ -166,3 +173,5 @@ void Opm::ParallelPAvgDynamicSourceData::defineCommunication()
         this->storageIndex_[elemIndex] = storageIx++;
     }
 }
+
+template class Opm::ParallelPAvgDynamicSourceData<double>;

@@ -51,10 +51,10 @@ class ParallelWBPCalculation
 public:
     /// Callback for inferring the source locations which are active on the
     /// current MPI rank.
-    using GlobalToLocal = ParallelPAvgDynamicSourceData::GlobalToLocal;
+    using GlobalToLocal = ParallelPAvgDynamicSourceData<double>::GlobalToLocal;
 
     /// Callback for evaluating WBPn source terms on the current MPI rank.
-    using Evaluator = ParallelPAvgDynamicSourceData::Evaluator;
+    using Evaluator = ParallelPAvgDynamicSourceData<double>::Evaluator;
 
     /// Callback for constructing a source term evaluation function on the
     /// current MPI rank.  Needed for deferred construction of per-well
@@ -213,7 +213,7 @@ private:
         ///
         /// Enables transparent usage of this object as an argument to \code
         /// PAvgCalculator::inferBlockAveragePressures() \endcode.
-        operator const ParallelPAvgDynamicSourceData&() const
+        operator const ParallelPAvgDynamicSourceData<double>&() const
         {
             return *this->srcData_;
         }
@@ -294,7 +294,7 @@ private:
 
     private:
         /// Type of wrapped object.
-        using DataPtr = std::unique_ptr<ParallelPAvgDynamicSourceData>;
+        using DataPtr = std::unique_ptr<ParallelPAvgDynamicSourceData<double>>;
 
         /// MPI communicator for this source data object.
         std::reference_wrapper<const Parallel::Communication> comm_;
