@@ -31,12 +31,12 @@
 
 namespace {
 
-template <typename Rates>
-std::pair<double, double>
+template <typename Scalar, typename Rates>
+std::pair<Scalar, Scalar>
 dissolvedVaporisedRatio(const int    io,
                         const int    ig,
-                        const double rs,
-                        const double rv,
+                        const Scalar rs,
+                        const Scalar rv,
                         const Rates& surface_rates)
 {
     if ((io < 0) || (ig < 0)) {
@@ -49,8 +49,8 @@ dissolvedVaporisedRatio(const int    io,
     const auto Rv = surface_rates[io] / (surface_rates[ig] + eps);
 
     return {
-        std::clamp(static_cast<double>(Rs), 0.0, rs),
-        std::clamp(static_cast<double>(Rv), 0.0, rv)
+        std::clamp(static_cast<Scalar>(Rs), Scalar{0.0}, rs),
+        std::clamp(static_cast<Scalar>(Rv), Scalar{0.0}, rv)
     };
 }
 
@@ -80,8 +80,8 @@ sumRates(std::unordered_map<RegionId,Attributes>& attributes_hpv,
             comm.sum(ra.data.data(), ra.data.size());
             assert(ra.pv > 0.);
         }
-        const double pv_sum = ra.pv;
-        for (double& d : ra.data)
+        const Scalar pv_sum = ra.pv;
+        for (Scalar & d : ra.data)
             d /= pv_sum;
         ra.pv = pv_sum;
     }
@@ -94,9 +94,9 @@ calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
 {
     const auto& pu = phaseUsage_;
     const auto& ra = attr_.attributes(r);
-    const double p = ra.pressure;
-    const double T = ra.temperature;
-    const double saltConcentration = ra.saltConcentration;
+    const Scalar p = ra.pressure;
+    const Scalar T = ra.temperature;
+    const Scalar saltConcentration = ra.saltConcentration;
 
     const int   iw = RegionAttributeHelpers::PhasePos::water(pu);
     const int   io = RegionAttributeHelpers::PhasePos::oil  (pu);
@@ -107,18 +107,29 @@ calcInjCoeff(const RegionId r, const int pvtRegionIdx, Coeff& coeff) const
     if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
         // q[w]_r = q[w]_s / bw
 
-        const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0, saltConcentration);
+        const Scalar bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx,
+                                                                               T,
+                                                                               p,
+                                                                               Scalar{0.0},
+                                                                               saltConcentration);
 
         coeff[iw] = 1.0 / bw;
     }
 
     if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
-        const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0);
+        const Scalar bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx,
+                                                                             T,
+                                                                             p,
+                                                                             Scalar{0.0});
         coeff[io] += 1.0 / bo;
     }
 
     if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
-        const double bg = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, 0.0, 0.0);
+        const Scalar bg = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx,
+                                                                             T,
+                                                                             p,
+                                                                             Scalar{0.0},
+                                                                             Scalar{0.0});
         coeff[ig] += 1.0 / bg;
     }
 }
@@ -154,15 +165,15 @@ calcCoeff(const RegionId r, const int pvtRegionIdx, const Rates& surface_rates, 
 template <class FluidSystem, class Region>
 template <class Coeff>
 void SurfaceToReservoirVoidage<FluidSystem,Region>::
-calcCoeff(  const int pvtRegionIdx,
-            const double        p,
-            const double        Rs,
-            const double        Rv,
-            const double        Rsw,
-            const double        Rvw,
-            const double        T,
-            const double saltConcentration,
-            Coeff& coeff) const
+calcCoeff(const int pvtRegionIdx,
+          const Scalar p,
+          const Scalar Rs,
+          const Scalar Rv,
+          const Scalar Rsw,
+          const Scalar Rvw,
+          const Scalar T,
+          const Scalar saltConcentration,
+          Coeff& coeff) const
 {
     const auto& pu = phaseUsage_;
 
@@ -173,14 +184,14 @@ calcCoeff(  const int pvtRegionIdx,
     std::fill(& coeff[0], & coeff[0] + phaseUsage_.num_phases, 0.0);
 
     // Determinant of 'R' matrix
-    const double detRw = 1.0 - (Rsw * Rvw);
+    const Scalar detRw = 1.0 - (Rsw * Rvw);
 
     if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
         // q[w]_r = 1/(bw * (1 - rsw*rvw)) * (q[w]_s - rvw*q[g]_s)
 
-        const double bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rsw, saltConcentration);
+        const Scalar bw = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rsw, saltConcentration);
 
-        const double den = bw * detRw;
+        const Scalar den = bw * detRw;
 
         coeff[iw] += 1.0 / den;
 
@@ -190,7 +201,7 @@ calcCoeff(  const int pvtRegionIdx,
     }
 
     // Determinant of 'R' matrix
-    const double detR = 1.0 - (Rs * Rv);
+    const Scalar detR = 1.0 - (Rs * Rv);
 
     // Currently we only support either gas in water or gas in oil
     // not both
@@ -204,8 +215,8 @@ calcCoeff(  const int pvtRegionIdx,
     if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
         // q[o]_r = 1/(bo * (1 - rs*rv)) * (q[o]_s - rv*q[g]_s)
 
-        const double bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
-        const double den = bo * detR;
+        const Scalar bo = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rs);
+        const Scalar den = bo * detR;
 
         coeff[io] += 1.0 / den;
 
@@ -216,15 +227,15 @@ calcCoeff(  const int pvtRegionIdx,
 
     if (RegionAttributeHelpers::PhaseUsed::gas(pu)) {
         // q[g]_r = 1/(bg * (1 - rs*rv)) * (q[g]_s - rs*q[o]_s)
-        const double bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv, Rvw);
+        const Scalar bg  = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx, T, p, Rv, Rvw);
         if (FluidSystem::enableDissolvedGasInWater()) {
-            const double denw = bg * detRw;
+            const Scalar denw = bg * detRw;
             coeff[ig] += 1.0 / denw;
             if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
                coeff[iw] -= Rsw / denw;
             }
         } else {
-            const double den = bg * detR;
+            const Scalar den = bg * detR;
             coeff[ig] += 1.0 / den;
             if (RegionAttributeHelpers::PhaseUsed::oil(pu)) {
                 coeff[io] -= Rs / den;
@@ -238,13 +249,13 @@ template <class FluidSystem, class Region>
 template <typename SurfaceRates, typename VoidageRates>
 void SurfaceToReservoirVoidage<FluidSystem,Region>::
 calcReservoirVoidageRates(const int           pvtRegionIdx,
-                          const double        p,
-                          const double        rs,
-                          const double        rv,
-                          const double        rsw,
-                          const double        rvw,
-                          const double        T,
-                          const double        saltConcentration,
+                          const Scalar        p,
+                          const Scalar        rs,
+                          const Scalar        rv,
+                          const Scalar        rsw,
+                          const Scalar        rvw,
+                          const Scalar        T,
+                          const Scalar        saltConcentration,
                           const SurfaceRates& surface_rates,
                           VoidageRates&       voidage_rates) const
 {
@@ -347,10 +358,10 @@ calcReservoirVoidageRates(const RegionId r,
 
 template <class FluidSystem, class Region>
 template <class Rates>
-std::pair<double, double>
+std::pair<typename FluidSystem::Scalar, typename FluidSystem::Scalar>
 SurfaceToReservoirVoidage<FluidSystem,Region>::
-inferDissolvedVaporisedRatio(const double rsMax,
-                             const double rvMax,
+inferDissolvedVaporisedRatio(const Scalar rsMax,
+                             const Scalar rvMax,
                              const Rates& surface_rates) const
 {
     const auto io = RegionAttributeHelpers::PhasePos::oil(this->phaseUsage_);

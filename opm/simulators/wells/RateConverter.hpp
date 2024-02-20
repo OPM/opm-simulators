@@ -69,6 +69,8 @@ namespace Opm {
         template <class FluidSystem, class Region>
         class SurfaceToReservoirVoidage {
         public:
+            using Scalar = typename FluidSystem::Scalar;
+
             /**
              * Constructor.
              *
@@ -130,12 +132,12 @@ namespace Opm {
                     const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                     const auto& fs = intQuants.fluidState();
                     // use pore volume weighted averages.
-                    const double pv_cell =
+                    const Scalar pv_cell =
                             simulator.model().dofTotalVolume(cellIdx)
                             * intQuants.porosity().value();
 
                     // only count oil and gas filled parts of the domain
-                    double hydrocarbon = 1.0;
+                    Scalar hydrocarbon = 1.0;
                     const auto& pu = phaseUsage_;
                     if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
                         hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
@@ -145,7 +147,7 @@ namespace Opm {
                     assert(reg >= 0);
 
                     // sum p, rs, rv, and T.
-                    const double hydrocarbonPV = pv_cell*hydrocarbon;
+                    const Scalar hydrocarbonPV = pv_cell*hydrocarbon;
                     if (hydrocarbonPV > 0.) {
                         auto& attr = attributes_hpv[reg];
                         attr.pv += hydrocarbonPV;
@@ -249,15 +251,15 @@ namespace Opm {
 
             template <class Coeff>
             void
-            calcCoeff(  const int pvtRegionIdx,
-                        const double        p,
-                        const double        rs,
-                        const double        rv,
-                        const double        rsw,
-                        const double        rvw,
-                        const double        T,
-                        const double saltConcentration,
-                        Coeff& coeff) const;
+            calcCoeff(  const int     pvtRegionIdx,
+                        const Scalar  p,
+                        const Scalar  rs,
+                        const Scalar  rv,
+                        const Scalar  rsw,
+                        const Scalar  rvw,
+                        const Scalar  T,
+                        const Scalar  saltConcentration,
+                        Coeff&        coeff) const;
 
             template <class Coeff>
             void
@@ -327,20 +329,20 @@ namespace Opm {
              */
             template <typename SurfaceRates, typename VoidageRates>
             void calcReservoirVoidageRates(const int           pvtRegionIdx,
-                                           const double        p,
-                                           const double        rs,
-                                           const double        rv,
-                                           const double        rsw,
-                                           const double        rvw,
-                                           const double        T,
-                                           const double        saltConcentration,
+                                           const Scalar        p,
+                                           const Scalar        rs,
+                                           const Scalar        rv,
+                                           const Scalar        rsw,
+                                           const Scalar        rvw,
+                                           const Scalar        T,
+                                           const Scalar        saltConcentration,
                                            const SurfaceRates& surface_rates,
                                            VoidageRates&       voidage_rates) const;
 
             template <class Rates>
-            std::pair<double, double>
-            inferDissolvedVaporisedRatio(const double rsMax,
-                                         const double rvMax,
+            std::pair<Scalar, Scalar>
+            inferDissolvedVaporisedRatio(const Scalar rsMax,
+                                         const Scalar rvMax,
                                          const Rates& surface_rates) const;
 
             /**
@@ -357,13 +359,13 @@ namespace Opm {
              */
             template <class SolventModule>
             void
-            calcCoeffSolvent(const RegionId r, const int pvtRegionIdx, double& coeff) const
+            calcCoeffSolvent(const RegionId r, const int pvtRegionIdx, Scalar& coeff) const
             {
                 const auto& ra = attr_.attributes(r);
-                const double p = ra.pressure;
-                const double T = ra.temperature;
+                const Scalar p = ra.pressure;
+                const Scalar T = ra.temperature;
                 const auto& solventPvt = SolventModule::solventPvt();
-                const double bs = solventPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p);
+                const Scalar bs = solventPvt.inverseFormationVolumeFactor(pvtRegionIdx, T, p);
                 coeff = 1.0 / bs;
             }
 
@@ -406,15 +408,15 @@ namespace Opm {
                     return *this;
                 }
 
-                std::array<double,8> data;
-                double& pressure;
-                double& temperature;
-                double& rs;
-                double& rv;
-                double& rsw;
-                double& rvw;
-                double& pv;
-                double& saltConcentration;
+                std::array<Scalar,8> data;
+                Scalar& pressure;
+                Scalar& temperature;
+                Scalar& rs;
+                Scalar& rv;
+                Scalar& rsw;
+                Scalar& rvw;
+                Scalar& pv;
+                Scalar& saltConcentration;
             };
 
             void sumRates(std::unordered_map<RegionId,Attributes>& attributes_hpv,
