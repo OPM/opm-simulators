@@ -90,9 +90,9 @@ namespace Opm {
             .localCellIndex([this](const std::size_t globalIndex)
             { return this->compressedIndexForInterior(globalIndex); })
             .evalCellSource([this](const int                                     localCell,
-                                   PAvgDynamicSourceData::SourceDataSpan<double> sourceTerms)
+                                   PAvgDynamicSourceData::SourceDataSpan<Scalar> sourceTerms)
             {
-                using Item = PAvgDynamicSourceData::SourceDataSpan<double>::Item;
+                using Item = typename PAvgDynamicSourceData::SourceDataSpan<Scalar>::Item;
 
                 const auto* intQuants = this->simulator_.model()
                     .cachedIntensiveQuantities(localCell, /*timeIndex = */0);
@@ -511,9 +511,9 @@ namespace Opm {
 
         //update guide rates
         const auto& comm = simulator_.vanguard().grid().comm();
-        std::vector<double> pot(this->numPhases(), 0.0);
+        std::vector<Scalar> pot(this->numPhases(), 0.0);
         const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
-        WellGroupHelpers<double>::updateGuideRates(fieldGroup,
+        WellGroupHelpers<Scalar>::updateGuideRates(fieldGroup,
                                                    this->schedule(),
                                                    summaryState,
                                                    this->phase_usage_,
@@ -533,7 +533,7 @@ namespace Opm {
                 calculator.second->template defineState<ElementContext>(simulator_);
             }
             const double dt = simulator_.timeStepSize();
-            WellGroupHelpers<double>::updateGpMaintTargetForGroups(fieldGroup,
+            WellGroupHelpers<Scalar>::updateGpMaintTargetForGroups(fieldGroup,
                                                                    this->schedule_,
                                                                    regionalAveragePressureCalculator_,
                                                                    reportStepIdx,
@@ -594,8 +594,8 @@ namespace Opm {
             // some preparation before the well can be used
             well->init(&this->phase_usage_, depth_, gravity_, local_num_cells_, B_avg_, true);
 
-            double well_efficiency_factor = wellEcl.getEfficiencyFactor();
-            WellGroupHelpers<double>::accumulateGroupEfficiencyFactor(this->schedule().getGroup(wellEcl.groupName(),
+            Scalar well_efficiency_factor = wellEcl.getEfficiencyFactor();
+            WellGroupHelpers<Scalar>::accumulateGroupEfficiencyFactor(this->schedule().getGroup(wellEcl.groupName(),
                                                                                                 timeStepIdx),
                                                                       this->schedule(),
                                                                       timeStepIdx,
@@ -799,7 +799,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     initializeWellState(const int timeStepIdx)
     {
-        std::vector<double> cellPressures(this->local_num_cells_, 0.0);
+        std::vector<Scalar> cellPressures(this->local_num_cells_, 0.0);
         ElementContext elemCtx(simulator_);
 
         const auto& gridView = simulator_.vanguard().gridView();
@@ -811,7 +811,7 @@ namespace Opm {
 
             const auto& fs = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0).fluidState();
             // copy of get perfpressure in Standard well except for value
-            double& perf_pressure = cellPressures[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)];
+            Scalar& perf_pressure = cellPressures[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)];
             if (Indices::oilEnabled) {
                 perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
             } else if (Indices::waterEnabled) {
@@ -959,7 +959,7 @@ namespace Opm {
                     if (it != this->node_pressures_.end()) {
                         // The well belongs to a group which has a network nodal pressure,
                         // set the dynamic THP constraint based on the network nodal pressure
-                        const double nodal_pressure = it->second;
+                        const Scalar nodal_pressure = it->second;
                         well->setDynamicThpLimit(nodal_pressure);
                     }
                 }
@@ -1217,9 +1217,9 @@ namespace Opm {
             const double simulationTime = simulator_.time();
             const auto& comm = simulator_.vanguard().grid().comm();
             const auto& summaryState = simulator_.vanguard().summaryState();
-            std::vector<double> pot(this->numPhases(), 0.0);
+            std::vector<Scalar> pot(this->numPhases(), 0.0);
             const Group& fieldGroup = this->schedule().getGroup("FIELD", reportStepIdx);
-            WellGroupHelpers<double>::updateGuideRates(fieldGroup,
+            WellGroupHelpers<Scalar>::updateGuideRates(fieldGroup,
                                                        this->schedule(),
                                                        summaryState,
                                                        this->phase_usage_,
@@ -1286,7 +1286,7 @@ namespace Opm {
         bool do_glift_optimization = false;
         int num_wells_changed = 0;
         const double simulation_time = simulator_.time();
-        const double min_wait = simulator_.vanguard().schedule().glo(simulator_.episodeIndex()).min_wait();
+        const Scalar min_wait = simulator_.vanguard().schedule().glo(simulator_.episodeIndex()).min_wait();
         // We only optimize if a min_wait time has past.
         // If all_newton is true we still want to optimize several times pr timestep
         // i.e. we also optimize if check simulation_time == last_glift_opt_time_
@@ -1390,13 +1390,13 @@ namespace Opm {
             if (num_rates_to_sync > 0) {
                 std::vector<int> group_indexes;
                 group_indexes.reserve(num_rates_to_sync);
-                std::vector<double> group_alq_rates;
+                std::vector<Scalar> group_alq_rates;
                 group_alq_rates.reserve(num_rates_to_sync);
-                std::vector<double> group_oil_rates;
+                std::vector<Scalar> group_oil_rates;
                 group_oil_rates.reserve(num_rates_to_sync);
-                std::vector<double> group_gas_rates;
+                std::vector<Scalar> group_gas_rates;
                 group_gas_rates.reserve(num_rates_to_sync);
-                std::vector<double> group_water_rates;
+                std::vector<Scalar> group_water_rates;
                 group_water_rates.reserve(num_rates_to_sync);
                 if (comm.rank() == i) {
                     for (auto idx : groups_to_sync) {
@@ -1897,10 +1897,10 @@ namespace Opm {
         bool more_network_update = false;
         if (this->shouldBalanceNetwork(episodeIdx, iterationIdx) || mandatory_network_balance) {
             const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx);
-            const double network_imbalance = comm.max(local_network_imbalance);
+            const Scalar network_imbalance = comm.max(local_network_imbalance);
             const auto& balance = this->schedule()[episodeIdx].network_balance();
-            constexpr double relaxtion_factor = 10.0;
-            const double tolerance = relax_network_tolerance ? relaxtion_factor * balance.pressure_tolerance() : balance.pressure_tolerance();
+            constexpr Scalar relaxation_factor = 10.0;
+            const Scalar tolerance = relax_network_tolerance ? relaxation_factor * balance.pressure_tolerance() : balance.pressure_tolerance();
             more_network_update = this->networkActive() && network_imbalance > tolerance;
         }
 
@@ -2068,7 +2068,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
     {
-        using Span = PAvgDynamicSourceData::SourceDataSpan<double>;
+        using Span = PAvgDynamicSourceData::SourceDataSpan<Scalar>;
         using Item = typename Span::Item;
 
         return [wellIdx, this]() -> ParallelWBPCalculation::Evaluator
@@ -2244,7 +2244,7 @@ namespace Opm {
                                                   DeferredLogger& deferred_logger)
     {
         const int np = this->numPhases();
-        std::vector<double> potentials;
+        std::vector<Scalar> potentials;
         const auto& well = well_container_[widx];
         std::string cur_exc_msg;
         auto cur_exc_type = ExceptionType::NONE;
@@ -2528,8 +2528,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     calcRates(const int fipnum,
               const int pvtreg,
-              const std::vector<double>& production_rates,
-              std::vector<double>& resv_coeff)
+              const std::vector<Scalar>& production_rates,
+              std::vector<Scalar>& resv_coeff)
     {
         rateConverter_->calcCoeff(fipnum, pvtreg, production_rates, resv_coeff);
     }
@@ -2538,8 +2538,8 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     calcInjRates(const int fipnum,
-              const int pvtreg,
-              std::vector<double>& resv_coeff)
+                 const int pvtreg,
+                 std::vector<Scalar>& resv_coeff)
     {
         rateConverter_->calcInjCoeff(fipnum, pvtreg, resv_coeff);
     }
@@ -2554,17 +2554,17 @@ namespace Opm {
             return;
 
         int np = this->numPhases();
-        double cellInternalEnergy;
-        double cellBinv;
-        double cellDensity;
-        double perfPhaseRate;
+        Scalar cellInternalEnergy;
+        Scalar cellBinv;
+        Scalar cellDensity;
+        Scalar perfPhaseRate;
         const int nw = this->numLocalWells();
         for (auto wellID = 0*nw; wellID < nw; ++wellID) {
             const Well& well = this->wells_ecl_[wellID];
             if (well.isInjector())
                 continue;
 
-            std::array<double,2> weighted{0.0,0.0};
+            std::array<Scalar,2> weighted{0.0,0.0};
             auto& [weighted_temperature, total_weight] = weighted;
 
             auto& well_info = this->local_parallel_well_info_[wellID].get();
@@ -2579,9 +2579,9 @@ namespace Opm {
                 const auto& fs = intQuants.fluidState();
 
                 // we on only have one temperature pr cell any phaseIdx will do
-                double cellTemperatures = fs.temperature(/*phaseIdx*/0).value();
+                Scalar cellTemperatures = fs.temperature(/*phaseIdx*/0).value();
 
-                double weight_factor = 0.0;
+                Scalar weight_factor = 0.0;
                 for (unsigned phaseIdx = 0; phaseIdx < FluidSystem::numPhases; ++phaseIdx)
                 {
                     if (!FluidSystem::phaseIsActive(phaseIdx)) {
@@ -2611,7 +2611,7 @@ namespace Opm {
         for (const auto& w : well_container_) {
             os << w->name() << ":";
             auto pv = w->getPrimaryVars();
-            for (const double v : pv) {
+            for (const Scalar v : pv) {
                 os << ' ' << v;
             }
             os << '\n';
@@ -2622,11 +2622,11 @@ namespace Opm {
 
 
     template <typename TypeTag>
-    std::vector<double>
+    std::vector<typename BlackoilWellModel<TypeTag>::Scalar>
     BlackoilWellModel<TypeTag>::
     getPrimaryVarsDomain(const Domain& domain) const
     {
-        std::vector<double> ret;
+        std::vector<Scalar> ret;
         for (const auto& well : well_container_) {
             if (well_domain_.at(well->name()) == domain.index) {
                 const auto& pv = well->getPrimaryVars();
@@ -2641,7 +2641,7 @@ namespace Opm {
     template <typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    setPrimaryVarsDomain(const Domain& domain, const std::vector<double>& vars)
+    setPrimaryVarsDomain(const Domain& domain, const std::vector<Scalar>& vars)
     {
         std::size_t offset = 0;
         for (auto& well : well_container_) {

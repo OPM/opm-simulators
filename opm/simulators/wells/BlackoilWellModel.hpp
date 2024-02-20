@@ -264,7 +264,7 @@ namespace Opm {
                 this->assignWellTracerRates(wsrpt, tracerRates);
 
 
-                BlackoilWellModelGuideRates<double>(*this).assignWellGuideRates(wsrpt, this->reportStepIndex());
+                BlackoilWellModelGuideRates(*this).assignWellGuideRates(wsrpt, this->reportStepIndex());
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
 
                 return wsrpt;
@@ -333,7 +333,7 @@ namespace Opm {
             WellInterfacePtr getWell(const std::string& well_name) const;
             bool hasWell(const std::string& well_name) const;
 
-            using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
+            using PressureMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
 
             void addWellPressureEquations(PressureMatrix& jacobian, const BVector& weights,const bool use_well_weights) const;
 
@@ -355,8 +355,8 @@ namespace Opm {
             void updateWellControlsDomain(DeferredLogger& deferred_logger, const Domain& domain);
 
             void logPrimaryVars() const;
-            std::vector<double> getPrimaryVarsDomain(const Domain& domain) const;
-            void setPrimaryVarsDomain(const Domain& domain, const std::vector<double>& vars);
+            std::vector<Scalar> getPrimaryVarsDomain(const Domain& domain) const;
+            void setPrimaryVarsDomain(const Domain& domain, const std::vector<Scalar>& vars);
 
             void setupDomains(const std::vector<Domain>& domains);
 
@@ -389,8 +389,8 @@ namespace Opm {
             std::size_t global_num_cells_{};
             // the number of the cells in the local grid
             std::size_t local_num_cells_{};
-            double gravity_{};
-            std::vector<double> depth_{};
+            Scalar gravity_{};
+            std::vector<Scalar> depth_{};
             bool alternative_well_rate_init_{};
 
             std::unique_ptr<RateConverterType> rateConverter_{};
@@ -495,7 +495,7 @@ namespace Opm {
                                    ExceptionType::ExcEnum& exc_type,
                                    DeferredLogger& deferred_logger) override;
 
-            const std::vector<double>& wellPerfEfficiencyFactors() const;
+            const std::vector<Scalar>& wellPerfEfficiencyFactors() const;
 
             void calculateProductivityIndexValuesShutWells(const int reportStepIdx, DeferredLogger& deferred_logger) override;
             void calculateProductivityIndexValues(DeferredLogger& deferred_logger) override;
@@ -539,12 +539,12 @@ namespace Opm {
 
             void calcRates(const int fipnum,
                            const int pvtreg,
-                           const std::vector<double>& production_rates,
-                           std::vector<double>& resv_coeff) override;
+                           const std::vector<Scalar>& production_rates,
+                           std::vector<Scalar>& resv_coeff) override;
 
             void calcInjRates(const int fipnum,
                            const int pvtreg,
-                           std::vector<double>& resv_coeff) override;
+                           std::vector<Scalar>& resv_coeff) override;
 
             void computeWellTemperature();
 
