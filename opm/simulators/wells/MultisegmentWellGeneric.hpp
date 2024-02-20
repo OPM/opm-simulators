@@ -64,16 +64,16 @@ protected:
     WellSegmentCompPressureDrop compPressureDrop() const;
 
     /// Detect oscillation or stagnation based on the residual measure history
-    void detectOscillations(const std::vector<double>& measure_history,
+    void detectOscillations(const std::vector<Scalar>& measure_history,
                             bool& oscillate,
                             bool& stagnate) const;
 
     bool accelerationalPressureLossConsidered() const;
     bool frictionalPressureLossConsidered() const;
 
-    double getSegmentDp(const int seg,
-                        const double density,
-                        const std::vector<double>& seg_dp) const;
+    Scalar getSegmentDp(const int seg,
+                        const Scalar density,
+                        const std::vector<Scalar>& seg_dp) const;
 
     const WellInterfaceGeneric<Scalar>& baseif_;
 };

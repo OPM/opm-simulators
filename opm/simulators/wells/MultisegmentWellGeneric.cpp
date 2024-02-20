@@ -58,8 +58,8 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
     auto& segments = ws.segments;
     auto& segment_rates = segments.rates;
     for (int phase = 0; phase < baseif_.numPhases(); ++phase) {
-        const double unscaled_top_seg_rate = segment_rates[phase];
-        const double well_phase_rate = ws.surface_rates[phase];
+        const Scalar unscaled_top_seg_rate = segment_rates[phase];
+        const Scalar well_phase_rate = ws.surface_rates[phase];
         if (std::abs(unscaled_top_seg_rate) > 1e-12) {
             for (int seg = 0; seg < numberOfSegments(); ++seg) {
                 segment_rates[baseif_.numPhases() * seg + phase] *= well_phase_rate / unscaled_top_seg_rate;
@@ -67,20 +67,20 @@ scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inle
         } else {
             // Due to various reasons, the well/top segment rate can be zero for this phase.
             // We can not scale this rate directly. The following approach is used to initialize the segment rates.
-            double sumTw = 0;
+            Scalar sumTw = 0;
             for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
                 sumTw += baseif_.wellIndex()[perf];
             }
 
             // only handling this specific phase
-            constexpr double num_single_phase = 1;
-            std::vector<double> perforation_rates(num_single_phase * baseif_.numPerfs(), 0.0);
-            const double perf_phaserate_scaled = ws.surface_rates[phase] / sumTw;
+            constexpr Scalar num_single_phase = 1;
+            std::vector<Scalar> perforation_rates(num_single_phase * baseif_.numPerfs(), 0.0);
+            const Scalar perf_phaserate_scaled = ws.surface_rates[phase] / sumTw;
             for (int perf = 0; perf < baseif_.numPerfs(); ++perf) {
                 perforation_rates[perf] = baseif_.wellIndex()[perf] * perf_phaserate_scaled;
             }
 
-            std::vector<double> rates;
+            std::vector<Scalar> rates;
             WellState<Scalar>::calculateSegmentRates(segment_inlets,
                                                      segment_perforations,
                                                      perforation_rates,
@@ -137,7 +137,7 @@ segmentNumberToIndex(const int segment_number) const
 template<typename Scalar>
 void
 MultisegmentWellGeneric<Scalar>::
-detectOscillations(const std::vector<double>& measure_history, bool& oscillate, bool& stagnate) const
+detectOscillations(const std::vector<Scalar>& measure_history, bool& oscillate, bool& stagnate) const
 {
     const auto it = measure_history.size() - 1;
     if ( it < 2 ) {
@@ -147,16 +147,16 @@ detectOscillations(const std::vector<double>& measure_history, bool& oscillate, 
     }
 
     stagnate = true;
-    const double F0 = measure_history[it];
-    const double F1 = measure_history[it - 1];
-    const double F2 = measure_history[it - 2];
-    const double d1 = std::abs((F0 - F2) / F0);
-    const double d2 = std::abs((F0 - F1) / F0);
+    const Scalar F0 = measure_history[it];
+    const Scalar F1 = measure_history[it - 1];
+    const Scalar F2 = measure_history[it - 2];
+    const Scalar d1 = std::abs((F0 - F2) / F0);
+    const Scalar d2 = std::abs((F0 - F1) / F0);
 
-    const double oscillaton_rel_tol = 0.2;
+    const Scalar oscillaton_rel_tol = 0.2;
     oscillate = (d1 < oscillaton_rel_tol) && (oscillaton_rel_tol < d2);
 
-    const double stagnation_rel_tol = 1.e-2;
+    const Scalar stagnation_rel_tol = 1.e-2;
     stagnate = std::abs((F1 - F2) / F2) <= stagnation_rel_tol;
 }
 
@@ -179,15 +179,15 @@ accelerationalPressureLossConsidered() const
 
 
 template<class Scalar>
-double
+Scalar
 MultisegmentWellGeneric<Scalar>::getSegmentDp(const int seg,
-                                              const double density,
-                                              const std::vector<double>& seg_dp) const
+                                              const Scalar density,
+                                              const std::vector<Scalar>& seg_dp) const
 {
-    const double segment_depth = this->segmentSet()[seg].depth();
+    const Scalar segment_depth = this->segmentSet()[seg].depth();
     const int outlet_segment_index = this->segmentNumberToIndex(this->segmentSet()[seg].outletSegment());
-    const double segment_depth_outlet = seg == 0 ? baseif_.refDepth() : this->segmentSet()[outlet_segment_index].depth();
-    double dp = wellhelpers::computeHydrostaticCorrection(segment_depth_outlet, segment_depth,
+    const Scalar segment_depth_outlet = seg == 0 ? baseif_.refDepth() : this->segmentSet()[outlet_segment_index].depth();
+    Scalar dp = wellhelpers::computeHydrostaticCorrection(segment_depth_outlet, segment_depth,
                                                           density, baseif_.gravity());
     // we add the hydrostatic correction from the outlet segment
     // in order to get the correction all the way to the bhp ref depth.
