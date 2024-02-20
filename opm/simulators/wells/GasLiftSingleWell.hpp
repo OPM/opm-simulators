@@ -31,43 +31,44 @@
 #include <vector>
 #include <utility>
 
-namespace Opm
+namespace Opm {
+
+template<class TypeTag>
+class GasLiftSingleWell : public GasLiftSingleWellGeneric<GetPropType<TypeTag, Properties::Scalar>>
 {
-    template<class TypeTag>
-    class GasLiftSingleWell : public GasLiftSingleWellGeneric<GetPropType<TypeTag, Properties::Scalar>>
-    {
-        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-        using Simulator = GetPropType<TypeTag, Properties::Simulator>;
-        using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
-        using BasicRates = typename GasLiftSingleWellGeneric<Scalar>::BasicRates;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
+    using BasicRates = typename GasLiftSingleWellGeneric<Scalar>::BasicRates;
 
-    public:
-        GasLiftSingleWell(
-            const WellInterface<TypeTag> &well,
-            const Simulator& simulator,
-            const SummaryState &summary_state,
-            DeferredLogger &deferred_logger,
-            WellState<Scalar>& well_state,
-            const GroupState<Scalar>& group_state,
-            GasLiftGroupInfo<Scalar>& group_info,
-            GLiftSyncGroups &sync_groups,
-            const Parallel::Communication& comm,
-            bool glift_debug
-        );
-        const WellInterfaceGeneric &getWell() const override { return well_; }
+public:
+    GasLiftSingleWell(const WellInterface<TypeTag>& well,
+                      const Simulator& simulator,
+                      const SummaryState& summary_state,
+                      DeferredLogger& deferred_logger,
+                      WellState<Scalar>& well_state,
+                      const GroupState<Scalar>& group_state,
+                      GasLiftGroupInfo<Scalar>& group_info,
+                      GLiftSyncGroups& sync_groups,
+                      const Parallel::Communication& comm,
+                      bool glift_debug);
 
-    private:
-        std::optional<double> computeBhpAtThpLimit_(double alq, bool debug_ouput=true) const override;
-        BasicRates computeWellRates_(
-            double bhp, bool bhp_is_limited, bool debug_output=true) const override;
-        void setAlqMaxRate_(const GasLiftWell& well);
-        void setupPhaseVariables_();
-        bool checkThpControl_() const override;
+    const WellInterfaceGeneric& getWell() const override { return well_; }
+
+private:
+    std::optional<double>
+    computeBhpAtThpLimit_(double alq, bool debug_ouput=true) const override;
+
+    BasicRates computeWellRates_(double bhp, bool bhp_is_limited,
+                                 bool debug_output = true) const override;
+    void setAlqMaxRate_(const GasLiftWell& well);
+    void setupPhaseVariables_();
+    bool checkThpControl_() const override;
 
 
-        const Simulator& simulator_;
-        const WellInterface<TypeTag> &well_;
-    };
+    const Simulator& simulator_;
+    const WellInterface<TypeTag>& well_;
+};
 
 } // namespace Opm
 
