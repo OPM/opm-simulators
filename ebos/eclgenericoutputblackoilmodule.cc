@@ -647,7 +647,17 @@ assignToSolution(data::Solution& sol)
 
     // Fluid in place
     if (this->outputFipRestart_) {
-        for (const auto& phase : Inplace::phases()) {
+        const auto baseFIPArrays = std::array {
+            DataEntry{"FIPOIL", UnitSystem::measure::liquid_surface_volume, fip_[Inplace::Phase::OIL]},
+            DataEntry{"FIPWAT", UnitSystem::measure::liquid_surface_volume, fip_[Inplace::Phase::WATER]},
+            DataEntry{"FIPGAS", UnitSystem::measure::gas_surface_volume,    fip_[Inplace::Phase::GAS]},
+        };
+
+        for (const auto& fipArray : baseFIPArrays) {
+            doInsert(fipArray, data::TargetType::RESTART_SOLUTION);
+        }
+
+        for (const auto& phase : Inplace::mixingPhases()) {
             if (! this->fip_[phase].empty()) {
                 sol.insert(EclString(phase),
                            UnitSystem::measure::volume,
