@@ -29,13 +29,7 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cmath>
-#include <memory>
-#include <stdexcept>
-#include <type_traits>
 #include <unordered_map>
-#include <utility>
-#include <vector>
 
 /**
  * \file
@@ -64,6 +58,7 @@ namespace Opm {
         template <class FluidSystem, class Region>
         class AverageRegionalPressure {
         public:
+            using Scalar = typename FluidSystem::Scalar;
             /**
              * Constructor.
              *
@@ -127,12 +122,12 @@ namespace Opm {
                     const auto& intQuants = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0);
                     const auto& fs = intQuants.fluidState();
                     // use pore volume weighted averages.
-                    const double pv_cell =
+                    const Scalar pv_cell =
                             simulator.model().dofTotalVolume(cellIdx)
                             * intQuants.porosity().value();
 
                     // only count oil and gas filled parts of the domain
-                    double hydrocarbon = 1.0;
+                    Scalar hydrocarbon = 1.0;
                     const auto& pu = phaseUsage_;
                     if (RegionAttributeHelpers::PhaseUsed::water(pu)) {
                         hydrocarbon -= fs.saturation(FluidSystem::waterPhaseIdx).value();
@@ -142,7 +137,7 @@ namespace Opm {
                     assert(reg >= 0);
 
                     // sum p, rs, rv, and T.
-                    const double hydrocarbonPV = pv_cell*hydrocarbon;
+                    const Scalar hydrocarbonPV = pv_cell*hydrocarbon;
                     if (hydrocarbonPV > 0.) {
                         auto& attr = attributes_hpv[reg];
                         attr.pv += hydrocarbonPV;
@@ -171,19 +166,19 @@ namespace Opm {
 
                 for (int reg = 1; reg <= numRegions ; ++ reg) {
                       auto& ra = attr_.attributes(reg);
-                      const double hpv_sum = comm.sum(attributes_hpv[reg].pv);
+                      const Scalar hpv_sum = comm.sum(attributes_hpv[reg].pv);
                       // TODO: should we have some epsilon here instead of zero?
                       if (hpv_sum > 0.) {
                           const auto& attri_hpv = attributes_hpv[reg];
-                          const double p_hpv_sum = comm.sum(attri_hpv.pressure);
+                          const Scalar p_hpv_sum = comm.sum(attri_hpv.pressure);
                           ra.pressure = p_hpv_sum / hpv_sum;
                       } else {
                           // using the pore volume to do the averaging
                           const auto& attri_pv = attributes_pv[reg];
-                          const double pv_sum = comm.sum(attri_pv.pv);
+                          const Scalar pv_sum = comm.sum(attri_pv.pv);
                           // pore volums can be zero if a fipnum region is empty
                           if (pv_sum > 0) {
-                            const double p_pv_sum = comm.sum(attri_pv.pressure);
+                            const Scalar p_pv_sum = comm.sum(attri_pv.pressure);
                             ra.pressure = p_pv_sum / pv_sum;
                           }
                       }
@@ -201,12 +196,12 @@ namespace Opm {
              * Average pressure
              *
              */
-            double
+            Scalar
             pressure(const RegionId r) const
             {
                 if (r == 0 ) // region 0 is the whole field
                 {
-                    double pressure = 0.0;
+                    Scalar pressure = 0.0;
                     int num_active_regions = 0;
                     for (const auto& attr :  attr_.attributes()) {
                         const auto& value = *attr.second;
@@ -243,9 +238,8 @@ namespace Opm {
 
                 {}
 
-                double pressure;
-                double pv;
-
+                Scalar pressure;
+                Scalar pv;
             };
 
             RegionAttributeHelpers::RegionAttributes<RegionId, Attributes> attr_;
