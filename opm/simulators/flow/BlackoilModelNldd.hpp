@@ -193,7 +193,7 @@ public:
         SimulatorReportSingle report;
         Dune::Timer perfTimer;
 
-        model_.initialLinearization(report, iteration, nonlinear_solver.minIter(), timer);
+        model_.initialLinearization(report, iteration, nonlinear_solver.minIter(), nonlinear_solver.maxIter(), timer);
 
         if (report.converged) {
             return report;
@@ -610,18 +610,20 @@ private:
         auto cnvErrorPvFraction = computeCnvErrorPvLocal(domain, B_avg, dt);
         cnvErrorPvFraction /= (pvSum - numAquiferPvSum);
 
-        const double tol_mb  = model_.param().local_tolerance_scaling_mb_ *
-                               model_.param().tolerance_mb_;
         // Default value of relaxed_max_pv_fraction_ is 0.03 and min_strict_cnv_iter_ is 0.
         // For each iteration, we need to determine whether to use the relaxed CNV tolerance.
         // To disable the usage of relaxed CNV tolerance, you can set the relaxed_max_pv_fraction_ to be 0.
-        const bool use_relaxed = cnvErrorPvFraction < model_.param().relaxed_max_pv_fraction_ &&
+        const bool use_relaxed_cnv = cnvErrorPvFraction < model_.param().relaxed_max_pv_fraction_ &&
                                  iteration >= model_.param().min_strict_cnv_iter_;
         // Tighter bound for local convergence should increase the
         // likelyhood of: local convergence => global convergence
         const double tol_cnv = model_.param().local_tolerance_scaling_cnv_
-            * (use_relaxed ? model_.param().tolerance_cnv_relaxed_
+            * (use_relaxed_cnv ? model_.param().tolerance_cnv_relaxed_
                            : model_.param().tolerance_cnv_);
+
+        const bool use_relaxed_mb = iteration >= model_.param().min_strict_mb_iter_;
+        const double tol_mb  = model_.param().local_tolerance_scaling_mb_ 
+            * (use_relaxed_mb ? model_.param().tolerance_mb_relaxed_ : model_.param().tolerance_mb_);
 
         // Finish computation
         std::vector<Scalar> CNV(numComp);

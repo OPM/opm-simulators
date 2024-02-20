@@ -199,6 +199,7 @@ public:
         EWOMS_HIDE_PARAM(TypeTag, DwellFractionMax);
         EWOMS_HIDE_PARAM(TypeTag, MaxResidualAllowed);
         EWOMS_HIDE_PARAM(TypeTag, ToleranceMb);
+        EWOMS_HIDE_PARAM(TypeTag, ToleranceMbRelaxed);
         EWOMS_HIDE_PARAM(TypeTag, ToleranceCnv);
         EWOMS_HIDE_PARAM(TypeTag, ToleranceCnvRelaxed);
         EWOMS_HIDE_PARAM(TypeTag, ToleranceWells);
@@ -212,6 +213,7 @@ public:
         EWOMS_HIDE_PARAM(TypeTag, MaxInnerIterWells);
         EWOMS_HIDE_PARAM(TypeTag, MaxSinglePrecisionDays);
         EWOMS_HIDE_PARAM(TypeTag, MinStrictCnvIter);
+        EWOMS_HIDE_PARAM(TypeTag, MinStrictMbIter);
         EWOMS_HIDE_PARAM(TypeTag, SolveWelleqInitially);
         EWOMS_HIDE_PARAM(TypeTag, UpdateEquationsScaling);
         EWOMS_HIDE_PARAM(TypeTag, UseUpdateStabilization);

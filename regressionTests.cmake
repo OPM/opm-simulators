@@ -299,7 +299,7 @@ add_test_compareECLFiles(CASENAME polymer_simple2D
                          SIMULATOR flow
                          ABS_TOL ${abs_tol}
                          REL_TOL ${coarse_rel_tol}
-                         TEST_ARGS --tolerance-mb=1.e-7)
+                         TEST_ARGS --tolerance-mb=1.e-7 --tolerance-mb-relaxed=1.e-7)
 
 add_test_compareECLFiles(CASENAME spe5
                          FILENAME SPE5CASE1
