@@ -38,7 +38,8 @@ namespace Opm {
 /// have a flowing bottom-hole pressure.  Mainly useful for reporting.
 ///
 /// Parallel edition.  Handles distributed wells.
-class ParallelPAvgCalculator : public PAvgCalculator<double>
+template<class Scalar>
+class ParallelPAvgCalculator : public PAvgCalculator<Scalar>
 {
 public:
     /// Constructor
@@ -55,6 +56,8 @@ public:
                            const WellConnections&         connections);
 
 private:
+    using Accumulator = typename PAvgCalculator<Scalar>::Accumulator;
+
     /// MPI communication object.
     std::reference_wrapper<const Parallel::Communication> comm_;
 

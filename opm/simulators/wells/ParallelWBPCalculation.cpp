@@ -179,7 +179,7 @@ createCalculator(const Well&             well,
     assert (this->wellConnSrc_.size() == this->localConnSet_.size());
 
     const auto ix = this->calculators_
-        .setCalculator(well.seqIndex(), std::make_unique<ParallelPAvgCalculator>
+                    .setCalculator(well.seqIndex(), std::make_unique<ParallelPAvgCalculator<double>>
                        (parallelWellInfo.communication(),
                         this->cellIndexMap_, well.getConnections()));
 
