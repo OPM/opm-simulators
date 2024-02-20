@@ -99,13 +99,13 @@ template<class FluidSystem, class Indices>
 ConvergenceReport
 StandardWellEval<FluidSystem,Indices>::
 getWellConvergence(const WellState<Scalar>& well_state,
-                   const std::vector<double>& B_avg,
-                   const double maxResidualAllowed,
-                   const double tol_wells,
-                   const double relaxed_tolerance_flow,
+                   const std::vector<Scalar>& B_avg,
+                   const Scalar maxResidualAllowed,
+                   const Scalar tol_wells,
+                   const Scalar relaxed_tolerance_flow,
                    const bool relax_tolerance,
                    const bool well_is_stopped, 
-                   std::vector<double>& res,
+                   std::vector<Scalar>& res,
                    DeferredLogger& deferred_logger) const
 {
     res.resize(this->primary_variables_.numWellEq());
@@ -114,7 +114,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
         res[eq_idx] = std::abs(this->linSys_.residual()[0][eq_idx]);
     }
 
-    std::vector<double> well_flux_residual(baseif_.numComponents());
+    std::vector<Scalar> well_flux_residual(baseif_.numComponents());
 
     // Finish computation
     for (int compIdx = 0; compIdx < baseif_.numComponents(); ++compIdx )
@@ -157,7 +157,7 @@ getWellConvergence(const WellState<Scalar>& well_state,
     // for BHP or THP controlled wells, we need to make sure the flow direction is correct
     if (!well_is_stopped && baseif_.isPressureControlled(well_state)) {
         // checking the flow direction
-        const double sign = baseif_.isProducer() ? -1. : 1.;
+        const Scalar sign = baseif_.isProducer() ? -1. : 1.;
         const auto weight_total_flux = this->primary_variables_.value(PrimaryVariables::WQTotal) * sign;
         constexpr int dummy_phase = -1;
         if (weight_total_flux < 0.) {
@@ -172,8 +172,8 @@ getWellConvergence(const WellState<Scalar>& well_state,
 template<class FluidSystem, class Indices>
 void
 StandardWellEval<FluidSystem,Indices>::
-init(std::vector<double>& perf_depth,
-     const std::vector<double>& depth_arg,
+init(std::vector<Scalar>& perf_depth,
+     const std::vector<Scalar>& depth_arg,
      const int num_cells,
      const bool has_polymermw)
 {
