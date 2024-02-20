@@ -89,7 +89,7 @@ assembleControlEq(const WellState<Scalar>& well_state,
                   const SummaryState& summaryState,
                   const Well::InjectionControls& inj_controls,
                   const Well::ProductionControls& prod_controls,
-                  const double rho,
+                  const Scalar rho,
                   const PrimaryVariables& primary_variables,
                   Equations& eqns1,
                   DeferredLogger& deferred_logger) const
@@ -121,7 +121,7 @@ assembleControlEq(const WellState<Scalar>& well_state,
     } else if (well_.isInjector() ) {
         // Find scaling factor to get injection rate,
         const InjectorType injectorType = inj_controls.injector_type;
-        double scaling;
+        Scalar scaling;
         const auto& pu = well_.phaseUsage();
         switch (injectorType) {
         case InjectorType::WATER:
