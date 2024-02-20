@@ -91,7 +91,7 @@ modelCompIdxToFlowCompIdx(const unsigned compIdx) const
 }
 
 template<class FluidSystem, class Indices>
-double
+typename WellInterfaceIndices<FluidSystem,Indices>::Scalar
 WellInterfaceIndices<FluidSystem,Indices>::
 scalingFactor(const int phaseIdx) const
 {
