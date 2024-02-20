@@ -33,36 +33,37 @@ class DeferredLogger;
 template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
+template<class Scalar>
 class WellConvergence
 {
 public:
-    WellConvergence(const WellInterfaceGeneric<double>& well)
+    WellConvergence(const WellInterfaceGeneric<Scalar>& well)
         : well_(well)
     {}
 
     struct Tolerances {
-        double bhp; //!< Tolerance for bhp controlled well
-        double thp; //!< Tolerance for thp controlled well
-        double rates; //!< Tolerance for a rate controlled well
-        double grup; //!< Tolerance for a grup controlled well
-        double max_residual_allowed; //!< Max residual allowd
+        Scalar bhp; //!< Tolerance for bhp controlled well
+        Scalar thp; //!< Tolerance for thp controlled well
+        Scalar rates; //!< Tolerance for a rate controlled well
+        Scalar grup; //!< Tolerance for a grup controlled well
+        Scalar max_residual_allowed; //!< Max residual allowd
     };
 
     // checking the convergence of the well control equations
-    void checkConvergenceControlEq(const WellState<double>& well_state,
+    void checkConvergenceControlEq(const WellState<Scalar>& well_state,
                                    const Tolerances& tolerances,
-                                   const double well_control_residual,
+                                   const Scalar well_control_residual,
                                    const bool well_is_stopped, 
                                    ConvergenceReport& report,
                                    DeferredLogger& deferred_logger) const;
 
-    void checkConvergencePolyMW(const std::vector<double>& res,
+    void checkConvergencePolyMW(const std::vector<Scalar>& res,
                                 const int Bhp,
-                                const double maxResidualAllowed,
+                                const Scalar maxResidualAllowed,
                                 ConvergenceReport& report) const;
 
 private:
-    const WellInterfaceGeneric<double>& well_;
+    const WellInterfaceGeneric<Scalar>& well_;
 };
 
 }

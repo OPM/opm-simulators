@@ -30,18 +30,18 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace Opm
-{
+namespace Opm {
 
-void WellConvergence::
-checkConvergenceControlEq(const WellState<double>& well_state,
+template<class Scalar>
+void WellConvergence<Scalar>::
+checkConvergenceControlEq(const WellState<Scalar>& well_state,
                           const Tolerances& tolerances,
-                          const double well_control_residual,
+                          const Scalar well_control_residual,
                           const bool well_is_stopped, 
                           ConvergenceReport& report,
                           DeferredLogger& deferred_logger) const
 {
-    double control_tolerance = 0.;
+    Scalar control_tolerance = 0.;
     using CR = ConvergenceReport;
     CR::WellFailure::Type ctrltype = CR::WellFailure::Type::Invalid;
 
@@ -120,21 +120,21 @@ checkConvergenceControlEq(const WellState<double>& well_state,
     }
 }
 
-void
-WellConvergence::
-checkConvergencePolyMW(const std::vector<double>& res,
+template<class Scalar>
+void WellConvergence<Scalar>::
+checkConvergencePolyMW(const std::vector<Scalar>& res,
                        const int Bhp,
-                       const double maxResidualAllowed,
+                       const Scalar maxResidualAllowed,
                        ConvergenceReport& report) const
 {
   if (well_.isInjector()) {
       //  checking the convergence of the perforation rates
-      const double wat_vel_tol = 1.e-8;
+      const Scalar wat_vel_tol = 1.e-8;
       const int dummy_component = -1;
       using CR = ConvergenceReport;
       const auto wat_vel_failure_type = CR::WellFailure::Type::MassBalance;
       for (int perf = 0; perf < well_.numPerfs(); ++perf) {
-          const double wat_vel_residual = res[Bhp + 1 + perf];
+          const Scalar wat_vel_residual = res[Bhp + 1 + perf];
           if (std::isnan(wat_vel_residual)) {
               report.setWellFailed({wat_vel_failure_type, CR::Severity::NotANumber, dummy_component, well_.name()});
           } else if (wat_vel_residual > maxResidualAllowed * 10.) {
@@ -145,10 +145,10 @@ checkConvergencePolyMW(const std::vector<double>& res,
       }
 
       // checking the convergence of the skin pressure
-      const double pskin_tol = 1000.; // 1000 pascal
+      const Scalar pskin_tol = 1000.; // 1000 pascal
       const auto pskin_failure_type = CR::WellFailure::Type::Pressure;
       for (int perf = 0; perf < well_.numPerfs(); ++perf) {
-          const double pskin_residual = res[Bhp + 1 + perf + well_.numPerfs()];
+          const Scalar pskin_residual = res[Bhp + 1 + perf + well_.numPerfs()];
           if (std::isnan(pskin_residual)) {
               report.setWellFailed({pskin_failure_type, CR::Severity::NotANumber, dummy_component, well_.name()});
           } else if (pskin_residual > maxResidualAllowed * 10.) {
@@ -159,5 +159,7 @@ checkConvergencePolyMW(const std::vector<double>& res,
       }
   }
 }
+
+template class WellConvergence<double>;
 
 }
