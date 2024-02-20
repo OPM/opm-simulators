@@ -36,7 +36,6 @@
 #include <opm/simulators/wells/ALQState.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
-#include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
@@ -52,6 +51,7 @@ namespace Opm
 {
 
 class ParallelWellInfo;
+template<class Scalar> struct PerforationData;
 class Schedule;
 enum class WellStatus;
 
@@ -102,7 +102,7 @@ public:
               const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
               const int report_step,
               const WellState* prevState,
-              const std::vector<std::vector<PerforationData>>& well_perf_data,
+              const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
               const SummaryState& summary_state);
 
     void resize(const std::vector<Well>& wells_ecl,
@@ -110,7 +110,7 @@ public:
                 const Schedule& schedule,
                 const bool handle_ms_well,
                 const std::size_t numCells,
-                const std::vector<std::vector<PerforationData>>& well_perf_data,
+                const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
                 const SummaryState& summary_state);
 
     void setCurrentWellRates(const std::string& wellName,
@@ -379,25 +379,25 @@ private:
     void base_init(const std::vector<Scalar>& cellPressures,
                    const std::vector<Well>& wells_ecl,
                    const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
-                   const std::vector<std::vector<PerforationData>>& well_perf_data,
+                   const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
                    const SummaryState& summary_state);
 
     void initSingleWell(const std::vector<Scalar>& cellPressures,
                         const Well& well,
-                        const std::vector<PerforationData>& well_perf_data,
+                        const std::vector<PerforationData<Scalar>>& well_perf_data,
                         const ParallelWellInfo& well_info,
                         const SummaryState& summary_state);
 
     void initSingleProducer(const Well& well,
                             const ParallelWellInfo& well_info,
                             Scalar pressure_first_connection,
-                            const std::vector<PerforationData>& well_perf_data,
+                            const std::vector<PerforationData<Scalar>>& well_perf_data,
                             const SummaryState& summary_state);
 
     void initSingleInjector(const Well& well,
                             const ParallelWellInfo& well_info,
                             Scalar pressure_first_connection,
-                            const std::vector<PerforationData>& well_perf_data,
+                            const std::vector<PerforationData<Scalar>>& well_perf_data,
                             const SummaryState& summary_state);
 };
 

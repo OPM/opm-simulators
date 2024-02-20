@@ -37,7 +37,7 @@ namespace Opm
 class DeferredLogger;
 class GuideRate;
 class ParallelWellInfo;
-struct PerforationData;
+template<class Scalar> struct PerforationData;
 struct PhaseUsage;
 class SummaryState;
 template<class Scalar> class VFPProperties;
@@ -57,10 +57,10 @@ public:
                          const int num_components,
                          const int num_phases,
                          const int index_of_well,
-                         const std::vector<PerforationData>& perf_data);
+                         const std::vector<PerforationData<Scalar>>& perf_data);
 
     /// \brief Get the perforations of the well
-    const std::vector<PerforationData>& perforationData() const;
+    const std::vector<PerforationData<Scalar>>& perforationData() const;
 
     /// Well name.
     const std::string& name() const;
@@ -286,7 +286,7 @@ protected:
     // the index of well in Wells struct
     int index_of_well_;
 
-    const std::vector<PerforationData>* perf_data_;
+    const std::vector<PerforationData<Scalar>>* perf_data_;
 
     // the vectors used to describe the inflow performance relationship (IPR)
     // Q = IPR_A - BHP * IPR_B

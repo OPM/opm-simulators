@@ -193,7 +193,7 @@ public:
     bool forceShutWellByName(const std::string& wellname,
                              const double simulation_time);
 
-    const std::vector<PerforationData>& perfData(const int well_idx) const
+    const std::vector<PerforationData<Scalar>>& perfData(const int well_idx) const
     { return well_perf_data_[well_idx]; }
 
     const Parallel::Communication& comm() const { return comm_; }
@@ -450,7 +450,7 @@ protected:
     std::optional<int> last_run_wellpi_{};
 
     std::vector<Well> wells_ecl_;
-    std::vector<std::vector<PerforationData>> well_perf_data_;
+    std::vector<std::vector<PerforationData<Scalar>>> well_perf_data_;
 
     /// Connection index mappings
     class ConnectionIndexMap

@@ -34,7 +34,7 @@ SingleWellState(const std::string& name_,
                 const ParallelWellInfo& pinfo,
                 bool is_producer,
                 Scalar pressure_first_connection,
-                const std::vector<PerforationData>& perf_input,
+                const std::vector<PerforationData<Scalar>>& perf_input,
                 const PhaseUsage& pu_,
                 Scalar temp)
     : name(name_)
@@ -138,7 +138,7 @@ void SingleWellState<Scalar>::updateStatus(Well::Status new_status)
 
 template<class Scalar>
 void SingleWellState<Scalar>::
-reset_connection_factors(const std::vector<PerforationData>& new_perf_data)
+reset_connection_factors(const std::vector<PerforationData<Scalar>>& new_perf_data)
 {
    if (this->perf_data.size() != new_perf_data.size()) {
         throw std::invalid_argument {

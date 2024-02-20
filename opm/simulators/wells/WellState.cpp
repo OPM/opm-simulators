@@ -30,6 +30,7 @@
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/grid/common/p2pcommunicator.hh>
 #include <opm/output/data/Wells.hpp>
 
@@ -150,7 +151,7 @@ template<class Scalar>
 void WellState<Scalar>::base_init(const std::vector<Scalar>& cellPressures,
                                   const std::vector<Well>& wells_ecl,
                                   const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
-                                  const std::vector<std::vector<PerforationData>>& well_perf_data,
+                                  const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
                                   const SummaryState& summary_state)
 {
     // clear old name mapping
@@ -172,7 +173,7 @@ template<class Scalar>
 void WellState<Scalar>::initSingleProducer(const Well& well,
                                            const ParallelWellInfo& well_info,
                                            Scalar pressure_first_connection,
-                                           const std::vector<PerforationData>& well_perf_data,
+                                           const std::vector<PerforationData<Scalar>>& well_perf_data,
                                            const SummaryState& summary_state)
 {
     const auto& pu = this->phase_usage_;
@@ -201,7 +202,7 @@ template<class Scalar>
 void WellState<Scalar>::initSingleInjector(const Well& well,
                                            const ParallelWellInfo& well_info,
                                            Scalar pressure_first_connection,
-                                           const std::vector<PerforationData>& well_perf_data,
+                                           const std::vector<PerforationData<Scalar>>& well_perf_data,
                                            const SummaryState& summary_state)
 {
     const auto& pu = this->phase_usage_;
@@ -228,7 +229,7 @@ void WellState<Scalar>::initSingleInjector(const Well& well,
 template<class Scalar>
 void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
                                        const Well& well,
-                                       const std::vector<PerforationData>& well_perf_data,
+                                       const std::vector<PerforationData<Scalar>>& well_perf_data,
                                        const ParallelWellInfo& well_info,
                                        const SummaryState& summary_state)
 {
@@ -253,7 +254,7 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
                              const std::vector<std::reference_wrapper<ParallelWellInfo>>& parallel_well_info,
                              const int report_step,
                              const WellState* prevState,
-                             const std::vector<std::vector<PerforationData>>& well_perf_data,
+                             const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
                              const SummaryState& summary_state)
 {
     // call init on base class
@@ -423,7 +424,7 @@ void WellState<Scalar>::resize(const std::vector<Well>& wells_ecl,
                                const Schedule& schedule,
                                const bool handle_ms_well,
                                const std::size_t numCells,
-                               const std::vector<std::vector<PerforationData>>& well_perf_data,
+                               const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
                                const SummaryState& summary_state)
 {
     const std::vector<Scalar> tmp(numCells, 0.0); // <- UGLY HACK to pass the size

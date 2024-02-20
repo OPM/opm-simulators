@@ -38,7 +38,7 @@ class GroupAndNetworkValues;
 template<class Scalar> class GroupState;
 class GuideRate;
 class GuideRateConfig;
-struct PerforationData;
+template<class Scalar> struct PerforationData;
 struct PhaseUsage;
 template<class Scalar> class SingleWellState;
 template<class Scalar> class WellState;
@@ -76,7 +76,7 @@ private:
     //! \brief Loads per-connection data from restart structures.
     void loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
                                    const data::Well&                    rst_well,
-                                   const std::vector<PerforationData>&  old_perf_data,
+                                   const std::vector<PerforationData<Scalar>>& old_perf_data,
                                    SingleWellState<Scalar>&             ws) const;
 
     //! \brief Loads per-segment data from restart structures.
@@ -90,7 +90,7 @@ private:
                              const bool                           handle_ms_well,
                              const std::vector<data::Rates::opt>& phs,
                              const data::Well&                    rst_well,
-                             const std::vector<PerforationData>&  old_perf_data,
+                             const std::vector<PerforationData<Scalar>>& old_perf_data,
                              SingleWellState<Scalar>&             ws) const;
 
     //! \brief Loads per-group data from restart structures.

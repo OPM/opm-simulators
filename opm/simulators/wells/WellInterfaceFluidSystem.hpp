@@ -75,7 +75,7 @@ protected:
                              const int num_components,
                              const int num_phases,
                              const int index_of_well,
-                             const std::vector<PerforationData>& perf_data);
+                             const std::vector<PerforationData<Scalar>>& perf_data);
 
     // updating the voidage rates in well_state when requested
     void calculateReservoirRates(SingleWellState<Scalar>& ws) const;

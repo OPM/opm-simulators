@@ -28,6 +28,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
@@ -106,7 +107,7 @@ struct Setup
                                + std::to_string(k) + " not found in grid (well = " + well.name() + ").");
                         OPM_THROW(std::runtime_error, msg);
                     } else {
-                        Opm::PerforationData pd;
+                        Opm::PerforationData<double> pd;
                         pd.cell_index = active_index;
                         pd.connection_transmissibility_factor = completion.CF();
                         pd.connection_d_factor = completion.dFactor();
@@ -132,7 +133,7 @@ struct Setup
     std::shared_ptr<Opm::Python> python;
     Opm::Schedule     sched;
     Opm::SummaryState st;
-    std::vector<std::vector<Opm::PerforationData>> well_perf_data;
+    std::vector<std::vector<Opm::PerforationData<double>>> well_perf_data;
 };
 
 namespace {
@@ -581,7 +582,7 @@ BOOST_AUTO_TEST_CASE(TESTPerfData) {
 
 BOOST_AUTO_TEST_CASE(TestSingleWellState) {
     Opm::ParallelWellInfo pinfo;
-    std::vector<Opm::PerforationData> connections = {{0,1,1,0,0},{1,1,1,0,1},{2,1,1,0,2}};
+    std::vector<Opm::PerforationData<double>> connections = {{0,1,1,0,0},{1,1,1,0,1},{2,1,1,0,2}};
     Opm::PhaseUsage pu;
 
     // This is totally bonkers, but the pu needs a complete deck to initialize properly

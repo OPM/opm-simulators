@@ -83,7 +83,7 @@ struct SetupTest {
     std::shared_ptr<Opm::Python> python;
     std::unique_ptr<const Opm::Schedule> schedule;
     std::unique_ptr<Opm::SummaryState> summaryState;
-    std::vector<std::vector<Opm::PerforationData>> well_perf_data;
+    std::vector<std::vector<Opm::PerforationData<double>>> well_perf_data;
     int current_timestep;
 };
 
@@ -125,8 +125,8 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     rateConverter.reset(new RateConverterType (phaseUsage,
                                      std::vector<int>(10, 0)));
 
-    Opm::PerforationData dummy;
-    std::vector<Opm::PerforationData> pdata(well.getConnections().size(), dummy);
+    Opm::PerforationData<double> dummy;
+    std::vector<Opm::PerforationData<double>> pdata(well.getConnections().size(), dummy);
     for (auto c = 0*pdata.size(); c < pdata.size(); ++c) {
         pdata[c].ecl_index = c;
     }
@@ -160,8 +160,8 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
             // Compute reservoir volumes for RESV controls.
             rateConverter.reset(new RateConverterType (phaseUsage,
                                              std::vector<int>(10, 0)));
-            Opm::PerforationData dummy;
-            std::vector<Opm::PerforationData> pdata(wells_ecl[w].getConnections().size(), dummy);
+            Opm::PerforationData<double> dummy;
+            std::vector<Opm::PerforationData<double>> pdata(wells_ecl[w].getConnections().size(), dummy);
             for (auto c = 0*pdata.size(); c < pdata.size(); ++c) {
                 pdata[c].ecl_index = c;
             }
