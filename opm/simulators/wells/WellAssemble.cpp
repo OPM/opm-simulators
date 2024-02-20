@@ -65,7 +65,7 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
 {
     const auto current = well_state.well(well_.indexOfWell()).production_cmode;
     const auto& pu = well_.phaseUsage();
-    const double efficiencyFactor = well_.wellEcl().getEfficiencyFactor();
+    const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor();
 
     switch (current) {
     case Well::ProducerCMode::ORAT: {
@@ -101,7 +101,7 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
     case Well::ProducerCMode::RESV: {
         auto total_rate = rates[0]; // To get the correct type only.
         total_rate = 0.0;
-        std::vector<double> convert_coeff(well_.numPhases(), 1.0);
+        std::vector<Scalar> convert_coeff(well_.numPhases(), 1.0);
         well_.rateConverter().calcCoeff(/*fipreg*/ 0, well_.pvtRegionIdx(), well_state.well(well_.indexOfWell()).surface_rates, convert_coeff);
         for (int phase = 0; phase < 3; ++phase) {
             if (pu.phase_used[phase]) {
@@ -112,7 +112,7 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
         if (controls.prediction_mode) {
             control_eq = total_rate - controls.resv_rate;
         } else {
-            std::vector<double> hrates(well_.numPhases(), 0.);
+            std::vector<Scalar> hrates(well_.numPhases(), 0.);
             if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
                 hrates[pu.phase_pos[Water]] = controls.water_rate;
             }
@@ -122,9 +122,9 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
             if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
                 hrates[pu.phase_pos[Gas]] = controls.gas_rate;
             }
-            std::vector<double> hrates_resv(well_.numPhases(), 0.);
+            std::vector<Scalar> hrates_resv(well_.numPhases(), 0.);
             well_.rateConverter().calcReservoirVoidageRates(/*fipreg*/ 0, well_.pvtRegionIdx(), hrates, hrates_resv);
-            double target = std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
+            Scalar target = std::accumulate(hrates_resv.begin(), hrates_resv.end(), 0.0);
             control_eq = total_rate - target;
         }
         break;
@@ -152,7 +152,9 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
                 active_rates[pu.phase_pos[canonical_phase]] = rates[canonical_phase];
             }
         }
-        auto rCoeff = [this, &group_state](const RegionId id, const int region, const std::optional<std::string>& prod_gname, std::vector<double>& coeff)
+        auto rCoeff = [this, &group_state](const RegionId id, const int region,
+                                           const std::optional<std::string>& prod_gname,
+                                           std::vector<Scalar>& coeff)
         {
             if (prod_gname)
                 well_.rateConverter().calcCoeff(id, region, group_state.production_rates(*prod_gname), coeff);
@@ -204,7 +206,7 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
     auto current = well_state.well(well_.indexOfWell()).injection_cmode;
     const InjectorType injectorType = controls.injector_type;
     const auto& pu = well_.phaseUsage();
-    const double efficiencyFactor = well_.wellEcl().getEfficiencyFactor();
+    const Scalar efficiencyFactor = well_.wellEcl().getEfficiencyFactor();
 
     switch (current) {
     case Well::InjectorCMode::RATE: {
@@ -212,10 +214,10 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
         break;
     }
     case Well::InjectorCMode::RESV: {
-        std::vector<double> convert_coeff(well_.numPhases(), 1.0);
+        std::vector<Scalar> convert_coeff(well_.numPhases(), 1.0);
         well_.rateConverter().calcInjCoeff(/*fipreg*/ 0, well_.pvtRegionIdx(), convert_coeff);
 
-        double coeff;
+        Scalar coeff;
 
         switch (injectorType) {
         case InjectorType::WATER: {
@@ -248,26 +250,29 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
     case Well::InjectorCMode::GRUP: {
         assert(well_.wellEcl().isAvailableForGroupControl());
         const auto& group = schedule.getGroup(well_.wellEcl().groupName(), well_.currentStep());
-        auto rCoeff = [this, &group_state](const RegionId id, const int region, const std::optional<std::string>& prod_gname, std::vector<double>& coeff)
+        auto rCoeff = [this, &group_state](const RegionId id, const int region,
+                                           const std::optional<std::string>& prod_gname,
+                                           std::vector<Scalar>& coeff)
         {
             if(prod_gname) {
-                well_.rateConverter().calcCoeff(id, region, group_state.production_rates(*prod_gname), coeff);
+                well_.rateConverter().calcCoeff(id, region,
+                                                group_state.production_rates(*prod_gname), coeff);
             } else {
                 well_.rateConverter().calcInjCoeff(id, region, coeff);
             }
         };
-        WellGroupControls<double>(well_).getGroupInjectionControl(group,
-                                                                  well_state,
-                                                                  group_state,
-                                                                  schedule,
-                                                                  summaryState,
-                                                                  injectorType,
-                                                                  bhp,
-                                                                  injection_rate,
-                                                                  rCoeff,
-                                                                  efficiencyFactor,
-                                                                  control_eq,
-                                                                  deferred_logger);
+        WellGroupControls(well_).getGroupInjectionControl(group,
+                                                          well_state,
+                                                          group_state,
+                                                          schedule,
+                                                          summaryState,
+                                                          injectorType,
+                                                          bhp,
+                                                          injection_rate,
+                                                          rCoeff,
+                                                          efficiencyFactor,
+                                                          control_eq,
+                                                          deferred_logger);
         break;
     }
     case Well::InjectorCMode::CMODE_UNDEFINED: {
