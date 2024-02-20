@@ -28,8 +28,6 @@
 #include <opm/simulators/wells/WellInterface.hpp>
 
 #include <optional>
-#include <vector>
-#include <utility>
 
 namespace Opm {
 
@@ -56,15 +54,17 @@ public:
     const WellInterfaceGeneric& getWell() const override { return well_; }
 
 private:
-    std::optional<double>
-    computeBhpAtThpLimit_(double alq, bool debug_ouput=true) const override;
+    std::optional<Scalar>
+    computeBhpAtThpLimit_(Scalar alq,
+                          bool debug_ouput = true) const override;
 
-    BasicRates computeWellRates_(double bhp, bool bhp_is_limited,
+    BasicRates computeWellRates_(Scalar bhp,
+                                 bool bhp_is_limited,
                                  bool debug_output = true) const override;
+
     void setAlqMaxRate_(const GasLiftWell& well);
     void setupPhaseVariables_();
     bool checkThpControl_() const override;
-
 
     const Simulator& simulator_;
     const WellInterface<TypeTag>& well_;
