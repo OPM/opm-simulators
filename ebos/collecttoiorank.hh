@@ -33,6 +33,7 @@
 #include <opm/output/data/Solution.hpp>
 #include <opm/output/data/Wells.hpp>
 
+#include <opm/simulators/flow/FlowsData.hpp>
 #include <opm/simulators/flow/InterRegFlows.hpp>
 
 #include <array>
@@ -82,8 +83,8 @@ public:
                  const data::Aquifers&                                localAquiferData,
                  const WellTestState&                                 localWellTestState,
                  const InterRegFlowMap&                               interRegFlows,
-                 const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFlowsn,
-                 const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& localFloresn);
+                 const std::array<FlowsData<double>, 3>&              localFlowsn,
+                 const std::array<FlowsData<double>, 3>&              localFloresn);
 
     const std::map<std::pair<std::string, int>, double>& globalBlockData() const
     { return globalBlockData_; }
@@ -115,10 +116,10 @@ public:
     const InterRegFlowMap& globalInterRegFlows() const
     { return this->globalInterRegFlows_; }
 
-    const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& globalFlowsn() const
+    const std::array<FlowsData<double>, 3>& globalFlowsn() const
     { return globalFlowsn_; }
 
-    const std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3>& globalFloresn() const
+    const std::array<FlowsData<double>, 3>& globalFloresn() const
     { return globalFloresn_; }
 
     bool isIORank() const
@@ -160,8 +161,8 @@ protected:
     data::Aquifers globalAquiferData_;
     WellTestState globalWellTestState_;
     std::vector<int> localIdxToGlobalIdx_;
-    std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3> globalFlowsn_;
-    std::array<std::pair<std::string, std::pair<std::vector<int>, std::vector<double>>>, 3> globalFloresn_;
+    std::array<FlowsData<double>, 3> globalFlowsn_;
+    std::array<FlowsData<double>, 3> globalFloresn_;
     /// \brief sorted list of cartesian indices present-
     ///
     /// non-empty only when running in parallel

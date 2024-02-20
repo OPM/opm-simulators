@@ -453,6 +453,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMain.hpp
+  opm/simulators/flow/FlowsData.hpp
   opm/simulators/flow/InterRegFlows.hpp
   opm/simulators/flow/Main.hpp
   opm/simulators/flow/NonlinearSolver.hpp
