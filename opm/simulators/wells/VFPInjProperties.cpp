@@ -41,7 +41,7 @@ bhp(const int    table_id,
 {
     const VFPInjTable& table = detail::getTable(m_tables, table_id);
 
-    detail::VFPEvaluation retval = detail::bhp(table, aqua, liquid, vapour, thp_arg);
+    detail::VFPEvaluation retval = VFPHelpers<Scalar>::bhp(table, aqua, liquid, vapour, thp_arg);
     return retval.value;
 }
 
@@ -61,7 +61,7 @@ thp(const int    table_id,
         return 0.;
     }
 
-    const std::vector<double> thp_array = table.getTHPAxis();
+    const auto thp_array = table.getTHPAxis();
     int nthp = thp_array.size();
 
     /**
@@ -69,14 +69,14 @@ thp(const int    table_id,
      * by interpolating for every value of thp. This might be somewhat
      * expensive, but let us assome that nthp is small
      */
-    auto flo_i = detail::findInterpData(flo, table.getFloAxis());
+    const auto flo_i = VFPHelpers<Scalar>::findInterpData(flo, table.getFloAxis());
     std::vector<Scalar> bhp_array(nthp);
     for (int i = 0; i < nthp; ++i) {
-        auto thp_i = detail::findInterpData(thp_array[i], thp_array);
-        bhp_array[i] = detail::interpolate(table, flo_i, thp_i).value;
+        auto thp_i = VFPHelpers<Scalar>::findInterpData(thp_array[i], thp_array);
+        bhp_array[i] = VFPHelpers<Scalar>::interpolate(table, flo_i, thp_i).value;
     }
 
-    return detail::findTHP(bhp_array, thp_array, bhp_arg);
+    return VFPHelpers<Scalar>::findTHP(bhp_array, thp_array, bhp_arg);
 }
 
 template<class Scalar>
@@ -115,10 +115,10 @@ EvalWell VFPInjProperties<Scalar>::bhp(const int       table_id,
 
     //First, find the values to interpolate between
     //Value of FLO is negative in OPM for producers, but positive in VFP table
-    auto flo_i = detail::findInterpData(flo.value(), table.getFloAxis());
-    auto thp_i = detail::findInterpData( thp, table.getTHPAxis()); // assume constant
+    const auto flo_i = VFPHelpers<Scalar>::findInterpData(flo.value(), table.getFloAxis());
+    const auto thp_i = VFPHelpers<Scalar>::findInterpData(thp, table.getTHPAxis()); // assume constant
 
-    detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i);
+    detail::VFPEvaluation bhp_val = VFPHelpers<Scalar>::interpolate(table, flo_i, thp_i);
 
     bhp = bhp_val.dflo * flo;
     bhp.setValue(bhp_val.value); // thp is assumed constant i.e.

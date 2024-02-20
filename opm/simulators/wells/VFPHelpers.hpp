@@ -21,7 +21,6 @@
 #ifndef OPM_AUTODIFF_VFPHELPERS_HPP_
 #define OPM_AUTODIFF_VFPHELPERS_HPP_
 
-#include <array>
 #include <functional>
 #include <map>
 #include <vector>
@@ -36,6 +35,40 @@ class VFPInjTable;
 class VFPProdTable;
 
 namespace detail {
+
+/**
+ * An "ADB-like" structure with a single value and a set of derivatives
+ */
+template<class Scalar>
+struct VFPEvaluation
+{
+    VFPEvaluation() : value(0.0), dthp(0.0), dwfr(0.0), dgfr(0.0), dalq(0.0), dflo(0.0) {};
+    Scalar value;
+    Scalar dthp;
+    Scalar dwfr;
+    Scalar dgfr;
+    Scalar dalq;
+    Scalar dflo;
+};
+
+template<class Scalar>
+VFPEvaluation<Scalar> operator+(VFPEvaluation<Scalar> lhs, const VFPEvaluation<Scalar>& rhs);
+template<class Scalar>
+VFPEvaluation<Scalar> operator-(VFPEvaluation<Scalar> lhs, const VFPEvaluation<Scalar>& rhs);
+template<class Scalar>
+VFPEvaluation<Scalar> operator*(Scalar lhs, const VFPEvaluation<Scalar>& rhs);
+
+/**
+ * Helper struct for linear interpolation
+ */
+template<class Scalar>
+struct InterpData
+{
+    InterpData() : ind_{0, 0}, inv_dist_(0.0), factor_(0.0) {}
+    int ind_[2]; //[First element greater than or equal to value, Last element smaller than or equal to value]
+    Scalar inv_dist_; // 1 / distance between the two end points of the segment. Used to calculate derivatives and uses 1.0 / 0.0 = 0.0 as a convention
+    Scalar factor_; // Interpolation factor
+};
 
 /**
  * Computes the flo parameter according to the flo_type_
@@ -80,76 +113,6 @@ T getGFR(const VFPProdTable& table,
          const T& vapour);
 
 /**
- * Helper struct for linear interpolation
- */
-struct InterpData {
-    InterpData() : ind_{0, 0}, inv_dist_(0.0), factor_(0.0) {}
-    int ind_[2]; //[First element greater than or equal to value, Last element smaller than or equal to value]
-    double inv_dist_; // 1 / distance between the two end points of the segment. Used to calculate derivatives and uses 1.0 / 0.0 = 0.0 as a convention
-    double factor_; // Interpolation factor
-};
-
-/**
- * Helper function to find indices etc. for linear interpolation and extrapolation
- *  @param value_in Value to find in values
- *  @param values Sorted list of values to search for value in.
- *  @return Data required to find the interpolated value
- */
-InterpData findInterpData(const double value_in, const std::vector<double>& values);
-
-/**
- * An "ADB-like" structure with a single value and a set of derivatives
- */
-struct VFPEvaluation {
-    VFPEvaluation() : value(0.0), dthp(0.0), dwfr(0.0), dgfr(0.0), dalq(0.0), dflo(0.0) {};
-    double value;
-    double dthp;
-    double dwfr;
-    double dgfr;
-    double dalq;
-    double dflo;
-};
-
-VFPEvaluation operator+(VFPEvaluation lhs, const VFPEvaluation& rhs);
-VFPEvaluation operator-(VFPEvaluation lhs, const VFPEvaluation& rhs);
-VFPEvaluation operator*(double lhs, const VFPEvaluation& rhs);
-
-/**
- * Helper function which interpolates data using the indices etc. given in the inputs.
- */
-VFPEvaluation interpolate(const VFPProdTable& table,
-                          const InterpData& flo_i,
-                          const InterpData& thp_i,
-                          const InterpData& wfr_i,
-                          const InterpData& gfr_i,
-                          const InterpData& alq_i);
-
-/**
- * This basically models interpolate(VFPProdTable::array_type, ...)
- * which performs 5D interpolation, but here for the 2D case only
- */
-VFPEvaluation interpolate(const VFPInjTable& table,
-                          const InterpData& flo_i,
-                          const InterpData& thp_i);
-
-VFPEvaluation bhp(const VFPProdTable& table,
-                  const double aqua,
-                  const double liquid,
-                  const double vapour,
-                  const double thp,
-                  const double alq,
-                  const double explicit_wfr,
-                  const double explicit_gfr,
-                  const bool   use_vfpexplicit);
-
-VFPEvaluation bhp(const VFPInjTable& table,
-                  const double aqua,
-                  const double liquid,
-                  const double vapour,
-                  const double thp);
-
-
-/**
  * Returns the table from the map if found, or throws an exception
  */
 template <typename T>
@@ -164,54 +127,95 @@ bool hasTable(const std::map<int, std::reference_wrapper<const T>>& tables, int 
     return (entry != tables.end() );
 }
 
-
 /**
  * Returns the type variable for FLO/GFR/WFR for production tables
  */
 template <typename TYPE, typename TABLE>
 TYPE getType(const TABLE& table);
 
+}
 
-/**
- * This function finds the value of THP given a specific BHP.
- * Essentially:
- *   Given the function f(thp_array(x)) = bhp_array(x), which is piecewise linear,
- *   find thp so that f(thp) = bhp.
- */
-double findTHP(const std::vector<double>& bhp_array,
-               const std::vector<double>& thp_array,
-               double bhp);
+template<class Scalar>
+class VFPHelpers {
+public:
+    /**
+     * Helper function to find indices etc. for linear interpolation and extrapolation
+     *  @param value_in Value to find in values
+     *  @param values Sorted list of values to search for value in.
+     *  @return Data required to find the interpolated value
+     */
+    static detail::InterpData<Scalar> findInterpData(const Scalar value_in,
+                                                     const std::vector<double>& values);
 
-/**
-* Get (flo, bhp) at minimum bhp for given thp,wfr,gfr,alq
-*/
-std::pair<double, double> 
-getMinimumBHPCoordinate(const VFPProdTable& table,
-                        const double thp,
-                        const double wfr,
-                        const double gfr,
-                        const double alq);
+    /**
+     * Helper function which interpolates data using the indices etc. given in the inputs.
+     */
+    static detail::VFPEvaluation<Scalar> interpolate(const VFPProdTable& table,
+                                                     const detail::InterpData<Scalar>& flo_i,
+                                                     const detail::InterpData<Scalar>& thp_i,
+                                                     const detail::InterpData<Scalar>& wfr_i,
+                                                     const detail::InterpData<Scalar>& gfr_i,
+                                                     const detail::InterpData<Scalar>& alq_i);
 
-/**
-* Get (flo, bhp) at largest occuring stable vfp/ipr-intersection
-* if it exists
-*/  
-std::optional<std::pair<double, double>> 
-intersectWithIPR(const VFPProdTable& table,
-                 const double thp,
-                 const double wfr,
-                 const double gfr,
-                 const double alq, 
-                 const double ipr_a,
-                 const double ipr_b,
-                 const std::function<double(const double)>& adjust_bhp);                        
+    /**
+     * This basically models interpolate(VFPProdTable::array_type, ...)
+     * which performs 5D interpolation, but here for the 2D case only
+     */
+    static detail::VFPEvaluation<Scalar> interpolate(const VFPInjTable& table,
+                                                     const detail::InterpData<Scalar>& flo_i,
+                                                     const detail::InterpData<Scalar>& thp_i);
 
-} // namespace detail
+    static detail::VFPEvaluation<Scalar> bhp(const VFPProdTable& table,
+                                             const Scalar aqua,
+                                             const Scalar liquid,
+                                             const Scalar vapour,
+                                             const Scalar thp,
+                                             const Scalar alq,
+                                             const Scalar explicit_wfr,
+                                             const Scalar explicit_gfr,
+                                             const bool   use_vfpexplicit);
 
+    static detail::VFPEvaluation<Scalar> bhp(const VFPInjTable& table,
+                                             const Scalar aqua,
+                                             const Scalar liquid,
+                                             const Scalar vapour,
+                                             const Scalar thp);
+
+    /**
+     * This function finds the value of THP given a specific BHP.
+     * Essentially:
+     *   Given the function f(thp_array(x)) = bhp_array(x), which is piecewise linear,
+     *   find thp so that f(thp) = bhp.
+     */
+    static Scalar findTHP(const std::vector<Scalar>& bhp_array,
+                          const std::vector<double>& thp_array,
+                          Scalar bhp);
+
+    /**
+    * Get (flo, bhp) at minimum bhp for given thp,wfr,gfr,alq
+    */
+    static std::pair<Scalar, Scalar>
+    getMinimumBHPCoordinate(const VFPProdTable& table,
+                            const Scalar thp,
+                            const Scalar wfr,
+                            const Scalar gfr,
+                            const Scalar alq);
+
+    /**
+    * Get (flo, bhp) at largest occuring stable vfp/ipr-intersection
+    * if it exists
+    */
+    static std::optional<std::pair<Scalar, Scalar>>
+    intersectWithIPR(const VFPProdTable& table,
+                     const Scalar thp,
+                     const Scalar wfr,
+                     const Scalar gfr,
+                     const Scalar alq,
+                     const Scalar ipr_a,
+                     const Scalar ipr_b,
+                     const std::function<Scalar(const Scalar)>& adjust_bhp);
+};
 
 } // namespace
-
-
-
 
 #endif /* OPM_AUTODIFF_VFPHELPERS_HPP_ */

@@ -83,13 +83,13 @@ double computeBhp(const VFPProdTable& table,
     // First, find the values to interpolate between.
     // Assuming positive flo here!
     assert(flo > 0.0);
-    auto flo_i = detail::findInterpData(flo, table.getFloAxis());
-    auto thp_i = detail::findInterpData(thp, table.getTHPAxis()); // assume constant
-    auto wfr_i = detail::findInterpData(wfr, table.getWFRAxis());
-    auto gfr_i = detail::findInterpData(gfr, table.getGFRAxis());
-    auto alq_i = detail::findInterpData(alq, table.getALQAxis()); //assume constant
+    auto flo_i = VFPHelpers<double>::findInterpData(flo, table.getFloAxis());
+    auto thp_i = VFPHelpers<double>::findInterpData(thp, table.getTHPAxis()); // assume constant
+    auto wfr_i = VFPHelpers<double>::findInterpData(wfr, table.getWFRAxis());
+    auto gfr_i = VFPHelpers<double>::findInterpData(gfr, table.getGFRAxis());
+    auto alq_i = VFPHelpers<double>::findInterpData(alq, table.getALQAxis()); //assume constant
 
-    return detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
+    return VFPHelpers<double>::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
 }
 
 

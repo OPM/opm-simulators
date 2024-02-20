@@ -67,17 +67,17 @@ thp(const int    table_id,
      * by interpolating for every value of thp. This might be somewhat
      * expensive, but let us assome that nthp is small.
      */
-    auto flo_i = detail::findInterpData( flo, table.getFloAxis());
-    auto wfr_i = detail::findInterpData( wfr, table.getWFRAxis());
-    auto gfr_i = detail::findInterpData( gfr, table.getGFRAxis());
-    auto alq_i = detail::findInterpData( alq, table.getALQAxis());
+    auto flo_i = VFPHelpers<Scalar>::findInterpData( flo, table.getFloAxis());
+    auto wfr_i = VFPHelpers<Scalar>::findInterpData( wfr, table.getWFRAxis());
+    auto gfr_i = VFPHelpers<Scalar>::findInterpData( gfr, table.getGFRAxis());
+    auto alq_i = VFPHelpers<Scalar>::findInterpData( alq, table.getALQAxis());
     std::vector<Scalar> bhp_array(nthp);
     for (int i = 0; i < nthp; ++i) {
-        auto thp_i = detail::findInterpData(thp_array[i], thp_array);
-        bhp_array[i] = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
+        auto thp_i = VFPHelpers<Scalar>::findInterpData(thp_array[i], thp_array);
+        bhp_array[i] = VFPHelpers<Scalar>::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
     }
 
-    return detail::findTHP(bhp_array, thp_array, bhp_arg);
+    return VFPHelpers<Scalar>::findTHP(bhp_array, thp_array, bhp_arg);
 }
 
 template<class Scalar>
@@ -94,7 +94,9 @@ bhp(const int     table_id,
 {
     const VFPProdTable& table = detail::getTable(m_tables, table_id);
 
-    detail::VFPEvaluation retval = detail::bhp(table, aqua, liquid, vapour, thp_arg, alq, explicit_wfr,explicit_gfr, use_expvfp);
+    detail::VFPEvaluation retval = VFPHelpers<Scalar>::bhp(table, aqua, liquid, vapour,
+                                                           thp_arg, alq, explicit_wfr,
+                                                           explicit_gfr, use_expvfp);
     return retval.value;
 }
 
@@ -124,16 +126,16 @@ bhpwithflo(const std::vector<Scalar>& flos,
 {
     // Get the table
     const VFPProdTable& table = detail::getTable(m_tables, table_id);
-    const auto thp_i = detail::findInterpData( thp, table.getTHPAxis()); // assume constant
-    const auto wfr_i = detail::findInterpData( wfr, table.getWFRAxis());
-    const auto gfr_i = detail::findInterpData( gfr, table.getGFRAxis());
-    const auto alq_i = detail::findInterpData( alq, table.getALQAxis()); //assume constant
+    const auto thp_i = VFPHelpers<Scalar>::findInterpData( thp, table.getTHPAxis()); // assume constant
+    const auto wfr_i = VFPHelpers<Scalar>::findInterpData( wfr, table.getWFRAxis());
+    const auto gfr_i = VFPHelpers<Scalar>::findInterpData( gfr, table.getGFRAxis());
+    const auto alq_i = VFPHelpers<Scalar>::findInterpData( alq, table.getALQAxis()); //assume constant
 
     std::vector<Scalar> bhps(flos.size(), 0.);
     for (std::size_t i = 0; i < flos.size(); ++i) {
         // Value of FLO is negative in OPM for producers, but positive in VFP table
-        const auto flo_i = detail::findInterpData(-flos[i], table.getFloAxis());
-        const detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+        const auto flo_i = VFPHelpers<Scalar>::findInterpData(-flos[i], table.getFloAxis());
+        const detail::VFPEvaluation bhp_val = VFPHelpers<Scalar>::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
         // TODO: this kind of breaks the conventions for the functions here by putting dp within the function
         bhps[i] = bhp_val.value - dp;
@@ -152,7 +154,7 @@ minimumBHP(const int table_id,
 {
     // Get the table
     const VFPProdTable& table = detail::getTable(m_tables, table_id);
-    const auto retval = detail::getMinimumBHPCoordinate(table, thp, wfr, gfr, alq);
+    const auto retval = VFPHelpers<Scalar>::getMinimumBHPCoordinate(table, thp, wfr, gfr, alq);
     // returned pair is (flo, bhp)
     return retval.second;
 }
@@ -191,13 +193,14 @@ bhp(const int       table_id,
 
     //First, find the values to interpolate between
     //Value of FLO is negative in OPM for producers, but positive in VFP table
-    auto flo_i = detail::findInterpData(-flo.value(), table.getFloAxis());
-    auto thp_i = detail::findInterpData( thp, table.getTHPAxis()); // assume constant
-    auto wfr_i = detail::findInterpData( wfr.value(), table.getWFRAxis());
-    auto gfr_i = detail::findInterpData( gfr.value(), table.getGFRAxis());
-    auto alq_i = detail::findInterpData( alq, table.getALQAxis()); //assume constant
+    auto flo_i = VFPHelpers<Scalar>::findInterpData(-flo.value(), table.getFloAxis());
+    auto thp_i = VFPHelpers<Scalar>::findInterpData( thp, table.getTHPAxis()); // assume constant
+    auto wfr_i = VFPHelpers<Scalar>::findInterpData( wfr.value(), table.getWFRAxis());
+    auto gfr_i = VFPHelpers<Scalar>::findInterpData( gfr.value(), table.getGFRAxis());
+    auto alq_i = VFPHelpers<Scalar>::findInterpData( alq, table.getALQAxis()); //assume constant
 
-    detail::VFPEvaluation bhp_val = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    detail::VFPEvaluation bhp_val = VFPHelpers<Scalar>::interpolate(table, flo_i, thp_i, wfr_i,
+                                                                    gfr_i, alq_i);
 
     bhp = (bhp_val.dwfr * wfr) + (bhp_val.dgfr * gfr) - (std::max(0.0, bhp_val.dflo) * flo);
     bhp.setValue(bhp_val.value);

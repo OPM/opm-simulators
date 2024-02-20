@@ -38,14 +38,15 @@ namespace {
  * Helper function that finds x for a given value of y for a line
  * *NOTE ORDER OF ARGUMENTS*
  */
-double findX(const double  x0,
-             const double  x1,
-             const double  y0,
-             const double  y1,
-             const double  y)
+template<class Scalar>
+Scalar findX(const Scalar x0,
+             const Scalar x1,
+             const Scalar y0,
+             const Scalar y1,
+             const Scalar y)
 {
-    const double dx = x1 - x0;
-    const double dy = y1 - y0;
+    const Scalar dx = x1 - x0;
+    const Scalar dy = y1 - y0;
 
     /**
      *       y = y0 + (dy / dx) * (x - x0)
@@ -54,7 +55,7 @@ double findX(const double  x0,
      * If dy is zero, use x1 as the value.
      */
 
-    double x = 0.0;
+    Scalar x = 0.0;
 
     if (dy != 0.0) {
         x = x0 + (y-y0) * (dx/dy);
@@ -77,17 +78,18 @@ static T chopNegativeValues(const T& value) {
 }
 
 namespace Opm {
-namespace detail {
 
-InterpData findInterpData(const double value_in, const std::vector<double>& values)
+template<class Scalar>
+detail::InterpData<Scalar> VFPHelpers<Scalar>::findInterpData(const Scalar value_in,
+                                                              const std::vector<double>& values)
 {
-    InterpData retval;
+    detail::InterpData<Scalar> retval;
 
     const int nvalues = values.size();
 
     // chopping the value to be zero, which means we do not
     // extrapolate the table towards nagative ranges
-    const double value = value_in < 0.? 0. : value_in;
+    const Scalar value = value_in < 0.? 0. : value_in;
 
     //If we only have one value in our vector, return that
     if (values.size() == 1) {
@@ -119,8 +121,8 @@ InterpData findInterpData(const double value_in, const std::vector<double>& valu
             }
         }
 
-        const double start = values[retval.ind_[0]];
-        const double end   = values[retval.ind_[1]];
+        const Scalar start = values[retval.ind_[0]];
+        const Scalar end   = values[retval.ind_[1]];
 
         //Find interpolation ratio
         if (end > start) {
@@ -138,50 +140,17 @@ InterpData findInterpData(const double value_in, const std::vector<double>& valu
     return retval;
 }
 
-VFPEvaluation operator+(VFPEvaluation lhs, const VFPEvaluation& rhs)
-{
-    lhs.value += rhs.value;
-    lhs.dthp += rhs.dthp;
-    lhs.dwfr += rhs.dwfr;
-    lhs.dgfr += rhs.dgfr;
-    lhs.dalq += rhs.dalq;
-    lhs.dflo += rhs.dflo;
-    return lhs;
-}
-
-VFPEvaluation operator-(VFPEvaluation lhs, const VFPEvaluation& rhs)
-{
-    lhs.value -= rhs.value;
-    lhs.dthp -= rhs.dthp;
-    lhs.dwfr -= rhs.dwfr;
-    lhs.dgfr -= rhs.dgfr;
-    lhs.dalq -= rhs.dalq;
-    lhs.dflo -= rhs.dflo;
-    return lhs;
-}
-
-VFPEvaluation operator*(double lhs, const VFPEvaluation& rhs)
-{
-    VFPEvaluation retval;
-    retval.value = rhs.value * lhs;
-    retval.dthp = rhs.dthp * lhs;
-    retval.dwfr = rhs.dwfr * lhs;
-    retval.dgfr = rhs.dgfr * lhs;
-    retval.dalq = rhs.dalq * lhs;
-    retval.dflo = rhs.dflo * lhs;
-    return retval;
-}
-
-VFPEvaluation interpolate(const VFPProdTable& table,
-                          const InterpData& flo_i,
-                          const InterpData& thp_i,
-                          const InterpData& wfr_i,
-                          const InterpData& gfr_i,
-                          const InterpData& alq_i)
+template<class Scalar>
+detail::VFPEvaluation<Scalar> VFPHelpers<Scalar>::
+interpolate(const VFPProdTable& table,
+            const detail::InterpData<Scalar>& flo_i,
+            const detail::InterpData<Scalar>& thp_i,
+            const detail::InterpData<Scalar>& wfr_i,
+            const detail::InterpData<Scalar>& gfr_i,
+            const detail::InterpData<Scalar>& alq_i)
 {
     //Values and derivatives in a 5D hypercube
-    VFPEvaluation nn[2][2][2][2][2];
-
+    detail::VFPEvaluation<Scalar> nn[2][2][2][2][2];
 
     //Pick out nearest neighbors (nn) to our evaluation point
     //This is not really required, but performance-wise it may pay off, since the 32-elements
@@ -231,7 +200,7 @@ VFPEvaluation interpolate(const VFPProdTable& table,
         }
     }
 
-    double t1, t2; //interpolation variables, so that t1 = (1-t) and t2 = t.
+    Scalar t1, t2; //interpolation variables, so that t1 = (1-t) and t2 = t.
 
     // Remove dimensions one by one
     // Example: going from 3D to 2D to 1D, we start by interpolating along
@@ -280,13 +249,14 @@ VFPEvaluation interpolate(const VFPProdTable& table,
     return nn[0][0][0][0][0];
 }
 
-VFPEvaluation interpolate(const VFPInjTable& table,
-                          const InterpData& flo_i,
-                          const InterpData& thp_i)
+template<class Scalar>
+detail::VFPEvaluation<Scalar> VFPHelpers<Scalar>::
+interpolate(const VFPInjTable& table,
+            const detail::InterpData<Scalar>& flo_i,
+            const detail::InterpData<Scalar>& thp_i)
 {
     //Values and derivatives in a 2D plane
-    VFPEvaluation nn[2][2];
-
+    detail::VFPEvaluation<Scalar> nn[2][2];
 
     //Pick out nearest neighbors (nn) to our evaluation point
     //The following ladder of for loops will presumably be unrolled by a reasonable compiler.
@@ -318,7 +288,7 @@ VFPEvaluation interpolate(const VFPInjTable& table,
         nn[i][1].dflo = nn[i][0].dflo;
     }
 
-    double t1, t2; //interpolation variables, so that t1 = (1-t) and t2 = t.
+    Scalar t1, t2; //interpolation variables, so that t1 = (1-t) and t2 = t.
 
     // Go from 2D to 1D
     t2 = flo_i.factor_;
@@ -334,20 +304,22 @@ VFPEvaluation interpolate(const VFPInjTable& table,
     return nn[0][0];
 }
 
-VFPEvaluation bhp(const VFPProdTable& table,
-                  const double  aqua,
-                  const double  liquid,
-                  const double  vapour,
-                  const double  thp,
-                  const double  alq,
-                  const double  explicit_wfr,
-                  const double  explicit_gfr,
-                  const bool    use_vfpexplicit)
+template<class Scalar>
+detail::VFPEvaluation<Scalar> VFPHelpers<Scalar>::
+bhp(const VFPProdTable& table,
+    const Scalar aqua,
+    const Scalar liquid,
+    const Scalar vapour,
+    const Scalar thp,
+    const Scalar alq,
+    const Scalar explicit_wfr,
+    const Scalar explicit_gfr,
+    const bool   use_vfpexplicit)
 {
     //Find interpolation variables
-    double flo = detail::getFlo(table, aqua, liquid, vapour);
-    double wfr = detail::getWFR(table, aqua, liquid, vapour);
-    double gfr = detail::getGFR(table, aqua, liquid, vapour);
+    Scalar flo = detail::getFlo(table, aqua, liquid, vapour);
+    Scalar wfr = detail::getWFR(table, aqua, liquid, vapour);
+    Scalar gfr = detail::getGFR(table, aqua, liquid, vapour);
     if (use_vfpexplicit || -flo < table.getFloAxis().front()) {
         wfr = explicit_wfr;
         gfr = explicit_gfr;
@@ -355,43 +327,47 @@ VFPEvaluation bhp(const VFPProdTable& table,
 
     //First, find the values to interpolate between
     //Recall that flo is negative in Opm, so switch sign.
-    auto flo_i = detail::findInterpData(-flo, table.getFloAxis());
-    auto thp_i = detail::findInterpData( thp, table.getTHPAxis());
-    auto wfr_i = detail::findInterpData( wfr, table.getWFRAxis());
-    auto gfr_i = detail::findInterpData( gfr, table.getGFRAxis());
-    auto alq_i = detail::findInterpData( alq, table.getALQAxis());
+    auto flo_i = findInterpData(-flo, table.getFloAxis());
+    auto thp_i = findInterpData( thp, table.getTHPAxis());
+    auto wfr_i = findInterpData( wfr, table.getWFRAxis());
+    auto gfr_i = findInterpData( gfr, table.getGFRAxis());
+    auto alq_i = findInterpData( alq, table.getALQAxis());
 
-    detail::VFPEvaluation retval = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    detail::VFPEvaluation retval = interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
 
     return retval;
 }
 
-VFPEvaluation bhp(const VFPInjTable& table,
-                  const double  aqua,
-                  const double  liquid,
-                  const double  vapour,
-                  const double  thp)
+template<class Scalar>
+detail::VFPEvaluation<Scalar> VFPHelpers<Scalar>::
+bhp(const VFPInjTable& table,
+    const Scalar aqua,
+    const Scalar liquid,
+    const Scalar vapour,
+    const Scalar thp)
 {
     //Find interpolation variables
-    double flo = detail::getFlo(table, aqua, liquid, vapour);
+    Scalar flo = detail::getFlo(table, aqua, liquid, vapour);
 
     //First, find the values to interpolate between
-    auto flo_i = detail::findInterpData(flo, table.getFloAxis());
-    auto thp_i = detail::findInterpData(thp, table.getTHPAxis());
+    auto flo_i = findInterpData(flo, table.getFloAxis());
+    auto thp_i = findInterpData(thp, table.getTHPAxis());
 
     //Then perform the interpolation itself
-    detail::VFPEvaluation retval = detail::interpolate(table, flo_i, thp_i);
+    detail::VFPEvaluation retval = interpolate(table, flo_i, thp_i);
 
     return retval;
 }
 
-double findTHP(const std::vector<double>& bhp_array,
-               const std::vector<double>& thp_array,
-               double bhp)
+template<class Scalar>
+Scalar VFPHelpers<Scalar>::
+findTHP(const std::vector<Scalar>& bhp_array,
+        const std::vector<double>& thp_array,
+        Scalar bhp)
 {
     int nthp = thp_array.size();
 
-    double thp = -1e100;
+    Scalar thp = -1e100;
 
     //Check that our thp axis is sorted
     assert(std::is_sorted(thp_array.begin(), thp_array.end()));
@@ -406,19 +382,19 @@ double findTHP(const std::vector<double>& bhp_array,
         //Target bhp less than all values in array, extrapolate
         if (bhp <= bhp_array[0]) {
             //TODO: LOG extrapolation
-            const double& x0 = thp_array[0];
-            const double& x1 = thp_array[1];
-            const double& y0 = bhp_array[0];
-            const double& y1 = bhp_array[1];
+            const Scalar& x0 = thp_array[0];
+            const Scalar& x1 = thp_array[1];
+            const Scalar& y0 = bhp_array[0];
+            const Scalar& y1 = bhp_array[1];
             thp = findX(x0, x1, y0, y1, bhp);
         }
         //Target bhp greater than all values in array, extrapolate
         else if (bhp > bhp_array[nthp-1]) {
             //TODO: LOG extrapolation
-            const double& x0 = thp_array[nthp-2];
-            const double& x1 = thp_array[nthp-1];
-            const double& y0 = bhp_array[nthp-2];
-            const double& y1 = bhp_array[nthp-1];
+            const Scalar& x0 = thp_array[nthp-2];
+            const Scalar& x1 = thp_array[nthp-1];
+            const Scalar& y0 = bhp_array[nthp-2];
+            const Scalar& y1 = bhp_array[nthp-1];
             thp = findX(x0, x1, y0, y1, bhp);
         }
         //Target bhp within table ranges, interpolate
@@ -432,8 +408,8 @@ double findTHP(const std::vector<double>& bhp_array,
             int i=0;
             bool found = false;
             for (; i<nthp-1; ++i) {
-                const double& y0 = bhp_array[i  ];
-                const double& y1 = bhp_array[i+1];
+                const Scalar& y0 = bhp_array[i  ];
+                const Scalar& y1 = bhp_array[i+1];
 
                 if (y0 < bhp && bhp <= y1) {
                     found = true;
@@ -444,10 +420,10 @@ double findTHP(const std::vector<double>& bhp_array,
             assert(found == true);
             static_cast<void>(found); //Silence compiler warning
 
-            const double& x0 = thp_array[i  ];
-            const double& x1 = thp_array[i+1];
-            const double& y0 = bhp_array[i  ];
-            const double& y1 = bhp_array[i+1];
+            const Scalar& x0 = thp_array[i  ];
+            const Scalar& x1 = thp_array[i+1];
+            const Scalar& y0 = bhp_array[i  ];
+            const Scalar& y1 = bhp_array[i+1];
             thp = findX(x0, x1, y0, y1, bhp);
         }
     }
@@ -459,8 +435,8 @@ double findTHP(const std::vector<double>& bhp_array,
         int i=0;
         bool found = false;
         for (; i<nthp-1; ++i) {
-            const double& y0 = bhp_array[i  ];
-            const double& y1 = bhp_array[i+1];
+            const Scalar& y0 = bhp_array[i  ];
+            const Scalar& y1 = bhp_array[i+1];
 
             if (y0 < bhp && bhp <= y1) {
                 found = true;
@@ -468,27 +444,27 @@ double findTHP(const std::vector<double>& bhp_array,
             }
         }
         if (found) {
-            const double& x0 = thp_array[i  ];
-            const double& x1 = thp_array[i+1];
-            const double& y0 = bhp_array[i  ];
-            const double& y1 = bhp_array[i+1];
+            const Scalar& x0 = thp_array[i  ];
+            const Scalar& x1 = thp_array[i+1];
+            const Scalar& y0 = bhp_array[i  ];
+            const Scalar& y1 = bhp_array[i+1];
             thp = findX(x0, x1, y0, y1, bhp);
         }
         else if (bhp <= bhp_array[0]) {
             //TODO: LOG extrapolation
-            const double& x0 = thp_array[0];
-            const double& x1 = thp_array[1];
-            const double& y0 = bhp_array[0];
-            const double& y1 = bhp_array[1];
+            const Scalar& x0 = thp_array[0];
+            const Scalar& x1 = thp_array[1];
+            const Scalar& y0 = bhp_array[0];
+            const Scalar& y1 = bhp_array[1];
             thp = findX(x0, x1, y0, y1, bhp);
         }
         //Target bhp greater than all values in array, extrapolate
         else if (bhp > bhp_array[nthp-1]) {
             //TODO: LOG extrapolation
-            const double& x0 = thp_array[nthp-2];
-            const double& x1 = thp_array[nthp-1];
-            const double& y0 = bhp_array[nthp-2];
-            const double& y1 = bhp_array[nthp-1];
+            const Scalar& x0 = thp_array[nthp-2];
+            const Scalar& x1 = thp_array[nthp-1];
+            const Scalar& y0 = bhp_array[nthp-2];
+            const Scalar& y1 = bhp_array[nthp-1];
             thp = findX(x0, x1, y0, y1, bhp);
         }
         else {
@@ -499,86 +475,88 @@ double findTHP(const std::vector<double>& bhp_array,
     return thp;
 }
 
-std::pair<double, double> 
+template<class Scalar>
+std::pair<Scalar, Scalar> VFPHelpers<Scalar>::
 getMinimumBHPCoordinate(const VFPProdTable& table,
-                        const double thp,
-                        const double wfr,
-                        const double gfr,
-                        const double alq)
-{   
+                        const Scalar thp,
+                        const Scalar wfr,
+                        const Scalar gfr,
+                        const Scalar alq)
+{
     // Given fixed thp, wfr, gfr and alq, this function finds the minimum bhp and returns
-    // the corresponding pair (-flo_at_bhp_min, bhp_min). No assumption is taken on the 
-    // shape of the function bhp(flo), so all points in the flo-axis is checked. 
-    double flo_at_bhp_min = 0.0; // start by checking flo=0
-    auto flo_i = detail::findInterpData(flo_at_bhp_min, table.getFloAxis());
-    auto thp_i = detail::findInterpData( thp, table.getTHPAxis());
-    auto wfr_i = detail::findInterpData( wfr, table.getWFRAxis());
-    auto gfr_i = detail::findInterpData( gfr, table.getGFRAxis());
-    auto alq_i = detail::findInterpData( alq, table.getALQAxis());
+    // the corresponding pair (-flo_at_bhp_min, bhp_min). No assumption is taken on the
+    // shape of the function bhp(flo), so all points in the flo-axis is checked.
+    Scalar flo_at_bhp_min = 0.0; // start by checking flo=0
+    auto flo_i = findInterpData(flo_at_bhp_min, table.getFloAxis());
+    auto thp_i = findInterpData( thp, table.getTHPAxis());
+    auto wfr_i = findInterpData( wfr, table.getWFRAxis());
+    auto gfr_i = findInterpData( gfr, table.getGFRAxis());
+    auto alq_i = findInterpData( alq, table.getALQAxis());
 
-    detail::VFPEvaluation bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
-    double bhp_min = bhp_i.value;
+    detail::VFPEvaluation bhp_i = interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    Scalar bhp_min = bhp_i.value;
     const std::vector<double>& flos = table.getFloAxis();
     for (size_t i = 0; i < flos.size(); ++i) {
-        flo_i = detail::findInterpData(flos[i], flos);
-        bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+        flo_i = findInterpData(flos[i], flos);
+        bhp_i = interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
         if (bhp_i.value < bhp_min){
             bhp_min = bhp_i.value;
             flo_at_bhp_min = flos[i];
         }
     }
     // return negative flo
-    return std::make_pair(-flo_at_bhp_min, bhp_min); 
-}      
+    return std::make_pair(-flo_at_bhp_min, bhp_min);
+}
 
-std::optional<std::pair<double, double>> 
+template<class Scalar>
+std::optional<std::pair<Scalar, Scalar>> VFPHelpers<Scalar>::
 intersectWithIPR(const VFPProdTable& table,
-                 const double thp,
-                 const double wfr,
-                 const double gfr,
-                 const double alq, 
-                 const double ipr_a,
-                 const double ipr_b, 
-                 const std::function<double(const double)>& adjust_bhp)
-{   
-    // Given fixed thp, wfr, gfr and alq, this function finds a stable (-flo, bhp)-intersection 
-    // between the ipr-line and bhp(flo) if such an intersection exists. For multiple stable 
+                 const Scalar thp,
+                 const Scalar wfr,
+                 const Scalar gfr,
+                 const Scalar alq,
+                 const Scalar ipr_a,
+                 const Scalar ipr_b,
+                 const std::function<Scalar(const Scalar)>& adjust_bhp)
+{
+    // Given fixed thp, wfr, gfr and alq, this function finds a stable (-flo, bhp)-intersection
+    // between the ipr-line and bhp(flo) if such an intersection exists. For multiple stable
     // intersections, the one corresponding the largest flo is returned.
     // The adjust_bhp-function is used to adjust the vfp-table bhp-values to actual bhp-values due
-    // vfp/well ref-depth differences and/or WVFPDP-related pressure adjustments. 
+    // vfp/well ref-depth differences and/or WVFPDP-related pressure adjustments.
 
     // NOTE: ipr-line is q=b*bhp - a!
     // ipr is given for negative flo, so
-    // flo = -b*bhp + a, i.e., bhp = -(flo-a)/b  
-    auto thp_i = detail::findInterpData( thp, table.getTHPAxis());
-    auto wfr_i = detail::findInterpData( wfr, table.getWFRAxis());
-    auto gfr_i = detail::findInterpData( gfr, table.getGFRAxis());
-    auto alq_i = detail::findInterpData( alq, table.getALQAxis());
+    // flo = -b*bhp + a, i.e., bhp = -(flo-a)/b
+    auto thp_i = findInterpData( thp, table.getTHPAxis());
+    auto wfr_i = findInterpData( wfr, table.getWFRAxis());
+    auto gfr_i = findInterpData( gfr, table.getGFRAxis());
+    auto alq_i = findInterpData( alq, table.getALQAxis());
 
     if (ipr_b == 0.0) {
         // this shouldn't happen, but deal with it to be safe
-        auto flo_i = detail::findInterpData(ipr_a, table.getFloAxis());
-        detail::VFPEvaluation bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+        auto flo_i = findInterpData(ipr_a, table.getFloAxis());
+        detail::VFPEvaluation bhp_i = interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
         return std::make_pair(-ipr_a, adjust_bhp(bhp_i.value));
     }
     // find largest flo (flo_x) for which y = bhp(flo) + (flo-a)/b = 0 and dy/dflo > 0
-    double flo_x = -1.0;
-    double flo0, flo1;
-    double y0, y1;
+    Scalar flo_x = -1.0;
+    Scalar flo0, flo1;
+    Scalar y0, y1;
     flo0 = 0.0; // start by checking flo=0
-    auto flo_i = detail::findInterpData(flo0, table.getFloAxis());
-    detail::VFPEvaluation bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+    auto flo_i = findInterpData(flo0, table.getFloAxis());
+    detail::VFPEvaluation bhp_i = interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
     y0 = adjust_bhp(bhp_i.value) - ipr_a/ipr_b; // +0.0/ipr_b
 
-    std::vector<double> flos = table.getFloAxis();
+    const std::vector<double>& flos = table.getFloAxis();
     for (size_t i = 0; i < flos.size(); ++i) {
         flo1 = flos[i];
-        flo_i = detail::findInterpData(flo1, table.getFloAxis());
-        bhp_i = detail::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
+        flo_i = findInterpData(flo1, flos);
+        bhp_i = interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i);
         y1 = adjust_bhp(bhp_i.value) + (flo1 - ipr_a)/ipr_b;
         if (y0 < 0 && y1 >= 0){
             // crossing with positive slope
-            double w = -y0/(y1-y0);
+            Scalar w = -y0/(y1-y0);
             w = std::clamp(w, 0.0, 1.0); // just to be safe (if y0~y1~0)
             flo_x = flo0 + w*(flo1 - flo0);
         }
@@ -591,7 +569,46 @@ intersectWithIPR(const VFPProdTable& table,
     } else {
         return std::nullopt;
     }
-} 
+}
+
+namespace detail {
+
+template<class Scalar>
+VFPEvaluation<Scalar> operator+(VFPEvaluation<Scalar> lhs, const VFPEvaluation<Scalar>& rhs)
+{
+    lhs.value += rhs.value;
+    lhs.dthp += rhs.dthp;
+    lhs.dwfr += rhs.dwfr;
+    lhs.dgfr += rhs.dgfr;
+    lhs.dalq += rhs.dalq;
+    lhs.dflo += rhs.dflo;
+    return lhs;
+}
+
+template<class Scalar>
+VFPEvaluation<Scalar> operator-(VFPEvaluation<Scalar> lhs, const VFPEvaluation<Scalar>& rhs)
+{
+    lhs.value -= rhs.value;
+    lhs.dthp -= rhs.dthp;
+    lhs.dwfr -= rhs.dwfr;
+    lhs.dgfr -= rhs.dgfr;
+    lhs.dalq -= rhs.dalq;
+    lhs.dflo -= rhs.dflo;
+    return lhs;
+}
+
+template<class Scalar>
+VFPEvaluation<Scalar> operator*(Scalar lhs, const VFPEvaluation<Scalar>& rhs)
+{
+    VFPEvaluation<Scalar> retval;
+    retval.value = rhs.value * lhs;
+    retval.dthp = rhs.dthp * lhs;
+    retval.dwfr = rhs.dwfr * lhs;
+    retval.dgfr = rhs.dgfr * lhs;
+    retval.dalq = rhs.dalq * lhs;
+    retval.dflo = rhs.dflo * lhs;
+    return retval;
+}
 
 template <typename T>
 T getFlo(const VFPProdTable& table,
@@ -753,4 +770,7 @@ INSTANCE(DenseAd::Evaluation<double, 9, 0u>)
 INSTANCE(DenseAd::Evaluation<double, 10, 0u>)
 
 } // namespace detail
+
+template class VFPHelpers<double>;
+
 } // namespace Opm
