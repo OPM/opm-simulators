@@ -67,7 +67,7 @@ public:
     int stepInit();
 
 private:
-    Opm::FlowMainEbos<TypeTag>& getFlowMain() const;
+    Opm::FlowMain<TypeTag>& getFlowMain() const;
     PyFluidState<TypeTag>& getFluidState() const;
     PyMaterialState<TypeTag>& getMaterialState() const;
 
