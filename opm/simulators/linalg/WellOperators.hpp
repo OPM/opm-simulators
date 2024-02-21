@@ -54,7 +54,8 @@ template <class X, class Y>
 class LinearOperatorExtra : public Dune::LinearOperator<X, Y>
 {
 public:
-    using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<double, 1, 1>>;
+    using field_type = typename X::field_type;
+    using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<field_type, 1, 1>>;
     virtual void addWellPressureEquations(PressureMatrix& jacobian,
                                           const X& weights,
                                           const bool use_well_weights) const = 0;
@@ -143,7 +144,7 @@ public:
     using domain_type = X;
     using range_type = Y;
     using field_type = typename X::field_type;
-    using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<double, 1, 1>>;
+    using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<field_type, 1, 1>>;
 #if HAVE_MPI
     using communication_type = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
@@ -237,7 +238,7 @@ public:
     using domain_type = X;
     using range_type = Y;
     using field_type = typename X::field_type;
-    using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<double, 1, 1>>;
+    using PressureMatrix = Dune::BCRSMatrix<MatrixBlock<field_type, 1, 1>>;
 #if HAVE_MPI
     using communication_type = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
