@@ -50,12 +50,13 @@ public:
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
     using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     enum { dimWorld = GridView::dimensionworld };
     enum { numPhases = FluidSystem::numPhases };
     static constexpr int numEq = BlackoilIndices::numEq;
 
-    using Eval =  DenseAd::Evaluation<double, numEq>;
+    using Eval =  DenseAd::Evaluation<Scalar, numEq>;
     using Toolbox = MathToolbox<Eval>;
 
     using typename AquiferInterface<TypeTag>::RateVector;
@@ -111,7 +112,10 @@ public:
         if (const auto* aqData = xaqPos->second.typeData.template get<data::AquiferType::Numerical>();
             aqData != nullptr)
         {
-            this->init_pressure_ = aqData->initPressure;
+            this->init_pressure_.resize(aqData->initPressure.size());
+            std::copy(aqData->initPressure.begin(),
+                      aqData->initPressure.end(),
+                      this->init_pressure_.begin());
         }
 
         this->solution_set_from_restart_ = true;
@@ -136,7 +140,10 @@ public:
         data.volume = this->cumulative_flux_;
 
         auto* aquNum = data.typeData.template create<data::AquiferType::Numerical>();
-        aquNum->initPressure = this->init_pressure_;
+        aquNum->initPressure.resize(this->init_pressure_.size());
+        std::copy(this->init_pressure_.begin(),
+                  this->init_pressure_.end(),
+                  aquNum->initPressure.begin());
 
         return data;
     }
@@ -152,10 +159,10 @@ public:
         this->cumulative_flux_ = 0.;
     }
 
-    void computeFaceAreaFraction(const std::vector<double>& /*total_face_area*/) override
+    void computeFaceAreaFraction(const std::vector<Scalar>& /*total_face_area*/) override
     {}
 
-    double totalFaceArea() const override
+    Scalar totalFaceArea() const override
     {
         return 1.0;
     }
@@ -177,7 +184,7 @@ public:
                this->pressure_ == rhs.pressure_;
     }
 
-    double cumulativeFlux() const
+    Scalar cumulativeFlux() const
     {
         return this->cumulative_flux_;
     }
@@ -205,16 +212,16 @@ private:
             elemIt->partitionType() == Dune::InteriorEntity;
     }
 
-    double calculateAquiferPressure() const
+    Scalar calculateAquiferPressure() const
     {
-        auto capture = std::vector<double>(this->init_pressure_.size(), 0.0);
+        auto capture = std::vector<Scalar>(this->init_pressure_.size(), 0.0);
         return this->calculateAquiferPressure(capture);
     }
 
-    double calculateAquiferPressure(std::vector<double>& cell_pressure) const
+    Scalar calculateAquiferPressure(std::vector<Scalar>& cell_pressure) const
     {
-        double sum_pressure_watervolume = 0.;
-        double sum_watervolume = 0.;
+        Scalar sum_pressure_watervolume = 0.;
+        Scalar sum_watervolume = 0.;
 
         ElementContext  elem_ctx(this->simulator_);
         const auto& gridView = this->simulator_.gridView();
@@ -236,12 +243,12 @@ private:
             // TODO: the porosity of the cells are still wrong for numerical aquifer cells
             // Because the dofVolume still based on the grid information.
             // The pore volume is correct. Extra efforts will be done to get sensible porosity value here later.
-            const double water_saturation = fs.saturation(this->phaseIdx_()).value();
-            const double porosity = iq0.porosity().value();
-            const double volume = elem_ctx.dofTotalVolume(0, 0);
+            const Scalar water_saturation = fs.saturation(this->phaseIdx_()).value();
+            const Scalar porosity = iq0.porosity().value();
+            const Scalar volume = elem_ctx.dofTotalVolume(0, 0);
             // TODO: not sure we should use water pressure here
-            const double water_pressure_reservoir = fs.pressure(this->phaseIdx_()).value();
-            const double water_volume = volume * porosity * water_saturation;
+            const Scalar water_pressure_reservoir = fs.pressure(this->phaseIdx_()).value();
+            const Scalar water_volume = volume * porosity * water_saturation;
             sum_pressure_watervolume += water_volume * water_pressure_reservoir;
             sum_watervolume += water_volume;
 
@@ -260,16 +267,16 @@ private:
     }
 
     template <class ElemCtx>
-    double getWaterFlux(const ElemCtx& elem_ctx, unsigned face_idx) const
+    Scalar getWaterFlux(const ElemCtx& elem_ctx, unsigned face_idx) const
     {
         const auto& exQuants = elem_ctx.extensiveQuantities(face_idx, /*timeIdx*/ 0);
-        const double water_flux = Toolbox::value(exQuants.volumeFlux(this->phaseIdx_()));
+        const Scalar water_flux = Toolbox::value(exQuants.volumeFlux(this->phaseIdx_()));
         return water_flux;
     }
 
-    double calculateAquiferFluxRate() const
+    Scalar calculateAquiferFluxRate() const
     {
-        double aquifer_flux = 0.0;
+        Scalar aquifer_flux = 0.0;
 
         if (! this->connects_to_reservoir_) {
             return aquifer_flux;
@@ -312,11 +319,11 @@ private:
                 elem_ctx.updateAllIntensiveQuantities();
                 elem_ctx.updateAllExtensiveQuantities();
 
-                const double water_flux = getWaterFlux(elem_ctx,face_idx);
+                const Scalar water_flux = getWaterFlux(elem_ctx,face_idx);
                 const std::size_t up_id = water_flux >= 0.0 ? i : j;
                 const auto& intQuantsIn = elem_ctx.intensiveQuantities(up_id, 0);
-                const double invB = Toolbox::value(intQuantsIn.fluidState().invB(this->phaseIdx_()));
-                const double face_area = face.area();
+                const Scalar invB = Toolbox::value(intQuantsIn.fluidState().invB(this->phaseIdx_()));
+                const Scalar face_area = face.area();
                 aquifer_flux += water_flux * invB * face_area;
             }
 
@@ -327,10 +334,10 @@ private:
         return aquifer_flux;
     }
 
-    double flux_rate_; // aquifer influx rate
-    double cumulative_flux_; // cumulative aquifer influx
-    std::vector<double> init_pressure_{};
-    double pressure_; // aquifer pressure
+    Scalar flux_rate_; // aquifer influx rate
+    Scalar cumulative_flux_; // cumulative aquifer influx
+    std::vector<Scalar> init_pressure_{};
+    Scalar pressure_; // aquifer pressure
     bool solution_set_from_restart_ {false};
     bool connects_to_reservoir_ {false};
 
