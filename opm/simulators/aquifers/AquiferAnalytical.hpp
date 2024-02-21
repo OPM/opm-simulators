@@ -54,6 +54,7 @@ class AquiferAnalytical : public AquiferInterface<TypeTag>
 {
 public:
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using BlackoilIndices = GetPropType<TypeTag, Properties::Indices>;
@@ -70,9 +71,8 @@ public:
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
 
     static constexpr int numEq = BlackoilIndices::numEq;
-    using Scalar = double;
 
-    using Eval = DenseAd::Evaluation<double, /*size=*/numEq>;
+    using Eval = DenseAd::Evaluation<Scalar, /*size=*/numEq>;
 
     using FluidState = BlackOilFluidState<Eval,
                                           FluidSystem,
@@ -99,12 +99,12 @@ public:
     virtual ~AquiferAnalytical()
     {}
 
-    void computeFaceAreaFraction(const std::vector<double>& total_face_area) override
+    void computeFaceAreaFraction(const std::vector<Scalar>& total_face_area) override
     {
-        assert (total_face_area.size() >= static_cast<std::vector<double>::size_type>(this->aquiferID()));
+        assert (total_face_area.size() >= static_cast<typename std::vector<Scalar>::size_type>(this->aquiferID()));
 
         const auto tfa = total_face_area[this->aquiferID() - 1];
-        const auto eps_sqrt = std::sqrt(std::numeric_limits<double>::epsilon());
+        const auto eps_sqrt = std::sqrt(std::numeric_limits<Scalar>::epsilon());
 
         if (tfa < eps_sqrt) {
             this->alphai_.assign(this->size(), Scalar{0});
@@ -122,7 +122,7 @@ public:
         this->area_fraction_ = this->totalFaceArea() / tfa;
     }
 
-    double totalFaceArea() const override
+    Scalar totalFaceArea() const override
     {
         return this->total_face_area_;
     }
