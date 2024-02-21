@@ -260,7 +260,7 @@ protected:
 private:
     Scalar timeConstantCO2Store() const
     {
-        const auto press = this->aquct_data_.initial_pressure.value();
+        const Scalar press = this->aquct_data_.initial_pressure.value();
         const auto temp = this->reservoirTemperatureCO2Store();
 
         auto waterViscosity = Scalar { 0 };
@@ -287,7 +287,7 @@ private:
 
     Scalar waterDensityCO2Store() const
     {
-        const auto press = this->aquct_data_.initial_pressure.value();
+        const Scalar press = this->aquct_data_.initial_pressure.value();
         const auto temp = this->reservoirTemperatureCO2Store();
 
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
