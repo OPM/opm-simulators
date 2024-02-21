@@ -557,6 +557,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
             auto parseContext = setupParseContext(exitOnAllErrors);
             if (treatCriticalAsNonCritical) { // Continue with invalid names if parsing strictness is set to low
                 parseContext->update(ParseContext::SCHEDULE_INVALID_NAME, InputErrorAction::WARN);
+                schedule->treat_critical_as_non_critical(true);
             }
             readOnIORank(comm, deckFilename, parseContext.get(),
                          eclipseState, schedule, udqState, actionState, wtestState,
