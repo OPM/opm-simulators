@@ -77,7 +77,7 @@ public:
     /*!
     * \brief Return well tracer rates
     */
-    const std::map<std::pair<std::string, std::string>, double>&
+    const std::map<std::pair<std::string, std::string>, Scalar>&
     getWellTracerRates() const {return wellTracerRate_;}
 
     template<class Serializer>
@@ -105,9 +105,11 @@ protected:
 
     bool linearSolve_(const TracerMatrix& M, TracerVector& x, TracerVector& b);
 
-    bool linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::vector<TracerVector>& b);
+    bool linearSolveBatchwise_(const TracerMatrix& M,
+                               std::vector<TracerVector>& x,
+                               std::vector<TracerVector>& b);
 
-    double currentConcentration_(const Well& eclWell, const std::string& name) const;
+    Scalar currentConcentration_(const Well& eclWell, const std::string& name) const;
 
     const GridView& gridView_;
     const EclipseState& eclState_;
@@ -120,7 +122,7 @@ protected:
     std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> storageOfTimeIndex1_;
 
     // <wellName, tracerIdx> -> wellRate
-    std::map<std::pair<std::string, std::string>, double> wellTracerRate_;
+    std::map<std::pair<std::string, std::string>, Scalar> wellTracerRate_;
     /// \brief Function returning the cell centers
     std::function<std::array<double,dimWorld>(int)> centroids_;
 };

@@ -144,7 +144,7 @@ fname(int tracerIdx) const
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
-double GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+Scalar GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 currentConcentration_(const Well& eclWell, const std::string& name) const
 {
     return eclWell.getTracerProperties().getConcentration(name);
