@@ -286,15 +286,15 @@ public:
         bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
         if (enableAdaptive) {
             const UnitSystem& unitSystem = this->ebosSimulator_.vanguard().eclState().getUnits();
+            const auto& sched_state = schedule()[timer.currentStepNum()];
+            auto max_next_tstep = sched_state.max_next_tstep(enableTUNING);
             if (enableTUNING) {
-                const auto& sched_state = schedule()[timer.currentStepNum()];
-                auto max_next_tstep = sched_state.max_next_tstep();
                 adaptiveTimeStepping_ = std::make_unique<TimeStepper>(max_next_tstep,
                                                                       sched_state.tuning(),
                                                                       unitSystem, terminalOutput_);
             }
             else {
-                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(unitSystem, terminalOutput_);
+                adaptiveTimeStepping_ = std::make_unique<TimeStepper>(unitSystem, max_next_tstep, terminalOutput_);
             }
 
             if (isRestart()) {
@@ -379,18 +379,21 @@ public:
         // \Note: The sub stepping will require a copy of the state variables
         if (adaptiveTimeStepping_) {
             const auto& events = schedule()[timer.currentStepNum()].events();
-            if (enableTUNING) {
-                if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
-                    const auto& sched_state = schedule()[timer.currentStepNum()];
+            if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
+                const auto& sched_state = schedule()[timer.currentStepNum()];
+                const auto& max_next_tstep = sched_state.max_next_tstep(enableTUNING);
+                if (enableTUNING) {
                     const auto& tuning = sched_state.tuning();
-                    const auto& max_next_tstep = sched_state.max_next_tstep();
                     adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning);
                     // \Note: Assumes TUNING is only used with adaptive time-stepping
                     // \Note: Need to update both solver (model) and simulator since solver is re-created each report step.
                     solver_->model().updateTUNING(tuning);
                     this->updateTUNING(tuning);
+                } else {
+                    adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
                 }
             }
+
             bool event = events.hasEvent(ScheduleEvents::NEW_WELL) ||
                 events.hasEvent(ScheduleEvents::INJECTION_TYPE_CHANGED) ||
                 events.hasEvent(ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER) ||

@@ -473,7 +473,7 @@ beginEpisode_(bool enableExperiments,
     {
         const auto& sched_state = schedule_[episodeIdx];
         const auto& tuning = sched_state.tuning();
-        initialTimeStepSize_ = sched_state.max_next_tstep();
+        initialTimeStepSize_ = sched_state.max_next_tstep(enableTuning_);
         maxTimeStepAfterWellEvent_ = tuning.TMAXWC;
         return true;
     }
