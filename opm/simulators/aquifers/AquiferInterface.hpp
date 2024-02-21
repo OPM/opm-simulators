@@ -37,6 +37,7 @@ public:
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using RateVector = GetPropType<TypeTag, Properties::RateVector>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
 
     // Constructor
     AquiferInterface(int aqID,
@@ -58,8 +59,8 @@ public:
 
     virtual data::AquiferData aquiferData() const = 0;
 
-    virtual void computeFaceAreaFraction(const std::vector<double>& total_face_area) = 0;
-    virtual double totalFaceArea() const = 0;
+    virtual void computeFaceAreaFraction(const std::vector<Scalar>& total_face_area) = 0;
+    virtual Scalar totalFaceArea() const = 0;
 
     template <class Context>
     void addToSource(RateVector& rates,
