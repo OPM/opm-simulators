@@ -43,10 +43,11 @@ class WellContributions;
 template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
 class WellState;
 
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 class StandardWellEval
 {
 protected:
+    using Scalar = typename FluidSystem::Scalar;
     using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>;
     using StdWellConnections = StandardWellConnections<FluidSystem,Indices>;
     static constexpr int Bhp = PrimaryVariables::Bhp;
