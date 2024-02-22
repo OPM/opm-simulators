@@ -35,7 +35,7 @@ template<class Scalar, int numWellEq, int numEq> class MultisegmentWellEquations
 template<class FluidSystem, class Indices> class MultisegmentWellPrimaryVariables;
 class Schedule;
 class SummaryState;
-template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
+template<class FluidSystem, class Indices> class WellInterfaceIndices;
 class WellState;
 
 //! \brief Class handling assemble of the equation system for MultisegmentWell.
@@ -65,7 +65,7 @@ public:
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq+Indices::numEq>;
 
     //! \brief Constructor initializes reference to well.
-    MultisegmentWellAssemble(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well)
+    MultisegmentWellAssemble(const WellInterfaceIndices<FluidSystem,Indices>& well)
         : well_(well)
     {}
 
@@ -144,7 +144,7 @@ public:
                                Equations& eqns) const;
 
 private:
-    const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well
+    const WellInterfaceIndices<FluidSystem,Indices>& well_; //!< Reference to well
 };
 
 }

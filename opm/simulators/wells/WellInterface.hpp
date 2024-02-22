@@ -71,12 +71,10 @@ class WellProductionProperties;
 
 template<typename TypeTag>
 class WellInterface : public WellInterfaceIndices<GetPropType<TypeTag, Properties::FluidSystem>,
-                                                  GetPropType<TypeTag, Properties::Indices>,
-                                                  GetPropType<TypeTag, Properties::Scalar>>
+                                                  GetPropType<TypeTag, Properties::Indices>>
 {
     using Base = WellInterfaceIndices<GetPropType<TypeTag, Properties::FluidSystem>,
-                                      GetPropType<TypeTag, Properties::Indices>,
-                                      GetPropType<TypeTag, Properties::Scalar>>;
+                                      GetPropType<TypeTag, Properties::Indices>>;
 public:
     using ModelParameters = BlackoilModelParameters<TypeTag>;
 

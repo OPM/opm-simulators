@@ -60,7 +60,7 @@ namespace Opm
                      const int index_of_well,
                      const std::vector<PerforationData>& perf_data)
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, perf_data)
-    , MSWEval(static_cast<WellInterfaceIndices<FluidSystem,Indices,Scalar>&>(*this))
+    , MSWEval(static_cast<WellInterfaceIndices<FluidSystem,Indices>&>(*this))
     , regularize_(false)
     , segment_fluid_initial_(this->numberOfSegments(), std::vector<double>(this->num_components_, 0.0))
     {

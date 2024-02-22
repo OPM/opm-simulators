@@ -43,7 +43,7 @@ class Schedule;
 class WellContributions;
 class SummaryState;
 
-template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
+template<class FluidSystem, class Indices> class WellInterfaceIndices;
 class WellState;
 
 template<typename FluidSystem, typename Indices>
@@ -74,7 +74,7 @@ public:
     { return linSys_; }
 
 protected:
-    MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
+    MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif);
 
     void initMatrixAndVectors(const int num_cells);
 
@@ -138,7 +138,7 @@ protected:
     // convert a Eval from reservoir to contain the derivative related to wells
     EvalWell extendEval(const Eval& in) const;
 
-    const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif_;
+    const WellInterfaceIndices<FluidSystem,Indices>& baseif_;
 
     Equations linSys_; //!< The equation system
     PrimaryVariables primary_variables_; //!< The primary variables

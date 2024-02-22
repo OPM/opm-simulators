@@ -40,7 +40,7 @@ class GroupState;
 class Schedule;
 class SummaryState;
 class WellContributions;
-template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
+template<class FluidSystem, class Indices> class WellInterfaceIndices;
 class WellState;
 
 template<class FluidSystem, class Indices>
@@ -70,9 +70,9 @@ public:
     { return linSys_; }
 
 protected:
-    StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
+    StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif);
 
-    const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif_;
+    const WellInterfaceIndices<FluidSystem,Indices>& baseif_;
 
     EvalWell extendEval(const Eval& in) const;
 

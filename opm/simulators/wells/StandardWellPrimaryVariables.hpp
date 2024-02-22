@@ -33,7 +33,7 @@ namespace Opm
 {
 
 class DeferredLogger;
-template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
+template<class FluidSystem, class Indices> class WellInterfaceIndices;
 class WellState;
 
 //! \brief Class holding primary variables for StandardWell.
@@ -88,7 +88,7 @@ public:
     using BVectorWell = typename StandardWellEquations<Scalar,Indices::numEq>::BVectorWell;
 
     //! \brief Constructor initializes reference to well interface.
-    StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well)
+    StandardWellPrimaryVariables(const WellInterfaceIndices<FluidSystem,Indices>& well)
         : well_(well)
     {}
 
@@ -168,7 +168,7 @@ private:
     //! \details Contain derivatives and are used in AD calculation
     std::vector<EvalWell> evaluation_;
 
-    const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
+    const WellInterfaceIndices<FluidSystem,Indices>& well_; //!< Reference to well interface
 
     //! \brief Total number of the well equations and primary variables.
     //! \details There might be extra equations be used, numWellEq will be updated during the initialization
