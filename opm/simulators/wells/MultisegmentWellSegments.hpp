@@ -43,7 +43,7 @@ namespace Opm {
 template<typename FluidSystem, typename Indices, typename Scalar>
 class MultisegmentWellSegments
 {
-    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>;
+    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
     using EvalWell = typename PrimaryVariables::EvalWell;
 
 public:

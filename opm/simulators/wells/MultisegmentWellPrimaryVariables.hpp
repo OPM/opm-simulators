@@ -40,7 +40,7 @@ template<class Scalar> class MultisegmentWellGeneric;
 template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
 class WellState;
 
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 class MultisegmentWellPrimaryVariables
 {
 public:
@@ -75,6 +75,7 @@ public:
     //  the number of well equations  TODO: it should have a more general strategy for it
     static constexpr int numWellEq = Indices::numPhases + 1;
 
+    using Scalar = typename FluidSystem::Scalar;
     using EvalWell = DenseAd::Evaluation<double, /*size=*/Indices::numEq + numWellEq>;
 
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;

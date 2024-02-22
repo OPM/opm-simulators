@@ -50,7 +50,7 @@ template<typename FluidSystem, typename Indices, typename Scalar>
 class MultisegmentWellEval : public MultisegmentWellGeneric<Scalar>
 {
 protected:
-    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>;
+    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
     static constexpr int numWellEq = PrimaryVariables::numWellEq;
     static constexpr int SPres = PrimaryVariables::SPres;
     static constexpr int WQTotal = PrimaryVariables::WQTotal;

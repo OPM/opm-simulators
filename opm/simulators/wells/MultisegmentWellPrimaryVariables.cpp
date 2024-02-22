@@ -44,16 +44,16 @@
 
 namespace Opm {
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 resize(const int numSegments)
 {
     value_.resize(numSegments);
     evaluation_.resize(numSegments);
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 init()
 {
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
@@ -65,8 +65,8 @@ init()
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 update(const WellState& well_state, const bool stop_or_zero_rate_target)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -153,8 +153,8 @@ update(const WellState& well_state, const bool stop_or_zero_rate_target)
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 updateNewton(const BVectorWell& dwells,
              const double relaxation_factor,
              const double dFLimit,
@@ -209,8 +209,8 @@ updateNewton(const BVectorWell& dwells,
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                 const double rho,
                 const bool stop_or_zero_rate_target,
@@ -410,8 +410,8 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                    well_state, summary_state, deferred_logger);
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 processFractions(const int seg)
 {
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -479,9 +479,9 @@ processFractions(const int seg)
     }
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<typename FluidSystem, typename Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 volumeFraction(const int seg,
                const unsigned compIdx) const
 {
@@ -514,9 +514,9 @@ volumeFraction(const int seg,
     return oil_fraction;
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 volumeFractionScaled(const int seg,
                      const int comp_idx) const
 {
@@ -531,9 +531,9 @@ volumeFractionScaled(const int seg,
     return this->volumeFraction(seg, comp_idx);
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 surfaceVolumeFraction(const int seg,
                       const int comp_idx) const
 {
@@ -547,9 +547,9 @@ surfaceVolumeFraction(const int seg,
     return this->volumeFractionScaled(seg, comp_idx) / sum_volume_fraction_scaled;
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getSegmentRateUpwinding(const int seg,
                         const int seg_upwind,
                         const std::size_t comp_idx) const
@@ -587,50 +587,50 @@ getSegmentRateUpwinding(const int seg,
     return segment_rate;
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getSegmentPressure(const int seg) const
 {
     return evaluation_[seg][SPres];
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getBhp() const
 {
     return this->getSegmentPressure(0);
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getSegmentRate(const int seg,
                const int comp_idx) const
 {
     return evaluation_[seg][WQTotal] * this->volumeFractionScaled(seg, comp_idx);
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getQs(const int comp_idx) const
 {
     return this->getSegmentRate(0, comp_idx);
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellPrimaryVariables<FluidSystem,Indices>::EvalWell
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 getWQTotal() const
 {
     return evaluation_[0][WQTotal];
 }
 
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 void
-MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const
 {
     std::string msg = fmt::format("outputting the segments for well {} with pressures close to the lower limits "
@@ -650,7 +650,7 @@ outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const
 }
 
 #define INSTANCE(...) \
-template class MultisegmentWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
+template class MultisegmentWellPrimaryVariables<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__>;
 
 // One phase
 INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
