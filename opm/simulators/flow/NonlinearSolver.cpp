@@ -31,8 +31,9 @@
 namespace Opm {
 namespace detail {
 
-void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
-                        const int it, const int numPhases, const double relaxRelTol,
+template<class Scalar>
+void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
+                        const int it, const int numPhases, const Scalar relaxRelTol,
                         bool& oscillate, bool& stagnate)
 {
     // The detection of oscillation in two primary variable results in the report of the detection
@@ -52,8 +53,8 @@ void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
     const auto& F1 = residualHistory[it - 1];
     const auto& F2 = residualHistory[it - 2];
     for (int p = 0; p < numPhases; ++p) {
-        const double d1 = std::abs((F0[p] - F2[p]) / F0[p]);
-        const double d2 = std::abs((F0[p] - F1[p]) / F0[p]);
+        const Scalar d1 = std::abs((F0[p] - F2[p]) / F0[p]);
+        const Scalar d2 = std::abs((F0[p] - F1[p]) / F0[p]);
 
         oscillatePhase += (d1 < relaxRelTol) && (relaxRelTol < d2);
 
@@ -65,9 +66,9 @@ void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
     oscillate = (oscillatePhase > 1);
 }
 
-template <class BVector>
+template <class BVector, class Scalar>
 void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
-                              const double omega,
+                              const Scalar omega,
                               NonlinearRelaxType relaxType)
 {
     // The dxOld is updated with dx.
@@ -104,16 +105,25 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
     return;
 }
 
-template<int Size> using BV = Dune::BlockVector<Dune::FieldVector<double,Size>>;
-#define INSTANCE(Size) \
-    template void stabilizeNonlinearUpdate<BV<Size>>(BV<Size>&, BV<Size>&, \
-                                                  const double, NonlinearRelaxType);
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
+template<class Scalar, int Size>
+using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Size>>;
+
+#define INSTANCE(T,Size) \
+    template void stabilizeNonlinearUpdate<BV<T,Size>,T>(BV<T,Size>&, BV<T,Size>&, \
+                                                         const T, NonlinearRelaxType);
+
+#define INSTANCE_TYPE(T) \
+    template void detectOscillations(const std::vector<std::vector<T>>&, \
+                                     const int, const int, const T, \
+                                     bool&, bool&); \
+    INSTANCE(T,1) \
+    INSTANCE(T,2) \
+    INSTANCE(T,3) \
+    INSTANCE(T,4) \
+    INSTANCE(T,5) \
+    INSTANCE(T,6)
+
+INSTANCE_TYPE(double)
 
 } // namespace detail
 } // namespace Opm
