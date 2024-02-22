@@ -46,10 +46,11 @@ class SummaryState;
 template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
 class WellState;
 
-template<typename FluidSystem, typename Indices, typename Scalar>
-class MultisegmentWellEval : public MultisegmentWellGeneric<Scalar>
+template<typename FluidSystem, typename Indices>
+class MultisegmentWellEval : public MultisegmentWellGeneric<typename FluidSystem::Scalar>
 {
 protected:
+    using Scalar = typename FluidSystem::Scalar;
     using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
     static constexpr int numWellEq = PrimaryVariables::numWellEq;
     static constexpr int SPres = PrimaryVariables::SPres;

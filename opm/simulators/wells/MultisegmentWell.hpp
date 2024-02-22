@@ -32,14 +32,12 @@ namespace Opm
     template<typename TypeTag>
     class MultisegmentWell : public WellInterface<TypeTag>
                            , public MultisegmentWellEval<GetPropType<TypeTag, Properties::FluidSystem>,
-                                                         GetPropType<TypeTag, Properties::Indices>,
-                                                         GetPropType<TypeTag, Properties::Scalar>>
+                                                         GetPropType<TypeTag, Properties::Indices>>
     {
     public:
         using Base = WellInterface<TypeTag>;
         using MSWEval = MultisegmentWellEval<GetPropType<TypeTag, Properties::FluidSystem>,
-                                             GetPropType<TypeTag, Properties::Indices>,
-                                             GetPropType<TypeTag, Properties::Scalar>>;
+                                             GetPropType<TypeTag, Properties::Indices>>;
 
         using typename Base::Simulator;
         using typename Base::IntensiveQuantities;

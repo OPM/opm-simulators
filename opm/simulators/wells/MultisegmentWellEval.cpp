@@ -51,8 +51,8 @@
 namespace Opm
 {
 
-template<typename FluidSystem, typename Indices, typename Scalar>
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+template<typename FluidSystem, typename Indices>
+MultisegmentWellEval<FluidSystem,Indices>::
 MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
     : MultisegmentWellGeneric<Scalar>(baseif)
     , baseif_(baseif)
@@ -64,9 +64,9 @@ MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
 {
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
+template<typename FluidSystem, typename Indices>
 void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+MultisegmentWellEval<FluidSystem,Indices>::
 initMatrixAndVectors(const int num_cells)
 {
     linSys_.init(num_cells, baseif_.numPerfs(),
@@ -75,9 +75,9 @@ initMatrixAndVectors(const int num_cells)
     primary_variables_.resize(this->numberOfSegments());
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
+template<typename FluidSystem, typename Indices>
 ConvergenceReport
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+MultisegmentWellEval<FluidSystem,Indices>::
 getWellConvergence(const WellState& well_state,
                    const std::vector<double>& B_avg,
                    DeferredLogger& deferred_logger,
@@ -182,9 +182,9 @@ getWellConvergence(const WellState& well_state,
     return report;
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
-typename MultisegmentWellEval<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+template<typename FluidSystem, typename Indices>
+typename MultisegmentWellEval<FluidSystem,Indices>::EvalWell
+MultisegmentWellEval<FluidSystem,Indices>::
 extendEval(const Eval& in) const
 {
     EvalWell out = 0.0;
@@ -195,9 +195,9 @@ extendEval(const Eval& in) const
     return out;
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
+template<typename FluidSystem, typename Indices>
 void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+MultisegmentWellEval<FluidSystem,Indices>::
 assembleAccelerationPressureLoss(const int seg,
                                  WellState& well_state)
 {
@@ -242,10 +242,9 @@ assembleAccelerationPressureLoss(const int seg,
     }
 }
 
-
-template<typename FluidSystem, typename Indices, typename Scalar>
+template<typename FluidSystem, typename Indices>
 void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+MultisegmentWellEval<FluidSystem,Indices>::
 assembleDefaultPressureEq(const int seg,
                           WellState& well_state,
                           const bool use_average_density)
@@ -289,9 +288,9 @@ assembleDefaultPressureEq(const int seg,
     assembleAccelerationAndHydroPressureLosses(seg, well_state, use_average_density);
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
+template<typename FluidSystem, typename Indices>
 void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+MultisegmentWellEval<FluidSystem,Indices>::
 assembleICDPressureEq(const int seg,
                       const UnitSystem& unit_system,
                       WellState& well_state,
@@ -374,9 +373,9 @@ assembleICDPressureEq(const int seg,
     assembleAccelerationAndHydroPressureLosses(seg, well_state, use_average_density);
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
+template<typename FluidSystem, typename Indices>
 void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+MultisegmentWellEval<FluidSystem,Indices>::
 assembleAccelerationAndHydroPressureLosses(const int seg,
                                            WellState& well_state,
                                            const bool use_average_density)
@@ -405,9 +404,9 @@ assembleAccelerationAndHydroPressureLosses(const int seg,
     }
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
+template<typename FluidSystem, typename Indices>
 void
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+MultisegmentWellEval<FluidSystem,Indices>::
 assemblePressureEq(const int seg,
                    const UnitSystem& unit_system,
                    WellState& well_state,
@@ -427,9 +426,9 @@ assemblePressureEq(const int seg,
     }
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
-std::pair<bool, std::vector<Scalar> >
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+template<typename FluidSystem, typename Indices>
+std::pair<bool, std::vector<typename FluidSystem::Scalar> >
+MultisegmentWellEval<FluidSystem,Indices>::
 getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
                        DeferredLogger& deferred_logger) const
 {
@@ -471,9 +470,9 @@ getFiniteWellResiduals(const std::vector<Scalar>& B_avg,
     return {true, residuals};
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
+template<typename FluidSystem, typename Indices>
 double
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+MultisegmentWellEval<FluidSystem,Indices>::
 getControlTolerance(const WellState& well_state,
                     const double tolerance_wells,
                     const double tolerance_pressure_ms_wells,
@@ -538,9 +537,9 @@ getControlTolerance(const WellState& well_state,
     return control_tolerance;
 }
 
-template<typename FluidSystem, typename Indices, typename Scalar>
+template<typename FluidSystem, typename Indices>
 double
-MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+MultisegmentWellEval<FluidSystem,Indices>::
 getResidualMeasureValue(const WellState& well_state,
                         const std::vector<double>& residuals,
                         const double tolerance_wells,
@@ -578,7 +577,7 @@ getResidualMeasureValue(const WellState& well_state,
 }
 
 #define INSTANCE(...) \
-template class MultisegmentWellEval<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
+template class MultisegmentWellEval<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__>;
 
 // One phase
 INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
@@ -597,6 +596,7 @@ INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>)
+
 // Blackoil
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)
@@ -608,6 +608,6 @@ INSTANCE(BlackOilIndices<0u,0u,1u,0u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,1u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,1u,false,true,0u,0u>)
-
 INSTANCE(BlackOilIndices<1u,0u,0u,0u,true,false,0u,0u>)
+
 } // namespace Opm
