@@ -41,20 +41,17 @@
 namespace Opm {
 
 template class FlowGenericProblem<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
-                                  double>;
+                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
 
 #if HAVE_DUNE_FEM
 template class FlowGenericProblem<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
-                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
-                                  double>;
+                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
 template class FlowGenericProblem<Dune::Fem::GridPart2GridViewImpl<
                                      Dune::Fem::AdaptiveLeafGridPart<
                                          Dune::CpGrid,
                                          Dune::PartitionIteratorType(4),
                                          false> >,
-                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
-                                  double>;
+                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
 #endif // HAVE_DUNE_FEM
 
 } // end namespace Opm
