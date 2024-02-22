@@ -488,37 +488,37 @@ namespace Opm
 
     public:
         /// Max relative change in bhp in single iteration.
-        double dbhp_max_rel_;
+        Scalar dbhp_max_rel_;
         /// Max absolute change in well volume fraction in single iteration.
-        double dwell_fraction_max_;
+        Scalar dwell_fraction_max_;
         /// Absolute max limit for residuals.
-        double max_residual_allowed_;
+        Scalar max_residual_allowed_;
         //// Max allowed pore volume faction where CNV is violated. Below the
         //// relaxed tolerance tolerance_cnv_relaxed_ is used.
-        double relaxed_max_pv_fraction_;
+        Scalar relaxed_max_pv_fraction_;
         /// Relative mass balance tolerance (total mass balance error).
-        double tolerance_mb_;
+        Scalar tolerance_mb_;
         /// Relaxed mass balance tolerance (can be used when iter >= min_strict_mb_iter_).
-        double tolerance_mb_relaxed_;
+        Scalar tolerance_mb_relaxed_;
         /// Local convergence tolerance (max of local saturation errors).
-        double tolerance_cnv_;
+        Scalar tolerance_cnv_;
         /// Relaxed local convergence tolerance (can be used when iter >= min_strict_cnv_iter_ && cnvViolatedPV < relaxed_max_pv_fraction_).
-        double tolerance_cnv_relaxed_;
+        Scalar tolerance_cnv_relaxed_;
         /// Well convergence tolerance.
-        double tolerance_wells_;
+        Scalar tolerance_wells_;
         /// Tolerance for the well control equations
         //  TODO: it might need to distinguish between rate control and pressure control later
-        double tolerance_well_control_;
+        Scalar tolerance_well_control_;
         /// Tolerance for the pressure equations for multisegment wells
-        double tolerance_pressure_ms_wells_;
+        Scalar tolerance_pressure_ms_wells_;
         /// Relaxed tolerance for for the well flow residual
-        double relaxed_tolerance_flow_well_;
+        Scalar relaxed_tolerance_flow_well_;
 
         /// Relaxed tolerance for the MSW pressure solution
-        double relaxed_tolerance_pressure_ms_well_;
+        Scalar relaxed_tolerance_pressure_ms_well_;
 
         /// Maximum pressure change over an iteratio for ms wells
-        double max_pressure_change_ms_wells_;
+        Scalar max_pressure_change_ms_wells_;
 
         /// Maximum inner iteration number for ms wells
         int max_inner_iter_ms_wells_;
@@ -530,7 +530,7 @@ namespace Opm
         int strict_outer_iter_wells_;
 
         /// Regularization factor for wells
-        double regularization_factor_wells_;
+        Scalar regularization_factor_wells_;
 
         /// Maximum newton iterations with inner well iterations
         int max_niter_inner_well_iter_;
@@ -546,7 +546,7 @@ namespace Opm
 
         /// Tolerance for time step in seconds where single precision can be used
         /// for solving for the Jacobian
-        double maxSinglePrecisionTimeStep_;
+        Scalar maxSinglePrecisionTimeStep_;
 
         /// Minimum number of Newton iterations before we can use relaxed CNV convergence criterion
         int min_strict_cnv_iter_;
@@ -606,12 +606,12 @@ namespace Opm
 
         int max_local_solve_iterations_;
 
-        double local_tolerance_scaling_mb_;
-        double local_tolerance_scaling_cnv_;
+        Scalar local_tolerance_scaling_mb_;
+        Scalar local_tolerance_scaling_cnv_;
 
         int nldd_num_initial_newton_iter_{1};
         int num_local_domains_{0};
-        double local_domain_partition_imbalance_{1.03};
+        Scalar local_domain_partition_imbalance_{1.03};
         std::string local_domain_partition_method_;
         DomainOrderingMeasure local_domain_ordering_{DomainOrderingMeasure::MaxPressure};
 
@@ -671,7 +671,7 @@ namespace Opm
             local_tolerance_scaling_cnv_ = Parameters::get<TypeTag, Properties::LocalToleranceScalingCnv>();
             nldd_num_initial_newton_iter_ = Parameters::get<TypeTag, Properties::NlddNumInitialNewtonIter>();
             num_local_domains_ = Parameters::get<TypeTag, Properties::NumLocalDomains>();
-            local_domain_partition_imbalance_ = std::max(1.0, Parameters::get<TypeTag, Properties::LocalDomainsPartitioningImbalance>());
+            local_domain_partition_imbalance_ = std::max(Scalar{1.0}, Parameters::get<TypeTag, Properties::LocalDomainsPartitioningImbalance>());
             local_domain_partition_method_ = Parameters::get<TypeTag, Properties::LocalDomainsPartitioningMethod>();
             deck_file_name_ = Parameters::get<TypeTag, Properties::EclDeckFileName>();
             network_max_strict_iterations_ = Parameters::get<TypeTag, Properties::NetworkMaxStrictIterations>();
