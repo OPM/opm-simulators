@@ -310,14 +310,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
             }
 
             const auto& outsideElem = intersection.outside();
-            unsigned outsideElemIdx = elemMapper.index(outsideElem);
-            // Check whether this is an intersection on the boundary of the LGR
-            bool isOnLgrBoundary = grid_.isOnBoundaryLgr(intersection.id()); 
-            if (isOnLgrBoundary){
-                // Get parent face
-                const auto& parentFace_IntersectionFace = grid_.getParentFaceFromLgrBoundaryFace(intersection.id());
-            }
-            
+            unsigned outsideElemIdx = elemMapper.index(outsideElem);  
 
             // Get the Cartesian indices of the origen cells (parent or equivalent cell on level zero), for CpGrid with LGRs.
             // For genral grids and no LGRs, get the usual Cartesian Index.
@@ -404,7 +397,23 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
             else
                 trans = 1.0 / (1.0/halfTrans1 + 1.0/halfTrans2);
 
-            std::cout << "InsideFaceIdx: " << insideFaceIdx << " OutsideFaceIdx: " << outsideFaceIdx << " trans value " << trans << std::endl;
+            // Print trans values of intersections laying on LGR boundaries and belonging to the interior of the grid.
+            // (such intersections have one neighboring coarse cell  and one neighboring refined cell)
+            if((intersection.inside().level() != intersection.outside().level()) && !intersection.boundary()){
+                std::cout << "Boundary LGR face. InsideFaceIdx: " << insideFaceIdx << " OutsideFaceIdx: " << outsideFaceIdx << " trans: " << trans << std::endl;
+            }
+
+            // Print trans values of intersections laying on LGR boundaries and belonging to the interior of the grid.
+            // (such intersections have one neighboring coarse cell  and one neighboring refined cell)
+            if((intersection.inside().level() == intersection.outside().level()) && (intersection.inside().level()>0)){
+                std::cout << "LGR(interior or on boundary) face. InsideFaceIdx: " << insideFaceIdx << " OutsideFaceIdx: " << outsideFaceIdx << " trans: " << trans << std::endl;
+            }
+
+            // Print trans values of intersections laying on LGR boundaries and belonging to the interior of the grid.
+            // (such intersections have one neighboring coarse cell  and one neighboring refined cell)
+            if(insideCartElemIdx == outsideCartElemIdx){
+                std::cout << "LGR(same parent cell) face. InsideFaceIdx: " << insideFaceIdx << " OutsideFaceIdx: " << outsideFaceIdx << " trans: " << trans << std::endl;
+            }
             
             // apply the full face transmissibility multipliers
             // for the inside ...
@@ -468,8 +477,6 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                                                    faceDir);
 
             trans_[details::isId(elemIdx, outsideElemIdx)] = trans;
-
-            std::cout << "elemIdx: " << elemIdx << " OutsideElemIdx: " << outsideElemIdx << " trans value " << trans << std::endl;
 
             // update the "thermal half transmissibility" for the intersection
             if (enableEnergy_) {
