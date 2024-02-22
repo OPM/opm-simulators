@@ -69,6 +69,9 @@ namespace Opm
         /// \brief \copydoc SimulationTimer::currentStepLength
         double currentStepLength () const;
 
+        // \brief Set next step length
+        void setCurrentStepLength(double dt);
+
         /// \brief \copydoc SimulationTimer::totalTime
         double totalTime() const;
 
