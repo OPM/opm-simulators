@@ -81,8 +81,8 @@ private:
     MultisegmentWellEquations<Scalar,numWellEq,numEq>& eqns_; //!< Reference to equation system
 };
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellAssemble<FluidSystem,Indices>::
 assembleControlEq(const WellState& well_state,
                   const GroupState& group_state,
                   const Schedule& schedule,
@@ -197,8 +197,8 @@ assembleControlEq(const WellState& well_state,
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellAssemble<FluidSystem,Indices>::
 assembleAccelerationTerm(const int seg_target,
                          const int seg,
                          const int seg_upwind,
@@ -222,8 +222,8 @@ assembleAccelerationTerm(const int seg_target,
     }
 }                     
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellAssemble<FluidSystem,Indices>::
 assembleHydroPressureLoss(const int seg,
                           const int seg_density,
                           const EvalWell& hydro_pressure_drop_seg,
@@ -237,8 +237,8 @@ assembleHydroPressureLoss(const int seg,
 
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellAssemble<FluidSystem,Indices>::
 assemblePressureEqExtraDerivatives(const int seg,
                                    const int seg_upwind,
                                    const EvalWell& extra_derivatives,
@@ -252,8 +252,8 @@ assemblePressureEqExtraDerivatives(const int seg,
 }
 
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellAssemble<FluidSystem,Indices>::
 assemblePressureEq(const int seg,
                    const int seg_upwind,
                    const int outlet_segment_index,
@@ -281,8 +281,8 @@ assemblePressureEq(const int seg,
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellAssemble<FluidSystem,Indices>::
 assembleTrivialEq(const int seg,
                   const Scalar value,
                   Equations& eqns1) const
@@ -292,8 +292,8 @@ assembleTrivialEq(const int seg,
     eqns.D()[seg][seg][SPres][WQTotal] = 1.;
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellAssemble<FluidSystem,Indices>::
 assembleAccumulationTerm(const int seg,
                          const int comp_idx,
                          const EvalWell& accumulation_term,
@@ -306,8 +306,8 @@ assembleAccumulationTerm(const int seg,
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellAssemble<FluidSystem,Indices>::
 assembleOutflowTerm(const int seg,
                     const int seg_upwind,
                     const int comp_idx,
@@ -326,8 +326,8 @@ assembleOutflowTerm(const int seg,
     // pressure derivative should be zero
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellAssemble<FluidSystem,Indices>::
 assembleInflowTerm(const int seg,
                    const int inlet,
                    const int inlet_upwind,
@@ -347,8 +347,8 @@ assembleInflowTerm(const int seg,
     // pressure derivative should be zero
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellAssemble<FluidSystem,Indices>::
 assemblePerforationEq(const int seg,
                       const int cell_idx,
                       const int comp_idx,
@@ -375,7 +375,7 @@ assemblePerforationEq(const int seg,
 }
 
 #define INSTANCE(...) \
-template class MultisegmentWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
+template class MultisegmentWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__>;
 
 // One phase
 INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)

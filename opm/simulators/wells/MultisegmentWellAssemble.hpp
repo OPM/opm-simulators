@@ -39,7 +39,7 @@ template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndi
 class WellState;
 
 //! \brief Class handling assemble of the equation system for MultisegmentWell.
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 class MultisegmentWellAssemble
 {
     static constexpr bool has_water = (Indices::waterSwitchIdx >= 0);
@@ -59,6 +59,7 @@ class MultisegmentWellAssemble
 
 public:
     static constexpr int numWellEq = Indices::numPhases+1;
+    using Scalar = typename FluidSystem::Scalar;
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
     using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>;
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq+Indices::numEq>;
