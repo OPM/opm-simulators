@@ -53,9 +53,11 @@ class SummaryConfig;
 class SummaryConfigNode;
 class SummaryState;
 
-template<class FluidSystem, class Scalar>
+template<class FluidSystem>
 class GenericOutputBlackoilModule {
 public:
+    using Scalar = typename FluidSystem::Scalar;
+
     // Virtual destructor for safer inheritance.
     virtual ~GenericOutputBlackoilModule();
 
