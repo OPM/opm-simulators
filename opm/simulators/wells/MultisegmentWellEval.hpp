@@ -57,7 +57,7 @@ protected:
     static constexpr int WQTotal = PrimaryVariables::WQTotal;
 
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
-    using MSWSegments = MultisegmentWellSegments<FluidSystem,Indices,Scalar>;
+    using MSWSegments = MultisegmentWellSegments<FluidSystem,Indices>;
 
     using BVector = typename Equations::BVector;
     using BVectorWell = typename Equations::BVectorWell;
