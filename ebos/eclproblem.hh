@@ -235,9 +235,6 @@ public:
                              "The frequencies of which time steps are serialized to disk");
         EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableDriftCompensation,
                              "Enable partial compensation of systematic mass losses via the source term of the next time step");
-        if constexpr (enableExperiments)
-            EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableAquifers,
-                                 "Enable analytic and numeric aquifer models");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
                              "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
         EWOMS_REGISTER_PARAM(TypeTag, int, NumPressurePointsEquil,
@@ -319,11 +316,6 @@ public:
         enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
 
         enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
-
-        if constexpr (enableExperiments)
-            enableAquifers_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableAquifers);
-        else
-            enableAquifers_ = true;
 
         this->enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
         this->initialTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
@@ -491,9 +483,8 @@ public:
         // deserialize the wells
         wellModel_.deserialize(res);
 
-        if (enableAquifers_)
-            // deserialize the aquifer
-            aquiferModel_.deserialize(res);
+        // deserialize the aquifer
+        aquiferModel_.deserialize(res);
     }
 
     /*!
@@ -507,8 +498,7 @@ public:
     {
         wellModel_.serialize(res);
 
-        if (enableAquifers_)
-            aquiferModel_.serialize(res);
+        aquiferModel_.serialize(res);
     }
 
     int episodeIndex() const
@@ -560,9 +550,7 @@ public:
         wellModel_.beginEpisode();
 
         // set up the aquifers for the next episode.
-        if (enableAquifers_)
-            // set up the aquifers for the next episode.
-            aquiferModel_.beginEpisode();
+        aquiferModel_.beginEpisode();
 
         // set the size of the initial time step of the episode
         Scalar dt = limitNextTimeStepSize_(simulator.episodeLength());
@@ -612,8 +600,7 @@ public:
         }
 
         wellModel_.beginTimeStep();
-        if (enableAquifers_)
-            aquiferModel_.beginTimeStep();
+        aquiferModel_.beginTimeStep();
         tracerModel_.beginTimeStep();
 
     }
@@ -625,8 +612,7 @@ public:
     {
         OPM_TIMEBLOCK(beginIteration);
         wellModel_.beginIteration();
-        if (enableAquifers_)
-            aquiferModel_.beginIteration();
+        aquiferModel_.beginIteration();
     }
 
     /*!
@@ -636,8 +622,7 @@ public:
     {
         OPM_TIMEBLOCK(endIteration);
         wellModel_.endIteration();
-        if (enableAquifers_)
-            aquiferModel_.endIteration();
+        aquiferModel_.endIteration();
     }
 
     /*!
@@ -663,8 +648,7 @@ public:
 
         auto& simulator = this->simulator();
         wellModel_.endTimeStep();
-        if (enableAquifers_)
-            aquiferModel_.endTimeStep();
+        aquiferModel_.endTimeStep();
         tracerModel_.endTimeStep();
 
 
@@ -726,8 +710,7 @@ public:
         auto& schedule = simulator.vanguard().schedule();
 
         wellModel_.endEpisode();
-        if (enableAquifers_)
-            aquiferModel_.endEpisode();
+        aquiferModel_.endEpisode();
 
         int episodeIdx = this->episodeIndex();
         // check if we're finished ...
@@ -1362,8 +1345,7 @@ public:
 
         updateCompositionChangeLimits_();
 
-        if (enableAquifers_)
-            aquiferModel_.initialSolutionApplied();
+        aquiferModel_.initialSolutionApplied();
 
         if (this->simulator().episodeIndex() == 0) {
             eclWriter_->writeInitialFIPReport();
@@ -1412,8 +1394,7 @@ public:
                           unsigned globalDofIdx,
                           unsigned timeIdx) const
     {
-        if (enableAquifers_)
-            aquiferModel_.addToSource(rate, globalDofIdx, timeIdx);
+        aquiferModel_.addToSource(rate, globalDofIdx, timeIdx);
 
         // Add source term from deck
         const auto& source = this->simulator().vanguard().schedule()[this->episodeIndex()].source();
@@ -2791,7 +2772,6 @@ private:
     GlobalEqVector drift_;
 
     EclWellModel wellModel_;
-    bool enableAquifers_;
     EclAquiferModel aquiferModel_;
 
     bool enableEclOutput_;
