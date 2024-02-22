@@ -38,10 +38,11 @@ template<class FluidSystem> class WellInterfaceFluidSystem;
 class WellState;
 
 //! \brief Class handling assemble of the equation system for StandardWell.
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 class StandardWellAssemble
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>;
     using EvalWell = typename PrimaryVariables::EvalWell;
 

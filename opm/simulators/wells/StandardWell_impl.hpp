@@ -398,7 +398,7 @@ namespace Opm
 
                 connectionRates[perf][componentIdx] = Base::restrictEval(cq_s_effective);
 
-                StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                StandardWellAssemble<FluidSystem,Indices>(*this).
                     assemblePerforationEq(cq_s_effective,
                                           componentIdx,
                                           cell_idx,
@@ -415,7 +415,7 @@ namespace Opm
             }
 
             if constexpr (has_zFraction) {
-                StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                StandardWellAssemble<FluidSystem,Indices>(*this).
                     assembleZFracEq(cq_s_zfrac_effective,
                                     cell_idx,
                                     this->primary_variables_.numWellEq(),
@@ -446,7 +446,7 @@ namespace Opm
                                 this->F0_[componentIdx]) * volume / dt;
             }
             resWell_loc -= this->primary_variables_.getQs(componentIdx) * this->well_efficiency_factor_;
-            StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+            StandardWellAssemble<FluidSystem,Indices>(*this).
                 assembleSourceEq(resWell_loc,
                                  componentIdx,
                                  this->primary_variables_.numWellEq(),
@@ -455,7 +455,7 @@ namespace Opm
 
         const auto& summaryState = simulator.vanguard().summaryState();
         const Schedule& schedule = simulator.vanguard().schedule();
-        StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+        StandardWellAssemble<FluidSystem,Indices>(*this).
             assembleControlEq(well_state, group_state,
                               schedule, summaryState,
                               inj_controls, prod_controls,
@@ -2075,7 +2075,7 @@ namespace Opm
         const EvalWell eq_pskin = this->primary_variables_.eval(pskin_index)
                                   - pskin(throughput, this->primary_variables_.eval(wat_vel_index), poly_conc, deferred_logger);
 
-        StandardWellAssemble<FluidSystem,Indices,Scalar>(*this).
+        StandardWellAssemble<FluidSystem,Indices>(*this).
                 assembleInjectivityEq(eq_pskin,
                                       eq_wat_vel,
                                       pskin_index,
