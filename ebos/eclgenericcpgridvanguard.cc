@@ -438,7 +438,7 @@ void EclGenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafV
         const auto lgrCarfin = lgrCollection.getLgr(lgr);
         cells_per_dim_vec.push_back({lgrCarfin.NX(), lgrCarfin.NY(), lgrCarfin.NZ()});
         startIJK_vec.push_back({lgrCarfin.I1(), lgrCarfin.J1(), lgrCarfin.K1()});
-        endIJK_vec.push_back({lgrCarfin.I2(), lgrCarfin.J2(), lgrCarfin.K2()});
+        endIJK_vec.push_back({lgrCarfin.I2()+1, lgrCarfin.J2()+1, lgrCarfin.K2()+1});
         lgrName_vec.emplace_back(lgrCarfin.NAME());
 
     }
