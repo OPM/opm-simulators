@@ -321,8 +321,8 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
             // once...
             // In a parallel run insideCartElemIdx>outsideCartElemIdx does not imply elemIdx>outsideElemIdx for
             // ghost cells and we need to use the cartesian index as this will be used when applying Z multipliers
-            // We still need to cover the case where both cells are part of an LGR and as a consequence might have
-            // the same cartesian index
+            // To cover the case where both cells are part of an LGR and as a consequence might have
+            // the same cartesian index, we tie their Cartesian indices and the ones on the leaf grid view.
             if (std::tie(insideCartElemIdx, elemIdx) > std::tie(outsideCartElemIdx, outsideElemIdx))
                 continue;
 
