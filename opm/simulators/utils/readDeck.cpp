@@ -563,10 +563,9 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                          summaryConfig, std::move(python), initFromRestart,
                          checkDeck, treatCriticalAsNonCritical, outputInterval, *errorGuard);
 
-            if (treatCriticalAsNonCritical) { // Update schedule so that re-parsing after actions use same strictness
-                assert(schedule);
-                schedule->treat_critical_as_non_critical(true);
-            }
+            // Update schedule so that re-parsing after actions use same strictness
+            assert(schedule);
+            schedule->treat_critical_as_non_critical(treatCriticalAsNonCritical);
         }
         catch (const OpmInputError& input_error) {
             failureMessage = input_error.what();
