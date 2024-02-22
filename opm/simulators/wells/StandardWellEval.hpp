@@ -48,7 +48,7 @@ class StandardWellEval
 {
 protected:
     using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>;
-    using StdWellConnections = StandardWellConnections<FluidSystem,Indices,Scalar>;
+    using StdWellConnections = StandardWellConnections<FluidSystem,Indices>;
     static constexpr int Bhp = PrimaryVariables::Bhp;
     static constexpr int WQTotal= PrimaryVariables::WQTotal;
     static constexpr int numWellConservationEq = PrimaryVariables::numWellConservationEq;

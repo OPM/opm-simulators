@@ -37,10 +37,11 @@ enum class Phase;
 template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
 class WellState;
 
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 class StandardWellConnections
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well);
 
     struct Properties

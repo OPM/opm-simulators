@@ -43,8 +43,8 @@
 namespace Opm
 {
 
-template<class FluidSystem, class Indices, class Scalar>
-StandardWellConnections<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+StandardWellConnections<FluidSystem,Indices>::
 StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well)
     : well_(well)
     , perf_densities_(well.numPerfs())
@@ -52,8 +52,8 @@ StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& 
 {
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void StandardWellConnections<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void StandardWellConnections<FluidSystem,Indices>::
 computePressureDelta()
 {
     // Algorithm:
@@ -88,8 +88,8 @@ computePressureDelta()
     well_.parallelWellInfo().partialSumPerfValues(beg, end);
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void StandardWellConnections<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void StandardWellConnections<FluidSystem,Indices>::
 computeDensities(const std::vector<Scalar>& perfComponentRates,
                  const Properties& props,
                  DeferredLogger& deferred_logger)
@@ -285,8 +285,8 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void StandardWellConnections<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void StandardWellConnections<FluidSystem,Indices>::
 computePropertiesForPressures(const WellState& well_state,
                               const std::function<Scalar(int,int)>& getTemperature,
                               const std::function<Scalar(int)>& getSaltConcentration,
@@ -419,8 +419,8 @@ computePropertiesForPressures(const WellState& well_state,
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void StandardWellConnections<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void StandardWellConnections<FluidSystem,Indices>::
 computeProperties(const WellState& well_state,
                   const std::function<Scalar(int,int)>& invB,
                   const std::function<Scalar(int,int)>& mobility,
@@ -514,9 +514,9 @@ computeProperties(const WellState& well_state,
     this->computePressureDelta();
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval
-StandardWellConnections<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename StandardWellConnections<FluidSystem,Indices>::Eval
+StandardWellConnections<FluidSystem,Indices>::
 connectionRateBrine(double& rate,
                     const double vap_wat_rate,
                     const std::vector<EvalWell>& cq_s,
@@ -539,9 +539,9 @@ connectionRateBrine(double& rate,
     return well_.restrictEval(cq_s_sm);
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval
-StandardWellConnections<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename StandardWellConnections<FluidSystem,Indices>::Eval
+StandardWellConnections<FluidSystem,Indices>::
 connectionRateFoam(const std::vector<EvalWell>& cq_s,
                     const std::variant<Scalar,EvalWell>& foamConcentration,
                     const Phase transportPhase,
@@ -578,11 +578,11 @@ connectionRateFoam(const std::vector<EvalWell>& cq_s,
     return well_.restrictEval(cq_s_foam);
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-std::tuple<typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
-           typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
-           typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval>
-StandardWellConnections<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+std::tuple<typename StandardWellConnections<FluidSystem,Indices>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices>::Eval>
+StandardWellConnections<FluidSystem,Indices>::
 connectionRatesMICP(const std::vector<EvalWell>& cq_s,
                     const std::variant<Scalar,EvalWell>& microbialConcentration,
                     const std::variant<Scalar,EvalWell>& oxygenConcentration,
@@ -615,10 +615,10 @@ connectionRatesMICP(const std::vector<EvalWell>& cq_s,
             well_.restrictEval(cq_s_urea)};
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-std::tuple<typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
-           typename StandardWellConnections<FluidSystem,Indices,Scalar>::EvalWell>
-StandardWellConnections<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+std::tuple<typename StandardWellConnections<FluidSystem,Indices>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices>::EvalWell>
+StandardWellConnections<FluidSystem,Indices>::
 connectionRatePolymer(double& rate,
                     const std::vector<EvalWell>& cq_s,
                     const std::variant<Scalar,EvalWell>& polymerConcentration) const
@@ -639,10 +639,10 @@ connectionRatePolymer(double& rate,
     return {well_.restrictEval(cq_s_poly), cq_s_poly};
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-std::tuple<typename StandardWellConnections<FluidSystem,Indices,Scalar>::Eval,
-           typename StandardWellConnections<FluidSystem,Indices,Scalar>::EvalWell>
-StandardWellConnections<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+std::tuple<typename StandardWellConnections<FluidSystem,Indices>::Eval,
+           typename StandardWellConnections<FluidSystem,Indices>::EvalWell>
+StandardWellConnections<FluidSystem,Indices>::
 connectionRatezFraction(double& rate,
                         const double dis_gas_rate,
                         const std::vector<EvalWell>& cq_s,
@@ -667,7 +667,7 @@ connectionRatezFraction(double& rate,
 
 #define INSTANCE(...) \
 template class StandardWellConnections<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, \
-                                       __VA_ARGS__,double>;
+                                       __VA_ARGS__>;
 
 // One phase
 INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
