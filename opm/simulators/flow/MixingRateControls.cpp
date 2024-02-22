@@ -36,26 +36,26 @@
 
 namespace Opm {
 
-template<class FluidSystem, class Scalar>
-MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+MixingRateControls<FluidSystem>::
 MixingRateControls(const Schedule& schedule)
     : schedule_(schedule)
 {}
 
-template<class FluidSystem, class Scalar>
-MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+MixingRateControls<FluidSystem>::
 MixingRateControls(const MixingRateControls& rhs)
     : schedule_(rhs.schedule_)
 {
     *this = rhs;
 }
 
-template<class FluidSystem, class Scalar>
-MixingRateControls<FluidSystem,Scalar>
-MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+MixingRateControls<FluidSystem>
+MixingRateControls<FluidSystem>::
 serializationTestObject(const Schedule& schedule)
 {
-    MixingRateControls<FluidSystem,Scalar> result(schedule);
+    MixingRateControls<FluidSystem> result(schedule);
     result.lastRv_ = {21.0};
     result.maxDRv_ = {22.0, 23.0};
     result.convectiveDrs_ = {24.0, 25.0, 26.0};
@@ -66,8 +66,8 @@ serializationTestObject(const Schedule& schedule)
     return result;
 }
 
-template<class FluidSystem, class Scalar>
-bool MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+bool MixingRateControls<FluidSystem>::
 operator==(const MixingRateControls& rhs) const
 {
     return this->lastRv_ == rhs.lastRv_ &&
@@ -78,9 +78,9 @@ operator==(const MixingRateControls& rhs) const
            this->dRsDtOnlyFreeGas_ == rhs.dRsDtOnlyFreeGas_;
 }
 
-template<class FluidSystem, class Scalar>
-MixingRateControls<FluidSystem,Scalar>&
-MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+MixingRateControls<FluidSystem>&
+MixingRateControls<FluidSystem>::
 operator=(const MixingRateControls& rhs)
 {
     this->lastRv_ = rhs.lastRv_;
@@ -93,8 +93,8 @@ operator=(const MixingRateControls& rhs)
     return *this;
 }
 
-template<class FluidSystem, class Scalar>
-void MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+void MixingRateControls<FluidSystem>::
 init(std::size_t numDof, int episodeIdx, const unsigned ntpvt)
 {
     // deal with DRSDT
@@ -116,8 +116,8 @@ init(std::size_t numDof, int episodeIdx, const unsigned ntpvt)
     }
 }
 
-template<class FluidSystem, class Scalar>
-bool MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+bool MixingRateControls<FluidSystem>::
 drsdtActive(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
@@ -126,8 +126,8 @@ drsdtActive(int episodeIdx) const
     return (oilVaporizationControl.drsdtActive() && bothOilGasActive);
 }
 
-template<class FluidSystem, class Scalar>
-bool MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+bool MixingRateControls<FluidSystem>::
 drvdtActive(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
@@ -136,8 +136,8 @@ drvdtActive(int episodeIdx) const
     return (oilVaporizationControl.drvdtActive() && bothOilGasActive);
 }
 
-template<class FluidSystem, class Scalar>
-bool MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+bool MixingRateControls<FluidSystem>::
 drsdtConvective(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
@@ -146,8 +146,8 @@ drsdtConvective(int episodeIdx) const
     return (oilVaporizationControl.drsdtConvective() && bothOilGasActive);
 }
 
-template<class FluidSystem, class Scalar>
-void MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+void MixingRateControls<FluidSystem>::
 updateExplicitQuantities(const int episodeIdx,
                          const Scalar timeStepSize)
 {
@@ -165,8 +165,8 @@ updateExplicitQuantities(const int episodeIdx,
     }
 }
 
-template<class FluidSystem, class Scalar>
-void MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+void MixingRateControls<FluidSystem>::
 updateLastValues(const unsigned elemIdx,
                  const Scalar Rs,
                  const Scalar Rv)
@@ -180,8 +180,8 @@ updateLastValues(const unsigned elemIdx,
     }
 }
 
-template<class FluidSystem, class Scalar>
-void MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+void MixingRateControls<FluidSystem>::
 updateMaxValues(const int episodeIdx,
                 const Scalar timeStepSize)
 {
@@ -201,8 +201,9 @@ updateMaxValues(const int episodeIdx,
     }
 }
 
-template<class FluidSystem, class Scalar>
-Scalar MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+typename MixingRateControls<FluidSystem>::Scalar
+MixingRateControls<FluidSystem>::
 drsdtcon(const unsigned elemIdx,
          int episodeIdx,
          const int pvtRegionIdx) const
@@ -218,8 +219,9 @@ drsdtcon(const unsigned elemIdx,
     return oilVaporizationControl.getMaxDRSDT(pvtRegionIdx) * convectiveDrs_[elemIdx];
 }
 
-template<class FluidSystem, class Scalar>
-Scalar MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+typename MixingRateControls<FluidSystem>::Scalar
+MixingRateControls<FluidSystem>::
 maxGasDissolutionFactor(const unsigned timeIdx,
                         const unsigned globalDofIdx,
                         const int episodeIdx,
@@ -243,8 +245,9 @@ maxGasDissolutionFactor(const unsigned timeIdx,
     }
 }
 
-template<class FluidSystem, class Scalar>
-Scalar MixingRateControls<FluidSystem,Scalar>::
+template<class FluidSystem>
+typename MixingRateControls<FluidSystem>::Scalar
+MixingRateControls<FluidSystem>::
 maxOilVaporizationFactor(const unsigned timeIdx,
                          const unsigned globalDofIdx,
                          const int episodeIdx,
@@ -262,8 +265,9 @@ maxOilVaporizationFactor(const unsigned timeIdx,
         return lastRv_[globalDofIdx];
     }
 }
-template<class FluidSystem, class Scalar>
-void MixingRateControls<FluidSystem,Scalar>::
+
+template<class FluidSystem>
+void MixingRateControls<FluidSystem>::
 updateConvectiveDRsDt_(const unsigned compressedDofIdx,
                        const Scalar t,
                        const Scalar p,
@@ -294,6 +298,6 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
         = permz * rssat * max(0.0, deltaDensity) * gravity / (so * visc * distZ * poro);
 }
 
-template class MixingRateControls<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>, double>;
+template class MixingRateControls<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
 
 } // namespace Opm
