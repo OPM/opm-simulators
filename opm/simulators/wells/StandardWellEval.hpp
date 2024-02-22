@@ -48,7 +48,7 @@ class StandardWellEval
 {
 protected:
     using Scalar = typename FluidSystem::Scalar;
-    using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>;
+    using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices>;
     using StdWellConnections = StandardWellConnections<FluidSystem,Indices>;
     static constexpr int Bhp = PrimaryVariables::Bhp;
     static constexpr int WQTotal= PrimaryVariables::WQTotal;

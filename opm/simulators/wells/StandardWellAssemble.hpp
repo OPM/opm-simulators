@@ -32,7 +32,7 @@ class DeferredLogger;
 class GroupState;
 class Schedule;
 template<class Scalar, int numEq> class StandardWellEquations;
-template<class FluidSystem, class Indices, class Scalar> class StandardWellPrimaryVariables;
+template<class FluidSystem, class Indices> class StandardWellPrimaryVariables;
 class SummaryState;
 template<class FluidSystem> class WellInterfaceFluidSystem;
 class WellState;
@@ -43,7 +43,7 @@ class StandardWellAssemble
 {
 public:
     using Scalar = typename FluidSystem::Scalar;
-    using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>;
+    using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices>;
     using EvalWell = typename PrimaryVariables::EvalWell;
 
     //! \brief Constructor initializes reference to well.

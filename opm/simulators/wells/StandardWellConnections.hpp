@@ -94,7 +94,7 @@ public:
     { return perf_pressure_diffs_[perf]; }
 
     using Eval = typename WellInterfaceIndices<FluidSystem,Indices,Scalar>::Eval;
-    using EvalWell = typename StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell;
+    using EvalWell = typename StandardWellPrimaryVariables<FluidSystem,Indices>::EvalWell;
 
     Eval connectionRateBrine(double& rate,
                              const double vap_wat_rate,

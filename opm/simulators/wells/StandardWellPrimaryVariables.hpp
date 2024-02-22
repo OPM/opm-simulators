@@ -37,7 +37,7 @@ template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndi
 class WellState;
 
 //! \brief Class holding primary variables for StandardWell.
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 class StandardWellPrimaryVariables {
 protected:
     // the positions of the primary variables for StandardWell
@@ -82,6 +82,7 @@ public:
     static constexpr int GFrac = has_gfrac_variable ? has_wfrac_variable + 1 : -1000;
     static constexpr int SFrac = !Indices::enableSolvent ? -1000 : has_wfrac_variable+has_gfrac_variable+1;
 
+    using Scalar = typename FluidSystem::Scalar;
     //! \brief Evaluation for the well equations.
     using EvalWell = DenseAd::DynamicEvaluation<Scalar, numStaticWellEq + Indices::numEq + 1>;
     using BVectorWell = typename StandardWellEquations<Scalar,Indices::numEq>::BVectorWell;
