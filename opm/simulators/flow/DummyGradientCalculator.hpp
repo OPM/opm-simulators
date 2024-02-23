@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclDummyGradientCalculator
+ * \copydoc Opm::DummyGradientCalculator
  */
-#ifndef EWOMS_ECL_DUMMY_GRADIENT_CALCULATOR_HH
-#define EWOMS_ECL_DUMMY_GRADIENT_CALCULATOR_HH
+#ifndef OPM_DUMMY_GRADIENT_CALCULATOR_HPP
+#define OPM_DUMMY_GRADIENT_CALCULATOR_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -36,17 +36,17 @@
 
 namespace Opm {
 /*!
- * \ingroup EclBlackOilSimulator
+ * \ingroup BlackOilSimulator
  *
  * \brief This is a "dummy" gradient calculator which does not do anything.
  *
- * The ECL blackoil simulator does not need any gradients: Volume fluxes are calculated
+ * The blackoil simulator does not need any gradients: Volume fluxes are calculated
  * via pressure differences instead of pressure gradients (i.e., transmissibilities
  * instead of permeabilities), and an energy equation and molecular diffusion are not
  * supported.
  */
 template<class TypeTag>
-class EclDummyGradientCalculator
+class DummyGradientCalculator
 {
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -69,7 +69,7 @@ public:
                                 unsigned,
                                 const QuantityCallback&) const
     {
-        throw std::logic_error("Generic values are not supported by the ECL black-oil simulator");
+        throw std::logic_error("Generic values are not supported by the black-oil simulator");
     }
 
     template <class QuantityCallback>
@@ -78,7 +78,7 @@ public:
                            unsigned,
                            const QuantityCallback&) const
     {
-        throw std::logic_error("Generic gradients are not supported by the ECL black-oil simulator");
+        throw std::logic_error("Generic gradients are not supported by the black-oil simulator");
     }
 
     template <class QuantityCallback>
@@ -86,7 +86,7 @@ public:
                                   unsigned,
                                   const QuantityCallback&)
     {
-        throw std::logic_error("Generic boundary values are not supported by the ECL black-oil simulator");
+        throw std::logic_error("Generic boundary values are not supported by the black-oil simulator");
     }
 
     template <class QuantityCallback>
@@ -95,9 +95,9 @@ public:
                                    unsigned,
                                    const QuantityCallback&) const
     {
-        throw std::logic_error("Generic boundary gradients are not supported by the ECL black-oil simulator");
+        throw std::logic_error("Generic boundary gradients are not supported by the black-oil simulator");
     }
 };
 } // namespace Opm
 
-#endif
+#endif // OPM_DUMMY_GRADIENT_CALCULATOR_HPP

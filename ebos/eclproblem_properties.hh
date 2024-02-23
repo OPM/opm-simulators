@@ -30,7 +30,6 @@
 
 #include <ebos/eclbaseaquifermodel.hh>
 #include <ebos/eclcpgridvanguard.hh>
-#include <ebos/ecldummygradientcalculator.hh>
 #include <ebos/eclfluxmodule.hh>
 #include <ebos/eclnewtonmethod.hh>
 #include <ebos/ecloutputblackoilmodule.hh>
@@ -48,6 +47,8 @@
 
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include <opm/models/utils/propertysystem.hh>
+
+#include <opm/simulators/flow/DummyGradientCalculator.hpp>
 
 #include <tuple>
 
@@ -499,7 +500,7 @@ struct FluxModule<TypeTag, TTag::EclBaseProblem> {
 // Use the dummy gradient calculator in order not to do unnecessary work.
 template<class TypeTag>
 struct GradientCalculator<TypeTag, TTag::EclBaseProblem> {
-    using type = EclDummyGradientCalculator<TypeTag>;
+    using type = DummyGradientCalculator<TypeTag>;
 };
 
 // Use a custom Newton-Raphson method class for ebos in order to attain more
