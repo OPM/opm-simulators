@@ -29,7 +29,6 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <optional>
 #include <vector>
 
 namespace Opm

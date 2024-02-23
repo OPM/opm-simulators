@@ -37,7 +37,6 @@
 #include <opm/simulators/wells/WellState.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
-#include <cassert>
 #include <cmath>
 #include <cstddef>
 

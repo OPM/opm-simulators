@@ -1815,7 +1815,7 @@ namespace Opm
                 for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
                     const EvalWell accumulation_term = regularization_factor * (segment_surface_volume * this->primary_variables_.surfaceVolumeFraction(seg, comp_idx)
                                                      - segment_fluid_initial_[seg][comp_idx]) / dt;
-                    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                    MultisegmentWellAssemble(*this).
                         assembleAccumulationTerm(seg, comp_idx, accumulation_term, this->linSys_);
                 }
             }
@@ -1828,7 +1828,7 @@ namespace Opm
                                                                          seg_upwind,
                                                                          comp_idx) *
                         this->well_efficiency_factor_;
-                    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                    MultisegmentWellAssemble(*this).
                         assembleOutflowTerm(seg, seg_upwind, comp_idx, segment_rate, this->linSys_);
                 }
             }
@@ -1843,7 +1843,7 @@ namespace Opm
                                                                              inlet_upwind,
                                                                              comp_idx) *
                             this->well_efficiency_factor_;
-                        MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                        MultisegmentWellAssemble(*this).
                             assembleInflowTerm(seg, inlet, inlet_upwind, comp_idx, inlet_rate, this->linSys_);
                     }
                 }
@@ -1888,7 +1888,7 @@ namespace Opm
 
                     this->connectionRates_[perf][comp_idx] = Base::restrictEval(cq_s_effective);
 
-                    MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                    MultisegmentWellAssemble(*this).
                         assemblePerforationEq(seg, cell_idx, comp_idx, cq_s_effective, this->linSys_);
                 }
             }
@@ -1897,7 +1897,7 @@ namespace Opm
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = ebosSimulator.vanguard().summaryState();
                 const Schedule& schedule = ebosSimulator.vanguard().schedule();
-                MultisegmentWellAssemble<FluidSystem,Indices,Scalar>(*this).
+                MultisegmentWellAssemble(*this).
                         assembleControlEq(well_state,
                                         group_state,
                                         schedule,
