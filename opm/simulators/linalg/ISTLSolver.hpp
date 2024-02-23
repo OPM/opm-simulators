@@ -66,7 +66,7 @@ struct FlowIstlSolver {
 }
 
 template <class TypeTag, class MyTypeTag>
-struct EclWellModel;
+struct WellModel;
 
 //! Set the type of a global jacobian matrix for linear solvers that are based on
 //! dune-istl.
@@ -148,7 +148,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
         using SparseMatrixAdapter = GetPropType<TypeTag, Properties::SparseMatrixAdapter>;
         using Vector = GetPropType<TypeTag, Properties::GlobalEqVector>;
         using Indices = GetPropType<TypeTag, Properties::Indices>;
-        using WellModel = GetPropType<TypeTag, Properties::EclWellModel>;
+        using WellModel = GetPropType<TypeTag, Properties::WellModel>;
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using Matrix = typename SparseMatrixAdapter::IstlMatrix;
         using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;

@@ -65,9 +65,9 @@ struct EclBaseProblem {
 };
 }
 
-// The class which deals with ECL wells
+// The class which deals with wells
 template<class TypeTag, class MyTypeTag>
-struct EclWellModel {
+struct WellModel {
     using type = UndefinedProperty;
 };
 
@@ -115,7 +115,7 @@ struct EnableApiTracking {
 
 // The class which deals with ECL aquifers
 template<class TypeTag, class MyTypeTag>
-struct EclAquiferModel {
+struct AquiferModel {
     using type = UndefinedProperty;
 };
 
@@ -241,7 +241,7 @@ public:
 
 // by default use the dummy aquifer "model"
 template<class TypeTag>
-struct EclAquiferModel<TypeTag, TTag::EclBaseProblem> {
+struct AquiferModel<TypeTag, TTag::EclBaseProblem> {
     using type = EclBaseAquiferModel<TypeTag>;
 };
 

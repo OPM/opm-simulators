@@ -172,8 +172,8 @@ class EclProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
-    using EclWellModel = GetPropType<TypeTag, Properties::EclWellModel>;
-    using EclAquiferModel = GetPropType<TypeTag, Properties::EclAquiferModel>;
+    using WellModel = GetPropType<TypeTag, Properties::WellModel>;
+    using AquiferModel = GetPropType<TypeTag, Properties::AquiferModel>;
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
     using PolymerModule = BlackOilPolymerModule<TypeTag>;
@@ -1493,16 +1493,16 @@ public:
      *
      * This can be used for inspecting wells outside of the problem.
      */
-    const EclWellModel& wellModel() const
+    const WellModel& wellModel() const
     { return wellModel_; }
 
-    EclWellModel& wellModel()
+    WellModel& wellModel()
     { return wellModel_; }
 
-    const EclAquiferModel& aquiferModel() const
+    const AquiferModel& aquiferModel() const
     { return aquiferModel_; }
 
-    EclAquiferModel& mutableAquiferModel()
+    AquiferModel& mutableAquiferModel()
     { return aquiferModel_; }
 
     // temporary solution to facilitate output of initial state from flow
@@ -2771,8 +2771,8 @@ private:
     bool enableDriftCompensation_;
     GlobalEqVector drift_;
 
-    EclWellModel wellModel_;
-    EclAquiferModel aquiferModel_;
+    WellModel wellModel_;
+    AquiferModel aquiferModel_;
 
     bool enableEclOutput_;
     std::unique_ptr<EclWriterType> eclWriter_;
