@@ -435,7 +435,6 @@ list (APPEND PUBLIC_HEADER_FILES
   ebos/eclproblem.hh
   ebos/eclproblem_properties.hh
   ebos/eclsolutioncontainers.hh
-  ebos/ecltimesteppingparams.hh
   ebos/eclthresholdpressure.hh
   ebos/ecltracermodel.hh
   ebos/ecltransmissibility.hh
@@ -537,6 +536,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/AdaptiveSimulatorTimer.hpp
   opm/simulators/timestepping/AdaptiveTimeStepping.hpp
   opm/simulators/timestepping/ConvergenceReport.hpp
+  opm/simulators/timestepping/EclTimeSteppingParams.hpp
   opm/simulators/timestepping/TimeStepControl.hpp
   opm/simulators/timestepping/TimeStepControlInterface.hpp
   opm/simulators/timestepping/SimulatorTimer.hpp
