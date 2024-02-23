@@ -19,6 +19,13 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// Improve IDE experience
+#ifndef OPM_STANDARDWELL_HEADER_INCLUDED
+#define OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
+#include <config.h>
+#include <opm/simulators/wells/StandardWell.hpp>
+#endif
+
 #include <opm/common/Exceptions.hpp>
 
 #include <opm/input/eclipse/Units/Units.hpp>
