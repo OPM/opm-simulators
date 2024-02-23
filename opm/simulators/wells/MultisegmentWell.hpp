@@ -323,6 +323,8 @@ namespace Opm
 
 }
 
+#ifndef OPM_MULTISEGMENTWELL_IMPL_HEADER_INCLUDED
 #include "MultisegmentWell_impl.hpp"
+#endif
 
 #endif // OPM_MULTISEGMENTWELL_HEADER_INCLUDED
