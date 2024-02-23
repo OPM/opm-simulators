@@ -20,7 +20,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef OPM_BLACKOILAQUIFERMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILAQUIFERMODEL_HEADER_INCLUDED
 
@@ -146,6 +145,8 @@ private:
 
 } // namespace Opm
 
+#ifndef OPM_BLACKOILAQUIFERMODEL_IMPL_HEADER_INCLUDED
 #include "BlackoilAquiferModel_impl.hpp"
+#endif
 
 #endif

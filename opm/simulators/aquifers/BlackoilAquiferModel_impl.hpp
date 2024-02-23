@@ -18,6 +18,13 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// Improve IDE experience
+#ifndef OPM_BLACKOILAQUIFERMODEL_HEADER_INCLUDED
+#include <config.h>
+#define OPM_BLACKOILAQUIFERMODEL_IMPL_HEADER_INCLUDED
+#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+#endif
+
 #include <opm/simulators/aquifers/AquiferConstantFlux.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
