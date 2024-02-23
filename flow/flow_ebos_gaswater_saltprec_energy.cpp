@@ -28,56 +28,56 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowGasWaterSaltprecEnergyProblem {
-    using InheritsFrom = std::tuple<EclFlowProblem>;
+struct FlowGasWaterSaltprecEnergyProblem {
+    using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem> {
+struct EnableBrine<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem> {
+struct EnableSaltPrecipitation<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableVapwat<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem> {
+struct EnableVapwat<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem> {
+struct EnableDisgasInWater<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem> {
+struct EnableEnergy<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem> {
     static constexpr bool value = true;
 };
 
 //! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::EclFlowGasWaterSaltprecEnergyProblem>
+struct Indices<TypeTag, TTag::FlowGasWaterSaltprecEnergyProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
-    using BaseTypeTag = TTag::EclFlowProblem;
+    using BaseTypeTag = TTag::FlowProblem;
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
 public:
-    typedef BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
-                                    getPropValue<TypeTag, Properties::EnableExtbo>(),
-                                    getPropValue<TypeTag, Properties::EnablePolymer>(),
-                                    getPropValue<TypeTag, Properties::EnableEnergy>(),
-                                    getPropValue<TypeTag, Properties::EnableFoam>(),
-                                    getPropValue<TypeTag, Properties::EnableBrine>(),
-                                    /*PVOffset=*/0,
-                                    /*disabledCompIdx=*/FluidSystem::oilCompIdx,
-                                    getPropValue<TypeTag, Properties::EnableMICP>()> type;
+    using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                         getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                         getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                         getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                         getPropValue<TypeTag, Properties::EnableFoam>(),
+                                         getPropValue<TypeTag, Properties::EnableBrine>(),
+                                         /*PVOffset=*/0,
+                                         /*disabledCompIdx=*/FluidSystem::oilCompIdx,
+                                         getPropValue<TypeTag, Properties::EnableMICP>()>;
 };
 }}
 
@@ -90,14 +90,14 @@ int flowEbosGasWaterSaltprecEnergyMain(int argc, char** argv, bool outputCout, b
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::EclFlowGasWaterSaltprecEnergyProblem>
+    FlowMain<Properties::TTag::FlowGasWaterSaltprecEnergyProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
 
 int flowEbosGasWaterSaltprecEnergyMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowGasWaterSaltprecEnergyProblem;
+    using TypeTag = Properties::TTag::FlowGasWaterSaltprecEnergyProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!

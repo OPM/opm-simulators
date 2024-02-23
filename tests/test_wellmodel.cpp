@@ -58,7 +58,7 @@
 
 
 
-using StandardWell = Opm::StandardWell<Opm::Properties::TTag::EclFlowProblem>;
+using StandardWell = Opm::StandardWell<Opm::Properties::TTag::FlowProblem>;
 
 struct SetupTest {
 
@@ -101,7 +101,7 @@ struct GlobalFixture {
         Dune::MPIHelper::instance(argcDummy, argvDummy);
 #endif
 
-        Opm::FlowMain<Opm::Properties::TTag::EclFlowProblem>::setupParameters_(argcDummy, argvDummy, Dune::MPIHelper::getCommunication());
+        Opm::FlowMain<Opm::Properties::TTag::FlowProblem>::setupParameters_(argcDummy, argvDummy, Dune::MPIHelper::getCommunication());
     }
 };
 
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
     const auto& wells_ecl = setup_test.schedule->getWells(setup_test.current_timestep);
     BOOST_CHECK_EQUAL( wells_ecl.size(), 2);
     const Opm::Well& well = wells_ecl[1];
-    const Opm::BlackoilModelParameters<Opm::Properties::TTag::EclFlowProblem> param;
+    const Opm::BlackoilModelParameters<Opm::Properties::TTag::FlowProblem> param;
 
     // For the conversion between the surface volume rate and resrevoir voidage rate
     typedef Opm::BlackOilFluidSystem<double> FluidSystem;
@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE(TestBehavoir) {
 
     {
         const int nw = wells_ecl.size();
-        const Opm::BlackoilModelParameters<Opm::Properties::TTag::EclFlowProblem> param;
+        const Opm::BlackoilModelParameters<Opm::Properties::TTag::FlowProblem> param;
 
         for (int w = 0; w < nw; ++w) {
             // For the conversion between the surface volume rate and resrevoir voidage rate

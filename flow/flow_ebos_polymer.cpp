@@ -26,12 +26,12 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowPolymerProblem {
-    using InheritsFrom = std::tuple<EclFlowProblem>;
+struct FlowPolymerProblem {
+    using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 template<class TypeTag>
-struct EnablePolymer<TypeTag, TTag::EclFlowPolymerProblem> {
+struct EnablePolymer<TypeTag, TTag::FlowPolymerProblem> {
     static constexpr bool value = true;
 };
 }}
@@ -45,14 +45,14 @@ int flowEbosPolymerMain(int argc, char** argv, bool outputCout, bool outputFiles
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::EclFlowPolymerProblem>
+    FlowMain<Properties::TTag::FlowPolymerProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
 
 int flowEbosPolymerMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowPolymerProblem;
+    using TypeTag = Properties::TTag::FlowPolymerProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!

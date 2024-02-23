@@ -101,7 +101,7 @@ py::array_t<double> PyBlackOilSimulator::getPorosity()
 int PyBlackOilSimulator::run()
 {
     auto main_object = Opm::Main( this->deck_filename_ );
-    return main_object.runStatic<Opm::Properties::TTag::EclFlowProblemTPFA>();
+    return main_object.runStatic<Opm::Properties::TTag::FlowProblemTPFA>();
 }
 
 void PyBlackOilSimulator::setPorosity( py::array_t<double,

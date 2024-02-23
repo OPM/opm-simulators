@@ -29,32 +29,31 @@ namespace Opm {
 namespace Properties {
 
 namespace TTag {
-struct EclFlowProblemWaterOnly {
-    using InheritsFrom = std::tuple<EclFlowProblem>;
+struct FlowWaterOnlyProblem {
+    using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::EclFlowProblemWaterOnly> { using type = TpfaLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FlowWaterOnlyProblem> { using type = TpfaLinearizer<TypeTag>; };
 
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::EclFlowProblemWaterOnly> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlowWaterOnlyProblem> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::EclFlowProblemWaterOnly> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::FlowWaterOnlyProblem> { static constexpr bool value = false; };
 
 //! The indices required by the model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::EclFlowProblemWaterOnly>
+struct Indices<TypeTag, TTag::FlowWaterOnlyProblem>
 {
 private:
     // it is unfortunately not possible to simply use 'TypeTag' here because this leads
     // to cyclic definitions of some properties. if this happens the compiler error
     // messages unfortunately are *really* confusing and not really helpful.
-    using BaseTypeTag = TTag::EclFlowProblem;
+    using BaseTypeTag = TTag::FlowProblem;
     using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
 
-public:
 public:
     using type = BlackOilOnePhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
                                          getPropValue<TypeTag, Properties::EnableExtbo>(),
@@ -76,14 +75,14 @@ int flowEbosWaterOnlyMain(int argc, char** argv, bool outputCout, bool outputFil
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::EclFlowProblemWaterOnly>
+    FlowMain<Properties::TTag::FlowWaterOnlyProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
 
 int flowEbosWaterOnlyMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowProblemWaterOnly;
+    using TypeTag = Opm::Properties::TTag::FlowWaterOnlyProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!

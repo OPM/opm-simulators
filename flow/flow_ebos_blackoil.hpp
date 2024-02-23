@@ -19,22 +19,14 @@
 
 #include <memory>
 
-namespace Opm {
-    namespace Properties {
-        namespace TTag {
-
-            struct EclFlowProblem;
-
-            struct EclFlowProblemTPFA {
-            using InheritsFrom = std::tuple<EclFlowProblem>;
-            };
-
-        }
-   }
+namespace Opm::Properties::TTag {
+    struct FlowProblem;
+    struct FlowProblemTPFA {
+        using InheritsFrom = std::tuple<FlowProblem>;
+    };
 }
 
 namespace Opm {
-
 
 //! \brief Main function used in flow binary.
 int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFiles);
@@ -42,7 +34,7 @@ int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool output
 template<class TypeTag> class FlowMain;
 
 //! \brief Initialization function used in flow binary and python simulator.
-std::unique_ptr<FlowMain<Properties::TTag::EclFlowProblemTPFA>>
+std::unique_ptr<FlowMain<Properties::TTag::FlowProblemTPFA>>
     flowEbosBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
 
 //! \brief Main function used in flow_brine binary.

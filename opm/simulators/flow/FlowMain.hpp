@@ -58,16 +58,16 @@ struct EnableLoggingFalloutWarning {
 
 // TODO: enumeration parameters. we use strings for now.
 template<class TypeTag>
-struct EnableDryRun<TypeTag, TTag::EclFlowProblem> {
+struct EnableDryRun<TypeTag, TTag::FlowProblem> {
     static constexpr auto value = "auto";
 };
 // Do not merge parallel output files or warn about them
 template<class TypeTag>
-struct EnableLoggingFalloutWarning<TypeTag, TTag::EclFlowProblem> {
+struct EnableLoggingFalloutWarning<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
 template<class TypeTag>
-struct OutputInterval<TypeTag, TTag::EclFlowProblem> {
+struct OutputInterval<TypeTag, TTag::FlowProblem> {
     static constexpr int value = 1;
 };
 

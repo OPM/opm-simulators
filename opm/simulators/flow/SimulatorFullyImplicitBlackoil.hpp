@@ -95,40 +95,40 @@ struct LoadFile
 };
 
 template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, TTag::EclFlowProblem> {
+struct EnableTerminalOutput<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = true;
 };
 template<class TypeTag>
-struct EnableAdaptiveTimeStepping<TypeTag, TTag::EclFlowProblem> {
+struct EnableAdaptiveTimeStepping<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = true;
 };
 
 template <class TypeTag>
-struct OutputExtraConvergenceInfo<TypeTag, TTag::EclFlowProblem>
+struct OutputExtraConvergenceInfo<TypeTag, TTag::FlowProblem>
 {
     static constexpr auto* value = "none";
 };
 
 template <class TypeTag>
-struct SaveStep<TypeTag, TTag::EclFlowProblem>
+struct SaveStep<TypeTag, TTag::FlowProblem>
 {
     static constexpr auto* value = "";
 };
 
 template <class TypeTag>
-struct SaveFile<TypeTag, TTag::EclFlowProblem>
+struct SaveFile<TypeTag, TTag::FlowProblem>
 {
     static constexpr auto* value = "";
 };
 
 template <class TypeTag>
-struct LoadFile<TypeTag, TTag::EclFlowProblem>
+struct LoadFile<TypeTag, TTag::FlowProblem>
 {
     static constexpr auto* value = "";
 };
 
 template <class TypeTag>
-struct LoadStep<TypeTag, TTag::EclFlowProblem>
+struct LoadStep<TypeTag, TTag::FlowProblem>
 {
     static constexpr int value = -1;
 };

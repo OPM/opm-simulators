@@ -24,14 +24,14 @@
 
 namespace Opm {
 
-std::unique_ptr<FlowMain<Properties::TTag::EclFlowProblem>>
+std::unique_ptr<FlowMain<Properties::TTag::FlowProblem>>
 flowEbosBlackoilMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
     resetLocale();
 
-    return std::make_unique<FlowMain<Properties::TTag::EclFlowProblem>>(
+    return std::make_unique<FlowMain<Properties::TTag::FlowProblem>>(
         argc, argv, outputCout, outputFiles);
 }
 
@@ -44,7 +44,7 @@ int flowEbosBlackoilMain(int argc, char** argv, bool outputCout, bool outputFile
 
 int flowEbosBlackoilMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowProblem;
+    using TypeTag = Properties::TTag::FlowProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!

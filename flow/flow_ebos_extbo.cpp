@@ -26,12 +26,12 @@
 namespace Opm {
 namespace Properties {
 namespace TTag {
-struct EclFlowExtboProblem {
-    using InheritsFrom = std::tuple<EclFlowProblem>;
+struct FlowExtboProblem {
+    using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 template<class TypeTag>
-struct EnableExtbo<TypeTag, TTag::EclFlowExtboProblem> {
+struct EnableExtbo<TypeTag, TTag::FlowExtboProblem> {
     static constexpr bool value = true;
 };
 }}
@@ -45,14 +45,14 @@ int flowEbosExtboMain(int argc, char** argv, bool outputCout, bool outputFiles)
     // with incorrect locale settings.
     resetLocale();
 
-    FlowMain<Properties::TTag::EclFlowExtboProblem>
+    FlowMain<Properties::TTag::FlowExtboProblem>
         mainfunc {argc, argv, outputCout, outputFiles};
     return mainfunc.execute();
 }
 
 int flowEbosExtboMainStandalone(int argc, char** argv)
 {
-    using TypeTag = Properties::TTag::EclFlowExtboProblem;
+    using TypeTag = Properties::TTag::FlowExtboProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);
     auto ret = mainObject->runStatic<TypeTag>();
     // Destruct mainObject as the destructor calls MPI_Finalize!

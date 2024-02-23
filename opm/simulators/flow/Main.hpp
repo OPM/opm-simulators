@@ -93,7 +93,7 @@ namespace Opm::Properties {
 // simulator.
 namespace TTag {
 struct FlowEarlyBird {
-    using InheritsFrom = std::tuple<EclFlowProblem>;
+    using InheritsFrom = std::tuple<FlowProblem>;
 };
 }
 
@@ -170,7 +170,7 @@ public:
         return exitCode;
     }
 
-    using FlowMainType = FlowMain<Properties::TTag::EclFlowProblemTPFA>;
+    using FlowMainType = FlowMain<Properties::TTag::FlowProblemTPFA>;
     // To be called from the Python interface code. Only do the
     // initialization and then return a pointer to the FlowEbosMain
     // object that can later be accessed directly from the Python interface
