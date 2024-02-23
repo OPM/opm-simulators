@@ -27,15 +27,11 @@
 #include <ebos/eclproblem.hh>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <cassert>
 #include <cstddef>
 #include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
-#include <tuple>
-#include <unordered_map>
 #include <vector>
 
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
@@ -558,5 +554,8 @@ namespace Opm {
 
 } // namespace Opm
 
+#ifndef OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED
 #include "BlackoilWellModel_impl.hpp"
+#endif
+
 #endif
