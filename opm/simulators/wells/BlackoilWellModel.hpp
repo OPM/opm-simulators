@@ -391,7 +391,7 @@ namespace Opm {
             double gravity_{};
             std::vector<double> depth_{};
             bool alternative_well_rate_init_{};
-            double well_group_thp_prev_{0.0};
+            std::optional<double> well_group_thp_calc_;
 
             std::unique_ptr<RateConverterType> rateConverter_{};
             std::map<std::string, std::unique_ptr<AverageRegionalPressureType>> regionalAveragePressureCalculator_{};
