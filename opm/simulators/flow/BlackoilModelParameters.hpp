@@ -393,7 +393,7 @@ struct RelaxedWellFlowTol<TypeTag, TTag::FlowModelParameters> {
 template<class TypeTag>
 struct RelaxedPressureTolMsw<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0e4;
+    static constexpr type value = 2.0e4;
 };
 template<class TypeTag>
 struct MaximumNumberOfWellSwitches<TypeTag, TTag::FlowModelParameters> {
