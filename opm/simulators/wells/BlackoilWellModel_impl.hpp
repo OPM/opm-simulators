@@ -1354,8 +1354,6 @@ namespace Opm {
                     return (group_rate - orig_target)/orig_target;
                 };
 
-                double well_group_rate(0.0);
-                double rate(0.0);
                 double thp(0.0);
                 double min_thp(1.0E8);
                 double max_thp(0.0);
@@ -1363,8 +1361,6 @@ namespace Opm {
                     std::string well_name = well->name();
                     if (group.hasWell(well_name)) {
                         auto& ws = well_state.well(well_name);
-                        rate = -tcalc.calcModeRateFromRates(ws.surface_rates);
-                        well_group_rate += rate;
                         thp = ws.thp;
                         min_thp = std::min(min_thp, thp);
                         max_thp = std::max(max_thp, thp);
