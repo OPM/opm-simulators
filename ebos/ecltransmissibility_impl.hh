@@ -266,6 +266,9 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                 auto faceAreaNormal = intersection.centerUnitOuterNormal();
                 faceAreaNormal *= geometry.volume();
 
+                
+                std::cout<< " geometry.volume() on boundary lgr : " << geometry.volume() << std::endl;
+
                 Scalar transBoundaryIs;
                 computeHalfTrans_(transBoundaryIs,
                                   faceAreaNormal,
@@ -397,24 +400,35 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
             else
                 trans = 1.0 / (1.0/halfTrans1 + 1.0/halfTrans2);
 
-            // Print trans values of intersections laying on LGR boundaries and belonging to the interior of the grid.
+            // Print trans values of intersections laying ON LGR BOUNDARIES and belonging to the interior of the grid.
             // (such intersections have one neighboring coarse cell  and one neighboring refined cell)
-            if((intersection.inside().level() != intersection.outside().level()) && !intersection.boundary()){
-                std::cout << "Boundary LGR face. InsideFaceIdx: " << insideFaceIdx << " OutsideFaceIdx: " << outsideFaceIdx << " trans: " << trans << std::endl;
+            // std::vector<int> elems = {34, 35, 134, 135, 234, 235};
+            // if( (std::find(elems.begin(), elems.end(), insideCartElemIdx) != std::end(elems))) {//
+            if(  (intersection.inside().level()) ){ // && !intersection.boundary()){
+                std::cout << "Face on lgr. insideCartElemIdx: " << insideCartElemIdx
+                          << " outsideCartElemIdx: " << outsideCartElemIdx << " trans: " << trans << std::endl;
+                std::cout << "halfTrans1 (insideElem): " << halfTrans1 << " halfTrans2 (outsideElem): " << halfTrans2 << std::endl;
+                std::cout << "insideElemIdx on the leaf: " << elemIdx << " outsideElemIdx on the leaf: " << outsideElemIdx << std::endl;
+                std::cout << "Type of face (InInsideIndex): insideFaceIdx: " << insideFaceIdx <<  " outsideFaceIdx: " << outsideFaceIdx << std::endl;
+                std::cout << "Level insideElemIdx: " << intersection.inside().level()
+                          << " Level outsideElem: " << intersection.outside().level() << std::endl;
+                std::cout<< std::endl;
             }
 
-            // Print trans values of intersections laying on LGR boundaries and belonging to the interior of the grid.
+            /*// Print trans values of intersections laying IN THE INTERIOR of an LGR (and belonging to the interior of the grid).
             // (such intersections have one neighboring coarse cell  and one neighboring refined cell)
             if((intersection.inside().level() == intersection.outside().level()) && (intersection.inside().level()>0)){
-                std::cout << "LGR(interior or on boundary) face. InsideFaceIdx: " << insideFaceIdx << " OutsideFaceIdx: " << outsideFaceIdx << " trans: " << trans << std::endl;
+                std::cout << "Face in the interior of LGR. InsideFaceIdx: " << insideFaceIdx <<
+                    " OutsideFaceIdx: " << outsideFaceIdx << " trans: " << trans << std::endl;
             }
 
             // Print trans values of intersections laying on LGR boundaries and belonging to the interior of the grid.
             // (such intersections have one neighboring coarse cell  and one neighboring refined cell)
             if(insideCartElemIdx == outsideCartElemIdx){
-                std::cout << "LGR(same parent cell) face. InsideFaceIdx: " << insideFaceIdx << " OutsideFaceIdx: " << outsideFaceIdx << " trans: " << trans << std::endl;
-            }
-            
+                std::cout << "Face with inside/outside same parent. inside/outsideCartElemIdx: " << insideCartElemIdx
+                          << " InsideFaceIdx: " << insideFaceIdx << " OutsideFaceIdx: " << outsideFaceIdx << " trans: " << trans << std::endl;
+                          }*/
+
             // apply the full face transmissibility multipliers
             // for the inside ...
             if(!pinchActive){
@@ -995,9 +1009,31 @@ computeFaceProperties(const Intersection& intersection,
                       /*isCpGrid=*/std::true_type) const
 {
     int faceIdx = intersection.id();
-    faceCenterInside = grid_.faceCenterEcl(insideElemIdx, insideFaceIdx);
-    faceCenterOutside = grid_.faceCenterEcl(outsideElemIdx, outsideFaceIdx);
-    faceAreaNormal = grid_.faceAreaNormalEcl(faceIdx);
+
+    if (intersection.neighbor() && (intersection.inside().level() != intersection.outside().level())) {
+        const auto& parentIntersection = grid_.getParentIntersectionFromLgrBoundaryFace(intersection);
+        const auto& parentIntersectionGeometry = parentIntersection.geometry();
+        faceCenterInside =  (intersection.inside().level() == 0) ? parentIntersectionGeometry.center() : grid_.faceCenterEcl(insideElemIdx, faceIdx);
+        faceCenterOutside = (intersection.outside().level() == 0) ?  parentIntersectionGeometry.center() : grid_.faceCenterEcl(outsideElemIdx, faceIdx);
+
+        faceAreaNormal = parentIntersection.centerUnitOuterNormal();
+        faceAreaNormal *= parentIntersectionGeometry.volume();
+
+        // faceAreaNormal = intersection.centerUnitOuterNormal();
+        // faceAreaNormal *= intersection.geometry().volume();
+    }
+    else {
+        assert(intersection.inside().level() == intersection.outside().level());
+        faceCenterInside = grid_.faceCenterEcl(insideElemIdx, faceIdx);
+        faceCenterOutside = grid_.faceCenterEcl(outsideElemIdx, faceIdx);
+        if (grid_.maxLevel()) {
+            faceAreaNormal = intersection.centerUnitOuterNormal();
+            faceAreaNormal *= intersection.geometry().volume();
+        }
+        else {
+            faceAreaNormal = grid_.faceAreaNormalEcl(faceIdx);
+        }
+    }
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
