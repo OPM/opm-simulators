@@ -255,9 +255,30 @@ EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
 
 template<class FluidSystem, class Scalar>
 void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
-outputTimeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate)
+outputTimeStamp(const std::string& lbl,
+                const double elapsed,
+                const int rstep,
+                const boost::posix_time::ptime currentDate)
 {
     logOutput_.timeStamp(lbl, elapsed, rstep, currentDate);
+}
+
+template<class FluidSystem, class Scalar>
+void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
+prepareDensityAccumulation()
+{
+    if (this->regionAvgDensity_.has_value()) {
+        this->regionAvgDensity_->prepareAccumulation();
+    }
+}
+
+template<class FluidSystem, class Scalar>
+void EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
+accumulateDensityParallel()
+{
+    if (this->regionAvgDensity_.has_value()) {
+        this->regionAvgDensity_->accumulateParallel();
+    }
 }
 
 template<class FluidSystem, class Scalar>
@@ -280,7 +301,6 @@ outputInjLog(std::size_t reportStepNum)
 {
     this->logOutput_.injection(reportStepNum);
 }
-
 
 template<class FluidSystem,class Scalar>
 Inplace EclGenericOutputBlackoilModule<FluidSystem,Scalar>::
