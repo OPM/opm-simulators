@@ -1428,6 +1428,70 @@ namespace Opm
     }
 
     template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    wellUnderZeroRateTargetVersion(const Simulator& simulator,
+                                   const WellState<Scalar>& well_state,
+                                   DeferredLogger& deferred_logger) const
+    {
+        // Extended version of WellInterfaceGeneric::wellUnderZeroRateTarget that also checks group controls
+        const auto& ws = well_state.well(this->index_of_well_);
+        const auto& summaryState = simulator.vanguard().summaryState();
+        const bool isGroupControlled = (this->isInjector() && ws.injection_cmode == Well::InjectorCMode::GRUP) ||
+                                       (this->isProducer() && ws.production_cmode == Well::ProducerCMode::GRUP);
+        if (!isGroupControlled) {
+            // well is not under group control, check "light-weight" version
+            return this->wellUnderZeroRateTarget(summaryState, well_state);
+        } else {
+            const auto& well = this->well_ecl_;
+            const auto& schedule = simulator.vanguard().schedule();
+            const auto& group_state = simulator.problem().wellModel().groupState();
+            const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
+            const Scalar efficiencyFactor = well.getEfficiencyFactor();
+            if (this->isInjector()) {
+                // Check injector under group control
+                const auto& controls = well.injectionControls(summaryState);
+                std::optional<Scalar> target = this->getGroupInjectionTargetRate(group,
+                                                                                 well_state,
+                                                                                 group_state,
+                                                                                 schedule,
+                                                                                 summaryState,
+                                                                                 controls.injector_type,
+                                                                                 efficiencyFactor,
+                                                                                 deferred_logger);
+            if (target.has_value()) {
+                return target.value() == 0.0;
+            } else {
+                return false;
+            }
+            } else {
+                // Check producer under group control
+                Scalar scale = this->getGroupProductionTargetRate(group,
+                                                                  well_state,
+                                                                  group_state,
+                                                                  schedule,
+                                                                  summaryState,
+                                                                  efficiencyFactor,
+                                                                  deferred_logger);
+                return scale == 0.0;
+            }
+        }
+    }
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    stoppedOrZeroRateTargetVersion(const Simulator& simulator,
+                                   const WellState<Scalar>& well_state,
+                                   DeferredLogger& deferred_logger) const
+    {
+        // Extended version of WellInterfaceGeneric::stopppedOrZeroRateTarget that also checks group controls
+        return (this->wellIsStopped() || wellUnderZeroRateTargetVersion(simulator,
+                                                                        well_state, 
+                                                                        deferred_logger));
+    }
+    
+    template<typename TypeTag>
     std::vector<typename WellInterface<TypeTag>::Scalar>
     WellInterface<TypeTag>::
     initialWellRateFractions(const Simulator& simulator,
