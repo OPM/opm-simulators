@@ -827,6 +827,7 @@ namespace WellGroupHelpers
                     const auto& group = schedule.getGroup(node, report_time_step);
                     for (const std::string& wellname : group.wells()) {
                         const Well& well = schedule.getWell(wellname, report_time_step);
+                        if (well.isInjector()) continue;
                         // Here we use the efficiency unconditionally, but if WEFAC item 3
                         // for the well is false (it defaults to true) then we should NOT use
                         // the efficiency factor. Fixing this requires not only changing the
