@@ -51,6 +51,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/Main.cpp
   opm/simulators/flow/NonlinearSolver.cpp
   opm/simulators/flow/RSTConv.cpp
+  opm/simulators/flow/RegionPhasePVAverage.cpp
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/ValidationFunctions.cpp
@@ -284,6 +285,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_partitionCells.cpp
   tests/test_preconditionerfactory.cpp
   tests/test_privarspacking.cpp
+  tests/test_region_phase_pvaverage.cpp
   tests/test_relpermdiagnostics.cpp
   tests/test_RestartSerialization.cpp
   tests/test_rstconv.cpp
@@ -460,6 +462,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/partitionCells.hpp
   opm/simulators/flow/priVarsPacking.hpp
   opm/simulators/flow/RSTConv.hpp
+  opm/simulators/flow/RegionPhasePVAverage.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp
   opm/simulators/flow/SimulatorReportBanners.hpp
   opm/simulators/flow/SimulatorSerializer.hpp
