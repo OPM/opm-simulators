@@ -23,13 +23,16 @@
 #ifndef EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 #define EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
 
-#include "opm/simulators/flow/FlowsData.hpp"
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/simulators/flow/FlowsData.hpp>
 #include <opm/simulators/flow/InterRegFlows.hpp>
 #include <opm/simulators/flow/LogOutputHelper.hpp>
+#include <opm/simulators/flow/RegionPhasePVAverage.hpp>
+
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <array>
@@ -61,7 +64,18 @@ public:
         return (this->fluidPressure_.size()) ;
     };
 
-    void outputTimeStamp(const std::string& lbl, double elapsed, int rstep, boost::posix_time::ptime currentDate);
+    void outputTimeStamp(const std::string& lbl,
+                         double elapsed,
+                         int rstep,
+                         boost::posix_time::ptime currentDate);
+
+    /// Clear internal arrays for parallel accumulation of per-region phase
+    /// density averages.
+    void prepareDensityAccumulation();
+
+    /// Run cross-rank parallel accumulation of per-region phase density
+    /// running sums (average values).
+    void accumulateDensityParallel();
 
     // write cumulative production and injection reports to output
     void outputCumLog(std::size_t reportStepNum);
@@ -83,7 +97,6 @@ public:
                          boost::posix_time::ptime currentDate,
                          const bool substep,
                          const Parallel::Communication& comm);
-
 
     void outputErrorLog(const Parallel::Communication& comm) const;
 
@@ -506,6 +519,8 @@ protected:
 
     std::optional<Inplace> initialInplace_;
     bool local_data_valid_;
+
+    std::optional<RegionPhasePoreVolAverage> regionAvgDensity_;
 };
 
 } // namespace Opm

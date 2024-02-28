@@ -33,7 +33,6 @@
 #include <ebos/eclgenericoutputblackoilmodule.hh>
 #include <opm/simulators/utils/moduleVersion.hpp>
 
-
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -52,10 +51,13 @@
 #include <opm/output/eclipse/EclipseIO.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
 
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstddef>
+#include <functional>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -182,6 +184,23 @@ public:
             }
             OPM_THROW_NOLOG(std::runtime_error, msg);
         }
+
+        if (const auto& smryCfg = simulator.vanguard().summaryConfig();
+            smryCfg.match("[FB]PP[OGW]") || smryCfg.match("RPP[OGW]*"))
+        {
+            auto rset = this->eclState_.fieldProps().fip_regions();
+            rset.push_back("PVTNUM");
+
+            // Note: We explicitly use decltype(auto) here because the
+            // default scheme (-> auto) will deduce an undesirable type.  We
+            // need the "reference to vector" semantics in this instance.
+            this->regionAvgDensity_
+                .emplace(this->simulator_.gridView().comm(),
+                         FluidSystem::numPhases, rset,
+                         [fp = std::cref(this->eclState_.fieldProps())]
+                         (const std::string& rsetName) -> decltype(auto)
+                         { return fp.get().get_int(rsetName); });
+        }
     }
 
     /*!
@@ -290,9 +309,10 @@ public:
             const auto& intQuants = elemCtx.intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto& fs = intQuants.fluidState();
 
-            typedef typename std::remove_const<typename std::remove_reference<decltype(fs)>::type>::type FluidState;
-            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-            unsigned pvtRegionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
+            using FluidState = std::remove_cv_t<std::remove_reference_t<decltype(fs)>>;
+
+            const unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+            const unsigned pvtRegionIdx = elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex();
 
             for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
                 if (this->saturation_[phaseIdx].empty())
@@ -300,6 +320,16 @@ public:
 
                 this->saturation_[phaseIdx][globalDofIdx] = getValue(fs.saturation(phaseIdx));
                 Valgrind::CheckDefined(this->saturation_[phaseIdx][globalDofIdx]);
+            }
+
+            if (this->regionAvgDensity_.has_value()) {
+                // Note: We intentionally exclude effects of rock
+                // compressibility by using referencePorosity() here.
+                const auto porv = intQuants.referencePorosity()
+                    * elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
+
+                this->aggregateAverageDensityContributions_(fs, globalDofIdx,
+                                                            static_cast<double>(porv));
             }
 
             if (!this->fluidPressure_.empty()) {
@@ -765,7 +795,10 @@ public:
             for (auto& val : this->blockData_) {
                 const auto& key = val.first;
                 assert(key.second > 0);
-                unsigned int cartesianIdxBlock = key.second - 1;
+
+                const auto cartesianIdxBlock = static_cast<std::remove_cv_t<
+                    std::remove_reference_t<decltype(cartesianIdx)>>>(key.second - 1);
+
                 if (cartesianIdx == cartesianIdxBlock) {
                     if ((key.first == "BWSAT") || (key.first == "BSWAT"))
                         val.second = getValue(fs.saturation(waterPhaseIdx));
@@ -848,8 +881,8 @@ public:
                         }
 
                         // Include active pore-volume.
-                        val.second *= elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
-                            * getValue(intQuants.porosity());
+                        val.second *= getValue(intQuants.porosity())
+                            * elemCtx.simulator().model().dofTotalVolume(globalDofIdx);
                     }
                     else if (key.first == "BRS")
                         val.second = getValue(fs.Rs());
@@ -903,12 +936,59 @@ public:
                         val.second *= elemCtx.simulator().model().dofTotalVolume(globalDofIdx)
                             * getValue(intQuants.porosity());
                     }
-                    else if (key.first == "BFLOWI")
-                        val.second = this->flows_[FaceDir::ToIntersectionIndex(Dir::XPlus)][waterCompIdx][globalDofIdx];
-                    else if (key.first == "BFLOWJ")
-                        val.second = this->flows_[FaceDir::ToIntersectionIndex(Dir::YPlus)][waterCompIdx][globalDofIdx];
-                    else if (key.first == "BFLOWK")
-                        val.second = this->flows_[FaceDir::ToIntersectionIndex(Dir::ZPlus)][waterCompIdx][globalDofIdx];
+                    else if ((key.first == "BPPO") || (key.first == "BPPG") || (key.first == "BPPW")) {
+                        auto phase = RegionPhasePoreVolAverage::Phase{};
+
+                        if (key.first == "BPPO") {
+                            phase.ix = oilPhaseIdx;
+                        }
+                        else if (key.first == "BPPG") {
+                            phase.ix = gasPhaseIdx;
+                        }
+                        else { // BPPW
+                            phase.ix = waterPhaseIdx;
+                        }
+
+                        // Note different region handling here.  FIPNUM is
+                        // one-based, but we need zero-based lookup in
+                        // DatumDepth.  On the other hand, pvtRegionIndex is
+                        // zero-based but we need one-based lookup in
+                        // RegionPhasePoreVolAverage.
+
+                        // Subtract one to convert FIPNUM to region index.
+                        const auto datum = this->eclState_.getSimulationConfig()
+                            .datumDepths()(this->regions_["FIPNUM"][dofIdx] - 1);
+
+                        // Add one to convert region index to region ID.
+                        const auto region = RegionPhasePoreVolAverage::Region {
+                            elemCtx.primaryVars(dofIdx, /*timeIdx=*/0).pvtRegionIndex() + 1
+                        };
+
+                        const auto density = this->regionAvgDensity_
+                            ->value("PVTNUM", phase, region);
+
+                        const auto press = getValue(fs.pressure(phase.ix));
+                        const auto grav =
+                            elemCtx.problem().gravity()[GridView::dimensionworld - 1];
+                        const auto dz = problem.dofCenterDepth(globalDofIdx) - datum;
+
+                        val.second = press - density*dz*grav;
+                    }
+                    else if ((key.first == "BFLOWI") ||
+                             (key.first == "BLFOWJ") ||
+                             (key.first == "BFLOWK"))
+                    {
+                        auto dir = FaceDir::ToIntersectionIndex(Dir::XPlus);
+
+                        if (key.first == "BFLOWJ") {
+                            dir = FaceDir::ToIntersectionIndex(Dir::YPlus);
+                        }
+                        else if (key.first == "BFLOWK") {
+                            dir = FaceDir::ToIntersectionIndex(Dir::ZPlus);
+                        }
+
+                        val.second = this->flows_[dir][waterCompIdx][globalDofIdx];
+                    }
                     else {
                         std::string logstring = "Keyword '";
                         logstring.append(key.first);
@@ -1123,9 +1203,36 @@ private:
     {
         std::size_t elemIdx = 0;
         for (const auto& elem : elements(simulator_.gridView())) {
-            if (elem.partitionType() != Dune::InteriorEntity)
+            if (elem.partitionType() != Dune::InteriorEntity) {
                 region[elemIdx] = 0;
+            }
+
             ++elemIdx;
+        }
+    }
+
+    template <typename FluidState>
+    void aggregateAverageDensityContributions_(const FluidState&  fs,
+                                               const unsigned int globalDofIdx,
+                                               const double       porv)
+    {
+        auto pvCellValue = RegionPhasePoreVolAverage::CellValue{};
+        pvCellValue.porv = porv;
+
+        for (auto phaseIdx = 0*FluidSystem::numPhases;
+             phaseIdx < FluidSystem::numPhases; ++phaseIdx)
+        {
+            if (! FluidSystem::phaseIsActive(phaseIdx)) {
+                continue;
+            }
+
+            pvCellValue.value = getValue(fs.density(phaseIdx));
+            pvCellValue.sat   = getValue(fs.saturation(phaseIdx));
+
+            this->regionAvgDensity_
+                ->addCell(globalDofIdx,
+                          RegionPhasePoreVolAverage::Phase { phaseIdx },
+                          pvCellValue);
         }
     }
 

@@ -600,12 +600,17 @@ private:
 
         {
             OPM_TIMEBLOCK(prepareCellBasedData);
+
+            this->eclOutputModule_->prepareDensityAccumulation();
+
             for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 elemCtx.updatePrimaryStencil(elem);
                 elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
                 this->eclOutputModule_->processElement(elemCtx);
             }
+
+            this->eclOutputModule_->accumulateDensityParallel();
         }
 
         if constexpr (enableMech) {
