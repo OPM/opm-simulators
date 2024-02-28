@@ -689,7 +689,8 @@ namespace Opm
                                               relaxation_factor,
                                               dFLimit,
                                               stop_or_zero_rate_target,
-                                              max_pressure_change);
+                                              max_pressure_change,
+                                              deferred_logger);
 
         this->primary_variables_.copyToWellState(*this, getRefDensity(), stop_or_zero_rate_target,
                                                  well_state, summary_state, deferred_logger);
