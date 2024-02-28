@@ -230,6 +230,14 @@ public:
                                                    std::vector<double>& well_flux,
                                                    DeferredLogger& deferred_logger) const = 0;
 
+    bool wellUnderZeroRateTargetVersion(const Simulator& ebos_simulator,
+                                        const WellState& well_state,
+                                        DeferredLogger& deferred_logger) const;
+
+    bool stoppedOrZeroRateTargetVersion(const Simulator& ebos_simulator,
+                                        const WellState& well_state,
+                                        DeferredLogger& deferred_logger) const;
+
     bool updateWellStateWithTHPTargetProd(const Simulator& simulator,
                                           WellState<Scalar>& well_state,
                                           DeferredLogger& deferred_logger) const;

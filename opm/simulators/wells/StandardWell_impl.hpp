@@ -2364,8 +2364,11 @@ namespace Opm
         const bool allow_open =  this->well_ecl_.getStatus() == WellStatus::OPEN &&
                                  well_state.well(this->index_of_well_).status == WellStatus::OPEN;
         // don't allow switcing for wells under zero rate target or requested fixed status and control
-        const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) &&
+        //const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) &&
+         //                            (!fixed_control || !fixed_status) && allow_open;
+        const bool allow_switching = !this->wellUnderZeroRateTargetVersion(ebosSimulator, well_state, deferred_logger) &&
                                      (!fixed_control || !fixed_status) && allow_open;
+        
         bool changed = false;
         bool final_check = false;
         // well needs to be set operable or else solving/updating of re-opened wells is skipped
