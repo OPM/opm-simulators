@@ -27,12 +27,25 @@
 //#include <opm/simulators/flow/python/PyFluidState.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
 #include <opm/simulators/flow/python/PyBlackOilSimulator.hpp>
-#include <flow/flow_ebos_blackoil.hpp>
 // NOTE: EXIT_SUCCESS, EXIT_FAILURE is defined in cstdlib
 #include <cstdlib>
-#include <iostream>
 #include <stdexcept>
 #include <string>
+
+namespace Opm {
+
+std::unique_ptr<FlowMain<Properties::TTag::FlowProblemTPFA>>
+flowEbosBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles)
+{
+    // we always want to use the default locale, and thus spare us the trouble
+    // with incorrect locale settings.
+    resetLocale();
+
+    return std::make_unique<FlowMain<Properties::TTag::FlowProblemTPFA>>(
+        argc, argv, outputCout, outputFiles);
+}
+
+}
 
 namespace py = pybind11;
 
