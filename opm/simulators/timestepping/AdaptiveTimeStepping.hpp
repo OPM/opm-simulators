@@ -34,6 +34,8 @@
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
 #include <cassert>
 #include <cmath>
@@ -436,16 +438,19 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
 
                 report += substepReport;
 
-                bool continue_on_uncoverged_solution = ignoreConvergenceFailure_ && !substepReport.converged && dt <= minTimeStep_;
+                bool continue_on_uncoverged_solution = ignoreConvergenceFailure_ &&
+                                                       !substepReport.converged  &&
+                                                       dt <= minTimeStep_;
 
-                if (continue_on_uncoverged_solution) {
-                    const auto msg = std::string("Solver failed to converge but timestep ")
-                            + std::to_string(dt) + " is smaller or equal to "
-                            + std::to_string(minTimeStep_) + "\n which is the minimum threshold given"
-                            +  "by option --solver-min-time-step= \n";
-                    if (solverVerbose_) {
-                        OpmLog::problem(msg);
-                    }
+                if (continue_on_uncoverged_solution && solverVerbose_) {
+                    const auto msg = fmt::format(
+                        "Solver failed to converge but timestep "
+                        "{} is smaller or equal to {}\n"
+                        "which is the minimum threshold given "
+                        "by option --solver-min-time-step\n",
+                        dt, minTimeStep_
+                    );
+                    OpmLog::problem(msg);
                 }
 
                 if (substepReport.converged || continue_on_uncoverged_solution) {
@@ -515,8 +520,10 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                     // If we have restarted (i.e. cut the timestep) too
                     // many times, we have failed and throw an exception.
                     if (restarts >= solverRestartMax_) {
-                        const auto msg = std::string("Solver failed to converge after cutting timestep ")
-                            + std::to_string(restarts) + " times.";
+                        const auto msg = fmt::format(
+                            "Solver failed to converge after cutting timestep {} times.",
+                            restarts
+                        );
                         if (solverVerbose_) {
                             OpmLog::error(msg);
                         }
@@ -531,9 +538,11 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                     // If we have restarted (i.e. cut the timestep) too
                     // much, we have failed and throw an exception.
                     if (newTimeStep < minTimeStep_) {
-                        const auto msg = std::string("Solver failed to converge after cutting timestep to ")
-                                + std::to_string(minTimeStep_) + "\n which is the minimum threshold given"
-                                +  "by option --solver-min-time-step= \n";
+                        const auto msg = fmt::format(
+                            "Solver failed to converge after cutting timestep to {}\n"
+                            "which is the minimum threshold given by option --solver-min-time-step\n",
+                            minTimeStep_
+                        );
                         if (solverVerbose_) {
                             OpmLog::error(msg);
                         }
@@ -545,9 +554,11 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                     auto chopTimestep = [&]() {
                         substepTimer.provideTimeStepEstimate(newTimeStep);
                         if (solverVerbose_) {
-                            std::string msg;
-                            msg = causeOfFailure + "\nTimestep chopped to "
-                                + std::to_string(unit::convert::to(substepTimer.currentStepLength(), unit::day)) + " days\n";
+                            const auto msg = fmt::format(
+                                "{}\nTimestep chopped to {} days\n",
+                                causeOfFailure,
+                                std::to_string(unit::convert::to(substepTimer.currentStepLength(), unit::day))
+                            );
                             OpmLog::problem(msg);
                         }
                         ++restarts;
@@ -837,16 +848,16 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
         double restartFactor_;               //!< factor to multiply time step with when solver fails to converge
         double growthFactor_;                //!< factor to multiply time step when solver recovered from failed convergence
         double maxGrowth_;                   //!< factor that limits the maximum growth of a time step
-        double maxTimeStep_;                //!< maximal allowed time step size in days
-        double minTimeStep_;                //!< minimal allowed time step size before throwing
-        bool ignoreConvergenceFailure_;     //!< continue instead of stop when minimum time step is reached
-        int solverRestartMax_;        //!< how many restart of solver are allowed
-        bool solverVerbose_;           //!< solver verbosity
-        bool timestepVerbose_;         //!< timestep verbosity
-        double suggestedNextTimestep_;      //!< suggested size of next timestep
-        bool fullTimestepInitially_;        //!< beginning with the size of the time step from data file
-        double timestepAfterEvent_;         //!< suggested size of timestep after an event
-        bool useNewtonIteration_;           //!< use newton iteration count for adaptive time step control
+        double maxTimeStep_;                 //!< maximal allowed time step size in days
+        double minTimeStep_;                 //!< minimal allowed time step size before throwing
+        bool ignoreConvergenceFailure_;      //!< continue instead of stop when minimum time step is reached
+        int solverRestartMax_;               //!< how many restart of solver are allowed
+        bool solverVerbose_;                 //!< solver verbosity
+        bool timestepVerbose_;               //!< timestep verbosity
+        double suggestedNextTimestep_;       //!< suggested size of next timestep
+        bool fullTimestepInitially_;         //!< beginning with the size of the time step from data file
+        double timestepAfterEvent_;          //!< suggested size of timestep after an event
+        bool useNewtonIteration_;            //!< use newton iteration count for adaptive time step control
         double minTimeStepBeforeShuttingProblematicWells_; //! < shut problematic wells when time step size in days are less than this
     };
 }
