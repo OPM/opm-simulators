@@ -30,6 +30,7 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
+#include <opm/simulators/wells/FractionCalculator.hpp>
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/WellGroupHelpers.hpp>

@@ -235,39 +235,6 @@ namespace WellGroupHelpers
                              const Phase injection_phase);
 
 
-    class FractionCalculator
-    {
-    public:
-        FractionCalculator(const Schedule& schedule,
-                           const WellState& well_state,
-                           const GroupState& group_state,
-                           const int report_step,
-                           const GuideRate* guide_rate,
-                           const GuideRateModel::Target target,
-                           const PhaseUsage& pu,
-                           const bool is_producer,
-                           const Phase injection_phase);
-        double fraction(const std::string& name, const std::string& control_group_name, const bool always_include_this);
-        double localFraction(const std::string& name, const std::string& always_included_child);
-
-    private:
-        std::string parent(const std::string& name);
-        double guideRateSum(const Group& group, const std::string& always_included_child);
-        double guideRate(const std::string& name, const std::string& always_included_child);
-        int groupControlledWells(const std::string& group_name, const std::string& always_included_child);
-        GuideRate::RateVector getGroupRateVector(const std::string& group_name);
-        const Schedule& schedule_;
-        const WellState& well_state_;
-        const GroupState& group_state_;
-        int report_step_;
-        const GuideRate* guide_rate_;
-        GuideRateModel::Target target_;
-        const PhaseUsage& pu_;
-        bool is_producer_;
-        Phase injection_phase_;
-    };
-
-
     std::pair<bool, double> checkGroupConstraintsInj(const std::string& name,
                                                      const std::string& parent,
                                                      const Group& group,
