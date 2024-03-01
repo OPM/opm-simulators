@@ -22,14 +22,15 @@
 #ifndef OPM_FLOW_MAIN_HEADER_INCLUDED
 #define OPM_FLOW_MAIN_HEADER_INCLUDED
 
-#include <opm/simulators/flow/Banners.hpp>
-#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
-
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/IOConfig/IOConfig.hpp>
 #include <opm/input/eclipse/EclipseState/InitConfig/InitConfig.hpp>
 
 #include <opm/models/utils/start.hh>
+
+#include <opm/simulators/flow/Banners.hpp>
+#include <opm/simulators/flow/FlowUtils.hpp>
+#include <opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
@@ -39,7 +40,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <string_view>
 
 namespace Opm::Properties {
 
@@ -74,21 +74,6 @@ struct OutputInterval<TypeTag, TTag::FlowProblem> {
 } // namespace Opm::Properties
 
 namespace Opm {
-namespace detail {
-
-void checkAllMPIProcesses();
-
-void mergeParallelLogFiles(std::string_view output_dir,
-                           std::string_view deck_filename,
-                           bool enableLoggingFalloutWarning);
-
-void handleExtraConvergenceOutput(SimulatorReport& report,
-                                  std::string_view option,
-                                  std::string_view optionName,
-                                  std::string_view output_dir,
-                                  std::string_view base_name);
-
-}
 
     class Deck;
 
