@@ -825,7 +825,7 @@ public:
             std::string name;
             buffer.read(name);
             globalFlows_[i].name = name;
-            unsigned int size = 0;
+            std::size_t size = 0;
             buffer.read(size);
             for (unsigned int j = 0; j < size; ++j) {
                 int nncIdx;
