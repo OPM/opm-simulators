@@ -557,7 +557,10 @@ public:
      *
      * \return true Iff the interpretation of one of the switching variables was changed
      */
-    bool adaptPrimaryVariables(const Problem& problem, unsigned globalDofIdx, Scalar swMaximum, Scalar thresholdWaterFilledCell, Scalar eps = 0.0)
+    bool adaptPrimaryVariables(const Problem& problem,
+                               unsigned globalDofIdx,
+                               [[maybe_unused]] Scalar swMaximum,
+                               Scalar thresholdWaterFilledCell, Scalar eps = 0.0)
     {
         // this function accesses quite a few black-oil specific low-level functions
         // directly for better performance (instead of going the canonical way through
@@ -1054,7 +1057,7 @@ private:
             return 0.0;
     }
 
-    Scalar temperature_(const Problem& problem, unsigned globalDofIdx) const
+    Scalar temperature_(const Problem& problem, [[maybe_unused]] unsigned globalDofIdx) const
     {
         if constexpr (enableEnergy)
             return (*this)[Indices::temperatureIdx];

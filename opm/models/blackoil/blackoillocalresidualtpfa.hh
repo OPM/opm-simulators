@@ -617,7 +617,7 @@ public:
                                        RateVector& bdyFlux,
                                        const BoundaryConditionData& bdyInfo,
                                        const IntensiveQuantities& insideIntQuants,
-                                       unsigned globalSpaceIdx)
+                                       [[maybe_unused]] unsigned globalSpaceIdx)
     {
         OPM_TIMEBLOCK_LOCAL(computeBoundaryThermal);
         // only heat is allowed to flow through this boundary
