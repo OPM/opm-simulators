@@ -9,16 +9,13 @@
 #  https://pybind11.readthedocs.io/en/stable/compiling.html
 #
 pybind11_add_module(simulators ${PYBIND11_SYSTEM}
+  $<TARGET_OBJECTS:moduleVersion>
+  Pybind11Exporter.cpp
   PyBlackOilSimulator.cpp
-  Pybind11Exporter.cpp)
+  )
 
 set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
 set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
-
-target_sources(simulators
-  PRIVATE
-  $<TARGET_OBJECTS:moduleVersion>
-  $<TARGET_OBJECTS:flow_libblackoil>)
 
 target_link_libraries( simulators PRIVATE opmsimulators )
 
