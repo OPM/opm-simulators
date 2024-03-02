@@ -26,6 +26,7 @@
 
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <array>
 #include <cstddef>
@@ -97,8 +98,7 @@ public:
                       const double relaxation_factor,
                       const double DFLimit,
                       const bool stop_or_zero_rate_target,
-                      const double max_pressure_change,
-                      DeferredLogger& deferred_logger);
+                      const double max_pressure_change);
 
     //! \brief Copy values to well state.
     void copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
@@ -151,6 +151,9 @@ public:
     void setValue(const int idx, const std::array<Scalar, numWellEq>& val)
     { value_[idx] = val; }
 
+    //! output the segments with pressure close to lower pressure limit for debugging purpose
+    void outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const;
+
 private:
     //! \brief Handle non-reasonable fractions due to numerical overshoot.
     void processFractions(const int seg);
@@ -168,6 +171,9 @@ private:
     std::vector<std::array<EvalWell, numWellEq>> evaluation_;
 
     const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
+
+    static constexpr double bhp_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
+    static constexpr double seg_pres_lower_limit = 0.;
 };
 
 }

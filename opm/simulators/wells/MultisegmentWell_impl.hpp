@@ -689,8 +689,7 @@ namespace Opm
                                               relaxation_factor,
                                               dFLimit,
                                               stop_or_zero_rate_target,
-                                              max_pressure_change,
-                                              deferred_logger);
+                                              max_pressure_change);
 
         this->primary_variables_.copyToWellState(*this, getRefDensity(), stop_or_zero_rate_target,
                                                  well_state, summary_state, deferred_logger);
@@ -1762,6 +1761,7 @@ namespace Opm
             const std::string message = fmt::format("   Well {} did not converge in {} inner iterations ("
                                                     "{} control/status switches).", this->name(), it, switch_count);
             deferred_logger.debug(message);
+            this->primary_variables_.outputLowLimitPressureSegments(deferred_logger);
         }
 
         return converged;
