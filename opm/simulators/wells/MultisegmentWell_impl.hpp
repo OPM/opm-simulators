@@ -1761,6 +1761,7 @@ namespace Opm
             const std::string message = fmt::format("   Well {} did not converge in {} inner iterations ("
                                                     "{} control/status switches).", this->name(), it, switch_count);
             deferred_logger.debug(message);
+            this->primary_variables_.outputLowLimitPressureSegments(deferred_logger);
         }
 
         return converged;

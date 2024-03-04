@@ -23,7 +23,6 @@
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
-#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/material/fluidsystems/BlackOilDefaultIndexTraits.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
@@ -38,7 +37,10 @@
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <fmt/format.h>
+
 #include <algorithm>
+#include <limits>
 
 namespace Opm {
 
@@ -183,10 +185,8 @@ updateNewton(const BVectorWell& dwells,
             const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
             // some cases might have defaulted bhp constraint of 1 bar, we use a slightly smaller value as the bhp lower limit for Newton update
             // so that bhp constaint can be an active control when needed.
-            // TODO: we might need to distinguish SPres of the top segment from the SPres of the other segments, since only the top segment
-            // is involved in the well constraints/control checking
-            constexpr double spres_lower_limit = 1. * unit::barsa - 1. * unit::Pascal;
-            value_[seg][SPres] = std::max(old_primary_variables[seg][SPres] - dx_limited, spres_lower_limit);
+            const double lower_limit = (seg == 0) ? bhp_lower_limit : seg_pres_lower_limit;
+            value_[seg][SPres] = std::max(old_primary_variables[seg][SPres] - dx_limited, lower_limit);
         }
 
         // update the total rate // TODO: should we have a limitation of the total rate change?
@@ -257,7 +257,7 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
             if (scale > 0.) {
                 fractions[p] /= scale;
             } else {
-                // this should only happens to injection wells
+                // this should only happen to injection wells
                 fractions[p] = 0.;
             }
         }
@@ -626,6 +626,27 @@ MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
 getWQTotal() const
 {
     return evaluation_[0][WQTotal];
+}
+
+template<class FluidSystem, class Indices, class Scalar>
+void
+MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>::
+outputLowLimitPressureSegments(DeferredLogger& deferred_logger) const
+{
+    std::string msg = fmt::format("outputting the segments for well {} with pressures close to the lower limits "
+                                  "for debugging purpose \n", this->well_.name());
+    bool any_seg_pressure_close_to_limit = false;
+    for (std::size_t seg = 0; seg < value_.size(); ++seg) {
+        const double lower_limit = (seg == 0) ? bhp_lower_limit : seg_pres_lower_limit;
+        const double pres = Opm::getValue(this->getSegmentPressure(seg));
+        if (pres <= std::numeric_limits<double>::epsilon() + lower_limit) {
+            any_seg_pressure_close_to_limit = true;
+            fmt::format_to(std::back_inserter(msg), "seg {} : pressure {}\n", seg, pres / unit::barsa);
+        }
+    }
+    if (any_seg_pressure_close_to_limit) {
+        deferred_logger.debug(msg);
+    }
 }
 
 #define INSTANCE(...) \
