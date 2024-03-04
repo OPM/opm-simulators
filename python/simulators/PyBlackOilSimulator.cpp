@@ -27,6 +27,9 @@
 //#include <opm/simulators/flow/python/PyFluidState.hpp>
 #include <opm/simulators/flow/python/PyMaterialState.hpp>
 #include <opm/simulators/flow/python/PyBlackOilSimulator.hpp>
+// NOTE: This file will be generated at compile time and placed in the build directory
+// See python/generate_docstring_hpp.py, and python/simulators/CMakeLists.txt for details
+#include <PyBlackOilSimulatorDoc.hpp>
 // NOTE: EXIT_SUCCESS, EXIT_FAILURE is defined in cstdlib
 #include <cstdlib>
 #include <stdexcept>
@@ -158,14 +161,14 @@ void PyBlackOilSimulator::setPorosity( py::array_t<double,
 void
 PyBlackOilSimulator::
 setPrimaryVariable(
-    const std::string &idx_name,
+    const std::string &variable,
     py::array_t<double,
     py::array::c_style | py::array::forcecast> array
 )
 {
     std::size_t size_ = array.size();
     const double *data = array.data();
-    getFluidState().setPrimaryVariable(idx_name, data, size_);
+    getFluidState().setPrimaryVariable(variable, data, size_);
 }
 
 int PyBlackOilSimulator::step()
@@ -272,36 +275,39 @@ PyBlackOilSimulator::getMaterialState() const
 // Exported functions
 void export_PyBlackOilSimulator(py::module& m)
 {
+    using namespace Opm::Pybind::DocStrings;
+
     py::class_<PyBlackOilSimulator>(m, "BlackOilSimulator")
-        .def(py::init< const std::string& >())
+        .def(py::init<const std::string&>(),
+             PyBlackOilSimulator_filename_constructor_docstring)
         .def(py::init<
-            std::shared_ptr<Opm::Deck>,
-            std::shared_ptr<Opm::EclipseState>,
-            std::shared_ptr<Opm::Schedule>,
-            std::shared_ptr<Opm::SummaryConfig> >())
-        .def("advance", &PyBlackOilSimulator::advance, py::arg("report_step"))
-        .def("current_step", &PyBlackOilSimulator::currentStep)
-        .def("get_cell_volumes", &PyBlackOilSimulator::getCellVolumes,
-            py::return_value_policy::copy)
-        .def("get_dt", &PyBlackOilSimulator::getDT)
+             std::shared_ptr<Opm::Deck>,
+             std::shared_ptr<Opm::EclipseState>,
+             std::shared_ptr<Opm::Schedule>,
+             std::shared_ptr<Opm::SummaryConfig>>(),
+             PyBlackOilSimulator_objects_constructor_docstring)
+        .def("advance", &PyBlackOilSimulator::advance, advance_docstring, py::arg("report_step"))
+        .def("check_simulation_finished", &PyBlackOilSimulator::checkSimulationFinished,
+             checkSimulationFinished_docstring)
+        .def("current_step", &PyBlackOilSimulator::currentStep, currentStep_docstring)
+        .def("get_cell_volumes", &PyBlackOilSimulator::getCellVolumes, getCellVolumes_docstring)
+        .def("get_dt", &PyBlackOilSimulator::getDT, getDT_docstring)
         .def("get_fluidstate_variable", &PyBlackOilSimulator::getFluidStateVariable,
             py::return_value_policy::copy, py::arg("name"))
-        .def("get_porosity", &PyBlackOilSimulator::getPorosity,
-            py::return_value_policy::copy)
+        .def("get_porosity", &PyBlackOilSimulator::getPorosity, getPorosity_docstring)
         .def("get_primary_variable_meaning", &PyBlackOilSimulator::getPrimaryVarMeaning,
             py::return_value_policy::copy, py::arg("variable"))
         .def("get_primary_variable_meaning_map", &PyBlackOilSimulator::getPrimaryVarMeaningMap,
             py::return_value_policy::copy, py::arg("variable"))
         .def("get_primary_variable", &PyBlackOilSimulator::getPrimaryVariable,
             py::return_value_policy::copy, py::arg("variable"))
-        .def("run", &PyBlackOilSimulator::run)
-        .def("set_porosity", &PyBlackOilSimulator::setPorosity)
+        .def("run", &PyBlackOilSimulator::run, run_docstring)
+        .def("set_porosity", &PyBlackOilSimulator::setPorosity, setPorosity_docstring, py::arg("array"))
         .def("set_primary_variable", &PyBlackOilSimulator::setPrimaryVariable,
-            py::arg("idx_name"), py::arg("value"))
-        .def("current_step", &PyBlackOilSimulator::currentStep)
-        .def("step", &PyBlackOilSimulator::step)
-        .def("step_cleanup", &PyBlackOilSimulator::stepCleanup)
-        .def("step_init", &PyBlackOilSimulator::stepInit);
+            py::arg("variable"), py::arg("value"))
+        .def("step", &PyBlackOilSimulator::step, step_docstring)
+        .def("step_cleanup", &PyBlackOilSimulator::stepCleanup, stepCleanup_docstring)
+        .def("step_init", &PyBlackOilSimulator::stepInit, stepInit_docstring);
 }
 
 } // namespace Opm::Pybind
