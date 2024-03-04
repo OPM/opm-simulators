@@ -154,7 +154,6 @@ protected:
     const GridView& gridView_;
     const Schedule& schedule_;
     const EclipseState& eclState_;
-    const SummaryConfig& summaryConfig_;
     std::unique_ptr<EclipseIO> eclIO_;
     std::unique_ptr<TaskletRunner> taskletRunner_;
     Scalar restartTimeStepSize_;

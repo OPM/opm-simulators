@@ -184,8 +184,8 @@ GenericOutputBlackoilModule(const EclipseState& eclState,
                             bool enableMICP)
     : eclState_(eclState)
     , schedule_(schedule)
-    , summaryConfig_(summaryConfig)
     , summaryState_(summaryState)
+    , summaryConfig_(summaryConfig)
     , interRegionFlows_(numCells(eclState),
                         defineInterRegionFlowArrays(eclState, summaryConfig),
                         declaredMaxRegionID(eclState.runspec()))

@@ -36,6 +36,11 @@
 
 #include <opm/output/eclipse/RestartValue.hpp>
 
+#if HAVE_MPI
+#include <mpi.h>
+#include <opm/simulators/utils/MPISerializer.hpp>
+#endif
+
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/EclGenericWriter.hpp>
@@ -151,10 +156,29 @@ public:
                    EWOMS_GET_PARAM(TypeTag, bool, EnableEsmry))
         , simulator_(simulator)
     {
-        this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
-            (simulator, this->collectOnIORank_);
-            
-        rank_ = simulator_.vanguard().grid().comm().rank() ;
+#if HAVE_MPI
+        if (this->simulator_.vanguard().grid().comm().size() > 1) {
+            auto smryCfg = (this->simulator_.vanguard().grid().comm().rank() == 0)
+                ? this->eclIO_->finalSummaryConfig()
+                : SummaryConfig{};
+
+            auto serialiser = Parallel::MpiSerializer {
+                this->simulator_.vanguard().grid().comm()
+            };
+
+            serialiser.broadcast(0, smryCfg);
+
+            this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+                (simulator, smryCfg, this->collectOnIORank_);
+        }
+        else
+#endif
+        {
+            this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+                (simulator, this->eclIO_->finalSummaryConfig(), this->collectOnIORank_);
+        }
+
+        this->rank_ = this->simulator_.vanguard().grid().comm().rank();
     }
 
     ~EclWriter()

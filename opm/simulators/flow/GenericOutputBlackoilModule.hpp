@@ -24,6 +24,7 @@
 #define OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/output/data/Wells.hpp>
 #include <opm/output/eclipse/Inplace.hpp>
@@ -376,8 +377,9 @@ protected:
 
     const EclipseState& eclState_;
     const Schedule& schedule_;
-    const SummaryConfig& summaryConfig_;
     const SummaryState& summaryState_;
+
+    SummaryConfig summaryConfig_;
 
     InterRegFlowMap interRegionFlows_;
     LogOutputHelper<Scalar> logOutput_;
