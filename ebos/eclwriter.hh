@@ -114,7 +114,7 @@ class EclWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::Grid>
     using ElementMapper = GetPropType<TypeTag, Properties::ElementMapper>;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
     using BaseType = EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>;
-    
+
     typedef Dune::MultipleCodimMultipleGeomTypeMapper< GridView > VertexMapper;
 
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
@@ -133,7 +133,7 @@ public:
 
         EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEsmry,
                              "Write ESMRY file for fast loading of summary data.");
-                                                        
+
     }
 
     // The Simulator object should preferably have been const - the
@@ -158,7 +158,7 @@ public:
     {
         this->eclOutputModule_ = std::make_unique<EclOutputBlackOilModule<TypeTag>>
             (simulator, this->collectToIORank_);
-            
+
         rank_ = simulator_.vanguard().grid().comm().rank() ;
     }
 
@@ -177,7 +177,7 @@ public:
     {
         OPM_TIMEBLOCK(evalSummaryState);
         const int reportStepNum = simulator_.episodeIndex() + 1;
-        
+
         /*
           The summary data is not evaluated for timestep 0, that is
           implemented with a:
@@ -195,7 +195,7 @@ public:
           "Correct" in this context means unchanged behavior, might very
           well be more correct to actually remove this if test.
         */
-        
+
         if (reportStepNum == 0)
             return;
 
@@ -248,22 +248,22 @@ public:
             OPM_END_PARALLEL_TRY_CATCH("Collect to I/O rank: ",
                                        this->simulator_.vanguard().grid().comm());
         }
-        
+
 
         std::map<std::string, double> miscSummaryData;
         std::map<std::string, std::vector<double>> regionData;
         Inplace inplace;
-        
+
         {
             OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
 
             inplace = eclOutputModule_->calc_inplace(miscSummaryData, regionData, simulator_.gridView().comm());
-            
+
             if (this->collectToIORank_.isIORank()){
                 inplace_ = inplace;
             }
         }
-        
+
         // Add TCPU
         if (totalCpuTime != 0.0) {
             miscSummaryData["TCPU"] = totalCpuTime;
@@ -338,7 +338,7 @@ public:
 #pragma omp parallel for
 #endif
         for (int dofIdx = 0; dofIdx < num_interior; ++dofIdx) {
-            const auto& intQuants = *simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0);
+            const auto& intQuants = simulator_.model().intensiveQuantities(dofIdx, /*timeIdx=*/0);
             const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
 
             this->eclOutputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);
@@ -349,15 +349,15 @@ public:
         Inplace inplace;
         {
             OPM_TIMEBLOCK(outputFipLogAndFipresvLog);
-            
+
             boost::posix_time::ptime start_time = boost::posix_time::from_time_t(simulator_.vanguard().schedule().getStartTime());
 
             inplace = eclOutputModule_->calc_inplace(miscSummaryData, regionData, simulator_.gridView().comm());
 
             if (this->collectToIORank_.isIORank()){
                 inplace_ = inplace;
-                
-                eclOutputModule_->outputFipAndResvLog(inplace_, 0, 0.0, start_time, 
+
+                eclOutputModule_->outputFipAndResvLog(inplace_, 0, 0.0, start_time,
                                                      false, simulator_.gridView().comm());
             }
         }
@@ -387,24 +387,24 @@ public:
 
         // data::Solution localCellData = {};
         if (! isSubStep) {
-            
+
             auto rstep = timer.reportStepNum();
-            
+
             if ((rstep > 0) && (this->collectToIORank_.isIORank())){
 
                 eclOutputModule_->outputFipAndResvLog(inplace_, rstep, timer.simulationTimeElapsed(),
-                                                     timer.currentDateTime(), false, simulator_.gridView().comm()); 
+                                                     timer.currentDateTime(), false, simulator_.gridView().comm());
 
 
-                eclOutputModule_->outputTimeStamp("WELLS", timer.simulationTimeElapsed(), rstep, timer.currentDateTime()); 
-                                                             
+                eclOutputModule_->outputTimeStamp("WELLS", timer.simulationTimeElapsed(), rstep, timer.currentDateTime());
+
                 eclOutputModule_->outputProdLog(reportStepNum);
                 eclOutputModule_->outputInjLog(reportStepNum);
                 eclOutputModule_->outputCumLog(reportStepNum);
 
                 OpmLog::note("");   // Blank line after all reports.
             }
-            
+
             if (localCellData.empty()) {
                 this->eclOutputModule_->assignToSolution(localCellData);
             }
@@ -651,7 +651,7 @@ private:
 #pragma omp parallel for
 #endif
             for (int dofIdx = 0; dofIdx < num_interior; ++dofIdx) {
-                const auto& intQuants = *simulator_.model().cachedIntensiveQuantities(dofIdx, /*timeIdx=*/0);
+                const auto& intQuants = simulator_.model().intensiveQuantities(dofIdx, /*timeIdx=*/0);
                 const auto totVolume = simulator_.model().dofTotalVolume(dofIdx);
 
                 this->eclOutputModule_->updateFluidInPlace(dofIdx, intQuants, totVolume);

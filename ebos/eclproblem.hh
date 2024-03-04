@@ -2,7 +2,7 @@
 // vi: set et ts=4 sw=4 sts=4:
 /*
   Copyright 2023 INRIA
-  
+
   This file is part of the Open Porous Media project (OPM).
 
   OPM is free software: you can redistribute it and/or modify
@@ -737,10 +737,10 @@ public:
         }
 
         bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
-        
+
         data::Solution localCellData = {};
 #if HAVE_DAMARIS
-        // N.B. the Damaris output has to be done before the ECL output as the ECL one 
+        // N.B. the Damaris output has to be done before the ECL output as the ECL one
         // does all kinds of std::move() relocation of data
         if (enableDamarisOutput_) {
             damarisWriter_->writeOutput(localCellData, isSubStep) ;
@@ -1402,10 +1402,10 @@ public:
         this->simulator().vanguard().cartesianCoordinate(globalDofIdx, ijk);
 
         if (source.hasSource(ijk)) {
-            const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);  
+            const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
             static std::array<SourceComponent, 3> sc_map = {SourceComponent::WATER, SourceComponent::OIL, SourceComponent::GAS};
-            static std::array<int, 3> phidx_map = {FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx}; 
-            static std::array<int, 3> cidx_map = {waterCompIdx, oilCompIdx, gasCompIdx}; 
+            static std::array<int, 3> phidx_map = {FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx};
+            static std::array<int, 3> cidx_map = {waterCompIdx, oilCompIdx, gasCompIdx};
 
             for (unsigned i = 0; i < phidx_map.size(); ++i) {
                 const auto phaseIdx = phidx_map[i];
@@ -1413,7 +1413,7 @@ public:
                 const auto compIdx = cidx_map[i];
                 if (!FluidSystem::phaseIsActive(phaseIdx)) {
                     continue;
-                } 
+                }
                 Scalar mass_rate = source.rate({ijk, sourceComp}) / this->model().dofTotalVolume(globalDofIdx);
                 if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
                     mass_rate /= FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
@@ -1588,7 +1588,7 @@ public:
                         //single (water) phase
                         fluidState.setPressure(phaseIdx, pressure);
                 }
-                
+
                 double temperature = initialFluidStates_[globalDofIdx].temperature(0); // we only have one temperature
                 const auto temperature_input = bc.temperature;
                 if(temperature_input)
@@ -1717,7 +1717,7 @@ public:
         OPM_TIMEBLOCK_LOCAL(permFactTransMultiplier);
         if (!enableSaltPrecipitation)
             return 1.0;
-        
+
         const auto& fs = intQuants.fluidState();
         unsigned tableIdx = fs.pvtRegionIndex();
         LhsEval porosityFactor = decay<LhsEval>(1. - fs.saltSaturation());
@@ -1733,12 +1733,12 @@ public:
     LhsEval wellTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
         OPM_TIMEBLOCK_LOCAL(wellTransMultiplier);
-        
+
         bool implicit = !EWOMS_GET_PARAM(TypeTag, bool, ExplicitRockCompaction);
         double trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<double>(intQuants, elementIdx)
                                      : this->simulator().problem().getRockCompTransMultVal(elementIdx);
         trans_mult *= this->simulator().problem().template permFactTransMultiplier<double>(intQuants);
-    
+
         return trans_mult;
     }
 
@@ -1855,7 +1855,7 @@ protected:
 #pragma omp parallel for
 #endif
         for (unsigned dofIdx = 0; dofIdx < numGridDof; ++dofIdx) {
-                const auto& iq = *model.cachedIntensiveQuantities(dofIdx, /*timeIdx=*/ 0);
+                const auto& iq = model.intensiveQuantities(dofIdx, /*timeIdx=*/ 0);
                 func(dofIdx, iq);
         }
         OPM_END_PARALLEL_TRY_CATCH(failureMsg, vanguard.grid().comm());
@@ -2714,7 +2714,7 @@ private:
         std::size_t numGridDof = this->model().numGridDof();
         this->rockCompTransMultVal_.resize(numGridDof, 1.0);
         for (std::size_t elementIdx = 0; elementIdx < numGridDof; ++elementIdx) {
-            const auto& iq = *model.cachedIntensiveQuantities(elementIdx, /*timeIdx=*/ 0);
+            const auto& iq = model.intensiveQuantities(elementIdx, /*timeIdx=*/ 0);
             Scalar trans_mult = computeRockCompTransMultiplier_<Scalar>(iq, elementIdx);
             this->rockCompTransMultVal_[elementIdx] = trans_mult;
         }
@@ -2776,11 +2776,11 @@ private:
 
     bool enableEclOutput_;
     std::unique_ptr<EclWriterType> eclWriter_;
-    
+
 #if HAVE_DAMARIS
     bool enableDamarisOutput_ = false ;
     std::unique_ptr<DamarisWriterType> damarisWriter_;
-#endif 
+#endif
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
