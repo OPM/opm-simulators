@@ -121,9 +121,9 @@ add_test_compare_parallel_simulation(CASENAME 3d_tran_operator
                                      FILENAME 3D_TRAN_OPERATOR
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${rel_tol_parallel}
+                                     REL_TOL 0.03
                                      DIR parallel_fieldprops
-                                     TEST_ARGS --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
+                                     TEST_ARGS --enable-tuning=true --ecl-enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
 
 add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
                                      FILENAME 3D_2AQU_NUM
@@ -131,15 +131,15 @@ add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_2aqu
                                      ABS_TOL 0.17
                                      REL_TOL ${coarse_rel_tol_parallel}
                                      DIR aquifer-num
-                                     TEST_ARGS --tolerance-cnv=0.000003 --time-step-control=pid --linear-solver=cpr_trueimpes)
+                                     TEST_ARGS --tolerance-cnv=0.000003 --time-step-control=pid --linear-solver=cpr_trueimpes --ecl-enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
 
 add_test_compare_parallel_simulation(CASENAME aquflux_01
                                      FILENAME AQUFLUX-01
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol}
-                                     REL_TOL ${coarse_rel_tol_parallel}
+                                     REL_TOL 0.04
                                      DIR aquifers
-                                     TEST_ARGS --enable-tuning=true)
+                                     TEST_ARGS --enable-tuning=true --ecl-enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
 
 add_test_compare_parallel_simulation(CASENAME aquflux_02
                                      FILENAME AQUFLUX-02
@@ -161,9 +161,9 @@ add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      FILENAME 3D_1AQU_3CELLS
                                      SIMULATOR flow
                                      ABS_TOL ${abs_tol_parallel}
-                                     REL_TOL ${coarse_rel_tol_parallel}
+                                     REL_TOL 0.05
                                      DIR aquifer-num
-                                     TEST_ARGS --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes)
+                                     TEST_ARGS --enable-tuning=true --tolerance-cnv=0.00003 --time-step-control=pid --linear-solver=cpr_trueimpes --ecl-enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
 
 add_test_compare_parallel_simulation(CASENAME actionx_m1
                                      FILENAME ACTIONX_M1
