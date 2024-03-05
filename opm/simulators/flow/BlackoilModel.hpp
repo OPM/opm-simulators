@@ -705,7 +705,7 @@ namespace Opm {
             {
                 OPM_TIMEBLOCK(invalidateAndUpdateIntensiveQuantities);
                 simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
-                simulator_.problem().eclWriter()->mutableEclOutputModule().invalidateLocalData();
+                simulator_.problem().eclWriter()->mutableOutputModule().invalidateLocalData();
             }
         }
 

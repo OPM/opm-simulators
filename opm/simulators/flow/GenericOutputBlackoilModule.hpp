@@ -18,10 +18,10 @@
 */
 /*!
  * \file
- * \copydoc Opm::EclOutputBlackOilModule
+ * \copydoc Opm::OutputBlackOilModule
  */
-#ifndef EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
-#define EWOMS_ECL_GENERIC_OUTPUT_BLACK_OIL_MODULE_HH
+#ifndef OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
+#define OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
 
 #include <opm/input/eclipse/EclipseState/Grid/FaceDir.hpp>
 
@@ -54,8 +54,11 @@ class SummaryConfigNode;
 class SummaryState;
 
 template<class FluidSystem, class Scalar>
-class EclGenericOutputBlackoilModule {
+class GenericOutputBlackoilModule {
 public:
+    // Virtual destructor for safer inheritance.
+    virtual ~GenericOutputBlackoilModule();
+
      Scalar* getPRESSURE_ptr(void) {
         return (this->fluidPressure_.data()) ;
     };
@@ -285,9 +288,6 @@ public:
         cnvData_ = data;
     }
 
-    // Virtual destructor for safer inheritance.
-    virtual ~EclGenericOutputBlackoilModule();
-
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
@@ -313,21 +313,21 @@ protected:
     enum { waterCompIdx = FluidSystem::waterCompIdx };
     using Dir = FaceDir::DirEnum;
 
-    EclGenericOutputBlackoilModule(const EclipseState& eclState,
-                                   const Schedule& schedule,
-                                   const SummaryConfig& summaryConfig,
-                                   const SummaryState& summaryState,
-                                   const std::string& moduleVersionName,
-                                   bool enableEnergy,
-                                   bool enableTemperature,
-                                   bool enableMech,
-                                   bool enableSolvent,
-                                   bool enablePolymer,
-                                   bool enableFoam,
-                                   bool enableBrine,
-                                   bool enableSaltPrecipitation,
-                                   bool enableExtbo,
-                                   bool enableMICP);
+    GenericOutputBlackoilModule(const EclipseState& eclState,
+                                const Schedule& schedule,
+                                const SummaryConfig& summaryConfig,
+                                const SummaryState& summaryState,
+                                const std::string& moduleVersionName,
+                                bool enableEnergy,
+                                bool enableTemperature,
+                                bool enableMech,
+                                bool enableSolvent,
+                                bool enablePolymer,
+                                bool enableFoam,
+                                bool enableBrine,
+                                bool enableSaltPrecipitation,
+                                bool enableExtbo,
+                                bool enableMICP);
 
     void doAllocBuffers(unsigned bufferSize,
                         unsigned reportStepNum,
@@ -525,4 +525,4 @@ protected:
 
 } // namespace Opm
 
-#endif
+#endif // OPM_GENERIC_OUTPUT_BLACK_OIL_MODULE_HPP
