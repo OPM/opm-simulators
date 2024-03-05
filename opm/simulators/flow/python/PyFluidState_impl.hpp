@@ -121,11 +121,9 @@ getFluidStateVariable(const std::string &name) const
      *  model.numGridDof()
      */
     ElementContext elem_ctx(*this->ebos_simulator_);
-    ElementIterator elem_itr = grid_view.template begin</*codim=*/0>();
     const ElementIterator& elem_end_itr = grid_view.template end</*codim=*/0>();
     auto var_type = getVariableType_(name);
-    for (; elem_itr != elem_end_itr; ++elem_itr) {
-        const Element& elem = *elem_itr;
+    for (const auto& elem : elements(grid_view, Dune::Partitions::interior)) {
         elem_ctx.updatePrimaryStencil(elem);
         elem_ctx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
         for (unsigned dof_idx = 0; dof_idx < elem_ctx.numPrimaryDof(/*timeIdx=*/0); ++dof_idx) {
