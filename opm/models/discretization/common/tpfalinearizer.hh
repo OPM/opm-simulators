@@ -541,8 +541,8 @@ private:
         // If FLOWS/FLORES is set in any RPTRST in the schedule, then we initializate the sparse tables
         // For now, do the same also if any block flows are requested (TODO: only save requested cells...)
         // If DISPERC is in the deck, we initialize the sparse table here as well.
-        const bool anyFlows = simulator_().problem().eclWriter()->eclOutputModule().anyFlows();
-        const bool anyFlores = simulator_().problem().eclWriter()->eclOutputModule().anyFlores();                         
+        const bool anyFlows = simulator_().problem().eclWriter()->outputModule().anyFlows();
+        const bool anyFlores = simulator_().problem().eclWriter()->outputModule().anyFlores();
         const bool enableDispersion = simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion();
         if (((!anyFlows || !flowsInfo_.empty()) && (!anyFlores || !floresInfo_.empty())) && !enableDispersion) {
             return;
@@ -643,9 +643,9 @@ public:
 
     void updateFlowsInfo() {
         OPM_TIMEBLOCK(updateFlows);
-        const bool& enableFlows = simulator_().problem().eclWriter()->eclOutputModule().hasFlows() ||
-                                    simulator_().problem().eclWriter()->eclOutputModule().hasBlockFlows();
-        const bool& enableFlores = simulator_().problem().eclWriter()->eclOutputModule().hasFlores();
+        const bool& enableFlows = simulator_().problem().eclWriter()->outputModule().hasFlows() ||
+                                    simulator_().problem().eclWriter()->outputModule().hasBlockFlows();
+        const bool& enableFlores = simulator_().problem().eclWriter()->outputModule().hasFlores();
         if (!enableFlows && !enableFlores) {
             return;
         }
