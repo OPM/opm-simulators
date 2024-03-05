@@ -406,7 +406,7 @@ namespace Opm
                     auto& perf_rate_solvent = perf_data.solvent_rates;
                     perf_rate_solvent[perf] = cq_s[componentIdx].value();
                 } else {
-                    perf_rates[perf*np + this->ebosCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
+                    perf_rates[perf*np + this->modelCompIdxToFlowCompIdx(componentIdx)] = cq_s[componentIdx].value();
                 }
             }
 
@@ -897,7 +897,7 @@ namespace Opm
 
         for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx){
             EvalWell comp_rate = this->primary_variables_.getQs(comp_idx);
-            const int idx = this->ebosCompIdxToFlowCompIdx(comp_idx);
+            const int idx = this->modelCompIdxToFlowCompIdx(comp_idx);
             for (size_t pvIdx = 0; pvIdx < nEq; ++pvIdx) {
                 // well primary variable derivatives in EvalWell start at position Indices::numEq 
                 ws.implicit_ipr_b[idx] -= x_well[0][pvIdx]*comp_rate.derivative(pvIdx+Indices::numEq);
@@ -1459,7 +1459,7 @@ namespace Opm
                             cq_s, perf_rates, deferred_logger);
 
             for(int p = 0; p < np; ++p) {
-                well_flux[this->ebosCompIdxToFlowCompIdx(p)] += cq_s[p];
+                well_flux[this->modelCompIdxToFlowCompIdx(p)] += cq_s[p];
             }
 
             // the solvent contribution is added to the gas potentials
@@ -1631,7 +1631,7 @@ namespace Opm
         well_potentials.resize(np, 0.0);
         for (int compIdx = 0; compIdx < this->num_components_; ++compIdx) {
             const EvalWell rate = well_copy.primary_variables_.getQs(compIdx);
-            well_potentials[this->ebosCompIdxToFlowCompIdx(compIdx)] = rate.value();
+            well_potentials[this->modelCompIdxToFlowCompIdx(compIdx)] = rate.value();
         }
         return converged;
     }

@@ -1429,12 +1429,12 @@ namespace Opm
             const double well_tw_fraction = this->well_index_[perf] / total_tw;
             double total_mobility = 0.0;
             for (int p = 0; p < np; ++p) {
-                int ebosPhaseIdx = this->flowPhaseToEbosPhaseIdx(p);
-                total_mobility += fs.invB(ebosPhaseIdx).value() * intQuants.mobility(ebosPhaseIdx).value();
+                int modelPhaseIdx = this->flowPhaseToModelPhaseIdx(p);
+                total_mobility += fs.invB(modelPhaseIdx).value() * intQuants.mobility(modelPhaseIdx).value();
             }
             for (int p = 0; p < np; ++p) {
-                int ebosPhaseIdx = this->flowPhaseToEbosPhaseIdx(p);
-                scaling_factor[p] += well_tw_fraction * fs.invB(ebosPhaseIdx).value() * intQuants.mobility(ebosPhaseIdx).value() / total_mobility;
+                int modelPhaseIdx = this->flowPhaseToModelPhaseIdx(p);
+                scaling_factor[p] += well_tw_fraction * fs.invB(modelPhaseIdx).value() * intQuants.mobility(modelPhaseIdx).value() / total_mobility;
             }
         }
         return scaling_factor;
@@ -1472,18 +1472,18 @@ namespace Opm
             // No nonzero rates.
             // Use the computed rate directly
             for (int p = 0; p < this->number_of_phases_; ++p) {
-               ws.surface_rates[p] = well_q_s[this->flowPhaseToEbosCompIdx(p)];
+               ws.surface_rates[p] = well_q_s[this->flowPhaseToModelCompIdx(p)];
             }
             return;
         }
 
         // Set the currently-zero phase flows to be nonzero in proportion to well_q_s.
         const double initial_nonzero_rate = ws.surface_rates[nonzero_rate_index];
-        const int comp_idx_nz = this->flowPhaseToEbosCompIdx(nonzero_rate_index);
+        const int comp_idx_nz = this->flowPhaseToModelCompIdx(nonzero_rate_index);
         if (std::abs(well_q_s[comp_idx_nz]) > floating_point_error_epsilon) {
             for (int p = 0; p < this->number_of_phases_; ++p) {
                 if (p != nonzero_rate_index) {
-                    const int comp_idx = this->flowPhaseToEbosCompIdx(p);
+                    const int comp_idx = this->flowPhaseToModelCompIdx(p);
                     double& rate = ws.surface_rates[p];
                     rate = (initial_nonzero_rate / well_q_s[comp_idx_nz]) * (well_q_s[comp_idx]);
                 }
@@ -1792,8 +1792,8 @@ namespace Opm
             // Note: E100's notion of PI value phase mobility includes
             // the reciprocal FVF.
             const auto connMob =
-                mobility[this->flowPhaseToEbosCompIdx(p)]
-                    * fs.invB(this->flowPhaseToEbosPhaseIdx(p)).value();
+                mobility[this->flowPhaseToModelCompIdx(p)]
+                    * fs.invB(this->flowPhaseToModelPhaseIdx(p)).value();
 
             connPI[p] = connPICalc(connMob);
         }
@@ -1845,7 +1845,7 @@ namespace Opm
         }
 
         const auto mt     = std::accumulate(mobility.begin(), mobility.end(), 0.0);
-        connII[phase_pos] = connIICalc(mt * fs.invB(this->flowPhaseToEbosPhaseIdx(phase_pos)).value());
+        connII[phase_pos] = connIICalc(mt * fs.invB(this->flowPhaseToModelPhaseIdx(phase_pos)).value());
     }
 
 } // namespace Opm

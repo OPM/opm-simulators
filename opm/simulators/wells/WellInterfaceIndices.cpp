@@ -59,7 +59,7 @@ WellInterfaceIndices(const Well& well,
 template<class FluidSystem, class Indices, class Scalar>
 int
 WellInterfaceIndices<FluidSystem,Indices,Scalar>::
-flowPhaseToEbosCompIdx(const int phaseIdx) const
+flowPhaseToModelCompIdx(const int phaseIdx) const
 {
     const auto& pu = this->phaseUsage();
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && pu.phase_pos[Water] == phaseIdx)
@@ -76,7 +76,7 @@ flowPhaseToEbosCompIdx(const int phaseIdx) const
 template<class FluidSystem, class Indices, class Scalar>
 int
 WellInterfaceIndices<FluidSystem,Indices,Scalar>::
-ebosCompIdxToFlowCompIdx(const unsigned compIdx) const
+modelCompIdxToFlowCompIdx(const unsigned compIdx) const
 {
     const auto& pu = this->phaseUsage();
     if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx) == compIdx)
