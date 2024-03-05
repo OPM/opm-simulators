@@ -3,7 +3,18 @@
 project = "opm.simulators"
 copyright = "2024 Equinor ASA"
 author = "Håkon Hægland"
-release = "0.1"
+
+# Function to extract release version from dune.module file
+def extract_opm_simulators_release():
+    version_file_path = '../../../dune.module'
+    with open(version_file_path, 'r') as file:
+        for line in file:
+            if line.startswith('Version:'):
+                version_string = line.split(':')[1].strip()
+                return version_string
+    return "unknown"  # Fallback version
+
+release = extract_opm_simulators_release()
 
 # -- General configuration ---------------------------------------------------
 import os
