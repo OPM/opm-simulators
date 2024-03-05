@@ -110,9 +110,6 @@ std::vector<double>
 PyFluidState<TypeTag>::
 getFluidStateVariable(const std::string &name) const
 {
-    using ElementIterator = typename GridView::template Codim<0>::Iterator;
-    using Element = typename GridView::template Codim<0>::Entity;
-
     Model &model = this->ebos_simulator_->model();
     auto size = model.numGridDof();
     std::vector<double> array(size);
@@ -121,7 +118,6 @@ getFluidStateVariable(const std::string &name) const
      *  model.numGridDof()
      */
     ElementContext elem_ctx(*this->ebos_simulator_);
-    const ElementIterator& elem_end_itr = grid_view.template end</*codim=*/0>();
     auto var_type = getVariableType_(name);
     for (const auto& elem : elements(grid_view, Dune::Partitions::interior)) {
         elem_ctx.updatePrimaryStencil(elem);
