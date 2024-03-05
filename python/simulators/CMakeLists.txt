@@ -1,6 +1,24 @@
+set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
+set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
+
+target_link_libraries( simulators PRIVATE opmsimulators )
+# Add the binary (build) directory to the include directories for the target
+
+# Set the path to the input docstrings.json file and the output .hpp file
+set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings.json")
+set(PYTHON_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyBlackOilSimulatorDoc.hpp")
 #  Note: If the new find_package(Python3) is used in the top level CMakeLists.txt, the variable
 #    ${PYTHON_EXECUTABLE} is set there to ${Python3_EXECUTABLE}
 #
+# Command to run the Python script
+add_custom_command(
+    OUTPUT ${PYTHON_DOCSTRINGS_GENERATED_HPP}
+    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
+            ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/python/generate_docstring_hpp.py
+            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_DOCSTRINGS_GENERATED_HPP}
+    DEPENDS ${PYTHON_DOCSTRINGS_FILE}
+    COMMENT "Generating PyBlackOilSimulatorDoc.hpp from JSON file"
+)
 # NOTE: The variable ${PYBIND11_SYSTEM} is set in python/CMakeLists.txt
 #   to the value "SYSTEM" or unset, depending on the current version of Pybind11.
 #   The value is then forwarded to target_include_directories(), see
@@ -12,38 +30,10 @@ pybind11_add_module(simulators ${PYBIND11_SYSTEM}
   $<TARGET_OBJECTS:moduleVersion>
   Pybind11Exporter.cpp
   PyBlackOilSimulator.cpp
+  ${PYTHON_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
   )
-
-set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
-set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
-
-target_link_libraries( simulators PRIVATE opmsimulators )
-# Add the binary (build) directory to the include directories for the target
-
-# Set the path to the input docstrings.json file and the output .hpp file
-set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings.json")
-set(PYTHON_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyBlackOilSimulatorDoc.hpp")
-# Command to run the Python script
-add_custom_command(
-    OUTPUT ${PYTHON_DOCSTRINGS_GENERATED_HPP}
-    COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-            ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/python/generate_docstring_hpp.py
-            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_DOCSTRINGS_GENERATED_HPP}
-    DEPENDS ${PYTHON_DOCSTRINGS_FILE}
-    COMMENT "Generating PyBlackOilSimulatorDoc.hpp from JSON file"
-)
-
-# Create a custom target that depends on the generated .hpp file
-add_custom_target(
-    GenerateDocHPP
-    DEPENDS ${PYTHON_DOCSTRINGS_GENERATED_HPP}
-)
-
-# Ensure that the simulator target depends on the custom target
-add_dependencies(simulators GenerateDocHPP)
 # Add the build directory where the generated hpp file will be
 #  to the include directories for the target
-message(STATUS "Include directory: ${PROJECT_BINARY_DIR}/python")
 target_include_directories(simulators PRIVATE ${PROJECT_BINARY_DIR}/python)
 
 execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "
