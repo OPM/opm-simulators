@@ -1,8 +1,4 @@
 set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
-set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
-
-target_link_libraries( simulators PRIVATE opmsimulators )
-# Add the binary (build) directory to the include directories for the target
 
 # Set the path to the input docstrings.json file and the output .hpp file
 set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings.json")
@@ -32,7 +28,13 @@ pybind11_add_module(simulators ${PYBIND11_SYSTEM}
   PyBlackOilSimulator.cpp
   ${PYTHON_DOCSTRINGS_GENERATED_HPP}  # Include the generated .hpp as a source file
   )
-# Add the build directory where the generated hpp file will be
+
+set_target_properties( simulators PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PYTHON_OPM_SIMULATORS_PACKAGE_PATH} )
+
+target_link_libraries( simulators PRIVATE opmsimulators )
+# Add the binary (build) directory to the include directories for the target
+
+  # Add the build directory where the generated hpp file will be
 #  to the include directories for the target
 target_include_directories(simulators PRIVATE ${PROJECT_BINARY_DIR}/python)
 
