@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "opm-simulators-docs"
+version = "0.1.0"
+description = """Helper scripts for generating sphinx documentation for the \
+                 opm-simulators Python bindings"""
+authors = ["Håkon Hægland <hakon.hagland@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "opm_simulators_docs", from = "src"}]
+license = "GPL3"
+repository = "https://github.com/OPM/opm-simulators"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+sphinx = "^7.2.5"
+sphinx-rtd-theme = "^1.3.0"
+click = "^8.1.7"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
