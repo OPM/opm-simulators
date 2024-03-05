@@ -378,29 +378,40 @@ public:
         // \Note: The report steps are met in any case
         // \Note: The sub stepping will require a copy of the state variables
         if (adaptiveTimeStepping_) {
-            const auto& events = schedule()[timer.currentStepNum()].events();
-            if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
-                const auto& sched_state = schedule()[timer.currentStepNum()];
-                const auto& max_next_tstep = sched_state.max_next_tstep(enableTUNING);
-                if (enableTUNING) {
-                    const auto& tuning = sched_state.tuning();
-                    adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning);
-                    // \Note: Assumes TUNING is only used with adaptive time-stepping
-                    // \Note: Need to update both solver (model) and simulator since solver is re-created each report step.
-                    solver_->model().updateTUNING(tuning);
-                    this->updateTUNING(tuning);
-                } else {
-                    adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
-                }
-            }
+            auto tuningUpdater = [enableTUNING, this, reportStep = timer.currentStepNum()]()
+            {
+                auto& schedule = this->ebosSimulator_.vanguard().schedule();
+                auto& events = this->schedule()[reportStep].events();
 
+                if (events.hasEvent(ScheduleEvents::TUNING_CHANGE)) {
+                    // Unset the event to not trigger it again on the next sub step
+                    schedule.clear_event(ScheduleEvents::TUNING_CHANGE, reportStep);
+                    const auto& sched_state = schedule[reportStep];
+                    const auto& max_next_tstep = sched_state.max_next_tstep(enableTUNING);
+                    const auto& tuning = sched_state.tuning();
+
+                    if (enableTUNING) {
+                        adaptiveTimeStepping_->updateTUNING(max_next_tstep, tuning);
+                        // \Note: Assumes TUNING is only used with adaptive time-stepping
+                        // \Note: Need to update both solver (model) and simulator since solver is re-created each report step.
+                        solver_->model().updateTUNING(tuning);
+                        this->updateTUNING(tuning);
+                    } else {
+                        this->adaptiveTimeStepping_->updateNEXTSTEP(max_next_tstep);
+                    }
+                    return max_next_tstep >0;
+                }
+                return false;
+            };
+            tuningUpdater();
+            const auto& events = schedule()[timer.currentStepNum()].events();
             bool event = events.hasEvent(ScheduleEvents::NEW_WELL) ||
                 events.hasEvent(ScheduleEvents::INJECTION_TYPE_CHANGED) ||
                 events.hasEvent(ScheduleEvents::WELL_SWITCHED_INJECTOR_PRODUCER) ||
                 events.hasEvent(ScheduleEvents::PRODUCTION_UPDATE) ||
                 events.hasEvent(ScheduleEvents::INJECTION_UPDATE) ||
                 events.hasEvent(ScheduleEvents::WELL_STATUS_CHANGE);
-            auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, nullptr);
+            auto stepReport = adaptiveTimeStepping_->step(timer, *solver_, event, nullptr, tuningUpdater);
             report_ += stepReport;
             //Pass simulation report to eclwriter for summary output
             ebosSimulator_.problem().setSimulationReport(report_);

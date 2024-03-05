@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+#include <functional>
 #include <memory>
 #include <set>
 #include <sstream>
@@ -342,13 +343,18 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
 
         /** \brief  step method that acts like the solver::step method
                     in a sub cycle of time steps
+            \param tuningUpdater Function used to update TUNING parameters before each
+                                 time step. ACTIONX might change tuning.
         */
         template <class Solver>
         SimulatorReport step(const SimulatorTimer& simulatorTimer,
                              Solver& solver,
                              const bool isEvent,
-                             const std::vector<int>* fipnum = nullptr)
+                             const std::vector<int>* fipnum = nullptr,
+                             const std::function<bool()> tuningUpdater = [](){return false;})
         {
+            // Maybe update tuning
+            tuningUpdater();
             SimulatorReport report;
             const double timestep = simulatorTimer.currentStepLength();
 
@@ -377,8 +383,14 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
 
             // sub step time loop
             while (!substepTimer.done()) {
+                // Maybe update tuning
                 // get current delta t
-                const double dt = substepTimer.currentStepLength() ;
+                auto oldValue = suggestedNextTimestep_;
+                if (tuningUpdater()) {
+                    substepTimer.setCurrentStepLength(suggestedNextTimestep_);
+                    suggestedNextTimestep_ = oldValue;
+                }
+                const double dt = substepTimer.currentStepLength();
                 if (timestepVerbose_) {
                     detail::logTimer(substepTimer);
                 }

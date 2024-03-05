@@ -62,7 +62,7 @@ namespace Opm
         return ( report_step_ == 0 ) && ( current_step_ == 0 );
     }
 
-AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
+    AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
     {
         ++current_step_;
         current_time_ += dt_;
@@ -113,6 +113,12 @@ AdaptiveSimulatorTimer& AdaptiveSimulatorTimer::operator++ ()
     {
       assert(dt_ > 0);
         return dt_;
+    }
+
+    void AdaptiveSimulatorTimer::setCurrentStepLength(double dt)
+    {
+        assert(dt > 0);
+        dt_ = dt;
     }
 
     double AdaptiveSimulatorTimer::stepLengthTaken() const
