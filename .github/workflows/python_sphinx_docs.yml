@@ -1,0 +1,48 @@
+name: Build Python Sphinx Docs and push to gh-pages
+
+on:
+    push:
+        branches: main
+        paths:
+          - 'python/**'
+          - '.github/workflows/python_sphinx_docs.yml'
+    pull_request:
+        branches: main
+        paths:
+          - 'python/**'
+          - '.github/workflows/python_sphinx_docs.yml'
+permissions:
+    contents: write
+jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - name: checkout source code
+          uses: actions/checkout@v3
+        - name: Set up Python
+          uses: actions/setup-python@v4
+          with:
+            python-version: "3.11"
+        - name: Install poetry
+          uses: abatilo/actions-poetry@v2
+        - name: Install python dependencies
+          run: |
+            cd python/sphinx_docs
+            poetry install
+        - name: Build documentation
+          run: |
+            cd python
+            mkdir gh-pages
+            touch gh-pages/.nojekyll
+            cd sphinx_docs/docs/
+            poetry run sphinx-build -b html . _build
+        - name: Copy documentation to gh-pages
+          run: |
+            cd python/sphinx_docs/docs
+            cp -r _build/* ../../gh-pages/
+        - name: Deploy documentation
+          if: ${{ github.event_name == 'push' }}
+          uses: JamesIves/github-pages-deploy-action@v4
+          with:
+            branch: gh-pages
+            folder: python/gh-pages
