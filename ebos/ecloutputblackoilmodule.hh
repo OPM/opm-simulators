@@ -1367,7 +1367,7 @@ private:
     {
         const auto& fs = intQuants.fluidState();
 
-        const double pv = totVolume * intQuants.porosity().value();
+        const double pv = totVolume * intQuants.referencePorosity();
         const auto hydrocarbon = this->hydroCarbonFraction(fs);
 
         if (! this->hydrocarbonPoreVolume_.empty()) {
