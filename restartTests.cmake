@@ -45,7 +45,7 @@ add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_1aqu
                                       REL_TOL 4.0e-3
                                       RESTART_STEP 3
                                       DIR aquifer-num
-                                      TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0.0 --ecl-enable-drift-compensation=false)
+                                      TEST_ARGS --enable-tuning=true --relaxed-max-pv-fraction=0.0 --enable-drift-compensation=false)
 
 add_test_compare_restarted_simulation(CASENAME numerical_aquifer_3d_2aqu
                                       FILENAME 3D_2AQU_NUM

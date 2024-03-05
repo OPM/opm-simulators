@@ -233,7 +233,7 @@ public:
                              "Tell the output writer to use double precision. Useful for 'perfect' restarts");
         EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,
                              "The frequencies of which time steps are serialized to disk");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EclEnableDriftCompensation,
+        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDriftCompensation,
                              "Enable partial compensation of systematic mass losses via the source term of the next time step");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
                              "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
@@ -313,7 +313,7 @@ public:
         damarisWriter_ = std::make_unique<DamarisWriterType>(simulator);
         enableDamarisOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput) ;
 #endif
-        enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EclEnableDriftCompensation);
+        enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EnableDriftCompensation);
 
         enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
 
