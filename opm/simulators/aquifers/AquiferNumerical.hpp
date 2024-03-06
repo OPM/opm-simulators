@@ -62,20 +62,20 @@ public:
 
     // Constructor
     AquiferNumerical(const SingleNumericalAquifer& aquifer,
-                     const Simulator& ebos_simulator)
-        : AquiferInterface<TypeTag>(aquifer.id(), ebos_simulator)
+                     const Simulator& simulator)
+        : AquiferInterface<TypeTag>(aquifer.id(), simulator)
         , flux_rate_      (0.0)
         , cumulative_flux_(0.0)
         , init_pressure_  (aquifer.numCells(), 0.0)
     {
-        this->cell_to_aquifer_cell_idx_.resize(this->ebos_simulator_.gridView().size(/*codim=*/0), -1);
+        this->cell_to_aquifer_cell_idx_.resize(this->simulator_.gridView().size(/*codim=*/0), -1);
 
         auto aquifer_on_process = false;
         for (std::size_t idx = 0; idx < aquifer.numCells(); ++idx) {
             const auto* cell = aquifer.getCellPrt(idx);
 
             // Due to parallelisation, the cell might not exist in the current process
-            const int compressed_idx = ebos_simulator.vanguard().compressedIndexForInterior(cell->global_index);
+            const int compressed_idx = simulator.vanguard().compressedIndexForInterior(cell->global_index);
             if (compressed_idx >= 0) {
                 this->cell_to_aquifer_cell_idx_[compressed_idx] = idx;
                 aquifer_on_process = true;
@@ -87,9 +87,9 @@ public:
         }
     }
 
-    static AquiferNumerical serializationTestObject(const Simulator& ebos_simulator)
+    static AquiferNumerical serializationTestObject(const Simulator& simulator)
     {
-        AquiferNumerical result({}, ebos_simulator);
+        AquiferNumerical result({}, simulator);
         result.flux_rate_ = 1.0;
         result.cumulative_flux_ = 2.0;
         result.init_pressure_ = {3.0, 4.0};
@@ -124,7 +124,7 @@ public:
     {
         this->pressure_ = this->calculateAquiferPressure();
         this->flux_rate_ = this->calculateAquiferFluxRate();
-        this->cumulative_flux_ += this->flux_rate_ * this->ebos_simulator_.timeStepSize();
+        this->cumulative_flux_ += this->flux_rate_ * this->simulator_.timeStepSize();
     }
 
     data::AquiferData aquiferData() const override
@@ -185,9 +185,9 @@ public:
 private:
     void checkConnectsToReservoir()
     {
-        ElementContext elem_ctx(this->ebos_simulator_);
-        auto elemIt = std::find_if(this->ebos_simulator_.gridView().template begin</*codim=*/0>(),
-                                   this->ebos_simulator_.gridView().template end</*codim=*/0>(),
+        ElementContext elem_ctx(this->simulator_);
+        auto elemIt = std::find_if(this->simulator_.gridView().template begin</*codim=*/0>(),
+                                   this->simulator_.gridView().template end</*codim=*/0>(),
             [&elem_ctx, this](const auto& elem) -> bool
         {
             elem_ctx.updateStencil(elem);
@@ -198,7 +198,7 @@ private:
             return this->cell_to_aquifer_cell_idx_[cell_index] == 0;
         });
 
-        assert ((elemIt != this->ebos_simulator_.gridView().template end</*codim=*/0>())
+        assert ((elemIt != this->simulator_.gridView().template end</*codim=*/0>())
                 && "Internal error locating numerical aquifer's connecting cell");
 
         this->connects_to_reservoir_ =
@@ -216,8 +216,8 @@ private:
         double sum_pressure_watervolume = 0.;
         double sum_watervolume = 0.;
 
-        ElementContext  elem_ctx(this->ebos_simulator_);
-        const auto& gridView = this->ebos_simulator_.gridView();
+        ElementContext  elem_ctx(this->simulator_);
+        const auto& gridView = this->simulator_.gridView();
         OPM_BEGIN_PARALLEL_TRY_CATCH();
 
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
@@ -247,8 +247,9 @@ private:
 
             cell_pressure[idx] = water_pressure_reservoir;
         }
-        OPM_END_PARALLEL_TRY_CATCH("AquiferNumerical::calculateAquiferPressure() failed: ", this->ebos_simulator_.vanguard().grid().comm());
-        const auto& comm = this->ebos_simulator_.vanguard().grid().comm();
+        OPM_END_PARALLEL_TRY_CATCH("AquiferNumerical::calculateAquiferPressure() failed: ",
+                                   this->simulator_.vanguard().grid().comm());
+        const auto& comm = this->simulator_.vanguard().grid().comm();
         comm.sum(&sum_pressure_watervolume, 1);
         comm.sum(&sum_watervolume, 1);
 
@@ -274,8 +275,8 @@ private:
             return aquifer_flux;
         }
 
-        ElementContext elem_ctx(this->ebos_simulator_);
-        const auto& gridView = this->ebos_simulator_.gridView();
+        ElementContext elem_ctx(this->simulator_);
+        const auto& gridView = this->simulator_.gridView();
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             // elem_ctx.updatePrimaryStencil(elem);
             elem_ctx.updateStencil(elem);

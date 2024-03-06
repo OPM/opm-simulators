@@ -25,7 +25,7 @@ namespace Opm {
 template<typename TypeTag>
 GasLiftSingleWell<TypeTag>::
 GasLiftSingleWell(const WellInterface<TypeTag> &well,
-                  const Simulator &ebos_simulator,
+                  const Simulator& simulator,
                   const SummaryState &summary_state,
                   DeferredLogger &deferred_logger,
                   WellState &well_state,
@@ -45,13 +45,13 @@ GasLiftSingleWell(const WellInterface<TypeTag> &well,
         summary_state,
         group_info,
         well.phaseUsage(),
-        ebos_simulator.vanguard().schedule(),
-        ebos_simulator.episodeIndex(),
+        simulator.vanguard().schedule(),
+        simulator.episodeIndex(),
         sync_groups,
         comm,
         glift_debug
     )
-   , ebos_simulator_{ebos_simulator}
+   , simulator_{simulator}
    , well_{well}
 {
     const auto& gl_well = *gl_well_;
@@ -106,7 +106,7 @@ computeWellRates_( double bhp, bool bhp_is_limited, bool debug_output ) const
 {
     std::vector<double> potentials(NUM_PHASES, 0.0);
     this->well_.computeWellRatesWithBhp(
-        this->ebos_simulator_, bhp, potentials, this->deferred_logger_);
+        this->simulator_, bhp, potentials, this->deferred_logger_);
     if (debug_output) {
         const std::string msg = fmt::format("computed well potentials given bhp {}, "
             "oil: {}, gas: {}, water: {}", bhp,
@@ -131,7 +131,7 @@ GasLiftSingleWell<TypeTag>::
 computeBhpAtThpLimit_(double alq, bool debug_output) const
 {
     auto bhp_at_thp_limit = this->well_.computeBhpAtThpLimitProdWithAlq(
-        this->ebos_simulator_,
+        this->simulator_,
         this->summary_state_,
         alq,
         this->deferred_logger_);

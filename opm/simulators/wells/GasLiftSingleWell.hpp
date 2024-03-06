@@ -42,7 +42,7 @@ namespace Opm
     public:
         GasLiftSingleWell(
             const WellInterface<TypeTag> &well,
-            const Simulator &ebos_simulator,
+            const Simulator& simulator,
             const SummaryState &summary_state,
             DeferredLogger &deferred_logger,
             WellState &well_state,
@@ -63,7 +63,7 @@ namespace Opm
         bool checkThpControl_() const override;
 
 
-        const Simulator &ebos_simulator_;
+        const Simulator& simulator_;
         const WellInterface<TypeTag> &well_;
     };
 

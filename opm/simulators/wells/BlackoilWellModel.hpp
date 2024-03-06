@@ -143,7 +143,7 @@ namespace Opm {
 
             using Domain = SubDomain<Grid>;
 
-            BlackoilWellModel(Simulator& ebosSimulator);
+            BlackoilWellModel(Simulator& simulator);
 
             void init();
             void initWellContainer(const int reportStepIdx) override;
@@ -196,7 +196,7 @@ namespace Opm {
             void beginEpisode()
             {
                 OPM_TIMEBLOCK(beginEpsiode);
-                beginReportStep(ebosSimulator_.episodeIndex());
+                beginReportStep(simulator_.episodeIndex());
             }
 
             void beginTimeStep();
@@ -204,8 +204,8 @@ namespace Opm {
             void beginIteration()
             {
                 OPM_TIMEBLOCK(beginIteration);
-                assemble(ebosSimulator_.model().newtonMethod().numIterations(),
-                         ebosSimulator_.timeStepSize());
+                assemble(simulator_.model().newtonMethod().numIterations(),
+                         simulator_.timeStepSize());
             }
 
             void endIteration()
@@ -214,7 +214,7 @@ namespace Opm {
             void endTimeStep()
             {
                 OPM_TIMEBLOCK(endTimeStep);
-                timeStepSucceeded(ebosSimulator_.time(), ebosSimulator_.timeStepSize());
+                timeStepSucceeded(simulator_.time(), simulator_.timeStepSize());
             }
 
             void endEpisode()
@@ -238,7 +238,7 @@ namespace Opm {
             void initFromRestartFile(const RestartValue& restartValues)
             {
                 initFromRestartFile(restartValues,
-                                    this->ebosSimulator_.vanguard().transferWTestState(),
+                                    this->simulator_.vanguard().transferWTestState(),
                                     grid().size(0),
                                     param_.use_multisegment_well_);
             }
@@ -253,13 +253,13 @@ namespace Opm {
             data::Wells wellData() const
             {
                 auto wsrpt = this->wellState()
-                    .report(ebosSimulator_.vanguard().globalCell().data(),
+                    .report(simulator_.vanguard().globalCell().data(),
                             [this](const int well_index) -> bool
                 {
                     return this->wasDynamicallyShutThisTimeStep(well_index);
                 });
 
-                const auto& tracerRates = ebosSimulator_.problem().tracerModel().getWellTracerRates();
+                const auto& tracerRates = simulator_.problem().tracerModel().getWellTracerRates();
                 this->assignWellTracerRates(wsrpt, tracerRates);
 
 
@@ -360,7 +360,7 @@ namespace Opm {
             void setupDomains(const std::vector<Domain>& domains);
 
         protected:
-            Simulator& ebosSimulator_;
+            Simulator& simulator_;
 
             // a vector of all the wells.
             std::vector<WellInterfacePtr> well_container_{};
@@ -417,13 +417,13 @@ namespace Opm {
             std::map<std::string, int> well_domain_;
 
             const Grid& grid() const
-            { return ebosSimulator_.vanguard().grid(); }
+            { return simulator_.vanguard().grid(); }
 
             const EquilGrid& equilGrid() const
-            { return ebosSimulator_.vanguard().equilGrid(); }
+            { return simulator_.vanguard().equilGrid(); }
 
             const EclipseState& eclState() const
-            { return ebosSimulator_.vanguard().eclState(); }
+            { return simulator_.vanguard().eclState(); }
 
             // compute the well fluxes and assemble them in to the reservoir equations as source terms
             // and in the well equations.
@@ -548,11 +548,11 @@ namespace Opm {
             void computeWellTemperature();
 
             int compressedIndexForInterior(int cartesian_cell_idx) const override {
-                return ebosSimulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
+                return simulator_.vanguard().compressedIndexForInterior(cartesian_cell_idx);
             }
 
         private:
-            BlackoilWellModel(Simulator& ebosSimulator, const PhaseUsage& pu);
+            BlackoilWellModel(Simulator& simulator, const PhaseUsage& pu);
         };
 
 

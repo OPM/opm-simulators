@@ -91,9 +91,9 @@ bool PyBlackOilSimulator::checkSimulationFinished()
 int PyBlackOilSimulator::currentStep()
 {
     return getFlowMain().getSimTimer()->currentStepNum();
-    // NOTE: this->ebos_simulator_->episodeIndex() would also return the current
+    // NOTE: this->simulator_->episodeIndex() would also return the current
     // report step number, but this number is always delayed by 1 step relative
-    // to this->main_ebos_->getSimTimer()->currentStepNum()
+    // to this->flow_main_->getSimTimer()->currentStepNum()
     // See details in runStep() in file SimulatorFullyImplicitBlackoilEbos.hpp
 }
 
@@ -218,13 +218,13 @@ int PyBlackOilSimulator::stepInit()
         this->main_ = std::make_unique<Opm::Main>( this->deck_filename_ );
     }
     int exit_code = EXIT_SUCCESS;
-    this->main_ebos_ = this->main_->initFlowBlackoil(exit_code);
-    if (this->main_ebos_) {
-        int result = this->main_ebos_->executeInitStep();
+    this->flow_main_ = this->main_->initFlowBlackoil(exit_code);
+    if (this->flow_main_) {
+        int result = this->flow_main_->executeInitStep();
         this->has_run_init_ = true;
-        this->ebos_simulator_ = this->main_ebos_->getSimulatorPtr();
-        this->fluid_state_ = std::make_unique<PyFluidState<TypeTag>>(this->ebos_simulator_);
-        this->material_state_ = std::make_unique<PyMaterialState<TypeTag>>(this->ebos_simulator_);
+        this->simulator_ = this->flow_main_->getSimulatorPtr();
+        this->fluid_state_ = std::make_unique<PyFluidState<TypeTag>>(this->simulator_);
+        this->material_state_ = std::make_unique<PyMaterialState<TypeTag>>(this->simulator_);
         return result;
     }
     else {
@@ -238,8 +238,8 @@ int PyBlackOilSimulator::stepInit()
 Opm::FlowMain<typename Opm::Pybind::PyBlackOilSimulator::TypeTag>&
          PyBlackOilSimulator::getFlowMain() const
 {
-    if (this->main_ebos_) {
-        return *this->main_ebos_;
+    if (this->flow_main_) {
+        return *this->flow_main_;
     }
     else {
         throw std::runtime_error("BlackOilSimulator not initialized: "
