@@ -39,7 +39,7 @@ struct EnableExtbo<TypeTag, TTag::FlowExtboProblem> {
 namespace Opm {
 
 // ----------------- Main program -----------------
-int flowEbosExtboMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowExtboMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -50,7 +50,7 @@ int flowEbosExtboMain(int argc, char** argv, bool outputCout, bool outputFiles)
     return mainfunc.execute();
 }
 
-int flowEbosExtboMainStandalone(int argc, char** argv)
+int flowExtboMainStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::FlowExtboProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);

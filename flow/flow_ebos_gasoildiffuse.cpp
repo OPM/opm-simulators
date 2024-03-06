@@ -74,7 +74,7 @@ public:
 namespace Opm {
 
 // ----------------- Main program -----------------
-int flowEbosGasOilDiffuseMain(int argc, char** argv, bool outputCout, bool outputFiles)
+int flowGasOilDiffuseMain(int argc, char** argv, bool outputCout, bool outputFiles)
 {
     // we always want to use the default locale, and thus spare us the trouble
     // with incorrect locale settings.
@@ -85,7 +85,7 @@ int flowEbosGasOilDiffuseMain(int argc, char** argv, bool outputCout, bool outpu
     return mainfunc.execute();
 }
 
-int flowEbosGasOilDiffuseMainStandalone(int argc, char** argv)
+int flowGasOilDiffuseMainStandalone(int argc, char** argv)
 {
     using TypeTag = Properties::TTag::FlowGasOilDiffuseProblem;
     auto mainObject = std::make_unique<Opm::Main>(argc, argv);

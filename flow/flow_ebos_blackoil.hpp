@@ -29,16 +29,16 @@ namespace Opm::Properties::TTag {
 namespace Opm {
 
 //! \brief Main function used in flow binary.
-int flowEbosBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFiles);
+int flowBlackoilTpfaMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
 template<class TypeTag> class FlowMain;
 
 //! \brief Initialization function used in flow binary and python simulator.
 std::unique_ptr<FlowMain<Properties::TTag::FlowProblemTPFA>>
-    flowEbosBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
+flowBlackoilTpfaMainInit(int argc, char** argv, bool outputCout, bool outputFiles);
 
 //! \brief Main function used in flow_brine binary.
-int flowEbosBlackoilTpfaMainStandalone(int argc, char** argv);
+int flowBlackoilTpfaMainStandalone(int argc, char** argv);
 
 }
 

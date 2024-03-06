@@ -19,7 +19,7 @@
 #define FLOW_EBOS_BRINE_ENERGY_HPP
 
 namespace Opm {
-  int flowEbosBrineEnergyMain(int argc, char** argv);
+  int flowBrineEnergyMain(int argc, char** argv);
 }
 
 #endif

@@ -20,5 +20,5 @@
 
 int main(int argc, char** argv)
 {
-    return Opm::flowEbosExtboMainStandalone(argc, argv);
+    return Opm::flowExtboMainStandalone(argc, argv);
 }

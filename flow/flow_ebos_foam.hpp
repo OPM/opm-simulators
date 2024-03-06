@@ -20,10 +20,10 @@
 namespace Opm {
 
 //! \brief Main function used in flow binary.
-int flowEbosFoamMain(int argc, char** argv, bool outputCout, bool outputFiles);
+int flowFoamMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
 //! \brief Main function used in flow_foam binary.
-int flowEbosFoamMainStandalone(int argc, char** argv);
+int flowFoamMainStandalone(int argc, char** argv);
 
 }
 

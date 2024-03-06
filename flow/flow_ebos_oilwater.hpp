@@ -20,10 +20,10 @@
 namespace Opm {
 
 //! \brief Main functon used in main flow binary.
-int flowEbosOilWaterMain(int argc, char** argv, bool outputCout, bool outputFiles);
+int flowOilWaterMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
 //! \brief Main function used in flow_oilwater binary.
-int flowEbosOilWaterMainStandalone(int argc, char** argv);
+int flowOilWaterMainStandalone(int argc, char** argv);
 
 }
 

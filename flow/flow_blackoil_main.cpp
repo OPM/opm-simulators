@@ -21,5 +21,5 @@
 
 int main(int argc, char** argv)
 {
-    return Opm::flowEbosBlackoilTpfaMainStandalone(argc, argv);
+    return Opm::flowBlackoilTpfaMainStandalone(argc, argv);
 }

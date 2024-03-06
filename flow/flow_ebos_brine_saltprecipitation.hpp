@@ -17,15 +17,13 @@
 #ifndef FLOW_EBOS_BRINE_SALTPRECIPITATION_HPP
 #define FLOW_EBOS_BRINE_SALTPRECIPITATION_HPP
 
-#include <memory>
-
 namespace Opm {
 
 //! \brief Main function used in flow binary.
-int flowEbosBrineSaltPrecipitationMain(int argc, char** argv, bool outputCout, bool outputFiles);
+int flowBrineSaltPrecipitationMain(int argc, char** argv, bool outputCout, bool outputFiles);
 
 //! \brief Main function used in flow_brine binary.
-int flowEbosBrineSaltPrecipitationMainStandalone(int argc, char** argv);
+int flowBrineSaltPrecipitationMainStandalone(int argc, char** argv);
 
 }
 
