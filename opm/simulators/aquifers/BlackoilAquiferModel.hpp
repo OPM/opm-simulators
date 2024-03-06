@@ -24,8 +24,6 @@
 #ifndef OPM_BLACKOILAQUIFERMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILAQUIFERMODEL_HEADER_INCLUDED
 
-#include <ebos/eclbaseaquifermodel.hh>
-
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquancon.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/AquiferCT.hpp>
 #include <opm/input/eclipse/EclipseState/Aquifer/Aquifetp.hpp>
@@ -35,6 +33,8 @@
 #include <opm/simulators/aquifers/AquiferCarterTracy.hpp>
 #include <opm/simulators/aquifers/AquiferFetkovich.hpp>
 #include <opm/simulators/aquifers/AquiferNumerical.hpp>
+
+#include <opm/simulators/flow/BaseAquiferModel.hpp>
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
