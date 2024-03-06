@@ -167,7 +167,7 @@ public:
         numElements_ = std::distance(interior_elements.begin(), interior_elements.end());
 
         this->elements_rank_offsets_.resize(nranks_) ;
-        this->damarisOutputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>(simulator, this->collectToIORank_);
+        this->damarisOutputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>(simulator, this->collectOnIORank_);
     }
 
     /*!
@@ -249,9 +249,9 @@ private:
     {
         // GLOBAL_CELL_INDEX is used to reorder variable data when writing to disk 
         // This is enabled using select-file="GLOBAL_CELL_INDEX" in the <variable> XML tag
-        if (this->collectToIORank_.isParallel()) {
+        if (this->collectOnIORank_.isParallel()) {
             const std::vector<int>& local_to_global =
-                this->collectToIORank_.localIdxToGlobalIdxMapping();
+                this->collectOnIORank_.localIdxToGlobalIdxMapping();
             dam_err_ = DamarisOutput::write("GLOBAL_CELL_INDEX", rank_, local_to_global.data());
         } else {
             std::vector<int> local_to_global_filled ;
@@ -365,7 +365,7 @@ private:
         const auto& gridView = simulator_.vanguard().gridView();
         const int num_interior = detail::
             countLocalInteriorCellsGridView(gridView);
-        const bool log = this->collectToIORank_.isIORank();
+        const bool log = this->collectOnIORank_.isIORank();
 
         damarisOutputModule_->allocBuffers(num_interior, reportStepNum,
                                       isSubStep, log, /*isRestart*/ false);

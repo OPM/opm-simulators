@@ -20,12 +20,12 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef EWOMS_COLLECT_TO_IO_RANK_HH
-#define EWOMS_COLLECT_TO_IO_RANK_HH
-
-#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
+#ifndef OPM_COLLECT_DATA_ON_IO_RANK_HPP
+#define OPM_COLLECT_DATA_ON_IO_RANK_HPP
 
 #include <opm/grid/common/p2pcommunicator.hh>
+
+#include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/output/data/Aquifer.hpp>
 #include <opm/output/data/Cells.hpp>
@@ -52,7 +52,7 @@ template<class Grid> class CartesianIndexMapper;
 namespace Opm {
 
 template <class Grid, class EquilGrid, class GridView>
-class CollectDataToIORank
+class CollectDataOnIORank
 {
 public:
     using CollectiveCommunication = typename Grid::CollectiveCommunication;
@@ -67,7 +67,7 @@ public:
     static const bool needsReordering =
         !std::is_same<Grid, EquilGrid>::value;
 
-    CollectDataToIORank(const Grid& grid,
+    CollectDataOnIORank(const Grid& grid,
                         const EquilGrid* equilGrid,
                         const GridView& gridView,
                         const Dune::CartesianIndexMapper<Grid>& cartMapper,
@@ -171,4 +171,4 @@ protected:
 
 } // end namespace Opm
 
-#endif
+#endif // OPM_COLLECT_DATA_ON_IO_RANK_HPP

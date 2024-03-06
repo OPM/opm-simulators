@@ -197,7 +197,7 @@ EclGenericWriter(const Schedule& schedule,
                  const Dune::CartesianIndexMapper<EquilGrid>* equilCartMapper,
                  bool enableAsyncOutput,
                  bool enableEsmry )
-    : collectToIORank_(grid,
+    : collectOnIORank_(grid,
                        equilGrid,
                        gridView,
                        cartMapper,
@@ -212,7 +212,7 @@ EclGenericWriter(const Schedule& schedule,
     , equilCartMapper_(equilCartMapper)
     , equilGrid_      (equilGrid)
 {
-    if (this->collectToIORank_.isIORank()) {
+    if (this->collectOnIORank_.isIORank()) {
         this->eclIO_ = std::make_unique<EclipseIO>
             (this->eclState_,
              UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
@@ -222,7 +222,7 @@ EclGenericWriter(const Schedule& schedule,
     // create output thread if enabled and rank is I/O rank
     // async output is enabled by default if pthread are enabled
     int numWorkerThreads = 0;
-    if (enableAsyncOutput && collectToIORank_.isIORank()) {
+    if (enableAsyncOutput && collectOnIORank_.isIORank()) {
         numWorkerThreads = 1;
     }
 
@@ -241,10 +241,10 @@ template<class Grid, class EquilGrid, class GridView, class ElementMapper, class
 void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 writeInit(const std::function<unsigned int(unsigned int)>& map)
 {
-    if (collectToIORank_.isIORank()) {
+    if (collectOnIORank_.isIORank()) {
         std::map<std::string, std::vector<int>> integerVectors;
-        if (collectToIORank_.isParallel()) {
-            integerVectors.emplace("MPI_RANK", collectToIORank_.globalRanks());
+        if (collectOnIORank_.isParallel()) {
+            integerVectors.emplace("MPI_RANK", collectOnIORank_.globalRanks());
         }
 
         auto cartMap = cartesianToCompressed(equilGrid_->size(0), UgGridHelpers::globalCell(*equilGrid_));
@@ -255,7 +255,7 @@ writeInit(const std::function<unsigned int(unsigned int)>& map)
     }
 
 #if HAVE_MPI
-    if (collectToIORank_.isParallel()) {
+    if (collectOnIORank_.isParallel()) {
         const auto& comm = grid_.comm();
         Opm::Parallel::MpiSerializer ser(comm);
         ser.broadcast(outputNnc_);
@@ -524,21 +524,21 @@ doWriteOutput(const int                          reportStepNum,
               bool                               isFloresn,
               std::array<FlowsData<double>, 3>&& floresn)
 {
-    const auto isParallel = this->collectToIORank_.isParallel();
-    const bool needsReordering = this->collectToIORank_.doesNeedReordering();
+    const auto isParallel = this->collectOnIORank_.isParallel();
+    const bool needsReordering = this->collectOnIORank_.doesNeedReordering();
 
     RestartValue restartValue {
         (isParallel || needsReordering)
-        ? this->collectToIORank_.globalCellData()
+        ? this->collectOnIORank_.globalCellData()
         : std::move(localCellData),
 
-        isParallel ? this->collectToIORank_.globalWellData()
+        isParallel ? this->collectOnIORank_.globalWellData()
                    : std::move(localWellData),
 
-        isParallel ? this->collectToIORank_.globalGroupAndNetworkData()
+        isParallel ? this->collectOnIORank_.globalGroupAndNetworkData()
                    : std::move(localGroupAndNetworkData),
 
-        isParallel ? this->collectToIORank_.globalAquiferData()
+        isParallel ? this->collectOnIORank_.globalAquiferData()
                    : std::move(localAquiferData)
     };
 
@@ -554,7 +554,7 @@ doWriteOutput(const int                          reportStepNum,
 
     // Add nnc flows and flores.
     if (isFlowsn) {
-        const auto flowsn_global = isParallel ? this->collectToIORank_.globalFlowsn() : std::move(flowsn);
+        const auto flowsn_global = isParallel ? this->collectOnIORank_.globalFlowsn() : std::move(flowsn);
         for (const auto& flows : flowsn_global) {
             if (flows.name.empty())
                 continue;
@@ -566,7 +566,7 @@ doWriteOutput(const int                          reportStepNum,
         }
     }
     if (isFloresn) {
-        const auto floresn_global = isParallel ? this->collectToIORank_.globalFloresn() : std::move(floresn);
+        const auto floresn_global = isParallel ? this->collectOnIORank_.globalFloresn() : std::move(floresn);
         for (const auto& flores : floresn_global) {
             if (flores.name.empty()) {
                 continue;
@@ -579,7 +579,7 @@ doWriteOutput(const int                          reportStepNum,
     // step to disk
     auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
         actionState,
-        isParallel ? this->collectToIORank_.globalWellTestState() : std::move(localWTestState),
+        isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
         summaryState, udqState, *this->eclIO_,
         reportStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
 
@@ -609,23 +609,23 @@ evalSummary(const int                                            reportStepNum,
             SummaryState&                                        summaryState,
             UDQState&                                            udqState)
 {
-    if (collectToIORank_.isIORank()) {
+    if (collectOnIORank_.isIORank()) {
         const auto& summary = eclIO_->summary();
 
-        const auto& wellData = this->collectToIORank_.isParallel()
-            ? this->collectToIORank_.globalWellData()
+        const auto& wellData = this->collectOnIORank_.isParallel()
+            ? this->collectOnIORank_.globalWellData()
             : localWellData;
 
-        const auto& wbpData = this->collectToIORank_.isParallel()
-            ? this->collectToIORank_.globalWBPData()
+        const auto& wbpData = this->collectOnIORank_.isParallel()
+            ? this->collectOnIORank_.globalWBPData()
             : localWBPData;
 
-        const auto& groupAndNetworkData = this->collectToIORank_.isParallel()
-            ? this->collectToIORank_.globalGroupAndNetworkData()
+        const auto& groupAndNetworkData = this->collectOnIORank_.isParallel()
+            ? this->collectOnIORank_.globalGroupAndNetworkData()
             : localGroupAndNetworkData;
 
-        const auto& aquiferData = this->collectToIORank_.isParallel()
-            ? this->collectToIORank_.globalAquiferData()
+        const auto& aquiferData = this->collectOnIORank_.isParallel()
+            ? this->collectOnIORank_.globalAquiferData()
             : localAquiferData;
 
         summary.eval(summaryState,
@@ -658,7 +658,7 @@ evalSummary(const int                                            reportStepNum,
     }
 
 #if HAVE_MPI
-    if (collectToIORank_.isParallel()) {
+    if (collectOnIORank_.isParallel()) {
         Parallel::MpiSerializer ser(grid_.comm());
         ser.append(summaryState);
     }

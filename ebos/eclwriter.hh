@@ -30,29 +30,27 @@
 
 #include <dune/grid/common/partitionset.hh>
 
-#include <ebos/collecttoiorank.hh>
 #include <ebos/eclbasevanguard.hh>
 #include <ebos/eclgenericwriter.hh>
+
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/output/eclipse/RestartValue.hpp>
 
+#include <opm/simulators/flow/CollectDataOnIORank.hpp>
+#include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
-#include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
-
-#include <opm/common/OpmLog/OpmLog.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+#include <opm/simulators/utils/ParallelRestart.hpp>
 
 #include <limits>
 #include <stdexcept>
 #include <string>
-
-
-// #include <opm/simulators/utils/GridDataOutput.hpp>
-
 
 namespace Opm::Properties {
 
@@ -157,7 +155,7 @@ public:
         , simulator_(simulator)
     {
         this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
-            (simulator, this->collectToIORank_);
+            (simulator, this->collectOnIORank_);
             
         rank_ = simulator_.vanguard().grid().comm().rank() ;
     }
@@ -218,10 +216,10 @@ public:
             this->captureLocalFluxData();
         }
 
-        if (this->collectToIORank_.isParallel()) {
+        if (this->collectOnIORank_.isParallel()) {
             OPM_BEGIN_PARALLEL_TRY_CATCH()
 
-            this->collectToIORank_.collect({},
+            this->collectOnIORank_.collect({},
                                            outputModule_->getBlockData(),
                                            localWellData,
                                            localWBP,
@@ -232,8 +230,8 @@ public:
                                            {},
                                            {});
 
-            if (this->collectToIORank_.isIORank()) {
-                auto& iregFlows = this->collectToIORank_.globalInterRegFlows();
+            if (this->collectOnIORank_.isIORank()) {
+                auto& iregFlows = this->collectOnIORank_.globalInterRegFlows();
 
                 if (! iregFlows.readIsConsistent()) {
                     throw std::runtime_error {
@@ -259,7 +257,7 @@ public:
 
             inplace = outputModule_->calc_inplace(miscSummaryData, regionData, simulator_.gridView().comm());
             
-            if (this->collectToIORank_.isIORank()){
+            if (this->collectOnIORank_.isIORank()){
                 inplace_ = inplace;
             }
         }
@@ -293,12 +291,12 @@ public:
         {
             OPM_TIMEBLOCK(evalSummary);
 
-            const auto& blockData = this->collectToIORank_.isParallel()
-                ? this->collectToIORank_.globalBlockData()
+            const auto& blockData = this->collectOnIORank_.isParallel()
+                ? this->collectOnIORank_.globalBlockData()
                 : this->outputModule_->getBlockData();
 
-            const auto& interRegFlows = this->collectToIORank_.isParallel()
-                ? this->collectToIORank_.globalInterRegFlows()
+            const auto& interRegFlows = this->collectOnIORank_.isParallel()
+                ? this->collectOnIORank_.globalInterRegFlows()
                 : this->outputModule_->getInterRegFlows();
 
             this->evalSummary(reportStepNum,
@@ -354,7 +352,7 @@ public:
 
             inplace = outputModule_->calc_inplace(miscSummaryData, regionData, simulator_.gridView().comm());
 
-            if (this->collectToIORank_.isIORank()){
+            if (this->collectOnIORank_.isIORank()){
                 inplace_ = inplace;
                 
                 outputModule_->outputFipAndResvLog(inplace_, 0, 0.0, start_time,
@@ -390,7 +388,7 @@ public:
             
             auto rstep = timer.reportStepNum();
             
-            if ((rstep > 0) && (this->collectToIORank_.isIORank())){
+            if ((rstep > 0) && (this->collectOnIORank_.isIORank())){
 
                 outputModule_->outputFipAndResvLog(inplace_, rstep, timer.simulationTimeElapsed(),
                                                    timer.currentDateTime(), false, simulator_.gridView().comm());
@@ -413,15 +411,15 @@ public:
             this->outputModule_->addRftDataToWells(localWellData, reportStepNum);
         }
 
-        if (this->collectToIORank_.isParallel() ||
-            this->collectToIORank_.doesNeedReordering())
+        if (this->collectOnIORank_.isParallel() ||
+            this->collectOnIORank_.doesNeedReordering())
         {
             // Note: We don't need WBP (well-block averaged pressures) or
             // inter-region flow rate values in order to create restart file
             // output.  There's consequently no need to collect those
             // properties on the I/O rank.
 
-            this->collectToIORank_.collect(localCellData,
+            this->collectOnIORank_.collect(localCellData,
                                            this->outputModule_->getBlockData(),
                                            localWellData,
                                            /* wbpData = */ {},
@@ -431,14 +429,14 @@ public:
                                            /* interRegFlows = */ {},
                                            flowsn,
                                            floresn);
-            if (this->collectToIORank_.isIORank()) {
-                this->outputModule_->assignGlobalFieldsToSolution(this->collectToIORank_.globalCellData());
+            if (this->collectOnIORank_.isIORank()) {
+                this->outputModule_->assignGlobalFieldsToSolution(this->collectOnIORank_.globalCellData());
             }
         } else {
             this->outputModule_->assignGlobalFieldsToSolution(localCellData);
         }
 
-        if (this->collectToIORank_.isIORank()) {
+        if (this->collectOnIORank_.isIORank()) {
             const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
             const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
 
@@ -509,7 +507,7 @@ public:
             auto restartValues = loadParallelRestart(this->eclIO_.get(), actionState, summaryState, solutionKeys, extraKeys,
                                                      gridView.grid().comm());
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-                unsigned globalIdx = this->collectToIORank_.localIdxToGlobalIdx(elemIdx);
+                unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
                 outputModule_->setRestart(restartValues.solution, elemIdx, globalIdx);
             }
 
@@ -518,7 +516,7 @@ public:
                 const auto& tracer_name = tracer_model.fname(tracer_index);
                 const auto& tracer_solution = restartValues.solution.template data<double>(tracer_name);
                 for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-                    unsigned globalIdx = this->collectToIORank_.localIdxToGlobalIdx(elemIdx);
+                    unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
                     tracer_model.setTracerConcentration(tracer_index, globalIdx, tracer_solution[globalIdx]);
                 }
             }
@@ -586,7 +584,7 @@ private:
         }
 
         const auto& gridView = simulator_.vanguard().gridView();
-        const bool log = this->collectToIORank_.isIORank();
+        const bool log = this->collectOnIORank_.isIORank();
 
         const int num_interior = detail::
             countLocalInteriorCellsGridView(gridView);
