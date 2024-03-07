@@ -169,7 +169,7 @@ struct OwnerCellsFirst<TypeTag, TTag::EclBaseVanguard> {
 };
 template<class TypeTag>
 struct SerialPartitioning<TypeTag, TTag::EclBaseVanguard> {
-    static constexpr bool value = false;
+    static constexpr bool value = true;
 };
 
 template<class TypeTag>
