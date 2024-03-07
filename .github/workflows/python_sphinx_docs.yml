@@ -18,7 +18,9 @@ jobs:
       runs-on: ubuntu-latest
       steps:
         - name: checkout source code
-          uses: actions/checkout@v3
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0   # Fetch all history for all tags and branches
         - name: Set up Python
           uses: actions/setup-python@v4
           with:
@@ -34,12 +36,15 @@ jobs:
             cd python
             mkdir gh-pages
             touch gh-pages/.nojekyll
-            cd sphinx_docs/docs/
-            poetry run sphinx-build -b html . _build
+            cd sphinx_docs
+            # Currently we build only docs for the HEAD of the master branch
+            # Later we can add release tags to the list to get the docs for the releases
+            # For example: -b "main, release/2024.04/final" will build the docs for
+            # the main branch and the release/2024.04/final tag
+            poetry run sphinx-versioned -m master -b master --git-root ../../
         - name: Copy documentation to gh-pages
           run: |
-            cd python/sphinx_docs/docs
-            cp -r _build/* ../../gh-pages/
+            cp -r python/sphinx_docs/docs/_build/* gh-pages/
         - name: Deploy documentation
           if: ${{ github.event_name == 'push' }}
           uses: JamesIves/github-pages-deploy-action@v4
