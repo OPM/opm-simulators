@@ -68,6 +68,9 @@ public:
     using OffDiagMatWell = Dune::BCRSMatrix<OffDiagMatrixBlockWellType>;
 
     MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well);
+    MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well,
+                              const MultisegmentWellEquations& eqs);
+    MultisegmentWellEquations(const MultisegmentWellEquations&) = delete;
 
     //! \brief Setup sparsity pattern for the matrices.
     //! \param num_cells Total number of cells

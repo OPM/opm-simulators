@@ -42,6 +42,7 @@ class StandardWellConnections
 {
 public:
     StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well);
+    StandardWellConnections(const StandardWellConnections&) = delete;
 
     struct Properties
     {

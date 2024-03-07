@@ -130,6 +130,24 @@ MultisegmentWellSegments(const int numSegments,
 }
 
 template<class FluidSystem, class Indices, class Scalar>
+MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+MultisegmentWellSegments(WellInterfaceGeneric& well,
+                         const MultisegmentWellSegments& seg)
+    : perforations_(seg.perforations_)
+    , perforation_depth_diffs_(seg.perforation_depth_diffs_)
+    , inlets_(seg.inlets_)
+    , depth_diffs_(seg.depth_diffs_)
+    , densities_(seg.densities_)
+    , mass_rates_(seg.mass_rates_)
+    , viscosities_(seg.viscosities_)
+    , upwinding_segments_(seg.upwinding_segments_)
+    , phase_densities_(seg.phase_densities_)
+    , phase_fractions_(seg.phase_fractions_)
+    , phase_viscosities_(seg.phase_viscosities_)
+    , well_(well)
+{}
+
+template<class FluidSystem, class Indices, class Scalar>
 void MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
 computeFluidProperties(const EvalWell& temperature,
                        const EvalWell& saltConcentration,

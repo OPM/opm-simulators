@@ -66,6 +66,9 @@ public:
     using BVector = Dune::BlockVector<Dune::FieldVector<Scalar,numEq>>;
 
     StandardWellEquations(const ParallelWellInfo& parallel_well_info);
+    StandardWellEquations(const StandardWellEquations&) = delete;
+    StandardWellEquations(const ParallelWellInfo& parallel_well_info,
+                          const StandardWellEquations& eqs);
 
     //! \brief Setup sparsity pattern for the matrices.
     //! \param num_cells Total number of cells

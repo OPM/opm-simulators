@@ -52,6 +52,18 @@ MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well)
 }
 
 template<class Scalar, int numWellEq, int numEq>
+MultisegmentWellEquations<Scalar,numWellEq,numEq>::
+MultisegmentWellEquations(const MultisegmentWellGeneric<Scalar>& well,
+                          const MultisegmentWellEquations& eqs)
+    : duneB_(eqs.duneB_)
+    , duneC_(eqs.duneC_)
+    , duneD_(eqs.duneD_)
+    , resWell_(eqs.resWell_)
+    , well_(well)
+{
+}
+
+template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
 init(const int num_cells,
      const int numPerfs,

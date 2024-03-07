@@ -65,6 +65,19 @@ MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif)
 }
 
 template<typename FluidSystem, typename Indices, typename Scalar>
+MultisegmentWellEval<FluidSystem,Indices,Scalar>::
+MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif,
+                     const MultisegmentWellEval<FluidSystem,Indices,Scalar>& eval)
+    : MultisegmentWellGeneric<Scalar>(baseif)
+    , baseif_(baseif)
+    , linSys_(*this, eval.linSys_)
+    , primary_variables_(baseif, eval.primary_variables_)
+    , segments_(baseif, eval.segments_)
+    , cell_perforation_depth_diffs_(eval.cell_perforation_depth_diffs_)
+    , cell_perforation_pressure_diffs_(eval.cell_perforation_pressure_diffs_)
+{}
+
+template<typename FluidSystem, typename Indices, typename Scalar>
 void
 MultisegmentWellEval<FluidSystem,Indices,Scalar>::
 initMatrixAndVectors(const int num_cells)

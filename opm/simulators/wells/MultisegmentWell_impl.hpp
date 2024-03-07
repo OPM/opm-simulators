@@ -102,6 +102,15 @@ namespace Opm
     }
 
 
+    template <typename TypeTag>
+    MultisegmentWell<TypeTag>::MultisegmentWell(const MultisegmentWell<TypeTag>& well)
+    : Base(well)
+    , MSWEval(static_cast<WellInterfaceIndices<FluidSystem,Indices,Scalar>&>(*this), well)
+    , regularize_(well.regularize_)
+    , segment_fluid_initial_(well.segment_fluid_initial_)
+    {}
+
+
 
 
 

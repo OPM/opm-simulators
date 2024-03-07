@@ -50,6 +50,22 @@ StandardWellEquations(const ParallelWellInfo& parallel_well_info)
     invDuneD_.setBuildMode(DiagMatWell::row_wise);
 }
 
+
+template<class Scalar, int numEq>
+StandardWellEquations<Scalar,numEq>::
+StandardWellEquations(const ParallelWellInfo& parallel_well_info,
+                      const StandardWellEquations<Scalar,numEq>& eqs)
+    : duneB_(eqs.duneB_)
+    , duneC_(eqs.duneC_)
+    , invDuneD_(eqs.invDuneD_)
+    , duneD_(eqs.duneD_)
+    , parallelB_(duneB_, parallel_well_info)
+    , resWell_(eqs.resWell_)
+    , Bx_(eqs.Bx_)
+    , invDrw_(eqs.invDrw_)
+{
+}
+
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::
 init(const int num_cells,

@@ -80,6 +80,12 @@ namespace Opm
     }
 
 
+    template<typename TypeTag>
+    StandardWell<TypeTag>::StandardWell(const StandardWell<TypeTag>& well)
+    : Base(well)
+    , StdWellEval(static_cast<const WellInterfaceIndices<FluidSystem,Indices,Scalar>&>(*this), well)
+    , regularize_(well.regularize_)
+    {}
 
 
 

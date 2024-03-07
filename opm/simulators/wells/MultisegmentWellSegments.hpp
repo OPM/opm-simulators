@@ -49,6 +49,9 @@ class MultisegmentWellSegments
 public:
     MultisegmentWellSegments(const int numSegments,
                              WellInterfaceGeneric& well);
+    MultisegmentWellSegments(WellInterfaceGeneric& well,
+                             const MultisegmentWellSegments& seg);
+    MultisegmentWellSegments(const MultisegmentWellSegments&) = delete;
 
     void computeFluidProperties(const EvalWell& temperature,
                                 const EvalWell& saltConcentration,
