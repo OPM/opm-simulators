@@ -43,7 +43,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/CollectDataOnIORank.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
-  opm/simulators/flow/FlowMain.cpp
+  opm/simulators/flow/FlowUtils.cpp
   opm/simulators/flow/GenericOutputBlackoilModule.cpp
   opm/simulators/flow/InterRegFlows.cpp
   opm/simulators/flow/KeywordValidation.cpp
@@ -452,6 +452,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/DummyGradientCalculator.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FlowMain.hpp
+  opm/simulators/flow/FlowUtils.hpp
   opm/simulators/flow/FlowsData.hpp
   opm/simulators/flow/GenericOutputBlackoilModule.hpp
   opm/simulators/flow/InterRegFlows.hpp

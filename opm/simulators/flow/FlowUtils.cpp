@@ -21,21 +21,29 @@
 */
 
 #include <config.h>
-#include <opm/simulators/flow/FlowMain.hpp>
+#include <opm/simulators/flow/FlowUtils.hpp>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/utility/String.hpp>
 
 #include <opm/simulators/flow/ConvergenceOutputConfiguration.hpp>
-
+#include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/utils/ParallelFileMerger.hpp>
+
+#if HAVE_MPI
+#include <ebos/eclgenericvanguard.hh>
+#endif
+
+#include <fmt/format.h>
 
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <unistd.h>
+#include <vector>
 
-namespace Opm {
-namespace detail {
+namespace Opm::detail {
 
 void mergeParallelLogFiles(std::string_view output_dir,
                            std::string_view deckFilename,
@@ -156,5 +164,4 @@ void checkAllMPIProcesses()
 #endif
 }
 
-} // namespace detail
-} // namespace Opm
+} // namespace Opm::detail
