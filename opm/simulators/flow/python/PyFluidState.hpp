@@ -47,7 +47,7 @@ namespace Opm::Pybind
             Sw, Sg, So, pw, pg, po, Rs, Rv, rho_w, rho_g, rho_o, T
         };
     public:
-        PyFluidState(Simulator *ebos_simulator);
+        PyFluidState(Simulator* simulator);
         std::vector<double> getFluidStateVariable(const std::string &name) const;
         std::vector<int> getPrimaryVarMeaning(const std::string &variable) const;
         std::map<std::string, int> getPrimaryVarMeaningMap(const std::string &variable) const;
@@ -62,7 +62,7 @@ namespace Opm::Pybind
             FluidState &fs, VariableType var_type, const std::string &name) const;
         void variableNotFoundError_(const std::string &name) const;
 
-        Simulator *ebos_simulator_;
+        Simulator* simulator_;
     };
 }
 #include "PyFluidState_impl.hpp"
