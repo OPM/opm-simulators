@@ -29,6 +29,7 @@
 #include <opm/grid/utility/cartesianToCompressed.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/RegionSetMatcher.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
 
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
@@ -654,8 +655,11 @@ evalSummary(const int                                            reportStepNum,
                   this->schedule_,
                   this->schedule_.wellMatcher(udq_step),
                   this->schedule_.segmentMatcherFactory(udq_step),
-                  summaryState,
-                  udqState);
+                  [es = std::cref(this->eclState_)]() {
+                      return std::make_unique<RegionSetMatcher>
+                          (es.get().fipRegionStatistics());
+                  },
+                  summaryState, udqState);
     }
 
 #if HAVE_MPI
