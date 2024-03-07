@@ -52,7 +52,7 @@ auto dValueError(const dValue& d,
                        " during {} calculations with rs {}"
                        ", rv {} and pressure {}."
                        " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                       " for this connection.", d, name, methodName, Rs, Rv, pressure);
+                       " for this connection.", Opm::getValue(d), name, methodName, Opm::getValue(Rs), Opm::getValue(Rv), Opm::getValue(pressure));
 }
 
 }
@@ -794,7 +794,7 @@ namespace Opm
             // the well index associated with the connection
             double trans_mult = ebos_simulator.problem().template wellTransMultiplier<double>(int_quantities, cell_idx);
             const auto& wellstate_nupcol = ebos_simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-            const std::vector<Scalar> tw_perf = this->wellIndex(perf, int_quantities, trans_mult, wellstate_nupcol);  
+            const std::vector<Scalar> tw_perf = this->wellIndex(perf, int_quantities, trans_mult, wellstate_nupcol);
             std::vector<double> ipr_a_perf(this->ipr_a_.size());
             std::vector<double> ipr_b_perf(this->ipr_b_.size());
             for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
@@ -2509,13 +2509,18 @@ namespace Opm
             // convert to reservoir conditions
             EvalWell cq_r_thermal(this->primary_variables_.numWellEq() + Indices::numEq, 0.);
             const unsigned activeCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::solventComponentIndex(phaseIdx));
-            const bool both_oil_gas = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+            constexpr double epsilon = std::numeric_limits<double>::epsilon();
+            const bool has_oil = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
+                                 Opm::abs(cq_s[Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx)]) > epsilon;
+            const bool has_gas = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) &&
+                                 Opm::abs(cq_s[Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx)]) > epsilon;
+            const bool both_oil_gas = has_oil && has_gas;
             if (!both_oil_gas || FluidSystem::waterPhaseIdx == phaseIdx) {
                 cq_r_thermal = cq_s[activeCompIdx] / this->extendEval(fs.invB(phaseIdx));
             } else {
-                // remove dissolved gas and vapporized oil
                 const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
                 const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
+                // remove dissolved gas and vapporized oil
                 // q_os = q_or * b_o + rv * q_gr * b_g
                 // q_gs = q_gr * g_g + rs * q_or * b_o
                 // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
@@ -2594,27 +2599,41 @@ namespace Opm
         // q_or = 1 / (b_o * d) * (q_os - rv * q_gs)
         // q_gr = 1 / (b_g * d) * (q_gs - rs * q_os)
 
-        const double d = 1.0 - getValue(rv) * getValue(rs);
+        constexpr double epsilon = std::numeric_limits<double>::epsilon();
+        const bool has_oil = std::abs(getValue(cq_s[oilCompIdx])) > epsilon;
+        const bool has_gas = std::abs(getValue(cq_s[gasCompIdx])) > epsilon;
+        if (has_oil && has_gas ) {
+            const double d = 1.0 - getValue(rv) * getValue(rs);
 
-        if (d <= 0.0) {
-            deferred_logger.debug(dValueError(d, this->name(),
-                                              "gasOilPerfRateInj",
-                                              rs, rv, pressure));
+            if (d <= 0.0) {
+                deferred_logger.debug(dValueError(d, this->name(),
+                                                  "gasOilPerfRateInj",
+                                                  rs, rv, pressure));
+            } else {
+                // vaporized oil into gas
+                // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
+                perf_rates.vap_oil =
+                        getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+                // dissolved of gas in oil
+                // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
+                perf_rates.dis_gas =
+                        getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
+            }
+
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
+                // q_ws = q_wr * b_w + rvw * q_gr * b_g
+                // q_wr = 1 / b_w * (q_ws - rvw * q_gr * b_g) = 1 / b_w * (q_ws - rvw * 1 / d  (q_gs - rs * q_os))
+                // vaporized water in gas
+                // rvw * q_gr * b_g = q_ws -q_wr *b_w = rvw * (q_gs -rs *q_os) / d
+                perf_rates.vap_wat =
+                        getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+            }
         } else {
-            // vaporized oil into gas
-            // rv * q_gr * b_g = rv * (q_gs - rs * q_os) / d
-            perf_rates.vap_oil = getValue(rv) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
-            // dissolved of gas in oil
-            // rs * q_or * b_o = rs * (q_os - rv * q_gs) / d
-            perf_rates.dis_gas = getValue(rs) * (getValue(cq_s[oilCompIdx]) - getValue(rv) * getValue(cq_s[gasCompIdx])) / d;
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
-            // q_ws = q_wr * b_w + rvw * q_gr * b_g
-            // q_wr = 1 / b_w * (q_ws - rvw * q_gr * b_g) = 1 / b_w * (q_ws - rvw * 1 / d  (q_gs - rs * q_os))
-            // vaporized water in gas
-            // rvw * q_gr * b_g = q_ws -q_wr *b_w = rvw * (q_gs -rs *q_os) / d
-            perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rs) * getValue(cq_s[oilCompIdx])) / d;
+            perf_rates.vap_oil = 0.;
+            perf_rates.dis_gas = 0.;
+            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && has_gas ) {
+                perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasCompIdx]));
+            }
         }
     }
 
@@ -2695,19 +2714,31 @@ namespace Opm
         const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
         const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
 
-        const double dw = 1.0 - getValue(rvw) * getValue(rsw);
+        constexpr double epsilon = std::numeric_limits<double>::epsilon();
+        const bool has_wat = std::abs(getValue(cq_s[waterCompIdx])) > epsilon;
+        const bool has_gas = std::abs(getValue(cq_s[gasCompIdx])) > epsilon;
+        if (has_wat && has_gas ) {
+            const double dw = 1.0 - getValue(rvw) * getValue(rsw);
 
-        if (dw <= 0.0) {
-            deferred_logger.debug(dValueError(dw, this->name(),
-                                              "gasWaterPerfRateInj",
-                                              rsw, rvw, pressure));
+            if (dw <= 0.0) {
+                deferred_logger.debug(dValueError(dw, this->name(),
+                                                  "gasWaterPerfRateInj",
+                                                  rsw, rvw, pressure));
+            } else {
+                // vaporized water into gas
+                // rvw * q_gr * b_g = rvw * (q_gs - rsw * q_ws) / dw
+                perf_rates.vap_wat =
+                        getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rsw) * getValue(cq_s[waterCompIdx])) /
+                        dw;
+                // dissolved gas in water
+                // rsw * q_wr * b_w = rsw * (q_ws - rvw * q_gs) / dw
+                perf_rates.dis_gas_in_water =
+                        getValue(rsw) * (getValue(cq_s[waterCompIdx]) - getValue(rvw) * getValue(cq_s[gasCompIdx])) /
+                        dw;
+            }
         } else {
-            // vaporized water into gas
-            // rvw * q_gr * b_g = rvw * (q_gs - rsw * q_ws) / dw
-            perf_rates.vap_wat = getValue(rvw) * (getValue(cq_s[gasCompIdx]) - getValue(rsw) * getValue(cq_s[waterCompIdx])) / dw;
-            // dissolved gas in water
-            // rsw * q_wr * b_w = rsw * (q_ws - rvw * q_gs) / dw
-            perf_rates.dis_gas_in_water = getValue(rsw) * (getValue(cq_s[waterCompIdx]) - getValue(rvw) * getValue(cq_s[gasCompIdx])) / dw;
+            perf_rates.vap_wat = 0.;
+            perf_rates.dis_gas_in_water = 0.;
         }
     }
 
@@ -2726,21 +2757,33 @@ namespace Opm
     {
         const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
         const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        // Incorporate RSW/RVW factors if both water and gas active
-        const Value d = 1.0 - rvw * rsw;
+        constexpr double epsilon = std::numeric_limits<double>::epsilon();
+        const bool has_wat = std::abs(getValue(cmix_s[waterCompIdx])) > epsilon;
+        const bool has_gas = std::abs(getValue(cmix_s[gasCompIdx])) > epsilon;
+        if (has_wat && has_gas ) {
+            // Incorporate RSW/RVW factors if both water and gas active
+            const Value d = 1.0 - rvw * rsw;
 
-        if (d <= 0.0) {
-            deferred_logger.debug(dValueError(d, this->name(),
-                                              "disOilVapWatVolumeRatio",
-                                              rsw, rvw, pressure));
+            if (d <= 0.0) {
+                deferred_logger.debug(dValueError(d, this->name(),
+                                                  "disOilVapWatVolumeRatio",
+                                                  rsw, rvw, pressure));
+            }
+            const Value tmp_wat = d > 0.0 ? (cmix_s[waterCompIdx] - rvw * cmix_s[gasCompIdx]) / d
+                                          : cmix_s[waterCompIdx];
+            volumeRatio += tmp_wat / b_perfcells_dense[waterCompIdx];
+
+            const Value tmp_gas = d > 0.0 ? (cmix_s[gasCompIdx] - rsw * cmix_s[waterCompIdx]) / d
+                                          : cmix_s[waterCompIdx];
+            volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
+        } else {
+            if (has_wat) {
+                volumeRatio += cmix_s[waterCompIdx] / b_perfcells_dense[waterCompIdx];
+            }
+            if (has_gas) {
+                volumeRatio += cmix_s[gasCompIdx] / b_perfcells_dense[gasCompIdx];
+            }
         }
-        const Value tmp_wat = d > 0.0 ? (cmix_s[waterCompIdx] - rvw * cmix_s[gasCompIdx]) / d
-                                      : cmix_s[waterCompIdx];
-        volumeRatio += tmp_wat / b_perfcells_dense[waterCompIdx];
-
-        const Value tmp_gas =  d > 0.0 ? (cmix_s[gasCompIdx] - rsw * cmix_s[waterCompIdx]) / d
-                                       : cmix_s[waterCompIdx];
-        volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
     }
 
 
@@ -2758,19 +2801,30 @@ namespace Opm
     {
         const unsigned oilCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
         const unsigned gasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-        // Incorporate RS/RV factors if both oil and gas active
-        const Value d = 1.0 - rv * rs;
+        constexpr double epsilon = std::numeric_limits<double>::epsilon();
+        const bool has_oil = std::abs(getValue(cmix_s[oilCompIdx])) > epsilon;
+        const bool has_gas = std::abs(getValue(cmix_s[gasCompIdx])) > epsilon;
+        if (has_oil && has_gas) {
+            // Incorporate RS/RV factors if both oil and gas active
+            const Value d = 1.0 - rv * rs;
 
-        if (d <= 0.0) {
-            deferred_logger.debug(dValueError(d, this->name(),
-                                              "gasOilVolumeRatio",
-                                              rs, rv, pressure));
+            if (d <= 0.0) {
+                deferred_logger.debug(dValueError(d, this->name(),
+                                                  "gasOilVolumeRatio",
+                                                  rs, rv, pressure));
+            }
+            const Value tmp_oil = d > 0.0 ? (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d : cmix_s[oilCompIdx];
+            volumeRatio += tmp_oil / b_perfcells_dense[oilCompIdx];
+
+            const Value tmp_gas = d > 0.0 ? (cmix_s[gasCompIdx] - rs * cmix_s[oilCompIdx]) / d : cmix_s[gasCompIdx];
+            volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
+        } else {
+            if (has_oil) {
+                volumeRatio += cmix_s[oilCompIdx] / b_perfcells_dense[oilCompIdx];
+            }
+            if (has_gas) {
+                volumeRatio += cmix_s[gasCompIdx] / b_perfcells_dense[gasCompIdx];
+            }
         }
-        const Value tmp_oil = d > 0.0? (cmix_s[oilCompIdx] - rv * cmix_s[gasCompIdx]) / d : cmix_s[oilCompIdx];
-        volumeRatio += tmp_oil / b_perfcells_dense[oilCompIdx];
-
-        const Value tmp_gas =  d > 0.0? (cmix_s[gasCompIdx] - rs * cmix_s[oilCompIdx]) / d : cmix_s[gasCompIdx];
-        volumeRatio += tmp_gas / b_perfcells_dense[gasCompIdx];
     }
-
 } // namespace Opm
