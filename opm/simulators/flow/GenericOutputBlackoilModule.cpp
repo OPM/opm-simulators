@@ -32,8 +32,6 @@
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Runspec.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#include <opm/input/eclipse/EclipseState/Tables/Regdims.hpp>
-#include <opm/input/eclipse/EclipseState/Tables/Tabdims.hpp>
 
 #include <opm/input/eclipse/Schedule/RFTConfig.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -154,12 +152,6 @@ std::string EclString(const Opm::Inplace::Phase phase)
         }
 
         return regions;
-    }
-
-    std::size_t declaredMaxRegionID(const Opm::Runspec& rspec)
-    {
-        return std::max(rspec.tabdims().getNumFIPRegions(),
-                        rspec.regdims().getNTFIP());
     }
 }
 
