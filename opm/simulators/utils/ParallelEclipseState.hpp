@@ -179,6 +179,12 @@ public:
     //! \details Can only be called on root process.
     const FieldPropsManager& globalFieldProps() const override;
 
+    //! \brief Compute basic descriptive statistics about all FIP region sets
+    //!
+    //! MPI-aware version which knows how to compute statistics across all
+    //! ranks.
+    void computeFipRegionStatistics() override;
+
     //! \brief Returns a const ref to the eclipse grid.
     //! \details Can only be called on root process.
     const EclipseGrid& getInputGrid() const override;
