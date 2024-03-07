@@ -991,26 +991,28 @@ computeFaceProperties(const Intersection& intersection,
 
         // For the coarse neighboring cell, take the center of the parent intersection.
         // For the refined neighboring cell, take the 'usual' center. 
-        faceCenterInside =  (intersection.inside().level() == 0) ? parentIntersectionGeometry.center() : grid_.faceCenterEcl(insideElemIdx, faceIdx);
-        faceCenterOutside = (intersection.outside().level() == 0) ?  parentIntersectionGeometry.center() : grid_.faceCenterEcl(outsideElemIdx, faceIdx);
+        faceCenterInside =  (intersection.inside().level() == 0) ? parentIntersectionGeometry.center() :
+            grid_.faceCenterEcl(insideElemIdx, insideFaceIdx, intersection);
+        faceCenterOutside = (intersection.outside().level() == 0) ?  parentIntersectionGeometry.center() :
+            grid_.faceCenterEcl(outsideElemIdx, outsideFaceIdx, intersection);
 
         // For some computations, it seems to be benefitial to replace the actual area of the refined face, by
         // the area of its parent face. 
-        faceAreaNormal = parentIntersection.centerUnitOuterNormal();
-        faceAreaNormal *= parentIntersectionGeometry.volume();
+        // faceAreaNormal = parentIntersection.centerUnitOuterNormal();
+        // faceAreaNormal *= parentIntersectionGeometry.volume();
 
         /// Alternatively, the actual area of the refined face can be computed as follows:
-        /// faceAreaNormal = intersection.centerUnitOuterNormal();
-        /// faceAreaNormal *= intersection.geometry().volume();
+          faceAreaNormal = intersection.centerUnitOuterNormal();
+           faceAreaNormal *= intersection.geometry().volume();
     }
     else {
         assert(intersection.inside().level() == intersection.outside().level());
         
-        faceCenterInside = grid_.faceCenterEcl(insideElemIdx, faceIdx);
-        faceCenterOutside = grid_.faceCenterEcl(outsideElemIdx, faceIdx);
-
+        faceCenterInside = grid_.faceCenterEcl(insideElemIdx, insideFaceIdx, intersection);
+        faceCenterOutside = grid_.faceCenterEcl(outsideElemIdx, outsideFaceIdx, intersection);
+        
         // When the CpGrid has LGRs, we compute the face area normal differently.
-        if (grid_.maxLevel()) {
+        if (grid_.maxLevel() && intersection.inside().level() > 0) {  // remove intersection.inside().level() > 0
             faceAreaNormal = intersection.centerUnitOuterNormal();
             faceAreaNormal *= intersection.geometry().volume();
         }
