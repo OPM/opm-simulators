@@ -170,6 +170,8 @@ public:
         }
 
         this->rank_ = this->simulator_.vanguard().grid().comm().rank();
+
+        this->simulator_.vanguard().eclState().computeFipRegionStatistics();
     }
 
     ~EclWriter()
