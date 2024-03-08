@@ -25,8 +25,6 @@
 #include <dune/istl/owneroverlapcopy.hh>
 #include <dune/istl/solver.hh>
 
-#include <ebos/eclbasevanguard.hh>
-
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
@@ -36,6 +34,7 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
+#include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/linalg/ExtractParallelGridInformationToISTL.hpp>
 #include <opm/simulators/linalg/FlowLinearSolverParameters.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>

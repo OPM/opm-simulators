@@ -21,14 +21,12 @@
   copyright holders.
 */
 #include "config.h"
+#include "TestTypeTag.hpp"
 
 #define BOOST_TEST_MODULE Glift1
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
-#include <ebos/equil/equilibrationhelpers.hh>
-#include <ebos/eclproblem.hh>
-#include <ebos/ebos.hh>
 #include <opm/models/utils/start.hh>
 
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
@@ -36,6 +34,8 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/flow/BlackoilModel.hpp>
+#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/GasLiftSingleWell.hpp>
@@ -49,8 +49,6 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-#include <exception>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
@@ -67,7 +65,7 @@
 namespace Opm::Properties {
     namespace TTag {
         struct TestGliftTypeTag {
-            using InheritsFrom = std::tuple<EbosTypeTag>;
+            using InheritsFrom = std::tuple<TestTypeTag>;
         };
     }
 }
@@ -76,7 +74,8 @@ template <class TypeTag>
 std::unique_ptr<Opm::GetPropType<TypeTag, Opm::Properties::Simulator>>
 initSimulator(const char *filename)
 {
-    using Simulator = Opm::GetPropType<TypeTag, Opm::Properties::Simulator>;
+    using namespace Opm;
+    using Simulator = GetPropType<TypeTag, Properties::Simulator>;
 
     std::string filename_arg = "--ecl-deck-file-name=";
     filename_arg += filename;
@@ -86,11 +85,12 @@ initSimulator(const char *filename)
         filename_arg.c_str()
     };
 
-    Opm::registerEclTimeSteppingParameters<TypeTag>();
-    Opm::setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/true);
+    registerEclTimeSteppingParameters<TypeTag>();
+    BlackoilModelParameters<TypeTag>::registerParameters();
+    EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTerminalOutput, "Do *NOT* use!");
+    setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/true);
 
-    Opm::EclGenericVanguard::readDeck(filename);
-
+    FlowGenericVanguard::readDeck(filename);
     return std::make_unique<Simulator>();
 }
 
@@ -106,7 +106,7 @@ struct GliftFixture {
 #else
     Dune::MPIHelper::instance(argc, argv);
 #endif
-        Opm::EclGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+        Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
         using TypeTag = Opm::Properties::TTag::FlowProblem;
         Opm::registerAllParameters_<TypeTag>();
     }

@@ -23,17 +23,6 @@
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-  ebos/eclgenericcpgridvanguard.cc
-  ebos/eclgenericproblem.cc
-  ebos/eclgenericthresholdpressure.cc
-  ebos/eclgenerictracermodel.cc
-  ebos/eclgenericvanguard.cc
-  ebos/eclgenericwriter.cc
-  ebos/eclmixingratecontrols.cc
-  ebos/eclsolutioncontainers.cc
-  ebos/ecltransmissibility.cc
-  ebos/equil/equilibrationhelpers.cc
-  ebos/equil/initstateequil.cc
   opm/core/props/BlackoilPhases.cpp
   opm/core/props/phaseUsageFromDeck.cpp
   opm/core/props/satfunc/RelpermDiagnostics.cpp
@@ -42,20 +31,31 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/Banners.cpp
   opm/simulators/flow/CollectDataOnIORank.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
+  opm/simulators/flow/EclGenericWriter.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
+  opm/simulators/flow/FlowGenericProblem.cpp
+  opm/simulators/flow/FlowGenericVanguard.cpp
   opm/simulators/flow/FlowUtils.cpp
+  opm/simulators/flow/GenericCpGridVanguard.cpp
   opm/simulators/flow/GenericOutputBlackoilModule.cpp
+  opm/simulators/flow/GenericThresholdPressure.cpp
+  opm/simulators/flow/GenericTracerModel.cpp
   opm/simulators/flow/InterRegFlows.cpp
   opm/simulators/flow/KeywordValidation.cpp
   opm/simulators/flow/LogOutputHelper.cpp
   opm/simulators/flow/Main.cpp
+  opm/simulators/flow/MixingRateControls.cpp
   opm/simulators/flow/NonlinearSolver.cpp
   opm/simulators/flow/partitionCells.cpp
   opm/simulators/flow/RSTConv.cpp
   opm/simulators/flow/RegionPhasePVAverage.cpp
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
+  opm/simulators/flow/SolutionContainers.cpp
+  opm/simulators/flow/Transmissibility.cpp
   opm/simulators/flow/ValidationFunctions.cpp
+  opm/simulators/flow/equil/EquilibrationHelpers.cpp
+  opm/simulators/flow/equil/InitStateEquil.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/FlexibleSolver1.cpp
   opm/simulators/linalg/FlexibleSolver2.cpp
@@ -152,12 +152,13 @@ list (APPEND MAIN_SOURCE_FILES
 
 
 if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
-  list (APPEND MAIN_SOURCE_FILES opm/simulators/utils/DamarisOutputModule.cpp
-                                 opm/simulators/utils/DamarisKeywords.cpp
-                                 opm/simulators/utils/initDamarisXmlFile.cpp
-                                 ebos/damariswriter.cc
-                                 opm/simulators/utils/DamarisVar.cpp
-                                 opm/simulators/utils/GridDataOutput.cpp
+  list (APPEND MAIN_SOURCE_FILES
+    opm/simulators/flow/DamarisWriter.cpp
+    opm/simulators/utils/DamarisKeywords.cpp
+    opm/simulators/utils/DamarisOutputModule.cpp
+    opm/simulators/utils/DamarisVar.cpp
+    opm/simulators/utils/GridDataOutput.cpp
+    opm/simulators/utils/initDamarisXmlFile.cpp
   )
 endif()
 if(CUDA_FOUND)
@@ -267,7 +268,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_convergencereport.cpp
   tests/test_deferredlogger.cpp
   tests/test_dilu.cpp
-  tests/test_equil.cc
+  tests/test_equil.cpp
   tests/test_extractMatrix.cpp
   tests/test_flexiblesolver.cpp
   tests/test_glift1.cpp
@@ -409,34 +410,6 @@ list (APPEND TEST_DATA_FILES
 # originally generated with the command:
 # find opm -name '*.h*' -a ! -name '*-pch.hpp' -printf '\t%p\n' | sort
 list (APPEND PUBLIC_HEADER_FILES
-  ebos/ebos.hh
-  ebos/eclbasevanguard.hh
-  ebos/eclcpgridvanguard.hh
-  ebos/eclequilinitializer.hh
-  ebos/eclfluxmodule.hh
-  ebos/eclgenericcpgridvanguard.hh
-  ebos/eclgenericproblem.hh
-  ebos/eclgenericproblem_impl.hh
-  ebos/eclgenericthresholdpressure.hh
-  ebos/eclgenericthresholdpressure_impl.hh
-  ebos/eclgenerictracermodel.hh
-  ebos/eclgenerictracermodel_impl.hh
-  ebos/eclgenericvanguard.hh
-  ebos/eclgenericwriter.hh
-  ebos/eclgenericwriter_impl.hh
-  ebos/eclmixingratecontrols.hh
-  ebos/eclnewtonmethod.hh
-  ebos/eclpolyhedralgridvanguard.hh
-  ebos/eclproblem.hh
-  ebos/eclproblem_properties.hh
-  ebos/eclsolutioncontainers.hh
-  ebos/eclthresholdpressure.hh
-  ebos/ecltracermodel.hh
-  ebos/ecltransmissibility.hh
-  ebos/ecltransmissibility_impl.hh
-  ebos/eclwriter.hh
-  ebos/femcpgridcompat.hh
-  ebos/vtkecltracermodule.hh
   opm/simulators/flow/ActionHandler.hpp
   opm/simulators/flow/AluGridCartesianIndexMapper.hpp
   opm/simulators/flow/AluGridVanguard.hpp
@@ -449,27 +422,58 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/CollectDataOnIORank_impl.hpp
   opm/simulators/flow/ConvergenceOutputConfiguration.hpp
   opm/simulators/flow/countGlobalCells.hpp
+  opm/simulators/flow/CpGridVanguard.hpp
   opm/simulators/flow/DummyGradientCalculator.hpp
+  opm/simulators/flow/EclGenericWriter.hpp
+  opm/simulators/flow/EclGenericWriter_impl.hpp
+  opm/simulators/flow/EclWriter.hpp
+  opm/simulators/flow/EquilInitializer.hpp
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
+  opm/simulators/flow/FemCpGridCompat.hpp
+  opm/simulators/flow/FIBlackoilModel.hpp
+  opm/simulators/flow/FlowBaseVanguard.hpp
+  opm/simulators/flow/FlowGenericProblem.hpp
+  opm/simulators/flow/FlowGenericProblem_impl.hpp
+  opm/simulators/flow/FlowGenericVanguard.hpp
   opm/simulators/flow/FlowMain.hpp
+  opm/simulators/flow/FlowProblem.hpp
+  opm/simulators/flow/FlowProblemProperties.hpp
   opm/simulators/flow/FlowUtils.hpp
   opm/simulators/flow/FlowsData.hpp
+  opm/simulators/flow/FlowThresholdPressure.hpp
+  opm/simulators/flow/GenericCpGridVanguard.hpp
   opm/simulators/flow/GenericOutputBlackoilModule.hpp
+  opm/simulators/flow/GenericThresholdPressure.hpp
+  opm/simulators/flow/GenericThresholdPressure_impl.hpp
+  opm/simulators/flow/GenericTracerModel.hpp
+  opm/simulators/flow/GenericTracerModel_impl.hpp
   opm/simulators/flow/InterRegFlows.hpp
   opm/simulators/flow/KeywordValidation.hpp
   opm/simulators/flow/LogOutputHelper.hpp
   opm/simulators/flow/Main.hpp
+  opm/simulators/flow/MixingRateControls.hpp
+  opm/simulators/flow/NewTranFluxModule.hpp
   opm/simulators/flow/NonlinearSolver.hpp
   opm/simulators/flow/OutputBlackoilModule.hpp
   opm/simulators/flow/partitionCells.hpp
+  opm/simulators/flow/PolyhedralGridVanguard.hpp
   opm/simulators/flow/priVarsPacking.hpp
   opm/simulators/flow/RSTConv.hpp
   opm/simulators/flow/RegionPhasePVAverage.hpp
   opm/simulators/flow/SimulatorFullyImplicitBlackoil.hpp
   opm/simulators/flow/SimulatorReportBanners.hpp
   opm/simulators/flow/SimulatorSerializer.hpp
+  opm/simulators/flow/SolutionContainers.hpp
   opm/simulators/flow/SubDomain.hpp
+  opm/simulators/flow/TracerModel.hpp
+  opm/simulators/flow/Transmissibility.hpp
+  opm/simulators/flow/Transmissibility_impl.hpp
   opm/simulators/flow/ValidationFunctions.hpp
+  opm/simulators/flow/VtkTracerModule.hpp
+  opm/simulators/flow/equil/EquilibrationHelpers.hpp
+  opm/simulators/flow/equil/EquilibrationHelpers_impl.hpp
+  opm/simulators/flow/equil/InitStateEquil.hpp
+  opm/simulators/flow/equil/InitStateEquil_impl.hpp
   opm/core/props/BlackoilPhases.hpp
   opm/core/props/phaseUsageFromDeck.hpp
   opm/core/props/satfunc/RelpermDiagnostics.hpp
@@ -632,13 +636,14 @@ list (APPEND PUBLIC_HEADER_FILES
   )
 
 if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
-  list (APPEND PUBLIC_HEADER_FILES opm/simulators/utils/DamarisOutputModule.hpp
-                                   opm/simulators/utils/DamarisKeywords.hpp
-                                   ebos/damaris_properties.hh
-                                   ebos/damariswriter.hh
-                                   opm/simulators/utils/DamarisVar.hpp
-                                   opm/simulators/utils/GridDataOutput.hpp
-                                   opm/simulators/utils/GridDataOutput_impl.hpp
+  list (APPEND PUBLIC_HEADER_FILES
+    opm/simulators/utils/DamarisKeywords.hpp
+    opm/simulators/utils/DamarisOutputModule.hpp
+    opm/simulators/flow/DamarisProperties.hpp
+    opm/simulators/flow/DamarisWriter.hpp
+    opm/simulators/utils/DamarisVar.hpp
+    opm/simulators/utils/GridDataOutput.hpp
+    opm/simulators/utils/GridDataOutput_impl.hpp
   )
 endif()
 

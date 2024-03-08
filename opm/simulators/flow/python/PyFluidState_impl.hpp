@@ -22,7 +22,7 @@ namespace Opm::Pybind {
 
 template <class TypeTag>
 PyFluidState<TypeTag>::
-PyFluidState(Simulator* ebos_simulator) : ebos_simulator_(ebos_simulator)
+PyFluidState(Simulator* simulator) : simulator_(simulator)
 {
 
 }
@@ -33,9 +33,10 @@ PyFluidState(Simulator* ebos_simulator) : ebos_simulator_(ebos_simulator)
 template <class TypeTag>
 std::vector<int>
 PyFluidState<TypeTag>::
-getPrimaryVarMeaning(const std::string &variable) const {
-    Model &model = this->ebos_simulator_->model();
-    auto &sol = model.solution(/*timeIdx*/0);
+getPrimaryVarMeaning(const std::string& variable) const
+{
+    Model& model = this->simulator_->model();
+    auto& sol = model.solution(/*timeIdx*/0);
     auto size = model.numGridDof();
     std::vector<int> array(size);
     for (unsigned dof_idx = 0; dof_idx < size; ++dof_idx) {
@@ -48,7 +49,7 @@ getPrimaryVarMeaning(const std::string &variable) const {
 template <class TypeTag>
 std::map<std::string, int>
 PyFluidState<TypeTag>::
-getPrimaryVarMeaningMap(const std::string &variable) const
+getPrimaryVarMeaningMap(const std::string& variable) const
 {
     if (variable.compare("pressure") == 0) {
         return {{ "Po", static_cast<int>(PrimaryVariables::PressureMeaning::Po) },
@@ -108,16 +109,16 @@ getPrimaryVarMeaningMap(const std::string &variable) const
 template <class TypeTag>
 std::vector<double>
 PyFluidState<TypeTag>::
-getFluidStateVariable(const std::string &name) const
+getFluidStateVariable(const std::string& name) const
 {
-    Model &model = this->ebos_simulator_->model();
+    Model& model = this->simulator_->model();
     auto size = model.numGridDof();
     std::vector<double> array(size);
-    const auto& grid_view = this->ebos_simulator_->vanguard().gridView();
+    const auto& grid_view = this->simulator_->vanguard().gridView();
     /* NOTE: grid_view.size(0) should give the same value as
      *  model.numGridDof()
      */
-    ElementContext elem_ctx(*this->ebos_simulator_);
+    ElementContext elem_ctx(*this->simulator_);
     auto var_type = getVariableType_(name);
     for (const auto& elem : elements(grid_view, Dune::Partitions::interior)) {
         elem_ctx.updatePrimaryStencil(elem);
@@ -135,11 +136,11 @@ getFluidStateVariable(const std::string &name) const
 template <class TypeTag>
 std::vector<double>
 PyFluidState<TypeTag>::
-getPrimaryVariable(const std::string &idx_name) const
+getPrimaryVariable(const std::string& idx_name) const
 {
     std::size_t primary_var_idx = getPrimaryVarIndex_(idx_name);
-    Model &model = this->ebos_simulator_->model();
-    auto &sol = model.solution(/*timeIdx*/0);
+    Model& model = this->simulator_->model();
+    auto& sol = model.solution(/*timeIdx*/0);
     auto size = model.numGridDof();
     std::vector<double> array(size);
     for (unsigned dof_idx = 0; dof_idx < size; ++dof_idx) {
@@ -152,11 +153,11 @@ getPrimaryVariable(const std::string &idx_name) const
 template <class TypeTag>
 void
 PyFluidState<TypeTag>::
-setPrimaryVariable(const std::string &idx_name, const double *data, std::size_t size)
+setPrimaryVariable(const std::string& idx_name, const double* data, std::size_t size)
 {
     std::size_t primary_var_idx = getPrimaryVarIndex_(idx_name);
-    Model &model = this->ebos_simulator_->model();
-    auto &sol = model.solution(/*timeIdx*/0);
+    Model& model = this->simulator_->model();
+    auto& sol = model.solution(/*timeIdx*/0);
     auto model_size = model.numGridDof();
     if (model_size != size) {
         const std::string msg = fmt::format(
@@ -165,7 +166,7 @@ setPrimaryVariable(const std::string &idx_name, const double *data, std::size_t 
         throw std::runtime_error(msg);
     }
     for (unsigned dof_idx = 0; dof_idx < size; ++dof_idx) {
-        auto &primary_vars = sol[dof_idx];
+        auto& primary_vars = sol[dof_idx];
         primary_vars[primary_var_idx] = data[dof_idx];
     }
 }
@@ -196,7 +197,7 @@ getPrimaryVarIndex_(const std::string &idx_name) const
 template <class TypeTag>
 int
 PyFluidState<TypeTag>::
-getVariableMeaning_(PrimaryVariables &primary_vars, const std::string &variable) const
+getVariableMeaning_(PrimaryVariables& primary_vars, const std::string& variable) const
 {
     if (variable.compare("pressure") == 0) {
         return static_cast<int>(primary_vars.primaryVarsMeaningPressure());
@@ -220,7 +221,7 @@ getVariableMeaning_(PrimaryVariables &primary_vars, const std::string &variable)
 template <class TypeTag>
 typename PyFluidState<TypeTag>::VariableType
 PyFluidState<TypeTag>::
-getVariableType_(const std::string &name) const
+getVariableType_(const std::string& name) const
 {
     static std::map<std::string, VariableType> variable_type_map =
        {
@@ -248,7 +249,7 @@ template <class TypeTag>
 template <class FluidState>
 double
 PyFluidState<TypeTag>::
-getVariableValue_(FluidState &fs, VariableType var_type, const std::string &name) const
+getVariableValue_(FluidState& fs, VariableType var_type, const std::string& name) const
 {
     double value;
     switch(var_type) {
@@ -307,7 +308,7 @@ getVariableValue_(FluidState &fs, VariableType var_type, const std::string &name
 template <class TypeTag>
 void
 PyFluidState<TypeTag>::
-variableNotFoundError_(const std::string &name) const
+variableNotFoundError_(const std::string& name) const
 {
     const std::string msg = fmt::format("Access to variable '{}' is not implemented yet!", name);
     throw std::runtime_error(msg);

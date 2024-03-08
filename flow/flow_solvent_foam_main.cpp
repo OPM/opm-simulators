@@ -15,7 +15,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include <flow/flow_ebos_solvent_foam.hpp>
+#include <flow/flow_solvent_foam.hpp>
 
 
 int main(int argc, char** argv)

@@ -155,11 +155,6 @@ namespace Opm {
             EWOMS_HIDE_PARAM(TypeTag, NewtonTargetIterations);
             EWOMS_HIDE_PARAM(TypeTag, NewtonVerbose);
             EWOMS_HIDE_PARAM(TypeTag, NewtonWriteConvergence);
-            EWOMS_HIDE_PARAM(TypeTag, EclNewtonSumTolerance);
-            EWOMS_HIDE_PARAM(TypeTag, EclNewtonSumToleranceExponent);
-            EWOMS_HIDE_PARAM(TypeTag, EclNewtonStrictIterations);
-            EWOMS_HIDE_PARAM(TypeTag, EclNewtonRelaxedVolumeFraction);
-            EWOMS_HIDE_PARAM(TypeTag, EclNewtonRelaxedTolerance);
 
             // the default eWoms checkpoint/restart mechanism does not work with flow
             EWOMS_HIDE_PARAM(TypeTag, RestartTime);
@@ -187,7 +182,7 @@ namespace Opm {
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasFormationVolumeFactor);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasSaturationPressure);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteIntrinsicPermeabilities);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteEclTracerConcentration);
+                EWOMS_HIDE_PARAM(TypeTag, VtkWriteTracerConcentration);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteExtrusionFactor);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteFilterVelocities);
                 EWOMS_HIDE_PARAM(TypeTag, VtkWriteDensities);
@@ -340,9 +335,10 @@ namespace Opm {
                 Dune::Timer setupTimerAfterReadingDeck;
                 setupTimerAfterReadingDeck.start();
 
-                int status = setupParameters_(this->argc_, this->argv_, EclGenericVanguard::comm());
-                if (status)
+                int status = setupParameters_(this->argc_, this->argv_, FlowGenericVanguard::comm());
+                if (status) {
                     return status;
+                }
 
                 setupParallelism();
                 setupModelSimulator();
@@ -381,7 +377,7 @@ namespace Opm {
             // determine the rank of the current process and the number of processes
             // involved in the simulation. MPI must have already been initialized
             // here. (yes, the name of this method is misleading.)
-            auto comm = EclGenericVanguard::comm();
+            auto comm = FlowGenericVanguard::comm();
             mpi_rank_ = comm.rank();
             mpi_size_ = comm.size();
 
@@ -422,7 +418,7 @@ namespace Opm {
 
         void setupModelSimulator()
         {
-            modelSimulator_ = std::make_unique<ModelSimulator>(EclGenericVanguard::comm(), /*verbose=*/false);
+            modelSimulator_ = std::make_unique<ModelSimulator>(FlowGenericVanguard::comm(), /*verbose=*/false);
             modelSimulator_->executionTimer().start();
             modelSimulator_->model().applyInitialSolution();
 

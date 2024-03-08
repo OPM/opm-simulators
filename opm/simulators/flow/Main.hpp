@@ -23,36 +23,36 @@
 #ifndef OPM_MAIN_HEADER_INCLUDED
 #define OPM_MAIN_HEADER_INCLUDED
 
-#include <flow/flow_ebos_blackoil.hpp>
-#include <flow/flow_ebos_blackoil_legacyassembly.hpp>
+#include <flow/flow_blackoil.hpp>
+#include <flow/flow_blackoil_legacyassembly.hpp>
 
-#include <flow/flow_ebos_gasoil.hpp>
-#include <flow/flow_ebos_gasoildiffuse.hpp>
-#include <flow/flow_ebos_gasoil_energy.hpp>
-#include <flow/flow_ebos_oilwater.hpp>
-#include <flow/flow_ebos_gaswater.hpp>
-#include <flow/flow_ebos_gaswater_solvent.hpp>
-#include <flow/flow_ebos_solvent.hpp>
-#include <flow/flow_ebos_solvent_foam.hpp>
-#include <flow/flow_ebos_polymer.hpp>
-#include <flow/flow_ebos_extbo.hpp>
-#include <flow/flow_ebos_foam.hpp>
-#include <flow/flow_ebos_brine.hpp>
-#include <flow/flow_ebos_brine_saltprecipitation.hpp>
-#include <flow/flow_ebos_gaswater_saltprec_vapwat.hpp>
-#include <flow/flow_ebos_gaswater_saltprec_energy.hpp>
-#include <flow/flow_ebos_brine_precsalt_vapwat.hpp>
-#include <flow/flow_ebos_onephase.hpp>
-#include <flow/flow_ebos_onephase_energy.hpp>
-#include <flow/flow_ebos_oilwater_brine.hpp>
-#include <flow/flow_ebos_gaswater_brine.hpp>
-#include <flow/flow_ebos_gaswater_energy.hpp>
-#include <flow/flow_ebos_gaswater_dissolution.hpp>
-#include <flow/flow_ebos_gaswater_dissolution_diffuse.hpp>
-#include <flow/flow_ebos_energy.hpp>
-#include <flow/flow_ebos_oilwater_polymer.hpp>
-#include <flow/flow_ebos_oilwater_polymer_injectivity.hpp>
-#include <flow/flow_ebos_micp.hpp>
+#include <flow/flow_gasoil.hpp>
+#include <flow/flow_gasoildiffuse.hpp>
+#include <flow/flow_gasoil_energy.hpp>
+#include <flow/flow_oilwater.hpp>
+#include <flow/flow_gaswater.hpp>
+#include <flow/flow_gaswater_solvent.hpp>
+#include <flow/flow_solvent.hpp>
+#include <flow/flow_solvent_foam.hpp>
+#include <flow/flow_polymer.hpp>
+#include <flow/flow_extbo.hpp>
+#include <flow/flow_foam.hpp>
+#include <flow/flow_brine.hpp>
+#include <flow/flow_brine_saltprecipitation.hpp>
+#include <flow/flow_gaswater_saltprec_vapwat.hpp>
+#include <flow/flow_gaswater_saltprec_energy.hpp>
+#include <flow/flow_brine_precsalt_vapwat.hpp>
+#include <flow/flow_onephase.hpp>
+#include <flow/flow_onephase_energy.hpp>
+#include <flow/flow_oilwater_brine.hpp>
+#include <flow/flow_gaswater_brine.hpp>
+#include <flow/flow_gaswater_energy.hpp>
+#include <flow/flow_gaswater_dissolution.hpp>
+#include <flow/flow_gaswater_dissolution_diffuse.hpp>
+#include <flow/flow_energy.hpp>
+#include <flow/flow_oilwater_polymer.hpp>
+#include <flow/flow_oilwater_polymer_injectivity.hpp>
+#include <flow/flow_micp.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
@@ -313,7 +313,7 @@ private:
         using PreProblem = GetPropType<PreTypeTag, Properties::Problem>;
 
         PreProblem::setBriefDescription("Flow, an advanced reservoir simulator for ECL-decks provided by the Open Porous Media project.");
-        int status = FlowMain<PreTypeTag>::setupParameters_(argc_, argv_, EclGenericVanguard::comm());
+        int status = FlowMain<PreTypeTag>::setupParameters_(argc_, argv_, FlowGenericVanguard::comm());
         if (status != 0) {
             // if setupParameters_ returns a value smaller than 0, there was no error, but
             // the program should abort. This is the case e.g. for the --help and the
@@ -341,7 +341,7 @@ private:
         enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
         
         // Reset to false as we cannot use Damaris if there is only one rank.
-        if ((enableDamarisOutput_ == true) && (EclGenericVanguard::comm().size() == 1)) {
+        if ((enableDamarisOutput_ == true) && (FlowGenericVanguard::comm().size() == 1)) {
             std::string msg ;
             msg = "\nUse of Damaris (command line argument --enable-damaris-output=true) has been disabled for run with only one rank.\n" ;
             OpmLog::warning(msg);
@@ -371,7 +371,7 @@ private:
             return true;
         }
         
-        int mpiRank = EclGenericVanguard::comm().rank();
+        int mpiRank = FlowGenericVanguard::comm().rank();
         outputCout_ = false;
         if (mpiRank == 0)
             outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
@@ -401,7 +401,7 @@ private:
 
         std::string cmdline_params;
         if (outputCout_) {
-            printFlowBanner(EclGenericVanguard::comm().size(),
+            printFlowBanner(FlowGenericVanguard::comm().size(),
                             getNumThreads<PreTypeTag>(),
                             Opm::moduleVersionName());
             std::ostringstream str;

@@ -20,9 +20,8 @@
 #ifndef OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 #define OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 
+#include <opm/simulators/flow/DamarisProperties.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
-
-#include <ebos/damaris_properties.hh>
 
 #include <map>
 #include <string>
@@ -86,8 +85,10 @@ std::map<std::string, std::string>
 getDamarisKeywords(const Parallel::Communication& comm, const std::string& OutputDir)
 {
     DamarisSettings settings;
-    // Get all of the Damaris keywords (except for --enable-damaris, which is used in simulators/flow/Main.hpp)
-    // These command line arguments are defined in ebos/damariswriter.hh and defaults are set in ebos/eclproblem_properties.hh
+    // Get all of the Damaris keywords (except for --enable-damaris,
+    // which is used in simulators/flow/Main.hpp)
+    // These command line arguments are defined in opm/simulators/flow/DamarisWriter.hpp and
+    // defaults are set in opm/simulators/flow/FlowProblemProperties.hpp
     settings.enableDamarisOutputCollective_ = EWOMS_GET_PARAM(TypeTag, bool, DamarisOutputHdfCollective);
     settings.saveMeshToHDF5_ = EWOMS_GET_PARAM(TypeTag, bool, DamarisSaveMeshToHdf);
     settings.saveToDamarisHDF5_ = EWOMS_GET_PARAM(TypeTag, bool, DamarisSaveToHdf);

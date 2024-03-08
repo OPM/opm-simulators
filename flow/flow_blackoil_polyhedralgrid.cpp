@@ -18,21 +18,22 @@
 */
 #include <config.h>
 
-#include <ebos/eclpolyhedralgridvanguard.hh>
-
 #include <opm/grid/polyhedralgrid.hh>
+
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
+
+#include <opm/simulators/flow/PolyhedralGridVanguard.hpp>
 #include <opm/simulators/flow/Main.hpp>
 
 // these are not explicitly instanced in library
-#include <ebos/eclgenericproblem_impl.hh>
-#include <ebos/eclgenericthresholdpressure_impl.hh>
-#include <ebos/eclgenerictracermodel_impl.hh>
-#include <ebos/ecltransmissibility_impl.hh>
-#include <ebos/eclgenericwriter_impl.hh>
-#include <ebos/equil/initstateequil_impl.hh>
 #include <opm/simulators/flow/CollectDataOnIORank_impl.hpp>
+#include <opm/simulators/flow/EclGenericWriter_impl.hpp>
+#include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
+#include <opm/simulators/flow/GenericThresholdPressure_impl.hpp>
+#include <opm/simulators/flow/GenericTracerModel_impl.hpp>
+#include <opm/simulators/flow/Transmissibility_impl.hpp>
+#include <opm/simulators/flow/equil/InitStateEquil_impl.hpp>
 #include <opm/simulators/utils/GridDataOutput_impl.hpp>
 
 namespace Opm {
@@ -64,7 +65,7 @@ namespace Properties {
 
     template<class TypeTag>
     struct Vanguard<TypeTag, TTag::FlowProblemPoly> {
-        using type = Opm::EclPolyhedralGridVanguard<TypeTag>;
+        using type = Opm::PolyhedralGridVanguard<TypeTag>;
     };
 }
 }

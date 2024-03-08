@@ -43,8 +43,8 @@
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/simulators/flow/BlackoilModel.hpp>
+#include <opm/simulators/flow/FlowProblem.hpp>
 
-#include <ebos/eclproblem.hh>
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/wells/StandardWell.hpp>
