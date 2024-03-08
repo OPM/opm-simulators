@@ -162,7 +162,12 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
     }
 
 // HIP_VERSION is defined as (HIP_VERSION_MAJOR * 10000000 + HIP_VERSION_MINOR * 100000 + HIP_VERSION_PATCH)
-#if HIP_VERSION >= 50400000
+#if HIP_VERSION >= 60000000
+    ROCSPARSE_CHECK(rocsparse_dbsrmv(handle, dir, operation,
+                                     Nb, Nb, nnzb, &one, descr_M,
+                                     d_Avals, d_Arows, d_Acols, block_size,
+                                     spmv_info, d_x, &zero, d_r));
+#elif HIP_VERSION >= 50400000
     ROCSPARSE_CHECK(rocsparse_dbsrmv_ex(handle, dir, operation,
                                         Nb, Nb, nnzb, &one, descr_M,
                                         d_Avals, d_Arows, d_Acols, block_size,
@@ -219,7 +224,12 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
         }
 
         // spmv
-#if HIP_VERSION >= 50400000
+#if HIP_VERSION >= 60000000
+        ROCSPARSE_CHECK(rocsparse_dbsrmv(handle, dir, operation,
+                                          Nb, Nb, nnzb, &one, descr_M,
+                                          d_Avals, d_Arows, d_Acols, block_size,
+                                          spmv_info, d_pw, &zero, d_v));
+#elif HIP_VERSION >= 50400000
         ROCSPARSE_CHECK(rocsparse_dbsrmv_ex(handle, dir, operation,
                                             Nb, Nb, nnzb, &one, descr_M,
                                             d_Avals, d_Arows, d_Acols, block_size,
@@ -280,7 +290,12 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
         }
 
         // spmv
-#if HIP_VERSION >= 50400000
+#if HIP_VERSION >= 60000000
+        ROCSPARSE_CHECK(rocsparse_dbsrmv(handle, dir, operation,
+                                         Nb, Nb, nnzb, &one, descr_M,
+                                         d_Avals, d_Arows, d_Acols, block_size,
+                                         spmv_info, d_s, &zero, d_t));
+#elif HIP_VERSION >= 50400000
         ROCSPARSE_CHECK(rocsparse_dbsrmv_ex(handle, dir, operation,
                                             Nb, Nb, nnzb, &one, descr_M,
                                             d_Avals, d_Arows, d_Acols, block_size,
@@ -510,7 +525,12 @@ bool rocsparseSolverBackend<block_size>::analyze_matrix() {
                              Nb, nnzbs_prec, descr_U, d_Mvals, d_Mrows, d_Mcols, \
                              block_size, ilu_info, rocsparse_analysis_policy_reuse, rocsparse_solve_policy_auto, d_buffer));
 
-#if HIP_VERSION >= 50400000
+#if HIP_VERSION >= 60000000
+    ROCSPARSE_CHECK(rocsparse_dbsrmv_analysis(handle, dir, operation,
+                                              Nb, Nb, nnzb,
+                                              descr_A, d_Avals, d_Arows, d_Acols,
+                                              block_size, spmv_info));
+#elif HIP_VERSION >= 50400000
     ROCSPARSE_CHECK(rocsparse_dbsrmv_ex_analysis(handle, dir, operation,
         Nb, Nb, nnzb,
         descr_A, d_Avals, d_Arows, d_Acols,
