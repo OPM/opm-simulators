@@ -54,15 +54,15 @@ namespace Opm
                   const int num_phases,
                   const int index_of_well,
                   const std::vector<PerforationData>& perf_data)
-      : WellInterfaceIndices<FluidSystem,Indices,Scalar>(well,
-                                                         pw_info,
-                                                         time_step,
-                                                         rate_converter,
-                                                         pvtRegionIdx,
-                                                         num_components,
-                                                         num_phases,
-                                                         index_of_well,
-                                                         perf_data)
+      : WellInterfaceIndices<FluidSystem,Indices>(well,
+                                                  pw_info,
+                                                  time_step,
+                                                  rate_converter,
+                                                  pvtRegionIdx,
+                                                  num_components,
+                                                  num_phases,
+                                                  index_of_well,
+                                                  perf_data)
       , param_(param)
     {
         connectionRates_.resize(this->number_of_perforations_);

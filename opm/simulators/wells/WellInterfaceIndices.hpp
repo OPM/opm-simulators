@@ -30,13 +30,14 @@
 namespace Opm
 {
 
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 class WellInterfaceIndices : public WellInterfaceFluidSystem<FluidSystem>
 {
 public:
     using WellInterfaceFluidSystem<FluidSystem>::Gas;
     using WellInterfaceFluidSystem<FluidSystem>::Oil;
     using WellInterfaceFluidSystem<FluidSystem>::Water;
+    using Scalar = typename FluidSystem::Scalar;
     using Eval = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq>;
 
     int flowPhaseToModelCompIdx(const int phaseIdx) const;

@@ -34,14 +34,15 @@ namespace Opm
 
 class DeferredLogger;
 enum class Phase;
-template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
+template<class FluidSystem, class Indices> class WellInterfaceIndices;
 class WellState;
 
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 class StandardWellConnections
 {
 public:
-    StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well);
+    using Scalar = typename FluidSystem::Scalar;
+    StandardWellConnections(const WellInterfaceIndices<FluidSystem,Indices>& well);
 
     struct Properties
     {
@@ -92,8 +93,8 @@ public:
     Scalar pressure_diff(const unsigned perf) const
     { return perf_pressure_diffs_[perf]; }
 
-    using Eval = typename WellInterfaceIndices<FluidSystem,Indices,Scalar>::Eval;
-    using EvalWell = typename StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>::EvalWell;
+    using Eval = typename WellInterfaceIndices<FluidSystem,Indices>::Eval;
+    using EvalWell = typename StandardWellPrimaryVariables<FluidSystem,Indices>::EvalWell;
 
     Eval connectionRateBrine(double& rate,
                              const double vap_wat_rate,
@@ -131,7 +132,7 @@ private:
                           const Properties& props,
                           DeferredLogger& deferred_logger);
 
-    const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well interface
+    const WellInterfaceIndices<FluidSystem,Indices>& well_; //!< Reference to well interface
 
     std::vector<Scalar> perf_densities_; //!< densities of the fluid in each perforation
     std::vector<Scalar> perf_pressure_diffs_; //!< // pressure drop between different perforations

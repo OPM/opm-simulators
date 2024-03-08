@@ -65,10 +65,11 @@ int eclPositionalParameter(Dune::ParameterTree& tree,
  * \brief This problem simulates an input file given in the data format used by the
  *        commercial ECLiPSE simulator.
  */
-template<class GridView, class FluidSystem, class Scalar>
+template<class GridView, class FluidSystem>
 class FlowGenericProblem
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     using TabulatedTwoDFunction = UniformXTabulated2DFunction<Scalar>;
     using TabulatedFunction = Tabulated1DFunction<Scalar>;
 
@@ -371,7 +372,7 @@ protected:
     std::vector<Scalar> solventRsw_;
     MICPSolutionContainer<Scalar> micp_;
 
-    MixingRateControls<FluidSystem, Scalar> mixControls_;
+    MixingRateControls<FluidSystem> mixControls_;
 
     // time stepping parameters
     bool enableTuning_;

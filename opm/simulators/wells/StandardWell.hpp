@@ -55,15 +55,13 @@ namespace Opm
     template<typename TypeTag>
     class StandardWell : public WellInterface<TypeTag>
                        , public StandardWellEval<GetPropType<TypeTag, Properties::FluidSystem>,
-                                                 GetPropType<TypeTag, Properties::Indices>,
-                                                 GetPropType<TypeTag, Properties::Scalar>>
+                                                 GetPropType<TypeTag, Properties::Indices>>
     {
 
     public:
         using Base = WellInterface<TypeTag>;
         using StdWellEval = StandardWellEval<GetPropType<TypeTag, Properties::FluidSystem>,
-                                             GetPropType<TypeTag, Properties::Indices>,
-                                             GetPropType<TypeTag, Properties::Scalar>>;
+                                             GetPropType<TypeTag, Properties::Indices>>;
 
         // TODO: some functions working with AD variables handles only with values (double) without
         // dealing with derivatives. It can be beneficial to make functions can work with either AD or scalar value.

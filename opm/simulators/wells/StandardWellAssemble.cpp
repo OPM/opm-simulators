@@ -81,9 +81,9 @@ private:
     StandardWellEquations<Scalar,numEq>& eqns_; //!< Reference to equation system
 };
 
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 void
-StandardWellAssemble<FluidSystem,Indices,Scalar>::
+StandardWellAssemble<FluidSystem,Indices>::
 assembleControlEq(const WellState& well_state,
                   const GroupState& group_state,
                   const Schedule& schedule,
@@ -180,8 +180,8 @@ assembleControlEq(const WellState& well_state,
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void StandardWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void StandardWellAssemble<FluidSystem,Indices>::
 assembleInjectivityEq(const EvalWell& eq_pskin,
                       const EvalWell& eq_wat_vel,
                       const int pskin_index,
@@ -204,8 +204,8 @@ assembleInjectivityEq(const EvalWell& eq_pskin,
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void StandardWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void StandardWellAssemble<FluidSystem,Indices>::
 assemblePerforationEq(const EvalWell& cq_s_effective,
                       const int componentIdx,
                       const int cell_idx,
@@ -229,8 +229,8 @@ assemblePerforationEq(const EvalWell& cq_s_effective,
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void StandardWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void StandardWellAssemble<FluidSystem,Indices>::
 assembleSourceEq(const EvalWell& resWell_loc,
                  const int componentIdx,
                  const int numWellEq,
@@ -243,8 +243,8 @@ assembleSourceEq(const EvalWell& resWell_loc,
     eqns.residual()[0][componentIdx] += resWell_loc.value();
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void StandardWellAssemble<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void StandardWellAssemble<FluidSystem,Indices>::
 assembleZFracEq(const EvalWell& cq_s_zfrac_effective,
                 const int cell_idx,
                 const int numWellEq,
@@ -257,7 +257,7 @@ assembleZFracEq(const EvalWell& cq_s_zfrac_effective,
 }
 
 #define INSTANCE(Dim,...) \
-template class StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
+template class StandardWellAssemble<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__>;
 
 // One phase
 INSTANCE(4u, BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)

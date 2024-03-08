@@ -58,8 +58,8 @@
 namespace Opm
 {
 
-template<class FluidSystem, class Indices, class Scalar>
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+MultisegmentWellSegments<FluidSystem,Indices>::
 MultisegmentWellSegments(const int numSegments,
                          WellInterfaceGeneric& well)
     : perforations_(numSegments)
@@ -129,8 +129,8 @@ MultisegmentWellSegments(const int numSegments,
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellSegments<FluidSystem,Indices>::
 computeFluidProperties(const EvalWell& temperature,
                        const EvalWell& saltConcentration,
                        const PrimaryVariables& primary_variables,
@@ -306,8 +306,8 @@ computeFluidProperties(const EvalWell& temperature,
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-void MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+void MultisegmentWellSegments<FluidSystem,Indices>::
 updateUpwindingSegments(const PrimaryVariables& primary_variables)
 {
     for (std::size_t seg = 0; seg < perforations_.size(); ++seg) {
@@ -331,26 +331,27 @@ updateUpwindingSegments(const PrimaryVariables& primary_variables)
     }
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices>::
 getHydroPressureLoss(const int seg,
                      const int seg_density) const
 {
     return densities_[seg_density] * well_.gravity() * depth_diffs_[seg];
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-Scalar MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellSegments<FluidSystem,Indices>::Scalar
+MultisegmentWellSegments<FluidSystem,Indices>::
 getPressureDiffSegPerf(const int seg,
                        const int perf) const
 {
     return well_.gravity() * densities_[seg].value() * perforation_depth_diffs_[perf];
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices>::
 getSurfaceVolume(const EvalWell& temperature,
                  const EvalWell& saltConcentration,
                  const PrimaryVariables& primary_variables,
@@ -495,9 +496,9 @@ getSurfaceVolume(const EvalWell& temperature,
     return volume / vol_ratio;
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices>::
 getFrictionPressureLoss(const int seg, 
                         const bool extra_reverse_flow_derivatives /*false*/) const
 {
@@ -547,9 +548,9 @@ getFrictionPressureLoss(const int seg,
     return sign * mswellhelpers::frictionPressureLoss(length, diameter, area, roughness, density, mass_rate, visc);
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices>::
 pressureDropSpiralICD(const int seg,
                       const bool extra_reverse_flow_derivatives /*false*/) const
 {
@@ -651,9 +652,9 @@ pressureDropSpiralICD(const int seg,
     return sign * temp_value1 * temp_value2 * strength * reservoir_rate_icd * reservoir_rate_icd;
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices>::
 pressureDropAutoICD(const int seg,
                     const UnitSystem& unit_system, 
                     const bool extra_reverse_flow_derivatives /*false*/) const
@@ -765,9 +766,9 @@ pressureDropAutoICD(const int seg,
     return result;
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices>::
 pressureDropValve(const int seg,
                   const SummaryState& summary_state,
                   const bool extra_reverse_flow_derivatives /*false*/) const
@@ -826,9 +827,9 @@ pressureDropValve(const int seg,
     return sign * (friction_pressure_loss + constriction_pressure_loss);
 }
 
-template<class FluidSystem, class Indices, class Scalar>
-typename MultisegmentWellSegments<FluidSystem,Indices,Scalar>::EvalWell
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+template<class FluidSystem, class Indices>
+typename MultisegmentWellSegments<FluidSystem,Indices>::EvalWell
+MultisegmentWellSegments<FluidSystem,Indices>::
 accelerationPressureLossContribution(const int seg,
                                      const double area,
                                      const bool extra_reverse_flow_derivatives /*false*/) const
@@ -860,9 +861,9 @@ accelerationPressureLossContribution(const int seg,
     return sign*mswellhelpers::velocityHead(area, mass_rate, density);
 }                                     
 
-template <class FluidSystem, class Indices, class Scalar>
+template <class FluidSystem, class Indices>
 void
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+MultisegmentWellSegments<FluidSystem,Indices>::
 copyPhaseDensities(const PhaseUsage& pu, SegmentState& segSol) const
 {
     auto* rho = segSol.phase_density.data();
@@ -895,9 +896,9 @@ copyPhaseDensities(const PhaseUsage& pu, SegmentState& segSol) const
     }
 }
 
-template <class FluidSystem, class Indices, class Scalar>
+template <class FluidSystem, class Indices>
 void
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+MultisegmentWellSegments<FluidSystem,Indices>::
 copyPhaseDensities(const unsigned    phaseIdx,
                    const std::size_t stride,
                    double*           dens) const
@@ -911,9 +912,9 @@ copyPhaseDensities(const unsigned    phaseIdx,
     }
 }
 
-template <class FluidSystem, class Indices, class Scalar>
+template <class FluidSystem, class Indices>
 double
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+MultisegmentWellSegments<FluidSystem,Indices>::
 mixtureDensity(const int seg) const
 {
     auto mixDens = 0.0;
@@ -940,9 +941,9 @@ mixtureDensity(const int seg) const
     return mixDens;
 }
 
-template <class FluidSystem, class Indices, class Scalar>
+template <class FluidSystem, class Indices>
 double
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+MultisegmentWellSegments<FluidSystem,Indices>::
 mixtureDensityWithExponents(const int seg) const
 {
     if (const auto& segment = this->well_.wellEcl().getSegments()[seg];
@@ -956,9 +957,9 @@ mixtureDensityWithExponents(const int seg) const
     return this->mixtureDensity(seg);
 }
 
-template <class FluidSystem, class Indices, class Scalar>
+template <class FluidSystem, class Indices>
 double
-MultisegmentWellSegments<FluidSystem,Indices,Scalar>::
+MultisegmentWellSegments<FluidSystem,Indices>::
 mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const
 {
     auto mixDens = 0.0;
@@ -988,7 +989,7 @@ mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const
 }
 
 #define INSTANCE(...) \
-template class MultisegmentWellSegments<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__,double>;
+template class MultisegmentWellSegments<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,__VA_ARGS__>;
 
 // One phase
 INSTANCE(BlackOilOnePhaseIndices<0u,0u,0u,0u,false,false,0u,1u,0u>)
@@ -1007,6 +1008,7 @@ INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,0u,false,true,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,false,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<0u,0u,0u,1u,false,true,0u,0u,0u>)
 INSTANCE(BlackOilTwoPhaseIndices<1u,0u,0u,0u,false,false,0u,0u,0u>)
+
 // Blackoil
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,false,false,0u,0u>)
 INSTANCE(BlackOilIndices<0u,0u,0u,0u,true,false,0u,0u>)

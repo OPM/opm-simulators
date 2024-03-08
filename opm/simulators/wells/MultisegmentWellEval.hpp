@@ -43,20 +43,21 @@ class Schedule;
 class WellContributions;
 class SummaryState;
 
-template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
+template<class FluidSystem, class Indices> class WellInterfaceIndices;
 class WellState;
 
-template<typename FluidSystem, typename Indices, typename Scalar>
-class MultisegmentWellEval : public MultisegmentWellGeneric<Scalar>
+template<typename FluidSystem, typename Indices>
+class MultisegmentWellEval : public MultisegmentWellGeneric<typename FluidSystem::Scalar>
 {
 protected:
-    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>;
+    using Scalar = typename FluidSystem::Scalar;
+    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
     static constexpr int numWellEq = PrimaryVariables::numWellEq;
     static constexpr int SPres = PrimaryVariables::SPres;
     static constexpr int WQTotal = PrimaryVariables::WQTotal;
 
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
-    using MSWSegments = MultisegmentWellSegments<FluidSystem,Indices,Scalar>;
+    using MSWSegments = MultisegmentWellSegments<FluidSystem,Indices>;
 
     using BVector = typename Equations::BVector;
     using BVectorWell = typename Equations::BVectorWell;
@@ -73,7 +74,7 @@ public:
     { return linSys_; }
 
 protected:
-    MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
+    MultisegmentWellEval(WellInterfaceIndices<FluidSystem,Indices>& baseif);
 
     void initMatrixAndVectors(const int num_cells);
 
@@ -137,7 +138,7 @@ protected:
     // convert a Eval from reservoir to contain the derivative related to wells
     EvalWell extendEval(const Eval& in) const;
 
-    const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif_;
+    const WellInterfaceIndices<FluidSystem,Indices>& baseif_;
 
     Equations linSys_; //!< The equation system
     PrimaryVariables primary_variables_; //!< The primary variables

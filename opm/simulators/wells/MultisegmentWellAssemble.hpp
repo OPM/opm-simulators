@@ -32,14 +32,14 @@ namespace Opm
 class DeferredLogger;
 class GroupState;
 template<class Scalar, int numWellEq, int numEq> class MultisegmentWellEquations;
-template<class FluidSystem, class Indices, class Scalar> class MultisegmentWellPrimaryVariables;
+template<class FluidSystem, class Indices> class MultisegmentWellPrimaryVariables;
 class Schedule;
 class SummaryState;
-template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
+template<class FluidSystem, class Indices> class WellInterfaceIndices;
 class WellState;
 
 //! \brief Class handling assemble of the equation system for MultisegmentWell.
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 class MultisegmentWellAssemble
 {
     static constexpr bool has_water = (Indices::waterSwitchIdx >= 0);
@@ -59,12 +59,13 @@ class MultisegmentWellAssemble
 
 public:
     static constexpr int numWellEq = Indices::numPhases+1;
+    using Scalar = typename FluidSystem::Scalar;
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
-    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices,Scalar>;
+    using PrimaryVariables = MultisegmentWellPrimaryVariables<FluidSystem,Indices>;
     using EvalWell = DenseAd::Evaluation<Scalar, numWellEq+Indices::numEq>;
 
     //! \brief Constructor initializes reference to well.
-    MultisegmentWellAssemble(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well)
+    MultisegmentWellAssemble(const WellInterfaceIndices<FluidSystem,Indices>& well)
         : well_(well)
     {}
 
@@ -143,7 +144,7 @@ public:
                                Equations& eqns) const;
 
 private:
-    const WellInterfaceIndices<FluidSystem,Indices,Scalar>& well_; //!< Reference to well
+    const WellInterfaceIndices<FluidSystem,Indices>& well_; //!< Reference to well
 };
 
 }

@@ -40,15 +40,16 @@ class GroupState;
 class Schedule;
 class SummaryState;
 class WellContributions;
-template<class FluidSystem, class Indices, class Scalar> class WellInterfaceIndices;
+template<class FluidSystem, class Indices> class WellInterfaceIndices;
 class WellState;
 
-template<class FluidSystem, class Indices, class Scalar>
+template<class FluidSystem, class Indices>
 class StandardWellEval
 {
 protected:
-    using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices,Scalar>;
-    using StdWellConnections = StandardWellConnections<FluidSystem,Indices,Scalar>;
+    using Scalar = typename FluidSystem::Scalar;
+    using PrimaryVariables = StandardWellPrimaryVariables<FluidSystem,Indices>;
+    using StdWellConnections = StandardWellConnections<FluidSystem,Indices>;
     static constexpr int Bhp = PrimaryVariables::Bhp;
     static constexpr int WQTotal= PrimaryVariables::WQTotal;
     static constexpr int numWellConservationEq = PrimaryVariables::numWellConservationEq;
@@ -69,9 +70,9 @@ public:
     { return linSys_; }
 
 protected:
-    StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif);
+    StandardWellEval(const WellInterfaceIndices<FluidSystem,Indices>& baseif);
 
-    const WellInterfaceIndices<FluidSystem,Indices,Scalar>& baseif_;
+    const WellInterfaceIndices<FluidSystem,Indices>& baseif_;
 
     EvalWell extendEval(const Eval& in) const;
 

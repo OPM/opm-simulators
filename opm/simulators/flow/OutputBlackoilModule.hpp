@@ -112,8 +112,7 @@ class EcfvDiscretization;
  *        ECL binary format.
  */
 template <class TypeTag>
-class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<TypeTag, Properties::FluidSystem>,
-                                                                GetPropType<TypeTag, Properties::Scalar>>
+class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<TypeTag, Properties::FluidSystem>>
 {
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Discretization = GetPropType<TypeTag, Properties::Discretization>;
@@ -127,7 +126,7 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
     using GridView = GetPropType<TypeTag, Properties::GridView>;
     using Element = typename GridView::template Codim<0>::Entity;
     using ElementIterator = typename GridView::template Codim<0>::Iterator;
-    using BaseType = GenericOutputBlackoilModule<FluidSystem, Scalar>;
+    using BaseType = GenericOutputBlackoilModule<FluidSystem>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using Dir = FaceDir::DirEnum;
 
