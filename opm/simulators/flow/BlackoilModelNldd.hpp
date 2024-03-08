@@ -656,6 +656,7 @@ private:
                 } else if (res[ii] > tol[ii]) {
                     report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                 }
+                report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
             }
         }
 
@@ -842,6 +843,7 @@ private:
                 if (mb_sum < acceptable_local_mb_sum && cnv_sum < acceptable_local_cnv_sum) {
                     local_report.converged = true;
                     logger.debug(fmt::format("Accepting solution in unconverged domain {} on rank {}.", domain.index, rank_));
+                    logger.debug(fmt::format("Value of mb_sum: {}  cnv_sum: {}", mb_sum, cnv_sum));
                 } else {
                     logger.debug("Unconverged local solution.");
                 }
