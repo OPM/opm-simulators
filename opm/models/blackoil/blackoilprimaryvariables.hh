@@ -1145,11 +1145,11 @@ private:
         (*this)[Indices::pressureSwitchIdx] = pressure / (this->pressureScale_);
     }
 
-    WaterMeaning primaryVarsMeaningWater_;
-    PressureMeaning primaryVarsMeaningPressure_;
-    GasMeaning primaryVarsMeaningGas_;
-    BrineMeaning primaryVarsMeaningBrine_;
-    SolventMeaning primaryVarsMeaningSolvent_;
+    WaterMeaning primaryVarsMeaningWater_{WaterMeaning::Disabled};
+    PressureMeaning primaryVarsMeaningPressure_{PressureMeaning::Po};
+    GasMeaning primaryVarsMeaningGas_{GasMeaning::Disabled};
+    BrineMeaning primaryVarsMeaningBrine_{BrineMeaning::Disabled};
+    SolventMeaning primaryVarsMeaningSolvent_{SolventMeaning::Disabled};
     unsigned short pvtRegionIdx_;
     Scalar pcFactor_;
     static inline Scalar pressureScale_ = 1.0;
