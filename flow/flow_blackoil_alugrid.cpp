@@ -65,6 +65,12 @@ struct Vanguard<TypeTag, TTag::FlowProblemAlugrid> {
     using type = Opm::AluGridVanguard<TypeTag>;
 };
 }
+
+template<>
+class SupportsFaceTag<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
+    : public std::bool_constant<true>
+{};
+
 }
 
 int main(int argc, char** argv)

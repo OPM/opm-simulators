@@ -68,6 +68,12 @@ namespace Properties {
         using type = Opm::PolyhedralGridVanguard<TypeTag>;
     };
 }
+
+template<>
+class SupportsFaceTag<Dune::PolyhedralGrid<3, 3>>
+    : public std::bool_constant<true>
+{};
+
 }
 
 int main(int argc, char** argv)

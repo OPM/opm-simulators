@@ -20,7 +20,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #ifndef OPM_BLACKOILAQUIFERMODEL_HEADER_INCLUDED
 #define OPM_BLACKOILAQUIFERMODEL_HEADER_INCLUDED
 
@@ -33,14 +32,9 @@
 #include <opm/simulators/aquifers/AquiferCarterTracy.hpp>
 #include <opm/simulators/aquifers/AquiferFetkovich.hpp>
 #include <opm/simulators/aquifers/AquiferNumerical.hpp>
+#include <opm/simulators/aquifers/SupportsFaceTag.hpp>
 
 #include <opm/simulators/flow/BaseAquiferModel.hpp>
-
-#include <opm/grid/CpGrid.hpp>
-#include <opm/grid/polyhedralgrid.hh>
-#if HAVE_DUNE_ALUGRID
-#include <dune/alugrid/grid.hh>
-#endif
 
 #include <opm/material/densead/Math.hpp>
 
@@ -48,35 +42,9 @@
 #include <type_traits>
 #include <string_view>
 
-namespace Opm
-{
+namespace Opm {
 
-template<class Grid>
-class SupportsFaceTag
-    : public std::bool_constant<false>
-{};
-
-
-template<>
-class SupportsFaceTag<Dune::CpGrid>
-    : public std::bool_constant<true>
-{};
-
-
-template<>
-class SupportsFaceTag<Dune::PolyhedralGrid<3, 3>>
-    : public std::bool_constant<true>
-{};
-
-#if HAVE_DUNE_ALUGRID
-template<>
-class SupportsFaceTag<Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming>>
-    : public std::bool_constant<true>
-{};
-#endif
-
-
-/// Class for handling the blackoil well model.
+/// Class for handling the blackoil aquifer model.
 template <typename TypeTag>
 class BlackoilAquiferModel
 {
@@ -142,7 +110,6 @@ private:
 
     void computeConnectionAreaFraction() const;
 };
-
 
 } // namespace Opm
 

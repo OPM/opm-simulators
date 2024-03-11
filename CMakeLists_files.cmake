@@ -489,6 +489,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/aquifers/AquiferNumerical.hpp
   opm/simulators/aquifers/BlackoilAquiferModel.hpp
   opm/simulators/aquifers/BlackoilAquiferModel_impl.hpp
+  opm/simulators/aquifers/SupportsFaceTag.hpp
   opm/simulators/linalg/bda/amgclSolverBackend.hpp
   opm/simulators/linalg/bda/BdaBridge.hpp
   opm/simulators/linalg/bda/BdaResult.hpp
