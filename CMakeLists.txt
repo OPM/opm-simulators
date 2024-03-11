@@ -13,7 +13,7 @@
 
 # Mandatory call to project
 
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.21)
 
 project(opm-simulators C CXX)
 
@@ -33,6 +33,19 @@ option(BUILD_FLOW_ALU_GRID "Build flow blackoil with alu grid" OFF)
 option(USE_DAMARIS_LIB "Use the Damaris library for asynchronous I/O?" OFF)
 option(USE_BDA_BRIDGE "Enable the BDA bridge (GPU/AMGCL solvers)" ON)
 option(USE_TRACY_PROFILER "Enable tracy profiling" OFF)
+option(CONVERT_CUDA_TO_HIP "Convert CUDA code to HIP (to run on AMD cards)" OFF)
+
+if (CONVERT_CUDA_TO_HIP)
+  enable_language(HIP)
+  message("CUDA code will be hipified")
+  set(HAVE_CUDA 1) # we still need this defined so that the preprocessor does not remove the code
+  set(CUDA_FOUND ON)
+  set(USE_HIP 1)
+  find_package(hip REQUIRED)
+  find_package(hipsparse REQUIRED)
+  find_package(hipblas REQUIRED)
+  link_libraries(roc::hipblas roc::hipsparse)
+endif()
 
 # The following was copied from CMakeLists.txt in opm-common.
 # TODO: factor out the common parts in opm-common and opm-simulator as a cmake module
@@ -166,6 +179,7 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
     # Hence we call it unconditionally
     # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
     find_package(CUDA)
+    set(CUDA_FOUND ON)
   endif()
   if(CUDA_FOUND AND CUDA_VERSION VERSION_LESS "9.0")
     set(CUDA_FOUND OFF)
@@ -174,9 +188,13 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
   endif()
 endif()
 
+find_package(CUDAToolkit)
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
-  include_directories(${CUDA_INCLUDE_DIRS})
+  if(NOT USE_HIP) # no need to include CUDA files if we use rocm stack
+    include_directories(${CUDA_INCLUDE_DIRS})
+    include_directories(${CUDAToolkit_INCLUDE_DIRS})
+  endif()
 endif()
 
 find_package(OpenCL)
@@ -311,7 +329,7 @@ macro (files_hook)
     set(HDF5_FOUND OFF)
     unset(HAVE_HDF5)
   endif()
-  if(HAVE_ROCSPARSE AND HAVE_CUDA)
+  if(HAVE_ROCSPARSE AND HAVE_CUDA AND USE_BDA_BRIDGE) # unsure if this is the correct way to change this
     message(WARNING "WARNING! Using CUDA and ROCm at the same time is not allowed. Please choose only one of them by setting CMAKE_DISABLE_FIND_PACKAGE_<rocsparse|CUDA>=<ON|OFF>. Disabling CUDA...\n")
     set(CUDA_FOUND OFF)
     unset(HAVE_CUDA)
@@ -719,13 +737,19 @@ add_custom_target(extra_test ${CMAKE_CTEST_COMMAND} -C ExtraTests)
 # must link libraries after target 'opmsimulators' has been defined
 
 if(CUDA_FOUND)
-  target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
-  target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
+  if (NOT USE_HIP)
+    target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
+    target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
+  endif()
   if(USE_BDA_BRIDGE)
     set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
   endif()
 
   # CUISTL
+  set(gpu_label "gpu_cuda")
+  if(USE_HIP)
+    set(gpu_label "gpu_hip")
+  endif()
   set_tests_properties(cusparse_safe_call
                        cublas_safe_call
                        cuda_safe_call
@@ -740,7 +764,7 @@ if(CUDA_FOUND)
                        cuseqilu0
                        cuowneroverlapcopy
                        solver_adapter
-                       PROPERTIES LABELS gpu_cuda)
+                       PROPERTIES LABELS ${gpu_label})
 endif()
 
 if(USE_BDA_BRIDGE)
