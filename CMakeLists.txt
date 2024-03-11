@@ -13,9 +13,10 @@
 
 # Mandatory call to project
 
-cmake_minimum_required (VERSION 3.10)
+cmake_minimum_required (VERSION 3.29)
 
-project(opm-simulators C CXX)
+project(opm-simulators C CXX HIP)
+
 
 
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
@@ -33,6 +34,25 @@ option(BUILD_FLOW_ALU_GRID "Build flow blackoil with alu grid" OFF)
 option(USE_DAMARIS_LIB "Use the Damaris library for asynchronous I/O?" OFF)
 option(USE_BDA_BRIDGE "Enable the BDA bridge (GPU/AMGCL solvers)" ON)
 option(USE_TRACY_PROFILER "Enable tracy profiling" OFF)
+option(USE_HIPCODENVIDIA "Convert CUDA code to HIP and compile for Nvidia hardware" OFF)
+option(USE_HIPCODEAMD "Convert CUDA code to HIP and compile for AMD hardware" OFF)
+
+if (USE_HIPCODENVIDIA OR USE_HIPCODEAMD)
+  message("CUDA code will be hipified")
+  # target_include_directories(opmsimulators PRIVATE /opt/rocm-6.0.2/include)
+  # target_link_libraries(opmsimulators PRIVATE /home/tobias/Downloads/hipBLAS-rocm-6.0.2/build/library/src/libhipblas.so)
+  # target_link_libraries(opmsimulators PRIVATE /home/tobias/Downloads/hipSPARSE-rocm-6.0.2/library/libhipsparse.so)
+  include_directories(/opt/rocm-6.0.2/include)
+  link_libraries(/home/tobias/Downloads/hipBLAS-rocm-6.0.2/build/library/src/libhipblas.so)
+  link_libraries(/home/tobias/Downloads/hipSPARSE-rocm-6.0.2/library/libhipsparse.so)
+  # set(CUDA_FOUND OFF)
+
+  # when we add support for HIP on amd cards we should in here do:
+  # if (USE_HIPCODEAMD)
+  #   set(CUDA_VARIABLES OFF)
+  #   set(AMD_VARIABLES ON)
+  # endif()
+endif()
 
 # The following was copied from CMakeLists.txt in opm-common.
 # TODO: factor out the common parts in opm-common and opm-simulator as a cmake module
@@ -166,17 +186,20 @@ if(NOT CMAKE_DISABLE_FIND_PACKAGE_CUDA AND
     # Hence we call it unconditionally
     # The WellContributions kernel uses __shfl_down_sync, which was introduced in CUDA 9.0
     find_package(CUDA)
-  endif()
-  if(CUDA_FOUND AND CUDA_VERSION VERSION_LESS "9.0")
-    set(CUDA_FOUND OFF)
-    message(WARNING "Deactivating CUDA as we require version 9.0 or newer."
-      " Found only CUDA version ${CUDA_VERSION}.")
-  endif()
-endif()
+    set(CUDA_FOUND ON)
+    endif()
+    # if(CUDA_FOUND AND CUDA_VERSION VERSION_LESS "9.0")
+    # set(CUDA_FOUND OFF)
+    # message(WARNING "Deactivating CUDA as we require version 9.0 or newer."
+    # " Found only CUDA version ${CUDA_VERSION}.")
+    # endif()
+    endif()
 
+find_package(CUDAToolkit)
 if(CUDA_FOUND)
   set(HAVE_CUDA 1)
   include_directories(${CUDA_INCLUDE_DIRS})
+  include_directories(${CUDAToolkit_INCLUDE_DIRS})
 endif()
 
 find_package(OpenCL)
@@ -598,10 +621,12 @@ endif()
 
 add_library(moduleVersion OBJECT opm/simulators/utils/moduleVersion.cpp)
 set_property(TARGET moduleVersion PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET moduleVersion PROPERTY PUBLIC CUDA_ARCHITECTURES 52)
 
 # Strictly we only depend on the update-version target,
 # but this is not exposed in a super-build.
 add_dependencies(moduleVersion opmsimulators)
+set_property(TARGET opmsimulators PROPERTY PUBLIC CUDA_ARCHITECTURES 52)
 
 set(FLOW_MODELS blackoil brine energy extbo foam gasoil gaswater
                 oilwater oilwater_brine gaswater_brine oilwater_polymer
