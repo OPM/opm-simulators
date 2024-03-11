@@ -782,7 +782,7 @@ wasDynamicallyShutThisTimeStep(const int well_index) const
 
 bool
 BlackoilWellModelGeneric::
-wasDynamicallyShutThisTimeStep(const std::string well_name) const
+wasDynamicallyShutThisTimeStep(const std::string& well_name) const
 {
     return this->closed_this_step_.find(well_name) !=
            this->closed_this_step_.end();
@@ -1041,7 +1041,7 @@ updateAndCommunicateGroupData(const int reportStepIdx,
 
 bool
 BlackoilWellModelGeneric::
-hasTHPConstraints()
+hasTHPConstraints() const
 {
     return BlackoilWellModelConstraints(*this).hasTHPConstraints();
 }

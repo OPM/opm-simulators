@@ -447,8 +447,8 @@ actionOnBrokenConstraints(const Group& group,
     }
     case Group::ExceedAction::WELL: {
 
-        std::tie(worst_offending_well, std::ignore) = WellGroupHelpers::shutWorstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
-                                                                             newControl, wellModel_.phaseUsage(), wellModel_.comm(), well_state, deferred_logger);
+        std::tie(worst_offending_well, std::ignore) = WellGroupHelpers::worstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
+                                                            newControl, wellModel_.phaseUsage(), wellModel_.comm(), well_state, deferred_logger);
         break;
     }
     case Group::ExceedAction::PLUG: {

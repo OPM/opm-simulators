@@ -59,7 +59,7 @@ public:
                                    GroupState& group_state,
                                    DeferredLogger& deferred_logger) const;
 
-    //! \brief Execute action on broken constraint for a production well group.
+    //! \brief Execute action on broken constraint for a production well group. Return true if a group control is changed
     bool actionOnBrokenConstraints(const Group& group,
                                    const int reportStepIdx,
                                    const Group::GroupLimitAction group_limit_action,
@@ -69,7 +69,7 @@ public:
                                    GroupState& group_state,
                                    DeferredLogger& deferred_logger) const;
 
-    //! \brief Update the individual controls for wells in a group.
+    //! \brief Update the individual controls for wells in a group. Return true if a group control is changed
     bool updateGroupIndividualControl(const Group& group,
                                       const int reportStepIdx,
                                       std::map<std::pair<std::string,Opm::Phase>,std::string>& switched_inj,

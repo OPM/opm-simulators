@@ -2132,7 +2132,6 @@ namespace Opm {
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
         }
 
-        //if (iterationIdx > 1) {
         bool changed_individual =
             BlackoilWellModelConstraints(*this).
                 updateGroupIndividualControl(group,
@@ -2148,7 +2147,6 @@ namespace Opm {
             changed = true;
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
         }
-        //}
         // call recursively down the group hierarchy
         for (const std::string& groupName : group.groups()) {
             bool changed_this = updateGroupControls( schedule().getGroup(groupName, reportStepIdx), deferred_logger, reportStepIdx,iterationIdx);

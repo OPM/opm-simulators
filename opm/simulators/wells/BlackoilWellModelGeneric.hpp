@@ -179,7 +179,7 @@ public:
     data::GroupAndNetworkValues groupAndNetworkData(const int reportStepIdx) const;
 
     /// Return true if any well has a THP constraint.
-    bool hasTHPConstraints();
+    bool hasTHPConstraints() const;
 
     /// Checks if network is active (at least one network well on prediction).
     void updateNetworkActiveState(const int report_step);
@@ -213,7 +213,7 @@ public:
     void updateClosedWellsThisStep(const std::string& well_name) const {
         this->closed_this_step_.insert(well_name);
     }
-    bool wasDynamicallyShutThisTimeStep(const std::string well_name) const;
+    bool wasDynamicallyShutThisTimeStep(const std::string& well_name) const;
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -585,8 +585,10 @@ protected:
 
     bool wellStructureChangedDynamically_{false};
 
+    // Store maps of group name and new group controls for output
     std::map<std::string, std::string> switched_prod_groups_;
     std::map<std::pair<std::string, Opm::Phase>, std::string> switched_inj_groups_;
+    // Store map of group name and close offending well for output
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
 
 
