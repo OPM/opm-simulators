@@ -43,30 +43,37 @@ TEST_ARGS="$@"
 rm -Rf ${RESULT_PATH}
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
-${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-opm-rst-file=true --output-dir=${RESULT_PATH}
+
+${BINPATH}/${EXE_NAME} ${TEST_ARGS} --output-dir=${RESULT_PATH} 
+
+TS_FILE=${RESULT_PATH}/${FILENAME}.TXT
+
+summary=${COMPARE_ECL_COMMAND/compareECL/summary}
+
+${summary} ${RESULT_PATH}/${FILENAME} TIME -n > ${TS_FILE}
 
 test $? -eq 0 || exit 1
 mkdir mpi
 cd mpi
-mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --enable-opm-rst-file=true --output-dir=${RESULT_PATH}/mpi
+mpirun -np ${MPI_PROCS} ${BINPATH}/${EXE_NAME} ${TEST_ARGS} --output-dir=${RESULT_PATH}/mpi --time-step-control=hardcoded --time-step-control-file-name=${TS_FILE}
 test $? -eq 0 || exit 1
 cd ..
 
 ecode=0
 echo "=== Executing comparison for summary file ==="
-${COMPARE_ECL_COMMAND} -t SMRY -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
+${COMPARE_ECL_COMMAND} -t SMRY -d -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
   ecode=1
-  ${COMPARE_ECL_COMMAND} -t SMRY -a -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
+  ${COMPARE_ECL_COMMAND} -t SMRY -d -a -R ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
 fi
 
 echo "=== Executing comparison for restart file ==="
-${COMPARE_ECL_COMMAND} -l -t UNRST ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
+${COMPARE_ECL_COMMAND} -t UNRST ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
   ecode=1
-  ${COMPARE_ECL_COMMAND} -a -l -t UNRST ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
+  ${COMPARE_ECL_COMMAND} -a -t UNRST ${RESULT_PATH}/${FILENAME} ${RESULT_PATH}/mpi/${FILENAME} ${ABS_TOL} ${REL_TOL}
 fi
 
 exit $ecode
