@@ -204,28 +204,24 @@ initFromRestartFile(const RestartValue& restartValues,
     this->initializeWellProdIndCalculators();
     initializeWellPerfData();
 
-    if (! this->wells_ecl_.empty()) {
-        handle_ms_well &= anyMSWellOpenLocal();
-        // Resize for restart step
-        this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
-                                 this->schedule(), handle_ms_well, numCells,
-                                 this->well_perf_data_, this->summaryState_);
+    handle_ms_well &= anyMSWellOpenLocal();
+    // Resize for restart step
+    this->wellState().resize(this->wells_ecl_, this->local_parallel_well_info_,
+                             this->schedule(), handle_ms_well, numCells,
+                             this->well_perf_data_, this->summaryState_);
 
-        BlackoilWellModelRestart(*this).loadRestartData(restartValues.wells,
-                                                        restartValues.grp_nwrk,
-                                                        handle_ms_well,
-                                                        this->wellState(),
-                                                        this->groupState());
-
-        if (config.has_model()) {
-            BlackoilWellModelRestart(*this).loadRestartGuideRates(report_step,
-                                                                  config.model().target(),
-                                                                  restartValues.wells,
-                                                                  this->guideRate_);
-        }
-    }
+    BlackoilWellModelRestart(*this).loadRestartData(restartValues.wells,
+                                                    restartValues.grp_nwrk,
+                                                    handle_ms_well,
+                                                    this->wellState(),
+                                                    this->groupState());
 
     if (config.has_model()) {
+        BlackoilWellModelRestart(*this).loadRestartGuideRates(report_step,
+                                                              config.model().target(),
+                                                              restartValues.wells,
+                                                              this->guideRate_);
+
         BlackoilWellModelRestart(*this).loadRestartGuideRates(report_step,
                                                               config,
                                                               restartValues.grp_nwrk.groupData,
