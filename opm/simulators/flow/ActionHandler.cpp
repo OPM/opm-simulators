@@ -140,30 +140,23 @@ namespace {
     fetchWellPI(const int                                    reportStep,
                 const Opm::Schedule&                         schedule,
                 const WellModel&                             wellModel,
-                const Opm::Action::ActionX&                  action,
-                const Opm::Action::Result::MatchingEntities& matches,
                 const Opm::Parallel::Communication           comm)
     {
         auto wellpi = std::unordered_map<std::string, Scalar> {};
 
-        const auto wellpi_wells = action.wellpi_wells
-            (schedule.wellMatcher(reportStep), matches);
+        auto allWells = schedule[reportStep].well_order().names();
 
-        if (wellpi_wells.empty()) {
-            return wellpi;
-        }
-
-        auto wellPI = std::vector<Scalar>(wellpi_wells.size());
-        for (auto i = 0*wellpi_wells.size(); i < wellpi_wells.size(); ++i) {
-            if (wellModel.hasWell(wellpi_wells[i])) {
-                wellPI[i] = wellModel.wellPI(wellpi_wells[i]);
+        auto wellPI = std::vector<Scalar>(allWells.size());
+        for (auto i = 0*allWells.size(); i < allWells.size(); ++i) {
+            if (wellModel.hasWell(allWells[i])) {
+                wellPI[i] = wellModel.wellPI(allWells[i]);
             }
         }
 
         comm.max(wellPI.data(), wellPI.size());
 
-        for (auto i = 0*wellpi_wells.size(); i < wellpi_wells.size(); ++i) {
-            wellpi.emplace(wellpi_wells[i], wellPI[i]);
+        for (auto i = 0*allWells.size(); i < allWells.size(); ++i) {
+            wellpi.emplace(allWells[i], wellPI[i]);
         }
 
         return wellpi;
@@ -206,6 +199,13 @@ applyActions(const int reportStep,
     const auto ts  = formatActionDate(now, reportStep);
 
     bool commit_wellstate = false;
+    const auto simTime = asTimeT(now);
+
+    //Only fetch the WellPIMap if we have pending pyactions or actions
+    if (not actions.pending_python(actionState_).empty() or not actions.pending(actionState_, simTime).empty()) {
+        schedule_.setWellPIMap(fetchWellPI<Scalar>(reportStep, this->schedule_, this->wellModel_, this->comm_));
+
+    }
     for (const auto& pyaction : actions.pending_python(actionState_)) {
         auto sim_update = schedule_.runPyAction(reportStep, *pyaction, actionState_,
                                                 ecl_state_, summaryState_);
@@ -224,7 +224,6 @@ applyActions(const int reportStep,
     }
 
     auto non_triggered = 0;
-    const auto simTime = asTimeT(now);
     for (const auto& action : actions.pending(this->actionState_, simTime)) {
         const auto actionResult = action->eval(context);
         if (! actionResult.conditionSatisfied()) {
@@ -237,12 +236,8 @@ applyActions(const int reportStep,
 
         logActiveAction(action->name(), matches.wells(), ts);
 
-        const auto wellpi = fetchWellPI<Scalar>
-            (reportStep, this->schedule_, this->wellModel_,
-             *action, matches, this->comm_);
-
         const auto sim_update = this->schedule_
-            .applyAction(reportStep, *action, matches, wellpi);
+            .applyAction(reportStep, *action, matches);
 
         this->applySimulatorUpdate(reportStep, sim_update, transUp, commit_wellstate);
         this->actionState_.add_run(*action, simTime, actionResult);
