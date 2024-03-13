@@ -42,6 +42,7 @@
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
+#include <iostream>
 #include <chrono>
 #include <cstddef>
 #include <ctime>
@@ -143,8 +144,10 @@ void ActionHandler::applyActions(const int reportStep,
 
     bool commit_wellstate = false;
     for (const auto& pyaction : actions.pending_python(actionState_)) {
-        auto wellPIAll = this->fetchWellPIAll(reportStep); //todo: do this nicer!
-        schedule_.wellPIPointer = std::make_shared<std::unordered_map<std::string, double>>(std::move(wellPIAll));
+        //if (!schedule_.wellPIPointer) {
+        //auto wellPIAll = this->fetchWellPIAll(reportStep); //todo: do this nicer!
+        //schedule_.wellPIPointer = std::make_shared<std::unordered_map<std::string, double>>(std::move(wellPIAll));
+        //}
         auto sim_update = schedule_.runPyAction(reportStep, *pyaction, actionState_,
                                                 ecl_state_, summaryState_);
         this->applySimulatorUpdate(reportStep, sim_update, commit_wellstate, transUp);
@@ -238,7 +241,15 @@ ActionHandler::fetchWellPIAll(const int reportStep) const
   std::unordered_map<std::string, double> wellpi;
   for (const auto& well : allWells) {
       wellpi[well.name()] = wellpi_vector[ well.seqIndex() ];
+      std::cout << "------------------------------------------------------- At Report Step: " << reportStep << ": Well " << well.name() << " has productivity/injectivity of " << wellpi[well.name()] << std::endl;
   }
+  /*if (reportStep > 0) {
+    std::cout << " wellpi_from_inside ------------------------------------------------------- At Report Step: " << reportStep << ": Try to get schedule_.snapshots[reportStep-1].target_wellpi" << std::endl;
+    auto wellpi_from_inside = schedule_.snapshots[reportStep-1].target_wellpi;
+    for (const auto& wellpi_from_inside_entry : wellpi_from_inside) {
+        std::cout << " wellpi_from_inside ------------------------------------------------------- At Report Step: " << reportStep << ": Well " << wellpi_from_inside_entry.first << " has productivity/injectivity of " << wellpi_from_inside_entry.second << std::endl;
+    }
+  }*/
   return wellpi;
 }
 
@@ -284,6 +295,7 @@ ActionHandler::fetchWellPI(const int reportStep,
   for (const auto& wname : wellpi_wells) {
       const auto& well = schedule_.getWell( wname, reportStep );
       wellpi[wname] = wellpi_vector[ well.seqIndex() ];
+      std::cout << "------------------------------------------------------- At Report Step: " << reportStep << ": Well " << wname << " has productivity/injectivity of " <<  wellpi[wname] << std::endl;
   }
   return wellpi;
 }
