@@ -97,7 +97,7 @@ partiallySupported()
             "GCONPROD",
             {
                {2,{true, allow_values<std::string> {"NONE", "FLD", "ORAT", "WRAT", "GRAT", "LRAT", "RESV"}, "GCONPROD(TARGET): valid option should be NONE/FLD/ORAT/WRAT/GRAT/LRAT or RESV"}}, // CONTROL_MODE
-               {7,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTION): Only NONE and RATE are supported"}}, 
+               {7,{true, allow_values<std::string> {"NONE", "RATE", "WELL"}, "GCONPROD(ACTION): Only NONE and RATE are supported"}}, 
                {11,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTWAT): Only NONE and RATE are supported"}}, // WATER_EXCEED_PROCEDURE
                {12,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTGAS): Only NONE and RATE are supported"}}, // GAS_EXCEED_PROCEDURE
                {13,{true, allow_values<std::string> {"NONE", "RATE"}, "GCONPROD(ACTLIQ): Only NONE and RATE are supported"}}, // LIQUID_EXCEED_PROCEDURE
@@ -330,7 +330,8 @@ partiallySupported()
          {
             "WTEST",
             {
-               {3,{true, allow_values<std::string> {"E", "P", "EP", "PE", ""}, "WTEST(TEST): only the E (economic) and P (physical) reason is currently supported"}}, // REASON
+               {3,{true, allow_values<std::string> {"E", "P", "G", "EP", "PE", "EG", "GE", "PG", "GP", "PEG", "PGE", "EPG", "EGP", "GEP", "GPE"}, 
+                  "WTEST(TEST): only the E (economic) and P (physical) and G (group) reason is currently supported"}}, // REASON
             },
          },
          {
