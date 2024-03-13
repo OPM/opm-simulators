@@ -84,6 +84,9 @@ public:
                 const Action::ActionX& action,
                 const std::vector<std::string>& matching_wells) const;
 
+    std::unordered_map<std::string, double>
+    fetchWellPIAll(int reportStep) const;
+
     EclipseState& ecl_state_;
     Schedule& schedule_;
     Action::State& actionState_;
