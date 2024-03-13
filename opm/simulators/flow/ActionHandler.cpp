@@ -42,6 +42,7 @@
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
+#include <iostream>
 #include <chrono>
 #include <cstddef>
 #include <ctime>
@@ -238,6 +239,7 @@ ActionHandler::fetchWellPIAll(const int reportStep) const
   std::unordered_map<std::string, double> wellpi;
   for (const auto& well : allWells) {
       wellpi[well.name()] = wellpi_vector[ well.seqIndex() ];
+      std::cout << "------------------------------------------------------- At Report Step: " << reportStep << ": Well " << well.name() << " has productivity/injectivity of " << wellpi[well.name()] << std::endl;
   }
   return wellpi;
 }
@@ -284,6 +286,7 @@ ActionHandler::fetchWellPI(const int reportStep,
   for (const auto& wname : wellpi_wells) {
       const auto& well = schedule_.getWell( wname, reportStep );
       wellpi[wname] = wellpi_vector[ well.seqIndex() ];
+      std::cout << "------------------------------------------------------- At Report Step: " << reportStep << ": Well " << wname << " has productivity/injectivity of " <<  wellpi[wname] << std::endl;
   }
   return wellpi;
 }
