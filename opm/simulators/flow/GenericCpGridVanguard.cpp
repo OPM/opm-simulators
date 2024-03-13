@@ -206,14 +206,14 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         // first cell of a well (e.g. for pressure).  Hence this is now
         // skipped.  Rank 0 had everything even before.
 
-#if HAVE_OPENCL
+#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
         if (partitionJacobiBlocks) {
             this->cell_part_ = this->grid_->
                 zoltanPartitionWithoutScatter(&wells, faceTrans.data(),
                                               numJacobiBlocks,
                                               zoltanImbalanceTol);
         }
-#endif // HAVE_OPENCL
+#endif
     }
 }
 

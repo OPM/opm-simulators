@@ -195,7 +195,7 @@ public:
             ParentType::prepare(M,b);
         }
 
-#if HAVE_OPENCL
+#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
         // update matrix entries for solvers.
         if (firstcall && bdaBridge_) {
             // model will not change the matrix object. Hence simply store a pointer
