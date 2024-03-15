@@ -30,6 +30,8 @@
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/cuda/cuda_header.hpp>
 
+#include <thread>
+
 #include "cublas_v2.h"
 #include "cusparse_v2.h"
 // For more information about cusparse, check https://docs.nvidia.com/cuda/cusparse/index.html
@@ -37,6 +39,8 @@
 // iff true, the nonzeroes of the matrix are copied row-by-row into a contiguous, pinned memory array, then a single GPU memcpy is done
 // otherwise, the nonzeroes of the matrix are assumed to be in a contiguous array, and a single GPU memcpy is enough
 #define COPY_ROW_BY_ROW 0
+
+extern std::shared_ptr<std::thread> copyThread;
 
 namespace Opm
 {
@@ -306,6 +310,11 @@ template <unsigned int block_size>
 void cusparseSolverBackend<block_size>::copy_system_to_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix) {
     Timer t;
 
+    cudaMemcpyAsync(d_bCols, matrix->colIndices, nnzb * sizeof(int), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_bRows, matrix->rowPointers, (Nb + 1) * sizeof(int), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
+    cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
+
 #if COPY_ROW_BY_ROW
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
@@ -317,25 +326,24 @@ void cusparseSolverBackend<block_size>::copy_system_to_gpu(std::shared_ptr<Block
 #else
     cudaMemcpyAsync(d_bVals, matrix->nnzValues, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
     if (useJacMatrix) {
+        copyThread->join();
         cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, nnzbs_prec * block_size * block_size * sizeof(double), cudaMemcpyHostToDevice, stream);
     } else {
         cudaMemcpyAsync(d_mVals, d_bVals, nnz  * sizeof(double), cudaMemcpyDeviceToDevice, stream);
     }
 #endif
 
-    cudaMemcpyAsync(d_bCols, matrix->colIndices, nnzb * sizeof(int), cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_bRows, matrix->rowPointers, (Nb + 1) * sizeof(int), cudaMemcpyHostToDevice, stream);
     if (useJacMatrix) {
         cudaMemcpyAsync(d_mCols, jacMatrix->colIndices, nnzbs_prec * sizeof(int), cudaMemcpyHostToDevice, stream);
         cudaMemcpyAsync(d_mRows, jacMatrix->rowPointers, (Nb + 1) * sizeof(int), cudaMemcpyHostToDevice, stream);
     }
-    cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
-    cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
 
-    if (verbosity > 2) {
+    if (verbosity >= 3) {
         cudaStreamSynchronize(stream);
+        
+        c_copy += t.stop();
         std::ostringstream out;
-        out << "cusparseSolver::copy_system_to_gpu(): " << t.stop() << " s";
+        out << "---cusparseSolver::copy_system_to_gpu(): " << t.elapsed() << " s";
         OpmLog::info(out.str());
     }
 } // end copy_system_to_gpu()
@@ -346,6 +354,9 @@ template <unsigned int block_size>
 void cusparseSolverBackend<block_size>::update_system_on_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix) {
     Timer t;
 
+    cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
+    cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
+    
 #if COPY_ROW_BY_ROW
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
@@ -357,19 +368,20 @@ void cusparseSolverBackend<block_size>::update_system_on_gpu(std::shared_ptr<Blo
 #else
     cudaMemcpyAsync(d_bVals, matrix->nnzValues, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
     if (useJacMatrix) {
+        copyThread->join();
         cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, nnzbs_prec * block_size * block_size * sizeof(double), cudaMemcpyHostToDevice, stream);
     } else {
         cudaMemcpyAsync(d_mVals, d_bVals, nnz  * sizeof(double), cudaMemcpyDeviceToDevice, stream);
     }
 #endif
 
-    cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
-    cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
-
-    if (verbosity > 2) {
+    if (verbosity >= 3) {
         cudaStreamSynchronize(stream);
+
+        c_copy += t.stop();
         std::ostringstream out;
-        out << "cusparseSolver::update_system_on_gpu(): " << t.stop() << " s";
+        out << "-----cusparseSolver::update_system_on_gpu(): " << t.elapsed() << " s\n";
+        out << "---cusparseSolver::cum copy: " << c_copy << " s";
         OpmLog::info(out.str());
     }
 } // end update_system_on_gpu()

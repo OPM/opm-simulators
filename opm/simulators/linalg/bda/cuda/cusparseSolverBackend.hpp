@@ -71,6 +71,8 @@ private:
     bool useJacMatrix = false;
     int nnzbs_prec;             // number of nonzero blocks in the matrix for preconditioner
                                 // could be jacMatrix or matrix
+                                
+    double c_copy = 0.0; // cummulative timer measuring the total time it takes to transfer the data to the GPU
 
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
