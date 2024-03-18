@@ -397,6 +397,12 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
             else
                 trans = 1.0 / (1.0/halfTrans1 + 1.0/halfTrans2);
 
+            std::vector<int> lgr1Indices(326, 0);
+            std::iota(lgr1Indices.begin(), lgr1Indices.end(), 275);
+            if (std::find(lgr1Indices.begin(), lgr1Indices.end(), elemIdx) != std::end(lgr1Indices)){
+                std::cout << "ElemIdx: " << elemIdx<< " TRANS: " << trans << std::endl;
+            }
+            
             // apply the full face transmissibility multipliers
             // for the inside ...
             if(!pinchActive){
@@ -459,6 +465,11 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                                                    faceDir);
 
             trans_[details::isId(elemIdx, outsideElemIdx)] = trans;
+
+            
+            if (std::find(lgr1Indices.begin(), lgr1Indices.end(), elemIdx) != std::end(lgr1Indices)){
+                std::cout << "ElemIdx: " << elemIdx << " TRANS after applying the region multipliers: " << trans << std::endl;
+            }
 
             // update the "thermal half transmissibility" for the intersection
             if (enableEnergy_) {
