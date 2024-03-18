@@ -13,7 +13,7 @@
 
 # Mandatory call to project
 
-cmake_minimum_required (VERSION 3.29)
+cmake_minimum_required (VERSION 3.25)
 
 project(opm-simulators C CXX HIP)
 
@@ -38,6 +38,8 @@ option(USE_HIPCODENVIDIA "Convert CUDA code to HIP and compile for Nvidia hardwa
 option(USE_HIPCODEAMD "Convert CUDA code to HIP and compile for AMD hardware" OFF)
 
 if (USE_HIPCODENVIDIA OR USE_HIPCODEAMD)
+  # I am not sure of the side effects of this, but it now works to compile for HIP on nvidia cards with cmake 25...
+  add_compile_definitions(THRUST_IGNORE_CUB_VERSION_CHECK)
   message("CUDA code will be hipified")
   # target_include_directories(opmsimulators PRIVATE /opt/rocm-6.0.2/include)
   # target_link_libraries(opmsimulators PRIVATE /home/tobias/Downloads/hipBLAS-rocm-6.0.2/build/library/src/libhipblas.so)
