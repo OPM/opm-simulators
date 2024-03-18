@@ -929,7 +929,7 @@ namespace Opm {
             // We also use relaxed tolerances for cells with total poro volume less than relaxed_max_pv_fraction_
             // Default value of relaxed_max_pv_fraction_ is 0.03
             const bool relax_final_iteration_cnv = (param_.min_strict_cnv_iter_ < 0) && (iteration == maxIter);
-            const bool relax_iter_cnv = param_.min_strict_mb_iter_ >= 0 && iteration >= param_.min_strict_mb_iter_;
+            const bool relax_iter_cnv = param_.min_strict_cnv_iter_ >= 0 && iteration >= param_.min_strict_cnv_iter_;
             const bool relax_pv_fraction_cnv = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_;
             const bool use_relaxed_cnv = relax_final_iteration_cnv || relax_pv_fraction_cnv || relax_iter_cnv;
 
