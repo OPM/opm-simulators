@@ -309,7 +309,7 @@ struct MaxSinglePrecisionDays<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct MinStrictCnvIter<TypeTag, TTag::FlowModelParameters> {
-    static constexpr int value = 0;
+    static constexpr int value = -1;
 };
 template<class TypeTag>
 struct MinStrictMbIter<TypeTag, TTag::FlowModelParameters> {
