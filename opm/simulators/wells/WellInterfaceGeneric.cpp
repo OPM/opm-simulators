@@ -24,6 +24,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/FilterCake.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
@@ -605,8 +606,8 @@ isPressureControlled(const WellState<Scalar>& well_state) const
 
 template<class Scalar>
 bool WellInterfaceGeneric<Scalar>::
-wellUnderZeroRateTarget(const SummaryState& summary_state,
-                        const WellState<Scalar>& well_state) const
+wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
+                                  const WellState<Scalar>& well_state) const
 {
     if (this->isProducer()) { // producers
         const auto prod_controls = this->well_ecl_.productionControls(summary_state);
@@ -617,15 +618,6 @@ wellUnderZeroRateTarget(const SummaryState& summary_state,
         const auto inj_mode = well_state.well(this->indexOfWell()).injection_cmode;
         return wellhelpers::rateControlWithZeroInjTarget(inj_controls, inj_mode);
     }
-}
-
-template<class Scalar>
-bool WellInterfaceGeneric<Scalar>::
-stopppedOrZeroRateTarget(const SummaryState& summary_state,
-                         const WellState<Scalar>& well_state) const
-{
-    return (this->wellIsStopped() || this->wellUnderZeroRateTarget(summary_state, well_state));
-
 }
 
 template<class Scalar>

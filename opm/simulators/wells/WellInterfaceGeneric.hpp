@@ -173,9 +173,6 @@ public:
 
     bool isPressureControlled(const WellState<Scalar>& well_state) const;
 
-    bool stopppedOrZeroRateTarget(const SummaryState& summary_state,
-                                  const WellState<Scalar>& well_state) const;
-
     Scalar wellEfficiencyFactor() const { return well_efficiency_factor_; }
 
     //! \brief Update filter cake multipliers.
@@ -200,8 +197,8 @@ protected:
     int polymerInjTable_() const;
     int polymerWaterTable_() const;
 
-    bool wellUnderZeroRateTarget(const SummaryState& summary_state,
-                                 const WellState<Scalar>& well_state) const;
+    bool wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
+                                           const WellState<Scalar>& well_state) const;
 
     std::pair<bool,bool>
     computeWellPotentials(std::vector<Scalar>& well_potentials,

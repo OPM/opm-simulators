@@ -117,6 +117,12 @@ protected:
                                  Scalar efficiencyFactor,
                                  DeferredLogger& deferred_logger) const;
 
+    bool wellUnderZeroRateTargetGroup(const SummaryState& summary_state,
+                                      const Schedule& schedule,
+                                      const WellState<Scalar>& well_state,
+                                      const GroupState<Scalar>& group_state,
+                                      DeferredLogger& deferredLogger) const;
+
     // For the conversion between the surface volume rate and reservoir voidage rate
     const RateConverterType& rateConverter_;
 };

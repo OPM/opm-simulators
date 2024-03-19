@@ -79,6 +79,7 @@ public:
                            const Scalar rho,
                            const PrimaryVariables& primary_variables,
                            Equations& eqns,
+                           const bool stopped_or_zero_target,
                            DeferredLogger& deferred_logger) const;
 
     //! \brief Assemble piece of the acceleration term

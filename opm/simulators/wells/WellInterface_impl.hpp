@@ -198,8 +198,7 @@ namespace Opm
                       const GroupState<Scalar>& group_state,
                       DeferredLogger& deferred_logger) /* const */
     {
-        const auto& summary_state = simulator.vanguard().summaryState();
-        if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
+        if (stoppedOrZeroRateTarget(simulator, well_state, deferred_logger)) {
             return false;
         }
 
@@ -260,7 +259,7 @@ namespace Opm
 
             this->well_control_log_.push_back(from);
             updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
-            updatePrimaryVariables(summaryState, well_state, deferred_logger);
+            updatePrimaryVariables(simulator, well_state, deferred_logger);
         }
 
         return changed;
@@ -282,7 +281,7 @@ namespace Opm
         const auto& summary_state = simulator.vanguard().summaryState();
         const auto& schedule = simulator.vanguard().schedule();
 
-        if (this->wellUnderZeroRateTarget(summary_state, well_state) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+        if (this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
@@ -311,8 +310,8 @@ namespace Opm
                             updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
                         } else {
                             ws.thp = this->getTHPConstraint(summary_state);
-                        }  
-                        updatePrimaryVariables(summary_state, well_state, deferred_logger);
+                        }
+                        updatePrimaryVariables(simulator, well_state, deferred_logger);
                     }
                 }
                 return changed;
@@ -377,8 +376,7 @@ namespace Opm
 
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
-        const auto& summary_state = simulator.vanguard().summaryState();
-        updatePrimaryVariables(summary_state, well_state_copy, deferred_logger);
+        updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
         initPrimaryVariablesEvaluation();
 
         if (this->isProducer()) {
@@ -539,13 +537,13 @@ namespace Opm
 
         const bool isThp = ws.production_cmode == Well::ProducerCMode::THP;
         // check stability of solution under thp-control
-        if (converged && !this->stopppedOrZeroRateTarget(summary_state, well_state) && isThp) {
+        if (converged && !stoppedOrZeroRateTarget(simulator, well_state, deferred_logger) && isThp) {
             auto rates = well_state.well(this->index_of_well_).surface_rates;
             this->adaptRatesForVFP(rates);
             this->updateIPRImplicit(simulator, well_state, deferred_logger);
             bool is_stable = WellBhpThpCalculator(*this).isStableSolution(well_state, this->well_ecl_, rates, summary_state);
             if (!is_stable) {
-                // solution converged to an unstable point! 
+                // solution converged to an unstable point!
                 this->operability_status_.use_vfpexplicit = true;
                 auto bhp_stable = WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state);
                 // if we find an intersection with a sufficiently lower bhp, re-solve equations
@@ -570,10 +568,10 @@ namespace Opm
             if (!bhp_target.has_value()) {
                 // well can't operate using explicit fractions
                 is_operable = false;
-                // solve with zero rate 
+                // solve with zero rate
                 converged = solveWellWithZeroRate(simulator, dt, well_state, deferred_logger);
                 this->stopWell();
-            } else {      
+            } else {
                 // solve well with the estimated target bhp (or limit)
                 const Scalar bhp = std::max(bhp_target.value(),
                                             static_cast<Scalar>(prod_controls.bhp_limit));
@@ -602,8 +600,8 @@ namespace Opm
                         WellState<Scalar>& well_state,
                         const SummaryState& summary_state,
                         DeferredLogger& deferred_logger)
-    {   
-        // Given an unconverged well or closed well, estimate an operable bhp (if any) 
+    {
+        // Given an unconverged well or closed well, estimate an operable bhp (if any)
         // Get minimal bhp from vfp-curve
         Scalar bhp_min =  WellBhpThpCalculator(*this).calculateMinimumBhpFromThp(well_state, this->well_ecl_, summary_state, this->getRefDensity());
         // Solve
@@ -615,7 +613,7 @@ namespace Opm
         auto rates = well_state.well(this->index_of_well_).surface_rates;
         this->adaptRatesForVFP(rates);
         return WellBhpThpCalculator(*this).estimateStableBhp(well_state, this->well_ecl_, rates, this->getRefDensity(), summary_state);
-    } 
+    }
 
     template<typename TypeTag>
     bool
@@ -625,11 +623,11 @@ namespace Opm
                      const Scalar bhp,
                      WellState<Scalar>& well_state,
                      DeferredLogger& deferred_logger)
-    {   
+    {
         // Solve a well using single bhp-constraint (but close if not operable under this)
         auto group_state = GroupState<Scalar>(); // empty group
         auto inj_controls = Well::InjectionControls(0);
-        auto prod_controls = Well::ProductionControls(0); 
+        auto prod_controls = Well::ProductionControls(0);
         auto& ws = well_state.well(this->index_of_well_);
         auto cmode_inj = ws.injection_cmode;
         auto cmode_prod = ws.production_cmode;
@@ -637,21 +635,21 @@ namespace Opm
             inj_controls.addControl(Well::InjectorCMode::BHP);
             inj_controls.bhp_limit = bhp;
             inj_controls.cmode = Well::InjectorCMode::BHP;
-            ws.injection_cmode = Well::InjectorCMode::BHP;  
+            ws.injection_cmode = Well::InjectorCMode::BHP;
         } else {
             prod_controls.addControl(Well::ProducerCMode::BHP);
             prod_controls.bhp_limit = bhp;
             prod_controls.cmode = Well::ProducerCMode::BHP;
-            ws.production_cmode = Well::ProducerCMode::BHP;  
+            ws.production_cmode = Well::ProducerCMode::BHP;
         }
         // update well-state
         ws.bhp = bhp;
-        // solve 
+        // solve
         const bool converged =  this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger, /*fixed_control*/true);
         ws.injection_cmode = cmode_inj;
         ws.production_cmode = cmode_prod;
         return converged;
-    } 
+    }
 
     template<typename TypeTag>
     bool
@@ -660,18 +658,18 @@ namespace Opm
                           const double dt,
                           WellState<Scalar>& well_state,
                           DeferredLogger& deferred_logger)
-    {   
+    {
         // Solve a well as stopped
         const auto well_status_orig = this->wellStatus_;
         this->stopWell();
-        
+
         auto group_state = GroupState<Scalar>(); // empty group
         auto inj_controls = Well::InjectionControls(0);
-        auto prod_controls = Well::ProductionControls(0); 
+        auto prod_controls = Well::ProductionControls(0);
         const bool converged =  this->iterateWellEqWithSwitching(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger, /*fixed_control*/true, /*fixed_status*/ true);
         this->wellStatus_ = well_status_orig;
         return converged;
-    } 
+    }
 
     template<typename TypeTag>
     bool
@@ -1430,67 +1428,39 @@ namespace Opm
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    wellUnderZeroRateTargetVersion(const Simulator& simulator,
-                                   const WellState<Scalar>& well_state,
-                                   DeferredLogger& deferred_logger) const
+    wellUnderZeroRateTarget(const Simulator& simulator,
+                            const WellState<Scalar>& well_state,
+                            DeferredLogger& deferred_logger) const
     {
-        // Extended version of WellInterfaceGeneric::wellUnderZeroRateTarget that also checks group controls
+        // Check if well is under zero rate control, either directly or from group
         const auto& ws = well_state.well(this->index_of_well_);
-        const auto& summaryState = simulator.vanguard().summaryState();
         const bool isGroupControlled = (this->isInjector() && ws.injection_cmode == Well::InjectorCMode::GRUP) ||
                                        (this->isProducer() && ws.production_cmode == Well::ProducerCMode::GRUP);
         if (!isGroupControlled) {
-            // well is not under group control, check "light-weight" version
-            return this->wellUnderZeroRateTarget(summaryState, well_state);
+            // well is not under group control, check "individual" version
+            const auto& summaryState = simulator.vanguard().summaryState();
+            return this->wellUnderZeroRateTargetIndividual(summaryState, well_state);
         } else {
-            const auto& well = this->well_ecl_;
-            const auto& schedule = simulator.vanguard().schedule();
+            const auto& summaryState = simulator.vanguard().summaryState();
             const auto& group_state = simulator.problem().wellModel().groupState();
-            const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
-            const Scalar efficiencyFactor = well.getEfficiencyFactor();
-            if (this->isInjector()) {
-                // Check injector under group control
-                const auto& controls = well.injectionControls(summaryState);
-                std::optional<Scalar> target = this->getGroupInjectionTargetRate(group,
-                                                                                 well_state,
-                                                                                 group_state,
-                                                                                 schedule,
-                                                                                 summaryState,
-                                                                                 controls.injector_type,
-                                                                                 efficiencyFactor,
-                                                                                 deferred_logger);
-            if (target.has_value()) {
-                return target.value() == 0.0;
-            } else {
-                return false;
-            }
-            } else {
-                // Check producer under group control
-                Scalar scale = this->getGroupProductionTargetRate(group,
-                                                                  well_state,
-                                                                  group_state,
-                                                                  schedule,
-                                                                  summaryState,
-                                                                  efficiencyFactor,
-                                                                  deferred_logger);
-                return scale == 0.0;
-            }
+            const auto& schedule = simulator.vanguard().schedule();
+            return this->wellUnderZeroRateTargetGroup(summaryState, schedule, well_state, group_state, deferred_logger);
         }
     }
 
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    stoppedOrZeroRateTargetVersion(const Simulator& simulator,
-                                   const WellState<Scalar>& well_state,
-                                   DeferredLogger& deferred_logger) const
+    stoppedOrZeroRateTarget(const Simulator& simulator,
+                            const WellState<Scalar>& well_state,
+                            DeferredLogger& deferred_logger) const
     {
-        // Extended version of WellInterfaceGeneric::stopppedOrZeroRateTarget that also checks group controls
-        return (this->wellIsStopped() || wellUnderZeroRateTargetVersion(simulator,
-                                                                        well_state, 
-                                                                        deferred_logger));
+        // Check if well is stopped or under zero rate control, either directly or from group
+        return (this->wellIsStopped() || wellUnderZeroRateTarget(simulator,
+                                                                 well_state,
+                                                                 deferred_logger));
     }
-    
+
     template<typename TypeTag>
     std::vector<typename WellInterface<TypeTag>::Scalar>
     WellInterface<TypeTag>::
