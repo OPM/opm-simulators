@@ -148,7 +148,19 @@ void Opm::ParallelPAvgDynamicSourceData::defineCommunication()
 
     // 4) Build translation mapping from source term element indices to
     //    storage indices.
-    this->storageIndex_.resize(allIndices.size());
+    //
+    //    Note that if the source terms aren't all active--e.g., if a well
+    //    is connected in deactivated cells--then allIndices is not a
+    //    permutation of 0..allIndices.size()-1 and the maximum source
+    //    location may exceed size()-1.  Resize the storageIndex_ according
+    //    to the largest source location ID.
+    if (auto maxIxPos = std::max_element(allIndices.begin(), allIndices.end());
+        maxIxPos != allIndices.end())
+    {
+        // +1 for zero-based indices.
+        this->storageIndex_.resize(*maxIxPos + 1);
+    }
+
     auto storageIx = std::vector<double>::size_type{0};
     for (const auto& elemIndex : allIndices) {
         this->storageIndex_[elemIndex] = storageIx++;
