@@ -549,8 +549,8 @@ bool WellInterfaceGeneric::isPressureControlled(const WellState& well_state) con
 
 
 
-bool WellInterfaceGeneric::wellUnderZeroRateTarget(const SummaryState& summary_state,
-                                                   const WellState& well_state) const
+bool WellInterfaceGeneric::wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
+                                                             const WellState& well_state) const
 {
     if (this->isProducer()) { // producers
         const auto prod_controls = this->well_ecl_.productionControls(summary_state);
@@ -563,10 +563,10 @@ bool WellInterfaceGeneric::wellUnderZeroRateTarget(const SummaryState& summary_s
     }
 }
 
-bool WellInterfaceGeneric::stopppedOrZeroRateTarget(const SummaryState& summary_state,
-                                                    const WellState& well_state) const
+bool WellInterfaceGeneric::stoppedOrZeroRateTargetIndividual(const SummaryState& summary_state,
+                                                             const WellState& well_state) const
 {
-    return (this->wellIsStopped() || this->wellUnderZeroRateTarget(summary_state, well_state));
+    return (this->wellIsStopped() || this->wellUnderZeroRateTargetIndividual(summary_state, well_state));
 
 }
 

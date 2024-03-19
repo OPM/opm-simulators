@@ -61,6 +61,7 @@ public:
                            const PrimaryVariables& primary_variables,
                            const double rho,
                            StandardWellEquations<Scalar,Indices::numEq>& eqns,
+                           const bool stopped_or_zero_target,
                            DeferredLogger& deferred_logger) const;
 
     //! \brief Assemble injectivity equation.
