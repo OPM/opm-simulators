@@ -350,13 +350,12 @@ initializeWellPerfData()
                         hasFirstConnection = true;
                     }
 
-                    auto pd = PerforationData{};
+                    auto& pd = well_perf_data_[well_index].emplace_back();
+
                     pd.cell_index = active_index;
                     pd.connection_transmissibility_factor = connection.CF();
                     pd.satnum_id = connection.satTableId();
                     pd.ecl_index = connection_index;
-
-                    well_perf_data_[well_index].push_back(pd);
 
                     parallelWellInfo.pushBackEclIndex(connection_index_above,
                                                       connection_index);

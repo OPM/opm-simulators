@@ -28,12 +28,12 @@ namespace Opm
 /// Static data associated with a well perforation.
 struct PerforationData
 {
-    int cell_index;
-    double connection_transmissibility_factor;
-    double connection_d_factor;
-    int satnum_id;
+    int cell_index{};
+    double connection_transmissibility_factor{};
+    double connection_d_factor{};
+    int satnum_id{};
     /// \brief The original index of the perforation in ECL Schedule
-    std::size_t ecl_index;
+    std::size_t ecl_index{};
 };
 
 struct PerforationRates
