@@ -397,17 +397,40 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
             else
                 trans = 1.0 / (1.0/halfTrans1 + 1.0/halfTrans2);
 
-            std::vector<int> lgr1Indices(326, 0);
-            std::iota(lgr1Indices.begin(), lgr1Indices.end(), 275);
-            if (std::find(lgr1Indices.begin(), lgr1Indices.end(), elemIdx) != std::end(lgr1Indices)){
-                std::cout << "ElemIdx: " << elemIdx<< " TRANS: " << trans << std::endl;
+           
+            //std::cout << " ---------------- LGR1 ---------------- " << std::endl;
+            if (elem.level() == 1){
+                std::cout << "LGR1. Cell in LGR1 with index: " << elemIdx<< " TRANS: " << trans << std::endl;
+                std::cout << "Face index in inside: " << insideFaceIdx << std::endl;
+                std::cout<< std::endl;
             }
+            
+            //std::cout << " ---------------- LGR2 ---------------- " << std::endl;
+            if (elem.level() == 2){
+                std::cout << "LGR2. Cell in LGR2 with index: " << elemIdx<< " TRANS: " << trans << std::endl;
+                 std::cout << "Face index in inside: " << insideFaceIdx << std::endl;
+                std::cout<< std::endl;
+            }
+             
+            //std::cout << " ---------------- COARSE cells on Boundary LGRs ---------------- " << std::endl;
+            if ((elem.level() == 0) && (outsideElem.level() > 0)){
+                std::cout << "Coarse cell with index: " << elemIdx<< " TRANS: " << trans << std::endl;
+                 std::cout << "Face index in inside: " << insideFaceIdx << std::endl;
+                std::cout<< std::endl;
+            }
+
+            // std::cout << " ---------------- REFINED cells on Boundary LGRs ---------------- " << std::endl;
+            if ((elem.level() > 0) && (outsideElem.level() == 0)){
+                std::cout << "Refined cell with index: " << elemIdx<< " TRANS: " << trans << std::endl;
+                 std::cout << "Face index in inside: " << insideFaceIdx << std::endl;
+                std::cout<< std::endl;
+                }
             
             // apply the full face transmissibility multipliers
             // for the inside ...
             if(!pinchActive){
                 if (insideFaceIdx > 3){// top or bottom
-                     auto find_layer = [&cartDims](std::size_t cell){
+                    auto find_layer = [&cartDims](std::size_t cell){
                         cell /= cartDims[0];
                         auto k = cell / cartDims[1];
                         return k;
@@ -466,10 +489,37 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
 
             trans_[details::isId(elemIdx, outsideElemIdx)] = trans;
 
-            
-            if (std::find(lgr1Indices.begin(), lgr1Indices.end(), elemIdx) != std::end(lgr1Indices)){
-                std::cout << "ElemIdx: " << elemIdx << " TRANS after applying the region multipliers: " << trans << std::endl;
+            /*  // std::cout << " ---------------- LGR1 TRANS after applying the region multiplier ---------------- " << std::endl;
+            if (elem.level() == 1){
+                std::cout << "LGR1. Cell in LGR1 with index: " << elemIdx<<
+                    " TRANS after applying the region multipliers: " << trans << std::endl;
+                std::cout << "Face direction: " << faceDir << std::endl;
+                std::cout<< std::endl;
             }
+
+            // std::cout << " ---------------- LGR2 TRANS after applying the region multiplier ---------------- " << std::endl;
+            if (elem.level() == 2){
+                std::cout << "LGR2. Cell in LGR2 with index: " << elemIdx<<
+                    " TRANS after applying the region multipliers: " << trans << std::endl;
+                 std::cout << "Face direction: " << faceDir << std::endl;
+                 std::cout<< std::endl;
+            }
+
+            // std::cout << " ----- COARSE cells on Boundary LGRs TRANS after applying the region multiplier ----- " << std::endl;
+            if ((elem.level() == 0) && (outsideElem.level() > 0)){
+                std::cout << "Coarse cell with index: " << elemIdx<<
+                    " TRANS after applying the region multipliers: " << trans << std::endl;
+                 std::cout << "Face direction: " << faceDir << std::endl;
+           std::cout<< std::endl;
+            }
+
+            // std::cout << " ----- REFINED cells on Boundary LGRs TRANS after applying the region multiplier ----- " << std::endl;
+            if ((elem.level() > 0) && (outsideElem.level() == 0)){
+                std::cout << "Refined cell with index: " << elemIdx<<
+                    " TRANS after applying the region multipliers: " << trans << std::endl;
+                 std::cout << "Face direction: " << faceDir << std::endl;
+                 std::cout<< std::endl;
+                 }*/
 
             // update the "thermal half transmissibility" for the intersection
             if (enableEnergy_) {
