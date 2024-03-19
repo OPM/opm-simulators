@@ -47,6 +47,8 @@ macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
         COMMENT "Rehipifying because of change in ${cuda_file_path}"
     )
 
+    # the next lines breaks the build, not sure why
+    # set_source_files_properties(${relpath} PROPERTIES LANGUAGE HIP)
     list(APPEND ${LIST} ${relpath})
   endif()
 endmacro()
