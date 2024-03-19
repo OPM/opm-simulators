@@ -197,8 +197,7 @@ namespace Opm
                       const GroupState<Scalar>& group_state,
                       DeferredLogger& deferred_logger) /* const */
     {
-        const auto& summary_state = simulator.vanguard().summaryState();
-        if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
+        if (stoppedOrZeroRateTarget(simulator, well_state, deferred_logger)) {
             return false;
         }
 
@@ -281,7 +280,7 @@ namespace Opm
         const auto& summary_state = simulator.vanguard().summaryState();
         const auto& schedule = simulator.vanguard().schedule();
 
-        if (this->wellUnderZeroRateTarget(summary_state, well_state) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+        if (this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
@@ -521,7 +520,7 @@ namespace Opm
 
         const bool isThp = ws.production_cmode == Well::ProducerCMode::THP;
         // check stability of solution under thp-control
-        if (converged && !this->stopppedOrZeroRateTarget(summary_state, well_state) && isThp) {
+        if (converged && !stoppedOrZeroRateTarget(simulator, well_state, deferred_logger) && isThp) {
             auto rates = well_state.well(this->index_of_well_).surface_rates;
             this->adaptRatesForVFP(rates);
             this->updateIPRImplicit(simulator, well_state, deferred_logger);
@@ -1408,65 +1407,70 @@ namespace Opm
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    wellUnderZeroRateTargetVersion(const Simulator& ebos_simulator,
-                                   const WellState& well_state,
-                                   DeferredLogger& deferred_logger) const
+    wellUnderZeroRateTargetGroup(const Simulator& simulator,
+                                 const WellState& well_state,
+                                 const GroupState& group_state,
+                                 DeferredLogger& deferred_logger) const
     {
-        // Extended version of WellInterfaceGeneric::wellUnderZeroRateTarget that also checks group controls
+        const auto& well = this->well_ecl_;
+        const auto& schedule = simulator.vanguard().schedule();
+        const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
+        const auto& summaryState = simulator.vanguard().summaryState();
+        const double efficiencyFactor = well.getEfficiencyFactor();
+        if (this->isInjector()) {
+            // Check injector under group control
+            const auto& controls = well.injectionControls(summaryState);
+            const std::optional<double> target = this->getGroupInjectionTargetRate(group, well_state,
+                                                                                   group_state, schedule, 
+                                                                                   summaryState, controls.injector_type,
+                                                                                   efficiencyFactor, deferred_logger);
+        if (target.has_value()) {
+            return target.value() == 0.0;
+        } else {
+            return false;
+        }
+        } else {
+            // Check producer under group control
+            const double scale = this->getGroupProductionTargetRate(group, well_state,
+                                                                    group_state, schedule,
+                                                                    summaryState, efficiencyFactor,
+                                                                    deferred_logger);
+            return scale == 0.0;
+        }
+    }                                 
+
+    template<typename TypeTag>
+    bool
+    WellInterface<TypeTag>::
+    wellUnderZeroRateTarget(const Simulator& simulator,
+                            const WellState& well_state,
+                            DeferredLogger& deferred_logger) const
+    {
+        // Check if well is under zero rate control, either directly or from group
         const auto& ws = well_state.well(this->index_of_well_);
-        const auto& summaryState = ebos_simulator.vanguard().summaryState();
         const bool isGroupControlled = (this->isInjector() && ws.injection_cmode == Well::InjectorCMode::GRUP) ||
                                        (this->isProducer() && ws.production_cmode == Well::ProducerCMode::GRUP);
         if (!isGroupControlled) {
-            // well is not under group control, check "light-weight" version
-            return this->wellUnderZeroRateTarget(summaryState, well_state);
+            // well is not under group control, check "individual" version
+            const auto& summaryState = simulator.vanguard().summaryState();
+            return this->wellUnderZeroRateTargetIndividual(summaryState, well_state);
         } else {
-            const auto& well = this->well_ecl_;
-            const auto& schedule = ebos_simulator.vanguard().schedule();
-            const auto& group_state = ebos_simulator.problem().wellModel().groupState();
-            const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
-            const double efficiencyFactor = well.getEfficiencyFactor();
-            if (this->isInjector()) {
-                // Check injector under group control
-                const auto& controls = well.injectionControls(summaryState);
-                std::optional<double> target = this->getGroupInjectionTargetRate(group,
-                                                                                 well_state,
-                                                                                 group_state,
-                                                                                 schedule,
-                                                                                 summaryState,
-                                                                                 controls.injector_type,
-                                                                                 efficiencyFactor,
-                                                                                 deferred_logger);
-            if (target.has_value()) {
-                return target.value() == 0.0;
-            } else {
-                return false;
-            }
-            } else {
-                // Check producer under group control
-                double scale = this->getGroupProductionTargetRate(group,
-                                                                  well_state,
-                                                                  group_state,
-                                                                  schedule,
-                                                                  summaryState,
-                                                                  efficiencyFactor,
-                                                                  deferred_logger);
-                return scale == 0.0;
-            }
+            const auto& group_state = simulator.problem().wellModel().groupState();
+            return wellUnderZeroRateTargetGroup(simulator, well_state, group_state, deferred_logger);
         }
     }
 
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    stoppedOrZeroRateTargetVersion(const Simulator& ebos_simulator,
-                                   const WellState& well_state,
-                                   DeferredLogger& deferred_logger) const
+    stoppedOrZeroRateTarget(const Simulator& simulator,
+                            const WellState& well_state,
+                            DeferredLogger& deferred_logger) const
     {
-        // Extended version of WellInterfaceGeneric::stopppedOrZeroRateTarget that also checks group controls
-        return (this->wellIsStopped() || wellUnderZeroRateTargetVersion(ebos_simulator, 
-                                                                        well_state, 
-                                                                        deferred_logger));
+        // Check if well is stopped or under zero rate control, either directly or from group
+        return (this->wellIsStopped() || wellUnderZeroRateTarget(simulator, 
+                                                                 well_state, 
+                                                                 deferred_logger));
     }
     
     template<typename TypeTag>

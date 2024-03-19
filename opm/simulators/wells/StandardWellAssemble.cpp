@@ -93,6 +93,7 @@ assembleControlEq(const WellState<Scalar>& well_state,
                   const PrimaryVariables& primary_variables,
                   const double rho,
                   StandardWellEquations<Scalar,Indices::numEq>& eqns1,
+                  const bool stopped_or_zero_target, 
                   DeferredLogger& deferred_logger) const
 {
     static constexpr int Water = BlackoilPhases::Aqua;
@@ -119,7 +120,7 @@ assembleControlEq(const WellState<Scalar>& well_state,
         return rates;
     };
 
-    if (well_.stopppedOrZeroRateTarget(summaryState, well_state)) {
+    if (stopped_or_zero_target) {
         control_eq = primary_variables.eval(PrimaryVariables::WQTotal);
     } else if (well_.isInjector()) {
         // Find injection rate.

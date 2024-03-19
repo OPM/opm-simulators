@@ -486,7 +486,7 @@ namespace Opm {
             // This is done only for producers, as injectors will only have a single
             // nonzero phase anyway.
             for (auto& well : well_container_) {
-                const bool zero_target = well->stopppedOrZeroRateTarget(summaryState, this->wellState());
+                const bool zero_target = well->stoppedOrZeroRateTarget(simulator_, this->wellState(), local_deferredLogger);
                 if (well->isProducer() && !zero_target) {
                     well->updateWellStateRates(simulator_, this->wellState(), local_deferredLogger);
                 }

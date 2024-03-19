@@ -462,6 +462,7 @@ namespace Opm
 
         const auto& summaryState = simulator.vanguard().summaryState();
         const Schedule& schedule = simulator.vanguard().schedule();
+        const bool stopped_or_zero_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
         StandardWellAssemble<FluidSystem,Indices>(*this).
             assembleControlEq(well_state, group_state,
                               schedule, summaryState,
@@ -469,6 +470,7 @@ namespace Opm
                               this->primary_variables_,
                               this->connections_.rho(),
                               this->linSys_,
+                              stopped_or_zero_target,
                               deferred_logger);
 
 
@@ -699,7 +701,7 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTargetIndividual(summary_state, well_state);
         updatePrimaryVariablesNewton(dwells, stop_or_zero_rate_target, deferred_logger);
 
         updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, summary_state, deferred_logger);
@@ -1190,7 +1192,7 @@ namespace Opm
         constexpr double stopped_factor = 1.e-4;
         // use stricter tolerance for dynamic thp to ameliorate network convergence
         constexpr double dynamic_thp_factor = 1.e-1;
-        if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
+        if (this->stoppedOrZeroRateTargetIndividual(summary_state, well_state)) {
             tol_wells = tol_wells*stopped_factor;
         } else if (this->getDynamicThpLimit()) {
             tol_wells = tol_wells*dynamic_thp_factor;
@@ -1778,7 +1780,7 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTargetIndividual(summary_state, well_state);
         this->primary_variables_.update(well_state, stop_or_zero_rate_target, deferred_logger);
 
         // other primary variables related to polymer injection
@@ -2364,9 +2366,7 @@ namespace Opm
         const bool allow_open =  this->well_ecl_.getStatus() == WellStatus::OPEN &&
                                  well_state.well(this->index_of_well_).status == WellStatus::OPEN;
         // don't allow switcing for wells under zero rate target or requested fixed status and control
-        //const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) &&
-         //                            (!fixed_control || !fixed_status) && allow_open;
-        const bool allow_switching = !this->wellUnderZeroRateTargetVersion(ebosSimulator, well_state, deferred_logger) &&
+        const bool allow_switching = !this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) &&
                                      (!fixed_control || !fixed_status) && allow_open;
         
         bool changed = false;

@@ -92,6 +92,7 @@ assembleControlEq(const WellState<Scalar>& well_state,
                   const double rho,
                   const PrimaryVariables& primary_variables,
                   Equations& eqns1,
+                  const bool stopped_or_zero_target,
                   DeferredLogger& deferred_logger) const
 {
     static constexpr int Gas = BlackoilPhases::Vapour;
@@ -116,7 +117,7 @@ assembleControlEq(const WellState<Scalar>& well_state,
         return rates;
     };
 
-    if (well_.stopppedOrZeroRateTarget(summaryState, well_state)) {
+    if (stopped_or_zero_target) {
         control_eq = primary_variables.getWQTotal();
     } else if (well_.isInjector() ) {
         // Find scaling factor to get injection rate,

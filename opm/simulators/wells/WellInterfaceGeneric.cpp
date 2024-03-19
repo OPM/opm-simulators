@@ -567,7 +567,7 @@ bool WellInterfaceGeneric::wellUnderZeroRateTarget(const SummaryState& summary_s
 bool WellInterfaceGeneric::stopppedOrZeroRateTarget(const SummaryState& summary_state,
                                                     const WellState<double>& well_state) const
 {
-    return (this->wellIsStopped() || this->wellUnderZeroRateTarget(summary_state, well_state));
+    return (this->wellIsStopped() || this->wellUnderZeroRateTargetIndividual(summary_state, well_state));
 
 }
 

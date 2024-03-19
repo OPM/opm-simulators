@@ -166,7 +166,7 @@ namespace Opm
                            const WellState<Scalar>& well_state,
                            DeferredLogger& /* deferred_logger */)
     {
-        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTargetIndividual(summary_state, well_state);
         this->primary_variables_.update(well_state, stop_or_zero_rate_target);
     }
 
@@ -690,7 +690,7 @@ namespace Opm
 
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double max_pressure_change = this->param_.max_pressure_change_ms_wells_;
-        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTargetIndividual(summary_state, well_state);
         this->primary_variables_.updateNewton(dwells,
                                               relaxation_factor,
                                               dFLimit,
@@ -1634,7 +1634,7 @@ namespace Opm
         const bool allow_open =  this->well_ecl_.getStatus() == WellStatus::OPEN &&
                                  well_state.well(this->index_of_well_).status == WellStatus::OPEN;
         // don't allow switcing for wells under zero rate target or requested fixed status and control
-        const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) &&
+        const bool allow_switching = !this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) &&
                                      (!fixed_control || !fixed_status) && allow_open;
         bool changed = false;
         bool final_check = false;
@@ -1903,10 +1903,11 @@ namespace Opm
                 }
             }
 
-            // the fourth dequation, the pressure drop equation
+            // the fourth equation, the pressure drop equation
             if (seg == 0) { // top segment, pressure equation is the control equation
                 const auto& summaryState = simulator.vanguard().summaryState();
                 const Schedule& schedule = simulator.vanguard().schedule();
+                const bool stopped_or_zero_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
                 MultisegmentWellAssemble(*this).
                         assembleControlEq(well_state,
                                         group_state,
@@ -1917,6 +1918,7 @@ namespace Opm
                                         getRefDensity(),
                                         this->primary_variables_,
                                         this->linSys_,
+                                        stopped_or_zero_target,
                                         deferred_logger);
             } else {
                 const UnitSystem& unit_system = simulator.vanguard().eclState().getDeckUnitSystem();
