@@ -45,6 +45,7 @@ namespace Opm {
     class Schedule;
     class Well;
     class ParallelEclipseState;
+    class LgrCollection;
 }
 
 namespace Opm {
@@ -193,6 +194,7 @@ protected:
     void allocCartMapper();
 
     void doCreateGrids_(EclipseState& eclState);
+    void addLgrsUpdateLeafView(const LgrCollection& lgrCollection, const int lgrsSize);
 
     virtual void allocTrans() = 0;
     virtual double getTransmissibility(unsigned I, unsigned J) const = 0;

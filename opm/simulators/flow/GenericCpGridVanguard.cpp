@@ -35,6 +35,7 @@
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
+#include <opm/input/eclipse/EclipseState/Grid/LgrCollection.hpp>
 
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
@@ -370,6 +371,8 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
         global_porv = eclState.fieldProps().porv(true);
         OpmLog::info("\nProcessing grid");
     }
+
+    // --- Create grid ---
     OPM_TIMEBLOCK(createGrids);
 #if HAVE_MPI
     this->grid_ = std::make_unique<Dune::CpGrid>(FlowGenericVanguard::comm());
@@ -408,6 +411,17 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
 
     cartesianIndexMapper_ = std::make_unique<CartesianIndexMapper>(*grid_);
 
+    // --- Add LGRs and update Leaf Grid View ---
+    // Check if input file contains Lgrs.
+    const auto& lgrs = eclState.getLgrs();
+    const auto lgrsSize = lgrs.size();
+    // If there are lgrs, create the grid with them, and update the leaf grid view.
+    if (lgrsSize)
+    {
+        OpmLog::info("\nAdding LGRs to the grid and updating its leaf grid view");
+        this->addLgrsUpdateLeafView(lgrs, lgrsSize);
+    }
+
 #if HAVE_MPI
     {
         const bool has_numerical_aquifer = eclState.aquifer().hasNumericalAquifer();
@@ -428,6 +442,7 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     }
 #endif
 
+    // --- Copy grid with LGRs to equilGrid_ ---
     // We use separate grid objects: one for the calculation of the initial
     // condition via EQUIL and one for the actual simulation. The reason is
     // that the EQUIL code is allergic to distributed grids and the
@@ -460,6 +475,29 @@ void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::doCreateGrids_(Eclips
     // cells as part of minimum pore-volume threshold processing.
     eclState.pruneDeactivatedAquiferConnections(removed_cells);
 }
+
+template<class ElementMapper, class GridView, class Scalar>
+void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::addLgrsUpdateLeafView(const LgrCollection& lgrCollection, const int lgrsSize)
+{
+    std::vector<std::array<int,3>> cells_per_dim_vec;
+    std::vector<std::array<int,3>> startIJK_vec;
+    std::vector<std::array<int,3>> endIJK_vec;
+    std::vector<std::string> lgrName_vec;
+    cells_per_dim_vec.reserve(lgrsSize);
+    startIJK_vec.reserve(lgrsSize);
+    endIJK_vec.reserve(lgrsSize);
+    lgrName_vec.reserve(lgrsSize);
+    for (int lgr = 0; lgr < lgrsSize; ++lgr)
+    {
+        const auto lgrCarfin = lgrCollection.getLgr(lgr);
+        cells_per_dim_vec.push_back({lgrCarfin.NX()/(lgrCarfin.I2() +1 - lgrCarfin.I1()),
+                lgrCarfin.NY()/(lgrCarfin.J2() +1 - lgrCarfin.J1()), lgrCarfin.NZ()/(lgrCarfin.K2() +1 - lgrCarfin.K1())});
+        startIJK_vec.push_back({lgrCarfin.I1(), lgrCarfin.J1(), lgrCarfin.K1()});
+        endIJK_vec.push_back({lgrCarfin.I2()+1, lgrCarfin.J2()+1, lgrCarfin.K2()+1});
+        lgrName_vec.emplace_back(lgrCarfin.NAME());
+    }
+    this->grid_->addLgrsUpdateLeafView(cells_per_dim_vec, startIJK_vec, endIJK_vec, lgrName_vec);
+};
 
 template<class ElementMapper, class GridView, class Scalar>
 void GenericCpGridVanguard<ElementMapper,GridView,Scalar>::

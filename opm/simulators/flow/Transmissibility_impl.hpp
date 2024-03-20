@@ -308,7 +308,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
             }
 
             const auto& outsideElem = intersection.outside();
-            unsigned outsideElemIdx = elemMapper.index(outsideElem);
+            unsigned outsideElemIdx = elemMapper.index(outsideElem);  
 
             // Get the Cartesian indices of the origen cells (parent or equivalent cell on level zero), for CpGrid with LGRs.
             // For genral grids and no LGRs, get the usual Cartesian Index.
@@ -802,7 +802,7 @@ updateFromEclState_(bool global)
             if(grid_.maxLevel()>0) {
                 OPM_THROW(std::invalid_argument, "Calculations on TRANX/TRANY/TRANZ arrays are not support with LGRS, yet.");
             }
-            fp->apply_tran(*key, *it);
+        fp->apply_tran(*key, *it);
         }
     }
 
@@ -974,9 +974,56 @@ computeFaceProperties(const Intersection& intersection,
                       /*isCpGrid=*/std::true_type) const
 {
     int faceIdx = intersection.id();
-    faceCenterInside = grid_.faceCenterEcl(insideElemIdx, insideFaceIdx);
-    faceCenterOutside = grid_.faceCenterEcl(outsideElemIdx, outsideFaceIdx);
-    faceAreaNormal = grid_.faceAreaNormalEcl(faceIdx);
+
+    if(grid_.maxLevel() == 0) {
+        faceCenterInside = grid_.faceCenterEcl(insideElemIdx, insideFaceIdx, intersection);
+        faceCenterOutside = grid_.faceCenterEcl(outsideElemIdx, outsideFaceIdx, intersection);
+        faceAreaNormal = grid_.faceAreaNormalEcl(faceIdx);
+    }
+    else {
+        if ((intersection.inside().level() != intersection.outside().level())) {
+
+            // For CpGrid with LGRs, intersection laying on the boundary of an LGR, having two neighboring cells:
+            // one coarse neighboring cell and one refined neighboring cell, we get the corresponding parent
+            // intersection (from level 0), and use the center of the parent intersection for the coarse
+            // neighboring cell.
+
+            // Get parent intersection and its geometry
+            const auto& parentIntersection = grid_.getParentIntersectionFromLgrBoundaryFace(intersection);
+            const auto& parentIntersectionGeometry = parentIntersection.geometry();
+
+            // For the coarse neighboring cell, take the center of the parent intersection.
+            // For the refined neighboring cell, take the 'usual' center. 
+            faceCenterInside =  (intersection.inside().level() == 0) ? parentIntersectionGeometry.center() :
+                grid_.faceCenterEcl(insideElemIdx, insideFaceIdx, intersection);
+            faceCenterOutside = (intersection.outside().level() == 0) ?  parentIntersectionGeometry.center() :
+                grid_.faceCenterEcl(outsideElemIdx, outsideFaceIdx, intersection);
+
+            // For some computations, it seems to be benefitial to replace the actual area of the refined face, by
+            // the area of its parent face. 
+            // faceAreaNormal = parentIntersection.centerUnitOuterNormal();
+            // faceAreaNormal *= parentIntersectionGeometry.volume();
+
+            /// Alternatively, the actual area of the refined face can be computed as follows:
+            faceAreaNormal = intersection.centerUnitOuterNormal();
+            faceAreaNormal *= intersection.geometry().volume();
+        }
+        else {
+            assert(intersection.inside().level() == intersection.outside().level());
+        
+            faceCenterInside = grid_.faceCenterEcl(insideElemIdx, insideFaceIdx, intersection);
+            faceCenterOutside = grid_.faceCenterEcl(outsideElemIdx, outsideFaceIdx, intersection);
+        
+            // When the CpGrid has LGRs, we compute the face area normal differently.
+            if (intersection.inside().level() > 0) {  // remove intersection.inside().level() > 0
+                faceAreaNormal = intersection.centerUnitOuterNormal();
+                faceAreaNormal *= intersection.geometry().volume();
+            }
+            else {
+                faceAreaNormal = grid_.faceAreaNormalEcl(faceIdx);
+            }
+        }
+    }
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
