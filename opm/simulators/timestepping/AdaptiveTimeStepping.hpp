@@ -387,7 +387,8 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                 // get current delta t
                 auto oldValue = suggestedNextTimestep_;
                 if (tuningUpdater()) {
-                    substepTimer.setCurrentStepLength(suggestedNextTimestep_);
+                    // Use provideTimeStepEstimate to make we sure don't simulate longer than the report step is.
+                    substepTimer.provideTimeStepEstimate(suggestedNextTimestep_);
                     suggestedNextTimestep_ = oldValue;
                 }
                 const double dt = substepTimer.currentStepLength();
