@@ -25,8 +25,8 @@
  *
  * \brief Classes required for molecular diffusion.
  */
-#ifndef EWOMS_DIFFUSION_MODULE_HH
-#define EWOMS_DIFFUSION_MODULE_HH
+#ifndef OPM_DIFFUSION_MODULE_HH
+#define OPM_DIFFUSION_MODULE_HH
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/common/quantitycallbacks.hh>
