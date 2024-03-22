@@ -322,7 +322,7 @@ public:
         // 1. Command line value (--num-pressure-points-equil=N)
         // 2. EQLDIMS item 2
         // Default value is defined in opm-common/src/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
-        if (EWOMS_PARAM_IS_SET(TypeTag, int, NumPressurePointsEquil))
+        if (Parameters::isSet<TypeTag,int>("NumPressurePointsEquil"))
         {
             this->numPressurePointsEquil_ = EWOMS_GET_PARAM(TypeTag, int, NumPressurePointsEquil);
         } else {

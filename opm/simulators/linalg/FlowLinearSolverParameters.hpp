@@ -279,7 +279,7 @@ namespace Opm
             cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
             cpr_reuse_interval_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseInterval);
 
-            if (!EWOMS_PARAM_IS_SET(TypeTag, std::string, LinearSolver) && cprRequestedInDataFile) {
+            if (!Parameters::isSet<TypeTag, std::string>("LinearSolver") && cprRequestedInDataFile) {
                 linsolver_ = "cpr";
             } else {
                 linsolver_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
