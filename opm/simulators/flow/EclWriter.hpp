@@ -44,6 +44,7 @@
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/simulators/utils/ParallelSerialization.hpp>
 
 #include <limits>
 #include <stdexcept>
@@ -151,10 +152,25 @@ public:
                    EWOMS_GET_PARAM(TypeTag, bool, EnableEsmry))
         , simulator_(simulator)
     {
-        this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
-            (simulator, this->collectOnIORank_);
-            
-        rank_ = simulator_.vanguard().grid().comm().rank() ;
+#if HAVE_MPI
+        if (this->simulator_.vanguard().grid().comm().size() > 1) {
+            auto smryCfg = (this->simulator_.vanguard().grid().comm().rank() == 0)
+                ? this->eclIO_->finalSummaryConfig()
+                : SummaryConfig{};
+
+            eclBroadcast(this->simulator_.vanguard().grid().comm(), smryCfg);
+
+            this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+                (simulator, smryCfg, this->collectOnIORank_);
+        }
+        else
+#endif
+        {
+            this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+                (simulator, this->eclIO_->finalSummaryConfig(), this->collectOnIORank_);
+        }
+
+        this->rank_ = this->simulator_.vanguard().grid().comm().rank();
     }
 
     ~EclWriter()

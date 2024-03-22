@@ -44,6 +44,7 @@
 #include <opm/simulators/utils/DamarisVar.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/GridDataOutput.hpp>
+#include <opm/simulators/utils/ParallelSerialization.hpp>
 
 #include <fmt/format.h>
 
@@ -149,25 +150,52 @@ public:
                    simulator.vanguard().eclState(),
                    simulator.vanguard().summaryConfig(),
                    simulator.vanguard().grid(),
-                   simulator.vanguard().grid().comm().rank() == 0 ? &simulator.vanguard().equilGrid() : nullptr,
+                   ((simulator.vanguard().grid().comm().rank() == 0)
+                    ? &simulator.vanguard().equilGrid()
+                    : nullptr),
                    simulator.vanguard().gridView(),
                    simulator.vanguard().cartesianIndexMapper(),
-                   simulator.vanguard().grid().comm().rank() == 0 ? &simulator.vanguard().equilCartesianIndexMapper() : nullptr,
+                   ((simulator.vanguard().grid().comm().rank() == 0)
+                    ? &simulator.vanguard().equilCartesianIndexMapper()
+                    : nullptr),
                    false, false)
         , simulator_(simulator)
     {
         this->damarisUpdate_ = true ;
 
-        rank_ = simulator_.vanguard().grid().comm().rank() ;
-        nranks_ = simulator_.vanguard().grid().comm().size();
-        
-        const auto& gridView = simulator_.gridView();
-        const auto& interior_elements = elements(gridView, Dune::Partitions::interior);
-        // Get the size of the unique vector elements (excludes the shared 'ghost' elements)
-        numElements_ = std::distance(interior_elements.begin(), interior_elements.end());
+        this->rank_ = this->simulator_.vanguard().grid().comm().rank() ;
+        this->nranks_ = this->simulator_.vanguard().grid().comm().size();
 
-        this->elements_rank_offsets_.resize(nranks_) ;
-        this->damarisOutputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>(simulator, this->collectOnIORank_);
+        this->elements_rank_offsets_.resize(this->nranks_);
+        
+        // Get the size of the unique vector elements (excludes the shared 'ghost' elements)
+        //
+        // Might possibly use
+        //
+        //     detail::countLocalInteriorCellsGridView(this->simulator_.gridView())
+        //
+        // from countGlobalCells.hpp instead of calling std::distance() directly.
+        {
+            const auto& gridView = this->simulator_.gridView();
+            const auto& interior_elements = elements(gridView, Dune::Partitions::interior);
+
+            this->numElements_ = std::distance(interior_elements.begin(), interior_elements.end());
+        }
+
+        if (this->nranks_ > 1) {
+            auto smryCfg = (this->rank_ == 0)
+                ? this->eclIO_->finalSummaryConfig()
+                : SummaryConfig{};
+
+            eclBroadcast(this->simulator_.vanguard().grid().comm(), smryCfg);
+
+            this->damarisOutputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+                (simulator, smryCfg, this->collectOnIORank_);
+        }
+        else {
+            this->damarisOutputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
+                (simulator, this->eclIO_->finalSummaryConfig(), this->collectOnIORank_);
+        }
     }
 
     /*!

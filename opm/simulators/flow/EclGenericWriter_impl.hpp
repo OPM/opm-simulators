@@ -30,12 +30,14 @@
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellMatcher.hpp>
+
 #include <opm/input/eclipse/Units/UnitSystem.hpp>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
@@ -207,7 +209,6 @@ EclGenericWriter(const Schedule& schedule,
     , gridView_       (gridView)
     , schedule_       (schedule)
     , eclState_       (eclState)
-    , summaryConfig_  (summaryConfig)
     , cartMapper_     (cartMapper)
     , equilCartMapper_(equilCartMapper)
     , equilGrid_      (equilGrid)
@@ -216,7 +217,7 @@ EclGenericWriter(const Schedule& schedule,
         this->eclIO_ = std::make_unique<EclipseIO>
             (this->eclState_,
              UgGridHelpers::createEclipseGrid(*equilGrid, eclState_.getInputGrid()),
-             this->schedule_, this->summaryConfig_, "", enableEsmry);
+             this->schedule_, summaryConfig, "", enableEsmry);
     }
 
     // create output thread if enabled and rank is I/O rank

@@ -143,10 +143,11 @@ class OutputBlackOilModule : public GenericOutputBlackoilModule<GetPropType<Type
 public:
     template <class CollectDataToIORankType>
     OutputBlackOilModule(const Simulator& simulator,
+                         const SummaryConfig& smryCfg,
                          const CollectDataToIORankType& collectToIORank)
         : BaseType(simulator.vanguard().eclState(),
                    simulator.vanguard().schedule(),
-                   simulator.vanguard().summaryConfig(),
+                   smryCfg,
                    simulator.vanguard().summaryState(),
                    moduleVersionName(),
                    getPropValue<TypeTag, Properties::EnableEnergy>(),
@@ -185,9 +186,7 @@ public:
             OPM_THROW_NOLOG(std::runtime_error, msg);
         }
 
-        if (const auto& smryCfg = simulator.vanguard().summaryConfig();
-            smryCfg.match("[FB]PP[OGW]") || smryCfg.match("RPP[OGW]*"))
-        {
+        if (smryCfg.match("[FB]PP[OGW]") || smryCfg.match("RPP[OGW]*")) {
             auto rset = this->eclState_.fieldProps().fip_regions();
             rset.push_back("PVTNUM");
 
