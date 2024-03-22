@@ -246,11 +246,11 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, std::string, SaveFile,
                              "FileName for .OPMRST file used for saving serialized state. "
                              "If empty, CASENAME.OPMRST is used.");
-        EWOMS_HIDE_PARAM(TypeTag, SaveFile);
+        Parameters::hideParam<TypeTag>("SaveFile");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, LoadFile,
                              "FileName for .OPMRST file used to load serialized state. "
                              "If empty, CASENAME.OPMRST is used.");
-        EWOMS_HIDE_PARAM(TypeTag, LoadFile);
+        Parameters::hideParam<TypeTag>("LoadFile");
     }
 
     /// Run the simulation.

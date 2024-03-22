@@ -737,7 +737,7 @@ namespace Opm
 
             EWOMS_REGISTER_PARAM(TypeTag, bool, DebugEmitCellPartition, "Whether or not to emit cell partitions as a debugging aid.");
 
-            EWOMS_HIDE_PARAM(TypeTag, DebugEmitCellPartition);
+            Parameters::hideParam<TypeTag>("DebugEmitCellPartition");
         }
     };
 } // namespace Opm

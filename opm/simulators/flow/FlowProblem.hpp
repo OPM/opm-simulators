@@ -236,11 +236,10 @@ public:
                              "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
         EWOMS_REGISTER_PARAM(TypeTag, int, NumPressurePointsEquil,
                              "Number of pressure points (in each direction) in tables used for equilibration");
-        EWOMS_HIDE_PARAM(TypeTag, NumPressurePointsEquil); // Users will typically not need to modify this parameter..
+        Parameters::hideParam<TypeTag>("NumPressurePointsEquil"); // Users will typically not need to modify this parameter..
         EWOMS_REGISTER_PARAM(TypeTag, bool, ExplicitRockCompaction,
                              "Use pressure from end of the last time step when evaluating rock compaction");
-        EWOMS_HIDE_PARAM(TypeTag, ExplicitRockCompaction); // Users will typically not need to modify this parameter..
-
+        Parameters::hideParam<TypeTag>("ExplicitRockCompaction"); // Users will typically not need to modify this parameter..
     }
 
 

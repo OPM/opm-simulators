@@ -127,83 +127,83 @@ namespace Opm {
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
 
             // hide the parameters unused by flow. TODO: this is a pain to maintain
-            EWOMS_HIDE_PARAM(TypeTag, EnableGravity);
-            EWOMS_HIDE_PARAM(TypeTag, EnableGridAdaptation);
+            Parameters::hideParam<TypeTag>("EnableGravity");
+            Parameters::hideParam<TypeTag>("EnableGridAdaptation");
 
             // this parameter is actually used in eWoms, but the flow well model
             // hard-codes the assumption that the intensive quantities cache is enabled,
             // so flow crashes. Let's hide the parameter for that reason.
-            EWOMS_HIDE_PARAM(TypeTag, EnableIntensiveQuantityCache);
+            Parameters::hideParam<TypeTag>("EnableIntensiveQuantityCache");
 
             // thermodynamic hints are not implemented/required by the eWoms blackoil
             // model
-            EWOMS_HIDE_PARAM(TypeTag, EnableThermodynamicHints);
+            Parameters::hideParam<TypeTag>("EnableThermodynamicHints");
 
             // in flow only the deck file determines the end time of the simulation
-            EWOMS_HIDE_PARAM(TypeTag, EndTime);
+            Parameters::hideParam<TypeTag>("EndTime");
 
             // time stepping is not done by the eWoms code in flow
-            EWOMS_HIDE_PARAM(TypeTag, InitialTimeStepSize);
-            EWOMS_HIDE_PARAM(TypeTag, MaxTimeStepDivisions);
-            EWOMS_HIDE_PARAM(TypeTag, MaxTimeStepSize);
-            EWOMS_HIDE_PARAM(TypeTag, MinTimeStepSize);
-            EWOMS_HIDE_PARAM(TypeTag, PredeterminedTimeStepsFile);
+            Parameters::hideParam<TypeTag>("InitialTimeStepSize");
+            Parameters::hideParam<TypeTag>("MaxTimeStepDivisions");
+            Parameters::hideParam<TypeTag>("MaxTimeStepSize");
+            Parameters::hideParam<TypeTag>("MinTimeStepSize");
+            Parameters::hideParam<TypeTag>("PredeterminedTimeStepsFile");
 
             // flow also does not use the eWoms Newton method
-            EWOMS_HIDE_PARAM(TypeTag, NewtonMaxError);
-            EWOMS_HIDE_PARAM(TypeTag, NewtonTolerance);
-            EWOMS_HIDE_PARAM(TypeTag, NewtonTargetIterations);
-            EWOMS_HIDE_PARAM(TypeTag, NewtonVerbose);
-            EWOMS_HIDE_PARAM(TypeTag, NewtonWriteConvergence);
+            Parameters::hideParam<TypeTag>("NewtonMaxError");
+            Parameters::hideParam<TypeTag>("NewtonTolerance");
+            Parameters::hideParam<TypeTag>("NewtonTargetIterations");
+            Parameters::hideParam<TypeTag>("NewtonVerbose");
+            Parameters::hideParam<TypeTag>("NewtonWriteConvergence");
 
             // the default eWoms checkpoint/restart mechanism does not work with flow
-            EWOMS_HIDE_PARAM(TypeTag, RestartTime);
-            EWOMS_HIDE_PARAM(TypeTag, RestartWritingInterval);
+            Parameters::hideParam<TypeTag>("RestartTime");
+            Parameters::hideParam<TypeTag>("RestartWritingInterval");
             // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
             //if(not(EWOMS_GET_PARAM(TypeTag,bool,EnableVtkOutput))){
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilFormationVolumeFactor);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilSaturationPressure);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteOilVaporizationFactor);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWritePorosity);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWritePotentialGradients);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWritePressures);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWritePrimaryVars);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWritePrimaryVarsMeaning);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteProcessRank);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteRelativePermeabilities);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturatedGasOilVaporizationFactor);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturatedOilGasDissolutionFactor);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturationRatios);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteSaturations);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteTemperature);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteViscosities);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteWaterFormationVolumeFactor);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasDissolutionFactor);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasFormationVolumeFactor);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteGasSaturationPressure);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteIntrinsicPermeabilities);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteTracerConcentration);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteExtrusionFactor);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteFilterVelocities);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteDensities);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteDofIndex);
-                EWOMS_HIDE_PARAM(TypeTag, VtkWriteMobilities);
+                Parameters::hideParam<TypeTag>("VtkWriteOilFormationVolumeFactor");
+                Parameters::hideParam<TypeTag>("VtkWriteOilSaturationPressure");
+                Parameters::hideParam<TypeTag>("VtkWriteOilVaporizationFactor");
+                Parameters::hideParam<TypeTag>("VtkWritePorosity");
+                Parameters::hideParam<TypeTag>("VtkWritePotentialGradients");
+                Parameters::hideParam<TypeTag>("VtkWritePressures");
+                Parameters::hideParam<TypeTag>("VtkWritePrimaryVars");
+                Parameters::hideParam<TypeTag>("VtkWritePrimaryVarsMeaning");
+                Parameters::hideParam<TypeTag>("VtkWriteProcessRank");
+                Parameters::hideParam<TypeTag>("VtkWriteRelativePermeabilities");
+                Parameters::hideParam<TypeTag>("VtkWriteSaturatedGasOilVaporizationFactor");
+                Parameters::hideParam<TypeTag>("VtkWriteSaturatedOilGasDissolutionFactor");
+                Parameters::hideParam<TypeTag>("VtkWriteSaturationRatios");
+                Parameters::hideParam<TypeTag>("VtkWriteSaturations");
+                Parameters::hideParam<TypeTag>("VtkWriteTemperature");
+                Parameters::hideParam<TypeTag>("VtkWriteViscosities");
+                Parameters::hideParam<TypeTag>("VtkWriteWaterFormationVolumeFactor");
+                Parameters::hideParam<TypeTag>("VtkWriteGasDissolutionFactor");
+                Parameters::hideParam<TypeTag>("VtkWriteGasFormationVolumeFactor");
+                Parameters::hideParam<TypeTag>("VtkWriteGasSaturationPressure");
+                Parameters::hideParam<TypeTag>("VtkWriteIntrinsicPermeabilities");
+                Parameters::hideParam<TypeTag>("VtkWriteTracerConcentration");
+                Parameters::hideParam<TypeTag>("VtkWriteExtrusionFactor");
+                Parameters::hideParam<TypeTag>("VtkWriteFilterVelocities");
+                Parameters::hideParam<TypeTag>("VtkWriteDensities");
+                Parameters::hideParam<TypeTag>("VtkWriteDofIndex");
+                Parameters::hideParam<TypeTag>("VtkWriteMobilities");
                 //}
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteAverageMolarMasses);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteFugacities);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteFugacityCoeffs);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteMassFractions);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteMolarities);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteMoleFractions);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteTotalMassFractions);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteTotalMoleFractions);
+            Parameters::hideParam<TypeTag>("VtkWriteAverageMolarMasses");
+            Parameters::hideParam<TypeTag>("VtkWriteFugacities");
+            Parameters::hideParam<TypeTag>("VtkWriteFugacityCoeffs");
+            Parameters::hideParam<TypeTag>("VtkWriteMassFractions");
+            Parameters::hideParam<TypeTag>("VtkWriteMolarities");
+            Parameters::hideParam<TypeTag>("VtkWriteMoleFractions");
+            Parameters::hideParam<TypeTag>("VtkWriteTotalMassFractions");
+            Parameters::hideParam<TypeTag>("VtkWriteTotalMoleFractions");
 
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteTortuosities);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteDiffusionCoefficients);
-            EWOMS_HIDE_PARAM(TypeTag, VtkWriteEffectiveDiffusionCoefficients);
+            Parameters::hideParam<TypeTag>("VtkWriteTortuosities");
+            Parameters::hideParam<TypeTag>("VtkWriteDiffusionCoefficients");
+            Parameters::hideParam<TypeTag>("VtkWriteEffectiveDiffusionCoefficients");
             
-            // hide average density option 
-            EWOMS_HIDE_PARAM(TypeTag, UseAverageDensityMsWells);
+            // hide average density option
+            Parameters::hideParam<TypeTag>("UseAverageDensityMsWells");
 
             Parameters::endParamRegistration<TypeTag>();
 
