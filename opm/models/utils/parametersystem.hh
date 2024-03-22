@@ -132,17 +132,6 @@
 #define EWOMS_GET_PARAM_LISTS(TypeTag, UsedParamList, UnusedParamList)    \
     (::Opm::Parameters::getLists<TypeTag>(UsedParamList, UnusedParamList))
 
-/*!
- * \ingroup Parameter
- *
- * \brief Returns true if a parameter has been specified at runtime, false
- *        otherwise.
- *
- * If the parameter in question has not been registered, this throws an exception.
- */
-#define EWOMS_PARAM_IS_SET(TypeTag, ParamType, ParamName)               \
-    (::Opm::Parameters::isSet<TypeTag, ParamType>(#ParamName, #ParamName))
-
 namespace Opm {
 namespace Parameters {
 
@@ -978,9 +967,14 @@ public:
         ParamsMeta::clear();
     }
 
+    /*!
+     * \brief Returns true if a parameter has been specified at runtime, false
+     *        otherwise.
+     *
+     * If the parameter in question has not been registered, this throws an exception.
+     */
     template <class ParamType>
-    static bool isSet([[maybe_unused]] const char* propTagName,
-                      [[maybe_unused]] const char* paramName,
+    static bool isSet(const char* paramName,
                       bool errorIfNotRegistered = true)
     {
 
@@ -988,7 +982,7 @@ public:
         // make sure that the parameter is used consistently. since
         // this is potentially quite expensive, it is only done if
         // debugging code is not explicitly turned off.
-        check_(Dune::className<ParamType>(), propTagName, paramName);
+        check_(Dune::className<ParamType>(), paramName, paramName);
 #endif
 
         if (errorIfNotRegistered) {
@@ -1141,10 +1135,9 @@ void reset()
 }
 
 template <class TypeTag, class ParamType>
-bool isSet(const char *propTagName, const char *paramName, bool errorIfNotRegistered = true)
+bool isSet(const char* paramName, bool errorIfNotRegistered = true)
 {
-    return Param<TypeTag>::template isSet<ParamType>(propTagName,
-                                                     paramName,
+    return Param<TypeTag>::template isSet<ParamType>(paramName,
                                                      errorIfNotRegistered);
 }
 
