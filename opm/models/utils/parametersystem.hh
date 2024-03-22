@@ -77,16 +77,6 @@
 /*!
  * \ingroup Parameter
  *
- * \brief Indicate that a given parameter should not be mentioned in the help message
- *
- * This allows to deal with unused parameters
- */
-#define EWOMS_HIDE_PARAM(TypeTag, ParamName)                \
-    ::Opm::Parameters::hideParam<TypeTag>(#ParamName)
-
-/*!
- * \ingroup Parameter
- *
  * \brief Retrieve a runtime parameter.
  *
  * The default value is specified via the property system.
@@ -1158,6 +1148,11 @@ void registerParam(const char *paramName, const char *propertyName, const ParamT
     ParamsMeta::mutableRegistry()[paramName] = paramInfo;
 }
 
+/*!
+ * \brief Indicate that a given parameter should not be mentioned in the help message
+ *
+ * This allows to deal with unused parameters
+ */
 template <class TypeTag>
 void hideParam(const char* paramName)
 {
