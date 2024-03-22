@@ -72,7 +72,7 @@
  */
 #define EWOMS_REGISTER_PARAM(TypeTag, ParamType, ParamName, Description)       \
     ::Opm::Parameters::registerParam<TypeTag, ParamType>( \
-        #ParamName, #ParamName, getPropValue<TypeTag, Properties::ParamName>(), Description)
+        #ParamName, getPropValue<TypeTag, Properties::ParamName>(), Description)
 
 /*!
  * \ingroup Parameter
@@ -107,7 +107,6 @@ struct ParamInfo
     std::string paramName;
     std::string paramTypeName;
     std::string typeTagName;
-    std::string propertyName;
     std::string usageString;
     std::string compileTimeValue;
     bool isHidden;
@@ -117,7 +116,6 @@ struct ParamInfo
         return other.paramName == paramName
                && other.paramTypeName == paramTypeName
                && other.typeTagName == typeTagName
-               && other.propertyName == propertyName
                && other.usageString == usageString
                && other.compileTimeValue == compileTimeValue;
     }
@@ -949,7 +947,7 @@ public:
         // make sure that the parameter is used consistently. since
         // this is potentially quite expensive, it is only done if
         // debugging code is not explicitly turned off.
-        check_(Dune::className<ParamType>(), paramName, paramName);
+        check_(Dune::className<ParamType>(), paramName);
 #endif
 
         if (errorIfNotRegistered) {
@@ -972,13 +970,11 @@ public:
 private:
     struct Blubb
     {
-        std::string propertyName;
         std::string paramTypeName;
         std::string groupName;
 
         Blubb& operator=(const Blubb& b)
         {
-            propertyName = b.propertyName;
             paramTypeName = b.paramTypeName;
             groupName = b.groupName;
             return *this;
@@ -986,8 +982,7 @@ private:
     };
 
     static void check_(const std::string& paramTypeName,
-                       const std::string& propertyName,
-                       const char *paramName)
+                       const char* paramName)
     {
         using StaticData = std::unordered_map<std::string, Blubb>;
         static StaticData staticData;
@@ -996,19 +991,12 @@ private:
         Blubb *b;
         if (it == staticData.end()) {
             Blubb a;
-            a.propertyName = propertyName;
             a.paramTypeName = paramTypeName;
             staticData[paramName] = a;
             b = &staticData[paramName];
         }
         else
             b = &(it->second);
-
-        if (b->propertyName != propertyName) {
-            throw std::logic_error("GET_*_PARAM for parameter '"+std::string(paramName)
-                                   +"' called for at least two different properties ('"
-                                   +b->propertyName+"' and '"+propertyName+"')");
-        }
 
         if (b->paramTypeName != paramTypeName) {
             throw std::logic_error("GET_*_PARAM for parameter '"+std::string(paramName)
@@ -1027,7 +1015,7 @@ private:
         // make sure that the parameter is used consistently. since
         // this is potentially quite expensive, it is only done if
         // debugging code is not explicitly turned off.
-        check_(Dune::className<ParamType>(), propTagName, paramName);
+        check_(Dune::className<ParamType>(), paramName);
 #endif
 
         if (errorIfNotRegistered) {
@@ -1115,7 +1103,7 @@ bool isSet(const char* paramName, bool errorIfNotRegistered = true)
 }
 
 template <class TypeTag, class ParamType>
-void registerParam(const char *paramName, const char *propertyName, const ParamType& defaultValue, const char *usageString)
+void registerParam(const char* paramName, const ParamType& defaultValue, const char* usageString)
 {
     using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
     if (!ParamsMeta::registrationOpen())
@@ -1130,7 +1118,6 @@ void registerParam(const char *paramName, const char *propertyName, const ParamT
     paramInfo.paramTypeName = Dune::className<ParamType>();
     std::string tmp = Dune::className<TypeTag>();
     tmp.replace(0, strlen("Opm::Properties::TTag::"), "");
-    paramInfo.propertyName = propertyName;
     paramInfo.usageString = usageString;
     std::ostringstream oss;
     oss << defaultValue;
