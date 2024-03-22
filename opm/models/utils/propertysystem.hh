@@ -56,11 +56,9 @@ template<class P>
 constexpr std::true_type isDefinedProperty(...) { return {}; }
 
 //! check if a TypeTag inherits from other TypeTags
-//! the enable_if portion of decltype is only needed for the macro hack to work, if no macros are in use anymore it can be removed,
-//! i.e. then trailing return type is then -> decltype(std::declval<typename T::InheritsFrom>(), std::true_type{})
 template<class T>
 constexpr auto hasParentTypeTag(int)
--> decltype(std::declval<typename T::InheritsFrom>(), std::enable_if_t<!std::is_same<typename T::InheritsFrom, void>::value, int>{}, std::true_type{})
+-> decltype(std::declval<typename T::InheritsFrom>(), std::true_type{})
 { return {}; }
 
 //! fall back if a TypeTag doesn't inherit
@@ -255,10 +253,5 @@ void printValues(std::ostream& os)
 }
 
 } // end namespace Opm
-
-// remove this after release 2021.04 to remove macros completely
-#if OPM_ENABLE_OLD_PROPERTY_MACROS
-#include <opm/models/utils/propertysystemmacros.hh>
-#endif // OPM_ENABLE_OLD_PROPERTY_MACROS
 
 #endif
