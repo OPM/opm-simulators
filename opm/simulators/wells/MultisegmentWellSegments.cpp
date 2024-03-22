@@ -262,7 +262,7 @@ computeFluidProperties(const EvalWell& temperature,
                                 "rv {} and pressure {}. "
                                 "Continue as if no dissolution (rs = 0) and "
                                 "vaporization (rv = 0) for this connection.",
-                                d, well_.name(), rv, seg_pressure);
+                                d, well_.name(), rs, rv, seg_pressure);
                 deferred_logger.debug(str);
             } else {
                 if (rs > 0.0) {
