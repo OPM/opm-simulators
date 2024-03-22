@@ -29,8 +29,8 @@
  * Dune::ParameterTree with the default value taken from the property
  * system.
  */
-#ifndef EWOMS_PARAMETER_SYSTEM_HH
-#define EWOMS_PARAMETER_SYSTEM_HH
+#ifndef OPM_PARAMETER_SYSTEM_HH
+#define OPM_PARAMETER_SYSTEM_HH
 
 #include <opm/models/utils/propertysystem.hh>
 
@@ -1226,4 +1226,4 @@ void endParamRegistration()
 } // namespace Parameters
 } // namespace Opm
 
-#endif
+#endif // OPM_PARAMETER_SYSTEM_HH
