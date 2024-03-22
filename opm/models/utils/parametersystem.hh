@@ -82,7 +82,7 @@
  * This allows to deal with unused parameters
  */
 #define EWOMS_HIDE_PARAM(TypeTag, ParamName)                \
-    ::Opm::Parameters::hideParam<TypeTag>(#ParamName, getPropValue<TypeTag, Properties::ParamName>())
+    ::Opm::Parameters::hideParam<TypeTag>(#ParamName)
 
 /*!
  * \ingroup Parameter
@@ -1158,8 +1158,8 @@ void registerParam(const char *paramName, const char *propertyName, const ParamT
     ParamsMeta::mutableRegistry()[paramName] = paramInfo;
 }
 
-template <class TypeTag, class ParamType>
-void hideParam(const char *paramName, const ParamType&)
+template <class TypeTag>
+void hideParam(const char* paramName)
 {
     using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
     if (!ParamsMeta::registrationOpen())
