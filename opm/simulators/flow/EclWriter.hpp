@@ -36,11 +36,6 @@
 
 #include <opm/output/eclipse/RestartValue.hpp>
 
-#if HAVE_MPI
-#include <mpi.h>
-#include <opm/simulators/utils/MPISerializer.hpp>
-#endif
-
 #include <opm/simulators/flow/CollectDataOnIORank.hpp>
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/EclGenericWriter.hpp>
@@ -49,6 +44,7 @@
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelRestart.hpp>
+#include <opm/simulators/utils/ParallelSerialization.hpp>
 
 #include <limits>
 #include <stdexcept>
@@ -162,11 +158,7 @@ public:
                 ? this->eclIO_->finalSummaryConfig()
                 : SummaryConfig{};
 
-            auto serialiser = Parallel::MpiSerializer {
-                this->simulator_.vanguard().grid().comm()
-            };
-
-            serialiser.broadcast(0, smryCfg);
+            eclBroadcast(this->simulator_.vanguard().grid().comm(), smryCfg);
 
             this->outputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
                 (simulator, smryCfg, this->collectOnIORank_);

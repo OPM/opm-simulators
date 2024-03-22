@@ -36,9 +36,6 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <mpi.h>
-#include <opm/simulators/utils/MPISerializer.hpp>
-
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/DamarisProperties.hpp>
 #include <opm/simulators/flow/EclGenericWriter.hpp>
@@ -47,6 +44,7 @@
 #include <opm/simulators/utils/DamarisVar.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/GridDataOutput.hpp>
+#include <opm/simulators/utils/ParallelSerialization.hpp>
 
 #include <fmt/format.h>
 
@@ -189,11 +187,7 @@ public:
                 ? this->eclIO_->finalSummaryConfig()
                 : SummaryConfig{};
 
-            auto serialiser = Parallel::MpiSerializer {
-                this->simulator_.vanguard().grid().comm()
-            };
-
-            serialiser.broadcast(0, smryCfg);
+            eclBroadcast(this->simulator_.vanguard().grid().comm(), smryCfg);
 
             this->damarisOutputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
                 (simulator, smryCfg, this->collectOnIORank_);

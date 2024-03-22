@@ -82,11 +82,12 @@ void eclStateBroadcast(Parallel::Communication comm, EclipseState& eclState, Sch
 template <class T>
 void eclBroadcast(Parallel::Communication comm, T& data)
 {
-    Opm::Parallel::MpiSerializer ser(comm);
+    ::Opm::Parallel::MpiSerializer ser(comm);
     ser.broadcast(data);
 }
 
-template void eclBroadcast<TransMult>(Parallel::Communication, TransMult&);
-template void eclBroadcast<Schedule>(Parallel::Communication, Schedule&);
+template void eclBroadcast(Parallel::Communication, TransMult&);
+template void eclBroadcast(Parallel::Communication, Schedule&);
+template void eclBroadcast(Parallel::Communication, SummaryConfig&);
 
 }
