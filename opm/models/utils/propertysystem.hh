@@ -26,9 +26,12 @@
 #ifndef OPM_PROPERTY_SYSTEM_HH
 #define OPM_PROPERTY_SYSTEM_HH
 
+#include <dune/common/classname.hh>
+
+#include <cstring>
+#include <ostream>
 #include <tuple>
 #include <type_traits>
-#include <ostream>
 
 namespace Opm {
 namespace Properties {
@@ -215,6 +218,13 @@ struct GetSplicePropImpl
     static_assert(!std::is_same<type, std::tuple<>>::value, "Splice is undefined!");
 };
 
+template <typename, class = void>
+struct has_name : public std::false_type {};
+
+template <typename T>
+struct has_name<T, decltype((void)T::name, void())>
+: public std::true_type {};
+
 } // end namespace Detail
 } // end namespace Property
 
@@ -237,6 +247,23 @@ using GetSplicePropType = typename Properties::Detail::GetSplicePropImpl<TypeTag
 //! get the value data member of a property
 template<class TypeTag, template<class,class> class Property>
 constexpr auto getPropValue() { return Properties::Detail::GetPropImpl<TypeTag, Property>::type::value; }
+
+//! get the name data member of a property
+template<class TypeTag, template<class,class> class Property>
+auto getPropName()
+{
+    using type = typename Properties::Detail::GetPropImpl<TypeTag,Property>::type;
+    if constexpr (Properties::Detail::has_name<type>::value) {
+        return Properties::Detail::GetPropImpl<TypeTag, Property>::type::name;
+    } else {
+        std::string paramName = Dune::className<type>();
+        paramName.replace(0, std::strlen("Opm::Properties::"), "");
+        const auto pos = paramName.find_first_of('<');
+        paramName.erase(pos);
+        return paramName;
+    }
+}
+
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif

@@ -73,8 +73,7 @@
  * \endcode
  */
 #define EWOMS_REGISTER_PARAM(TypeTag, ParamType, ParamName, Description)       \
-        ::Opm::Parameters::registerParam<TypeTag, Properties::ParamName>( \
-        #ParamName, Description)
+        ::Opm::Parameters::registerParam<TypeTag, Properties::ParamName>(Description)
 
 /*!
  * \ingroup Parameter
@@ -1105,12 +1104,14 @@ bool isSet(const char* paramName, bool errorIfNotRegistered = true)
 }
 
 template <class TypeTag, template<class,class> class Param>
-void registerParam(const char* paramName, const char* usageString)
+void registerParam(const char* usageString)
 {
     using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-    if (!ParamsMeta::registrationOpen())
+    const std::string paramName = getPropName<TypeTag,Param>();
+    if (!ParamsMeta::registrationOpen()) {
         throw std::logic_error("Parameter registration was already closed before "
-                               "the parameter '"+std::string(paramName)+"' was registered.");
+                               "the parameter '" + paramName + "' was registered.");
+    }
 
     const auto defaultValue = getPropValue<TypeTag, Param>();
     using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
@@ -1134,7 +1135,7 @@ void registerParam(const char* paramName, const char* usageString)
         // parameter name, type and usage string are exactly the same.
         if (ParamsMeta::registry().at(paramName) == paramInfo)
             return;
-        throw std::logic_error("Parameter "+std::string(paramName)
+        throw std::logic_error("Parameter " + paramName
                                +" registered twice with non-matching characteristics.");
     }
 
