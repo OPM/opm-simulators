@@ -41,13 +41,15 @@
 #include <dune/common/classname.hh>
 #include <dune/common/parametertree.hh>
 
+#include <fstream>
+#include <iostream>
+#include <list>
 #include <map>
 #include <set>
-#include <list>
 #include <sstream>
+#include <stdexcept>
 #include <string>
-#include <iostream>
-#include <fstream>
+#include <type_traits>
 #include <unordered_map>
 
 #include <unistd.h>
@@ -71,8 +73,8 @@
  * \endcode
  */
 #define EWOMS_REGISTER_PARAM(TypeTag, ParamType, ParamName, Description)       \
-    ::Opm::Parameters::registerParam<TypeTag, ParamType>( \
-        #ParamName, getPropValue<TypeTag, Properties::ParamName>(), Description)
+        ::Opm::Parameters::registerParam<TypeTag, Properties::ParamName>( \
+        #ParamName, Description)
 
 /*!
  * \ingroup Parameter
@@ -1102,14 +1104,18 @@ bool isSet(const char* paramName, bool errorIfNotRegistered = true)
                                                      errorIfNotRegistered);
 }
 
-template <class TypeTag, class ParamType>
-void registerParam(const char* paramName, const ParamType& defaultValue, const char* usageString)
+template <class TypeTag, template<class,class> class Param>
+void registerParam(const char* paramName, const char* usageString)
 {
     using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
     if (!ParamsMeta::registrationOpen())
         throw std::logic_error("Parameter registration was already closed before "
                                "the parameter '"+std::string(paramName)+"' was registered.");
 
+    const auto defaultValue = getPropValue<TypeTag, Param>();
+    using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
+                                                        const char* const>, std::string,
+                                         std::remove_const_t<decltype(defaultValue)>>;
     ParamsMeta::registrationFinalizers().emplace_back(
         new ParamRegFinalizer_<TypeTag, ParamType>(paramName, defaultValue));
 
