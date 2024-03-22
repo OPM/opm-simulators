@@ -132,10 +132,6 @@
 #define EWOMS_GET_PARAM_LISTS(TypeTag, UsedParamList, UnusedParamList)    \
     (::Opm::Parameters::getLists<TypeTag>(UsedParamList, UnusedParamList))
 
-//!\cond SKIP_THIS
-#define EWOMS_RESET_PARAMS_(TypeTag)            \
-    (::Opm::Parameters::reset<TypeTag>())
-
 /*!
  * \ingroup Parameter
  *
