@@ -87,18 +87,6 @@
 /*!
  * \ingroup Parameter
  *
- * \brief Indicate that all parameters are registered for a given type tag.
- *
- * If \c EWOMS_REGISTER_PARAM is called after the invokation of
- * \c END_PARAM_REGISTRATION, a <tt>std::logic_error</tt> exception
- * will be thrown.
- */
-#define EWOMS_END_PARAM_REGISTRATION(TypeTag)                                  \
-    ::Opm::Parameters::endParamRegistration<TypeTag>()
-
-/*!
- * \ingroup Parameter
- *
  * \brief Retrieve a runtime parameter.
  *
  * The default value is specified via the property system.
@@ -963,7 +951,7 @@ public:
     {
         return retrieve_<ParamType>(propTagName, paramName, getPropValue<TypeTag, PropTag>(), errorIfNotRegistered);
     }
-    
+
     template <class ParamType>
     static ParamType get(const char *propTagName,
                          const char *paramName,
@@ -972,7 +960,7 @@ public:
     {
         return retrieve_<ParamType>(propTagName, paramName, defaultValue, errorIfNotRegistered);
     }
-    
+
     static void clear()
     {
         ParamsMeta::clear();
@@ -1199,6 +1187,13 @@ void hideParam(const char *paramName, const ParamType&)
     paramInfo.isHidden = true;
 }
 
+/*!
+ * \brief Indicate that all parameters are registered for a given type tag.
+ *
+ * If registerParam is called after the invocation of
+ * \c endParamRegistration, a <tt>std::logic_error</tt> exception
+ * will be thrown.
+ */
 template <class TypeTag>
 void endParamRegistration()
 {
