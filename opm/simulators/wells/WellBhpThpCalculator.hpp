@@ -133,6 +133,11 @@ public:
                                 const double& limit,
                                 DeferredLogger& deferred_logger);
 
+  //! \brief Find limits using brute-force solver.
+  static bool bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
+                                double& min_thp, double& max_thp,
+                                DeferredLogger& deferred_logger);
+
 private:
     //! \brief Compute BHP from THP limit for an injector - implementation.
     template<class ErrorPolicy>
