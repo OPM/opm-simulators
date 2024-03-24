@@ -1006,6 +1006,29 @@ bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
     return bracket_found;
 }
 
+bool
+WellBhpThpCalculator::
+bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
+                  double& min_thp, double& max_thp,
+                  DeferredLogger& deferred_logger)
+{
+    bool bracket_found = false;
+    const int sample_number = 1000;
+    const double interval = 1E5;
+    double eq_low = eq(min_thp);
+    double eq_high = 0.0;
+    for (int i = 0; i < sample_number + 1; ++i) {
+        max_thp = min_thp + interval * i;
+        eq_high = eq(max_thp);
+        if (eq_high * eq_low <= 0.) {
+            bracket_found = true;
+            min_thp = max_thp - interval;
+            break;
+        }
+        eq_low = eq_high;
+    }
+    return bracket_found;
+}
 #define INSTANCE(...) \
 template __VA_ARGS__ WellBhpThpCalculator:: \
 calculateBhpFromThp<__VA_ARGS__>(const WellState&, \
