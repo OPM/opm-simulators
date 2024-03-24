@@ -875,15 +875,9 @@ bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
     low = range[0];
     high = range[1];
     const int sample_number = 200;
-<<<<<<< HEAD
     const Scalar interval = (high - low) / sample_number;
     Scalar eq_low = eq(low);
     Scalar eq_high = 0.0;
-=======
-    const double interval = (high - low) / sample_number;
-    double eq_low = eq(low);
-    double eq_high = 0.0;
->>>>>>> 3ce8d7eec (moved common thp calculation to updateWellControls)
     for (int i = 0; i < sample_number + 1; ++i) {
         high = range[0] + interval * i;
         eq_high = eq(high);
@@ -1011,22 +1005,23 @@ getFloIPR(const WellState<Scalar>& well_state,
                           detail::getFlo(table, aqua_b, liquid_b, vapour_b));
 }
 
+template<class Scalar>
 bool
-WellBhpThpCalculator::
-bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
-                  const std::array<double, 2>& range,
-                  double& low, double& high,
-                  std::optional<double>& approximate_solution,
-                  const double& limit,
+WellBhpThpCalculator<Scalar>::
+bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
+                  const std::array<Scalar, 2>& range,
+                  Scalar& low, Scalar& high,
+                  std::optional<Scalar>& approximate_solution,
+                  const Scalar& limit,
                   DeferredLogger& deferred_logger)
 {
     bool bracket_found = false;
     low = range[0];
     high = range[1];
     const int sample_number = 300;
-    const double interval = (high - low) / sample_number;
-    double eq_low = eq(low);
-    double eq_high = 0.0;
+    const Scalar interval = (high - low) / sample_number;
+    Scalar eq_low = eq(low);
+    Scalar eq_high = 0.0;
     for (int i = 0; i < sample_number + 1; ++i) {
         high = range[0] + interval * i;
         eq_high = eq(high);
@@ -1046,6 +1041,30 @@ bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
         deferred_logger.debug(
                 " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
                 " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
+    }
+    return bracket_found;
+}
+
+template<class Scalar>
+bool
+WellBhpThpCalculator<Scalar>::
+bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
+                  Scalar& min_thp, Scalar& max_thp)
+{
+    bool bracket_found = false;
+    const int sample_number = 1000;
+    const Scalar interval = 1E5;
+    Scalar eq_low = eq(min_thp);
+    Scalar eq_high = 0.0;
+    for (int i = 0; i < sample_number + 1; ++i) {
+        max_thp = min_thp + interval * i;
+        eq_high = eq(max_thp);
+        if (eq_high * eq_low <= 0.) {
+            bracket_found = true;
+            min_thp = max_thp - interval;
+            break;
+        }
+        eq_low = eq_high;
     }
     return bracket_found;
 }

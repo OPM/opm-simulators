@@ -374,26 +374,15 @@ public:
     void updateConnectionTransmissibilityFactor(const Simulator& simulator,
                                                 SingleWellState<Scalar>& ws) const;
 
-                                                SingleWellState<double>& ws) const;
-
     virtual bool iterateWellEqWithSwitching(const Simulator& simulator,
                                             const double dt,
                                             const WellInjectionControls& inj_controls,
                                             const WellProductionControls& prod_controls,
-                                            WellState& well_state,
-                                            const GroupState& group_state,
+                                            WellState<Scalar>& well_state,
+                                            const GroupState<Scalar>& group_state,
                                             DeferredLogger& deferred_logger, 
                                             const bool fixed_control = false, 
                                             const bool fixed_status = false) = 0;
-
-    bool solveWellWithTHPConstraint(const Simulator& simulator,
-                                    const double dt,
-                                    const Well::InjectionControls& inj_controls,
-                                    const Well::ProductionControls& prod_controls,
-                                    WellState& well_state,
-                                    const GroupState& group_state,
-                                    DeferredLogger& deferred_logger);
-
 protected:
     // simulation parameters
     const ModelParameters& param_;
@@ -447,16 +436,6 @@ protected:
                                           WellState<Scalar>& well_state,
                                           const GroupState<Scalar>& group_state,
                                           DeferredLogger& deferred_logger) = 0;
-
-    virtual bool iterateWellEqWithSwitching(const Simulator& simulator,
-                                            const double dt,
-                                            const WellInjectionControls& inj_controls,
-                                            const WellProductionControls& prod_controls,
-                                            WellState<Scalar>& well_state,
-                                            const GroupState<Scalar>& group_state,
-                                            DeferredLogger& deferred_logger, 
-                                            const bool fixed_control = false, 
-                                            const bool fixed_status = false) = 0;
 
     virtual void updateIPRImplicit(const Simulator& simulator,
                                    WellState<Scalar>& well_state,
