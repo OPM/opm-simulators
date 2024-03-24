@@ -1354,17 +1354,29 @@ namespace Opm {
                     return (group_rate - orig_target)/orig_target;
                 };
 
-                double thp(0.0);
-                double min_thp(1.0E8);
-                double max_thp(0.0);
-                for (auto& well : this->well_container_) {
-                    std::string well_name = well->name();
-                    if (group.hasWell(well_name)) {
-                        auto& ws = well_state.well(well_name);
-                        thp = ws.thp;
-                        min_thp = std::min(min_thp, thp);
-                        max_thp = std::max(max_thp, thp);
+                double min_thp, max_thp;
+                std::array<double, 2> range_initial;
+                //Find an initial bracket
+                if (!this->well_group_thp_calc_.has_value()){
+                    // Retrieve the terminal pressure of the associated root of the manifold group
+                    std::string node_name =  nodeName;
+                    while (!network.node(node_name).terminal_pressure().has_value()) {
+                        auto branch = network.uptree_branch(node_name).value();
+                        node_name = branch.uptree_node();
                     }
+
+                    min_thp = network.node(node_name).terminal_pressure().value();
+                    std::optional<double> approximate_solution0;
+                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp, local_deferredLogger);
+
+                     // Narrow down the bracket
+                    double low1, high1;
+                    std::array<double, 2> range = {0.9*min_thp, 1.1*max_thp};
+                    std::optional<double> appr_sol;
+                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
+                    min_thp = low1;
+                    max_thp = high1;
+                    range_initial = {min_thp, max_thp};
                 }
 
                 const auto upbranch = network.uptree_branch(nodeName);
