@@ -1308,6 +1308,7 @@ namespace Opm {
         const auto& balance = this->schedule()[reportStepIdx].network_balance();
         const Scalar thp_tolerance = balance.thp_tolerance();
 
+
         if (!network.active()) {
             return;
         }
@@ -1319,7 +1320,11 @@ namespace Opm {
             const bool has_choke = network.node(nodeName).as_choke();
             if (has_choke) {
                 const auto& summary_state = this->simulator_.vanguard().summaryState();
+<<<<<<< HEAD
                 const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
+=======
+                const Group& group = schedule().getGroup(nodeName, reportStepIdx);
+>>>>>>> 683b05e18 (rebasing fixes)
                 const auto ctrl = group.productionControls(summary_state);
                 const auto cmode = ctrl.cmode;
                 const auto pu = this->phase_usage_;
