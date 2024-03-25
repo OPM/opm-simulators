@@ -1209,7 +1209,7 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
     {
-        const int reportStepIdx = this->ebosSimulator_.episodeIndex();
+        const int reportStepIdx = this->simulator_.episodeIndex();
         const auto& network = schedule()[reportStepIdx].network();
         const auto& balance = schedule()[reportStepIdx].network_balance();
         const double thp_tolerance = balance.thp_tolerance();
@@ -1224,7 +1224,7 @@ namespace Opm {
         for (const std::string& nodeName : network.node_names()) {
             const bool has_choke = network.node(nodeName).as_choke();
             if (has_choke) {
-                const auto& summary_state = this->ebosSimulator_.vanguard().summaryState();
+                const auto& summary_state = this->simulator_.vanguard().summaryState();
                 const Group& group = schedule().getGroup(nodeName, reportStepIdx);
                 const auto ctrl = group.productionControls(summary_state);
                 const auto cmode = ctrl.cmode;
@@ -1251,7 +1251,7 @@ namespace Opm {
                             const Well& well_ecl = wells_ecl_[well->indexOfWell()];
                             const auto inj_controls = Well::InjectionControls(0);
                             const auto prod_controls = well_ecl.productionControls(summary_state);
-                            well->iterateWellEqWithSwitching(this->ebosSimulator_, dt, inj_controls, prod_controls, well_state, group_state, local_deferredLogger,  false, false);
+                            well->iterateWellEqWithSwitching(this->simulator_, dt, inj_controls, prod_controls, well_state, group_state, local_deferredLogger,  false, false);
                             rate = -tcalc.calcModeRateFromRates(ws.surface_rates);
                             well_group_rate += rate;
                         }
@@ -1996,7 +1996,7 @@ namespace Opm {
         // network related
         bool more_network_update = false;
         if (shouldBalanceNetwork(episodeIdx, iterationIdx) || mandatory_network_balance) {
-            const double dt = this->ebosSimulator_.timeStepSize();
+            const double dt = this->simulator_.timeStepSize();
             // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
             computeWellGroupThp(dt, deferred_logger);
             const auto local_network_imbalance = updateNetworkPressures(episodeIdx);
