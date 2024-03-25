@@ -1009,8 +1009,7 @@ bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
 bool
 WellBhpThpCalculator::
 bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
-                  double& min_thp, double& max_thp,
-                  DeferredLogger& deferred_logger)
+                  double& min_thp, double& max_thp)
 {
     bool bracket_found = false;
     const int sample_number = 1000;
