@@ -1321,7 +1321,7 @@ namespace Opm {
 
                     min_thp = network.node(node_name).terminal_pressure().value();
                     std::optional<double> approximate_solution0;
-                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp, local_deferredLogger);
+                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
 
                      // Narrow down the bracket
                     double low1, high1;
