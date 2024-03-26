@@ -967,6 +967,67 @@ getFloIPR(const WellState& well_state,
                           detail::getFlo(table, aqua_b, liquid_b, vapour_b));
 }
 
+bool
+WellBhpThpCalculator::
+bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
+                  const std::array<double, 2>& range,
+                  double& low, double& high,
+                  std::optional<double>& approximate_solution,
+                  const double& limit,
+                  DeferredLogger& deferred_logger)
+{
+    bool bracket_found = false;
+    low = range[0];
+    high = range[1];
+    const int sample_number = 300;
+    const double interval = (high - low) / sample_number;
+    double eq_low = eq(low);
+    double eq_high = 0.0;
+    for (int i = 0; i < sample_number + 1; ++i) {
+        high = range[0] + interval * i;
+        eq_high = eq(high);
+        if ( (std::fabs(eq_high) < limit)) {
+            approximate_solution = high;
+            break;
+        }
+        if (eq_high * eq_low <= 0.) {
+            bracket_found = true;
+            break;
+        }
+        low = high;
+        eq_low = eq_high;
+    }
+
+    if (bracket_found) {
+        deferred_logger.debug(
+                " brute force solve found low " + std::to_string(low) + " with eq_low " + std::to_string(eq_low) +
+                " high " + std::to_string(high) + " with eq_high " + std::to_string(eq_high));
+    }
+    return bracket_found;
+}
+
+bool
+WellBhpThpCalculator::
+bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
+                  double& min_thp, double& max_thp)
+{
+    bool bracket_found = false;
+    const int sample_number = 1000;
+    const double interval = 1E5;
+    double eq_low = eq(min_thp);
+    double eq_high = 0.0;
+    for (int i = 0; i < sample_number + 1; ++i) {
+        max_thp = min_thp + interval * i;
+        eq_high = eq(max_thp);
+        if (eq_high * eq_low <= 0.) {
+            bracket_found = true;
+            min_thp = max_thp - interval;
+            break;
+        }
+        eq_low = eq_high;
+    }
+    return bracket_found;
+}
 #define INSTANCE(...) \
 template __VA_ARGS__ WellBhpThpCalculator:: \
 calculateBhpFromThp<__VA_ARGS__>(const WellState&, \

@@ -35,6 +35,7 @@
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 
 #include <cassert>
 #include <cmath>

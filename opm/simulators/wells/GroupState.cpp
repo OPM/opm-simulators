@@ -90,6 +90,22 @@ const std::vector<double>& GroupState::production_rates(const std::string& gname
 
 //-------------------------------------------------------------------------
 
+void GroupState::update_well_group_thp(const std::string& gname, const double& thp) {
+
+    this->group_thp[gname] = thp;
+}
+
+double GroupState::well_group_thp(const std::string& gname) const {
+    auto group_iter = this->group_thp.find(gname);
+    if (group_iter == this->group_thp.end())
+        throw std::logic_error("No such group");
+
+    return group_iter->second;
+}
+
+
+//-------------------------------------------------------------------------
+
 bool GroupState::has_production_reduction_rates(const std::string& gname) const {
     auto group_iter = this->prod_red_rates.find(gname);
     return (group_iter != this->prod_red_rates.end());
