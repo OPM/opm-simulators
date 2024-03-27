@@ -42,6 +42,7 @@
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 
+#include <iostream>
 #include <chrono>
 #include <cstddef>
 #include <ctime>
@@ -143,6 +144,8 @@ void ActionHandler::applyActions(const int reportStep,
 
     bool commit_wellstate = false;
     for (const auto& pyaction : actions.pending_python(actionState_)) {
+        auto wellPIAll = this->fetchWellPIAll(reportStep); //todo: do this nicer!
+        schedule_.wellPIPointer = std::make_shared<std::unordered_map<std::string, double>>(std::move(wellPIAll));
         auto sim_update = schedule_.runPyAction(reportStep, *pyaction, actionState_,
                                                 ecl_state_, summaryState_);
         this->applySimulatorUpdate(reportStep, sim_update, commit_wellstate, transUp);
@@ -208,6 +211,40 @@ void ActionHandler::applySimulatorUpdate(const int report_step,
 }
 
 std::unordered_map<std::string, double>
+ActionHandler::fetchWellPIAll(const int reportStep) const
+{
+  std::vector<Well> allWells = schedule_.getWells(reportStep);
+  const auto num_wells = schedule_[reportStep].well_order().size();
+  std::vector<double> wellpi_vector(num_wells);
+  for (const auto& well : allWells) {
+    wellpi_vector[well.seqIndex()] = this->wellModel_.wellPI(well.name());
+  }
+
+  if (comm_.size() > 1) {
+      std::vector<double> wellpi_buffer(num_wells * comm_.size());
+      comm_.gather( wellpi_vector.data(), wellpi_buffer.data(), num_wells, 0 );
+      if (comm_.rank() == 0) {
+          for (int rank=1; rank < comm_.size(); rank++) {
+              for (std::size_t well_index=0; well_index < num_wells; well_index++) {
+                  const auto global_index = rank*num_wells + well_index;
+                  const auto value = wellpi_buffer[global_index];
+                  if (value != 0)
+                      wellpi_vector[well_index] = value;
+              }
+          }
+      }
+      comm_.broadcast(wellpi_vector.data(), wellpi_vector.size(), 0);
+  }
+
+  std::unordered_map<std::string, double> wellpi;
+  for (const auto& well : allWells) {
+      wellpi[well.name()] = wellpi_vector[ well.seqIndex() ];
+      std::cout << "------------------------------------------------------- At Report Step: " << reportStep << ": Well " << well.name() << " has productivity/injectivity of " << wellpi[well.name()] << std::endl;
+  }
+  return wellpi;
+}
+
+std::unordered_map<std::string, double>
 ActionHandler::fetchWellPI(const int reportStep,
                            const Action::ActionX& action,
                            const std::vector<std::string>& matching_wells) const
@@ -249,6 +286,7 @@ ActionHandler::fetchWellPI(const int reportStep,
   for (const auto& wname : wellpi_wells) {
       const auto& well = schedule_.getWell( wname, reportStep );
       wellpi[wname] = wellpi_vector[ well.seqIndex() ];
+      std::cout << "------------------------------------------------------- At Report Step: " << reportStep << ": Well " << wname << " has productivity/injectivity of " <<  wellpi[wname] << std::endl;
   }
   return wellpi;
 }
