@@ -29,6 +29,8 @@
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <dune/common/shared_ptr.hh>
+#include <dune/istl/paamg/smoother.hh>
 
 #include <cstddef>
 
@@ -311,7 +313,128 @@ protected:
     std::size_t interiorSize_;
 };
 
+/*!
+   \brief Dune linear operator that assumes ghost rows are ordered after 
+   interior rows. Avoids some computations because of this.
+ 
+   This is similar to WellModelGhostLastMatrixAdapter, with the difference that
+   here we do not have a well model, and also do calcilate the interiorSize
+   using the parallel index set. Created for use in AMG/CPR smoothers.
+ */
+template<class M, class X, class Y, class C>
+class GhostLastMatrixAdapter : public Dune::AssembledLinearOperator<M,X,Y>
+{
+public:
+    typedef M matrix_type;
+    typedef X domain_type;
+    typedef Y range_type;
+    typedef typename X::field_type field_type;
+
+
+    typedef C communication_type;
+
+    Dune::SolverCategory::Category category() const override
+    {
+        return Dune::SolverCategory::overlapping;
+    }
+
+    //! constructor: just store a reference to a matrix
+    GhostLastMatrixAdapter (const M& A,
+                            const communication_type& comm)
+        : A_( Dune::stackobject_to_shared_ptr(A) ), comm_(comm)
+    {
+        interiorSize_ = setInteriorSize(comm_);
+    }
+
+    GhostLastMatrixAdapter (const std::shared_ptr<M> A,
+                            const communication_type& comm)
+        : A_( A ), comm_(comm)
+    {
+        interiorSize_ = setInteriorSize(comm_);
+    }
+
+    virtual void apply( const X& x, Y& y ) const override
+    {
+        for (auto row = A_->begin(); row.index() < interiorSize_; ++row)
+        {
+            y[row.index()]=0;
+            auto endc = (*row).end();
+            for (auto col = (*row).begin(); col != endc; ++col)
+                (*col).umv(x[col.index()], y[row.index()]);
+        }
+
+        ghostLastProject( y );
+    }
+
+    // y += \alpha * A * x
+    virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const override
+    {
+        for (auto row = A_->begin(); row.index() < interiorSize_; ++row)
+        {
+            auto endc = (*row).end();
+            for (auto col = (*row).begin(); col != endc; ++col)
+                (*col).usmv(alpha, x[col.index()], y[row.index()]);
+        }
+
+        ghostLastProject( y );
+    }
+
+    virtual const matrix_type& getmat() const override { return *A_; }
+
+    size_t getInteriorSize() const { return interiorSize_;}
+
+private:
+    void ghostLastProject(Y& y) const
+    {
+        size_t end = y.size();
+        for (size_t i = interiorSize_; i < end; ++i)
+            y[i] = 0; //project to interiorsize, i.e. ignore ghost
+    }
+
+    size_t setInteriorSize(const communication_type& comm) const
+    {
+        auto indexSet = comm.indexSet();
+
+        size_t is = 0;
+        // Loop over index set
+        for (auto idx = indexSet.begin(); idx!=indexSet.end(); ++idx) {
+            //Only take "owner" indices
+            if (idx->local().attribute()==1) {
+                //get local index
+                auto loc = idx->local().local();
+                // if loc is higher than "old interior size", update it
+                if (loc > is) {
+                    is = loc;
+                }
+            }
+        }
+        return is + 1; //size is plus 1 since we start at 0
+    }
+    const std::shared_ptr<const matrix_type> A_ ;
+    const communication_type&  comm_;
+    size_t interiorSize_;
+};
+
 } // namespace Opm
+
+namespace Dune {
+namespace Amg {
+
+template<class M, class X, class Y, class C>
+class ConstructionTraits<Opm::GhostLastMatrixAdapter<M,X,Y,C> >
+{
+public:
+    typedef ParallelOperatorArgs<M,C> Arguments;
+
+    static inline std::shared_ptr<Opm::GhostLastMatrixAdapter<M,X,Y,C>> construct(const Arguments& args)
+    {
+        return std::make_shared<Opm::GhostLastMatrixAdapter<M,X,Y,C>>
+            (args.matrix_, args.comm_);
+    }
+};
+
+} // end namespace Amg
+} // end namespace Dune
 
 #endif // OPM_WELLOPERATORS_HEADER_INCLUDED
 

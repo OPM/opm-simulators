@@ -304,7 +304,8 @@ if (HAVE_ECL_INPUT)
 endif()
 
 if(MPI_FOUND)
-  list(APPEND TEST_SOURCE_FILES tests/test_parallelistlinformation.cpp
+  list(APPEND TEST_SOURCE_FILES tests/test_ghostlastmatrixadapter.cpp
+                                tests/test_parallelistlinformation.cpp
                                 tests/test_ParallelSerialization.cpp)
 endif()
 
