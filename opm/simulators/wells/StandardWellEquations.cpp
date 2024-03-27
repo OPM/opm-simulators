@@ -161,7 +161,7 @@ void StandardWellEquations<Scalar,numEq>::invert()
 {
     try {
         invDuneD_ = duneD_; // Not strictly need if not cpr with well contributions is used
-        detail::invertMatrix(invDuneD_[0][0]);
+        invDuneD_[0][0].invert();
     } catch (NumericalProblem&) {
         // for singular matrices, use identity as the inverse
         invDuneD_[0][0] = 0.0;
