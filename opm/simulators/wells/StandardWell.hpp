@@ -519,6 +519,8 @@ namespace Opm
 
 }
 
+#ifndef OPM_STANDARDWELL_IMPL_HEADER_INCLUDED
 #include "StandardWell_impl.hpp"
+#endif
 
 #endif // OPM_STANDARDWELL_HEADER_INCLUDED

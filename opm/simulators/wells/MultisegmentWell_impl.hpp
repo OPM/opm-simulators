@@ -18,6 +18,13 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// Improve IDE experience
+#ifndef OPM_MULTISEGMENTWELL_HEADER_INCLUDED
+#define OPM_MULTISEGMENTWELL_IMPL_HEADER_INCLUDED
+#include <config.h>
+#include <opm/simulators/wells/MultisegmentWell.hpp>
+#endif
+
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
