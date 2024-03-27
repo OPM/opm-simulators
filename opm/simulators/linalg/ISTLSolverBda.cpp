@@ -43,6 +43,10 @@
 
 #include <opm/grid/polyhedralgrid.hh>
 
+#include <thread>
+
+std::shared_ptr<std::thread> copyThread;
+
 namespace Opm {
 namespace detail {
 
@@ -108,7 +112,8 @@ apply(Vector& rhs,
 #endif
 
         if (numJacobiBlocks_ > 1) {
-            this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);
+            copyThread = std::make_shared<std::thread>([&](){this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);});
+            
             // Const_cast needed since the CUDA stuff overwrites values for better matrix condition..
             bridge_->solve_system(&matrix, blockJacobiForGPUILU0_.get(),
                                   numJacobiBlocks_, rhs, *wellContribs, result);
