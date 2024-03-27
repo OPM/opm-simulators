@@ -79,14 +79,14 @@ public:
      */
     void apply(const X& x, Y& y) const override
     {
-        OPM_TIMEBLOCK(apply);
+        OPM_TIMEBLOCK_LOCAL(apply);
         wellMod_.apply(x, y);
     }
 
     //! apply operator to x, scale and add:  \f$ y = y + \alpha A(x) \f$
     virtual void applyscaleadd(field_type alpha, const X& x, Y& y) const override
     {
-        OPM_TIMEBLOCK(applyscaleadd);
+        OPM_TIMEBLOCK_LOCAL(applyscaleadd);
         wellMod_.applyScaleAdd(alpha, x, y);
     }
 
@@ -101,12 +101,12 @@ public:
     }
     void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const override
     {
-        OPM_TIMEBLOCK(addWellPressureEquations);
+        OPM_TIMEBLOCK_LOCAL(addWellPressureEquations);
         wellMod_.addWellPressureEquations(jacobian, weights, use_well_weights);
     }
     void addWellPressureEquationsStruct(PressureMatrix& jacobian) const override
     {
-        OPM_TIMEBLOCK(addWellPressureEquationsStruct);
+        OPM_TIMEBLOCK_LOCAL(addWellPressureEquationsStruct);
         wellMod_.addWellPressureEquationsStruct(jacobian);
     }
     int getNumberOfExtraEquations() const override
@@ -160,7 +160,7 @@ public:
 
   virtual void apply( const X& x, Y& y ) const override
   {
-    OPM_TIMEBLOCK(apply);
+    OPM_TIMEBLOCK_LOCAL(apply);
     A_.mv( x, y );
 
     // add well model modification to y
@@ -175,7 +175,7 @@ public:
   // y += \alpha * A * x
   virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const override
   {
-    OPM_TIMEBLOCK(applyscaleadd);
+    OPM_TIMEBLOCK_LOCAL(applyscaleadd);
     A_.usmv(alpha,x,y);
 
     // add scaled well model modification to y
@@ -191,12 +191,12 @@ public:
 
     void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const
     {
-        OPM_TIMEBLOCK(addWellPressureEquations);
+        OPM_TIMEBLOCK_LOCAL(addWellPressureEquations);
         wellOper_.addWellPressureEquations(jacobian, weights, use_well_weights);
     }
     void addWellPressureEquationsStruct(PressureMatrix& jacobian) const
     {
-        OPM_TIMEBLOCK(addWellPressureEquations);
+        OPM_TIMEBLOCK_LOCAL(addWellPressureEquations);
         wellOper_.addWellPressureEquationsStruct(jacobian);
     }
     int getNumberOfExtraEquations() const
@@ -250,7 +250,7 @@ public:
 
     virtual void apply( const X& x, Y& y ) const override
     {
-        OPM_TIMEBLOCK(apply);
+        OPM_TIMEBLOCK_LOCAL(apply);
         for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
         {
             y[row.index()]=0;
@@ -268,7 +268,7 @@ public:
     // y += \alpha * A * x
     virtual void applyscaleadd (field_type alpha, const X& x, Y& y) const override
     {
-        OPM_TIMEBLOCK(applyscaleadd);
+        OPM_TIMEBLOCK_LOCAL(applyscaleadd);
         for (auto row = A_.begin(); row.index() < interiorSize_; ++row)
         {
             auto endc = (*row).end();
@@ -285,12 +285,12 @@ public:
 
     void addWellPressureEquations(PressureMatrix& jacobian, const X& weights,const bool use_well_weights) const
     {
-        OPM_TIMEBLOCK(addWellPressureEquations);
+        OPM_TIMEBLOCK_LOCAL(addWellPressureEquations);
         wellOper_.addWellPressureEquations(jacobian, weights, use_well_weights);
     }
     void addWellPressureEquationsStruct(PressureMatrix& jacobian) const
     {
-        OPM_TIMEBLOCK(addWellPressureEquationsStruct);
+        OPM_TIMEBLOCK_LOCAL(addWellPressureEquationsStruct);
         wellOper_.addWellPressureEquationsStruct(jacobian);
     }
     int getNumberOfExtraEquations() const
@@ -314,4 +314,3 @@ protected:
 } // namespace Opm
 
 #endif // OPM_WELLOPERATORS_HEADER_INCLUDED
-

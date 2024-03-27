@@ -33,6 +33,7 @@ option(BUILD_FLOW_ALU_GRID "Build flow blackoil with alu grid" OFF)
 option(USE_DAMARIS_LIB "Use the Damaris library for asynchronous I/O?" OFF)
 option(USE_BDA_BRIDGE "Enable the BDA bridge (GPU/AMGCL solvers)" ON)
 option(USE_TRACY_PROFILER "Enable tracy profiling" OFF)
+option(USE_TRACY_PROFILER_LOCAL "Enable tracy profiling" OFF)
 
 # The following was copied from CMakeLists.txt in opm-common.
 # TODO: factor out the common parts in opm-common and opm-simulator as a cmake module
@@ -260,9 +261,13 @@ macro (config_hook)
   endif()
   if(USE_TRACY_PROFILER AND Tracy_FOUND)
     set(USE_TRACY 1)
+    if(USE_TRACY_PROFILER_LOCAL)
+      set(USE_TRACY_LOCAL 1)
+    endif()
     list(APPEND opm-simulators_LIBRARIES Tracy::TracyClient)
   else()
     set(USE_TRACY)
+    set(USE_TRACY_LOCAL)
   endif()
   include_directories(${EXTRA_INCLUDES})
 
