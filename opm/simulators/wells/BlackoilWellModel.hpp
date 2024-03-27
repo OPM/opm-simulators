@@ -43,7 +43,6 @@
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
 #include <opm/simulators/flow/countGlobalCells.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
