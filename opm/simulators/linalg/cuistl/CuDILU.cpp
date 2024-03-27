@@ -28,8 +28,14 @@
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <string>
 #include <vector>
+#include <opm/simulators/linalg/DILUUtil.hpp>
+#include <mutex>
 
+// Global variable in this file to ensure that the parallelism strucutre of the matrix
+// is only printed once.
+std::once_flag printDiluParallelism;
 namespace
 {
 std::vector<int>
@@ -123,6 +129,13 @@ CuDILU<M, X, Y, l>::CuDILU(const M& A)
                              m_gpuMatrix.nonzeroes(),
                              A.nonzeroes()));
     update();
+}
+
+template <class M, class X, class Y, int l>
+CuDILU<M, X, Y, l>::CuDILU(const M& A, int verbosity) : CuDILU(A){
+    if (verbosity > 0){
+        std::call_once(printDiluParallelism, Opm::DILUUtils::writeSparseTableRowSizesToFile<size_t>, &m_levelSets);
+    }
 }
 
 template <class M, class X, class Y, int l>
