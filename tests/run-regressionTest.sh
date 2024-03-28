@@ -19,12 +19,14 @@ then
   echo -e "\tOptional options:"
   echo -e "\t\t -s <step>     Step to do restart testing from"
   echo -e "\t\t -h value      sched_restart value to use in restart test"
+  echo -e "\t\t -y value      Name of the results to comapre this run to"
+  echo -e "\t\t -z value      Path to the results to comapre this run to"
   exit 1
 fi
 
 RESTART_STEP=""
 OPTIND=1
-while getopts "i:r:b:f:a:t:c:d:s:e:h:" OPT
+while getopts "i:r:b:f:a:t:c:d:s:e:h:y:z:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -38,6 +40,8 @@ do
     s) RESTART_STEP=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
     h) RESTART_SCHED=${OPTARG} ;;
+    y) COMPARE_FILENAME=${OPTARG} ;;
+    z) COMPARE_DIR=${OPTARG} ;;
   esac
 done
 shift $(($OPTIND-1))
@@ -58,12 +62,22 @@ then
     ignore_extra_kw="-x"
 fi
 
+if ! test -n "$COMPARE_FILENAME"
+then
+  COMPARE_FILENAME="${FILENAME}"
+fi
+
+if ! test -n "$COMPARE_DIR"
+then
+  COMPARE_DIR="${INPUT_DATA_PATH}/opm-simulation-reference"
+fi
+
 echo "=== Executing comparison for EGRID, INIT, UNRST and RFT files if these exists in reference folder ==="
-${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${RESULT_PATH}/${FILENAME} ${ABS_TOL} ${REL_TOL}
+${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${COMPARE_DIR}/${EXE_NAME}/${FILENAME} ${RESULT_PATH}/${FILENAME} ${ABS_TOL} ${REL_TOL}
 if [ $? -ne 0 ]
 then
   ecode=1
-  ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} -a  ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/${FILENAME} ${RESULT_PATH}/${FILENAME} ${ABS_TOL} ${REL_TOL}
+  ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} -a  ${COMPARE_DIR}/${EXE_NAME}/${COMPARE_FILENAME} ${RESULT_PATH}/${FILENAME} ${ABS_TOL} ${REL_TOL}
 fi
 
 RSTEPS=(${RESTART_STEP//,/ })
@@ -83,11 +97,11 @@ do
   test $? -eq 0 || exit 1
 
   echo "=== Executing comparison for EGRID, INIT, UNRST and RFT files for restarted run ==="
-  ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/restart/${FILENAME}_RESTART_${STEP} ${RESULT_PATH}/restart/${FILENAME}_RESTART_${STEP} ${ABS_TOL} ${REL_TOL}
+  ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} ${COMPARE_DIR}/${EXE_NAME}/restart/${COMPARE_FILENAME}_RESTART_${STEP} ${RESULT_PATH}/restart/${FILENAME}_RESTART_${STEP} ${ABS_TOL} ${REL_TOL}
   if [ $? -ne 0 ]
   then
     ecode=1
-    ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} -a  ${INPUT_DATA_PATH}/opm-simulation-reference/${EXE_NAME}/restart/${FILENAME}_RESTART_${STEP} ${RESULT_PATH}/restart/${FILENAME}_RESTART_${STEP} ${ABS_TOL} ${REL_TOL}
+    ${COMPARE_ECL_COMMAND} ${ignore_extra_kw} -a  ${COMPARE_DIR}/${EXE_NAME}/restart/${COMPARE_FILENAME}_RESTART_${STEP} ${RESULT_PATH}/restart/${FILENAME}_RESTART_${STEP} ${ABS_TOL} ${REL_TOL}
   fi
 done
 

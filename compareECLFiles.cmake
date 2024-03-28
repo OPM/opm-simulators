@@ -59,7 +59,7 @@ endfunction()
 # Details:
 #   - This test class compares output from a simulation to reference files.
 function(add_test_compareECLFiles)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP RESTART_SCHED)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP RESTART_SCHED COMPARE_DIR COMPARE_FILENAME)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -78,6 +78,13 @@ function(add_test_compareECLFiles)
                   -t ${PARAM_REL_TOL}
                   -c ${COMPARE_ECL_COMMAND}
                   -d ${RST_DECK_COMMAND})
+  if(PARAM_COMPARE_FILENAME)
+    list(APPEND DRIVER_ARGS -y ${PARAM_COMPARE_FILENAME})
+  endif()
+  if(PARAM_COMPARE_DIR)
+    set(PARAM_COMPARE_DIR ${OPM_TESTS_ROOT}/${PARAM_COMPARE_DIR})
+    list(APPEND DRIVER_ARGS -z ${PARAM_COMPARE_DIR})
+  endif()
    if(PARAM_RESTART_STEP)
      list(APPEND DRIVER_ARGS -s ${PARAM_RESTART_STEP})
    endif()
@@ -94,6 +101,8 @@ function(add_test_compareECLFiles)
                         SIMULATOR ${PARAM_SIMULATOR}
                         TESTNAME ${PARAM_CASENAME})
 endfunction()
+
+
 
 ###########################################################################
 # TEST: add_test_compare_restarted_simulation
@@ -361,7 +370,9 @@ add_test_runSimulator(CASENAME tuning_tsinit_nextstep
                       TEST_ARGS --enable-tuning=true
                       POST_COMMAND $<TARGET_FILE:test_tuning_tsinit_nextstep>)
 
-
+if (opm-common_EMBEDDED_PYTHON)
+  include (${CMAKE_CURRENT_SOURCE_DIR}/pyactionTests.cmake)
+endif ()
 include (${CMAKE_CURRENT_SOURCE_DIR}/regressionTests.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/restartTests.cmake)
 
