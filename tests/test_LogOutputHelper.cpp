@@ -170,6 +170,8 @@ BOOST_AUTO_TEST_CASE(Cumulative)
     helper.cumulative(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
+    // Cleanup backends with references to local variables
+    Opm::OpmLog::removeBackend("stream");
 }
 
 
@@ -200,6 +202,8 @@ Finding the dew point pressure failed for 3 cells [(5,1,1), (6,1,1), (7,1,1)]
     helper.error({1,20,30}, {4,5,6});
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
+    // Cleanup backends with references to local variables
+    Opm::OpmLog::removeBackend("stream");
 }
 
 BOOST_AUTO_TEST_CASE(Fip)
@@ -287,6 +291,8 @@ BOOST_AUTO_TEST_CASE(Fip)
     helper.fip(current, initial, "FIPNUM");
 
     BOOST_CHECK_EQUAL(str.str(), reference);
+    // Cleanup backends with references to local variables
+    Opm::OpmLog::removeBackend("stream");
 }
 
 BOOST_AUTO_TEST_CASE(FipResv)
@@ -340,6 +346,8 @@ BOOST_AUTO_TEST_CASE(FipResv)
 
     helper.fipResv(current, "FIPNUM");
     BOOST_CHECK_EQUAL(str.str(), reference);
+    // Cleanup backends with references to local variables
+    Opm::OpmLog::removeBackend("stream");
 }
 
 
@@ -395,6 +403,8 @@ BOOST_AUTO_TEST_CASE(Injection)
     helper.injection(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
+    // Cleanup backends with references to local variables
+    Opm::OpmLog::removeBackend("stream");
 }
 
 
@@ -456,5 +466,7 @@ BOOST_AUTO_TEST_CASE(Production)
     helper.production(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
+    // Cleanup backends with references to local variables
+    Opm::OpmLog::removeBackend("stream");
 }
 
