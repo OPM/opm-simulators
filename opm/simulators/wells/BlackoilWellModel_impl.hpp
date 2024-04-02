@@ -240,6 +240,10 @@ namespace Opm {
 
         this->report_step_starts_ = true;
 
+
+        this->rateConverter_ = std::make_unique<RateConverterType>
+            (this->phase_usage_, std::vector<int>(this->local_num_cells_, 0));
+
         {
             // WELPI scaling runs at start of report step.
             const auto enableWellPIScaling = true;
@@ -254,8 +258,6 @@ namespace Opm {
         {
             // Create facility for calculating reservoir voidage volumes for
             // purpose of RESV controls.
-            this->rateConverter_ = std::make_unique<RateConverterType>
-                (this->phase_usage_, std::vector<int>(this->local_num_cells_, 0));
             this->rateConverter_->template defineState<ElementContext>(this->simulator_);
 
             // Update VFP properties.
