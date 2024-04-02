@@ -95,6 +95,38 @@ function(add_test_compareECLFiles)
                         TESTNAME ${PARAM_CASENAME})
 endfunction()
 
+function(add_test_compareSeparateECLFiles)
+  set(oneValueArgs CASENAME FILENAME1 FILENAME2 DIR1 DIR2 SIMULATOR ABS_TOL REL_TOL IGNORE_EXTRA_KW DIR_PREFIX)
+  set(multiValueArgs TEST_ARGS)
+  cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
+  if(NOT PARAM_PREFIX)
+    set(PARAM_PREFIX compareSeparateECLFiles)
+  endif()
+  set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
+  set(TEST_ARGS ${PARAM_TEST_ARGS})
+  set(DRIVER_ARGS -i ${OPM_TESTS_ROOT}/${PARAM_DIR1}
+                  -j ${OPM_TESTS_ROOT}/${PARAM_DIR2}
+                  -f ${PARAM_FILENAME1}
+                  -g ${PARAM_FILENAME2}
+                  -r ${RESULT_PATH}
+                  -b ${PROJECT_BINARY_DIR}/bin
+                  -a ${PARAM_ABS_TOL}
+                  -t ${PARAM_REL_TOL}
+                  -c ${COMPARE_ECL_COMMAND})
+  if(PARAM_IGNORE_EXTRA_KW)
+    list(APPEND DRIVER_ARGS -y ${PARAM_IGNORE_EXTRA_KW})
+  endif()
+  opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} NO_COMPILE
+               EXE_NAME ${PARAM_SIMULATOR}
+               DRIVER_ARGS ${DRIVER_ARGS}
+               TEST_ARGS ${TEST_ARGS})
+  set_tests_properties(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} PROPERTIES
+                        DIRNAME ${PARAM_DIR}
+                        FILENAME ${PARAM_FILENAME}
+                        SIMULATOR ${PARAM_SIMULATOR}
+                        TESTNAME ${PARAM_CASENAME})
+endfunction()
+
 ###########################################################################
 # TEST: add_test_compare_restarted_simulation
 ###########################################################################
@@ -361,7 +393,9 @@ add_test_runSimulator(CASENAME tuning_tsinit_nextstep
                       TEST_ARGS --enable-tuning=true
                       POST_COMMAND $<TARGET_FILE:test_tuning_tsinit_nextstep>)
 
-
+if (opm-common_EMBEDDED_PYTHON)
+  include (${CMAKE_CURRENT_SOURCE_DIR}/pyactionComparisons.cmake)
+endif ()
 include (${CMAKE_CURRENT_SOURCE_DIR}/regressionTests.cmake)
 include (${CMAKE_CURRENT_SOURCE_DIR}/restartTests.cmake)
 
