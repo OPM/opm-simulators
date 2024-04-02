@@ -863,7 +863,9 @@ void WellState::communicateGroupRates(const Comm& comm)
                 data[pos++] = 0;
         }
     }
-    pos += this->alq_state.pack_data(&data[pos]);
+    if (!data.empty()) {
+        pos += this->alq_state.pack_data(&data[pos]);
+    }
     assert(pos == sz);
 
     // Communicate it with a single sum() call.
@@ -877,7 +879,9 @@ void WellState::communicateGroupRates(const Comm& comm)
         for (auto& value : rates)
             value = data[pos++];
     }
-    pos += this->alq_state.unpack_data(&data[pos]);
+    if (!data.empty()) {
+        pos += this->alq_state.unpack_data(&data[pos]);
+    }
     assert(pos == sz);
 }
 
