@@ -863,7 +863,7 @@ void WellState::communicateGroupRates(const Comm& comm)
                 data[pos++] = 0;
         }
     }
-    if (!data.empty()) {
+    if (!data.empty() && pos != sz) {
         pos += this->alq_state.pack_data(&data[pos]);
     }
     assert(pos == sz);
@@ -879,7 +879,7 @@ void WellState::communicateGroupRates(const Comm& comm)
         for (auto& value : rates)
             value = data[pos++];
     }
-    if (!data.empty()) {
+    if (!data.empty() && pos != sz) {
         pos += this->alq_state.unpack_data(&data[pos]);
     }
     assert(pos == sz);
