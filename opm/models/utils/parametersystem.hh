@@ -109,17 +109,6 @@
                                                 getPropValue<TypeTag, Properties::ParamName>(), \
                                                 /*errorIfNotRegistered=*/false))
 
-/*!
- * \ingroup Parameter
- *
- * \brief Retrieves the lists of parameters specified at runtime and their values.
- *
- * The two arguments besides the TypeTag are assumed to be STL containers which store
- * std::pair<std::string, std::string>.
- */
-#define EWOMS_GET_PARAM_LISTS(TypeTag, UsedParamList, UnusedParamList)    \
-    (::Opm::Parameters::getLists<TypeTag>(UsedParamList, UnusedParamList))
-
 namespace Opm {
 namespace Parameters {
 
@@ -1088,6 +1077,12 @@ const ParamType get(const char *propTagName, const char *paramName, const ParamT
     return Param<TypeTag>::template get<ParamType>(propTagName, paramName, defaultValue, errorIfNotRegistered);
 }
 
+/*!
+ * \brief Retrieves the lists of parameters specified at runtime and their values.
+ *
+ * The two arguments besides the TypeTag are assumed to be STL containers which store
+ * std::pair<std::string, std::string>.
+ */
 template <class TypeTag, class Container>
 void getLists(Container& usedParams, Container& unusedParams)
 {

@@ -181,7 +181,7 @@ static inline int setupParameters_(int argc,
     ParamList usedParams;
     ParamList unusedParams;
 
-    EWOMS_GET_PARAM_LISTS(TypeTag, usedParams, unusedParams);
+    Parameters::getLists<TypeTag>(usedParams, unusedParams);
     if (!allowUnused && !unusedParams.empty()) {
         if (myRank == 0) {
             if (unusedParams.size() == 1)
