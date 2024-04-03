@@ -523,8 +523,8 @@ public:
             auto restartValues = loadParallelRestart(this->eclIO_.get(), actionState, summaryState, solutionKeys, extraKeys,
                                                      gridView.grid().comm());
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-                unsigned globalIdx = this->collectToIORank_.localIdxToGlobalIdx(elemIdx);
-                eclOutputModule_->setRestart(restartValues.solution, elemIdx, globalIdx);
+                unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
+                outputModule_->setRestart(restartValues.solution, elemIdx, globalIdx);
             }
 
             auto& tracer_model = simulator_.problem().tracerModel();
@@ -534,7 +534,7 @@ public:
                 const auto& sol_tracer_name = tracer_model.sname(tracer_index);
                 const auto& sol_tracer_solution = restartValues.solution.template data<double>(sol_tracer_name);
                 for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-                    unsigned globalIdx = this->collectToIORank_.localIdxToGlobalIdx(elemIdx);
+                    unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
                     tracer_model.setFreeTracerConcentration(tracer_index, globalIdx, free_tracer_solution[globalIdx]);
                     tracer_model.setSolTracerConcentration(tracer_index, globalIdx, sol_tracer_solution[globalIdx]);
                 }
