@@ -26,15 +26,11 @@
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <cassert>
 #include <cstddef>
 #include <map>
 #include <memory>
 #include <optional>
-#include <set>
 #include <string>
-#include <tuple>
-#include <unordered_map>
 #include <vector>
 
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>
@@ -42,8 +38,13 @@
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
+#include <opm/models/discretization/common/baseauxiliarymodule.hh>
+
 #include <opm/simulators/flow/countGlobalCells.hpp>
+#include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
+
+#include <opm/simulators/linalg/matrixblock.hh>
 
 #include <opm/simulators/wells/BlackoilWellModelGeneric.hpp>
 #include <opm/simulators/wells/BlackoilWellModelGuideRates.hpp>
