@@ -91,8 +91,9 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
     Simulator::registerParameters();
     ThreadManager::registerParameters();
 
-    if (finalizeRegistration)
-        EWOMS_END_PARAM_REGISTRATION(TypeTag);
+    if (finalizeRegistration) {
+        Parameters::endParamRegistration<TypeTag>();
+    }
 }
 
 /*!
