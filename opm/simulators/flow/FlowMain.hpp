@@ -205,7 +205,7 @@ namespace Opm {
             // hide average density option 
             EWOMS_HIDE_PARAM(TypeTag, UseAverageDensityMsWells);
 
-            EWOMS_END_PARAM_REGISTRATION(TypeTag);
+            Parameters::endParamRegistration<TypeTag>();
 
             int mpiRank = comm.rank();
 
