@@ -41,8 +41,6 @@
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 
-#include <thread>
-
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_version.h>
 
@@ -89,7 +87,10 @@
 
 #include <cstddef>
 
+#if HAVE_OPENMP
+#include <thread>
 extern std::shared_ptr<std::thread> copyThread;
+#endif //HAVE_OPENMP
 
 namespace Opm
 {
@@ -439,7 +440,9 @@ void rocsparseSolverBackend<block_size>::copy_system_to_gpu(double *b) {
     HIP_CHECK(hipMemcpyAsync(d_b, b, sizeof(double) * N, hipMemcpyHostToDevice, stream));
     
     if (useJacMatrix) {
+#if HAVE_OPENMP
         copyThread->join();
+#endif
         HIP_CHECK(hipMemcpyAsync(d_Mrows, jacMat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, stream));
         HIP_CHECK(hipMemcpyAsync(d_Mcols, jacMat->colIndices, sizeof(rocsparse_int) * nnzbs_prec, hipMemcpyHostToDevice, stream));
         HIP_CHECK(hipMemcpyAsync(d_Mvals, jacMat->nnzValues, sizeof(double) * nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, stream));
@@ -468,7 +471,9 @@ void rocsparseSolverBackend<block_size>::update_system_on_gpu(double *b) {
     HIP_CHECK(hipMemcpyAsync(d_b, b, sizeof(double) * N, hipMemcpyHostToDevice, stream));
     
     if (useJacMatrix) {
+#if HAVE_OPENMP
         copyThread->join();
+#endif
         HIP_CHECK(hipMemcpyAsync(d_Mvals, jacMat->nnzValues, sizeof(double) * nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, stream));
     } else {
         HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(double) * nnz, hipMemcpyDeviceToDevice, stream));

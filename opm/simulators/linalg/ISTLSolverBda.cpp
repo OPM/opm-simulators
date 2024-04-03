@@ -43,9 +43,11 @@
 
 #include <opm/grid/polyhedralgrid.hh>
 
+#if HAVE_OPENMP
 #include <thread>
 
 std::shared_ptr<std::thread> copyThread;
+#endif // HAVE_OPENMP
 
 namespace Opm {
 namespace detail {
@@ -112,8 +114,15 @@ apply(Vector& rhs,
 #endif
 
         if (numJacobiBlocks_ > 1) {
+#if HAVE_OPENMP
+	    //NOTE: copyThread can safely write to jacMat because in solve_system both matrix and *blockJacobiForGPUILU0_ diagonal entries
+	    //are checked and potentially overwritten in replaceZeroDiagonal() by mainThread. However, no matter the thread writing sequence,
+	    //the final entry in jacMat is correct.
             copyThread = std::make_shared<std::thread>([&](){this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);});
-            
+#else
+	    this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);
+#endif
+
             // Const_cast needed since the CUDA stuff overwrites values for better matrix condition..
             bridge_->solve_system(&matrix, blockJacobiForGPUILU0_.get(),
                                   numJacobiBlocks_, rhs, *wellContribs, result);

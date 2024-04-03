@@ -30,8 +30,6 @@
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 #include <opm/simulators/linalg/bda/cuda/cuda_header.hpp>
 
-#include <thread>
-
 #include "cublas_v2.h"
 #include "cusparse_v2.h"
 // For more information about cusparse, check https://docs.nvidia.com/cuda/cusparse/index.html
@@ -40,7 +38,10 @@
 // otherwise, the nonzeroes of the matrix are assumed to be in a contiguous array, and a single GPU memcpy is enough
 #define COPY_ROW_BY_ROW 0
 
+#if HAVE_OPENMP
+#include <thread>
 extern std::shared_ptr<std::thread> copyThread;
+#endif // HAVE_OPENMP
 
 namespace Opm
 {
@@ -326,7 +327,9 @@ void cusparseSolverBackend<block_size>::copy_system_to_gpu(std::shared_ptr<Block
 #else
     cudaMemcpyAsync(d_bVals, matrix->nnzValues, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
     if (useJacMatrix) {
+#if HAVE_OPENMP
         copyThread->join();
+#endif
         cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, nnzbs_prec * block_size * block_size * sizeof(double), cudaMemcpyHostToDevice, stream);
     } else {
         cudaMemcpyAsync(d_mVals, d_bVals, nnz  * sizeof(double), cudaMemcpyDeviceToDevice, stream);
@@ -368,7 +371,9 @@ void cusparseSolverBackend<block_size>::update_system_on_gpu(std::shared_ptr<Blo
 #else
     cudaMemcpyAsync(d_bVals, matrix->nnzValues, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
     if (useJacMatrix) {
+#if HAVE_OPENMP
         copyThread->join();
+#endif
         cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, nnzbs_prec * block_size * block_size * sizeof(double), cudaMemcpyHostToDevice, stream);
     } else {
         cudaMemcpyAsync(d_mVals, d_bVals, nnz  * sizeof(double), cudaMemcpyDeviceToDevice, stream);
