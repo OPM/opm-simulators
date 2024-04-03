@@ -504,7 +504,8 @@ protected:
     std::array<ScalarBuffer, numPhases> viscosity_;
     std::array<ScalarBuffer, numPhases> relativePermeability_;
 
-    std::vector<ScalarBuffer> tracerConcentrations_;
+    std::vector<ScalarBuffer> freeTracerConcentrations_;
+    std::vector<ScalarBuffer> solTracerConcentrations_;
 
     std::array<ScalarBuffer, numPhases> residual_;
 

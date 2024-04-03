@@ -114,19 +114,36 @@ GenericTracerModel(const GridView& gridView,
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 Scalar GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
-tracerConcentration(int tracerIdx, int globalDofIdx) const
+freeTracerConcentration(int tracerIdx, int globalDofIdx) const
 {
-    if (tracerConcentration_.empty())
+    if (freeTracerConcentration_.empty())
         return 0.0;
 
-    return tracerConcentration_[tracerIdx][globalDofIdx];
+    return freeTracerConcentration_[tracerIdx][globalDofIdx];
+}
+
+template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
+Scalar GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+solTracerConcentration(int tracerIdx, int globalDofIdx) const
+{
+    if (solTracerConcentration_.empty())
+        return 0.0;
+
+    return solTracerConcentration_[tracerIdx][globalDofIdx];
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 void GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
-setTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value)
+setFreeTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value)
 {
-    this->tracerConcentration_[tracerIdx][globalDofIdx] = value;
+    this->freeTracerConcentration_[tracerIdx][globalDofIdx] = value;
+}
+
+template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
+void GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+setSolTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value)
+{
+    this->solTracerConcentration_[tracerIdx][globalDofIdx] = value;
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
@@ -141,6 +158,13 @@ std::string GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 fname(int tracerIdx) const
 {
     return this->eclState_.tracer()[tracerIdx].fname();
+}
+
+template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
+std::string GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+sname(int tracerIdx) const
+{
+    return this->eclState_.tracer()[tracerIdx].sname();
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
@@ -170,7 +194,8 @@ doInit(bool rst, std::size_t numGridDof,
     // retrieve the number of tracers from the deck
     const std::size_t numTracers = tracers.size();
     tracerConcentration_.resize(numTracers);
-    storageOfTimeIndex1_.resize(numTracers);
+    freeTracerConcentration_.resize(numTracers);
+    solTracerConcentration_.resize(numTracers);
 
     // the phase where the tracer is
     tracerPhaseIdx_.resize(numTracers);
@@ -185,34 +210,71 @@ doInit(bool rst, std::size_t numGridDof,
             tracerPhaseIdx_[tracerIdx] = gasPhaseIdx;
 
         tracerConcentration_[tracerIdx].resize(numGridDof);
-        storageOfTimeIndex1_[tracerIdx].resize(numGridDof);
+        tracerConcentration_[tracerIdx].resize(numGridDof);
+        freeTracerConcentration_[tracerIdx].resize(numGridDof);
+        solTracerConcentration_[tracerIdx].resize(numGridDof);
 
         if (rst)
             continue;
 
 
-        //TBLK keyword
+        // TBLKF keyword
         if (tracer.free_concentration.has_value()){
             const auto& free_concentration = tracer.free_concentration.value();
             int tblkDatasize = free_concentration.size();
             if (tblkDatasize < cartMapper_.cartesianSize()){
-                throw std::runtime_error("Wrong size of TBLK for" + tracer.name);
+                throw std::runtime_error("Wrong size of TBLKF for" + tracer.name);
             }
             for (std::size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx) {
                 int cartDofIdx = cartMapper_.cartesianIndex(globalDofIdx);
-                tracerConcentration_[tracerIdx][globalDofIdx] = free_concentration[cartDofIdx];
+                tracerConcentration_[tracerIdx][globalDofIdx][0] = free_concentration[cartDofIdx];
+                freeTracerConcentration_[tracerIdx][globalDofIdx] = free_concentration[cartDofIdx];
             }
         }
-        //TVDPF keyword
+        // TVDPF keyword
         else if (tracer.free_tvdp.has_value()) {
             const auto& free_tvdp = tracer.free_tvdp.value();
             for (std::size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx) {
-                tracerConcentration_[tracerIdx][globalDofIdx] =
+                tracerConcentration_[tracerIdx][globalDofIdx][0] =
+                    free_tvdp.evaluate("TRACER_CONCENTRATION",
+                                       centroids_(globalDofIdx)[2]);
+                freeTracerConcentration_[tracerIdx][globalDofIdx] =
                     free_tvdp.evaluate("TRACER_CONCENTRATION",
                                        centroids_(globalDofIdx)[2]);
             }
-        } else
-            throw std::logic_error(fmt::format("Can not initialize tracer: {}", tracer.name));
+        } 
+        else {
+            throw std::logic_error(fmt::format("Can not initialize free tracer concentration: {}", tracer.name));
+        }
+
+        // TBLKS keyword
+        if (tracer.solution_concentration.has_value()){
+            const auto& solution_concentration = tracer.solution_concentration.value();
+            int tblkDatasize = solution_concentration.size();
+            if (tblkDatasize < cartMapper_.cartesianSize()){
+                throw std::runtime_error("Wrong size of TBLKS for" + tracer.name);
+            }
+            for (std::size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx) {
+                int cartDofIdx = cartMapper_.cartesianIndex(globalDofIdx);
+                tracerConcentration_[tracerIdx][globalDofIdx][1] = solution_concentration[cartDofIdx];
+                solTracerConcentration_[tracerIdx][globalDofIdx] = solution_concentration[cartDofIdx];
+            }
+        }
+        // TVDPS keyword
+        else if (tracer.solution_tvdp.has_value()) {
+            const auto& solution_tvdp = tracer.solution_tvdp.value();
+            for (std::size_t globalDofIdx = 0; globalDofIdx < numGridDof; ++globalDofIdx) {
+                tracerConcentration_[tracerIdx][globalDofIdx][1] =
+                    solution_tvdp.evaluate("TRACER_CONCENTRATION",
+                                           centroids_(globalDofIdx)[2]);
+                solTracerConcentration_[tracerIdx][globalDofIdx] =
+                    solution_tvdp.evaluate("TRACER_CONCENTRATION",
+                                           centroids_(globalDofIdx)[2]);
+            }
+        } 
+        else {
+            throw std::logic_error(fmt::format("Can not initialize solution tracer concentration: {}", tracer.name));
+        }
     }
 
     // allocate matrix for storing the Jacobian of the tracer residual
@@ -237,8 +299,9 @@ doInit(bool rst, std::size_t numGridDof,
     }
 
     // allocate space for the rows of the matrix
-    for (unsigned dofIdx = 0; dofIdx < numGridDof; ++ dofIdx)
+    for (unsigned dofIdx = 0; dofIdx < numGridDof; ++ dofIdx) {
         tracerMatrix_->setrowsize(dofIdx, neighbors[dofIdx].size());
+    }
     tracerMatrix_->endrowsizes();
 
     // fill the rows with indices. each degree of freedom talks to
@@ -247,8 +310,9 @@ doInit(bool rst, std::size_t numGridDof,
     for (unsigned dofIdx = 0; dofIdx < numGridDof; ++ dofIdx) {
         typename NeighborSet::iterator nIt = neighbors[dofIdx].begin();
         typename NeighborSet::iterator nEndIt = neighbors[dofIdx].end();
-        for (; nIt != nEndIt; ++nIt)
+        for (; nIt != nEndIt; ++nIt) {
             tracerMatrix_->addindex(dofIdx, *nIt);
+        }
     }
     tracerMatrix_->endindices();
 }

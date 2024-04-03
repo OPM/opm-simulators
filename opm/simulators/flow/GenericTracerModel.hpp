@@ -52,8 +52,9 @@ class Well;
 template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
 class GenericTracerModel {
 public:
-    using TracerMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
-    using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar,1>>;
+    using TracerVectorSingle = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
+    using TracerMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 2, 2>>;
+    using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar, 2>>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     static constexpr int dimWorld = Grid::dimensionworld;
     /*!
@@ -66,13 +67,16 @@ public:
      */
     const std::string& name(int tracerIdx) const;
     std::string fname(int tracerIdx) const;
+    std::string sname(int tracerIdx) const;
 
 
     /*!
      * \brief Return the tracer concentration for tracer index and global DofIdx
      */
-    Scalar tracerConcentration(int tracerIdx, int globalDofIdx) const;
-    void setTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value);
+    Scalar freeTracerConcentration(int tracerIdx, int globalDofIdx) const;
+    Scalar solTracerConcentration(int tracerIdx, int globalDofIdx) const;
+    void setFreeTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value);
+    void setSolTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value);
 
     /*!
     * \brief Return well tracer rates
@@ -117,9 +121,10 @@ protected:
     const DofMapper& dofMapper_;
 
     std::vector<int> tracerPhaseIdx_;
-    std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentration_;
+    std::vector<TracerVector> tracerConcentration_;
     std::unique_ptr<TracerMatrix> tracerMatrix_;
-    std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> storageOfTimeIndex1_;
+    std::vector<TracerVectorSingle> freeTracerConcentration_;
+    std::vector<TracerVectorSingle> solTracerConcentration_;
 
     // <wellName, tracerIdx> -> wellRate
     std::map<std::pair<std::string, std::string>, Scalar> wellTracerRate_;

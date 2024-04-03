@@ -500,8 +500,10 @@ public:
 
         {
             const auto& tracers = simulator_.vanguard().eclState().tracer();
-            for (const auto& tracer : tracers)
+            for (const auto& tracer : tracers) {
                 solutionKeys.emplace_back(tracer.fname(), UnitSystem::measure::identity, true);
+                solutionKeys.emplace_back(tracer.sname(), UnitSystem::measure::identity, true);
+            }
         }
 
         // The episodeIndex is rewined one back before beginRestart is called
@@ -521,17 +523,20 @@ public:
             auto restartValues = loadParallelRestart(this->eclIO_.get(), actionState, summaryState, solutionKeys, extraKeys,
                                                      gridView.grid().comm());
             for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-                unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
-                outputModule_->setRestart(restartValues.solution, elemIdx, globalIdx);
+                unsigned globalIdx = this->collectToIORank_.localIdxToGlobalIdx(elemIdx);
+                eclOutputModule_->setRestart(restartValues.solution, elemIdx, globalIdx);
             }
 
             auto& tracer_model = simulator_.problem().tracerModel();
             for (int tracer_index = 0; tracer_index < tracer_model.numTracers(); tracer_index++) {
-                const auto& tracer_name = tracer_model.fname(tracer_index);
-                const auto& tracer_solution = restartValues.solution.template data<double>(tracer_name);
+                const auto& free_tracer_name = tracer_model.fname(tracer_index);
+                const auto& free_tracer_solution = restartValues.solution.template data<double>(free_tracer_name);
+                const auto& sol_tracer_name = tracer_model.sname(tracer_index);
+                const auto& sol_tracer_solution = restartValues.solution.template data<double>(sol_tracer_name);
                 for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
-                    unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
-                    tracer_model.setTracerConcentration(tracer_index, globalIdx, tracer_solution[globalIdx]);
+                    unsigned globalIdx = this->collectToIORank_.localIdxToGlobalIdx(elemIdx);
+                    tracer_model.setFreeTracerConcentration(tracer_index, globalIdx, free_tracer_solution[globalIdx]);
+                    tracer_model.setSolTracerConcentration(tracer_index, globalIdx, sol_tracer_solution[globalIdx]);
                 }
             }
 
