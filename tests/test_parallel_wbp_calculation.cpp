@@ -565,9 +565,9 @@ BOOST_AUTO_TEST_CASE(Create)
 
     BOOST_REQUIRE_EQUAL(comm.size(), 2);
 
+    const Opm::GridDims dims{5, 5, 10};
     auto wbpCalcService = Opm::ParallelWBPCalculation {
-        Opm::GridDims { 5, 5, 10 },
-        comm
+        dims, comm
     };
 
     setCallbacks(comm.rank(), wbpCalcService);
