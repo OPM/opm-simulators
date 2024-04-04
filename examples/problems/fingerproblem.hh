@@ -168,11 +168,11 @@ struct InitialWaterSaturation<TypeTag, TTag::FingerBaseProblem>
 };
 
 template<class TypeTag>
-struct CellsX<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = 20; };
+struct CellsX<TypeTag, TTag::FingerBaseProblem> { static constexpr unsigned value = 20; };
 template<class TypeTag>
-struct CellsY<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = 70; };
+struct CellsY<TypeTag, TTag::FingerBaseProblem> { static constexpr unsigned value = 70; };
 template<class TypeTag>
-struct CellsZ<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = 1; };
+struct CellsZ<TypeTag, TTag::FingerBaseProblem> { static constexpr unsigned value = 1; };
 
 // The default for the end time of the simulation
 template<class TypeTag>

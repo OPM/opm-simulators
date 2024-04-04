@@ -460,7 +460,7 @@ struct PreconditionerWrapper<TypeTag, TTag::ParallelBaseLinearSolver>
 
 //! set the default overlap size to 2
 template<class TypeTag>
-struct LinearSolverOverlapSize<TypeTag, TTag::ParallelBaseLinearSolver> { static constexpr int value = 2; };
+struct LinearSolverOverlapSize<TypeTag, TTag::ParallelBaseLinearSolver> { static constexpr unsigned value = 2; };
 
 //! set the default number of maximum iterations for the linear solver
 template<class TypeTag>

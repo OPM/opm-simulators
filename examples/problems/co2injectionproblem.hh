@@ -179,7 +179,7 @@ struct FluidSystemPressureHigh<TypeTag, TTag::Co2InjectionBaseProblem>
     static constexpr type value = 4e7;
 };
 template<class TypeTag>
-struct FluidSystemNumPressure<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr int value = 100; };
+struct FluidSystemNumPressure<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr unsigned value = 100; };
 template<class TypeTag>
 struct FluidSystemTemperatureLow<TypeTag, TTag::Co2InjectionBaseProblem>
 {
@@ -193,7 +193,7 @@ struct FluidSystemTemperatureHigh<TypeTag, TTag::Co2InjectionBaseProblem>
     static constexpr type value = 500;
 };
 template<class TypeTag>
-struct FluidSystemNumTemperature<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr int value = 100; };
+struct FluidSystemNumTemperature<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr unsigned value = 100; };
 
 template<class TypeTag>
 struct MaxDepth<TypeTag, TTag::Co2InjectionBaseProblem>

@@ -236,7 +236,7 @@ struct ParameterFile<TypeTag, TTag::NumericModel> { static constexpr auto value 
 //! Set the number of refinement levels of the grid to 0. This does not belong
 //! here, strictly speaking.
 template<class TypeTag>
-struct GridGlobalRefinements<TypeTag, TTag::NumericModel> { static constexpr int value = 0; };
+struct GridGlobalRefinements<TypeTag, TTag::NumericModel> { static constexpr unsigned value = 0; };
 
 //! By default, print the properties on startup
 template<class TypeTag>

@@ -123,7 +123,7 @@ struct GradientCalculator<TypeTag, TTag::FvBaseDiscretization> { using type = Fv
 //! The maximum allowed number of timestep divisions for the
 //! Newton solver
 template<class TypeTag>
-struct MaxTimeStepDivisions<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = 10; };
+struct MaxTimeStepDivisions<TypeTag, TTag::FvBaseDiscretization> { static constexpr unsigned value = 10; };
 
 
 //! By default, do not continue with a non-converged solution instead of giving up
