@@ -49,6 +49,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <type_traits>
 #include <unordered_map>
 
@@ -71,14 +72,11 @@
  * \endcode
  */
 #define EWOMS_GET_PARAM(TypeTag, ParamType, ParamName)                         \
-    (::Opm::Parameters::get<TypeTag, ParamType>(#ParamName, \
-                                                getPropValue<TypeTag, Properties::ParamName>()))
+    (::Opm::Parameters::get<TypeTag, Properties::ParamName>())
 
 //!\cond SKIP_THIS
 #define EWOMS_GET_PARAM_(TypeTag, ParamType, ParamName)                 \
-    (::Opm::Parameters::get<TypeTag, ParamType>(#ParamName, \
-                                                getPropValue<TypeTag, Properties::ParamName>(), \
-                                                /*errorIfNotRegistered=*/false))
+    (::Opm::Parameters::get<TypeTag, Properties::ParamName>(false))
 
 namespace Opm {
 namespace Parameters {
@@ -103,10 +101,8 @@ struct ParamInfo
 };
 
 // forward declaration
-template <class TypeTag, class ParamType>
-const ParamType get(const char *paramName,
-                    const ParamType& defaultValue,
-                    bool errorIfNotRegistered = true);
+template <class TypeTag, template<class,class> class Property>
+auto get(bool errorIfNotRegistered = true);
 
 class ParamRegFinalizerBase_
 {
@@ -116,28 +112,16 @@ public:
     virtual void retrieve() = 0;
 };
 
-template <class TypeTag, class ParamType>
+template <class TypeTag, template<class,class> class Property>
 class ParamRegFinalizer_ : public ParamRegFinalizerBase_
 {
 public:
-    ParamRegFinalizer_(const std::string& paramName, const ParamType& defaultValue)
-        : paramName_(paramName)
-        , defaultValue_(defaultValue)
-    {}
-
-    virtual void retrieve() override
+    void retrieve() override
     {
         // retrieve the parameter once to make sure that its value does
         // not contain a syntax error.
-        ParamType __attribute__((unused)) dummy =
-            get<TypeTag, ParamType>(paramName_.data(),
-                                    defaultValue_,
-                                    /*errorIfNotRegistered=*/true);
+        std::ignore = get<TypeTag, Property>(/*errorIfNotRegistered=*/true);
     }
-
-private:
-    std::string paramName_;
-    ParamType defaultValue_;
 };
 } // namespace Parameters
 
@@ -886,7 +870,7 @@ class Param
 
 public:
     template <class ParamType>
-    static ParamType get(const char* paramName,
+    static ParamType get(const std::string& paramName,
                          const ParamType& defaultValue,
                          bool errorIfNotRegistered = true)
     {
@@ -948,7 +932,7 @@ private:
     };
 
     static void check_(const std::string& paramTypeName,
-                       const char* paramName)
+                       const std::string& paramName)
     {
         using StaticData = std::unordered_map<std::string, Blubb>;
         static StaticData staticData;
@@ -965,14 +949,14 @@ private:
             b = &(it->second);
 
         if (b->paramTypeName != paramTypeName) {
-            throw std::logic_error("GET_*_PARAM for parameter '"+std::string(paramName)
+            throw std::logic_error("GET_*_PARAM for parameter '" + paramName
                                    +"' called with at least two different types ("
-                                   +b->paramTypeName+" and "+paramTypeName+")");
+                                   + b->paramTypeName + " and " + paramTypeName+")");
         }
     }
 
     template <class ParamType>
-    static ParamType retrieve_(const char* paramName,
+    static ParamType retrieve_(const std::string& paramName,
                                const ParamType& defaultValue,
                                bool errorIfNotRegistered = true)
     {
@@ -989,7 +973,7 @@ private:
                                          "been registered.");
 
             if (ParamsMeta::registry().find(paramName) == ParamsMeta::registry().end())
-                throw std::runtime_error("Accessing parameter "+std::string(paramName)
+                throw std::runtime_error("Accessing parameter " + paramName
                                          +" without prior registration is not allowed.");
         }
 
@@ -1006,9 +990,14 @@ private:
     }
 };
 
-template <class TypeTag, class ParamType>
-const ParamType get(const char* paramName, const ParamType& defaultValue, bool errorIfNotRegistered)
+template <class TypeTag, template<class,class> class Property>
+auto get(bool errorIfNotRegistered)
 {
+    const std::string paramName = getPropName<TypeTag,Property>();
+    const auto defaultValue = getPropValue<TypeTag, Property>();
+    using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
+                                                        const char* const>, std::string,
+                                         std::remove_const_t<decltype(defaultValue)>>;
     return Param<TypeTag>::template get<ParamType>(paramName, defaultValue, errorIfNotRegistered);
 }
 
@@ -1089,8 +1078,8 @@ void registerParam(const char* usageString)
     using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
                                                         const char* const>, std::string,
                                          std::remove_const_t<decltype(defaultValue)>>;
-    ParamsMeta::registrationFinalizers().emplace_back(
-        new ParamRegFinalizer_<TypeTag, ParamType>(paramName, defaultValue));
+    ParamsMeta::registrationFinalizers().push_back(
+        std::make_unique<ParamRegFinalizer_<TypeTag, Param>>());
 
     ParamInfo paramInfo;
     paramInfo.paramName = paramName;
