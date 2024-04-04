@@ -199,11 +199,11 @@ struct DomainSizeZ<TypeTag, TTag::LensBaseProblem>
 };
 
 template<class TypeTag>
-struct CellsX<TypeTag, TTag::LensBaseProblem> { static constexpr int value = 48; };
+struct CellsX<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 48; };
 template<class TypeTag>
-struct CellsY<TypeTag, TTag::LensBaseProblem> { static constexpr int value = 32; };
+struct CellsY<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 32; };
 template<class TypeTag>
-struct CellsZ<TypeTag, TTag::LensBaseProblem> { static constexpr int value = 16; };
+struct CellsZ<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 16; };
 
 // The default for the end time of the simulation
 template<class TypeTag>

@@ -162,11 +162,11 @@ struct DomainSizeZ<TypeTag, TTag::Tutorial1Problem>
 
 // // define the number of cells used for discretizing the physical domain
 template<class TypeTag>
-struct CellsX<TypeTag, TTag::Tutorial1Problem> { static constexpr int value = 100; };
+struct CellsX<TypeTag, TTag::Tutorial1Problem> { static constexpr unsigned value = 100; };
 template<class TypeTag>
-struct CellsY<TypeTag, TTag::Tutorial1Problem> { static constexpr int value = 1; };
+struct CellsY<TypeTag, TTag::Tutorial1Problem> { static constexpr unsigned value = 1; };
 template<class TypeTag>
-struct CellsZ<TypeTag, TTag::Tutorial1Problem> { static constexpr int value = 1; }; /*@\label{tutorial1:default-params-end}@*/
+struct CellsZ<TypeTag, TTag::Tutorial1Problem> { static constexpr unsigned value = 1; }; /*@\label{tutorial1:default-params-end}@*/
 
 } // namespace Opm::Properties
 

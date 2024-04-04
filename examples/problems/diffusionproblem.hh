@@ -131,11 +131,11 @@ struct DomainSizeZ<TypeTag, TTag::DiffusionBaseProblem>
 };
 
 template<class TypeTag>
-struct CellsX<TypeTag, TTag::DiffusionBaseProblem> { static constexpr int value = 250; };
+struct CellsX<TypeTag, TTag::DiffusionBaseProblem> { static constexpr unsigned value = 250; };
 template<class TypeTag>
-struct CellsY<TypeTag, TTag::DiffusionBaseProblem> { static constexpr int value = 1; };
+struct CellsY<TypeTag, TTag::DiffusionBaseProblem> { static constexpr unsigned value = 1; };
 template<class TypeTag>
-struct CellsZ<TypeTag, TTag::DiffusionBaseProblem> { static constexpr int value = 1; };
+struct CellsZ<TypeTag, TTag::DiffusionBaseProblem> { static constexpr unsigned value = 1; };
 
 // The default for the end time of the simulation
 template<class TypeTag>

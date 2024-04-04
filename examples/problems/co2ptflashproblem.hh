@@ -202,8 +202,7 @@ struct NewtonTolerance<TypeTag, TTag::CO2PTBaseProblem> {
 
 template <class TypeTag>
 struct NewtonMaxIterations<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 30;
+    static constexpr int value = 30;
 };
 
 template <class TypeTag>
@@ -284,12 +283,12 @@ struct DomainSizeZ<TypeTag, TTag::CO2PTBaseProblem> {
 };
 
 template<class TypeTag>
-struct CellsX<TypeTag, TTag::CO2PTBaseProblem> { static constexpr int value = 30; };
+struct CellsX<TypeTag, TTag::CO2PTBaseProblem> { static constexpr unsigned value = 30; };
 template<class TypeTag>
-struct CellsY<TypeTag, TTag::CO2PTBaseProblem> { static constexpr int value = 1; };
+struct CellsY<TypeTag, TTag::CO2PTBaseProblem> { static constexpr unsigned value = 1; };
 // CellsZ is not needed, while to keep structuredgridvanguard.hh compile
 template<class TypeTag>
-struct CellsZ<TypeTag, TTag::CO2PTBaseProblem> { static constexpr int value = 1; };
+struct CellsZ<TypeTag, TTag::CO2PTBaseProblem> { static constexpr unsigned value = 1; };
 
 template <class TypeTag>
 struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
