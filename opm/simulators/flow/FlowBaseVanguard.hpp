@@ -275,13 +275,13 @@ public:
                              "from a JSON file by giving the filename here, ending with '.json.' "
                              "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
                              "for available Zoltan options.");
-        EWOMS_HIDE_PARAM(TypeTag, ZoltanParams);
+        Parameters::hideParam<TypeTag>("ZoltanParams");
         EWOMS_REGISTER_PARAM(TypeTag, std::string, ExternalPartition,
                              "Name of file from which to load an externally generated "
                              "partitioning of the model's active cells for MPI "
                              "distribution purposes. If empty, the built-in partitioning "
                              "method will be employed.");
-        EWOMS_HIDE_PARAM(TypeTag, ExternalPartition);
+        Parameters::hideParam<TypeTag>("ExternalPartition");
 #endif
         EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
                              "Allow the perforations of a well to be distributed to interior of multiple processes");
