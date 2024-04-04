@@ -93,12 +93,12 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWritePrimaryVars,
-                             "Include the primary variables into the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteProcessRank,
-                             "Include the MPI process rank into the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteDofIndex,
-                             "Include the index of the degrees of freedom into the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWritePrimaryVars>
+            ("Include the primary variables into the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteProcessRank>
+            ("Include the MPI process rank into the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteDofIndex>
+            ("Include the index of the degrees of freedom into the VTK output files");
     }
 
     /*!

@@ -263,36 +263,29 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftX,
-                             "The x-coordinate of the lens' lower-left corner "
-                             "[m].");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightX,
-                             "The x-coordinate of the lens' upper-right corner "
-                             "[m].");
+        Parameters::registerParam<TypeTag, Properties::LensLowerLeftX>
+            ("The x-coordinate of the lens' lower-left corner [m].");
+        Parameters::registerParam<TypeTag, Properties::LensUpperRightX>
+            ("The x-coordinate of the lens' upper-right corner [m].");
 
         if (dimWorld > 1) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftY,
-                                 "The y-coordinate of the lens' lower-left "
-                                 "corner [m].");
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightY,
-                                 "The y-coordinate of the lens' upper-right "
-                                 "corner [m].");
+            Parameters::registerParam<TypeTag, Properties::LensLowerLeftY>
+                ("The y-coordinate of the lens' lower-left corner [m].");
+            Parameters::registerParam<TypeTag, Properties::LensUpperRightY>
+                ("The y-coordinate of the lens' upper-right corner [m].");
         }
 
         if (dimWorld > 2) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensLowerLeftZ,
-                                 "The z-coordinate of the lens' lower-left "
-                                 "corner [m].");
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, LensUpperRightZ,
-                                 "The z-coordinate of the lens' upper-right "
-                                 "corner [m].");
+            Parameters::registerParam<TypeTag, Properties::LensLowerLeftZ>
+                ("The z-coordinate of the lens' lower-left corner [m].");
+            Parameters::registerParam<TypeTag, Properties::LensUpperRightZ>
+                ("The z-coordinate of the lens' upper-right corner [m].");
         }
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Permeability,
-                             "The intrinsic permeability [m^2] of the ambient "
-                             "material.");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, PermeabilityLens,
-                             "The intrinsic permeability [m^2] of the lens.");
+        Parameters::registerParam<TypeTag, Properties::Permeability>
+            ("The intrinsic permeability [m^2] of the ambient material.");
+        Parameters::registerParam<TypeTag, Properties::PermeabilityLens>
+            ("The intrinsic permeability [m^2] of the lens.");
     }
 
     /*!

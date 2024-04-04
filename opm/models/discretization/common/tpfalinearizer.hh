@@ -134,8 +134,8 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, SeparateSparseSourceTerms,
-                             "Treat well source terms all in one go, instead of on a cell by cell basis.");
+        Parameters::registerParam<TypeTag, Properties::SeparateSparseSourceTerms>
+            ("Treat well source terms all in one go, instead of on a cell by cell basis.");
     }
 
     /*!

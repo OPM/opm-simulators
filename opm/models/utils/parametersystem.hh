@@ -58,26 +58,6 @@
 /*!
  * \ingroup Parameter
  *
- * \brief Register a run-time parameter.
- *
- * In OPM, parameters can only be used after they have been
- * registered.
- *
- * Example:
- *
- * \code
- * // Registers a run-time parameter "UpwindWeight" which has type
- * // "Scalar" and the description "Relative weight of the upwind node."
- * EWOMS_REGISTER_PARAM(TypeTag, Scalar, UpwindWeight,
- *                      "Relative weight of the upwind node.");
- * \endcode
- */
-#define EWOMS_REGISTER_PARAM(TypeTag, ParamType, ParamName, Description)       \
-        ::Opm::Parameters::registerParam<TypeTag, Properties::ParamName>(Description)
-
-/*!
- * \ingroup Parameter
- *
  * \brief Retrieve a runtime parameter.
  *
  * The default value is specified via the property system.
@@ -1103,6 +1083,22 @@ bool isSet(const char* paramName, bool errorIfNotRegistered = true)
                                                      errorIfNotRegistered);
 }
 
+/*!
+ * \ingroup Parameter
+ *
+ * \brief Register a run-time parameter.
+ *
+ * In OPM, parameters can only be used after they have been
+ * registered.
+ *
+ * Example:
+ *
+ * \code
+ * // Registers a run-time parameter "UpwindWeight"
+ *    and the description "Relative weight of the upwind node."
+ * registerParam<TypeTag,UpwindWeight>("Relative weight of the upwind node.");
+ * \endcode
+ */
 template <class TypeTag, template<class,class> class Param>
 void registerParam(const char* usageString)
 {

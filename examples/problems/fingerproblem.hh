@@ -305,9 +305,8 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, InitialWaterSaturation,
-                             "The initial saturation in the domain [] of the "
-                             "wetting phase");
+        Parameters::registerParam<TypeTag, Properties::InitialWaterSaturation>
+            ("The initial saturation in the domain [] of the wetting phase");
     }
 
     /*!

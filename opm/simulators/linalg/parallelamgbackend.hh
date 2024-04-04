@@ -150,12 +150,12 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LinearSolverMaxError,
-                             "The maximum residual error which the linear solver tolerates"
-                             " without giving up");
-        EWOMS_REGISTER_PARAM(TypeTag, int, AmgCoarsenTarget,
-                             "The coarsening target for the agglomerations of "
-                             "the AMG preconditioner");
+        Parameters::registerParam<TypeTag, Properties::LinearSolverMaxError>
+            ("The maximum residual error which the linear solver tolerates "
+             "without giving up");
+        Parameters::registerParam<TypeTag, Properties::AmgCoarsenTarget>
+            ("The coarsening target for the agglomerations of "
+             "the AMG preconditioner");
     }
 
 protected:

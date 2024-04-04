@@ -186,18 +186,29 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, DpMaxRel, "Maximum relative change of pressure in a single iteration");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, DsMax, "Maximum absolute change of any saturation in a single iteration");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, PriVarOscilationThreshold,
-                             "The threshold value for the primary variable switching conditions after its meaning has switched to hinder oscilations");
-        EWOMS_REGISTER_PARAM(TypeTag,bool, ProjectSaturations, "Option for doing saturation projection");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxTemperatureChange, "Maximum absolute change of temperature in a single iteration");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, TemperatureMax, "Maximum absolute temperature");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, TemperatureMin, "Minimum absolute temperature");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, PressureMax, "Maximum absolute pressure");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, PressureMin, "Minimum absolute pressure");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaximumWaterSaturation, "Maximum water saturation");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, WaterOnlyThreshold, "Cells with water saturation above or equal is considered one-phase water only");
+        Parameters::registerParam<TypeTag, Properties::DpMaxRel>
+            ("Maximum relative change of pressure in a single iteration");
+        Parameters::registerParam<TypeTag, Properties::DsMax>
+            ("Maximum absolute change of any saturation in a single iteration");
+        Parameters::registerParam<TypeTag, Properties::PriVarOscilationThreshold>
+            ("The threshold value for the primary variable switching conditions "
+             "after its meaning has switched to hinder oscilations");
+        Parameters::registerParam<TypeTag, Properties::ProjectSaturations>
+            ("Option for doing saturation projection");
+        Parameters::registerParam<TypeTag, Properties::MaxTemperatureChange>
+            ("Maximum absolute change of temperature in a single iteration");
+        Parameters::registerParam<TypeTag, Properties::TemperatureMax>
+            ("Maximum absolute temperature");
+        Parameters::registerParam<TypeTag, Properties::TemperatureMin>
+            ("Minimum absolute temperature");
+        Parameters::registerParam<TypeTag, Properties::PressureMax>
+            ("Maximum absolute pressure");
+        Parameters::registerParam<TypeTag, Properties::PressureMin>
+            ("Minimum absolute pressure");
+        Parameters::registerParam<TypeTag, Properties::MaximumWaterSaturation>
+            ("Maximum water saturation");
+        Parameters::registerParam<TypeTag, Properties::WaterOnlyThreshold>
+            ("Cells with water saturation above or equal is considered one-phase water only");
     }
 
     /*!

@@ -88,8 +88,8 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteTemperature,
-                             "Include the temperature in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteTemperature>
+            ("Include the temperature in the VTK output files");
     }
 
     /*!

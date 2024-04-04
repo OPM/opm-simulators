@@ -108,16 +108,14 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteTortuosities,
-                             "Include the tortuosity for each phase in the VTK "
-                             "output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteDiffusionCoefficients,
-                             "Include the molecular diffusion coefficients in "
-                             "the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool,
-                             VtkWriteEffectiveDiffusionCoefficients,
-                             "Include the effective molecular diffusion "
-                             "coefficients the medium in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteTortuosities>
+            ("Include the tortuosity for each phase in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteDiffusionCoefficients>
+            ("Include the molecular diffusion coefficients in "
+             "the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteEffectiveDiffusionCoefficients>
+            ("Include the effective molecular diffusion "
+             "coefficients the medium in the VTK output files");
     }
 
     /*!

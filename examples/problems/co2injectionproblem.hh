@@ -373,33 +373,24 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow,
-                             "The lower temperature [K] for tabulation of the "
-                             "fluid system");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh,
-                             "The upper temperature [K] for tabulation of the "
-                             "fluid system");
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, FluidSystemNumTemperature,
-                             "The number of intervals between the lower and "
-                             "upper temperature");
-
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemPressureLow,
-                             "The lower pressure [Pa] for tabulation of the "
-                             "fluid system");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FluidSystemPressureHigh,
-                             "The upper pressure [Pa] for tabulation of the "
-                             "fluid system");
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, FluidSystemNumPressure,
-                             "The number of intervals between the lower and "
-                             "upper pressure");
-
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature,
-                             "The temperature [K] in the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxDepth,
-                             "The maximum depth [m] of the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, SimulationName,
-                             "The name of the simulation used for the output "
-                             "files");
+        Parameters::registerParam<TypeTag, Properties::FluidSystemTemperatureLow>
+            ("The lower temperature [K] for tabulation of the fluid system");
+        Parameters::registerParam<TypeTag, Properties::FluidSystemTemperatureHigh>
+            ("The upper temperature [K] for tabulation of the fluid system");
+        Parameters::registerParam<TypeTag, Properties::FluidSystemNumTemperature>
+            ("The number of intervals between the lower and upper temperature");
+        Parameters::registerParam<TypeTag, Properties::FluidSystemPressureLow>
+            ("The lower pressure [Pa] for tabulation of the fluid system");
+        Parameters::registerParam<TypeTag, Properties::FluidSystemPressureHigh>
+            ("The upper pressure [Pa] for tabulation of the fluid system");
+        Parameters::registerParam<TypeTag, Properties::FluidSystemNumPressure>
+            ("The number of intervals between the lower and upper pressure");
+        Parameters::registerParam<TypeTag, Properties::Temperature>
+            ("The temperature [K] in the reservoir");
+        Parameters::registerParam<TypeTag, Properties::MaxDepth>
+            ("The maximum depth [m] of the reservoir");
+        Parameters::registerParam<TypeTag, Properties::SimulationName>
+            ("The name of the simulation used for the output files");
     }
 
     /*!

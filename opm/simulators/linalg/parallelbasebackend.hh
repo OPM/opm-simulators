@@ -152,16 +152,16 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LinearSolverTolerance,
-                             "The maximum allowed error between of the linear solver");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LinearSolverAbsTolerance,
-                             "The maximum accepted error of the norm of the residual");
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, LinearSolverOverlapSize,
-                             "The size of the algebraic overlap for the linear solver");
-        EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverMaxIterations,
-                             "The maximum number of iterations of the linear solver");
-        EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverVerbosity,
-                             "The verbosity level of the linear solver");
+        Parameters::registerParam<TypeTag, Properties::LinearSolverTolerance>
+            ("The maximum allowed error between of the linear solver");
+        Parameters::registerParam<TypeTag, Properties::LinearSolverAbsTolerance>
+            ("The maximum accepted error of the norm of the residual");
+        Parameters::registerParam<TypeTag, Properties::LinearSolverOverlapSize>
+            ("The size of the algebraic overlap for the linear solver");
+        Parameters::registerParam<TypeTag, Properties::LinearSolverMaxIterations>
+            ("The maximum number of iterations of the linear solver");
+        Parameters::registerParam<TypeTag, Properties::LinearSolverVerbosity>
+            ("The verbosity level of the linear solver");
 
         PreconditionerWrapper::registerParameters();
     }

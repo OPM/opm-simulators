@@ -78,15 +78,14 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
 
-    EWOMS_REGISTER_PARAM(TypeTag, std::string, ParameterFile,
-                         "An .ini file which contains a set of run-time "
-                         "parameters");
-    EWOMS_REGISTER_PARAM(TypeTag, int, PrintProperties,
-                         "Print the values of the compile time properties at "
-                         "the start of the simulation");
-    EWOMS_REGISTER_PARAM(TypeTag, int, PrintParameters,
-                         "Print the values of the run-time parameters at the "
-                         "start of the simulation");
+    Parameters::registerParam<TypeTag, Properties::ParameterFile>
+        ("An .ini file which contains a set of run-time parameters");
+    Parameters::registerParam<TypeTag, Properties::PrintProperties>
+        ("Print the values of the compile time properties at "
+         "the start of the simulation");
+    Parameters::registerParam<TypeTag, Properties::PrintParameters>
+        ("Print the values of the run-time parameters at the "
+         "start of the simulation");
 
     Simulator::registerParameters();
     ThreadManager::registerParameters();

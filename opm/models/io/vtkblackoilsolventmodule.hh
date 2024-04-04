@@ -113,21 +113,21 @@ public:
         if (!enableSolvent)
             return;
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSolventSaturation,
-                             "Include the \"saturation\" of the solvent component "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSolventRsw,
-                             "Include the \"dissolved volume in water\" of the solvent component "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSolventDensity,
-                             "Include the \"density\" of the solvent component "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSolventViscosity,
-                             "Include the \"viscosity\" of the solvent component "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSolventMobility,
-                             "Include the \"mobility\" of the solvent component "
-                             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteSolventSaturation>
+            ("Include the \"saturation\" of the solvent component "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteSolventRsw>
+            ("Include the \"dissolved volume in water\" of the solvent component "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteSolventDensity>
+            ("Include the \"density\" of the solvent component "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteSolventViscosity>
+            ("Include the \"viscosity\" of the solvent component "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteSolventMobility>
+            ("Include the \"mobility\" of the solvent component "
+             "in the VTK output files");
     }
 
     /*!

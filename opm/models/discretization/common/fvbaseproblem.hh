@@ -168,19 +168,19 @@ public:
     static void registerParameters()
     {
         Model::registerParameters();
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxTimeStepSize,
-                             "The maximum size to which all time steps are limited to [s]");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MinTimeStepSize,
-                             "The minimum size to which all time steps are limited to [s]");
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, MaxTimeStepDivisions,
-                             "The maximum number of divisions by two of the timestep size "
-                             "before the simulation bails out");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAsyncVtkOutput,
-                             "Dispatch a separate thread to write the VTK output");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, ContinueOnConvergenceError,
-                             "Continue with a non-converged solution instead of giving up "
-                             "if we encounter a time step size smaller than the minimum time "
-                             "step size.");
+        Parameters::registerParam<TypeTag, Properties::MaxTimeStepSize>
+            ("The maximum size to which all time steps are limited to [s]");
+        Parameters::registerParam<TypeTag, Properties::MinTimeStepSize>
+            ("The minimum size to which all time steps are limited to [s]");
+        Parameters::registerParam<TypeTag, Properties::MaxTimeStepDivisions>
+            ("The maximum number of divisions by two of the timestep size "
+             "before the simulation bails out");
+        Parameters::registerParam<TypeTag, Properties::EnableAsyncVtkOutput>
+            ("Dispatch a separate thread to write the VTK output");
+        Parameters::registerParam<TypeTag, Properties::ContinueOnConvergenceError>
+            ("Continue with a non-converged solution instead of giving up "
+             "if we encounter a time step size smaller than the minimum time "
+             "step size.");
     }
 
     /*!

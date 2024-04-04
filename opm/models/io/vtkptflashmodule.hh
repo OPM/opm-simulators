@@ -99,10 +99,10 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteLiquidMoleFractions,
-                             "Include liquid mole fractions (L) in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteEquilibriumConstants,
-                             "Include equilibrium constants (K) in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteLiquidMoleFractions>
+            ("Include liquid mole fractions (L) in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteEquilibriumConstants>
+            ("Include equilibrium constants (K) in the VTK output files");
     }
 
     /*!

@@ -233,14 +233,14 @@ public:
         if (enableEnergy)
             Opm::VtkEnergyModule<TypeTag>::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FlashTolerance,
-                             "The maximum tolerance for the flash solver to "
-                             "consider the solution converged");
-        EWOMS_REGISTER_PARAM(TypeTag, int, FlashVerbosity,
-                             "Flash solver verbosity level");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, FlashTwoPhaseMethod,
-                             "Method for solving vapor-liquid composition. Available options include:"
-                             "ssi, newton, ssi+newton");
+        Parameters::registerParam<TypeTag, Properties::FlashTolerance>
+            ("The maximum tolerance for the flash solver to "
+             "consider the solution converged");
+        Parameters::registerParam<TypeTag, Properties::FlashVerbosity>
+            ("Flash solver verbosity level");
+        Parameters::registerParam<TypeTag, Properties::FlashTwoPhaseMethod>
+            ("Method for solving vapor-liquid composition. Available options include: "
+             "ssi, newton, ssi+newton");
     }
 
     /*!

@@ -151,25 +151,22 @@ public:
     {
         LinearSolverBackend::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, NewtonVerbose,
-                             "Specify whether the Newton method should inform "
-                             "the user about its progress or not");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, NewtonWriteConvergence,
-                             "Write the convergence behaviour of the Newton "
-                             "method to a VTK file");
-        EWOMS_REGISTER_PARAM(TypeTag, int, NewtonTargetIterations,
-                             "The 'optimum' number of Newton iterations per "
-                             "time step");
-        EWOMS_REGISTER_PARAM(TypeTag, int, NewtonMaxIterations,
-                             "The maximum number of Newton iterations per time "
-                             "step");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, NewtonTolerance,
-                             "The maximum raw error tolerated by the Newton"
-                             "method for considering a solution to be "
-                             "converged");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, NewtonMaxError,
-                             "The maximum error tolerated by the Newton "
-                             "method to which does not cause an abort");
+        Parameters::registerParam<TypeTag, Properties::NewtonVerbose>
+            ("Specify whether the Newton method should inform "
+             "the user about its progress or not");
+        Parameters::registerParam<TypeTag, Properties::NewtonWriteConvergence>
+            ("Write the convergence behaviour of the Newton "
+             "method to a VTK file");
+        Parameters::registerParam<TypeTag, Properties::NewtonTargetIterations>
+            ("The 'optimum' number of Newton iterations per time step");
+        Parameters::registerParam<TypeTag, Properties::NewtonMaxIterations>
+            ("The maximum number of Newton iterations per time step");
+        Parameters::registerParam<TypeTag, Properties::NewtonTolerance>
+            ("The maximum raw error tolerated by the Newton"
+             "method for considering a solution to be converged");
+        Parameters::registerParam<TypeTag, Properties::NewtonMaxError>
+            ("The maximum error tolerated by the Newton "
+             "method to which does not cause an abort");
     }
 
     /*!

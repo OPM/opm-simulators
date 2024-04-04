@@ -217,7 +217,8 @@ public:
 
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, double, PressureScale, "Scaling of pressure primary variable");
+        Parameters::registerParam<TypeTag, Properties::PressureScale>
+            ("Scaling of pressure primary variable");
     }
 
     void setPressureScale(Scalar val)

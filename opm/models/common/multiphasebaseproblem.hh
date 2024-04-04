@@ -90,8 +90,8 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableGravity,
-                             "Use the gravity correction for the pressure gradients.");
+        Parameters::registerParam<TypeTag, Properties::EnableGravity>
+            ("Use the gravity correction for the pressure gradients.");
     }
 
     /*!
