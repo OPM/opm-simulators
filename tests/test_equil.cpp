@@ -236,7 +236,6 @@ struct EquilFixture {
         Opm::BlackoilModelParameters<TypeTag>::registerParameters();
         Opm::AdaptiveTimeStepping<TypeTag>::registerParameters();
         Opm::Parameters::registerParam<TypeTag, bool>("EnableTerminalOutput",
-                                                      "EnableTerminalOutput",
                                                       Opm::getPropValue<TypeTag, Opm::Properties::EnableTerminalOutput>(),
                                                       "Dummy added for the well model to compile.");
         Opm::registerAllParameters_<TypeTag>();
