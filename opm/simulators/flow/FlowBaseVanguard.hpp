@@ -278,13 +278,13 @@ public:
              "from a JSON file by giving the filename here, ending with '.json.' "
              "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
              "for available Zoltan options.");
-        Parameters::hideParam<TypeTag>("ZoltanParams");
+        Parameters::hideParam<TypeTag, Properties::ZoltanParams>();
         Parameters::registerParam<TypeTag, Properties::ExternalPartition>
             ("Name of file from which to load an externally generated "
              "partitioning of the model's active cells for MPI "
              "distribution purposes. If empty, the built-in partitioning "
              "method will be employed.");
-        Parameters::hideParam<TypeTag>("ExternalPartition");
+        Parameters::hideParam<TypeTag, Properties::ExternalPartition>();
 #endif
         Parameters::registerParam<TypeTag, Properties::AllowDistributedWells>
             ("Allow the perforations of a well to be distributed to interior of multiple processes");
