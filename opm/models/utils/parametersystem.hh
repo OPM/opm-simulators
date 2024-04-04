@@ -103,9 +103,6 @@ struct ParamInfo
 };
 
 // forward declaration
-template <class TypeTag, class ParamType, class PropTag>
-const ParamType get(const char *paramName,
-                    bool errorIfNotRegistered = true);
 template <class TypeTag, class ParamType>
 const ParamType get(const char *paramName,
                     const ParamType& defaultValue,
@@ -888,13 +885,6 @@ class Param
     using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
 
 public:
-    template <class ParamType, class PropTag>
-    static ParamType get(const char* paramName,
-                         bool errorIfNotRegistered = true)
-    {
-        return retrieve_<ParamType>(paramName, getPropValue<TypeTag, PropTag>(), errorIfNotRegistered);
-    }
-
     template <class ParamType>
     static ParamType get(const char* paramName,
                          const ParamType& defaultValue,
@@ -1015,13 +1005,6 @@ private:
         return ParamsMeta::tree().template get<ParamType>(canonicalName, defaultValue);
     }
 };
-
-template <class TypeTag, class ParamType, class PropTag>
-const ParamType get(const char* paramName, bool errorIfNotRegistered)
-{
-    return Param<TypeTag>::template get<ParamType, PropTag>(paramName,
-                                                            errorIfNotRegistered);
-}
 
 template <class TypeTag, class ParamType>
 const ParamType get(const char* paramName, const ParamType& defaultValue, bool errorIfNotRegistered)
