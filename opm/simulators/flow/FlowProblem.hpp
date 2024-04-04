@@ -216,29 +216,31 @@ public:
 
         VtkTracerModule<TypeTag>::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableWriteAllSolutions,
-                             "Write all solutions to disk instead of only the ones for the "
-                             "report steps");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEclOutput,
-                             "Write binary output which is compatible with the commercial "
-                             "Eclipse simulator");
+        Parameters::registerParam<TypeTag, Properties::EnableWriteAllSolutions>
+           ("Write all solutions to disk instead of only the ones for the "
+            "report steps");
+        Parameters::registerParam<TypeTag, Properties::EnableEclOutput>
+            ("Write binary output which is compatible with the commercial "
+             "Eclipse simulator");
 #if HAVE_DAMARIS
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDamarisOutput,
-                             "Write a specific variable using Damaris in a separate core");
+        Parameters::registerParam<TypeTag, Properties::EnableDamarisOutput>
+            ("Write a specific variable using Damaris in a separate core");
 #endif
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EclOutputDoublePrecision,
-                             "Tell the output writer to use double precision. Useful for 'perfect' restarts");
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, RestartWritingInterval,
-                             "The frequencies of which time steps are serialized to disk");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableDriftCompensation,
-                             "Enable partial compensation of systematic mass losses via the source term of the next time step");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputMode,
-                             "Specify which messages are going to be printed. Valid values are: none, log, all (default)");
-        EWOMS_REGISTER_PARAM(TypeTag, int, NumPressurePointsEquil,
-                             "Number of pressure points (in each direction) in tables used for equilibration");
+        Parameters::registerParam<TypeTag, Properties::EclOutputDoublePrecision>
+            ("Tell the output writer to use double precision. Useful for 'perfect' restarts");
+        Parameters::registerParam<TypeTag, Properties::RestartWritingInterval>
+            ("The frequencies of which time steps are serialized to disk");
+        Parameters::registerParam<TypeTag, Properties::EnableDriftCompensation>
+            ("Enable partial compensation of systematic mass losses via "
+             "the source term of the next time step");
+        Parameters::registerParam<TypeTag, Properties::OutputMode>
+            ("Specify which messages are going to be printed. "
+             "Valid values are: none, log, all (default)");
+        Parameters::registerParam<TypeTag, Properties::NumPressurePointsEquil>
+            ("Number of pressure points (in each direction) in tables used for equilibration");
         Parameters::hideParam<TypeTag>("NumPressurePointsEquil"); // Users will typically not need to modify this parameter..
-        EWOMS_REGISTER_PARAM(TypeTag, bool, ExplicitRockCompaction,
-                             "Use pressure from end of the last time step when evaluating rock compaction");
+        Parameters::registerParam<TypeTag, Properties::ExplicitRockCompaction>
+            ("Use pressure from end of the last time step when evaluating rock compaction");
         Parameters::hideParam<TypeTag>("ExplicitRockCompaction"); // Users will typically not need to modify this parameter..
     }
 

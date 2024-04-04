@@ -95,9 +95,8 @@ namespace Opm {
      */
         static void registerParameters()
         {
-            EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteTracerConcentration,
-                                 "Include the tracer concentration "
-                                 "in the VTK output files");
+            Parameters::registerParam<TypeTag, Properties::VtkWriteTracerConcentration>
+                ("Include the tracer concentration in the VTK output files");
         }
 
         /*!

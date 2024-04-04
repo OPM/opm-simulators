@@ -114,12 +114,13 @@ namespace Opm {
                 return EXIT_SUCCESS;
             }
             // register the flow specific parameters
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, EnableDryRun,
-                                 "Specify if the simulation ought to be actually run, or just pretended to be");
-            EWOMS_REGISTER_PARAM(TypeTag, int, OutputInterval,
-                                 "Specify the number of report steps between two consecutive writes of restart data");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, EnableLoggingFalloutWarning,
-                                 "Developer option to see whether logging was on non-root processors. In that case it will be appended to the *.DBG or *.PRT files");
+            Parameters::registerParam<TypeTag, Properties::EnableDryRun>
+                ("Specify if the simulation ought to be actually run, or just pretended to be");
+            Parameters::registerParam<TypeTag, Properties::OutputInterval>
+                ("Specify the number of report steps between two consecutive writes of restart data");
+            Parameters::registerParam<TypeTag, Properties::EnableLoggingFalloutWarning>
+                ("Developer option to see whether logging was on non-root processors. "
+                 "In that case it will be appended to the *.DBG or *.PRT files");
 
             Simulator::registerParameters();
 

@@ -219,37 +219,37 @@ public:
         SolverParameters::registerParameters();
         TimeStepper::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTerminalOutput,
-                             "Print high-level information about the simulation's progress to the terminal");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAdaptiveTimeStepping,
-                             "Use adaptive time stepping between report steps");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo,
-                             "Provide additional convergence output "
-                             "files for diagnostic purposes. "
-                             "\"none\" gives no extra output and "
-                             "overrides all other options, "
-                             "\"steps\" generates an INFOSTEP file, "
-                             "\"iterations\" generates an INFOITER file. "
-                             "Combine options with commas, e.g., "
-                             "\"steps,iterations\" for multiple outputs.");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, SaveStep,
-                             "Save serialized state to .OPMRST file. "
-                             "Either a specific report step, \"all\" to save "
-                             "all report steps or \":x\" to save every x'th step."
-                             "Use negative values of \"x\" to keep only the last "
-                             "written step, or \"last\" to save every step, keeping "
-                             "only the last.");
-        EWOMS_REGISTER_PARAM(TypeTag, int, LoadStep,
-                             "Load serialized state from .OPMRST file. "
-                             "Either a specific report step, or 0 to load last "
-                             "stored report step.");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, SaveFile,
-                             "FileName for .OPMRST file used for saving serialized state. "
-                             "If empty, CASENAME.OPMRST is used.");
+        Parameters::registerParam<TypeTag, Properties::EnableTerminalOutput>
+            ("Print high-level information about the simulation's progress to the terminal");
+        Parameters::registerParam<TypeTag, Properties::EnableAdaptiveTimeStepping>
+            ("Use adaptive time stepping between report steps");
+        Parameters::registerParam<TypeTag, Properties::OutputExtraConvergenceInfo>
+            ("Provide additional convergence output "
+             "files for diagnostic purposes. "
+             "\"none\" gives no extra output and "
+             "overrides all other options, "
+             "\"steps\" generates an INFOSTEP file, "
+             "\"iterations\" generates an INFOITER file. "
+             "Combine options with commas, e.g., "
+             "\"steps,iterations\" for multiple outputs.");
+        Parameters::registerParam<TypeTag, Properties::SaveStep>
+            ("Save serialized state to .OPMRST file. "
+             "Either a specific report step, \"all\" to save "
+             "all report steps or \":x\" to save every x'th step."
+             "Use negative values of \"x\" to keep only the last "
+             "written step, or \"last\" to save every step, keeping "
+             "only the last.");
+        Parameters::registerParam<TypeTag, Properties::LoadStep>
+            ("Load serialized state from .OPMRST file. "
+             "Either a specific report step, or 0 to load last "
+             "stored report step.");
+        Parameters::registerParam<TypeTag, Properties::SaveFile>
+            ("FileName for .OPMRST file used for saving serialized state. "
+             "If empty, CASENAME.OPMRST is used.");
         Parameters::hideParam<TypeTag>("SaveFile");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, LoadFile,
-                             "FileName for .OPMRST file used to load serialized state. "
-                             "If empty, CASENAME.OPMRST is used.");
+        Parameters::registerParam<TypeTag, Properties::LoadFile>
+            ("FileName for .OPMRST file used to load serialized state. "
+             "If empty, CASENAME.OPMRST is used.");
         Parameters::hideParam<TypeTag>("LoadFile");
     }
 

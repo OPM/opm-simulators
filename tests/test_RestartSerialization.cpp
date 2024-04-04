@@ -451,7 +451,7 @@ struct AquiferFixture {
         };
         AdaptiveTimeStepping<TT>::registerParameters();
         BlackoilModelParameters<TT>::registerParameters();
-        EWOMS_REGISTER_PARAM(TT, bool, EnableTerminalOutput, "Do *NOT* use!");
+        Parameters::registerParam<TT, Properties::EnableTerminalOutput>("Do *NOT* use!");
         setupParameters_<TT>(2, argv, /*registerParams=*/true);
         FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
     }

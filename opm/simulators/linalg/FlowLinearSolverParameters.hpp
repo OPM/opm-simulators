@@ -294,27 +294,73 @@ namespace Opm
         template <class TypeTag>
         static void registerParameters()
         {
-            EWOMS_REGISTER_PARAM(TypeTag, double, LinearSolverReduction, "The minimum reduction of the residual which the linear solver must achieve");
-            EWOMS_REGISTER_PARAM(TypeTag, double, RelaxedLinearSolverReduction, "The minimum reduction of the residual which the linear solver need to achieve for the solution to be accepted");
-            EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverMaxIter, "The maximum number of iterations of the linear solver");
-            EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverRestart, "The number of iterations after which GMRES is restarted");
-            EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverVerbosity, "The verbosity level of the linear solver (0: off, 2: all)");
-            EWOMS_REGISTER_PARAM(TypeTag, double, IluRelaxation, "The relaxation factor of the linear solver's ILU preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, int, IluFillinLevel, "The fill-in level of the linear solver's ILU preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, MiluVariant, "Specify which variant of the modified-ILU preconditioner ought to be used. Possible variants are: ILU (default, plain ILU), MILU_1 (lump diagonal with dropped row entries), MILU_2 (lump diagonal with the sum of the absolute values of the dropped row  entries), MILU_3 (if diagonal is positive add sum of dropped row entrires. Otherwise subtract them), MILU_4 (if diagonal is positive add sum of dropped row entrires. Otherwise do nothing");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, IluRedblack, "Use red-black partitioning for the ILU preconditioner");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, IluReorderSpheres, "Whether to reorder the entries of the matrix in the red-black ILU preconditioner in spheres starting at an edge. If false the original ordering is preserved in each color. Otherwise why try to ensure D4 ordering (in a 2D structured grid, the diagonal elements are consecutive).");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, UseGmres, "Use GMRES as the linear solver");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure, "Continue with the simulation like nothing happened after the linear solver did not converge");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, ScaleLinearSystem, "Scale linear system according to equation scale and primary variable types");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, LinearSolver, "Configuration of solver. Valid options are: ilu0 (default), dilu, cprw, cpr (an alias for cprw), cpr_quasiimpes, cpr_trueimpes, cpr_trueimpesanalytic, amg or hybrid (experimental). Alternatively, you can request a configuration to be read from a JSON file by giving the filename here, ending with '.json.'");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, LinearSolverPrintJsonDefinition, "Write the JSON definition of the linear solver setup to the DBG file.");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseSetup, "Reuse preconditioner setup. Valid options are 0: recreate the preconditioner for every linear solve, 1: recreate once every timestep, 2: recreate if last linear solve took more than 10 iterations, 3: never recreate, 4: recreated every CprReuseInterval");
-            EWOMS_REGISTER_PARAM(TypeTag, int, CprReuseInterval, "Reuse preconditioner interval. Used when CprReuseSetup is set to 4, then the preconditioner will be fully recreated instead of reused every N linear solve, where N is this parameter.");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, AcceleratorMode, "Choose a linear solver, usage: '--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution|rocsparse]'");
-            EWOMS_REGISTER_PARAM(TypeTag, int, BdaDeviceId, "Choose device ID for cusparseSolver or openclSolver, use 'nvidia-smi' or 'clinfo' to determine valid IDs");
-            EWOMS_REGISTER_PARAM(TypeTag, int, OpenclPlatformId, "Choose platform ID for openclSolver, use 'clinfo' to determine valid platform IDs");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, OpenclIluParallel, "Parallelize ILU decomposition and application on GPU");
+            Parameters::registerParam<TypeTag, Properties::LinearSolverReduction>
+                ("The minimum reduction of the residual which the linear solver must achieve");
+            Parameters::registerParam<TypeTag, Properties::RelaxedLinearSolverReduction>
+                ("The minimum reduction of the residual which the linear solver need to "
+                 "achieve for the solution to be accepted");
+            Parameters::registerParam<TypeTag, Properties::LinearSolverMaxIter>
+                ("The maximum number of iterations of the linear solver");
+            Parameters::registerParam<TypeTag, Properties::LinearSolverRestart>
+                ("The number of iterations after which GMRES is restarted");
+            Parameters::registerParam<TypeTag, Properties::LinearSolverVerbosity>
+                ("The verbosity level of the linear solver (0: off, 2: all)");
+            Parameters::registerParam<TypeTag, Properties::IluRelaxation>
+                ("The relaxation factor of the linear solver's ILU preconditioner");
+            Parameters::registerParam<TypeTag, Properties::IluFillinLevel>
+                ("The fill-in level of the linear solver's ILU preconditioner");
+            Parameters::registerParam<TypeTag, Properties::MiluVariant>
+                ("Specify which variant of the modified-ILU preconditioner ought to be used. "
+                 "Possible variants are: ILU (default, plain ILU), "
+                 "MILU_1 (lump diagonal with dropped row entries), "
+                 "MILU_2 (lump diagonal with the sum of the absolute values of the dropped row entries), "
+                 "MILU_3 (if diagonal is positive add sum of dropped row entries, otherwise subtract them), "
+                 "MILU_4 (if diagonal is positive add sum of dropped row entries, otherwise do nothing");
+            Parameters::registerParam<TypeTag, Properties::IluRedblack>
+                ("Use red-black partitioning for the ILU preconditioner");
+            Parameters::registerParam<TypeTag, Properties::IluReorderSpheres>
+                ("Whether to reorder the entries of the matrix in the red-black "
+                 "ILU preconditioner in spheres starting at an edge. "
+                 "If false the original ordering is preserved in each color. "
+                 "Otherwise why try to ensure D4 ordering (in a 2D structured grid, "
+                 "the diagonal elements are consecutive).");
+            Parameters::registerParam<TypeTag, Properties::UseGmres>
+                ("Use GMRES as the linear solver");
+            Parameters::registerParam<TypeTag, Properties::LinearSolverIgnoreConvergenceFailure>
+                ("Continue with the simulation like nothing happened "
+                 "after the linear solver did not converge");
+            Parameters::registerParam<TypeTag, Properties::ScaleLinearSystem>
+                ("Scale linear system according to equation scale and primary variable types");
+            Parameters::registerParam<TypeTag, Properties::LinearSolver>
+                ("Configuration of solver. Valid options are: ilu0 (default), "
+                 "dilu, cprw, cpr (an alias for cprw), cpr_quasiimpes, "
+                 "cpr_trueimpes, cpr_trueimpesanalytic, amg or hybrid (experimental). "
+                 "Alternatively, you can request a configuration to be read from a "
+                 "JSON file by giving the filename here, ending with '.json.'");
+            Parameters::registerParam<TypeTag, Properties::LinearSolverPrintJsonDefinition>
+                ("Write the JSON definition of the linear solver setup to the DBG file.");
+            Parameters::registerParam<TypeTag, Properties::CprReuseSetup>
+                ("Reuse preconditioner setup. Valid options are "
+                 "0: recreate the preconditioner for every linear solve, "
+                 "1: recreate once every timestep, "
+                 "2: recreate if last linear solve took more than 10 iterations, "
+                 "3: never recreate, "
+                 "4: recreated every CprReuseInterval");
+            Parameters::registerParam<TypeTag, Properties::CprReuseInterval>
+                ("Reuse preconditioner interval. Used when CprReuseSetup is set to 4, "
+                 "then the preconditioner will be fully recreated instead of reused "
+                 "every N linear solve, where N is this parameter.");
+            Parameters::registerParam<TypeTag, Properties::AcceleratorMode>
+                ("Choose a linear solver, usage: "
+                 "'--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution|rocsparse]'");
+            Parameters::registerParam<TypeTag, Properties::BdaDeviceId>
+                ("Choose device ID for cusparseSolver or openclSolver, "
+                 "use 'nvidia-smi' or 'clinfo' to determine valid IDs");
+            Parameters::registerParam<TypeTag, Properties::OpenclPlatformId>
+                ("Choose platform ID for openclSolver, use 'clinfo' "
+                 "to determine valid platform IDs");
+            Parameters::registerParam<TypeTag, Properties::OpenclIluParallel>
+                ("Parallelize ILU decomposition and application on GPU");
         }
 
         FlowLinearSolverParameters() { reset(); }

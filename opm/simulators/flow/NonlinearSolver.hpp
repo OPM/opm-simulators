@@ -144,10 +144,14 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
 
             static void registerParameters()
             {
-                EWOMS_REGISTER_PARAM(TypeTag, Scalar, NewtonMaxRelax, "The maximum relaxation factor of a Newton iteration");
-                EWOMS_REGISTER_PARAM(TypeTag, int, NewtonMaxIterations, "The maximum number of Newton iterations per time step");
-                EWOMS_REGISTER_PARAM(TypeTag, int, NewtonMinIterations, "The minimum number of Newton iterations per time step");
-                EWOMS_REGISTER_PARAM(TypeTag, std::string, NewtonRelaxationType, "The type of relaxation used by Newton method");
+                Parameters::registerParam<TypeTag, Properties::NewtonMaxRelax>
+                    ("The maximum relaxation factor of a Newton iteration");
+                Parameters::registerParam<TypeTag, Properties::NewtonMaxIterations>
+                    ("The maximum number of Newton iterations per time step");
+                Parameters::registerParam<TypeTag, Properties::NewtonMinIterations>
+                    ("The minimum number of Newton iterations per time step");
+                Parameters::registerParam<TypeTag, Properties::NewtonRelaxationType>
+                    ("The type of relaxation used by Newton method");
             }
 
             void reset()

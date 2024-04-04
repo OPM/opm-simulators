@@ -115,20 +115,23 @@ namespace Opm {
 template<class TypeTag>
 void registerEclTimeSteppingParameters()
 {
-    EWOMS_REGISTER_PARAM(TypeTag, bool, EnableTuning,
-                         "Honor some aspects of the TUNING keyword.");
-    EWOMS_REGISTER_PARAM(TypeTag, double, SolverGrowthFactor,
-                         "The factor time steps are elongated after a successful substep");
-    EWOMS_REGISTER_PARAM(TypeTag, double, SolverMaxGrowth,
-                         "The maximum factor time steps are elongated after a report step");
-    EWOMS_REGISTER_PARAM(TypeTag, double, SolverMaxTimeStepInDays,
-                         "The maximum size of a time step in days");
-    EWOMS_REGISTER_PARAM(TypeTag, double, SolverMinTimeStep,
-                         "The minimum size of a time step in days for field and metric and hours for lab. If a step cannot converge without getting cut below this step size the simulator will stop");
-    EWOMS_REGISTER_PARAM(TypeTag, double, SolverRestartFactor,
-                         "The factor time steps are elongated after restarts");
-    EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepAfterEventInDays,
-                         "Time step size of the first time step after an event occurs during the simulation in days");
+    Parameters::registerParam<TypeTag, Properties::EnableTuning>
+        ("Honor some aspects of the TUNING keyword.");
+    Parameters::registerParam<TypeTag, Properties::SolverGrowthFactor>
+        ("The factor time steps are elongated after a successful substep");
+    Parameters::registerParam<TypeTag, Properties::SolverMaxGrowth>
+        ("The maximum factor time steps are elongated after a report step");
+    Parameters::registerParam<TypeTag, Properties::SolverMaxTimeStepInDays>
+        ("The maximum size of a time step in days");
+    Parameters::registerParam<TypeTag, Properties::SolverMinTimeStep>
+        ("The minimum size of a time step in days for field and "
+         "metric and hours for lab. If a step cannot converge without "
+         "getting cut below this step size the simulator will stop");
+    Parameters::registerParam<TypeTag, Properties::SolverRestartFactor>
+        ("The factor time steps are elongated after restarts");
+    Parameters::registerParam<TypeTag, Properties::TimeStepAfterEventInDays>
+        ("Time step size of the first time step after an event "
+         "occurs during the simulation in days");
 }
 
 } // namespace Opm

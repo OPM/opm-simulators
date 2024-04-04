@@ -232,13 +232,13 @@ struct EquilFixture {
 #else
         Dune::MPIHelper::instance(argc, argv);
 #endif
-        Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
-        Opm::BlackoilModelParameters<TypeTag>::registerParameters();
-        Opm::AdaptiveTimeStepping<TypeTag>::registerParameters();
-        Opm::Parameters::registerParam<TypeTag, bool>("EnableTerminalOutput",
-                                                      Opm::getPropValue<TypeTag, Opm::Properties::EnableTerminalOutput>(),
-                                                      "Dummy added for the well model to compile.");
-        Opm::registerAllParameters_<TypeTag>();
+        using namespace Opm;
+        FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+        BlackoilModelParameters<TypeTag>::registerParameters();
+        AdaptiveTimeStepping<TypeTag>::registerParameters();
+        Parameters::registerParam<TypeTag,
+                                  Properties::EnableTerminalOutput>("Dummy added for the well model to compile.");
+        registerAllParameters_<TypeTag>();
     }
 
     using TypeTag = Opm::Properties::TTag::TestEquilTypeTag;
