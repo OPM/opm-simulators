@@ -1143,18 +1143,19 @@ void registerParam(const char* usageString)
  *
  * This allows to deal with unused parameters
  */
-template <class TypeTag>
-void hideParam(const char* paramName)
+template <class TypeTag, template<class,class> class Param>
+void hideParam()
 {
+    const std::string paramName = getPropName<TypeTag,Param>();
     using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
     if (!ParamsMeta::registrationOpen())
-        throw std::logic_error("Parameter '"+std::string(paramName)+"' declared as hidden"
+        throw std::logic_error("Parameter '" +paramName + "' declared as hidden"
                                " when parameter registration was already closed.");
 
     auto paramInfoIt = ParamsMeta::mutableRegistry().find(paramName);
     if (paramInfoIt == ParamsMeta::mutableRegistry().end())
         throw std::logic_error("Tried to declare unknown parameter '"
-                               +std::string(paramName)+"' hidden.");
+                               + paramName + "' hidden.");
 
     auto& paramInfo = paramInfoIt->second;
     paramInfo.isHidden = true;
