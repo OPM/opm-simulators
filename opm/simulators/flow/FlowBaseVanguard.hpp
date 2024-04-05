@@ -89,12 +89,12 @@ struct EdgeWeightsMethod {
     using type = UndefinedProperty;
 };
 
-#if HAVE_OPENCL || HAVE_ROCSPARSE
+#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
 template<class TypeTag, class MyTypeTag>
 struct NumJacobiBlocks {
     using type = UndefinedProperty;
 };
-#endif  // HAVE_OPENCL || HAVE_ROCSPARSE
+#endif
 
 template<class TypeTag, class MyTypeTag>
 struct OwnerCellsFirst {
@@ -156,12 +156,12 @@ struct EdgeWeightsMethod<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr int value = 1;
 };
 
-#if HAVE_OPENCL || HAVE_ROCSPARSE
+#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
 template<class TypeTag>
 struct NumJacobiBlocks<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr int value = 0;
 };
-#endif // HAVE_OPENCL || HAVE_ROCSPARSE
+#endif
 
 template<class TypeTag>
 struct OwnerCellsFirst<TypeTag, TTag::FlowBaseVanguard> {
@@ -256,7 +256,7 @@ public:
         EWOMS_REGISTER_PARAM(TypeTag, int, EdgeWeightsMethod,
                              "Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
 
-#if HAVE_OPENCL || HAVE_ROCSPARSE
+#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
         EWOMS_REGISTER_PARAM(TypeTag, int, NumJacobiBlocks,
                              "Number of blocks to be created for the Block-Jacobi preconditioner.");
 #endif
@@ -302,7 +302,7 @@ public:
         fileName_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
         edgeWeightsMethod_   = Dune::EdgeWeightMethod(EWOMS_GET_PARAM(TypeTag, int, EdgeWeightsMethod));
 
-#if HAVE_OPENCL || HAVE_ROCSPARSE
+#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
         numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
 #endif
 
