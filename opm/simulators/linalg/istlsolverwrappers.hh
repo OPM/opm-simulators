@@ -124,8 +124,8 @@ public:
 
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, int, GMResRestart,
-                             "Number of iterations after which the GMRES linear solver is restarted");
+        Parameters::registerParam<TypeTag, Properties::GMResRestart>
+            ("Number of iterations after which the GMRES linear solver is restarted");
     }
 
     template <class LinearOperator, class ScalarProduct, class Preconditioner>

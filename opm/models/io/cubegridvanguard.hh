@@ -66,24 +66,24 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements,
-                             "The number of global refinements of the grid "
-                             "executed after it was loaded");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeX,
-                             "The size of the domain in x direction");
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, CellsX,
-                             "The number of intervalls in x direction");
+        Parameters::registerParam<TypeTag, Properties::GridGlobalRefinements>
+            ("The number of global refinements of the grid "
+             "executed after it was loaded");
+        Parameters::registerParam<TypeTag, Properties::DomainSizeX>
+            ("The size of the domain in x direction");
+        Parameters::registerParam<TypeTag, Properties::CellsX>
+            ("The number of intervalls in x direction");
         if (dimWorld > 1) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeY,
-                                 "The size of the domain in y direction");
-            EWOMS_REGISTER_PARAM(TypeTag, unsigned, CellsY,
-                                 "The number of intervalls in y direction");
+            Parameters::registerParam<TypeTag, Properties::DomainSizeY>
+                ("The size of the domain in y direction");
+            Parameters::registerParam<TypeTag, Properties::CellsY>
+                ("The number of intervalls in y direction");
         }
         if (dimWorld > 2) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeZ,
-                                 "The size of the domain in z direction");
-            EWOMS_REGISTER_PARAM(TypeTag, unsigned, CellsZ,
-                                 "The number of intervalls in z direction");
+            Parameters::registerParam<TypeTag, Properties::DomainSizeZ>
+                ("The size of the domain in z direction");
+            Parameters::registerParam<TypeTag, Properties::CellsZ>
+                ("The number of intervalls in z direction");
         }
     }
 

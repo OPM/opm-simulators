@@ -31,6 +31,7 @@
 #include <omp.h>
 #endif
 
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
@@ -59,9 +60,9 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, int, ThreadsPerProcess,
-                             "The maximum number of threads to be instantiated per process "
-                             "('-1' means 'automatic')");
+        Parameters::registerParam<TypeTag, Properties::ThreadsPerProcess>
+            ("The maximum number of threads to be instantiated per process "
+             "('-1' means 'automatic')");
     }
 
     /*!

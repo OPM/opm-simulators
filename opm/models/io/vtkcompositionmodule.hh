@@ -123,20 +123,20 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteMassFractions,
-                             "Include mass fractions in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteMoleFractions,
-                             "Include mole fractions in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteTotalMassFractions,
-                             "Include total mass fractions in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteTotalMoleFractions,
-                             "Include total mole fractions in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteMolarities,
-                             "Include component molarities in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFugacities,
-                             "Include component fugacities in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFugacityCoeffs,
-                             "Include component fugacity coefficients in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteMassFractions>
+            ("Include mass fractions in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteMoleFractions>
+            ("Include mole fractions in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteTotalMassFractions>
+            ("Include total mass fractions in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteTotalMoleFractions>
+            ("Include total mole fractions in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteMolarities>
+            ("Include component molarities in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFugacities>
+            ("Include component fugacities in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFugacityCoeffs>
+            ("Include component fugacity coefficients in the VTK output files");
     }
 
     /*!

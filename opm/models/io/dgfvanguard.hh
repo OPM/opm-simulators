@@ -62,11 +62,11 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, GridFile,
-                             "The file name of the DGF file to load");
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements,
-                             "The number of global refinements of the grid "
-                             "executed after it was loaded");
+        Parameters::registerParam<TypeTag,Properties::GridFile>
+            ("The file name of the DGF file to load");
+        Parameters::registerParam<TypeTag,Properties::GridGlobalRefinements>
+            ("The number of global refinements of the grid "
+             "executed after it was loaded");
     }
 
     /*!

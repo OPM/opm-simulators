@@ -141,39 +141,38 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteGasDissolutionFactor,
-                             "Include the gas dissolution factor (R_s) of the observed oil "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteOilVaporizationFactor,
-                             "Include the oil vaporization factor (R_v) of the observed gas "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteOilFormationVolumeFactor,
-                             "Include the oil formation volume factor (B_o) in the "
-                             "VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteGasFormationVolumeFactor,
-                             "Include the gas formation volume factor (B_g) in the "
-                             "VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteWaterFormationVolumeFactor,
-                             "Include the water formation volume factor (B_w) in the "
-                             "VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteOilSaturationPressure,
-                             "Include the saturation pressure of oil (p_o,sat) in the "
-                             "VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteGasSaturationPressure,
-                             "Include the saturation pressure of gas (p_g,sat) in the "
-                             "VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSaturatedOilGasDissolutionFactor,
-                             "Include the gas dissolution factor (R_s,sat) of gas saturated "
-                             "oil in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSaturatedGasOilVaporizationFactor,
-                             "Include the oil vaporization factor (R_v,sat) of oil saturated "
-                             "gas in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSaturationRatios,
-                             "Write the ratio of the actually and maximum dissolved component of "
-                             "the mixtures");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWritePrimaryVarsMeaning,
-                             "Include how the primary variables should be interpreted to the "
-                             "VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteGasDissolutionFactor>
+            ("Include the gas dissolution factor (R_s) of the observed oil "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteOilVaporizationFactor>
+            ("Include the oil vaporization factor (R_v) of the observed gas "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteOilFormationVolumeFactor>
+            ("Include the oil formation volume factor (B_o) in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteGasFormationVolumeFactor>
+            ("Include the gas formation volume factor (B_g) in the "
+             "VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteWaterFormationVolumeFactor>
+            ("Include the water formation volume factor (B_w) in the "
+             "VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteOilSaturationPressure>
+            ("Include the saturation pressure of oil (p_o,sat) in the "
+             "VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteGasSaturationPressure>
+            ("Include the saturation pressure of gas (p_g,sat) in the "
+             "VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteSaturatedOilGasDissolutionFactor>
+            ("Include the gas dissolution factor (R_s,sat) of gas saturated "
+             "oil in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteSaturatedGasOilVaporizationFactor>
+            ("Include the oil vaporization factor (R_v,sat) of oil saturated "
+             "gas in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteSaturationRatios>
+            ("Write the ratio of the actually and maximum dissolved component of "
+             "the mixtures");
+        Parameters::registerParam<TypeTag, Properties::VtkWritePrimaryVarsMeaning>
+            ("Include how the primary variables should be interpreted to the "
+             "VTK output files");
     }
 
     /*!

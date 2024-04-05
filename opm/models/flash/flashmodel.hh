@@ -234,9 +234,9 @@ public:
         if (enableEnergy)
             Opm::VtkEnergyModule<TypeTag>::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, FlashTolerance,
-                             "The maximum tolerance for the flash solver to "
-                             "consider the solution converged");
+        Parameters::registerParam<TypeTag, Properties::FlashTolerance>
+            ("The maximum tolerance for the flash solver to "
+             "consider the solution converged");
     }
 
     /*!

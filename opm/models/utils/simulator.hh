@@ -254,15 +254,15 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, EndTime,
-                             "The simulation time at which the simulation is finished [s]");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, InitialTimeStepSize,
-                             "The size of the initial time step [s]");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, RestartTime,
-                             "The simulation time at which a restart should be attempted [s]");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, PredeterminedTimeStepsFile,
-                             "A file with a list of predetermined time step sizes (one "
-                             "time step per line)");
+        Parameters::registerParam<TypeTag, Properties::EndTime>
+            ("The simulation time at which the simulation is finished [s]");
+        Parameters::registerParam<TypeTag, Properties::InitialTimeStepSize>
+            ("The size of the initial time step [s]");
+        Parameters::registerParam<TypeTag, Properties::RestartTime>
+            ("The simulation time at which a restart should be attempted [s]");
+        Parameters::registerParam<TypeTag, Properties::PredeterminedTimeStepsFile>
+            ("A file with a list of predetermined time step sizes (one "
+             "time step per line)");
 
         Vanguard::registerParameters();
         Model::registerParameters();

@@ -162,30 +162,30 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteExtrusionFactor,
-                             "Include the extrusion factor of the degrees of freedom into the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWritePressures,
-                             "Include the phase pressures in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteDensities,
-                             "Include the phase densities in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSaturations,
-                             "Include the phase saturations in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteMobilities,
-                             "Include the phase mobilities in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteRelativePermeabilities,
-                             "Include the phase relative permeabilities in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteViscosities,
-                             "Include component phase viscosities in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteAverageMolarMasses,
-                             "Include the average phase mass in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWritePorosity,
-                             "Include the porosity in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteIntrinsicPermeabilities,
-                             "Include the intrinsic permeability in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFilterVelocities,
-                             "Include in the filter velocities of the phases the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWritePotentialGradients,
-                             "Include the phase pressure potential gradients in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteExtrusionFactor>
+            ("Include the extrusion factor of the degrees of freedom into the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWritePressures>
+            ("Include the phase pressures in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteDensities>
+            ("Include the phase densities in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteSaturations>
+            ("Include the phase saturations in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteMobilities>
+            ("Include the phase mobilities in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteRelativePermeabilities>
+            ("Include the phase relative permeabilities in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteViscosities>
+            ("Include component phase viscosities in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteAverageMolarMasses>
+            ("Include the average phase mass in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWritePorosity>
+            ("Include the porosity in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteIntrinsicPermeabilities>
+            ("Include the intrinsic permeability in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFilterVelocities>
+            ("Include in the filter velocities of the phases the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWritePotentialGradients>
+            ("Include the phase pressure potential gradients in the VTK output files");
     }
 
     /*!

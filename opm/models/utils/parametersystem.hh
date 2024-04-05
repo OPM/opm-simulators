@@ -41,38 +41,19 @@
 #include <dune/common/classname.hh>
 #include <dune/common/parametertree.hh>
 
+#include <fstream>
+#include <iostream>
+#include <list>
 #include <map>
 #include <set>
-#include <list>
 #include <sstream>
+#include <stdexcept>
 #include <string>
-#include <iostream>
-#include <fstream>
+#include <type_traits>
 #include <unordered_map>
 
 #include <unistd.h>
 #include <sys/ioctl.h>
-
-/*!
- * \ingroup Parameter
- *
- * \brief Register a run-time parameter.
- *
- * In OPM, parameters can only be used after they have been
- * registered.
- *
- * Example:
- *
- * \code
- * // Registers a run-time parameter "UpwindWeight" which has type
- * // "Scalar" and the description "Relative weight of the upwind node."
- * EWOMS_REGISTER_PARAM(TypeTag, Scalar, UpwindWeight,
- *                      "Relative weight of the upwind node.");
- * \endcode
- */
-#define EWOMS_REGISTER_PARAM(TypeTag, ParamType, ParamName, Description)       \
-    ::Opm::Parameters::registerParam<TypeTag, ParamType>( \
-        #ParamName, #ParamName, getPropValue<TypeTag, Properties::ParamName>(), Description)
 
 /*!
  * \ingroup Parameter
@@ -107,7 +88,6 @@ struct ParamInfo
     std::string paramName;
     std::string paramTypeName;
     std::string typeTagName;
-    std::string propertyName;
     std::string usageString;
     std::string compileTimeValue;
     bool isHidden;
@@ -117,7 +97,6 @@ struct ParamInfo
         return other.paramName == paramName
                && other.paramTypeName == paramTypeName
                && other.typeTagName == typeTagName
-               && other.propertyName == propertyName
                && other.usageString == usageString
                && other.compileTimeValue == compileTimeValue;
     }
@@ -949,7 +928,7 @@ public:
         // make sure that the parameter is used consistently. since
         // this is potentially quite expensive, it is only done if
         // debugging code is not explicitly turned off.
-        check_(Dune::className<ParamType>(), paramName, paramName);
+        check_(Dune::className<ParamType>(), paramName);
 #endif
 
         if (errorIfNotRegistered) {
@@ -972,13 +951,11 @@ public:
 private:
     struct Blubb
     {
-        std::string propertyName;
         std::string paramTypeName;
         std::string groupName;
 
         Blubb& operator=(const Blubb& b)
         {
-            propertyName = b.propertyName;
             paramTypeName = b.paramTypeName;
             groupName = b.groupName;
             return *this;
@@ -986,8 +963,7 @@ private:
     };
 
     static void check_(const std::string& paramTypeName,
-                       const std::string& propertyName,
-                       const char *paramName)
+                       const char* paramName)
     {
         using StaticData = std::unordered_map<std::string, Blubb>;
         static StaticData staticData;
@@ -996,19 +972,12 @@ private:
         Blubb *b;
         if (it == staticData.end()) {
             Blubb a;
-            a.propertyName = propertyName;
             a.paramTypeName = paramTypeName;
             staticData[paramName] = a;
             b = &staticData[paramName];
         }
         else
             b = &(it->second);
-
-        if (b->propertyName != propertyName) {
-            throw std::logic_error("GET_*_PARAM for parameter '"+std::string(paramName)
-                                   +"' called for at least two different properties ('"
-                                   +b->propertyName+"' and '"+propertyName+"')");
-        }
 
         if (b->paramTypeName != paramTypeName) {
             throw std::logic_error("GET_*_PARAM for parameter '"+std::string(paramName)
@@ -1027,7 +996,7 @@ private:
         // make sure that the parameter is used consistently. since
         // this is potentially quite expensive, it is only done if
         // debugging code is not explicitly turned off.
-        check_(Dune::className<ParamType>(), propTagName, paramName);
+        check_(Dune::className<ParamType>(), paramName);
 #endif
 
         if (errorIfNotRegistered) {
@@ -1114,14 +1083,36 @@ bool isSet(const char* paramName, bool errorIfNotRegistered = true)
                                                      errorIfNotRegistered);
 }
 
-template <class TypeTag, class ParamType>
-void registerParam(const char *paramName, const char *propertyName, const ParamType& defaultValue, const char *usageString)
+/*!
+ * \ingroup Parameter
+ *
+ * \brief Register a run-time parameter.
+ *
+ * In OPM, parameters can only be used after they have been
+ * registered.
+ *
+ * Example:
+ *
+ * \code
+ * // Registers a run-time parameter "UpwindWeight"
+ *    and the description "Relative weight of the upwind node."
+ * registerParam<TypeTag,UpwindWeight>("Relative weight of the upwind node.");
+ * \endcode
+ */
+template <class TypeTag, template<class,class> class Param>
+void registerParam(const char* usageString)
 {
     using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-    if (!ParamsMeta::registrationOpen())
+    const std::string paramName = getPropName<TypeTag,Param>();
+    if (!ParamsMeta::registrationOpen()) {
         throw std::logic_error("Parameter registration was already closed before "
-                               "the parameter '"+std::string(paramName)+"' was registered.");
+                               "the parameter '" + paramName + "' was registered.");
+    }
 
+    const auto defaultValue = getPropValue<TypeTag, Param>();
+    using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
+                                                        const char* const>, std::string,
+                                         std::remove_const_t<decltype(defaultValue)>>;
     ParamsMeta::registrationFinalizers().emplace_back(
         new ParamRegFinalizer_<TypeTag, ParamType>(paramName, defaultValue));
 
@@ -1130,7 +1121,6 @@ void registerParam(const char *paramName, const char *propertyName, const ParamT
     paramInfo.paramTypeName = Dune::className<ParamType>();
     std::string tmp = Dune::className<TypeTag>();
     tmp.replace(0, strlen("Opm::Properties::TTag::"), "");
-    paramInfo.propertyName = propertyName;
     paramInfo.usageString = usageString;
     std::ostringstream oss;
     oss << defaultValue;
@@ -1141,7 +1131,7 @@ void registerParam(const char *paramName, const char *propertyName, const ParamT
         // parameter name, type and usage string are exactly the same.
         if (ParamsMeta::registry().at(paramName) == paramInfo)
             return;
-        throw std::logic_error("Parameter "+std::string(paramName)
+        throw std::logic_error("Parameter " + paramName
                                +" registered twice with non-matching characteristics.");
     }
 

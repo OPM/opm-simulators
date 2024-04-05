@@ -426,13 +426,13 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature,
-                             "The temperature [K] in the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, MaxDepth,
-                             "The maximum depth [m] of the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, WellWidth,
-                             "The width of producer/injector wells as a fraction of the width"
-                             " of the spatial domain");
+        Parameters::registerParam<TypeTag, Properties::Temperature>
+            ("The temperature [K] in the reservoir");
+        Parameters::registerParam<TypeTag, Properties::MaxDepth>
+            ("The maximum depth [m] of the reservoir");
+        Parameters::registerParam<TypeTag, Properties::WellWidth>
+            ("The width of producer/injector wells as a fraction of the width"
+             " of the spatial domain");
     }
 
     /*!

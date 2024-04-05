@@ -133,23 +133,22 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFractureSaturations,
-                             "Include the phase saturations in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFractureMobilities,
-                             "Include the phase mobilities in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFractureRelativePermeabilities,
-                             "Include the phase relative permeabilities in the "
-                             "VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFracturePorosity,
-                             "Include the porosity in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFractureIntrinsicPermeabilities,
-                             "Include the intrinsic permeability in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFractureFilterVelocities,
-                             "Include in the filter velocities of the phases "
-                             "the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFractureVolumeFraction,
-                             "Add the fraction of the total volume which is "
-                             "occupied by fractures in the VTK output");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureSaturations>
+            ("Include the phase saturations in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureMobilities>
+            ("Include the phase mobilities in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureRelativePermeabilities>
+            ("Include the phase relative permeabilities in the "
+             "VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFracturePorosity>
+            ("Include the porosity in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureIntrinsicPermeabilities>
+            ("Include the intrinsic permeability in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureFilterVelocities>
+            ("Include in the filter velocities of the phases in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureVolumeFraction>
+            ("Add the fraction of the total volume which is "
+             "occupied by fractures in the VTK output");
     }
 
     /*!

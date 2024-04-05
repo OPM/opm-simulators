@@ -83,9 +83,9 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWritePhasePresence,
-                             "Include the phase presence pseudo primary "
-                             "variable in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWritePhasePresence>
+            ("Include the phase presence pseudo primary "
+             "variable in the VTK output files");
     }
 
     /*!

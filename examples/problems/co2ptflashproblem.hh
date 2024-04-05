@@ -406,17 +406,14 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Temperature, 
-                            "The temperature [K] in the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, Initialpressure, 
-                            "The initial pressure [Pa s] in the reservoir");
-        EWOMS_REGISTER_PARAM(TypeTag,
-                             std::string,
-                             SimulationName,
-                             "The name of the simulation used for the output "
-                             "files");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, EpisodeLength, 
-                            "Time interval [s] for episode length");
+        Parameters::registerParam<TypeTag, Properties::Temperature>
+            ("The temperature [K] in the reservoir");
+        Parameters::registerParam<TypeTag, Properties::Initialpressure>
+            ("The initial pressure [Pa s] in the reservoir");
+        Parameters::registerParam<TypeTag, Properties::SimulationName>
+            ("The name of the simulation used for the output files");
+        Parameters::registerParam<TypeTag, Properties::EpisodeLength>
+            ("Time interval [s] for episode length");
     }
 
     /*!

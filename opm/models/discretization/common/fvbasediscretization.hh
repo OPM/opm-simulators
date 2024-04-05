@@ -510,12 +510,18 @@ public:
         // register runtime parameters of the output modules
         VtkPrimaryVarsModule<TypeTag>::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableGridAdaptation, "Enable adaptive grid refinement/coarsening");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableVtkOutput, "Global switch for turning on writing VTK files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableThermodynamicHints, "Enable thermodynamic hints");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableIntensiveQuantityCache, "Turn on caching of intensive quantities");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableStorageCache, "Store previous storage terms and avoid re-calculating them.");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, OutputDir, "The directory to which result files are written");
+        Parameters::registerParam<TypeTag, Properties::EnableGridAdaptation>
+            ("Enable adaptive grid refinement/coarsening");
+        Parameters::registerParam<TypeTag, Properties::EnableVtkOutput>
+            ("Global switch for turning on writing VTK files");
+        Parameters::registerParam<TypeTag, Properties::EnableThermodynamicHints>
+            ("Enable thermodynamic hints");
+        Parameters::registerParam<TypeTag, Properties::EnableIntensiveQuantityCache>
+            ("Turn on caching of intensive quantities");
+        Parameters::registerParam<TypeTag, Properties::EnableStorageCache>
+            ("Store previous storage terms and avoid re-calculating them.");
+        Parameters::registerParam<TypeTag, Properties::OutputDir>
+            ("The directory to which result files are written");
     }
 
     /*!

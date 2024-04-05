@@ -111,18 +111,18 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteSolidInternalEnergy,
-                             "Include the volumetric internal energy of solid"
-                             "matrix in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteThermalConductivity,
-                             "Include the total thermal conductivity of the"
-                             "medium in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteEnthalpies,
-                             "Include the specific enthalpy of the phases in "
-                             "the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteInternalEnergies,
-                             "Include the specific internal energy of the "
-                             "phases in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteSolidInternalEnergy>
+            ("Include the volumetric internal energy of solid"
+             "matrix in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteThermalConductivity>
+            ("Include the total thermal conductivity of the"
+             "medium in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteEnthalpies>
+            ("Include the specific enthalpy of the phases in "
+             "the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteInternalEnergies>
+            ("Include the specific internal energy of the "
+             "phases in the VTK output files");
     }
 
     /*!

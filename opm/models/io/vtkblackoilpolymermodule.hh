@@ -117,24 +117,24 @@ public:
         if (!enablePolymer)
             return;
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWritePolymerConcentration,
-                             "Include the concentration of the polymer component in the water phase "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWritePolymerDeadPoreVolume,
-                             "Include the fraction of the \"dead\" pore volume "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWritePolymerRockDensity,
-                             "Include the amount of already adsorbed polymer component"
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWritePolymerAdsorption,
-                             "Include the adsorption rate of the polymer component"
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWritePolymerViscosityCorrection,
-                             "Include the viscosity correction of the polymer component "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteWaterViscosityCorrection,
-                             "Include the viscosity correction of the water component "
-                             "due to polymers in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWritePolymerConcentration>
+            ("Include the concentration of the polymer component in the water phase "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWritePolymerDeadPoreVolume>
+            ("Include the fraction of the \"dead\" pore volume "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWritePolymerRockDensity>
+            ("Include the amount of already adsorbed polymer component"
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWritePolymerAdsorption>
+            ("Include the adsorption rate of the polymer component"
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWritePolymerViscosityCorrection>
+            ("Include the viscosity correction of the polymer component "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteWaterViscosityCorrection>
+            ("Include the viscosity correction of the water component "
+             "due to polymers in the VTK output files");
     }
 
     /*!

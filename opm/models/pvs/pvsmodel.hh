@@ -296,9 +296,9 @@ public:
         if (enableEnergy)
             Opm::VtkEnergyModule<TypeTag>::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, int, PvsVerbosity,
-                             "The verbosity level of the primary variable "
-                             "switching model");
+        Parameters::registerParam<TypeTag, Properties::PvsVerbosity>
+            ("The verbosity level of the primary variable "
+             "switching model");
     }
 
     /*!

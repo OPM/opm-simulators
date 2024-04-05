@@ -112,18 +112,16 @@ public:
         if (!enableEnergy)
             return;
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteRockInternalEnergy,
-                             "Include the volumetric internal energy of rock "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteTotalThermalConductivity,
-                             "Include the total thermal conductivity of the medium and the fluids "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFluidInternalEnergies,
-                             "Include the internal energies of the fluids "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteFluidEnthalpies,
-                             "Include the enthalpies of the fluids "
-                             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteRockInternalEnergy>
+            ("Include the volumetric internal energy of rock "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteTotalThermalConductivity>
+            ("Include the total thermal conductivity of the medium and the fluids "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFluidInternalEnergies>
+            ("Include the internal energies of the fluids in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteFluidEnthalpies>
+            ("Include the enthalpies of the fluids in the VTK output files");
     }
 
     /*!

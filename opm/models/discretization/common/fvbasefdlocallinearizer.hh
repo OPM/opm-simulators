@@ -182,9 +182,9 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, int, NumericDifferenceMethod,
-                             "The method used for numeric differentiation (-1: backward "
-                             "differences, 0: central differences, 1: forward differences)");
+        Parameters::registerParam<TypeTag, Properties::NumericDifferenceMethod>
+            ("The method used for numeric differentiation (-1: backward "
+             "differences, 0: central differences, 1: forward differences)");
     }
 
     /*!

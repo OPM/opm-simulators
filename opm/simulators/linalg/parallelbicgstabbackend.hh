@@ -121,9 +121,9 @@ public:
     {
         ParentType::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, LinearSolverMaxError,
-                             "The maximum residual error which the linear solver tolerates"
-                             " without giving up");
+        Parameters::registerParam<TypeTag, Properties::LinearSolverMaxError>
+            ("The maximum residual error which the linear solver tolerates"
+             " without giving up");
     }
 
 protected:

@@ -113,21 +113,19 @@ public:
         if (!enableMICP)
             return;
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteMicrobialConcentration,
-                             "Include the concentration of the microbial component in the water phase "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteOxygenConcentration,
-                             "Include the concentration of the oxygen component in the water phase "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteUreaConcentration,
-                             "Include the concentration of the urea component in the water phase "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteBiofilmConcentration,
-                             "Include the biofilm volume fraction "
-                             "in the VTK output files");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, VtkWriteCalciteConcentration,
-                             "Include the calcite volume fraction "
-                             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteMicrobialConcentration>
+            ("Include the concentration of the microbial component in the water phase "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteOxygenConcentration>
+            ("Include the concentration of the oxygen component in the water phase "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteUreaConcentration>
+            ("Include the concentration of the urea component in the water phase "
+             "in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteBiofilmConcentration>
+            ("Include the biofilm volume fraction in the VTK output files");
+        Parameters::registerParam<TypeTag, Properties::VtkWriteCalciteConcentration>
+            ("Include the calcite volume fraction in the VTK output files");
     }
 
     /*!
