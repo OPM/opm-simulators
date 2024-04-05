@@ -103,43 +103,57 @@ class DamarisWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::G
 public:
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, bool, DamarisOutputHdfCollective,
-                             "Write output via Damaris using parallel HDF5 to get single file and dataset per timestep instead of one per Damaris \n \
-                                                   core with multiple datasets.");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, DamarisSaveToHdf,
-                             "Set to false to prevent output to HDF5. Uses collective output by default or set --enable-damaris-collective=false to\n \
-                                                   use file per core (file per Damaris server).");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, DamarisSaveMeshToHdf,
-                             "Saves the mesh data to the HDF5 file (1st iteration only). Will set  --damaris-output-hdf-collective to false \n \
-                                                   so will use file per core (file per Damaris server) output (global sizes and offset values \n \
-                                                   of mesh variables are not being provided as yet).");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisPythonScript,
-                             "Set to the path and filename of a Python script to run on Damaris server resources with access to OPM flow data.");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisPythonParaviewScript,
-                             "Set to the path and filename of a Paraview Python script to run on Paraview Catalyst (1 or 2) on Damaris server \n \
-                                                  resources with access to OPM flow data.");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisSimName,
-                             "The name of the simulation to be used by Damaris. If empty (the default) then Damaris uses \"opm-sim-<random-number>\". \n \
-                                                  This name is used for the Damaris HDF5 file name prefix. Make unique if writing to the same output directory.");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisLogLevel,
-                             "The log level for the Damaris logging system (boost log based). \n \
-                                                  Levels are: [trace, debug, info, warning, error, fatal]. Currently debug and info are useful. ");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisDaskFile,
-                             "The name of a Dask json configuration file (if using Dask for processing).");                                         
-                                                 
-        EWOMS_REGISTER_PARAM(TypeTag, int, DamarisDedicatedCores,
-                             "Set the number of dedicated cores (MPI processes) that should be used for Damaris processing (per node). \n \
-                                                  Must divide evenly into the number of simulation ranks (client ranks).");
-        EWOMS_REGISTER_PARAM(TypeTag, int, DamarisDedicatedNodes,
-                             "Set the number of dedicated nodes (full nodes) that should be used for Damaris processing (per simulation). \n \
-                                                  Must divide evenly into the number of simulation nodes.");
-        EWOMS_REGISTER_PARAM(TypeTag, long, DamarisSharedMemorySizeBytes,
-                             "Set the size of the shared memory buffer used for IPC between the simulation and the Damaris resources. \n \
-                                                  Needs to hold all the variables published, possibly over multiple simulation iterations.");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, DamarisSharedMemoryName,
-                             "The name of the shared memory area to be used by Damaris for the current. If empty (the default) then Damaris uses \"opm-damaris-<random-string>\". \n \
-                                                  This name should be unique if multiple simulations are running on the same node/server as it is used for the Damaris shmem name and by the Python Dask \n \
-                                                  library to locate sections of variables.");
+        Parameters::registerParam<TypeTag, Properties::DamarisOutputHdfCollective>
+            ("Write output via Damaris using parallel HDF5 to "
+             "get single file and dataset per timestep instead "
+             "of one per Damaris core with multiple datasets.");
+        Parameters::registerParam<TypeTag, Properties::DamarisSaveToHdf>
+            ("Set to false to prevent output to HDF5. "
+             "Uses collective output by default or "
+             "set --enable-damaris-collective=false to"
+             "use file per core (file per Damaris server).");
+        Parameters::registerParam<TypeTag, Properties::DamarisSaveMeshToHdf>
+            ("Saves the mesh data to the HDF5 file (1st iteration only). "
+             "Will set  --damaris-output-hdf-collective to false "
+             "so will use file per core (file per Damaris server) output "
+            "(global sizes and offset values  of mesh variables are not being provided as yet).");
+        Parameters::registerParam<TypeTag, Properties::DamarisPythonScript>
+            ("Set to the path and filename of a Python script to run on "
+             "Damaris server resources with access to OPM flow data.");
+        Parameters::registerParam<TypeTag, Properties::DamarisPythonParaviewScript>
+            ("Set to the path and filename of a Paraview Python script "
+             "to run on Paraview Catalyst (1 or 2) on Damaris server "
+             "resources with access to OPM flow data.");
+        Parameters::registerParam<TypeTag, Properties::DamarisSimName>
+            ("The name of the simulation to be used by Damaris. "
+             "If empty (the default) then Damaris uses \"opm-sim-<random-number>\". "
+             "This name is used for the Damaris HDF5 file name prefix. "
+             "Make unique if writing to the same output directory.");
+        Parameters::registerParam<TypeTag, Properties::DamarisLogLevel>
+            ("The log level for the Damaris logging system (boost log based). "
+             "Levels are: [trace, debug, info, warning, error, fatal]. "
+             "Currently debug and info are useful. ");
+        Parameters::registerParam<TypeTag, Properties::DamarisDaskFile>
+            ("The name of a Dask json configuration file (if using Dask for processing).");
+        Parameters::registerParam<TypeTag, Properties::DamarisDedicatedCores>
+            ("Set the number of dedicated cores (MPI processes) "
+             "that should be used for Damaris processing (per node). "
+             "Must divide evenly into the number of simulation ranks (client ranks).");
+        Parameters::registerParam<TypeTag, Properties::DamarisDedicatedNodes>
+            ("Set the number of dedicated nodes (full nodes) "
+             "that should be used for Damaris processing (per simulation). "
+             "Must divide evenly into the number of simulation nodes.");
+        Parameters::registerParam<TypeTag, Properties::DamarisSharedMemorySizeBytes>
+            ("Set the size of the shared memory buffer used for IPC "
+             "between the simulation and the Damaris resources. "
+             "Needs to hold all the variables published, possibly over "
+             "multiple simulation iterations.");
+        Parameters::registerParam<TypeTag, Properties::DamarisSharedMemoryName>
+            ("The name of the shared memory area to be used by Damaris for the current. "
+             "If empty (the default) then Damaris uses \"opm-damaris-<random-string>\". "
+             "This name should be unique if multiple simulations are running on "
+             "the same node/server as it is used for the Damaris shmem name and by "
+             "the Python Dask library to locate sections of variables.");
     }
 
     // The Simulator object should preferably have been const - the

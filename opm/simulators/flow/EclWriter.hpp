@@ -124,12 +124,11 @@ public:
     {
         OutputBlackOilModule<TypeTag>::registerParameters();
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableAsyncEclOutput,
-                             "Write the ECL-formated results in a non-blocking way (i.e., using a separate thread).");
-
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableEsmry,
-                             "Write ESMRY file for fast loading of summary data.");
-                                                        
+        Parameters::registerParam<TypeTag, Properties::EnableAsyncEclOutput>
+            ("Write the ECL-formated results in a non-blocking way "
+             "(i.e., using a separate thread).");
+        Parameters::registerParam<TypeTag, Properties::EnableEsmry>
+            ("Write ESMRY file for fast loading of summary data.");
     }
 
     // The Simulator object should preferably have been const - the

@@ -305,40 +305,55 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
         {
             registerEclTimeSteppingParameters<TypeTag>();
             // TODO: make sure the help messages are correct (and useful)
-            EWOMS_REGISTER_PARAM(TypeTag, bool, SolverContinueOnConvergenceFailure,
-                                 "Continue instead of stop when minimum solver time step is reached");
-            EWOMS_REGISTER_PARAM(TypeTag, int, SolverMaxRestarts,
-                                 "The maximum number of breakdowns before a substep is given up and the simulator is terminated");
-            EWOMS_REGISTER_PARAM(TypeTag, int, SolverVerbosity,
-                                 "Specify the \"chattiness\" of the non-linear solver itself");
-            EWOMS_REGISTER_PARAM(TypeTag, int, TimeStepVerbosity,
-                                 "Specify the \"chattiness\" during the time integration");
-            EWOMS_REGISTER_PARAM(TypeTag, double, InitialTimeStepInDays,
-                                 "The size of the initial time step in days");
-            EWOMS_REGISTER_PARAM(TypeTag, bool, FullTimeStepInitially,
-                                 "Always attempt to finish a report step using a single substep");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, TimeStepControl,
-                                 "The algorithm used to determine time-step sizes. valid options are: 'pid' (default), 'pid+iteration', 'pid+newtoniteration', 'iterationcount', 'newtoniterationcount' and 'hardcoded'");
-            EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepControlTolerance,
-                                 "The tolerance used by the time step size control algorithm");
-            EWOMS_REGISTER_PARAM(TypeTag, int, TimeStepControlTargetIterations,
-                                 "The number of linear iterations which the time step control scheme should aim for (if applicable)");
-            EWOMS_REGISTER_PARAM(TypeTag, int, TimeStepControlTargetNewtonIterations,
-                                 "The number of Newton iterations which the time step control scheme should aim for (if applicable)");
-            EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepControlDecayRate,
-                                 "The decay rate of the time step size of the number of target iterations is exceeded");
-            EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepControlGrowthRate,
-                                 "The growth rate of the time step size of the number of target iterations is undercut");
-            EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepControlDecayDampingFactor,
-                                 "The decay rate of the time step decrease when the target iterations is exceeded");
-            EWOMS_REGISTER_PARAM(TypeTag, double, TimeStepControlGrowthDampingFactor,
-                                 "The growth rate of the time step increase when the target iterations is undercut");
-            EWOMS_REGISTER_PARAM(TypeTag, std::string, TimeStepControlFileName,
-                                 "The name of the file which contains the hardcoded time steps sizes");
-            EWOMS_REGISTER_PARAM(TypeTag, double, MinTimeStepBeforeShuttingProblematicWellsInDays,
-                                 "The minimum time step size in days for which problematic wells are not shut");
-            EWOMS_REGISTER_PARAM(TypeTag, double, MinTimeStepBasedOnNewtonIterations,
-                                 "The minimum time step size (in days for field and metric unit and hours for lab unit) can be reduced to based on newton iteration counts");
+            Parameters::registerParam<TypeTag, Properties::SolverContinueOnConvergenceFailure>
+                ("Continue instead of stop when minimum solver time step is reached");
+            Parameters::registerParam<TypeTag, Properties::SolverMaxRestarts>
+                ("The maximum number of breakdowns before a substep is given up and "
+                 "the simulator is terminated");
+            Parameters::registerParam<TypeTag, Properties::SolverVerbosity>
+                ("Specify the \"chattiness\" of the non-linear solver itself");
+            Parameters::registerParam<TypeTag, Properties::TimeStepVerbosity>
+                ("Specify the \"chattiness\" during the time integration");
+            Parameters::registerParam<TypeTag, Properties::InitialTimeStepInDays>
+                ("The size of the initial time step in days");
+            Parameters::registerParam<TypeTag, Properties::FullTimeStepInitially>
+                ("Always attempt to finish a report step using a single substep");
+            Parameters::registerParam<TypeTag, Properties::TimeStepControl>
+                ("The algorithm used to determine time-step sizes. "
+                 "Valid options are: "
+                 "'pid' (default), "
+                 "'pid+iteration', "
+                 "'pid+newtoniteration', "
+                 "'iterationcount', "
+                "'newtoniterationcount' "
+                "and 'hardcoded'");
+            Parameters::registerParam<TypeTag, Properties::TimeStepControlTolerance>
+                ("The tolerance used by the time step size control algorithm");
+            Parameters::registerParam<TypeTag, Properties::TimeStepControlTargetIterations>
+                ("The number of linear iterations which the time step control scheme "
+                 "should aim for (if applicable)");
+            Parameters::registerParam<TypeTag, Properties::TimeStepControlTargetNewtonIterations>
+                ("The number of Newton iterations which the time step control scheme "
+                 "should aim for (if applicable)");
+            Parameters::registerParam<TypeTag, Properties::TimeStepControlDecayRate>
+                ("The decay rate of the time step size of the number of "
+                 "target iterations is exceeded");
+            Parameters::registerParam<TypeTag, Properties::TimeStepControlGrowthRate>
+                ("The growth rate of the time step size of the number of "
+                 "target iterations is undercut");
+            Parameters::registerParam<TypeTag, Properties::TimeStepControlDecayDampingFactor>
+                ("The decay rate of the time step decrease when the "
+                 "target iterations is exceeded");
+            Parameters::registerParam<TypeTag, Properties::TimeStepControlGrowthDampingFactor>
+                ("The growth rate of the time step increase when the "
+                 "target iterations is undercut");
+            Parameters::registerParam<TypeTag, Properties::TimeStepControlFileName>
+                ("The name of the file which contains the hardcoded time steps sizes");
+            Parameters::registerParam<TypeTag, Properties::MinTimeStepBeforeShuttingProblematicWellsInDays>
+                ("The minimum time step size in days for which problematic wells are not shut");
+            Parameters::registerParam<TypeTag, Properties::MinTimeStepBasedOnNewtonIterations>
+                ("The minimum time step size (in days for field and metric unit and hours for lab unit) "
+                 "can be reduced to based on newton iteration counts");
         }
 
         /** \brief  step method that acts like the solver::step method

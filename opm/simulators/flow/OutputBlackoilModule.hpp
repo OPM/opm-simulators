@@ -207,16 +207,12 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(
-            TypeTag,
-            bool,
-            ForceDisableFluidInPlaceOutput,
-            "Do not print fluid-in-place values after each report step even if requested by the deck.");
-        EWOMS_REGISTER_PARAM(
-            TypeTag,
-            bool,
-            ForceDisableResvFluidInPlaceOutput,
-            "Do not print reservoir volumes values after each report step even if requested by the deck.");
+        Parameters::registerParam<TypeTag, Properties::ForceDisableFluidInPlaceOutput>
+            ("Do not print fluid-in-place values after each report step "
+             "even if requested by the deck.");
+        Parameters::registerParam<TypeTag, Properties::ForceDisableResvFluidInPlaceOutput>
+            ("Do not print reservoir volumes values after each report step "
+             "even if requested by the deck.");
     }
 
     /*!

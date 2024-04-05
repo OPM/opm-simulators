@@ -238,56 +238,59 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, EclDeckFileName,
-                             "The name of the file which contains the ECL deck to be simulated");
-        EWOMS_REGISTER_PARAM(TypeTag, int, EclOutputInterval,
-                             "The number of report steps that ought to be skipped between two writes of ECL results");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, EnableOpmRstFile,
-                             "Include OPM-specific keywords in the ECL restart file to enable restart of OPM simulators from these files");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, IgnoreKeywords,
-                             "List of Eclipse keywords which should be ignored. As a ':' separated string.");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, ParsingStrictness,
-                             "Set strictness of parsing process. Available options are "
-                             "normal (stop for critical errors), "
-                             "high (stop for all errors) and "
-                             "low (as normal, except do not stop due to unsupported keywords even if marked critical");
-        EWOMS_REGISTER_PARAM(TypeTag, bool, SchedRestart,
-                             "When restarting: should we try to initialize wells and groups from historical SCHEDULE section.");
-        EWOMS_REGISTER_PARAM(TypeTag, int, EdgeWeightsMethod,
-                             "Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
+        Parameters::registerParam<TypeTag, Properties::EclDeckFileName>
+            ("The name of the file which contains the ECL deck to be simulated");
+        Parameters::registerParam<TypeTag, Properties::EclOutputInterval>
+            ("The number of report steps that ought to be skipped between two writes of ECL results");
+        Parameters::registerParam<TypeTag, Properties::EnableOpmRstFile>
+            ("Include OPM-specific keywords in the ECL restart file to "
+             "enable restart of OPM simulators from these files");
+        Parameters::registerParam<TypeTag, Properties::IgnoreKeywords>
+            ("List of Eclipse keywords which should be ignored. As a ':' separated string.");
+        Parameters::registerParam<TypeTag, Properties::ParsingStrictness>
+            ("Set strictness of parsing process. Available options are "
+             "normal (stop for critical errors), "
+             "high (stop for all errors) and "
+             "low (as normal, except do not stop due to unsupported "
+             "keywords even if marked critical");
+        Parameters::registerParam<TypeTag, Properties::SchedRestart>
+            ("When restarting: should we try to initialize wells and "
+             "groups from historical SCHEDULE section.");
+        Parameters::registerParam<TypeTag, Properties::EdgeWeightsMethod>
+            ("Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
 
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
-        EWOMS_REGISTER_PARAM(TypeTag, int, NumJacobiBlocks,
-                             "Number of blocks to be created for the Block-Jacobi preconditioner.");
+        Parameters::registerParam<TypeTag, Properties::NumJacobiBlocks>
+            ("Number of blocks to be created for the Block-Jacobi preconditioner.");
 #endif
 
-        EWOMS_REGISTER_PARAM(TypeTag, bool, OwnerCellsFirst,
-                             "Order cells owned by rank before ghost/overlap cells.");
+        Parameters::registerParam<TypeTag, Properties::OwnerCellsFirst>
+            ("Order cells owned by rank before ghost/overlap cells.");
 #if HAVE_MPI
-        EWOMS_REGISTER_PARAM(TypeTag, bool, SerialPartitioning,
-                             "Perform partitioning for parallel runs on a single process.");
-        EWOMS_REGISTER_PARAM(TypeTag, double, ZoltanImbalanceTol,
-                             "Tolerable imbalance of the loadbalancing provided by Zoltan (default: 1.1).");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, ZoltanParams,
-                             "Configuration of Zoltan partitioner. "
-                             "Valid options are: graph, hypergraph or scotch. "
-                             "Alternatively, you can request a configuration to be read "
-                             "from a JSON file by giving the filename here, ending with '.json.' "
-                             "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
-                             "for available Zoltan options.");
+        Parameters::registerParam<TypeTag, Properties::SerialPartitioning>
+            ("Perform partitioning for parallel runs on a single process.");
+        Parameters::registerParam<TypeTag, Properties::ZoltanImbalanceTol>
+            ("Tolerable imbalance of the loadbalancing provided by Zoltan (default: 1.1).");
+        Parameters::registerParam<TypeTag, Properties::ZoltanParams>
+            ("Configuration of Zoltan partitioner. "
+             "Valid options are: graph, hypergraph or scotch. "
+             "Alternatively, you can request a configuration to be read "
+             "from a JSON file by giving the filename here, ending with '.json.' "
+             "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
+             "for available Zoltan options.");
         Parameters::hideParam<TypeTag>("ZoltanParams");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, ExternalPartition,
-                             "Name of file from which to load an externally generated "
-                             "partitioning of the model's active cells for MPI "
-                             "distribution purposes. If empty, the built-in partitioning "
-                             "method will be employed.");
+        Parameters::registerParam<TypeTag, Properties::ExternalPartition>
+            ("Name of file from which to load an externally generated "
+             "partitioning of the model's active cells for MPI "
+             "distribution purposes. If empty, the built-in partitioning "
+             "method will be employed.");
         Parameters::hideParam<TypeTag>("ExternalPartition");
 #endif
-        EWOMS_REGISTER_PARAM(TypeTag, bool, AllowDistributedWells,
-                             "Allow the perforations of a well to be distributed to interior of multiple processes");
+        Parameters::registerParam<TypeTag, Properties::AllowDistributedWells>
+            ("Allow the perforations of a well to be distributed to interior of multiple processes");
         // register here for the use in the tests without BlackoilModelParameters
-        EWOMS_REGISTER_PARAM(TypeTag, bool, UseMultisegmentWell, "Use the well model for multi-segment wells instead of the one for single-segment wells");
-
+        Parameters::registerParam<TypeTag, Properties::UseMultisegmentWell>
+            ("Use the well model for multi-segment wells instead of the one for single-segment wells");
     }
 
     /*!
