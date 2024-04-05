@@ -246,11 +246,11 @@ public:
         Parameters::registerParam<TypeTag, Properties::SaveFile>
             ("FileName for .OPMRST file used for saving serialized state. "
              "If empty, CASENAME.OPMRST is used.");
-        Parameters::hideParam<TypeTag>("SaveFile");
+        Parameters::hideParam<TypeTag, Properties::SaveFile>();
         Parameters::registerParam<TypeTag, Properties::LoadFile>
             ("FileName for .OPMRST file used to load serialized state. "
              "If empty, CASENAME.OPMRST is used.");
-        Parameters::hideParam<TypeTag>("LoadFile");
+        Parameters::hideParam<TypeTag, Properties::LoadFile>();
     }
 
     /// Run the simulation.

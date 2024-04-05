@@ -128,83 +128,83 @@ namespace Opm {
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
 
             // hide the parameters unused by flow. TODO: this is a pain to maintain
-            Parameters::hideParam<TypeTag>("EnableGravity");
-            Parameters::hideParam<TypeTag>("EnableGridAdaptation");
+            Parameters::hideParam<TypeTag, Properties::EnableGravity>();
+            Parameters::hideParam<TypeTag, Properties::EnableGridAdaptation>();
 
             // this parameter is actually used in eWoms, but the flow well model
             // hard-codes the assumption that the intensive quantities cache is enabled,
             // so flow crashes. Let's hide the parameter for that reason.
-            Parameters::hideParam<TypeTag>("EnableIntensiveQuantityCache");
+            Parameters::hideParam<TypeTag, Properties::EnableIntensiveQuantityCache>();
 
             // thermodynamic hints are not implemented/required by the eWoms blackoil
             // model
-            Parameters::hideParam<TypeTag>("EnableThermodynamicHints");
+            Parameters::hideParam<TypeTag, Properties::EnableThermodynamicHints>();
 
             // in flow only the deck file determines the end time of the simulation
-            Parameters::hideParam<TypeTag>("EndTime");
+            Parameters::hideParam<TypeTag, Properties::EndTime>();
 
             // time stepping is not done by the eWoms code in flow
-            Parameters::hideParam<TypeTag>("InitialTimeStepSize");
-            Parameters::hideParam<TypeTag>("MaxTimeStepDivisions");
-            Parameters::hideParam<TypeTag>("MaxTimeStepSize");
-            Parameters::hideParam<TypeTag>("MinTimeStepSize");
-            Parameters::hideParam<TypeTag>("PredeterminedTimeStepsFile");
+            Parameters::hideParam<TypeTag, Properties::InitialTimeStepSize>();
+            Parameters::hideParam<TypeTag, Properties::MaxTimeStepDivisions>();
+            Parameters::hideParam<TypeTag, Properties::MaxTimeStepSize>();
+            Parameters::hideParam<TypeTag, Properties::MinTimeStepSize>();
+            Parameters::hideParam<TypeTag, Properties::PredeterminedTimeStepsFile>();
 
             // flow also does not use the eWoms Newton method
-            Parameters::hideParam<TypeTag>("NewtonMaxError");
-            Parameters::hideParam<TypeTag>("NewtonTolerance");
-            Parameters::hideParam<TypeTag>("NewtonTargetIterations");
-            Parameters::hideParam<TypeTag>("NewtonVerbose");
-            Parameters::hideParam<TypeTag>("NewtonWriteConvergence");
+            Parameters::hideParam<TypeTag, Properties::NewtonMaxError>();
+            Parameters::hideParam<TypeTag, Properties::NewtonTolerance>();
+            Parameters::hideParam<TypeTag, Properties::NewtonTargetIterations>();
+            Parameters::hideParam<TypeTag, Properties::NewtonVerbose>();
+            Parameters::hideParam<TypeTag, Properties::NewtonWriteConvergence>();
 
             // the default eWoms checkpoint/restart mechanism does not work with flow
-            Parameters::hideParam<TypeTag>("RestartTime");
-            Parameters::hideParam<TypeTag>("RestartWritingInterval");
+            Parameters::hideParam<TypeTag, Properties::RestartTime>();
+            Parameters::hideParam<TypeTag, Properties::RestartWritingInterval>();
             // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
             //if(not(EWOMS_GET_PARAM(TypeTag,bool,EnableVtkOutput))){
-                Parameters::hideParam<TypeTag>("VtkWriteOilFormationVolumeFactor");
-                Parameters::hideParam<TypeTag>("VtkWriteOilSaturationPressure");
-                Parameters::hideParam<TypeTag>("VtkWriteOilVaporizationFactor");
-                Parameters::hideParam<TypeTag>("VtkWritePorosity");
-                Parameters::hideParam<TypeTag>("VtkWritePotentialGradients");
-                Parameters::hideParam<TypeTag>("VtkWritePressures");
-                Parameters::hideParam<TypeTag>("VtkWritePrimaryVars");
-                Parameters::hideParam<TypeTag>("VtkWritePrimaryVarsMeaning");
-                Parameters::hideParam<TypeTag>("VtkWriteProcessRank");
-                Parameters::hideParam<TypeTag>("VtkWriteRelativePermeabilities");
-                Parameters::hideParam<TypeTag>("VtkWriteSaturatedGasOilVaporizationFactor");
-                Parameters::hideParam<TypeTag>("VtkWriteSaturatedOilGasDissolutionFactor");
-                Parameters::hideParam<TypeTag>("VtkWriteSaturationRatios");
-                Parameters::hideParam<TypeTag>("VtkWriteSaturations");
-                Parameters::hideParam<TypeTag>("VtkWriteTemperature");
-                Parameters::hideParam<TypeTag>("VtkWriteViscosities");
-                Parameters::hideParam<TypeTag>("VtkWriteWaterFormationVolumeFactor");
-                Parameters::hideParam<TypeTag>("VtkWriteGasDissolutionFactor");
-                Parameters::hideParam<TypeTag>("VtkWriteGasFormationVolumeFactor");
-                Parameters::hideParam<TypeTag>("VtkWriteGasSaturationPressure");
-                Parameters::hideParam<TypeTag>("VtkWriteIntrinsicPermeabilities");
-                Parameters::hideParam<TypeTag>("VtkWriteTracerConcentration");
-                Parameters::hideParam<TypeTag>("VtkWriteExtrusionFactor");
-                Parameters::hideParam<TypeTag>("VtkWriteFilterVelocities");
-                Parameters::hideParam<TypeTag>("VtkWriteDensities");
-                Parameters::hideParam<TypeTag>("VtkWriteDofIndex");
-                Parameters::hideParam<TypeTag>("VtkWriteMobilities");
+                Parameters::hideParam<TypeTag, Properties::VtkWriteOilFormationVolumeFactor>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteOilSaturationPressure>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteOilVaporizationFactor>();
+                Parameters::hideParam<TypeTag, Properties::VtkWritePorosity>();
+                Parameters::hideParam<TypeTag, Properties::VtkWritePotentialGradients>();
+                Parameters::hideParam<TypeTag, Properties::VtkWritePressures>();
+                Parameters::hideParam<TypeTag, Properties::VtkWritePrimaryVars>();
+                Parameters::hideParam<TypeTag, Properties::VtkWritePrimaryVarsMeaning>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteProcessRank>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteRelativePermeabilities>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteSaturatedGasOilVaporizationFactor>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteSaturatedOilGasDissolutionFactor>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteSaturationRatios>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteSaturations>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteTemperature>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteViscosities>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteWaterFormationVolumeFactor>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteGasDissolutionFactor>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteGasFormationVolumeFactor>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteGasSaturationPressure>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteIntrinsicPermeabilities>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteTracerConcentration>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteExtrusionFactor>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteFilterVelocities>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteDensities>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteDofIndex>();
+                Parameters::hideParam<TypeTag, Properties::VtkWriteMobilities>();
                 //}
-            Parameters::hideParam<TypeTag>("VtkWriteAverageMolarMasses");
-            Parameters::hideParam<TypeTag>("VtkWriteFugacities");
-            Parameters::hideParam<TypeTag>("VtkWriteFugacityCoeffs");
-            Parameters::hideParam<TypeTag>("VtkWriteMassFractions");
-            Parameters::hideParam<TypeTag>("VtkWriteMolarities");
-            Parameters::hideParam<TypeTag>("VtkWriteMoleFractions");
-            Parameters::hideParam<TypeTag>("VtkWriteTotalMassFractions");
-            Parameters::hideParam<TypeTag>("VtkWriteTotalMoleFractions");
+            Parameters::hideParam<TypeTag, Properties::VtkWriteAverageMolarMasses>();
+            Parameters::hideParam<TypeTag, Properties::VtkWriteFugacities>();
+            Parameters::hideParam<TypeTag, Properties::VtkWriteFugacityCoeffs>();
+            Parameters::hideParam<TypeTag, Properties::VtkWriteMassFractions>();
+            Parameters::hideParam<TypeTag, Properties::VtkWriteMolarities>();
+            Parameters::hideParam<TypeTag, Properties::VtkWriteMoleFractions>();
+            Parameters::hideParam<TypeTag, Properties::VtkWriteTotalMassFractions>();
+            Parameters::hideParam<TypeTag, Properties::VtkWriteTotalMoleFractions>();
 
-            Parameters::hideParam<TypeTag>("VtkWriteTortuosities");
-            Parameters::hideParam<TypeTag>("VtkWriteDiffusionCoefficients");
-            Parameters::hideParam<TypeTag>("VtkWriteEffectiveDiffusionCoefficients");
+            Parameters::hideParam<TypeTag, Properties::VtkWriteTortuosities>();
+            Parameters::hideParam<TypeTag, Properties::VtkWriteDiffusionCoefficients>();
+            Parameters::hideParam<TypeTag, Properties::VtkWriteEffectiveDiffusionCoefficients>();
             
             // hide average density option
-            Parameters::hideParam<TypeTag>("UseAverageDensityMsWells");
+            Parameters::hideParam<TypeTag, Properties::UseAverageDensityMsWells>();
 
             Parameters::endParamRegistration<TypeTag>();
 

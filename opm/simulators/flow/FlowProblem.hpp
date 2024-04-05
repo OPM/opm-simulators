@@ -238,10 +238,10 @@ public:
              "Valid values are: none, log, all (default)");
         Parameters::registerParam<TypeTag, Properties::NumPressurePointsEquil>
             ("Number of pressure points (in each direction) in tables used for equilibration");
-        Parameters::hideParam<TypeTag>("NumPressurePointsEquil"); // Users will typically not need to modify this parameter..
+        Parameters::hideParam<TypeTag, Properties::NumPressurePointsEquil>(); // Users will typically not need to modify this parameter..
         Parameters::registerParam<TypeTag, Properties::ExplicitRockCompaction>
             ("Use pressure from end of the last time step when evaluating rock compaction");
-        Parameters::hideParam<TypeTag>("ExplicitRockCompaction"); // Users will typically not need to modify this parameter..
+        Parameters::hideParam<TypeTag, Properties::ExplicitRockCompaction>(); // Users will typically not need to modify this parameter..
     }
 
 

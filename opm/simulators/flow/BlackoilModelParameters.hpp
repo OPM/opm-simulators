@@ -800,7 +800,7 @@ namespace Opm
             Parameters::registerParam<TypeTag, Properties::DebugEmitCellPartition>
                 ("Whether or not to emit cell partitions as a debugging aid.");
 
-            Parameters::hideParam<TypeTag>("DebugEmitCellPartition");
+            Parameters::hideParam<TypeTag, Properties::DebugEmitCellPartition>();
         }
     };
 } // namespace Opm
