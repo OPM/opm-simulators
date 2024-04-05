@@ -69,8 +69,8 @@ public:
 
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, int, LinearSolverVerbosity,
-                             "The verbosity level of the linear solver");
+        Parameters::registerParam<TypeTag, Properties::LinearSolverVerbosity>
+            ("The verbosity level of the linear solver");
     }
 
     /*!
@@ -110,7 +110,7 @@ public:
     {
         Vector bTmp(b);
 
-        int verbosity = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
+        int verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
         Dune::InverseOperatorResult result;
         Dune::SuperLU<Matrix> solver(A, verbosity > 0);
         solver.apply(x, bTmp, result);

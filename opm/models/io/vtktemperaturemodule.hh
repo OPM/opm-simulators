@@ -109,7 +109,7 @@ public:
     {
         using Toolbox = MathToolbox<Evaluation>;
 
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
@@ -139,7 +139,7 @@ public:
 private:
     static bool temperatureOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteTemperature);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteTemperature>();
         return val;
     }
 

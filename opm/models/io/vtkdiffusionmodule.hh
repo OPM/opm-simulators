@@ -138,7 +138,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
@@ -184,19 +184,19 @@ public:
 private:
     static bool tortuosityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteTortuosities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteTortuosities>();
         return val;
     }
 
     static bool diffusionCoefficientOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteDiffusionCoefficients);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteDiffusionCoefficients>();
         return val;
     }
 
     static bool effectiveDiffusionCoefficientOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteEffectiveDiffusionCoefficients);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteEffectiveDiffusionCoefficients>();
         return val;
     }
 

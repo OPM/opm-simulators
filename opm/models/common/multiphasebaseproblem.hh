@@ -395,7 +395,7 @@ private:
     void init_()
     {
         gravity_ = 0.0;
-        if (EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
+        if (Parameters::get<TypeTag, Properties::EnableGravity>())
             gravity_[dimWorld-1]  = -9.81;
     }
 };

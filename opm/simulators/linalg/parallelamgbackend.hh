@@ -193,24 +193,24 @@ protected:
         const auto& gridView = this->simulator_.gridView();
         using CCC = CombinedCriterion<OverlappingVector, decltype(gridView.comm())>;
 
-        Scalar linearSolverTolerance = EWOMS_GET_PARAM(TypeTag, Scalar, LinearSolverTolerance);
-        Scalar linearSolverAbsTolerance = EWOMS_GET_PARAM(TypeTag, Scalar, LinearSolverAbsTolerance);
+        Scalar linearSolverTolerance = Parameters::get<TypeTag, Properties::LinearSolverTolerance>();
+        Scalar linearSolverAbsTolerance = Parameters::get<TypeTag, Properties::LinearSolverAbsTolerance>();
         if(linearSolverAbsTolerance < 0.0)
             linearSolverAbsTolerance = this->simulator_.model().newtonMethod().tolerance()/100.0;
 
         convCrit_.reset(new CCC(gridView.comm(),
                                 /*residualReductionTolerance=*/linearSolverTolerance,
                                 /*absoluteResidualTolerance=*/linearSolverAbsTolerance,
-                                EWOMS_GET_PARAM(TypeTag, Scalar, LinearSolverMaxError)));
+                                Parameters::get<TypeTag, Properties::LinearSolverMaxError>()));
 
         auto bicgstabSolver =
             std::make_shared<RawLinearSolver>(parPreCond, *convCrit_, parScalarProduct);
 
         int verbosity = 0;
         if (parOperator.overlap().myRank() == 0)
-            verbosity = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
+            verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
         bicgstabSolver->setVerbosity(verbosity);
-        bicgstabSolver->setMaxIterations(EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIterations));
+        bicgstabSolver->setMaxIterations(Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>());
         bicgstabSolver->setLinearOperator(&parOperator);
         bicgstabSolver->setRhs(this->overlappingb_);
 
@@ -274,7 +274,7 @@ protected:
 
         int verbosity = 0;
         if (this->simulator_.vanguard().gridView().comm().rank() == 0)
-            verbosity = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
+            verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
 
         using SmootherArgs = typename Dune::Amg::SmootherTraits<ParallelSmoother>::Arguments;
 
@@ -289,7 +289,7 @@ protected:
         //                             Dune::Amg::FirstDiagonal>>
         using CoarsenCriterion = Dune::Amg::
             CoarsenCriterion<Dune::Amg::SymmetricCriterion<IstlMatrix, Dune::Amg::FrobeniusNorm> >;
-        int coarsenTarget = EWOMS_GET_PARAM(TypeTag, int, AmgCoarsenTarget);
+        int coarsenTarget = Parameters::get<TypeTag, Properties::AmgCoarsenTarget>();
         CoarsenCriterion coarsenCriterion(/*maxLevel=*/15, coarsenTarget);
         coarsenCriterion.setDefaultValuesAnisotropic(GridView::dimension,
                                                      /*aggregateSizePerDim=*/3);

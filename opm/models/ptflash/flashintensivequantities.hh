@@ -107,9 +107,9 @@ public:
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const auto& problem = elemCtx.problem();
 
-        const Scalar flashTolerance = EWOMS_GET_PARAM(TypeTag, Scalar, FlashTolerance);
-        const int flashVerbosity = EWOMS_GET_PARAM(TypeTag, int, FlashVerbosity);
-        const std::string flashTwoPhaseMethod = EWOMS_GET_PARAM(TypeTag, std::string, FlashTwoPhaseMethod);
+        const Scalar flashTolerance = Parameters::get<TypeTag, Properties::FlashTolerance>();
+        const int flashVerbosity = Parameters::get<TypeTag, Properties::FlashVerbosity>();
+        const std::string flashTwoPhaseMethod = Parameters::get<TypeTag, Properties::FlashTwoPhaseMethod>();
 
         // extract the total molar densities of the components
         ComponentVector z(0.);

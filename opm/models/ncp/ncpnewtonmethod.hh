@@ -117,10 +117,10 @@ protected:
 
         // make sure that the error never grows beyond the maximum
         // allowed one
-        if (this->error_ > EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxError))
+        if (this->error_ > Parameters::get<TypeTag, Properties::NewtonMaxError>())
             throw Opm::NumericalProblem("Newton: Error "+std::to_string(double(this->error_))+
                                         + " is larger than maximum allowed error of "
-                                        + std::to_string(double(EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxError))));
+                                        + std::to_string(Parameters::get<TypeTag, Properties::NewtonMaxError>()));
     }
 
     /*!

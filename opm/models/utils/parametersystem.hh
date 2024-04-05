@@ -56,24 +56,6 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 
-/*!
- * \ingroup Parameter
- *
- * \brief Retrieve a runtime parameter.
- *
- * The default value is specified via the property system.
- *
- * Example:
- *
- * \code
- * // Retrieves scalar value UpwindWeight, default
- * // is taken from the property UpwindWeight
- * EWOMS_GET_PARAM(TypeTag, Scalar, UpwindWeight);
- * \endcode
- */
-#define EWOMS_GET_PARAM(TypeTag, ParamType, ParamName)                         \
-    (::Opm::Parameters::get<TypeTag, Properties::ParamName>())
-
 namespace Opm {
 namespace Parameters {
 
@@ -96,7 +78,21 @@ struct ParamInfo
     }
 };
 
-// forward declaration
+/*!
+ * \ingroup Parameter
+ *
+ * \brief Retrieve a runtime parameter.
+ *
+ * The default value is specified via the property system.
+ *
+ * Example:
+ *
+ * \code
+ * // Retrieves value UpwindWeight, default
+ * // is taken from the property UpwindWeight
+ * ::Opm::Parameters::get<TypeTag, Properties::UpwindWeight>();
+ * \endcode
+ */
 template <class TypeTag, template<class,class> class Property>
 auto get(bool errorIfNotRegistered = true);
 

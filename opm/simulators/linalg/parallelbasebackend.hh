@@ -195,7 +195,7 @@ public:
                                             simulator_.model().dofMapper());
 
         // create the overlapping Jacobian matrix
-        unsigned overlapSize = EWOMS_GET_PARAM(TypeTag, unsigned, LinearSolverOverlapSize);
+        unsigned overlapSize = Parameters::get<TypeTag, Properties::LinearSolverOverlapSize>();
         overlappingMatrix_ = new OverlappingMatrix(M.istlMatrix(),
                                                    borderListCreator.borderList(),
                                                    borderListCreator.blackList(),

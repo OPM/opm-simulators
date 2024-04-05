@@ -240,20 +240,20 @@ public:
 
         eps_ = 1.0e-3;
 
-        lensLowerLeft_[0] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftX);
+        lensLowerLeft_[0] = Parameters::get<TypeTag, Properties::LensLowerLeftX>();
         if (dim > 1)
-            lensLowerLeft_[1] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftY);
+            lensLowerLeft_[1] = Parameters::get<TypeTag, Properties::LensLowerLeftY>();
         if (dim > 2)
-            lensLowerLeft_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftY);
+            lensLowerLeft_[2] = Parameters::get<TypeTag, Properties::LensLowerLeftY>();
 
-        lensUpperRight_[0] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightX);
+        lensUpperRight_[0] = Parameters::get<TypeTag, Properties::LensUpperRightX>();
         if (dim > 1)
-            lensUpperRight_[1] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
+            lensUpperRight_[1] = Parameters::get<TypeTag, Properties::LensUpperRightY>();
         if (dim > 2)
-            lensUpperRight_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
+            lensUpperRight_[2] = Parameters::get<TypeTag, Properties::LensUpperRightY>();
 
-        intrinsicPerm_ = this->toDimMatrix_(EWOMS_GET_PARAM(TypeTag, Scalar, Permeability));
-        intrinsicPermLens_ = this->toDimMatrix_(EWOMS_GET_PARAM(TypeTag, Scalar, PermeabilityLens));
+        intrinsicPerm_ = this->toDimMatrix_(Parameters::get<TypeTag, Properties::Permeability>());
+        intrinsicPermLens_ = this->toDimMatrix_(Parameters::get<TypeTag, Properties::PermeabilityLens>());
     }
 
     /*!

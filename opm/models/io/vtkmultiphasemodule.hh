@@ -238,7 +238,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         const auto& problem = elemCtx.problem();
@@ -418,73 +418,73 @@ public:
 private:
     static bool extrusionFactorOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteExtrusionFactor);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteExtrusionFactor>();
         return val;
     }
 
     static bool pressureOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePressures);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePressures>();
         return val;
     }
 
     static bool densityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteDensities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteDensities>();
         return val;
     }
 
     static bool saturationOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSaturations);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSaturations>();
         return val;
     }
 
     static bool mobilityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteMobilities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteMobilities>();
         return val;
     }
 
     static bool relativePermeabilityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteRelativePermeabilities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteRelativePermeabilities>();
         return val;
     }
 
     static bool viscosityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteViscosities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteViscosities>();
         return val;
     }
 
     static bool averageMolarMassOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteAverageMolarMasses);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteAverageMolarMasses>();
         return val;
     }
 
     static bool porosityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePorosity);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePorosity>();
         return val;
     }
 
     static bool intrinsicPermeabilityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteIntrinsicPermeabilities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteIntrinsicPermeabilities>();
         return val;
     }
 
     static bool velocityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFilterVelocities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFilterVelocities>();
         return val;
     }
 
     static bool potentialGradientOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePotentialGradients);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePotentialGradients>();
         return val;
     }
 

@@ -52,11 +52,11 @@ class UnstructuredGridVanguard : public BaseVanguard<TypeTag> {
      * unstructured grid simulator vanguard.
      */
     static void registerParameters() {
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements,
-                             "The number of global refinements of the grid "
-                             "executed after it was loaded");
-        EWOMS_REGISTER_PARAM(TypeTag, std::string, GridFile,
-                             "The file name of the file to load");
+        Parameters::registerParam<TypeTag, Properties::GridGlobalRefinements>
+            ("The number of global refinements of the grid "
+             "executed after it was loaded");
+        Parameters::registerParam<TypeTag, Properties::GridFile>,
+            ("The file name of the file to load");
     }
 
     /*!
@@ -64,8 +64,8 @@ class UnstructuredGridVanguard : public BaseVanguard<TypeTag> {
      */
     UnstructuredGridVanguard(Simulator& simulator) : ParentType(simulator){
 #ifdef HAVE_OPM_GRID
-        const std::string gridFileName = EWOMS_GET_PARAM(TypeTag, std::string, GridFile);
-        unsigned numRefinments = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
+        const std::string gridFileName = Parameters::get<TypeTag, Properties::GridFile>();
+        unsigned numRefinments = Parameters::get<TypeTag, Properties::GridGlobalRefinements>();
 
         const char* c_str = gridFileName.c_str();
 

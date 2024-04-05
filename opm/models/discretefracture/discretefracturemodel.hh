@@ -132,7 +132,7 @@ public:
     DiscreteFractureModel(Simulator& simulator)
         : ParentType(simulator)
     {
-        if (EWOMS_GET_PARAM(TypeTag, bool, EnableIntensiveQuantityCache)) {
+        if (Parameters::get<TypeTag, Properties::EnableIntensiveQuantityCache>()) {
             throw std::runtime_error("The discrete fracture model does not work in conjunction "
                                      "with intensive quantities caching");
         }

@@ -212,7 +212,7 @@ public:
     static void init()
     {
         // TODO: these parameters have undocumented non-trivial dependencies
-        pressureScale_ = EWOMS_GET_PARAM(TypeTag, double, PressureScale);
+        pressureScale_ = Parameters::get<TypeTag, Properties::PressureScale>();
     }
 
     static void registerParameters()

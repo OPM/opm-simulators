@@ -78,7 +78,7 @@ public:
     {
         if (queryCommandLineParameter)
         {
-            numThreads_ = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
+            numThreads_ = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
 
             // some safety checks. This is pretty ugly macro-magic, but so what?
 #if !defined(_OPENMP)

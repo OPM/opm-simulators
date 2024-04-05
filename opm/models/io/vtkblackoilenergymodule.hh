@@ -130,7 +130,7 @@ public:
      */
     void allocBuffers()
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         if (!enableEnergy)
@@ -152,7 +152,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         if (!enableEnergy)
@@ -212,25 +212,25 @@ public:
 private:
     static bool rockInternalEnergyOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteRockInternalEnergy);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteRockInternalEnergy>();
         return val;
     }
 
     static bool totalThermalConductivityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteTotalThermalConductivity);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteTotalThermalConductivity>();
         return val;
     }
 
     static bool fluidInternalEnergiesOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFluidInternalEnergies);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFluidInternalEnergies>();
         return val;
     }
 
     static bool fluidEnthalpiesOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFluidEnthalpies);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFluidEnthalpies>();
         return val;
     }
 

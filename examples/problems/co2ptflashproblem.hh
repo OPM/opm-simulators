@@ -353,7 +353,7 @@ public:
     explicit CO2PTProblem(Simulator& simulator)
         : ParentType(simulator)
     {
-        const Scalar epi_len = EWOMS_GET_PARAM(TypeTag, Scalar, EpisodeLength);
+        const Scalar epi_len = Parameters::get<TypeTag, Properties::EpisodeLength>();
         simulator.setEpisodeLength(epi_len);
         FluidSystem::init();
         using CompParm = typename FluidSystem::ComponentParam;
@@ -371,7 +371,7 @@ public:
 
     void initPetrophysics()
     {
-        temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
+        temperature_ = Parameters::get<TypeTag, Properties::Temperature>();
         K_ = this->toDimMatrix_(9.869232667160131e-14);
 
         porosity_ = 0.1;
@@ -422,7 +422,7 @@ public:
     std::string name() const
     {
         std::ostringstream oss;
-        oss << EWOMS_GET_PARAM(TypeTag, std::string, SimulationName);
+        oss << Parameters::get<TypeTag, Properties::SimulationName>();
         return oss.str();
     }
 
@@ -431,7 +431,7 @@ public:
     // the old one.
     void endEpisode()
     {
-        Scalar epi_len = EWOMS_GET_PARAM(TypeTag, Scalar, EpisodeLength);
+        Scalar epi_len = Parameters::get<TypeTag, Properties::EpisodeLength>();
         this->simulator().startNextEpisode(epi_len);
     }
 
@@ -507,7 +507,7 @@ public:
     {
         int spatialIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         int inj = 0;
-        int prod = EWOMS_GET_PARAM(TypeTag, unsigned, CellsX) - 1;
+        int prod = Parameters::get<TypeTag, Properties::CellsX>() - 1;
         if (spatialIdx == inj || spatialIdx == prod) {
             return 1.0;
         } else {
@@ -558,7 +558,7 @@ private:
         // p0 = 75e5
         // T0 = 423.25
         int inj = 0;
-        int prod = EWOMS_GET_PARAM(TypeTag, unsigned, CellsX) - 1;
+        int prod = Parameters::get<TypeTag, Properties::CellsX>() - 1;
         int spatialIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         ComponentVector comp;
         comp[0] = Evaluation::createVariable(0.5, 1);
@@ -573,7 +573,7 @@ private:
         sat[0] = 1.0;
         sat[1] = 1.0 - sat[0];
 
-        Scalar p0 = EWOMS_GET_PARAM(TypeTag, Scalar, Initialpressure);
+        Scalar p0 = Parameters::get<TypeTag, Properties::Initialpressure>();
 
         //\Note, for an AD variable, if we multiply it with 2, the derivative will also be scalced with 2,
         //\Note, so we should not do it.

@@ -139,14 +139,14 @@ public:
         Dune::FieldVector<GridScalar, dim> upperRight;
         Dune::FieldVector<GridScalar, dim> lowerLeft( 0 );
 
-        upperRight[0] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeX);
-        upperRight[1] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeY);
+        upperRight[0] = Parameters::get<TypeTag, Properties::DomainSizeX>();
+        upperRight[1] = Parameters::get<TypeTag, Properties::DomainSizeY>();
 
-        cellRes[0] = EWOMS_GET_PARAM(TypeTag, unsigned, CellsX);
-        cellRes[1] = EWOMS_GET_PARAM(TypeTag, unsigned, CellsY);
+        cellRes[0] = Parameters::get<TypeTag, Properties::CellsX>();
+        cellRes[1] = Parameters::get<TypeTag, Properties::CellsY>();
         if (dim == 3) {
-            upperRight[2] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeZ);
-            cellRes[2] = EWOMS_GET_PARAM(TypeTag, unsigned, CellsZ);
+            upperRight[2] = Parameters::get<TypeTag, Properties::DomainSizeZ>();
+            cellRes[2] = Parameters::get<TypeTag, Properties::CellsZ>();
         }
 
         std::stringstream dgffile;
@@ -165,7 +165,7 @@ public:
         // use DGF parser to create a grid from interval block
         gridPtr_.reset( Dune::GridPtr< Grid >( dgffile ).release() );
 
-        unsigned numRefinements = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
+        unsigned numRefinements = Parameters::get<TypeTag, Properties::GridGlobalRefinements>();
         gridPtr_->globalRefine(static_cast<int>(numRefinements));
 
         this->finalizeInit_();

@@ -141,12 +141,12 @@ public:
         if (enableVtkOutput_()) {
             bool asyncVtkOutput =
                 simulator_.gridView().comm().size() == 1 &&
-                EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncVtkOutput);
+                Parameters::get<TypeTag, Properties::EnableAsyncVtkOutput>();
 
             // asynchonous VTK output currently does not work in conjunction with grid
             // adaptivity because the async-IO code assumes that the grid stays
             // constant. complain about that case.
-            bool enableGridAdaptation = EWOMS_GET_PARAM(TypeTag, bool, EnableGridAdaptation);
+            bool enableGridAdaptation = Parameters::get<TypeTag, Properties::EnableGridAdaptation>();
             if (asyncVtkOutput && enableGridAdaptation)
                 throw std::runtime_error("Asynchronous VTK output currently cannot be used "
                                          "at the same time as grid adaptivity");
@@ -203,9 +203,9 @@ public:
      */
     std::string outputDir() const
     {
-        std::string outputDir = EWOMS_GET_PARAM(TypeTag, std::string, OutputDir);
+        std::string outputDir = Parameters::get<TypeTag, Properties::OutputDir>();
 
-        if (outputDir == "")
+        if (outputDir.empty())
             outputDir = ".";
 
         // TODO: replace this by std::filesystem once we require c++-2017
@@ -559,14 +559,14 @@ public:
      * \brief Returns the minimum allowable size of a time step.
      */
     Scalar minTimeStepSize() const
-    { return EWOMS_GET_PARAM(TypeTag, Scalar, MinTimeStepSize); }
+    { return Parameters::get<TypeTag, Properties::MinTimeStepSize>(); }
 
     /*!
      * \brief Returns the maximum number of subsequent failures for the time integration
      *        before giving up.
      */
     unsigned maxTimeIntegrationFailures() const
-    { return EWOMS_GET_PARAM(TypeTag, unsigned, MaxTimeStepDivisions); }
+    { return Parameters::get<TypeTag, Properties::MaxTimeStepDivisions>(); }
 
     /*!
      * \brief Returns if we should continue with a non-converged solution instead of
@@ -574,7 +574,7 @@ public:
      *        step size.
      */
     bool continueOnConvergenceError() const
-    { return EWOMS_GET_PARAM(TypeTag, unsigned, ContinueOnConvergenceError); }
+    { return Parameters::get<TypeTag, Properties::ContinueOnConvergenceError>(); }
 
     /*!
      * \brief Impose the next time step size to be used externally.
@@ -592,7 +592,7 @@ public:
         if (nextTimeStepSize_ > 0.0)
             return nextTimeStepSize_;
 
-        Scalar dtNext = std::min(EWOMS_GET_PARAM(TypeTag, Scalar, MaxTimeStepSize),
+        Scalar dtNext = std::min(Parameters::get<TypeTag, Properties::MaxTimeStepSize>(),
                                  newtonMethod().suggestTimeStepSize(simulator().timeStepSize()));
 
         if (dtNext < simulator().maxTimeStepSize()
@@ -811,7 +811,7 @@ protected:
 
 private:
     bool enableVtkOutput_() const
-    { return EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput); }
+    { return Parameters::get<TypeTag, Properties::EnableVtkOutput>(); }
 
     //! Returns the implementation of the problem (i.e. static polymorphism)
     Implementation& asImp_()

@@ -75,8 +75,8 @@ public:
     DgfVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
-        const std::string dgfFileName = EWOMS_GET_PARAM(TypeTag, std::string, GridFile);
-        unsigned numRefinments = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
+        const std::string dgfFileName = Parameters::get<TypeTag, Properties::GridFile>();
+        unsigned numRefinments = Parameters::get<TypeTag, Properties::GridGlobalRefinements>();
 
         {
             // create DGF GridPtr from a dgf file

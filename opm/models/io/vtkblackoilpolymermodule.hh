@@ -143,7 +143,7 @@ public:
      */
     void allocBuffers()
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         if (!enablePolymer)
@@ -169,7 +169,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         if (!enablePolymer)
@@ -239,37 +239,37 @@ public:
 private:
     static bool polymerConcentrationOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePolymerConcentration);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerConcentration>();
         return val;
     }
 
     static bool polymerDeadPoreVolumeOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePolymerDeadPoreVolume);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerDeadPoreVolume>();
         return val;
     }
 
     static bool polymerRockDensityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePolymerRockDensity);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerRockDensity>();
         return val;
     }
 
     static bool polymerAdsorptionOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePolymerAdsorption);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerAdsorption>();
         return val;
     }
 
     static bool polymerViscosityCorrectionOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePolymerViscosityCorrection);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerViscosityCorrection>();
         return val;
     }
 
     static bool waterViscosityCorrectionOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePolymerViscosityCorrection);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerViscosityCorrection>();
         return val;
     }
 

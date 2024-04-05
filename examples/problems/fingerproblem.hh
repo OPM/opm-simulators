@@ -558,7 +558,7 @@ private:
         auto& fs = initialFluidState_;
         fs.setPressure(wettingPhaseIdx, /*pressure=*/1e5);
 
-        Scalar Sw = EWOMS_GET_PARAM(TypeTag, Scalar, InitialWaterSaturation);
+        Scalar Sw = Parameters::get<TypeTag, Properties::InitialWaterSaturation>();
         fs.setSaturation(wettingPhaseIdx, Sw);
         fs.setSaturation(nonWettingPhaseIdx, 1 - Sw);
 

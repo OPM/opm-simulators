@@ -155,17 +155,17 @@ class BlackOilNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonM
 public:
     BlackOilNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {
-        priVarOscilationThreshold_ = EWOMS_GET_PARAM(TypeTag, Scalar, PriVarOscilationThreshold);
-        dpMaxRel_ = EWOMS_GET_PARAM(TypeTag, Scalar, DpMaxRel);
-        dsMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, DsMax);
-        projectSaturations_ = EWOMS_GET_PARAM(TypeTag, bool, ProjectSaturations);
-        maxTempChange_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxTemperatureChange);
-        tempMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, TemperatureMax);
-        tempMin_ = EWOMS_GET_PARAM(TypeTag, Scalar, TemperatureMin);
-        pressMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, PressureMax);
-        pressMin_ = EWOMS_GET_PARAM(TypeTag, Scalar, PressureMin);
-        waterSaturationMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaximumWaterSaturation);
-        waterOnlyThreshold_ = EWOMS_GET_PARAM(TypeTag, Scalar, WaterOnlyThreshold);
+        priVarOscilationThreshold_ = Parameters::get<TypeTag, Properties::PriVarOscilationThreshold>();
+        dpMaxRel_ = Parameters::get<TypeTag, Properties::DpMaxRel>();
+        dsMax_ = Parameters::get<TypeTag, Properties::DsMax>();
+        projectSaturations_ = Parameters::get<TypeTag, Properties::ProjectSaturations>();
+        maxTempChange_ = Parameters::get<TypeTag, Properties::MaxTemperatureChange>();
+        tempMax_ = Parameters::get<TypeTag, Properties::TemperatureMax>();
+        tempMin_ = Parameters::get<TypeTag, Properties::TemperatureMin>();
+        pressMax_ = Parameters::get<TypeTag, Properties::PressureMax>();
+        pressMin_ = Parameters::get<TypeTag, Properties::PressureMin>();
+        waterSaturationMax_ = Parameters::get<TypeTag, Properties::MaximumWaterSaturation>();
+        waterOnlyThreshold_ = Parameters::get<TypeTag, Properties::WaterOnlyThreshold>();
     }
 
     /*!

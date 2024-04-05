@@ -1368,7 +1368,7 @@ public:
         Valgrind::CheckDefined(solventPGrad);
 
         // correct the pressure gradients by the gravitational acceleration
-        if (EWOMS_GET_PARAM(TypeTag, bool, EnableGravity)) {
+        if (Parameters::get<TypeTag, Properties::EnableGravity>()) {
             // estimate the gravitational acceleration at a given SCV face
             // using the arithmetic mean
             const auto& gIn = elemCtx.problem().gravity(elemCtx, i, timeIdx);

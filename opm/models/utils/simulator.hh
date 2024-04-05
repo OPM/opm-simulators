@@ -129,11 +129,11 @@ public:
         timeStepIdx_ = 0;
         startTime_ = 0.0;
         time_ = 0.0;
-        endTime_ = EWOMS_GET_PARAM(TypeTag, Scalar, EndTime);
-        timeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
+        endTime_ = Parameters::get<TypeTag, Properties::EndTime>();
+        timeStepSize_ = Parameters::get<TypeTag, Properties::InitialTimeStepSize>();
         assert(timeStepSize_ > 0);
         const std::string& predetTimeStepFile =
-            EWOMS_GET_PARAM(TypeTag, std::string, PredeterminedTimeStepsFile);
+            Parameters::get<TypeTag, Properties::PredeterminedTimeStepsFile>();
         if (!predetTimeStepFile.empty()) {
             std::ifstream is(predetTimeStepFile);
             while (!is.eof()) {
@@ -649,7 +649,7 @@ public:
         TimerGuard writeTimerGuard(writeTimer_);
 
         setupTimer_.start();
-        Scalar restartTime = EWOMS_GET_PARAM(TypeTag, Scalar, RestartTime);
+        Scalar restartTime = Parameters::get<TypeTag, Properties::RestartTime>();
         if (restartTime > -1e30) {
             // try to restart a previous simulation
             time_ = restartTime;

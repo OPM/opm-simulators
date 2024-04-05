@@ -335,7 +335,7 @@ protected:
      * \brief Returns the numeric difference method which is applied.
      */
     static int numericDifferenceMethod_()
-    { return EWOMS_GET_PARAM(TypeTag, int, NumericDifferenceMethod); }
+    { return Parameters::get<TypeTag, Properties::NumericDifferenceMethod>(); }
 
     /*!
      * \brief Resize all internal attributes to the size of the

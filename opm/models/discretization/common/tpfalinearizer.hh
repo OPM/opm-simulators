@@ -122,7 +122,7 @@ public:
         : jacobian_()
     {
         simulatorPtr_ = 0;
-        separateSparseSourceTerms_ = EWOMS_GET_PARAM(TypeTag, bool, SeparateSparseSourceTerms);
+        separateSparseSourceTerms_ = Parameters::get<TypeTag, Properties::SeparateSparseSourceTerms>();
     }
 
     ~TpfaLinearizer()

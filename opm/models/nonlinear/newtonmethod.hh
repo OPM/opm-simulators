@@ -139,7 +139,7 @@ public:
     {
         lastError_ = 1e100;
         error_ = 1e100;
-        tolerance_ = EWOMS_GET_PARAM(TypeTag, Scalar, NewtonTolerance);
+        tolerance_ = Parameters::get<TypeTag, Properties::NewtonTolerance>();
 
         numIterations_ = 0;
     }
@@ -529,7 +529,7 @@ protected:
      */
     bool verbose_() const
     {
-        return EWOMS_GET_PARAM(TypeTag, bool, NewtonVerbose) && (comm_.rank() == 0);
+        return Parameters::get<TypeTag, Properties::NewtonVerbose>() && (comm_.rank() == 0);
     }
 
     /*!
@@ -542,7 +542,7 @@ protected:
     {
         numIterations_ = 0;
 
-        if (EWOMS_GET_PARAM(TypeTag, bool, NewtonWriteConvergence))
+        if (Parameters::get<TypeTag, Properties::NewtonWriteConvergence>())
             convergenceWriter_.beginTimeStep();
     }
 
@@ -594,7 +594,7 @@ protected:
     {
         const auto& constraintsMap = model().linearizer().constraintsMap();
         lastError_ = error_;
-        Scalar newtonMaxError = EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxError);
+        Scalar newtonMaxError = Parameters::get<TypeTag, Properties::NewtonMaxError>();
 
         // calculate the error as the maximum weighted tolerance of
         // the solution's residual
@@ -759,7 +759,7 @@ protected:
     void writeConvergence_(const SolutionVector& currentSolution,
                            const GlobalEqVector& solutionUpdate)
     {
-        if (EWOMS_GET_PARAM(TypeTag, bool, NewtonWriteConvergence)) {
+        if (Parameters::get<TypeTag, Properties::NewtonWriteConvergence>()) {
             convergenceWriter_.beginIteration();
             convergenceWriter_.writeFields(currentSolution, solutionUpdate);
             convergenceWriter_.endIteration();
@@ -831,7 +831,7 @@ protected:
      */
     void end_()
     {
-        if (EWOMS_GET_PARAM(TypeTag, bool, NewtonWriteConvergence))
+        if (Parameters::get<TypeTag, Properties::NewtonWriteConvergence>())
             convergenceWriter_.endTimeStep();
     }
 
@@ -853,10 +853,10 @@ protected:
 
     // optimal number of iterations we want to achieve
     int targetIterations_() const
-    { return EWOMS_GET_PARAM(TypeTag, int, NewtonTargetIterations); }
+    { return Parameters::get<TypeTag, Properties::NewtonTargetIterations>(); }
     // maximum number of iterations we do before giving up
     int maxIterations_() const
-    { return EWOMS_GET_PARAM(TypeTag, int, NewtonMaxIterations); }
+    { return Parameters::get<TypeTag, Properties::NewtonMaxIterations>(); }
 
     static bool enableConstraints_()
     { return getPropValue<TypeTag, Properties::EnableConstraints>(); }

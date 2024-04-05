@@ -148,7 +148,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
@@ -194,25 +194,25 @@ public:
 private:
     static bool solidInternalEnergyOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSolidInternalEnergy);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSolidInternalEnergy>();
         return val;
     }
 
     static bool thermalConductivityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteThermalConductivity);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteThermalConductivity>();
         return val;
     }
 
     static bool enthalpyOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteEnthalpies);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteEnthalpies>();
         return val;
     }
 
     static bool internalEnergyOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteInternalEnergies);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteInternalEnergies>();
         return val;
     }
 

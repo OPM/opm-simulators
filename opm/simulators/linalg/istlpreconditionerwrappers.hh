@@ -80,8 +80,8 @@ namespace Linear {
                                                                                 \
         void prepare(IstlMatrix& matrix)                                        \
         {                                                                       \
-            int order = EWOMS_GET_PARAM(TypeTag, int, PreconditionerOrder);     \
-            Scalar relaxationFactor = EWOMS_GET_PARAM(TypeTag, Scalar, PreconditionerRelaxation);   \
+            int order = Parameters::get<TypeTag, Properties::PreconditionerOrder>(); \
+            Scalar relaxationFactor = Parameters::get<TypeTag, Properties::PreconditionerRelaxation>(); \
             seqPreCond_ = new SequentialPreconditioner(matrix, order,           \
                                                        relaxationFactor);       \
         }                                                                       \
@@ -122,7 +122,7 @@ namespace Linear {
         void prepare(OverlappingMatrix& matrix)                                 \
         {                                                                       \
             Scalar relaxationFactor =                                           \
-                EWOMS_GET_PARAM(TypeTag, Scalar, PreconditionerRelaxation);     \
+            Parameters::get<TypeTag, Properties::PreconditionerRelaxation>();   \
             seqPreCond_ = new SequentialPreconditioner(matrix,                  \
                                                        relaxationFactor);       \
         }                                                                       \
@@ -168,7 +168,7 @@ public:
 
     void prepare(OverlappingMatrix& matrix)
     {
-        Scalar relaxationFactor = EWOMS_GET_PARAM(TypeTag, Scalar, PreconditionerRelaxation);
+        Scalar relaxationFactor = Parameters::get<TypeTag, Properties::PreconditionerRelaxation>();
 
         // create the sequential preconditioner.
         seqPreCond_ = new SequentialPreconditioner(matrix, relaxationFactor);

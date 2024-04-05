@@ -122,7 +122,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         const auto& elementMapper = elemCtx.model().elementMapper();
@@ -168,17 +168,17 @@ public:
 private:
     static bool primaryVarsOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePrimaryVars);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePrimaryVars>();
         return val;
     }
     static bool processRankOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteProcessRank);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteProcessRank>();
         return val;
     }
     static bool dofIndexOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteDofIndex);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteDofIndex>();
         return val;
     }
 

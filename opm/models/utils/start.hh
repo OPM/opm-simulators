@@ -318,7 +318,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
 #endif
 
         // read the initial time step and the end time
-        Scalar endTime = EWOMS_GET_PARAM(TypeTag, Scalar, EndTime);
+        Scalar endTime = Parameters::get<TypeTag, Properties::EndTime>();
         if (endTime < -1e50) {
             if (myRank == 0)
                 Parameters::printUsage<TypeTag>(argv[0],
@@ -326,7 +326,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
             return 1;
         }
 
-        Scalar initialTimeStepSize = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
+        Scalar initialTimeStepSize = Parameters::get<TypeTag, Properties::InitialTimeStepSize>();
         if (initialTimeStepSize < -1e50) {
             if (myRank == 0)
                 Parameters::printUsage<TypeTag>(argv[0],
@@ -354,7 +354,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         }
 
         // print the parameters if requested
-        int printParams = EWOMS_GET_PARAM(TypeTag, int, PrintParameters);
+        int printParams = Parameters::get<TypeTag, Properties::PrintParameters>();
         if (myRank == 0) {
             std::string endParametersSeparator("# [end of parameters]\n");
             if (printParams) {
@@ -378,7 +378,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         }
 
         // print the properties if requested
-        int printProps = EWOMS_GET_PARAM(TypeTag, int, PrintProperties);
+        int printProps = Parameters::get<TypeTag, Properties::PrintProperties>();
         if (printProps && myRank == 0) {
             if (printProps == 1 || !isatty(fileno(stdout)))
                 Properties::printValues<TypeTag>(std::cout);

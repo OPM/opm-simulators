@@ -216,7 +216,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
@@ -344,67 +344,67 @@ public:
 private:
     static bool gasDissolutionFactorOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteGasDissolutionFactor);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteGasDissolutionFactor>();
         return val;
     }
 
     static bool oilVaporizationFactorOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteOilVaporizationFactor);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteOilVaporizationFactor>();
         return val;
     }
 
     static bool oilFormationVolumeFactorOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteOilFormationVolumeFactor);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteOilFormationVolumeFactor>();
         return val;
     }
 
     static bool gasFormationVolumeFactorOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteGasFormationVolumeFactor);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteGasFormationVolumeFactor>();
         return val;
     }
 
     static bool waterFormationVolumeFactorOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteWaterFormationVolumeFactor);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteWaterFormationVolumeFactor>();
         return val;
     }
 
     static bool oilSaturationPressureOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteOilSaturationPressure);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteOilSaturationPressure>();
         return val;
     }
 
     static bool gasSaturationPressureOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteGasSaturationPressure);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteGasSaturationPressure>();
         return val;
     }
 
     static bool saturatedOilGasDissolutionFactorOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSaturatedOilGasDissolutionFactor);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSaturatedOilGasDissolutionFactor>();
         return val;
     }
 
     static bool saturatedGasOilVaporizationFactorOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSaturatedGasOilVaporizationFactor);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSaturatedGasOilVaporizationFactor>();
         return val;
     }
 
     static bool saturationRatiosOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSaturationRatios);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSaturationRatios>();
         return val;
     }
 
     static bool primaryVarsMeaningOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePrimaryVarsMeaning);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePrimaryVarsMeaning>();
         return val;
     }
 

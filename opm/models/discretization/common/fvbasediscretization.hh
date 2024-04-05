@@ -453,10 +453,10 @@ public:
         , newtonMethod_(simulator)
         , localLinearizer_(ThreadManager::maxThreads())
         , linearizer_(new Linearizer())
-        , enableGridAdaptation_( EWOMS_GET_PARAM(TypeTag, bool, EnableGridAdaptation) )
-        , enableIntensiveQuantityCache_(EWOMS_GET_PARAM(TypeTag, bool, EnableIntensiveQuantityCache))
-        , enableStorageCache_(EWOMS_GET_PARAM(TypeTag, bool, EnableStorageCache))
-        , enableThermodynamicHints_(EWOMS_GET_PARAM(TypeTag, bool, EnableThermodynamicHints))
+        , enableGridAdaptation_(Parameters::get<TypeTag, Properties::EnableGridAdaptation>() )
+        , enableIntensiveQuantityCache_(Parameters::get<TypeTag, Properties::EnableIntensiveQuantityCache>())
+        , enableStorageCache_(Parameters::get<TypeTag, Properties::EnableStorageCache>())
+        , enableThermodynamicHints_(Parameters::get<TypeTag, Properties::EnableThermodynamicHints>())
     {
         bool isEcfv = std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value;
         if (enableGridAdaptation_ && !isEcfv)
@@ -464,7 +464,7 @@ public:
                                         "element-centered finite volume discretization (is: "
                                         +Dune::className<Discretization>()+")");
 
-        enableStorageCache_ = EWOMS_GET_PARAM(TypeTag, bool, EnableStorageCache);
+        enableStorageCache_ = Parameters::get<TypeTag, Properties::EnableStorageCache>();
 
         PrimaryVariables::init();
         size_t numDof = asImp_().numGridDof();

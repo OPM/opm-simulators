@@ -321,14 +321,14 @@ public:
         FluidSystem::init();
 
         temperature_ = 273.15 + 20; // -> 20°C
-        lensLowerLeft_[0] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftX);
-        lensLowerLeft_[1] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftY);
-        lensUpperRight_[0] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightX);
-        lensUpperRight_[1] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightY);
+        lensLowerLeft_[0] = Parameters::get<TypeTag, Properties::LensLowerLeftX>();
+        lensLowerLeft_[1] = Parameters::get<TypeTag, Properties::LensLowerLeftY>();
+        lensUpperRight_[0] = Parameters::get<TypeTag, Properties::LensUpperRightX>();
+        lensUpperRight_[1] = Parameters::get<TypeTag, Properties::LensUpperRightY>();
 
         if (dimWorld == 3) {
-            lensLowerLeft_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensLowerLeftZ);
-            lensUpperRight_[2] = EWOMS_GET_PARAM(TypeTag, Scalar, LensUpperRightZ);
+            lensLowerLeft_[2] = Parameters::get<TypeTag, Properties::LensLowerLeftZ>();
+            lensUpperRight_[2] = Parameters::get<TypeTag, Properties::LensUpperRightZ>();
         }
 
         // residual saturations

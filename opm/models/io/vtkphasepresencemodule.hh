@@ -103,7 +103,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
@@ -133,7 +133,7 @@ public:
 private:
     static bool phasePresenceOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWritePhasePresence);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWritePhasePresence>();
         return val;
     }
 
