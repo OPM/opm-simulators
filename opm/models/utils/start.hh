@@ -150,8 +150,8 @@ static inline int setupParameters_(int argc,
         return status;
     }
 
-    std::string paramFileName = EWOMS_GET_PARAM_(TypeTag, std::string, ParameterFile);
-    if (paramFileName != "") {
+    const std::string paramFileName = Parameters::get<TypeTag, Properties::ParameterFile>(false);
+    if (!paramFileName.empty()) {
         ////////////////////////////////////////////////////////////
         // add the parameters specified using an .ini file
         ////////////////////////////////////////////////////////////

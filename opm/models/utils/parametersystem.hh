@@ -74,10 +74,6 @@
 #define EWOMS_GET_PARAM(TypeTag, ParamType, ParamName)                         \
     (::Opm::Parameters::get<TypeTag, Properties::ParamName>())
 
-//!\cond SKIP_THIS
-#define EWOMS_GET_PARAM_(TypeTag, ParamType, ParamName)                 \
-    (::Opm::Parameters::get<TypeTag, Properties::ParamName>(false))
-
 namespace Opm {
 namespace Parameters {
 
