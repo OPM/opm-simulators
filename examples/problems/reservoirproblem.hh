@@ -262,9 +262,9 @@ public:
     {
         ParentType::finishInit();
 
-        temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
-        maxDepth_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxDepth);
-        wellWidth_ = EWOMS_GET_PARAM(TypeTag, Scalar, WellWidth);
+        temperature_ = Parameters::get<TypeTag, Properties::Temperature>();
+        maxDepth_ = Parameters::get<TypeTag, Properties::MaxDepth>();
+        wellWidth_ = Parameters::get<TypeTag, Properties::WellWidth>();
 
         std::vector<std::pair<Scalar, Scalar> > Bo = {
             { 101353, 1.062 },

@@ -311,16 +311,16 @@ public:
 
         eps_ = 1e-6;
 
-        temperatureLow_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureLow);
-        temperatureHigh_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemTemperatureHigh);
-        nTemperature_ = EWOMS_GET_PARAM(TypeTag, unsigned, FluidSystemNumTemperature);
+        temperatureLow_ = Parameters::get<TypeTag, Properties::FluidSystemTemperatureLow>();
+        temperatureHigh_ = Parameters::get<TypeTag, Properties::FluidSystemTemperatureHigh>();
+        nTemperature_ = Parameters::get<TypeTag, Properties::FluidSystemNumTemperature>();
 
-        pressureLow_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemPressureLow);
-        pressureHigh_ = EWOMS_GET_PARAM(TypeTag, Scalar, FluidSystemPressureHigh);
-        nPressure_ = EWOMS_GET_PARAM(TypeTag, unsigned, FluidSystemNumPressure);
+        pressureLow_ = Parameters::get<TypeTag, Properties::FluidSystemPressureLow>();
+        pressureHigh_ = Parameters::get<TypeTag, Properties::FluidSystemPressureHigh>();
+        nPressure_ = Parameters::get<TypeTag, Properties::FluidSystemNumPressure>();
 
-        maxDepth_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxDepth);
-        temperature_ = EWOMS_GET_PARAM(TypeTag, Scalar, Temperature);
+        maxDepth_ = Parameters::get<TypeTag, Properties::MaxDepth>();
+        temperature_ = Parameters::get<TypeTag, Properties::Temperature>();
 
         // initialize the tables of the fluid system
         // FluidSystem::init();
@@ -404,7 +404,7 @@ public:
     std::string name() const
     {
         std::ostringstream oss;
-        oss << EWOMS_GET_PARAM(TypeTag, std::string, SimulationName)
+        oss << Parameters::get<TypeTag, Properties::SimulationName>()
             << "_" << Model::name();
         if (getPropValue<TypeTag, Properties::EnableEnergy>())
             oss << "_ni";

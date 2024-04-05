@@ -136,7 +136,7 @@ public:
      */
     void allocBuffers()
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         if (!enableSolvent)
@@ -160,7 +160,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         if (!enableSolvent)
@@ -224,31 +224,31 @@ public:
 private:
     static bool solventSaturationOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSolventSaturation);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSolventSaturation>();
         return val;
     }
 
     static bool solventRswOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSolventRsw);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSolventRsw>();
         return val;
     }
 
     static bool solventDensityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSolventDensity);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSolventDensity>();
         return val;
     }
 
     static bool solventViscosityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSolventViscosity);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSolventViscosity>();
         return val;
     }
 
     static bool solventMobilityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteSolventMobility);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSolventMobility>();
         return val;
     }
 

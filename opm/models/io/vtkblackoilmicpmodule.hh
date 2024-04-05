@@ -134,7 +134,7 @@ public:
      */
     void allocBuffers()
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         if (!enableMICP)
@@ -158,7 +158,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         if (!enableMICP)
@@ -223,31 +223,31 @@ public:
 private:
     static bool microbialConcentrationOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteMicrobialConcentration);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteMicrobialConcentration>();
         return val;
     }
 
     static bool oxygenConcentrationOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteOxygenConcentration);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteOxygenConcentration>();
         return val;
     }
 
     static bool ureaConcentrationOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteUreaConcentration);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteUreaConcentration>();
         return val;
     }
 
     static bool biofilmConcentrationOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteBiofilmConcentration);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteBiofilmConcentration>();
         return val;
     }
 
     static bool calciteConcentrationOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteCalciteConcentration);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteCalciteConcentration>();
         return val;
     }
 

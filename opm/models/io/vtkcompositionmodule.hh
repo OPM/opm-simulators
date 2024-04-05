@@ -170,7 +170,7 @@ public:
     {
         using Toolbox = MathToolbox<Evaluation>;
 
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
@@ -256,43 +256,43 @@ public:
 private:
     static bool massFracOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteMassFractions);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteMassFractions>();
         return val;
     }
 
     static bool moleFracOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteMoleFractions);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteMoleFractions>();
         return val;
     }
 
     static bool totalMassFracOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteTotalMassFractions);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteTotalMassFractions>();
         return val;
     }
 
     static bool totalMoleFracOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteTotalMoleFractions);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteTotalMoleFractions>();
         return val;
     }
 
     static bool molarityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteMolarities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteMolarities>();
         return val;
     }
 
     static bool fugacityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFugacities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFugacities>();
         return val;
     }
 
     static bool fugacityCoeffOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFugacityCoeffs);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFugacityCoeffs>();
         return val;
     }
 

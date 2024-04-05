@@ -190,7 +190,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         const auto& fractureMapper = elemCtx.simulator().vanguard().fractureMapper();
@@ -318,43 +318,43 @@ public:
 private:
     static bool saturationOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFractureSaturations);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureSaturations>();
         return val;
     }
 
     static bool mobilityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFractureMobilities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureMobilities>();
         return val;
     }
 
     static bool relativePermeabilityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFractureRelativePermeabilities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureRelativePermeabilities>();
         return val;
     }
 
     static bool porosityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFracturePorosity);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFracturePorosity>();
         return val;
     }
 
     static bool intrinsicPermeabilityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFractureIntrinsicPermeabilities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureIntrinsicPermeabilities>();
         return val;
     }
 
     static bool volumeFractionOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFractureVolumeFraction);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureVolumeFraction>();
         return val;
     }
 
     static bool velocityOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteFractureFilterVelocities);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureFilterVelocities>();
         return val;
     }
 

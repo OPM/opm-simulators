@@ -59,24 +59,24 @@ public:
      */
     static void registerParameters()
     {
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, GridGlobalRefinements,
-                             "The number of global refinements of the grid "
-                             "executed after it was loaded");
-        EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeX,
-                             "The size of the domain in x direction");
-        EWOMS_REGISTER_PARAM(TypeTag, unsigned, CellsX,
-                             "The number of intervalls in x direction");
+        Parameters::registerParam<TypeTag, Properties::GridGlobalRefinements>
+            ("The number of global refinements of the grid "
+             "executed after it was loaded");
+        Parameters::registerParam<TypeTag, Properties::DomainSizeX>
+            ("The size of the domain in x direction");
+        Parameters::registerParam<TypeTag, Properties::CellsX>
+            ("The number of intervalls in x direction");
         if (dimWorld > 1) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeY,
-                                 "The size of the domain in y direction");
-            EWOMS_REGISTER_PARAM(TypeTag, unsigned, CellsY,
-                                 "The number of intervalls in y direction");
+            Parameters::registerParam<TypeTag, Properties::DomainSizeY>
+                ("The size of the domain in y direction");
+            Parameters::registerParam<TypeTag, Properties::CellsY>
+                ("The number of intervalls in y direction");
         }
         if (dimWorld > 2) {
-            EWOMS_REGISTER_PARAM(TypeTag, Scalar, DomainSizeZ,
-                                 "The size of the domain in z direction");
-            EWOMS_REGISTER_PARAM(TypeTag, unsigned, CellsZ,
-                                 "The number of intervalls in z direction");
+            Parameters::registerParam<TypeTag, Properties::DomainSizeZ>
+                ("The size of the domain in z direction");
+            Parameters::registerParam<TypeTag, Properties::CellsZ>
+                ("The number of intervalls in z direction");
         }
     }
 
@@ -91,24 +91,24 @@ public:
         GlobalPosition lowerLeft;
 
         lowerLeft[0] = 0.0;
-        upperRight[0] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeX);
-        cellRes[0] = EWOMS_GET_PARAM(TypeTag, unsigned, CellsX);
+        upperRight[0] = Parameters::get<TypeTag, Properties::DomainSizeX>();
+        cellRes[0] = Parameters::get<TypeTag, Properties::CellsX>();
         if (dimWorld > 1) {
             lowerLeft[1] = 0.0;
-            upperRight[1] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeY);
-            cellRes[1] = EWOMS_GET_PARAM(TypeTag, unsigned, CellsY);
+            upperRight[1] = Parameters::get<TypeTag, Properties::DomainSizeY>();
+            cellRes[1] = Parameters::get<TypeTag, Properties::CellsY>();
         }
         if (dimWorld > 2) {
             lowerLeft[2] = 0.0;
-            upperRight[2] = EWOMS_GET_PARAM(TypeTag, Scalar, DomainSizeZ);
-            cellRes[2] = EWOMS_GET_PARAM(TypeTag, unsigned, CellsZ);
+            upperRight[2] = Parameters::get<TypeTag, Properties::DomainSizeZ>();
+            cellRes[2] = Parameters::get<TypeTag, Properies::CellsZ>();
         }
 
         simplexGrid_ = Dune::StructuredGridFactory<Grid>::createSimplexGrid(lowerLeft,
                                                                             upperRight,
                                                                             cellRes);
 
-        unsigned numRefinments = EWOMS_GET_PARAM(TypeTag, unsigned, GridGlobalRefinements);
+        unsigned numRefinments = Parameters::get<TypeTag, Properties::GridGlobalRefinements>();
         simplexGrid_->globalRefine(numRefinments);
 
         this->finalizeInit_();

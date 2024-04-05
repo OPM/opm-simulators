@@ -106,7 +106,7 @@ public:
 
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const auto& problem = elemCtx.problem();
-        Scalar flashTolerance = EWOMS_GET_PARAM(TypeTag, Scalar, FlashTolerance);
+        Scalar flashTolerance = Parameters::get<TypeTag, Properties::FlashTolerance>();
 
         // extract the total molar densities of the components
         ComponentVector cTotal;

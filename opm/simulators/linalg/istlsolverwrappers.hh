@@ -77,13 +77,12 @@ namespace Opm::Linear {
                                        ScalarProduct& parScalarProduct,            \
                                        Preconditioner& parPreCond)                 \
         {                                                                          \
-            Scalar tolerance = EWOMS_GET_PARAM(TypeTag, Scalar,                    \
-                                               LinearSolverTolerance);             \
-            int maxIter = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIterations);\
+            Scalar tolerance = Parameters::get<TypeTag, Properties::LinearSolverTolerance>(); \
+            int maxIter = Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>();\
                                                                                    \
             int verbosity = 0;                                                     \
             if (parOperator.overlap().myRank() == 0)                               \
-                verbosity = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);  \
+                verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>(); \
             solver_ = std::make_shared<RawSolver>(parOperator, parScalarProduct,   \
                                                   parPreCond, tolerance, maxIter,  \
                                                   verbosity);                      \
@@ -133,13 +132,13 @@ public:
                                    ScalarProduct& parScalarProduct,
                                    Preconditioner& parPreCond)
     {
-        Scalar tolerance = EWOMS_GET_PARAM(TypeTag, Scalar, LinearSolverTolerance);
-        int maxIter = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIterations);
+        Scalar tolerance = Parameters::get<TypeTag, Properties::LinearSolverTolerance>();
+        int maxIter = Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>();
 
         int verbosity = 0;
         if (parOperator.overlap().myRank() == 0)
-            verbosity = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
-        int restartAfter = EWOMS_GET_PARAM(TypeTag, int, GMResRestart);
+            verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
+        int restartAfter = Parameters::get<TypeTag, Properties::GMResRestart>();
         solver_ = std::make_shared<RawSolver>(parOperator,
                                               parScalarProduct,
                                               parPreCond,

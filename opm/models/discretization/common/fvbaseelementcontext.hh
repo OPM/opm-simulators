@@ -95,7 +95,7 @@ public:
     {
         // remember the simulator object
         simulatorPtr_ = &simulator;
-        enableStorageCache_ = EWOMS_GET_PARAM(TypeTag, bool, EnableStorageCache);
+        enableStorageCache_ = Parameters::get<TypeTag, Properties::EnableStorageCache>();
         stashedDofIdx_ = -1;
         focusDofIdx_ = -1;
     }

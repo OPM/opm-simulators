@@ -125,7 +125,7 @@ public:
     {
         using Toolbox = MathToolbox<Evaluation>;
 
-        if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
             return;
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
@@ -162,13 +162,13 @@ public:
 private:
     static bool LOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteLiquidMoleFractions);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteLiquidMoleFractions>();
         return val;
     }
 
     static bool equilConstOutput_()
     {
-        static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteEquilibriumConstants);
+        static bool val = Parameters::get<TypeTag, Properties::VtkWriteEquilibriumConstants>();
         return val;
     }
 

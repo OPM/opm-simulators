@@ -275,7 +275,7 @@ public:
     PvsModel(Simulator& simulator)
         : ParentType(simulator)
     {
-        verbosity_ = EWOMS_GET_PARAM(TypeTag, int, PvsVerbosity);
+        verbosity_ = Parameters::get<TypeTag, Properties::PvsVerbosity>();
         numSwitched_ = 0;
     }
 
