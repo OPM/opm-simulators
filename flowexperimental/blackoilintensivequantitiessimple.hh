@@ -25,8 +25,8 @@
  *
  * \copydoc Opm::BlackOilIntensiveQuantities
  */
-#ifndef EWOMS_BLACK_OIL_INTENSIVE_QUANTITIES_SIMPLE_HH
-#define EWOMS_BLACK_OIL_INTENSIVE_QUANTITIES_SIMPLE_HH
+#ifndef OPM_BLACK_OIL_INTENSIVE_QUANTITIES_SIMPLE_HH
+#define OPM_BLACK_OIL_INTENSIVE_QUANTITIES_SIMPLE_HH
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/blackoil/blackoilextbomodules.hh>

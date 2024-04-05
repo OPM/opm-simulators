@@ -25,8 +25,8 @@
  *
  * \brief Contains the classes required to extend the black-oil model by energy.
  */
-#ifndef EWOMS_BLACK_OIL_ENERGY_MODULE_TPFA_HH
-#define EWOMS_BLACK_OIL_ENERGY_MODULE_TPFA_HH
+#ifndef OPM_BLACK_OIL_ENERGY_MODULE_TPFA_HH
+#define OPM_BLACK_OIL_ENERGY_MODULE_TPFA_HH
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 
 namespace Opm {
@@ -35,11 +35,6 @@ namespace Opm {
  * \brief Contains the high level supplements required to extend the black oil
  *        model by energy.
  */
-// template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
-// class BlackOilEnergyModuleFV: public  BlackOilEnergyModule<TypeTag,enableEnergyV>
-// {
-
-// }
 template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
 class BlackOilEnergyIntensiveQuantitiesFV: public BlackOilEnergyIntensiveQuantities<TypeTag,enableEnergyV>
 {

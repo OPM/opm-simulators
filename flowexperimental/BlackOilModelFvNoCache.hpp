@@ -1,7 +1,6 @@
 #ifndef BLACK_OIL_MODEL_FV_NOCACHE_HPP
 #define BLACK_OIL_MODEL_FV_NOCACHE_HPP
 #include <opm/simulators/flow/FIBlackoilModel.hpp>
-//#include "BlackOilModelFvFast.hpp"
 namespace Opm{
     template<typename TypeTag>
     class BlackOilModelFvNoCache: public FIBlackOilModel<TypeTag>{
