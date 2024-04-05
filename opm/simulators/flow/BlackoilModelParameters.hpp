@@ -619,44 +619,44 @@ namespace Opm
         /// Construct from user parameters or defaults.
         BlackoilModelParameters()
         {
-            dbhp_max_rel_=  EWOMS_GET_PARAM(TypeTag, Scalar, DbhpMaxRel);
-            dwell_fraction_max_ = EWOMS_GET_PARAM(TypeTag, Scalar, DwellFractionMax);
-            max_residual_allowed_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxResidualAllowed);
-            relaxed_max_pv_fraction_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedMaxPvFraction);
-            tolerance_mb_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceMb);
-            tolerance_mb_relaxed_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceMbRelaxed);
-            tolerance_cnv_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceCnv);
-            tolerance_cnv_relaxed_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceCnvRelaxed);
-            tolerance_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceWells);
-            tolerance_well_control_ = EWOMS_GET_PARAM(TypeTag, Scalar, ToleranceWellControl);
-            max_welleq_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxWelleqIter);
-            use_multisegment_well_ = EWOMS_GET_PARAM(TypeTag, bool, UseMultisegmentWell);
-            tolerance_pressure_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, TolerancePressureMsWells);
-            relaxed_tolerance_flow_well_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedWellFlowTol);
-            relaxed_tolerance_pressure_ms_well_ = EWOMS_GET_PARAM(TypeTag, Scalar, RelaxedPressureTolMsw);
-            max_pressure_change_ms_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxPressureChangeMsWells);
-            max_inner_iter_ms_wells_ = EWOMS_GET_PARAM(TypeTag, int, MaxInnerIterMsWells);
-            strict_inner_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, StrictInnerIterWells);
-            strict_outer_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, StrictOuterIterWells);
-            regularization_factor_wells_ = EWOMS_GET_PARAM(TypeTag, Scalar, RegularizationFactorWells);
-            max_niter_inner_well_iter_ = EWOMS_GET_PARAM(TypeTag, int, MaxNewtonIterationsWithInnerWellIterations);
-            shut_unsolvable_wells_ = EWOMS_GET_PARAM(TypeTag, bool, ShutUnsolvableWells);
-            max_inner_iter_wells_ = EWOMS_GET_PARAM(TypeTag, int, MaxInnerIterWells);
-            maxSinglePrecisionTimeStep_ = EWOMS_GET_PARAM(TypeTag, Scalar, MaxSinglePrecisionDays) *24*60*60;
-            min_strict_cnv_iter_ = EWOMS_GET_PARAM(TypeTag, int, MinStrictCnvIter);
-            min_strict_mb_iter_ = EWOMS_GET_PARAM(TypeTag, int, MinStrictMbIter);
-            solve_welleq_initially_ = EWOMS_GET_PARAM(TypeTag, bool, SolveWelleqInitially);
-            update_equations_scaling_ = EWOMS_GET_PARAM(TypeTag, bool, UpdateEquationsScaling);
-            use_update_stabilization_ = EWOMS_GET_PARAM(TypeTag, bool, UseUpdateStabilization);
-            matrix_add_well_contributions_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-            check_well_operability_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheck);
-            check_well_operability_iter_ = EWOMS_GET_PARAM(TypeTag, bool, EnableWellOperabilityCheckIter);
-            max_number_of_well_switches_ = EWOMS_GET_PARAM(TypeTag, int, MaximumNumberOfWellSwitches);
-            use_average_density_ms_wells_ = EWOMS_GET_PARAM(TypeTag, bool, UseAverageDensityMsWells);
-            local_well_solver_control_switching_ = EWOMS_GET_PARAM(TypeTag, bool, LocalWellSolveControlSwitching);
-            use_implicit_ipr_ = EWOMS_GET_PARAM(TypeTag, bool, UseImplicitIpr);
-            nonlinear_solver_ = EWOMS_GET_PARAM(TypeTag, std::string, NonlinearSolver);
-            const auto approach = EWOMS_GET_PARAM(TypeTag, std::string, LocalSolveApproach);
+            dbhp_max_rel_=  Parameters::get<TypeTag, Properties::DbhpMaxRel>();
+            dwell_fraction_max_ = Parameters::get<TypeTag, Properties::DwellFractionMax>();
+            max_residual_allowed_ = Parameters::get<TypeTag, Properties::MaxResidualAllowed>();
+            relaxed_max_pv_fraction_ = Parameters::get<TypeTag, Properties::RelaxedMaxPvFraction>();
+            tolerance_mb_ = Parameters::get<TypeTag, Properties::ToleranceMb>();
+            tolerance_mb_relaxed_ = Parameters::get<TypeTag, Properties::ToleranceMbRelaxed>();
+            tolerance_cnv_ = Parameters::get<TypeTag, Properties::ToleranceCnv>();
+            tolerance_cnv_relaxed_ = Parameters::get<TypeTag, Properties::ToleranceCnvRelaxed>();
+            tolerance_wells_ = Parameters::get<TypeTag, Properties::ToleranceWells>();
+            tolerance_well_control_ = Parameters::get<TypeTag, Properties::ToleranceWellControl>();
+            max_welleq_iter_ = Parameters::get<TypeTag, Properties::MaxWelleqIter>();
+            use_multisegment_well_ = Parameters::get<TypeTag, Properties::UseMultisegmentWell>();
+            tolerance_pressure_ms_wells_ = Parameters::get<TypeTag, Properties::TolerancePressureMsWells>();
+            relaxed_tolerance_flow_well_ = Parameters::get<TypeTag, Properties::RelaxedWellFlowTol>();
+            relaxed_tolerance_pressure_ms_well_ = Parameters::get<TypeTag, Properties::RelaxedPressureTolMsw>();
+            max_pressure_change_ms_wells_ = Parameters::get<TypeTag, Properties::MaxPressureChangeMsWells>();
+            max_inner_iter_ms_wells_ = Parameters::get<TypeTag, Properties::MaxInnerIterMsWells>();
+            strict_inner_iter_wells_ = Parameters::get<TypeTag, Properties::StrictInnerIterWells>();
+            strict_outer_iter_wells_ = Parameters::get<TypeTag, Properties::StrictOuterIterWells>();
+            regularization_factor_wells_ = Parameters::get<TypeTag, Properties::RegularizationFactorWells>();
+            max_niter_inner_well_iter_ = Parameters::get<TypeTag, Properties::MaxNewtonIterationsWithInnerWellIterations>();
+            shut_unsolvable_wells_ = Parameters::get<TypeTag, Properties::ShutUnsolvableWells>();
+            max_inner_iter_wells_ = Parameters::get<TypeTag, Properties::MaxInnerIterWells>();
+            maxSinglePrecisionTimeStep_ = Parameters::get<TypeTag, Properties::MaxSinglePrecisionDays>() * 24 * 60 * 60;
+            min_strict_cnv_iter_ = Parameters::get<TypeTag, Properties::MinStrictCnvIter>();
+            min_strict_mb_iter_ = Parameters::get<TypeTag, Properties::MinStrictMbIter>();
+            solve_welleq_initially_ = Parameters::get<TypeTag, Properties::SolveWelleqInitially>();
+            update_equations_scaling_ = Parameters::get<TypeTag, Properties::UpdateEquationsScaling>();
+            use_update_stabilization_ = Parameters::get<TypeTag, Properties::UseUpdateStabilization>();
+            matrix_add_well_contributions_ = Parameters::get<TypeTag, Properties::MatrixAddWellContributions>();
+            check_well_operability_ = Parameters::get<TypeTag, Properties::EnableWellOperabilityCheck>();
+            check_well_operability_iter_ = Parameters::get<TypeTag, Properties::EnableWellOperabilityCheckIter>();
+            max_number_of_well_switches_ = Parameters::get<TypeTag, Properties::MaximumNumberOfWellSwitches>();
+            use_average_density_ms_wells_ = Parameters::get<TypeTag, Properties::UseAverageDensityMsWells>();
+            local_well_solver_control_switching_ = Parameters::get<TypeTag, Properties::LocalWellSolveControlSwitching>();
+            use_implicit_ipr_ = Parameters::get<TypeTag, Properties::UseImplicitIpr>();
+            nonlinear_solver_ = Parameters::get<TypeTag, Properties::NonlinearSolver>();
+            const auto approach = Parameters::get<TypeTag, Properties::LocalSolveApproach>();
             if (approach == "jacobi") {
                 local_solve_approach_ = DomainSolveApproach::Jacobi;
             } else if (approach == "gauss-seidel") {
@@ -665,18 +665,18 @@ namespace Opm
                 throw std::runtime_error("Invalid domain solver approach '" + approach + "' specified.");
             }
 
-            max_local_solve_iterations_ = EWOMS_GET_PARAM(TypeTag, int, MaxLocalSolveIterations);
-            local_tolerance_scaling_mb_ = EWOMS_GET_PARAM(TypeTag, double, LocalToleranceScalingMb);
-            local_tolerance_scaling_cnv_ = EWOMS_GET_PARAM(TypeTag, double, LocalToleranceScalingCnv);
-            nldd_num_initial_newton_iter_ = EWOMS_GET_PARAM(TypeTag, int, NlddNumInitialNewtonIter);
-            num_local_domains_ = EWOMS_GET_PARAM(TypeTag, int, NumLocalDomains);
-            local_domain_partition_imbalance_ = std::max(1.0, EWOMS_GET_PARAM(TypeTag, double, LocalDomainsPartitioningImbalance));
-            local_domain_partition_method_ = EWOMS_GET_PARAM(TypeTag, std::string, LocalDomainsPartitioningMethod);
-            deck_file_name_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
-            network_max_strict_iterations_ = EWOMS_GET_PARAM(TypeTag, int, NetworkMaxStrictIterations);
-            network_max_iterations_ = EWOMS_GET_PARAM(TypeTag, int, NetworkMaxIterations);
-            local_domain_ordering_ = domainOrderingMeasureFromString(EWOMS_GET_PARAM(TypeTag, std::string, LocalDomainsOrderingMeasure));
-            write_partitions_ = EWOMS_GET_PARAM(TypeTag, bool, DebugEmitCellPartition);
+            max_local_solve_iterations_ = Parameters::get<TypeTag, Properties::MaxLocalSolveIterations>();
+            local_tolerance_scaling_mb_ = Parameters::get<TypeTag, Properties::LocalToleranceScalingMb>();
+            local_tolerance_scaling_cnv_ = Parameters::get<TypeTag, Properties::LocalToleranceScalingCnv>();
+            nldd_num_initial_newton_iter_ = Parameters::get<TypeTag, Properties::NlddNumInitialNewtonIter>();
+            num_local_domains_ = Parameters::get<TypeTag, Properties::NumLocalDomains>();
+            local_domain_partition_imbalance_ = std::max(1.0, Parameters::get<TypeTag, Properties::LocalDomainsPartitioningImbalance>());
+            local_domain_partition_method_ = Parameters::get<TypeTag, Properties::LocalDomainsPartitioningMethod>();
+            deck_file_name_ = Parameters::get<TypeTag, Properties::EclDeckFileName>();
+            network_max_strict_iterations_ = Parameters::get<TypeTag, Properties::NetworkMaxStrictIterations>();
+            network_max_iterations_ = Parameters::get<TypeTag, Properties::NetworkMaxIterations>();
+            local_domain_ordering_ = domainOrderingMeasureFromString(Parameters::get<TypeTag, Properties::LocalDomainsOrderingMeasure>());
+            write_partitions_ = Parameters::get<TypeTag, Properties::DebugEmitCellPartition>();
         }
 
         static void registerParameters()

@@ -254,20 +254,20 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                              const double max_next_tstep = -1.0,
                              const bool terminalOutput = true)
             : timeStepControl_()
-            , restartFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverRestartFactor)) // 0.33
-            , growthFactor_(EWOMS_GET_PARAM(TypeTag, double, SolverGrowthFactor)) // 2.0
-            , maxGrowth_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxGrowth)) // 3.0
-            , maxTimeStep_(EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60) // 365.25
-            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, EWOMS_GET_PARAM(TypeTag, double, SolverMinTimeStep))) // 1e-12;
-            , ignoreConvergenceFailure_(EWOMS_GET_PARAM(TypeTag, bool, SolverContinueOnConvergenceFailure)) // false;
-            , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
-            , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
-            , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
-            , suggestedNextTimestep_((max_next_tstep <= 0 ? EWOMS_GET_PARAM(TypeTag, double, InitialTimeStepInDays) : max_next_tstep)*24*60*60) // 1.0
-            , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FullTimeStepInitially)) // false
-            , timestepAfterEvent_(EWOMS_GET_PARAM(TypeTag, double, TimeStepAfterEventInDays)*24*60*60) // 1e30
+            , restartFactor_(Parameters::get<TypeTag, Properties::SolverRestartFactor>()) // 0.33
+            , growthFactor_(Parameters::get<TypeTag, Properties::SolverGrowthFactor>()) // 2.0
+            , maxGrowth_(Parameters::get<TypeTag, Properties::SolverMaxGrowth>()) // 3.0
+            , maxTimeStep_(Parameters::get<TypeTag, Properties::SolverMaxTimeStepInDays>() * 24 * 60 * 60) // 365.25
+            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, Parameters::get<TypeTag, Properties::SolverMinTimeStep>())) // 1e-12;
+            , ignoreConvergenceFailure_(Parameters::get<TypeTag, Properties::SolverContinueOnConvergenceFailure>()) // false;
+            , solverRestartMax_(Parameters::get<TypeTag, Properties::SolverMaxRestarts>()) // 10
+            , solverVerbose_(Parameters::get<TypeTag, Properties::SolverVerbosity>() > 0 && terminalOutput) // 2
+            , timestepVerbose_(Parameters::get<TypeTag, Properties::TimeStepVerbosity>() > 0 && terminalOutput) // 2
+            , suggestedNextTimestep_((max_next_tstep <= 0 ? Parameters::get<TypeTag, Properties::InitialTimeStepInDays>() : max_next_tstep) * 24 * 60 * 60) // 1.0
+            , fullTimestepInitially_(Parameters::get<TypeTag, Properties::FullTimeStepInitially>()) // false
+            , timestepAfterEvent_(Parameters::get<TypeTag, Properties::TimeStepAfterEventInDays>() * 24 * 60 * 60) // 1e30
             , useNewtonIteration_(false)
-            , minTimeStepBeforeShuttingProblematicWells_(EWOMS_GET_PARAM(TypeTag, double, MinTimeStepBeforeShuttingProblematicWellsInDays)*unit::day)
+            , minTimeStepBeforeShuttingProblematicWells_(Parameters::get<TypeTag, Properties::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day)
 
         {
             init_(unitSystem);
@@ -289,14 +289,14 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
             , maxTimeStep_(tuning.TSMAXZ) // 365.25
             , minTimeStep_(tuning.TSFMIN) // 0.1;
             , ignoreConvergenceFailure_(true)
-            , solverRestartMax_(EWOMS_GET_PARAM(TypeTag, int, SolverMaxRestarts)) // 10
-            , solverVerbose_(EWOMS_GET_PARAM(TypeTag, int, SolverVerbosity) > 0 && terminalOutput) // 2
-            , timestepVerbose_(EWOMS_GET_PARAM(TypeTag, int, TimeStepVerbosity) > 0 && terminalOutput) // 2
-            , suggestedNextTimestep_(max_next_tstep <= 0 ? EWOMS_GET_PARAM(TypeTag, double, InitialTimeStepInDays)*24*60*60 : max_next_tstep) // 1.0
-            , fullTimestepInitially_(EWOMS_GET_PARAM(TypeTag, bool, FullTimeStepInitially)) // false
+            , solverRestartMax_(Parameters::get<TypeTag, Properties::SolverMaxRestarts>()) // 10
+            , solverVerbose_(Parameters::get<TypeTag, Properties::SolverVerbosity>() > 0 && terminalOutput) // 2
+            , timestepVerbose_(Parameters::get<TypeTag, Properties::TimeStepVerbosity>() > 0 && terminalOutput) // 2
+            , suggestedNextTimestep_(max_next_tstep <= 0 ? Parameters::get<TypeTag, Properties::InitialTimeStepInDays>() * 24 * 60 * 60 : max_next_tstep) // 1.0
+            , fullTimestepInitially_(Parameters::get<TypeTag, Properties::FullTimeStepInitially>()) // false
             , timestepAfterEvent_(tuning.TMAXWC) // 1e30
             , useNewtonIteration_(false)
-            , minTimeStepBeforeShuttingProblematicWells_(EWOMS_GET_PARAM(TypeTag, double, MinTimeStepBeforeShuttingProblematicWellsInDays)*unit::day)
+            , minTimeStepBeforeShuttingProblematicWells_(Parameters::get<TypeTag, Properties::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day)
         {
             init_(unitSystem);
         }
@@ -815,25 +815,25 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
         void init_(const UnitSystem& unitSystem)
         {
             // valid are "pid" and "pid+iteration"
-            std::string control = EWOMS_GET_PARAM(TypeTag, std::string, TimeStepControl); // "pid"
+            std::string control = Parameters::get<TypeTag, Properties::TimeStepControl>(); // "pid"
 
-            const double tol =  EWOMS_GET_PARAM(TypeTag, double, TimeStepControlTolerance); // 1e-1
+            const double tol =  Parameters::get<TypeTag, Properties::TimeStepControlTolerance>(); // 1e-1
             if (control == "pid") {
                 timeStepControl_ = std::make_unique<PIDTimeStepControl>(tol);
                 timeStepControlType_ = TimeStepControlType::PID;
             }
             else if (control == "pid+iteration") {
-                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetIterations); // 30
-                const double decayDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlDecayDampingFactor); // 1.0
-                const double growthDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthDampingFactor); // 3.2
+                const int iterations =  Parameters::get<TypeTag, Properties::TimeStepControlTargetIterations>(); // 30
+                const double decayDampingFactor = Parameters::get<TypeTag, Properties::TimeStepControlDecayDampingFactor>(); // 1.0
+                const double growthDampingFactor = Parameters::get<TypeTag, Properties::TimeStepControlGrowthDampingFactor>(); // 3.2
                 timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor, growthDampingFactor, tol);
                 timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
             }
             else if (control == "pid+newtoniteration") {
-                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetNewtonIterations); // 8
-                const double decayDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlDecayDampingFactor); // 1.0
-                const double growthDampingFactor = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthDampingFactor); // 3.2
-                const double nonDimensionalMinTimeStepIterations = EWOMS_GET_PARAM(TypeTag, double, MinTimeStepBasedOnNewtonIterations); // 0.0 by default
+                const int iterations =  Parameters::get<TypeTag, Properties::TimeStepControlTargetNewtonIterations>(); // 8
+                const double decayDampingFactor = Parameters::get<TypeTag, Properties::TimeStepControlDecayDampingFactor>(); // 1.0
+                const double growthDampingFactor = Parameters::get<TypeTag, Properties::TimeStepControlGrowthDampingFactor>(); // 3.2
+                const double nonDimensionalMinTimeStepIterations = Parameters::get<TypeTag, Properties::MinTimeStepBasedOnNewtonIterations>(); // 0.0 by default
                 // the min time step can be reduced by the newton iteration numbers
                 double minTimeStepReducedByIterations = unitSystem.to_si(UnitSystem::measure::time, nonDimensionalMinTimeStepIterations);
                 timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor,
@@ -842,22 +842,22 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                 useNewtonIteration_ = true;
             }
             else if (control == "iterationcount") {
-                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetIterations); // 30
-                const double decayrate = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlDecayRate); // 0.75
-                const double growthrate = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthRate); // 1.25
+                const int iterations =  Parameters::get<TypeTag, Properties::TimeStepControlTargetIterations>(); // 30
+                const double decayrate = Parameters::get<TypeTag, Properties::TimeStepControlDecayRate>(); // 0.75
+                const double growthrate = Parameters::get<TypeTag, Properties::TimeStepControlGrowthRate>(); // 1.25
                 timeStepControl_ = std::make_unique<SimpleIterationCountTimeStepControl>(iterations, decayrate, growthrate);
                 timeStepControlType_ = TimeStepControlType::SimpleIterationCount;
             }
             else if (control == "newtoniterationcount") {
-                const int iterations =  EWOMS_GET_PARAM(TypeTag, int, TimeStepControlTargetNewtonIterations); // 8
-                const double decayrate = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlDecayRate); // 0.75
-                const double growthrate = EWOMS_GET_PARAM(TypeTag, double, TimeStepControlGrowthRate); // 1.25
+                const int iterations =  Parameters::get<TypeTag, Properties::TimeStepControlTargetNewtonIterations>(); // 8
+                const double decayrate = Parameters::get<TypeTag, Properties::TimeStepControlDecayRate>(); // 0.75
+                const double growthrate = Parameters::get<TypeTag, Properties::TimeStepControlGrowthRate>(); // 1.25
                 timeStepControl_ = std::make_unique<SimpleIterationCountTimeStepControl>(iterations, decayrate, growthrate);
                 useNewtonIteration_ = true;
                 timeStepControlType_ = TimeStepControlType::SimpleIterationCount;
             }
             else if (control == "hardcoded") {
-                const std::string filename = EWOMS_GET_PARAM(TypeTag, std::string, TimeStepControlFileName); // "timesteps"
+                const std::string filename = Parameters::get<TypeTag, Properties::TimeStepControlFileName>(); // "timesteps"
                 timeStepControl_ = std::make_unique<HardcodedTimeStepControl>(filename);
                 timeStepControlType_ = TimeStepControlType::HardCodedTimeStep;
             }

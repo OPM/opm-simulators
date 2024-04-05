@@ -333,12 +333,12 @@ private:
             outputDir = eclipseState_->getIOConfig().getOutputDir();
         }
         else {
-            deckFilename = EWOMS_GET_PARAM(PreTypeTag, std::string, EclDeckFileName);
-            outputDir = EWOMS_GET_PARAM(PreTypeTag, std::string, OutputDir);
+            deckFilename = Parameters::get<PreTypeTag, Properties::EclDeckFileName>();
+            outputDir = Parameters::get<PreTypeTag, Properties::OutputDir>();
         }
 
 #if HAVE_DAMARIS
-        enableDamarisOutput_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableDamarisOutput);
+        enableDamarisOutput_ = Parameters::get<PreTypeTag, Properties::EnableDamarisOutput>();
         
         // Reset to false as we cannot use Damaris if there is only one rank.
         if ((enableDamarisOutput_ == true) && (FlowGenericVanguard::comm().size() == 1)) {
@@ -374,7 +374,7 @@ private:
         int mpiRank = FlowGenericVanguard::comm().rank();
         outputCout_ = false;
         if (mpiRank == 0)
-            outputCout_ = EWOMS_GET_PARAM(PreTypeTag, bool, EnableTerminalOutput);
+            outputCout_ = Parameters::get<PreTypeTag, Properties::EnableTerminalOutput>();
 
         if (deckFilename.empty()) {
             if (mpiRank == 0) {
@@ -413,12 +413,12 @@ private:
         try {
             this->readDeck(deckFilename,
                            outputDir,
-                           EWOMS_GET_PARAM(PreTypeTag, std::string, OutputMode),
-                           !EWOMS_GET_PARAM(PreTypeTag, bool, SchedRestart),
-                           EWOMS_GET_PARAM(PreTypeTag, bool,  EnableLoggingFalloutWarning),
-                           EWOMS_GET_PARAM(PreTypeTag, std::string, ParsingStrictness),
+                           Parameters::get<PreTypeTag, Properties::OutputMode>(),
+                           !Parameters::get<PreTypeTag, Properties::SchedRestart>(),
+                           Parameters::get<PreTypeTag, Properties::EnableLoggingFalloutWarning>(),
+                           Parameters::get<PreTypeTag, Properties::ParsingStrictness>(),
                            getNumThreads<PreTypeTag>(),
-                           EWOMS_GET_PARAM(PreTypeTag, int, EclOutputInterval),
+                           Parameters::get<PreTypeTag, Properties::EclOutputInterval>(),
                            cmdline_params,
                            Opm::moduleVersion(),
                            Opm::compileTimestamp());
@@ -715,7 +715,7 @@ private:
         else {
             threads = 2;
 
-            const int input_threads = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
+            const int input_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
 
             if (input_threads > 0)
                 threads = input_threads;

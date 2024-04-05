@@ -189,20 +189,19 @@ public:
         , serializer_(*this,
                       FlowGenericVanguard::comm(),
                       simulator_.vanguard().eclState().getIOConfig(),
-                      EWOMS_GET_PARAM(TypeTag, std::string, SaveStep),
-                      EWOMS_GET_PARAM(TypeTag, int, LoadStep),
-                      EWOMS_GET_PARAM(TypeTag, std::string, SaveFile),
-                      EWOMS_GET_PARAM(TypeTag, std::string, LoadFile))
+                      Parameters::get<TypeTag, Properties::SaveStep>(),
+                      Parameters::get<TypeTag, Properties::LoadStep>(),
+                      Parameters::get<TypeTag, Properties::SaveFile>(),
+                      Parameters::get<TypeTag, Properties::LoadFile>())
     {
         phaseUsage_ = phaseUsageFromDeck(eclState());
 
         // Only rank 0 does print to std::cout, and only if specifically requested.
         this->terminalOutput_ = false;
         if (this->grid().comm().rank() == 0) {
-            this->terminalOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput);
+            this->terminalOutput_ = Parameters::get<TypeTag, Properties::EnableTerminalOutput>();
 
-            this->startConvergenceOutputThread(EWOMS_GET_PARAM(TypeTag, std::string,
-                                                               OutputExtraConvergenceInfo),
+            this->startConvergenceOutputThread(Parameters::get<TypeTag, Properties::OutputExtraConvergenceInfo>(),
                                                R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))");
         }
     }
@@ -282,8 +281,8 @@ public:
         totalTimer_->start();
 
         // adaptive time stepping
-        bool enableAdaptive = EWOMS_GET_PARAM(TypeTag, bool, EnableAdaptiveTimeStepping);
-        bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
+        bool enableAdaptive = Parameters::get<TypeTag, Properties::EnableAdaptiveTimeStepping>();
+        bool enableTUNING = Parameters::get<TypeTag, Properties::EnableTuning>();
         if (enableAdaptive) {
             const UnitSystem& unitSystem = this->simulator_.vanguard().eclState().getUnits();
             const auto& sched_state = schedule()[timer.currentStepNum()];
@@ -370,7 +369,7 @@ public:
             simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         }
         solver_->model().beginReportStep();
-        bool enableTUNING = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
+        bool enableTUNING = Parameters::get<TypeTag, Properties::EnableTuning>();
 
         // If sub stepping is enabled allow the solver to sub cycle
         // in case the report steps are too large for the solver to converge

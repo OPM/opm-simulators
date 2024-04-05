@@ -122,7 +122,7 @@ namespace Opm {
      */
         void processElement(const ElementContext& elemCtx)
         {
-            if (!EWOMS_GET_PARAM(TypeTag, bool, EnableVtkOutput))
+            if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
                 return;
 
             const auto& tracerModel = elemCtx.problem().tracerModel();
@@ -162,7 +162,7 @@ namespace Opm {
     private:
         static bool eclTracerConcentrationOutput_()
         {
-            static bool val = EWOMS_GET_PARAM(TypeTag, bool, VtkWriteTracerConcentration);
+            static bool val = Parameters::get<TypeTag, Properties::VtkWriteTracerConcentration>();
             return val;
         }
 
