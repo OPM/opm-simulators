@@ -258,8 +258,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             // Set it up manually
             ElementMapper elemMapper(simulator_.vanguard().gridView(), Dune::mcmgElementLayout());
             detail::findOverlapAndInterior(simulator_.vanguard().grid(), elemMapper, overlapRows_, interiorRows_);
-            useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
-            const bool ownersFirst = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
+            useWellConn_ = Parameters::get<TypeTag, Properties::MatrixAddWellContributions>();
+            const bool ownersFirst = Parameters::get<TypeTag, Properties::OwnerCellsFirst>();
             if (!ownersFirst) {
                 const std::string msg = "The linear solver no longer supports --owner-cells-first=false.";
                 if (on_io_rank) {
@@ -324,7 +324,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 // Outch! We need to be able to scale the linear system! Hence const_cast
                 matrix_ = const_cast<Matrix*>(&M);
 
-                useWellConn_ = EWOMS_GET_PARAM(TypeTag, bool, MatrixAddWellContributions);
+                useWellConn_ = Parameters::get<TypeTag, Properties::MatrixAddWellContributions>();
                 // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
             } else {
                 // Pointers should not change

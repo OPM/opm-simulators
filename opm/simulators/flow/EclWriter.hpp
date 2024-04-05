@@ -147,8 +147,8 @@ public:
                    ((simulator.vanguard().grid().comm().rank() == 0)
                     ? &simulator.vanguard().equilCartesianIndexMapper()
                     : nullptr),
-                   EWOMS_GET_PARAM(TypeTag, bool, EnableAsyncEclOutput),
-                   EWOMS_GET_PARAM(TypeTag, bool, EnableEsmry))
+                   Parameters::get<TypeTag, Properties::EnableAsyncEclOutput>(),
+                   Parameters::get<TypeTag, Properties::EnableEsmry>())
         , simulator_(simulator)
     {
 #if HAVE_MPI
@@ -463,7 +463,7 @@ public:
                                 this->summaryState(),
                                 this->simulator_.problem().thresholdPressure().getRestartVector(),
                                 curTime, nextStepSize,
-                                EWOMS_GET_PARAM(TypeTag, bool, EclOutputDoublePrecision),
+                                Parameters::get<TypeTag, Properties::EclOutputDoublePrecision>(),
                                 isFlowsn, std::move(flowsn),
                                 isFloresn, std::move(floresn));
         }
@@ -473,7 +473,7 @@ public:
     {
         bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
         bool enableSwatinit = simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT");
-        bool opm_rst_file = EWOMS_GET_PARAM(TypeTag, bool, EnableOpmRstFile);
+        bool opm_rst_file = Parameters::get<TypeTag, Properties::EnableOpmRstFile>();
         bool read_temp = enableEnergy || (opm_rst_file && enableTemperature);
         std::vector<RestartKey> solutionKeys{
             {"PRESSURE", UnitSystem::measure::pressure},
@@ -569,7 +569,7 @@ public:
 
 private:
     static bool enableEclOutput_()
-    { return EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput); }
+    { return Parameters::get<TypeTag, Properties::EnableEclOutput>(); }
 
     const EclipseState& eclState() const
     { return simulator_.vanguard().eclState(); }

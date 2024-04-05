@@ -127,11 +127,11 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
                 reset();
 
                 // overload with given parameters
-                relaxMax_ = EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxRelax);
-                maxIter_ = EWOMS_GET_PARAM(TypeTag, int, NewtonMaxIterations);
-                minIter_ = EWOMS_GET_PARAM(TypeTag, int, NewtonMinIterations);
+                relaxMax_ = Parameters::get<TypeTag, Properties::NewtonMaxRelax>();
+                maxIter_ = Parameters::get<TypeTag, Properties::NewtonMaxIterations>();
+                minIter_ = Parameters::get<TypeTag, Properties::NewtonMinIterations>();
 
-                const auto& relaxationTypeString = EWOMS_GET_PARAM(TypeTag, std::string, NewtonRelaxationType);
+                const auto& relaxationTypeString = Parameters::get<TypeTag, Properties::NewtonRelaxationType>();
                 if (relaxationTypeString == "dampen") {
                     relaxType_ = NonlinearRelaxType::Dampen;
                 } else if (relaxationTypeString == "sor") {

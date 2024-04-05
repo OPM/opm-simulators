@@ -283,8 +283,8 @@ private:
     bool damarisUpdate_ = false;  ///< Whenever this is true writeOutput() will set up Damaris mesh information and offsets of model fields
 
     static bool enableDamarisOutput_()
-    { 
-        return EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput); 
+    {
+        return Parameters::get<TypeTag, Properties::EnableDamarisOutput>();
     }
 
     void setGlobalIndexForDamaris () 

@@ -309,15 +309,15 @@ public:
 #if HAVE_DAMARIS
         // create Damaris writer
         damarisWriter_ = std::make_unique<DamarisWriterType>(simulator);
-        enableDamarisOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableDamarisOutput) ;
+        enableDamarisOutput_ = Parameters::get<TypeTag, Properties::EnableDamarisOutput>();
 #endif
-        enableDriftCompensation_ = EWOMS_GET_PARAM(TypeTag, bool, EnableDriftCompensation);
+        enableDriftCompensation_ = Parameters::get<TypeTag, Properties::EnableDriftCompensation>();
 
-        enableEclOutput_ = EWOMS_GET_PARAM(TypeTag, bool, EnableEclOutput);
+        enableEclOutput_ = Parameters::get<TypeTag, Properties::EnableEclOutput>();
 
-        this->enableTuning_ = EWOMS_GET_PARAM(TypeTag, bool, EnableTuning);
-        this->initialTimeStepSize_ = EWOMS_GET_PARAM(TypeTag, Scalar, InitialTimeStepSize);
-        this->maxTimeStepAfterWellEvent_ = EWOMS_GET_PARAM(TypeTag, double, TimeStepAfterEventInDays)*24*60*60;
+        this->enableTuning_ = Parameters::get<TypeTag, Properties::EnableTuning>();
+        this->initialTimeStepSize_ = Parameters::get<TypeTag, Properties::InitialTimeStepSize>();
+        this->maxTimeStepAfterWellEvent_ = Parameters::get<TypeTag, Properties::TimeStepAfterEventInDays>() * 24 * 60 * 60;
 
         // The value N for this parameter is defined in the following order of presedence:
         // 1. Command line value (--num-pressure-points-equil=N)
@@ -325,7 +325,7 @@ public:
         // Default value is defined in opm-common/src/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
         if (Parameters::isSet<TypeTag,int>("NumPressurePointsEquil"))
         {
-            this->numPressurePointsEquil_ = EWOMS_GET_PARAM(TypeTag, int, NumPressurePointsEquil);
+            this->numPressurePointsEquil_ = Parameters::get<TypeTag, Properties::NumPressurePointsEquil>();
         } else {
             this->numPressurePointsEquil_ = simulator.vanguard().eclState().getTableManager().getEqldims().getNumDepthNodesP();
         }
@@ -360,7 +360,7 @@ public:
         // disables gravity, else the standard value of the gravity constant at sea level
         // on earth is used
         this->gravity_ = 0.0;
-        if (EWOMS_GET_PARAM(TypeTag, bool, EnableGravity))
+        if (Parameters::get<TypeTag, Properties::EnableGravity>())
             this->gravity_[dim - 1] = 9.80665;
         if (!eclState.getInitConfig().hasGravity())
             this->gravity_[dim - 1] = 0.0;
@@ -667,7 +667,8 @@ public:
             }
         }
         }
-        bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
+        bool isSubStep = !Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() &&
+                         !this->simulator().episodeWillBeOver();
         // For CpGrid with LGRs, ecl/vtk output is not supported yet.
         const auto& grid =  this->simulator().vanguard().gridView().grid();
         using GridType =  std::remove_cv_t< typename std::remove_reference<decltype(grid)>::type>;
@@ -736,11 +737,13 @@ public:
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
-        if (EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) || this->simulator().episodeWillBeOver()){
+        if (Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() ||
+            this->simulator().episodeWillBeOver()) {
             ParentType::writeOutput(verbose);
         }
 
-        bool isSubStep = !EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) && !this->simulator().episodeWillBeOver();
+        bool isSubStep = !Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() &&
+                         !this->simulator().episodeWillBeOver();
         
         data::Solution localCellData = {};
 #if HAVE_DAMARIS
@@ -1705,7 +1708,7 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        bool implicit = !EWOMS_GET_PARAM(TypeTag, bool, ExplicitRockCompaction);
+        bool implicit = !Parameters::get<TypeTag, Properties::ExplicitRockCompaction>();
         return implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx)
                         : this->simulator().problem().getRockCompTransMultVal(elementIdx);
     }
@@ -1738,7 +1741,7 @@ public:
     {
         OPM_TIMEBLOCK_LOCAL(wellTransMultiplier);
         
-        bool implicit = !EWOMS_GET_PARAM(TypeTag, bool, ExplicitRockCompaction);
+        bool implicit = !Parameters::get<TypeTag, Properties::ExplicitRockCompaction>();
         double trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<double>(intQuants, elementIdx)
                                      : this->simulator().problem().getRockCompTransMultVal(elementIdx);
         trans_mult *= this->simulator().problem().template permFactTransMultiplier<double>(intQuants);
@@ -2628,7 +2631,7 @@ private:
             int episodeIdx = simulator.episodeIndex();
 
             // first thing in the morning, limit the time step size to the maximum size
-            Scalar maxTimeStepSize = EWOMS_GET_PARAM(TypeTag, double, SolverMaxTimeStepInDays)*24*60*60;
+            Scalar maxTimeStepSize = Parameters::get<TypeTag, Properties::SolverMaxTimeStepInDays>() * 24 * 60 * 60;
             int reportStepIdx = std::max(episodeIdx, 0);
             if (this->enableTuning_) {
                 const auto& tuning = schedule[reportStepIdx].tuning();

@@ -161,7 +161,7 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Properties::RestartTime>();
             Parameters::hideParam<TypeTag, Properties::RestartWritingInterval>();
             // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
-            //if(not(EWOMS_GET_PARAM(TypeTag,bool,EnableVtkOutput))){
+            //if(not(Parameters::get<TypeTag,Properties::EnableVtkOutput>())){
                 Parameters::hideParam<TypeTag, Properties::VtkWriteOilFormationVolumeFactor>();
                 Parameters::hideParam<TypeTag, Properties::VtkWriteOilSaturationPressure>();
                 Parameters::hideParam<TypeTag, Properties::VtkWriteOilVaporizationFactor>();
@@ -244,13 +244,13 @@ namespace Opm {
 
                 bool doExit = false;
 
-                if (EWOMS_GET_PARAM(TypeTag, int, PrintProperties) == 1) {
+                if (Parameters::get<TypeTag, Properties::PrintProperties>() == 1) {
                     doExit = true;
                     if (mpiRank == 0)
                         Properties::printValues<TypeTag>(std::cout);
                 }
 
-                if (EWOMS_GET_PARAM(TypeTag, int, PrintParameters) == 1) {
+                if (Parameters::get<TypeTag, Properties::PrintParameters>() == 1) {
                     doExit = true;
                     if (mpiRank == 0)
                         Parameters::printValues<TypeTag>();
@@ -388,7 +388,7 @@ namespace Opm {
             if (!getenv("OMP_NUM_THREADS"))
             {
                 int threads = 2;
-                const int requested_threads = EWOMS_GET_PARAM(TypeTag, int, ThreadsPerProcess);
+                const int requested_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
                 if (requested_threads > 0)
                     threads = requested_threads;
 
@@ -413,8 +413,8 @@ namespace Opm {
             }
 
             detail::mergeParallelLogFiles(eclState().getIOConfig().getOutputDir(),
-                                          EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName),
-                                          EWOMS_GET_PARAM(TypeTag, bool, EnableLoggingFalloutWarning));
+                                          Parameters::get<TypeTag, Properties::EclDeckFileName>(),
+                                          Parameters::get<TypeTag, Properties::EnableLoggingFalloutWarning>());
         }
 
         void setupModelSimulator()
@@ -425,7 +425,7 @@ namespace Opm {
 
             try {
                 // Possible to force initialization only behavior (NOSIM).
-                const std::string& dryRunString = EWOMS_GET_PARAM(TypeTag, std::string, EnableDryRun);
+                const std::string& dryRunString = Parameters::get<TypeTag, Properties::EnableDryRun>();
                 if (dryRunString != "" && dryRunString != "auto") {
                     bool yesno;
                     if (dryRunString == "true"
@@ -503,7 +503,7 @@ namespace Opm {
             printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report, simulator_->model().localAccumulatedReports());
 
             detail::handleExtraConvergenceOutput(report,
-                                                 EWOMS_GET_PARAM(TypeTag, std::string, OutputExtraConvergenceInfo),
+                                                 Parameters::get<TypeTag, Properties::OutputExtraConvergenceInfo>(),
                                                  R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
                                                  eclState().getIOConfig().getOutputDir(),
                                                  eclState().getIOConfig().getBaseName());

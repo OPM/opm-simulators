@@ -173,12 +173,12 @@ public:
         this->setupBlockData(isCartIdxOnThisRank);
 
         this->forceDisableFipOutput_ =
-            EWOMS_GET_PARAM(TypeTag, bool, ForceDisableFluidInPlaceOutput);
+            Parameters::get<TypeTag, Properties::ForceDisableFluidInPlaceOutput>();
 
         this->forceDisableFipresvOutput_ =
-            EWOMS_GET_PARAM(TypeTag, bool, ForceDisableResvFluidInPlaceOutput);
+            Parameters::get<TypeTag, Properties::ForceDisableResvFluidInPlaceOutput>();
 
-        if (! EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst)) {
+        if (! Parameters::get<TypeTag, Properties::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
             if (collectToIORank.isIORank()) {
                 OpmLog::error(msg);

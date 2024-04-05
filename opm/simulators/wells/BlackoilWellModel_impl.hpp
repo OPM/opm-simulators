@@ -59,7 +59,7 @@ namespace Opm {
         , simulator_(simulator)
     {
         terminal_output_ = ((simulator.gridView().comm().rank() == 0) &&
-                           EWOMS_GET_PARAM(TypeTag, bool, EnableTerminalOutput));
+                            Parameters::get<TypeTag, Properties::EnableTerminalOutput>());
 
         local_num_cells_ = simulator_.gridView().size(0);
 
@@ -76,7 +76,7 @@ namespace Opm {
         }
 
         this->alternative_well_rate_init_ =
-            EWOMS_GET_PARAM(TypeTag, bool, AlternativeWellRateInit);
+            Parameters::get<TypeTag, Properties::AlternativeWellRateInit>();
 
         this->wbpCalculationService_
             .localCellIndex([this](const std::size_t globalIndex)

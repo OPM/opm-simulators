@@ -302,26 +302,26 @@ public:
     FlowBaseVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
-        fileName_ = EWOMS_GET_PARAM(TypeTag, std::string, EclDeckFileName);
-        edgeWeightsMethod_   = Dune::EdgeWeightMethod(EWOMS_GET_PARAM(TypeTag, int, EdgeWeightsMethod));
+        fileName_ = Parameters::get<TypeTag, Properties::EclDeckFileName>();
+        edgeWeightsMethod_   = Dune::EdgeWeightMethod(Parameters::get<TypeTag, Properties::EdgeWeightsMethod>());
 
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
-        numJacobiBlocks_ = EWOMS_GET_PARAM(TypeTag, int, NumJacobiBlocks);
+        numJacobiBlocks_ = Parameters::get<TypeTag, Properties::NumJacobiBlocks>();
 #endif
 
-        ownersFirst_ = EWOMS_GET_PARAM(TypeTag, bool, OwnerCellsFirst);
+        ownersFirst_ = Parameters::get<TypeTag, Properties::OwnerCellsFirst>();
 #if HAVE_MPI
-        serialPartitioning_ = EWOMS_GET_PARAM(TypeTag, bool, SerialPartitioning);
-        zoltanImbalanceTol_ = EWOMS_GET_PARAM(TypeTag, double, ZoltanImbalanceTol);
-        zoltanParams_ = EWOMS_GET_PARAM(TypeTag, std::string, ZoltanParams);
-        externalPartitionFile_ = EWOMS_GET_PARAM(TypeTag, std::string, ExternalPartition);
+        serialPartitioning_ = Parameters::get<TypeTag, Properties::SerialPartitioning>();
+        zoltanImbalanceTol_ = Parameters::get<TypeTag, Properties::ZoltanImbalanceTol>();
+        zoltanParams_ = Parameters::get<TypeTag, Properties::ZoltanParams>();
+        externalPartitionFile_ = Parameters::get<TypeTag, Properties::ExternalPartition>();
 #endif
-        enableDistributedWells_ = EWOMS_GET_PARAM(TypeTag, bool, AllowDistributedWells);
-        ignoredKeywords_ = EWOMS_GET_PARAM(TypeTag, std::string, IgnoreKeywords);
-        int output_param = EWOMS_GET_PARAM(TypeTag, int, EclOutputInterval);
+        enableDistributedWells_ = Parameters::get<TypeTag, Properties::AllowDistributedWells>();
+        ignoredKeywords_ = Parameters::get<TypeTag, Properties::IgnoreKeywords>();
+        int output_param = Parameters::get<TypeTag, Properties::EclOutputInterval>();
         if (output_param >= 0)
             outputInterval_ = output_param;
-        useMultisegmentWell_ = EWOMS_GET_PARAM(TypeTag, bool, UseMultisegmentWell);
+        useMultisegmentWell_ = Parameters::get<TypeTag, Properties::UseMultisegmentWell>();
         enableExperiments_ = enableExperiments;
 
         init();
@@ -517,8 +517,8 @@ protected:
     {
         asImp_().createGrids_();
         asImp_().filterConnections_();
-        std::string outputDir = EWOMS_GET_PARAM(TypeTag, std::string, OutputDir);
-        bool enableEclCompatFile = !EWOMS_GET_PARAM(TypeTag, bool, EnableOpmRstFile);
+        std::string outputDir = Parameters::get<TypeTag, Properties::OutputDir>();
+        bool enableEclCompatFile = !Parameters::get<TypeTag, Properties::EnableOpmRstFile>();
         asImp_().updateOutputDir_(outputDir, enableEclCompatFile);
         asImp_().finalizeInit_();
     }

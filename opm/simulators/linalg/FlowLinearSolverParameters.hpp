@@ -261,34 +261,34 @@ namespace Opm
         void init(bool cprRequestedInDataFile)
         {
             // TODO: these parameters have undocumented non-trivial dependencies
-            linear_solver_reduction_ = EWOMS_GET_PARAM(TypeTag, double, LinearSolverReduction);
-            relaxed_linear_solver_reduction_ = EWOMS_GET_PARAM(TypeTag, double, RelaxedLinearSolverReduction);
-            linear_solver_maxiter_ = EWOMS_GET_PARAM(TypeTag, int, LinearSolverMaxIter);
-            linear_solver_restart_ = EWOMS_GET_PARAM(TypeTag, int, LinearSolverRestart);
-            linear_solver_verbosity_ = EWOMS_GET_PARAM(TypeTag, int, LinearSolverVerbosity);
-            ilu_relaxation_ = EWOMS_GET_PARAM(TypeTag, double, IluRelaxation);
-            ilu_fillin_level_ = EWOMS_GET_PARAM(TypeTag, int, IluFillinLevel);
-            ilu_milu_ = convertString2Milu(EWOMS_GET_PARAM(TypeTag, std::string, MiluVariant));
-            ilu_redblack_ = EWOMS_GET_PARAM(TypeTag, bool, IluRedblack);
-            ilu_reorder_sphere_ = EWOMS_GET_PARAM(TypeTag, bool, IluReorderSpheres);
-            newton_use_gmres_ = EWOMS_GET_PARAM(TypeTag, bool, UseGmres);
-            ignoreConvergenceFailure_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverIgnoreConvergenceFailure);
-            scale_linear_system_ = EWOMS_GET_PARAM(TypeTag, bool, ScaleLinearSystem);
-            linsolver_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
-            linear_solver_print_json_definition_ = EWOMS_GET_PARAM(TypeTag, bool, LinearSolverPrintJsonDefinition);
-            cpr_reuse_setup_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseSetup);
-            cpr_reuse_interval_  =  EWOMS_GET_PARAM(TypeTag, int, CprReuseInterval);
+            linear_solver_reduction_ = Parameters::get<TypeTag, Properties::LinearSolverReduction>();
+            relaxed_linear_solver_reduction_ = Parameters::get<TypeTag, Properties::RelaxedLinearSolverReduction>();
+            linear_solver_maxiter_ = Parameters::get<TypeTag, Properties::LinearSolverMaxIter>();
+            linear_solver_restart_ = Parameters::get<TypeTag, Properties::LinearSolverRestart>();
+            linear_solver_verbosity_ = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
+            ilu_relaxation_ = Parameters::get<TypeTag, Properties::IluRelaxation>();
+            ilu_fillin_level_ = Parameters::get<TypeTag, Properties::IluFillinLevel>();
+            ilu_milu_ = convertString2Milu(Parameters::get<TypeTag, Properties::MiluVariant>());
+            ilu_redblack_ = Parameters::get<TypeTag, Properties::IluRedblack>();
+            ilu_reorder_sphere_ = Parameters::get<TypeTag, Properties::IluReorderSpheres>();
+            newton_use_gmres_ = Parameters::get<TypeTag, Properties::UseGmres>();
+            ignoreConvergenceFailure_ = Parameters::get<TypeTag, Properties::LinearSolverIgnoreConvergenceFailure>();
+            scale_linear_system_ = Parameters::get<TypeTag, Properties::ScaleLinearSystem>();
+            linsolver_ = Parameters::get<TypeTag, Properties::LinearSolver>();
+            linear_solver_print_json_definition_ = Parameters::get<TypeTag, Properties::LinearSolverPrintJsonDefinition>();
+            cpr_reuse_setup_  = Parameters::get<TypeTag, Properties::CprReuseSetup>();
+            cpr_reuse_interval_  = Parameters::get<TypeTag, Properties::CprReuseInterval>();
 
             if (!Parameters::isSet<TypeTag, std::string>("LinearSolver") && cprRequestedInDataFile) {
                 linsolver_ = "cpr";
             } else {
-                linsolver_ = EWOMS_GET_PARAM(TypeTag, std::string, LinearSolver);
+                linsolver_ = Parameters::get<TypeTag, Properties::LinearSolver>();
             }
 
-            accelerator_mode_ = EWOMS_GET_PARAM(TypeTag, std::string, AcceleratorMode);
-            bda_device_id_ = EWOMS_GET_PARAM(TypeTag, int, BdaDeviceId);
-            opencl_platform_id_ = EWOMS_GET_PARAM(TypeTag, int, OpenclPlatformId);
-            opencl_ilu_parallel_ = EWOMS_GET_PARAM(TypeTag, bool, OpenclIluParallel);
+            accelerator_mode_ = Parameters::get<TypeTag, Properties::AcceleratorMode>();
+            bda_device_id_ = Parameters::get<TypeTag, Properties::BdaDeviceId>();
+            opencl_platform_id_ = Parameters::get<TypeTag, Properties::OpenclPlatformId>();
+            opencl_ilu_parallel_ = Parameters::get<TypeTag, Properties::OpenclIluParallel>();
         }
 
         template <class TypeTag>
