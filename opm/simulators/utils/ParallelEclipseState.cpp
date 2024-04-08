@@ -20,13 +20,18 @@
 #include <config.h>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 
+#include <opm/input/eclipse/EclipseState/Grid/FIPRegionStatistics.hpp>
 #include <opm/input/eclipse/EclipseState/Grid/FieldData.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 
 #include <cstddef>
+#include <map>
 #include <regex>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace {
     bool is_FIP(const std::string& keyword)
@@ -277,6 +282,20 @@ const FieldPropsManager& ParallelEclipseState::globalFieldProps() const
     if (m_comm.rank() != 0)
         OPM_THROW(std::runtime_error, "Attempt to access global field properties on non-root process");
     return this->EclipseState::globalFieldProps();
+}
+
+
+void ParallelEclipseState::computeFipRegionStatistics()
+{
+    if (! this->fipRegionStatistics_.has_value()) {
+        this->fipRegionStatistics_
+            .emplace(declaredMaxRegionID(this->runspec()),
+                     this->fieldProps(),
+                     [this](std::vector<int>& maxRegionID)
+                     {
+                         this->m_comm.max(maxRegionID.data(), maxRegionID.size());
+                     });
+    }
 }
 
 
