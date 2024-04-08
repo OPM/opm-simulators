@@ -173,6 +173,14 @@ add_test_compare_parallel_simulation(CASENAME actionx_m1
                                      DIR udq_actionx
                                      TEST_ARGS --solver-max-time-step-in-days=0.2 --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-6)
 
+add_test_compare_parallel_simulation(CASENAME reg_smry_in_fld_udq
+                                     FILENAME UDQ_REG-01
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol_parallel}
+                                     REL_TOL ${coarse_rel_tol_parallel}
+                                     DIR udq_actionx
+                                     TEST_ARGS --enable-tuning=true)
+
 add_test_compare_parallel_simulation(CASENAME winjmult_msw
                                      FILENAME WINJMULT_MSW
                                      SIMULATOR flow
