@@ -95,12 +95,12 @@ public:
     EclNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {
         errorPvFraction_ = 1.0;
-        relaxedMaxPvFraction_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonRelaxedVolumeFraction);
+        relaxedMaxPvFraction_ = Parameters::get<TypeTag, Properties::EclNewtonRelaxedVolumeFraction>();
 
         sumTolerance_ = 0.0; // this gets determined in the error calculation proceedure
-        relaxedTolerance_ = EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonRelaxedTolerance);
+        relaxedTolerance_ = Parameters::get<TypeTag, Properties::EclNewtonRelaxedTolerance>();
 
-        numStrictIterations_ = EWOMS_GET_PARAM(TypeTag, int, EclNewtonStrictIterations);
+        numStrictIterations_ = Parameters::get<TypeTag, Properties::EclNewtonStrictIterations>();
     }
 
     /*!
@@ -146,7 +146,7 @@ public:
     {
         const auto& constraintsMap = this->model().linearizer().constraintsMap();
         this->lastError_ = this->error_;
-        Scalar newtonMaxError = EWOMS_GET_PARAM(TypeTag, Scalar, NewtonMaxError);
+        Scalar newtonMaxError = Parameters::get<TypeTag, Properties::NewtonMaxError>();
 
         // calculate the error as the maximum weighted tolerance of
         // the solution's residual
@@ -219,8 +219,8 @@ public:
 
         // scale the tolerance for the total error with the pore volume. by default, the
         // exponent is 1/3, i.e., cubic root.
-        Scalar x = EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonSumTolerance);
-        Scalar y = EWOMS_GET_PARAM(TypeTag, Scalar, EclNewtonSumToleranceExponent);
+        Scalar x = Parameters::get<TypeTag, Properties::EclNewtonSumTolerance>();
+        Scalar y = Parameters::get<TypeTag, Properties::EclNewtonSumToleranceExponent>();
         sumTolerance_ = x*std::pow(sumPv, y);
 
         this->endIterMsg() << " (max: " << this->tolerance_ << ", violated for " << errorPvFraction_*100 << "% of the pore volume), aggegate error: " << errorSum_ << " (max: " << sumTolerance_ << ")";

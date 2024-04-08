@@ -200,7 +200,7 @@ public:
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
-        if (EWOMS_GET_PARAM(TypeTag, bool, EnableWriteAllSolutions) || this->simulator().episodeWillBeOver()){
+        if (Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() || this->simulator().episodeWillBeOver()){
             BaseType::writeOutput(verbose);
         }
     }
