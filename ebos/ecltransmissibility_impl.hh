@@ -398,7 +398,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                 trans = 1.0 / (1.0/halfTrans1 + 1.0/halfTrans2);
 
            
-            //std::cout << " ---------------- LGR1 ---------------- " << std::endl;
+            /* //std::cout << " ---------------- LGR1 ---------------- " << std::endl;
             if (elem.level() == 1){
                 std::cout << "LGR1. Cell in LGR1 with index: " << elemIdx<< " TRANS: " << trans << std::endl;
                 std::cout << "Face index in inside: " << insideFaceIdx << std::endl;
@@ -424,7 +424,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                 std::cout << "Refined cell with index: " << elemIdx<< " TRANS: " << trans << std::endl;
                  std::cout << "Face index in inside: " << insideFaceIdx << std::endl;
                 std::cout<< std::endl;
-                }
+                }*/
             
             // apply the full face transmissibility multipliers
             // for the inside ...
@@ -489,38 +489,24 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
 
             trans_[details::isId(elemIdx, outsideElemIdx)] = trans;
 
-            /*  // std::cout << " ---------------- LGR1 TRANS after applying the region multiplier ---------------- " << std::endl;
-            if (elem.level() == 1){
-                std::cout << "LGR1. Cell in LGR1 with index: " << elemIdx<<
-                    " TRANS after applying the region multipliers: " << trans << std::endl;
-                std::cout << "Face direction: " << faceDir << std::endl;
-                std::cout<< std::endl;
+            /*if (elem.index() == 276)
+            {
+                std::cout << "TRANS 276, 43: " << transmissibility(276, 43) << std::endl;
+                std::cout << "TRANS 276, 34: " << transmissibility(276, 34) << std::endl;
+                std::cout << "TRANS 276, 277: " << transmissibility(276, 277) << std::endl;
             }
-
-            // std::cout << " ---------------- LGR2 TRANS after applying the region multiplier ---------------- " << std::endl;
-            if (elem.level() == 2){
-                std::cout << "LGR2. Cell in LGR2 with index: " << elemIdx<<
-                    " TRANS after applying the region multipliers: " << trans << std::endl;
-                 std::cout << "Face direction: " << faceDir << std::endl;
-                 std::cout<< std::endl;
+            if (elem.index() == 282)
+            {
+                std::cout << "TRANS 276, 282: " << transmissibility(276, 282) << std::endl;
             }
-
-            // std::cout << " ----- COARSE cells on Boundary LGRs TRANS after applying the region multiplier ----- " << std::endl;
-            if ((elem.level() == 0) && (outsideElem.level() > 0)){
-                std::cout << "Coarse cell with index: " << elemIdx<<
-                    " TRANS after applying the region multipliers: " << trans << std::endl;
-                 std::cout << "Face direction: " << faceDir << std::endl;
-           std::cout<< std::endl;
-            }
-
-            // std::cout << " ----- REFINED cells on Boundary LGRs TRANS after applying the region multiplier ----- " << std::endl;
-            if ((elem.level() > 0) && (outsideElem.level() == 0)){
-                std::cout << "Refined cell with index: " << elemIdx<<
-                    " TRANS after applying the region multipliers: " << trans << std::endl;
-                 std::cout << "Face direction: " << faceDir << std::endl;
-                 std::cout<< std::endl;
-                 }*/
-
+             
+            if (elem.index() == 312)
+            {
+                std::cout << "TRANS 276, 312: " << transmissibility(276, 312) << std::endl;
+                }*/
+            
+            
+        
             // update the "thermal half transmissibility" for the intersection
             if (enableEnergy_) {
 
@@ -619,6 +605,31 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
            }
         }
     }
+
+
+         // compute the transmissibilities for leaf grid view with index 276
+     for (const auto& elem : elements(gridView_)) {
+         if ( (elem.index() == 384) || (elem.index() == 389) || (elem.index() == 414) || (elem.index() == 419)) {
+             std::cout << "Element level: " << elem.level() << std::endl;
+        unsigned elemIdx = elemMapper.index(elem);
+        std::cout << "Element index: " << elemIdx << std::endl;
+
+        auto isIt = gridView_.ibegin(elem);
+        const auto& isEndIt = gridView_.iend(elem);
+        for (; isIt != isEndIt; ++ isIt) {
+            // store intersection, this might be costly
+            const auto& intersection = *isIt;
+            std::cout << "Intersection cell index: " << intersection.inside().index() << std::endl;
+            if (intersection.neighbor())
+            {
+             std::cout << "Intersection OUTSIDE cell index LEVEL: " << intersection.outside().level() << std::endl;
+             std::cout << "Intersection OUTSIDE cell indexL: " << intersection.outside().index() << std::endl;
+              std::cout << "TRANS CELL, neighbor: " << transmissibility(elemIdx, intersection.outside().index()) << std::endl;
+            }
+        }
+        std::cout << std::endl;
+     }
+     }
 
     // Potentially overwrite and/or modify transmissibilities based on input from deck
     this->updateFromEclState_(global);
