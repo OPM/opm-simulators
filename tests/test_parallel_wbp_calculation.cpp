@@ -599,7 +599,7 @@ BOOST_AUTO_TEST_CASE(TopOfFormation_Well_OpenConns)
     cse.wbpCalcService.inferBlockAveragePressures(calcIndex, controls, gravity, refDepth);
 
     const auto avgPress = cse.wbpCalcService.averagePressures(calcIndex);
-    using WBPMode = Opm::PAvgCalculator::Result::WBPMode;
+    using WBPMode = Opm::PAvgCalculator<double>::Result::WBPMode;
 
     BOOST_CHECK_CLOSE(avgPress.value(WBPMode::WBP) , 1254.806625666667, 1.0e-8);
     BOOST_CHECK_CLOSE(avgPress.value(WBPMode::WBP4), 1295.348292333333, 1.0e-8);

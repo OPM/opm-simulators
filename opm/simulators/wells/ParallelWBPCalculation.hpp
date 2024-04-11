@@ -163,7 +163,7 @@ public:
     ///
     /// \return Result set from most recent call to member function \c
     ///   inferBlockAveragePressures() for \c calcIndex.
-    const PAvgCalculator::Result&
+    const PAvgCalculator<double>::Result&
     averagePressures(const std::size_t calcIndex) const;
 
 private:
@@ -360,7 +360,7 @@ private:
     /// terms.
     ///
     /// \return WBPn source terms aggregated for \p well.
-    PAvgCalculator::Sources makeEvaluationSources(const WellID well) const;
+    PAvgCalculator<double>::Sources makeEvaluationSources(const WellID well) const;
 };
 
 } // namespace Opm

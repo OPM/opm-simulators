@@ -240,7 +240,7 @@ inferBlockAveragePressures(const std::size_t calcIndex,
                                     controls, gravity, refDepth);
 }
 
-const Opm::PAvgCalculator::Result&
+const Opm::PAvgCalculator<double>::Result&
 Opm::ParallelWBPCalculation::averagePressures(const std::size_t calcIndex) const
 {
     return this->calculators_[calcIndex].averagePressures();
@@ -334,10 +334,10 @@ void Opm::ParallelWBPCalculation::defineWellCommunication(const std::size_t well
         .buildStructure(this->calculators_[well].allWellConnections());
 }
 
-Opm::PAvgCalculator::Sources
+Opm::PAvgCalculator<double>::Sources
 Opm::ParallelWBPCalculation::makeEvaluationSources(const WellID well) const
 {
-    return PAvgCalculator::Sources{}
+    return PAvgCalculator<double>::Sources{}
         .wellBlocks(this->reservoirSrc_)
         .wellConns (this->wellConnSrc_[well]);
 }

@@ -38,7 +38,7 @@ namespace Opm {
 /// have a flowing bottom-hole pressure.  Mainly useful for reporting.
 ///
 /// Parallel edition.  Handles distributed wells.
-class ParallelPAvgCalculator : public PAvgCalculator
+class ParallelPAvgCalculator : public PAvgCalculator<double>
 {
 public:
     /// Constructor
