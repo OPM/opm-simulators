@@ -179,6 +179,19 @@ namespace WellGroupHelpers
                              GroupState& group_state,
                              bool sum_rank);
 
+    
+    /// Returns the name of the worst offending well and its fraction (i.e. violated_phase / preferred_phase) 
+    template <class Comm>
+    std::pair<std::optional<std::string>, double>  worstOffendingWell(const Group& group,
+                                                                      const Schedule& schedule,
+                                                                      const int reportStepIdx,
+                                                                      const Group::ProductionCMode& offendedControl,
+                                                                      const PhaseUsage& pu,
+                                                                      const Comm& comm,
+                                                                      const WellState& wellState,
+                                                                      DeferredLogger& deferred_logger);
+
+
     template <class RegionalValues>
     void updateGpMaintTargetForGroups(const Group& group,
                                       const Schedule& schedule,

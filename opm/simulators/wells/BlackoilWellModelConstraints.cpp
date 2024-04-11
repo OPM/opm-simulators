@@ -400,13 +400,18 @@ actionOnBrokenConstraints(const Group& group,
     }
 }
 
-void BlackoilWellModelConstraints::
+bool BlackoilWellModelConstraints::
 actionOnBrokenConstraints(const Group& group,
+                          const int reportStepIdx,
                           const Group::GroupLimitAction group_limit_action,
                           const Group::ProductionCMode& newControl,
+                          const WellState& well_state,
+                          std::optional<std::string>& worst_offending_well,
                           GroupState& group_state,
                           DeferredLogger& deferred_logger) const
 {
+
+    bool changed = false;
     const Group::ProductionCMode oldControl = wellModel_.groupState().production_control(group.name());
 
     std::string ss;
@@ -421,6 +426,8 @@ actionOnBrokenConstraints(const Group& group,
                                  group.name(),
                                  Group::ProductionCMode2String(oldControl),
                                  Group::ProductionCMode2String(newControl));
+
+                changed = true;
             }
             else {
                 ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. Nothing is done.",
@@ -439,7 +446,9 @@ actionOnBrokenConstraints(const Group& group,
         break;
     }
     case Group::ExceedAction::WELL: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit WELL not implemented", deferred_logger);
+
+        std::tie(worst_offending_well, std::ignore) = WellGroupHelpers::worstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
+                                                            newControl, wellModel_.phaseUsage(), wellModel_.comm(), well_state, deferred_logger);
         break;
     }
     case Group::ExceedAction::PLUG: {
@@ -454,6 +463,7 @@ actionOnBrokenConstraints(const Group& group,
                              Group::ProductionCMode2String(oldControl),
                              Group::ProductionCMode2String(newControl));
         }
+        changed = true;
         break;
     }
     default:
@@ -462,6 +472,8 @@ actionOnBrokenConstraints(const Group& group,
 
     if (!ss.empty() && wellModel_.comm().rank() == 0)
         deferred_logger.debug(ss);
+
+    return changed;
 }
 
 bool BlackoilWellModelConstraints::
@@ -469,6 +481,7 @@ updateGroupIndividualControl(const Group& group,
                              const int reportStepIdx,
                              std::map<std::pair<std::string,Opm::Phase>,std::string>& switched_inj,
                              std::map<std::string, std::string>& switched_prod,
+                             std::map<std::string, std::pair<std::string, std::string>>& closed_offending_wells,
                              GroupState& group_state,
                              WellState& well_state,
                              DeferredLogger& deferred_logger) const
@@ -506,23 +519,30 @@ updateGroupIndividualControl(const Group& group,
                                                                          reportStepIdx,
                                                                          deferred_logger);
         const auto controls = group.productionControls(wellModel_.summaryState());
+
         if (changed_this.first != Group::ProductionCMode::NONE)
         {
-            switched_prod.insert_or_assign(group.name(),
-                                  Group::ProductionCMode2String(changed_this.first));
-
-            this->actionOnBrokenConstraints(group,
+            std::optional<std::string> worst_offending_well = std::nullopt;
+            changed = this->actionOnBrokenConstraints(group, reportStepIdx,              
                                             controls.group_limit_action,
-                                            changed_this.first,
+                                            changed_this.first, well_state, 
+                                            worst_offending_well,
                                             group_state, deferred_logger);
-            WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second,
-                                                                  group,
-                                                                  wellModel_.schedule(),
-                                                                  reportStepIdx,
-                                                                  /* isInjector */ false,
-                                                                  wellModel_.groupState(),
-                                                                  well_state);
-            changed = true;
+
+            if(changed) {
+                switched_prod.insert_or_assign(group.name(),
+                                    Group::ProductionCMode2String(changed_this.first));
+                WellGroupHelpers::updateWellRatesFromGroupTargetScale(changed_this.second,
+                                                                    group,
+                                                                    wellModel_.schedule(),
+                                                                    reportStepIdx,
+                                                                    /* isInjector */ false,
+                                                                    wellModel_.groupState(),
+                                                                    well_state);
+            } else if (worst_offending_well) {
+                closed_offending_wells.insert_or_assign(group.name(), 
+                            std::make_pair(Group::ProductionCMode2String(changed_this.first), *worst_offending_well));
+            }
         }
     }
 
