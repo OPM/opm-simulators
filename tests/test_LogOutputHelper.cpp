@@ -40,6 +40,28 @@
 #include <memory>
 #include <string>
 
+template<int type>
+struct LogFixture
+{
+    LogFixture() {
+        Opm::OpmLog::addBackend("stream",
+                                std::make_shared<Opm::StreamLog>(str, type));
+    }
+    ~LogFixture() {
+        Opm::OpmLog::removeBackend("stream");
+    }
+
+    std::stringstream str;
+};
+/*
+template<>
+std::stringstream LogFixture<Opm::Log::MessageType::Warning>::str;
+template<>
+std::stringstream LogFixture<Opm::Log::MessageType::Note>::str;
+*/
+using LogNoteFixture = LogFixture<Opm::Log::MessageType::Note>;
+using LogWarningFixture = LogFixture<Opm::Log::MessageType::Warning>;
+
 namespace {
 
 const std::string input = R"(
@@ -94,7 +116,7 @@ std::string trimStream(std::stringstream& str)
 
 }
 
-BOOST_AUTO_TEST_CASE(Cumulative)
+BOOST_FIXTURE_TEST_CASE(Cumulative, LogNoteFixture)
 {
     const std::string reference = R"(=================================================== CUMULATIVE PRODUCTION/INJECTION REPORT =========================================
 :  WELL  :  LOCATION :  WELL  :CTRL:    OIL    :   WATER   :    GAS    :   Prod    :    OIL    :   WATER   :    GAS    :   INJ     :
@@ -107,12 +129,6 @@ BOOST_AUTO_TEST_CASE(Cumulative)
 :     INJ:    1,    1:     INJ:GRAT:       24.0:       25.0:       26.0:       27.0:       28.0:       29.0:       30.0:       31.0:
 :--------:-----------:--------:----:-----------:-----------:-----------:-----------:-----------:-----------:-----------:-----------:
 )";
-
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
-
-
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
     auto deck = parser.parseString(input);
@@ -170,20 +186,14 @@ BOOST_AUTO_TEST_CASE(Cumulative)
     helper.cumulative(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
-    // Cleanup backends with references to local variables
-    Opm::OpmLog::removeBackend("stream");
 }
 
 
-BOOST_AUTO_TEST_CASE(Error)
+BOOST_FIXTURE_TEST_CASE(Error, LogWarningFixture)
 {
     const std::string reference = R"(Finding the bubble point pressure failed for 3 cells [(2,1,1), (1,3,1), (1,4,1)]
 Finding the dew point pressure failed for 3 cells [(5,1,1), (6,1,1), (7,1,1)]
 )";
-
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Warning));
 
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
@@ -202,11 +212,9 @@ Finding the dew point pressure failed for 3 cells [(5,1,1), (6,1,1), (7,1,1)]
     helper.error({1,20,30}, {4,5,6});
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
-    // Cleanup backends with references to local variables
-    Opm::OpmLog::removeBackend("stream");
 }
 
-BOOST_AUTO_TEST_CASE(Fip)
+BOOST_FIXTURE_TEST_CASE(Fip, LogNoteFixture)
 {
     const std::string reference = R"(
                                                      ==================================================
@@ -240,11 +248,6 @@ BOOST_AUTO_TEST_CASE(Fip)
 
 
 )";
-
-
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
 
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
@@ -291,11 +294,9 @@ BOOST_AUTO_TEST_CASE(Fip)
     helper.fip(current, initial, "FIPNUM");
 
     BOOST_CHECK_EQUAL(str.str(), reference);
-    // Cleanup backends with references to local variables
-    Opm::OpmLog::removeBackend("stream");
 }
 
-BOOST_AUTO_TEST_CASE(FipResv)
+BOOST_FIXTURE_TEST_CASE(FipResv, LogNoteFixture)
 {
     const std::string reference = R"(
                                                      ===================================
@@ -310,11 +311,6 @@ BOOST_AUTO_TEST_CASE(FipResv)
  ===========================================================================================
 )";
     
-
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
-
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
     auto deck = parser.parseString(input);
@@ -346,12 +342,10 @@ BOOST_AUTO_TEST_CASE(FipResv)
 
     helper.fipResv(current, "FIPNUM");
     BOOST_CHECK_EQUAL(str.str(), reference);
-    // Cleanup backends with references to local variables
-    Opm::OpmLog::removeBackend("stream");
 }
 
 
-BOOST_AUTO_TEST_CASE(Injection)
+BOOST_FIXTURE_TEST_CASE(Injection, LogNoteFixture)
 {
     const std::string reference = R"(=================================================== INJECTION REPORT ========================================
 :  WELL  :  LOCATION : CTRL : CTRL : CTRL :    OIL    :   WATER   :    GAS    :   FLUID   : BHP OR : THP OR :
@@ -363,10 +357,6 @@ BOOST_AUTO_TEST_CASE(Injection)
 :     INJ:    1,    1:      :      :  GRAT:        9.0:       10.0:       11.0:       12.0:    13.0:    14.0:
 :--------:-----------:------:------:------:-----------:-----------:-----------:-----------:--------:--------:
 )";
-
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
 
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
@@ -403,12 +393,10 @@ BOOST_AUTO_TEST_CASE(Injection)
     helper.injection(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
-    // Cleanup backends with references to local variables
-    Opm::OpmLog::removeBackend("stream");
 }
 
 
-BOOST_AUTO_TEST_CASE(Production)
+BOOST_FIXTURE_TEST_CASE(Production, LogNoteFixture)
 {
     const std::string reference = R"(======================================================= PRODUCTION REPORT =======================================================
 :  WELL  :  LOCATION :CTRL:    OIL    :   WATER   :    GAS    :   FLUID   :   WATER   : GAS/OIL  :  WAT/GAS   : BHP OR : THP OR :
@@ -421,9 +409,6 @@ BOOST_AUTO_TEST_CASE(Production)
 :--------:-----------:----:-----------:-----------:-----------:-----------:-----------:----------:------------:--------:--------:
 )";
 
-    std::stringstream str;
-    Opm::OpmLog::addBackend("stream",
-                            std::make_shared<Opm::StreamLog>(str, Opm::Log::MessageType::Note));
 
     Opm::Parser parser;
     auto python = std::make_shared<Opm::Python>();
@@ -466,7 +451,5 @@ BOOST_AUTO_TEST_CASE(Production)
     helper.production(0);
     std::string data = trimStream(str);
     BOOST_CHECK_EQUAL(data, reference);
-    // Cleanup backends with references to local variables
-    Opm::OpmLog::removeBackend("stream");
 }
 
