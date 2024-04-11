@@ -1633,7 +1633,7 @@ public:
         }
 
         // do the normalization of the relative error
-        Scalar alpha = std::max(1e-20,
+        Scalar alpha = std::max(Scalar{1e-20},
                                 std::max(std::abs(maxRelErr),
                                          std::abs(minRelErr)));
         for (unsigned globalIdx = 0; globalIdx < numGridDof; ++ globalIdx)

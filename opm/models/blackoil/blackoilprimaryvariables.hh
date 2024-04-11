@@ -849,7 +849,7 @@ public:
                                                                                soMax);
 
                 Scalar rs = (*this)[Indices::compositionSwitchIdx];
-                if (rs > std::min(rsMax, rsSat*(1.0 + eps))) {
+                if (rs > std::min(rsMax, rsSat*(Scalar{1.0} + eps))) {
                     // the gas phase appears, i.e., switch the primary variables to GasMeaning::Sg
                     setPrimaryVarsMeaningGas(GasMeaning::Sg);
                     (*this)[Indices::compositionSwitchIdx] = 0.0; // hydrocarbon gas saturation
@@ -876,7 +876,7 @@ public:
                                                                                     soMax);
 
                 Scalar rv = (*this)[Indices::compositionSwitchIdx];
-                if (rv > std::min(rvMax, rvSat*(1.0 + eps))) {
+                if (rv > std::min(rvMax, rvSat*(Scalar{1.0} + eps))) {
                     // switch to phase equilibrium mode because the oil phase appears. here
                     // we also need the capillary pressures to calculate the oil phase
                     // pressure using the gas phase pressure
@@ -925,10 +925,10 @@ public:
             ssol =(*this) [Indices::solventSaturationIdx];
 
         Scalar so = 1.0 - sw - sg - ssol;
-        sw = std::min(std::max(sw,0.0),1.0);
-        so = std::min(std::max(so,0.0),1.0);
-        sg = std::min(std::max(sg,0.0),1.0);
-        ssol = std::min(std::max(ssol,0.0),1.0);
+        sw = std::min(std::max(sw, Scalar{0.0}), Scalar{1.0});
+        so = std::min(std::max(so, Scalar{0.0}), Scalar{1.0});
+        sg = std::min(std::max(sg, Scalar{0.0}), Scalar{1.0});
+        ssol = std::min(std::max(ssol, Scalar{0.0}), Scalar{1.0});
         Scalar st = sw + so + sg + ssol;
         sw = sw/st;
         sg = sg/st;
@@ -981,7 +981,7 @@ public:
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
-        using FV = Dune::FieldVector<double,getPropValue<TypeTag, Properties::NumEq>()>;
+        using FV = Dune::FieldVector<Scalar, getPropValue<TypeTag, Properties::NumEq>()>;
         serializer(static_cast<FV&>(*this));
         serializer(primaryVarsMeaningWater_);
         serializer(primaryVarsMeaningPressure_);

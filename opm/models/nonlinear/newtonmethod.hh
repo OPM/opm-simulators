@@ -454,13 +454,13 @@ public:
         if (numIterations_ > targetIterations_()) {
             Scalar percent = Scalar(numIterations_ - targetIterations_())/targetIterations_();
             Scalar nextDt = std::max(problem().minTimeStepSize(),
-                                     oldDt/(1.0 + percent));
+                                     oldDt / (Scalar{1.0} + percent));
             return nextDt;
         }
 
         Scalar percent = Scalar(targetIterations_() - numIterations_)/targetIterations_();
         Scalar nextDt = std::max(problem().minTimeStepSize(),
-                                 oldDt*(1.0 + percent/1.2));
+                                 oldDt*(Scalar{1.0} + percent / Scalar{1.2}));
         return nextDt;
     }
 
