@@ -105,7 +105,7 @@ finaliseConstruction(const std::vector<std::size_t>& sourceLocations,
     this->defineCommunication();
 }
 
-Opm::PAvgDynamicSourceData::SourceDataSpan<double>
+Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>
 Opm::ParallelPAvgDynamicSourceData::localSourceTerm(const std::size_t localIx)
 {
     return this->sourceTerm(localIx, this->localSrc_);

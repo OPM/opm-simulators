@@ -32,7 +32,7 @@ namespace Opm {
 
 /// Dynamic source data for block-average pressure calculations.
 /// Specialisation for parallel runs.
-class ParallelPAvgDynamicSourceData : public PAvgDynamicSourceData
+class ParallelPAvgDynamicSourceData : public PAvgDynamicSourceData<double>
 {
 public:
     /// Translate globally unique, linearised Cartesian cell indices to

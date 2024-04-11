@@ -214,9 +214,9 @@ namespace {
             }
 
             void cellSource(const int                                          cell,
-                            Opm::PAvgDynamicSourceData::SourceDataSpan<double> src)
+                            Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double> src)
             {
-                using Item = Opm::PAvgDynamicSourceData::SourceDataSpan<double>::Item;
+                using Item = Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>::Item;
 
                 src .set(Item::Pressure      , pressure(cell))
                     .set(Item::PoreVol       , porevol (cell))
@@ -239,10 +239,10 @@ namespace {
                     auto rho = std::vector { 0.1, 0.12, 0.14, };
 
                     return [rho = std::move(rho)]
-                        (const int                                          connIx,
-                         Opm::PAvgDynamicSourceData::SourceDataSpan<double> src)
+                        (const int                                                  connIx,
+                         Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double> src)
                     {
-                        using Item = Opm::PAvgDynamicSourceData::SourceDataSpan<double>::Item;
+                        using Item = Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>::Item;
 
                         src .set(Item::Pressure      , 1222.0)
                             .set(Item::PoreVol       ,    1.25)
@@ -353,10 +353,10 @@ namespace {
                     });
             }
 
-            void cellSource(const int                                          cell,
-                            Opm::PAvgDynamicSourceData::SourceDataSpan<double> src)
+            void cellSource(const int                                                  cell,
+                            Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double> src)
             {
-                using Item = Opm::PAvgDynamicSourceData::SourceDataSpan<double>::Item;
+                using Item = Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>::Item;
 
                 src .set(Item::Pressure      , pressure(cell))
                     .set(Item::PoreVol       , porevol (cell))
@@ -379,10 +379,10 @@ namespace {
                     auto rho = std::vector { 0.16, 0.18, 0.2, };
 
                     return [rho = std::move(rho)]
-                        (const int                                          connIx,
-                         Opm::PAvgDynamicSourceData::SourceDataSpan<double> src)
+                        (const int                                                  connIx,
+                         Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double> src)
                     {
-                        using Item = Opm::PAvgDynamicSourceData::SourceDataSpan<double>::Item;
+                        using Item = Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>::Item;
 
                         src .set(Item::Pressure      , 1222.0)
                             .set(Item::PoreVol       ,    1.25)
