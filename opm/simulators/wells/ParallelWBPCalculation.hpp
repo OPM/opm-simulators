@@ -326,7 +326,7 @@ private:
 
     /// Collection of WBPn calculation objects.  One object for each well on
     /// rank.
-    PAvgCalculatorCollection calculators_{};
+    PAvgCalculatorCollection<double> calculators_{};
 
     /// Source term objects for each well on rank.
     std::vector<SourceData> wellConnSrc_{};
