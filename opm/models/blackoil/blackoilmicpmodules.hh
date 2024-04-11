@@ -127,7 +127,13 @@ public:
                            MICPpara.getMaximumUreaConcentration(),
                            MICPpara.getToleranceBeforeClogging());
         // obtain the porosity for the clamp in the blackoilnewtonmethod
-        params_.phi_ = eclState.fieldProps().get_double("PORO");
+        if constexpr (std::is_same_v<Scalar, float>) {
+            const auto phi = eclState.fieldProps().get_double("PORO");
+            params_.phi_.resize(phi.size());
+            std::copy(phi.begin(), phi.end(), params_.phi_.begin());
+        } else {
+            params_.phi_ = eclState.fieldProps().get_double("PORO");
+        }
     }
 #endif
 
