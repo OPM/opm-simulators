@@ -1005,33 +1005,40 @@ getFloIPR(const WellState<Scalar>& well_state,
                           detail::getFlo(table, aqua_b, liquid_b, vapour_b));
 }
 
-template class WellBhpThpCalculator<double>;
+#define INSTANTIATE(T,...)                                   \
+    template __VA_ARGS__                                     \
+    WellBhpThpCalculator<T>::                                \
+        calculateBhpFromThp(const WellState<T>&,             \
+                            const std::vector<__VA_ARGS__>&, \
+                            const Well&,                     \
+                            const SummaryState&,             \
+                            const T,                         \
+                            DeferredLogger&) const;
 
-#define INSTANCE(...) \
-template __VA_ARGS__ WellBhpThpCalculator<double>:: \
-calculateBhpFromThp<__VA_ARGS__>(const WellState<double>&, \
-                                 const std::vector<__VA_ARGS__>&, \
-                                 const Well&, \
-                                 const SummaryState&, \
-                                 const double, \
-                                 DeferredLogger&) const;
+#define INSTANTIATE_TYPE(T)                      \
+    template class WellBhpThpCalculator<T>;      \
+    INSTANTIATE(T,T)                             \
+    INSTANTIATE(T,DenseAd::Evaluation<T,3,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,4,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,5,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,6,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,7,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,8,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,9,0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T,10,0u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,4u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,5u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,6u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,7u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,8u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,9u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,10u>) \
+    INSTANTIATE(T,DenseAd::Evaluation<T,-1,11u>)
 
-INSTANCE(double)
-INSTANCE(DenseAd::Evaluation<double,3,0u>)
-INSTANCE(DenseAd::Evaluation<double,4,0u>)
-INSTANCE(DenseAd::Evaluation<double,5,0u>)
-INSTANCE(DenseAd::Evaluation<double,6,0u>)
-INSTANCE(DenseAd::Evaluation<double,7,0u>)
-INSTANCE(DenseAd::Evaluation<double,8,0u>)
-INSTANCE(DenseAd::Evaluation<double,9,0u>)
-INSTANCE(DenseAd::Evaluation<double,10,0u>)
-INSTANCE(DenseAd::Evaluation<double,-1,4u>)
-INSTANCE(DenseAd::Evaluation<double,-1,5u>)
-INSTANCE(DenseAd::Evaluation<double,-1,6u>)
-INSTANCE(DenseAd::Evaluation<double,-1,7u>)
-INSTANCE(DenseAd::Evaluation<double,-1,8u>)
-INSTANCE(DenseAd::Evaluation<double,-1,9u>)
-INSTANCE(DenseAd::Evaluation<double,-1,10u>)
-INSTANCE(DenseAd::Evaluation<double,-1,11u>)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm
