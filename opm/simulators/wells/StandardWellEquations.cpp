@@ -404,24 +404,31 @@ sumDistributed(Parallel::Communication comm)
     wellhelpers::sumDistributedWellEntries(duneD_[0][0], resWell_[0], comm);
 }
 
-#define INSTANCE(N) \
-template class StandardWellEquations<double,N>; \
-template void StandardWellEquations<double,N>:: \
-    extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<double,N,N>>&) const; \
-template void StandardWellEquations<double,N>:: \
-    extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<double,1,1>>&, \
-                             const typename StandardWellEquations<double,N>::BVector&, \
-                             const int, \
-                             const bool, \
-                             const WellInterfaceGeneric<double>&, \
-                             const int, \
-                             const WellState<double>&) const;
+#define INSTANTIATE(T,N)                                                              \
+    template class StandardWellEquations<T,N>;                                        \
+    template void StandardWellEquations<T,N>::                                        \
+        extract(Linear::IstlSparseMatrixAdapter<MatrixBlock<T,N,N>>&) const;          \
+    template void StandardWellEquations<T,N>::                                        \
+        extractCPRPressureMatrix(Dune::BCRSMatrix<MatrixBlock<T,1,1>>&,               \
+                                 const typename StandardWellEquations<T,N>::BVector&, \
+                                 const int,                                           \
+                                 const bool,                                          \
+                                 const WellInterfaceGeneric<T>&,                      \
+                                 const int,                                           \
+                                 const WellState<T>&) const;
 
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
+#define INSTANTIATE_TYPE(T) \
+    INSTANTIATE(T,1)        \
+    INSTANTIATE(T,2)        \
+    INSTANTIATE(T,3)        \
+    INSTANTIATE(T,4)        \
+    INSTANTIATE(T,5)        \
+    INSTANTIATE(T,6)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 }
