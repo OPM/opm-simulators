@@ -1392,7 +1392,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     }
     else {
         for (std::size_t i = 0; i < rec.size(); ++i) {
-            rsFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
+            rsFunc_.push_back(std::make_shared<Miscibility::NoMixing<double>>());
         }
     }
 
@@ -1439,7 +1439,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     }
     else {
         for (std::size_t i = 0; i < rec.size(); ++i) {
-            rvFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
+            rvFunc_.push_back(std::make_shared<Miscibility::NoMixing<double>>());
         }
     }
 
@@ -1468,7 +1468,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                 const auto oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
                 if (oilActive){
                     if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
-                        rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
+                        rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing<double>>());
                         const auto msg = "No explicit RVWVD table is given for EQUIL region " + std::to_string(i + 1) +". \n"
                                         "and datum depth is not at the gas-oil-contact. \n"
                                         "Rvw is set to 0.0 in all cells. \n";
@@ -1485,7 +1485,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                      // two-phase gas-water sytem:  water-oil contact depth is taken equal to gas-water contact depth (GWC)
                      // and water-oil capillary pressure (Pcwo) is taken equal to gas-water capillary pressure (Pcgw) at GWC
                      if (rec[i].waterOilContactDepth() != rec[i].datumDepth()) {
-                        rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
+                        rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing<double>>());
                         const auto msg = "No explicit RVWVD table is given for EQUIL region " + std::to_string(i + 1) +". \n"
                                         "and datum depth is not at the gas-water-contact. \n"
                                         "Rvw is set to 0.0 in all cells. \n";
@@ -1502,7 +1502,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     }
     else {
         for (std::size_t i = 0; i < rec.size(); ++i) {
-            rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing>());
+            rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing<double>>());
         }
     }
 
@@ -1783,10 +1783,10 @@ calcPressSatRsRv(const RMap& reg,
                  const double grav)
 {
     using PhaseSat = Details::PhaseSaturations<
-        MaterialLawManager, FluidSystem, EquilReg, typename RMap::CellId
+        MaterialLawManager, FluidSystem, EquilReg<double>, typename RMap::CellId
     >;
     
-    auto ptable = Details::PressureTable<FluidSystem, EquilReg>{ grav, this->num_pressure_points_ };
+    auto ptable = Details::PressureTable<FluidSystem, EquilReg<double>>{ grav, this->num_pressure_points_ };
     auto psat   = PhaseSat { materialLawManager, this->swatInit_ };
     auto vspan  = std::array<double, 2>{};
 
@@ -1914,7 +1914,7 @@ void InitialStateComputer<FluidSystem,
                           ElementMapper,
                           CartesianIndexMapper>::
 equilibrateCellCentres(const CellRange&         cells,
-                       const EquilReg&          eqreg,
+                       const EquilReg<double>&  eqreg,
                        const PressTable&        ptable,
                        PhaseSat&                psat)
 {
@@ -1960,11 +1960,11 @@ void InitialStateComputer<FluidSystem,
                           GridView,
                           ElementMapper,
                           CartesianIndexMapper>::
-equilibrateHorizontal(const CellRange&  cells,
-                      const EquilReg&   eqreg,
-                      const int         acc,
-                      const PressTable& ptable,
-                      PhaseSat&         psat)
+equilibrateHorizontal(const CellRange&        cells,
+                      const EquilReg<double>& eqreg,
+                      const int               acc,
+                      const PressTable&       ptable,
+                      PhaseSat&               psat)
 {
     using CellPos = typename PhaseSat::Position;
     using CellID  = std::remove_cv_t<std::remove_reference_t<

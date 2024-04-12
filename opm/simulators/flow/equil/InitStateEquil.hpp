@@ -58,8 +58,8 @@ class NumericalAquifers;
  */
 namespace EQUIL {
 
-class EquilReg;
-namespace Miscibility { class RsFunction; }
+template<class Scalar> class EquilReg;
+namespace Miscibility { template<class Scalar> class RsFunction; }
 
 namespace Details {
 template <class RHS>
@@ -736,21 +736,21 @@ private:
                   EquilibrationMethod&& eqmethod);
 
     template <class CellRange, class PressTable, class PhaseSat>
-    void equilibrateCellCentres(const CellRange&         cells,
-                                const EquilReg&          eqreg,
-                                const PressTable&        ptable,
-                                PhaseSat&                psat);
+    void equilibrateCellCentres(const CellRange&        cells,
+                                const EquilReg<double>& eqreg,
+                                const PressTable&       ptable,
+                                PhaseSat&               psat);
 
     template <class CellRange, class PressTable, class PhaseSat>
-    void equilibrateHorizontal(const CellRange&  cells,
-                               const EquilReg&   eqreg,
-                               const int         acc,
-                               const PressTable& ptable,
-                               PhaseSat&         psat);
+    void equilibrateHorizontal(const CellRange&        cells,
+                               const EquilReg<double>& eqreg,
+                               const int               acc,
+                               const PressTable&       ptable,
+                               PhaseSat&               psat);
 
-    std::vector< std::shared_ptr<Miscibility::RsFunction> > rsFunc_;
-    std::vector< std::shared_ptr<Miscibility::RsFunction> > rvFunc_;
-    std::vector< std::shared_ptr<Miscibility::RsFunction> > rvwFunc_;
+    std::vector< std::shared_ptr<Miscibility::RsFunction<double>> > rsFunc_;
+    std::vector< std::shared_ptr<Miscibility::RsFunction<double>> > rvFunc_;
+    std::vector< std::shared_ptr<Miscibility::RsFunction<double>> > rvwFunc_;
     using TabulatedFunction = Tabulated1DFunction<double>;
     std::vector<TabulatedFunction> tempVdTable_;
     std::vector<TabulatedFunction> saltVdTable_;
