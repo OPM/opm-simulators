@@ -369,52 +369,62 @@ inferDissolvedVaporisedRatio(const Scalar rsMax,
     return dissolvedVaporisedRatio(io, ig, rsMax, rvMax, surface_rates);
 }
 
-using FS = BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>;
-template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
-    sumRates(std::unordered_map<int,Attributes>&,
-             std::unordered_map<int,Attributes>&,
-             Parallel::Communication);
+template<class Scalar>
+using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
 
-template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
-    calcInjCoeff<std::vector<double>>(const int, const int, std::vector<double>&) const;
-template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
-    calcCoeff<std::vector<double>>(const int, const int, std::vector<double>&) const;
-template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
-    calcCoeff<std::vector<double>, std::vector<double>>(const int, const int, const std::vector<double>&, std::vector<double>&) const;
-template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
-    calcReservoirVoidageRates<std::vector<double>,std::vector<double>>(const int,
-                                                                       const double,
-                                                                       const double,
-                                                                       const double,
-                                                                       const double,
-                                                                       const double,
-                                                                       const double,
-                                                                       const double,
-                                                                       const std::vector<double>&,
-                                                                       std::vector<double>&) const;
-template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
-    calcReservoirVoidageRates<double const*,double*>(const int,
-                                                     const double,
-                                                     const double,
-                                                     const double,
-                                                     const double,
-                                                     const double,
-                                                     const double,
-                                                     const double,
-                                                     double const* const&,
-                                                     double*&) const;
+#define INSTANTIATE_TYPE(T)                                              \
+    template void SurfaceToReservoirVoidage<FS<T>,std::vector<int>>::    \
+        sumRates(std::unordered_map<int,Attributes>&,                    \
+                 std::unordered_map<int,Attributes>&,                    \
+                 Parallel::Communication);                               \
+    template void SurfaceToReservoirVoidage<FS<T>,std::vector<int>>::    \
+        calcInjCoeff(const int, const int,                               \
+                     std::vector<T>&) const;                             \
+    template void SurfaceToReservoirVoidage<FS<T>,std::vector<int>>::    \
+        calcCoeff(const int, const int, std::vector<T>&) const;          \
+    template void SurfaceToReservoirVoidage<FS<T>,std::vector<int>>::    \
+        calcCoeff(const int,                                             \
+                  const int,                                             \
+                  const std::vector<T>&,                                 \
+                  std::vector<T>&) const;                                \
+    template void SurfaceToReservoirVoidage<FS<T>,std::vector<int>>::    \
+        calcReservoirVoidageRates(const int,                             \
+                                  const T,                               \
+                                  const T,                               \
+                                  const T,                               \
+                                  const T,                               \
+                                  const T,                               \
+                                  const T,                               \
+                                  const T,                               \
+                                  const std::vector<T>&,                 \
+                                  std::vector<T>&) const;                \
+    template void SurfaceToReservoirVoidage<FS<T>,std::vector<int>>::    \
+        calcReservoirVoidageRates(const int,                             \
+                                  const T,                               \
+                                  const T,                               \
+                                  const T,                               \
+                                  const T,                               \
+                                  const T,                               \
+                                  const T,                               \
+                                  const T,                               \
+                                  T const* const&,                       \
+                                  T*&) const;                            \
+    template void SurfaceToReservoirVoidage<FS<T>,std::vector<int>>::    \
+        calcReservoirVoidageRates(const int,                             \
+                                  const int,                             \
+                                  const std::vector<T>&,                 \
+                                  std::vector<T>&) const;                \
+    template std::pair<T,T>                                              \
+    SurfaceToReservoirVoidage<FS<T>,std::vector<int>>::                  \
+        inferDissolvedVaporisedRatio(const T,                            \
+                                     const T,                            \
+                                     const std::vector<T>::iterator&) const;
 
-template void SurfaceToReservoirVoidage<FS,std::vector<int>>::
-    calcReservoirVoidageRates<std::vector<double>>(const int,
-                                                   const int,
-                                                   const std::vector<double>&,
-                                                   std::vector<double>&) const;
+INSTANTIATE_TYPE(double)
 
-template std::pair<double,double>
-SurfaceToReservoirVoidage<FS,std::vector<int>>::
-    inferDissolvedVaporisedRatio<std::vector<double>::iterator>(const double,
-                                                                const double,
-                                                                const std::vector<double>::iterator&) const;
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace RateConverter
 } // namespace Opm
