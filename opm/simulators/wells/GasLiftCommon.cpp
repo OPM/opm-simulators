@@ -105,4 +105,8 @@ logMessage_(const std::string& prefix,
 
 template class GasLiftCommon<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class GasLiftCommon<float>;
+#endif
+
 } // namespace Opm
