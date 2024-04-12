@@ -1054,4 +1054,8 @@ WellState<Scalar>::parallelWellInfo(std::size_t well_index) const
 
 template class WellState<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class WellState<float>;
+#endif
+
 } // namespace Opm
