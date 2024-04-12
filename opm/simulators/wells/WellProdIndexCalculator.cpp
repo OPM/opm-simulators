@@ -152,10 +152,17 @@ Scalar Opm::wellProdIndStandard(const WellProdIndexCalculator<Scalar>& wellPICal
     return std::accumulate(connPI.begin(), connPI.end(), 0.0);
 }
 
-template class Opm::WellProdIndexCalculator<double>;
-template std::vector<double>
-Opm::connectionProdIndStandard(const WellProdIndexCalculator<double>&,
-                               const std::vector<double>&);
-template double
-Opm::wellProdIndStandard(const WellProdIndexCalculator<double>&,
-                         const std::vector<double>&);
+#define INSTANTIATE_TYPE(T)                                           \
+    template class Opm::WellProdIndexCalculator<T>;                   \
+    template std::vector<T>                                           \
+    Opm::connectionProdIndStandard(const WellProdIndexCalculator<T>&, \
+                                   const std::vector<T>&);            \
+    template T                                                        \
+    Opm::wellProdIndStandard(const WellProdIndexCalculator<T>&,       \
+                             const std::vector<T>&);
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
