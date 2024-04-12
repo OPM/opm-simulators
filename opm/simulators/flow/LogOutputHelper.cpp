@@ -1000,4 +1000,9 @@ pressureUnitConvert_(Scalar& pav) const
 
 template class LogOutputHelper<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class LogOutputHelper<float>;
+#endif
+
+
 } // namespace Opm
