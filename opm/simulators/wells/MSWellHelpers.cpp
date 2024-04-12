@@ -306,52 +306,59 @@ ValueType emulsionViscosity(const ValueType& water_fraction,
     }
 }
 
-template<int Dim>
-using Vec = Dune::BlockVector<Dune::FieldVector<double,Dim>>;
-template<int Dim>
-using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<double,Dim,Dim>>;
+template<class Scalar, int Dim>
+using Vec = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
+template<class Scalar, int Dim>
+using Mat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,Dim,Dim>>;
 
-#define INSTANCE_UMF(Dim) \
-    template Vec<Dim> applyUMFPack<Mat<Dim>,Vec<Dim>>(Dune::UMFPack<Mat<Dim>>&, \
-                                                      Vec<Dim>); \
-    template Dune::Matrix<typename Mat<Dim>::block_type> \
-    invertWithUMFPack<Vec<Dim>,Mat<Dim>>(const int, const int, Dune::UMFPack<Mat<Dim>>&);
+#define INSTANTIATE_UMF(T,Dim)                                             \
+    template Vec<T,Dim> applyUMFPack(Dune::UMFPack<Mat<T,Dim>>&,           \
+                                     Vec<T,Dim>);                          \
+    template Dune::Matrix<typename Mat<T,Dim>::block_type>                 \
+    invertWithUMFPack<Vec<T,Dim>,Mat<T,Dim>>(const int, const int,         \
+                                             Dune::UMFPack<Mat<T,Dim>>&);
 
-INSTANCE_UMF(2)
-INSTANCE_UMF(3)
-INSTANCE_UMF(4)
-
-#define INSTANCE_IMPL(T,...) \
-    template __VA_ARGS__ \
-    frictionPressureLoss(const T, \
-                         const T, \
-                         const T, \
-                         const T, \
-                         const __VA_ARGS__&, \
-                         const __VA_ARGS__&, \
-                         const __VA_ARGS__&); \
-    template  __VA_ARGS__ \
-    valveContrictionPressureLoss(const __VA_ARGS__& mass_rate, \
-                                 const __VA_ARGS__& density, \
-                                 const T, const T); \
-    template __VA_ARGS__ \
+#define INSTANTIATE_IMPL(T,...)                                    \
+    template __VA_ARGS__                                           \
+    frictionPressureLoss(const T,                                  \
+                         const T,                                  \
+                         const T,                                  \
+                         const T,                                  \
+                         const __VA_ARGS__&,                       \
+                         const __VA_ARGS__&,                       \
+                         const __VA_ARGS__&);                      \
+    template  __VA_ARGS__                                          \
+    valveContrictionPressureLoss(const __VA_ARGS__& mass_rate,     \
+                                 const __VA_ARGS__& density,       \
+                                 const T, const T);                \
+    template __VA_ARGS__                                           \
     velocityHead(const T, const __VA_ARGS__&, const __VA_ARGS__&); \
-    template __VA_ARGS__ \
-    emulsionViscosity<__VA_ARGS__,T>(const __VA_ARGS__&,  \
-                                     const __VA_ARGS__&, \
-                                     const __VA_ARGS__&, \
-                                     const __VA_ARGS__&, \
+    template __VA_ARGS__                                           \
+    emulsionViscosity<__VA_ARGS__,T>(const __VA_ARGS__&,           \
+                                     const __VA_ARGS__&,           \
+                                     const __VA_ARGS__&,           \
+                                     const __VA_ARGS__&,           \
                                      const SICD&);
 
-#define INSTANCE_EVAL(Dim) \
-    INSTANCE_IMPL(double, DenseAd::Evaluation<double,Dim>)
+#define INSTANTIATE_EVAL(T,Dim) \
+    INSTANTIATE_IMPL(T, DenseAd::Evaluation<T,Dim>)
 
-INSTANCE_EVAL(3)
-INSTANCE_EVAL(4)
-INSTANCE_EVAL(5)
-INSTANCE_EVAL(6)
-INSTANCE_EVAL(7)
-INSTANCE_EVAL(8)
-INSTANCE_EVAL(9)
+#define INSTANTIATE_TYPE(T) \
+    INSTANTIATE_UMF(T,2)    \
+    INSTANTIATE_UMF(T,3)    \
+    INSTANTIATE_UMF(T,4)    \
+    INSTANTIATE_EVAL(T,3)   \
+    INSTANTIATE_EVAL(T,4)   \
+    INSTANTIATE_EVAL(T,5)   \
+    INSTANTIATE_EVAL(T,6)   \
+    INSTANTIATE_EVAL(T,7)   \
+    INSTANTIATE_EVAL(T,8)   \
+    INSTANTIATE_EVAL(T,9)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::mswellhelpers
