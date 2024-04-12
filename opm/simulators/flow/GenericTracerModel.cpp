@@ -37,42 +37,85 @@
 
 namespace Opm {
 
-template class GenericTracerModel<Dune::CpGrid,
-                                  Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-                                  Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
-                                  Opm::EcfvStencil<double,Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,false,false>,
-                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
-                                  double>;
+#define INSTANTIATE_TYPE(T)                                                                             \
+    template class GenericTracerModel<Dune::CpGrid,                                                     \
+                                      Dune::GridView<                                                   \
+                                          Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,               \
+                                      Dune::MultipleCodimMultipleGeomTypeMapper<                        \
+                                          Dune::GridView<                                               \
+                                              Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,          \
+                                      EcfvStencil<T,Dune::GridView<                                     \
+                                                        Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>, \
+                                                  false,false>,                                         \
+                                      BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>,                \
+                                      T>;
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 #if HAVE_DUNE_FEM
 #if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
 using GV = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
                                            (Dune::PartitionIteratorType)4,
                                            false>;
-template class GenericTracerModel<Dune::CpGrid,
-                                  GV,
-                                  Dune::MultipleCodimMultipleGeomTypeMapper<GV>,
-                                  EcfvStencil<double, GV, false, false>,
-                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
-                                  double>;
+#define INSTANTIATE_FEM_TYPE(T)                                                      \
+template class GenericTracerModel<Dune::CpGrid,                                      \
+                                  GV,                                                \
+                                  Dune::MultipleCodimMultipleGeomTypeMapper<GV>,     \
+                                  EcfvStencil<T, GV, false, false>,                  \
+                                  BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>, \
+                                  T>;
 #else
-template class GenericTracerModel<Dune::CpGrid,
-                                  Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
-                                  Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>,
-                                  EcfvStencil<double,Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,false,false>,
-                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
-                                  double>;
-template class GenericTracerModel<Dune::CpGrid,
-                                  Dune::Fem::GridPart2GridViewImpl<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, (Dune::PartitionIteratorType)4, false> >,
-                                  Dune::MultipleCodimMultipleGeomTypeMapper<
-                                     Dune::Fem::GridPart2GridViewImpl<
-                                         Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false> > >,
-                                  EcfvStencil<double, Dune::Fem::GridPart2GridViewImpl<
-                                                               Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false> >,
-                                                   false, false>,
-                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
-                                  double>;
+#define INSTANTIATE_FEM_TYPE(T)                                                                     \
+    template class GenericTracerModel<Dune::CpGrid,                                                 \
+                                      Dune::GridView<                                               \
+                                          Dune::Fem::GridPart2GridViewTraits<                       \
+                                              Dune::Fem::AdaptiveLeafGridPart<                      \
+                                                  Dune::CpGrid,                                     \
+                                                  Dune::PartitionIteratorType(4), false>>>,         \
+                                      Dune::MultipleCodimMultipleGeomTypeMapper<                    \
+                                          Dune::GridView<                                           \
+                                              Dune::Fem::GridPart2GridViewTraits<                   \
+                                                  Dune::Fem::AdaptiveLeafGridPart<                  \
+                                                      Dune::CpGrid,                                 \
+                                                      Dune::PartitionIteratorType(4), false>>>>,    \
+                                      EcfvStencil<T,Dune::GridView<                                 \
+                                                        Dune::Fem::GridPart2GridViewTraits<         \
+                                                            Dune::Fem::AdaptiveLeafGridPart<        \
+                                                                Dune::CpGrid,                       \
+                                                                Dune::PartitionIteratorType(4),     \
+                                                                false>>>,                           \
+                                                        false,false>,                               \
+                                      BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>,            \
+                                      T>;                                                           \
+    template class GenericTracerModel<Dune::CpGrid,                                                 \
+                                      Dune::Fem::GridPart2GridViewImpl<                             \
+                                          Dune::Fem::AdaptiveLeafGridPart<                          \
+                                              Dune::CpGrid,                                         \
+                                              (Dune::PartitionIteratorType)4, false> >,             \
+                                      Dune::MultipleCodimMultipleGeomTypeMapper<                    \
+                                         Dune::Fem::GridPart2GridViewImpl<                          \
+                                             Dune::Fem::AdaptiveLeafGridPart<                       \
+                                                Dune::CpGrid,                                       \
+                                                Dune::PartitionIteratorType(4), false> > >,         \
+                                      EcfvStencil<T, Dune::Fem::GridPart2GridViewImpl<              \
+                                                        Dune::Fem::AdaptiveLeafGridPart<            \
+                                                            Dune::CpGrid,                           \
+                                                            Dune::PartitionIteratorType(4), false>>,\
+                                                 false, false>,                                     \
+                                      BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>,            \
+                                      T>;
 #endif
+
+INSTANTIATE_FEM_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_FEM_TYPE(float)
+#endif
+
 #endif // HAVE_DUNE_FEM
 
 } // namespace Opm
