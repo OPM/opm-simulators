@@ -180,4 +180,8 @@ bool ALQState<Scalar>::operator==(const ALQState& rhs) const
 
 template class ALQState<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class ALQState<float>;
+#endif
+
 }
