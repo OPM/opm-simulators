@@ -1432,6 +1432,36 @@ add_test_compareECLFiles(CASENAME 01_multregt
                          ABS_TOL ${abs_tol}
                          REL_TOL ${rel_tol}
                          DIR mult)
+add_test_compareECLFiles(CASENAME 05_multxyz
+                         FILENAME MULTXYZ05
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR mult)
+add_test_compareECLFiles(CASENAME 06_multxyz
+                         FILENAME MULTXYZ06
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR mult)
+add_test_compareECLFiles(CASENAME 07_multxyz
+                         FILENAME MULTXYZ07
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR mult)
+add_test_compareECLFiles(CASENAME 08_multxyz
+                         FILENAME MULTXYZ08
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR mult)
+add_test_compareECLFiles(CASENAME 11_multxyz
+                         FILENAME MULTXYZ11
+                         SIMULATOR flow
+                         ABS_TOL ${abs_tol}
+                         REL_TOL ${rel_tol}
+                         DIR mult)
 
 if(BUILD_FLOW_POLY_GRID)
   add_test_compareECLFiles(CASENAME spe12_polyhedralgrid
