@@ -679,7 +679,13 @@ extractPorosity_()
     // over several processes.)
     const auto& fp = eclState_.fieldProps();
     if (fp.has_double("PORO")) {
-        porosity_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PORO");
+        if constexpr (std::is_same_v<Scalar,double>) {
+            porosity_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PORO");
+        } else {
+            const auto por = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"PORO");
+            porosity_.resize(por.size());
+            std::copy(por.begin(), por.end(), porosity_.begin());
+        }
     }
     else
         throw std::logic_error("Can't read the porosityfrom the ecl state. "
@@ -695,7 +701,13 @@ extractDispersion_()
                                  "contains the DISPERC keyword.");
     }
     const auto& fp = eclState_.fieldProps();
-    dispersion_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"DISPERC");
+    if constexpr (std::is_same_v<Scalar,double>) {
+        dispersion_ = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"DISPERC");
+    } else {
+        const auto disp = this-> lookUpData_.assignFieldPropsDoubleOnLeaf(fp,"DISPERC");
+        dispersion_.resize(disp.size());
+        std::copy(disp.begin(), disp.end(), dispersion_.begin());
+    }
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -760,7 +772,7 @@ applyAllZMultipliers_(Scalar& trans,
                 auto multiplier = transMult.getMultiplier(cartElemIdx, FaceDir::ZPlus);
                 cartElemIdx += cartDims[0]*cartDims[1];
                 multiplier *= transMult.getMultiplier(cartElemIdx, FaceDir::ZMinus);
-                mult = std::min(mult, multiplier);
+                mult = std::min(mult, static_cast<Scalar>(multiplier));
             }
         }
 
@@ -1105,7 +1117,7 @@ applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLoca
                                    [&input](const NNCdata& nnc){
                                        return input.edit_location(nnc);},
                                    // Multiply transmissibility with EDITNNC value
-                                   [](double& trans, const double& rhs){ trans *= rhs;});
+                                   [](Scalar& trans, const Scalar& rhs){ trans *= rhs;});
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -1118,7 +1130,7 @@ applyEditNncrToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLoc
                                    [&input](const NNCdata& nnc){
                                        return input.editr_location(nnc);},
                                    // Replace Transmissibility with EDITNNCR value
-                                   [](double& trans, const double& rhs){ trans = rhs;});
+                                   [](Scalar& trans, const Scalar& rhs){ trans = rhs;});
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -1127,7 +1139,7 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
                                const std::string& keyword,
                                const std::vector<NNCdata>& nncs,
                                const std::function<KeywordLocation(const NNCdata&)>& getLocation,
-                               const std::function<void(double&, const double&)>& apply)
+                               const std::function<void(Scalar&, const Scalar&)>& apply)
 {
     if (nncs.empty())
         return;
