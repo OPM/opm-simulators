@@ -146,8 +146,10 @@ readRockParameters_(const std::vector<Scalar>& cellCenterDepths,
     {
         const auto& comp = rock_config.comp();
         rockParams_.clear();
-        for (const auto& c : comp)
-            rockParams_.push_back( { c.pref, c.compressibility } );
+        for (const auto& c : comp) {
+            rockParams_.push_back({static_cast<Scalar>(c.pref),
+                                   static_cast<Scalar>(c.compressibility)});
+        }
     }
 
     // read the parameters for water-induced rock compaction
@@ -495,21 +497,28 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
                                          bool enablePolymerMolarWeight,
                                          bool enableMICP)
 {
-    if (enableSolvent) {
-        if (eclState_.fieldProps().has_double("SSOL"))
-            solventSaturation_ = eclState_.fieldProps().get_double("SSOL");
-        else
-            solventSaturation_.resize(numDof, 0.0);
+    auto getArray = [](const std::vector<double>& input)
+    {
+        if constexpr (std::is_same_v<Scalar,double>) {
+            return input;
+        } else {
+            return std::vector<Scalar>{input.begin(), input.end()};
+        }
+    };
 
-        //if (eclState_.fieldProps().has_double("SSOL"))
-        //    solventRsw_ = eclState_.fieldProps().get_double("SSOL");
-        //else
-            solventRsw_.resize(numDof, 0.0);
+    if (enableSolvent) {
+        if (eclState_.fieldProps().has_double("SSOL")) {
+            solventSaturation_ = getArray(eclState_.fieldProps().get_double("SSOL"));
+        } else {
+            solventSaturation_.resize(numDof, 0.0);
+        }
+
+        solventRsw_.resize(numDof, 0.0);
     }
 
     if (enablePolymer) {
         if (eclState_.fieldProps().has_double("SPOLY")) {
-            polymer_.concentration = eclState_.fieldProps().get_double("SPOLY");
+            polymer_.concentration = getArray(eclState_.fieldProps().get_double("SPOLY"));
         } else {
             polymer_.concentration.resize(numDof, 0.0);
         }
@@ -517,7 +526,7 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
 
     if (enablePolymerMolarWeight) {
         if (eclState_.fieldProps().has_double("SPOLYMW")) {
-            polymer_.moleWeight = eclState_.fieldProps().get_double("SPOLYMW");
+            polymer_.moleWeight = getArray(eclState_.fieldProps().get_double("SPOLYMW"));
         } else {
             polymer_.moleWeight.resize(numDof, 0.0);
         }
@@ -525,27 +534,27 @@ readBlackoilExtentionsInitialConditions_(std::size_t numDof,
 
     if (enableMICP) {
         if (eclState_.fieldProps().has_double("SMICR")) {
-            micp_.microbialConcentration = eclState_.fieldProps().get_double("SMICR");
+            micp_.microbialConcentration = getArray(eclState_.fieldProps().get_double("SMICR"));
         } else {
             micp_.microbialConcentration.resize(numDof, 0.0);
         }
         if (eclState_.fieldProps().has_double("SOXYG")) {
-            micp_.oxygenConcentration = eclState_.fieldProps().get_double("SOXYG");
+            micp_.oxygenConcentration = getArray(eclState_.fieldProps().get_double("SOXYG"));
         } else {
             micp_.oxygenConcentration.resize(numDof, 0.0);
         }
         if (eclState_.fieldProps().has_double("SUREA")) {
-            micp_.ureaConcentration = eclState_.fieldProps().get_double("SUREA");
+            micp_.ureaConcentration = getArray(eclState_.fieldProps().get_double("SUREA"));
         } else {
             micp_.ureaConcentration.resize(numDof, 0.0);
         }
         if (eclState_.fieldProps().has_double("SBIOF")) {
-            micp_.biofilmConcentration = eclState_.fieldProps().get_double("SBIOF");
+            micp_.biofilmConcentration = getArray(eclState_.fieldProps().get_double("SBIOF"));
         } else {
             micp_.biofilmConcentration.resize(numDof, 0.0);
         }
         if (eclState_.fieldProps().has_double("SCALC")) {
-            micp_.calciteConcentration = eclState_.fieldProps().get_double("SCALC");
+            micp_.calciteConcentration = getArray(eclState_.fieldProps().get_double("SCALC"));
         } else {
             micp_.calciteConcentration.resize(numDof, 0.0);
         }
