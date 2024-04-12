@@ -70,4 +70,8 @@ bool ConnFiltrateData<Scalar>::operator==(const ConnFiltrateData& rhs) const
 
 template struct ConnFiltrateData<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template struct ConnFiltrateData<float>;
+#endif
+
 }
