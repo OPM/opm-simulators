@@ -581,53 +581,67 @@ computeCellThickness(const typename GridView::template Codim<0>::Entity& element
     zz2 /=4;
     return zz2-zz1;
 }
-template class GenericCpGridVanguard<
-    Dune::MultipleCodimMultipleGeomTypeMapper<
-        Dune::GridView<
-            Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
-    Dune::GridView<
-        Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
-    double>;
+
+#define INSTANTIATE_TYPE(T)                                      \
+    template class GenericCpGridVanguard<                        \
+        Dune::MultipleCodimMultipleGeomTypeMapper<               \
+            Dune::GridView<                                      \
+                Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>, \
+        Dune::GridView<                                          \
+            Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,      \
+        T>;
+
+INSTANTIATE_TYPE(double)
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 #if HAVE_DUNE_FEM
 #if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
 using GV = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
                                            (Dune::PartitionIteratorType)4,
                                            false>;
-template class GenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMapper<GV>,
-                                     GV,
-                                     double>;
+#define INSTANTIATE_FEM_TYPE(T)                                                       \
+  template class GenericCpGridVanguard<Dune::MultipleCodimMultipleGeomTypeMapper<GV>, \
+                                       GV,                                            \
+                                       T>;
 #else
-template class GenericCpGridVanguard<
-    Dune::MultipleCodimMultipleGeomTypeMapper<
-        Dune::GridView<
-            Dune::Fem::GridPart2GridViewTraits<
-                Dune::Fem::AdaptiveLeafGridPart<
-                    Dune::CpGrid,
-                    Dune::PartitionIteratorType(4),
-                    false>>>>,
-    Dune::GridView<
-        Dune::Fem::GridPart2GridViewTraits<
-            Dune::Fem::AdaptiveLeafGridPart<
-                Dune::CpGrid,
-                Dune::PartitionIteratorType(4),
-                false>>>,
-    double>;
-
-template class GenericCpGridVanguard<
-    Dune::MultipleCodimMultipleGeomTypeMapper<
-        Dune::Fem::GridPart2GridViewImpl<
-            Dune::Fem::AdaptiveLeafGridPart<
-                Dune::CpGrid,
-                Dune::PartitionIteratorType(4),
-                false>>>,
-    Dune::Fem::GridPart2GridViewImpl<
-        Dune::Fem::AdaptiveLeafGridPart<
-            Dune::CpGrid,
-            Dune::PartitionIteratorType(4),
-            false> >,
-    double>;
+#define INSTANTIATE_FEM_TYPE(T)                         \
+    template class GenericCpGridVanguard<               \
+        Dune::MultipleCodimMultipleGeomTypeMapper<      \
+            Dune::GridView<                             \
+                Dune::Fem::GridPart2GridViewTraits<     \
+                    Dune::Fem::AdaptiveLeafGridPart<    \
+                        Dune::CpGrid,                   \
+                        Dune::PartitionIteratorType(4), \
+                        false>>>>,                      \
+        Dune::GridView<                                 \
+            Dune::Fem::GridPart2GridViewTraits<         \
+                Dune::Fem::AdaptiveLeafGridPart<        \
+                    Dune::CpGrid,                       \
+                    Dune::PartitionIteratorType(4),     \
+                    false>>>,                           \
+        T>;                                             \
+    template class GenericCpGridVanguard<               \
+        Dune::MultipleCodimMultipleGeomTypeMapper<      \
+            Dune::Fem::GridPart2GridViewImpl<           \
+                Dune::Fem::AdaptiveLeafGridPart<        \
+                    Dune::CpGrid,                       \
+                    Dune::PartitionIteratorType(4),     \
+                    false>>>,                           \
+        Dune::Fem::GridPart2GridViewImpl<               \
+            Dune::Fem::AdaptiveLeafGridPart<            \
+                Dune::CpGrid,                           \
+                Dune::PartitionIteratorType(4),         \
+                false> >,                               \
+        T>;
 #endif
+
+INSTANTIATE_FEM_TYPE(double)
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_FEM_TYPE(float)
+#endif
+
 #endif // HAVE_DUNE_FEM
 
 } // namespace Opm
