@@ -106,6 +106,12 @@ std::string EclString(const Opm::Inplace::Phase phase)
     case Opm::Inplace::Phase::CO2InGasPhaseMob:
         return "GCDM";
 
+    case Opm::Inplace::Phase::CO2InGasPhaseInMobKrg:
+        return "GKDI";
+
+    case Opm::Inplace::Phase::CO2InGasPhaseMobKrg:
+        return "GKDM";
+
     case Opm::Inplace::Phase::WaterInGasPhase:
         return "WIPG";
 
@@ -126,6 +132,12 @@ std::string EclString(const Opm::Inplace::Phase phase)
         
     case Opm::Inplace::Phase::CO2MassInGasPhaseMob:
         return "GMMO";
+
+    case Opm::Inplace::Phase::CO2MassInGasPhaseInMobKrg:
+        return "GKTR";
+        
+    case Opm::Inplace::Phase::CO2MassInGasPhaseMobKrg:
+        return "GKMO";
 
     default:
         throw std::logic_error {

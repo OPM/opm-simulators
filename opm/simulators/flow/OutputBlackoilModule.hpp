@@ -1441,7 +1441,11 @@ private:
              !this->fip_[Inplace::Phase::CO2InGasPhaseMob].empty() ||
              !this->fip_[Inplace::Phase::CO2MassInGasPhaseInMob].empty() ||
              !this->fip_[Inplace::Phase::CO2MassInGasPhaseMob].empty() ||
-             !this->fip_[Inplace::Phase::CO2Mass].empty()))
+             !this->fip_[Inplace::Phase::CO2Mass].empty() ||
+             !this->fip_[Inplace::Phase::CO2InGasPhaseInMobKrg].empty() ||
+             !this->fip_[Inplace::Phase::CO2InGasPhaseMobKrg].empty() ||
+             !this->fip_[Inplace::Phase::CO2MassInGasPhaseInMobKrg].empty() ||
+             !this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg].empty()))
         {
             this->updateCO2InGas(globalDofIdx, pv, fs);
         }
@@ -1619,6 +1623,24 @@ private:
             this->fip_[Inplace::Phase::CO2InGasPhaseMob][globalDofIdx] = mobileGas;
         }
 
+        if (!this->fip_[Inplace::Phase::CO2InGasPhaseInMobKrg].empty()) {
+            if (sgcr >= sg) {
+                const Scalar imMobileGasKrg = massGas / mM * sg;
+                this->fip_[Inplace::Phase::CO2InGasPhaseInMobKrg][globalDofIdx] = imMobileGasKrg;
+            } else {
+                this->fip_[Inplace::Phase::CO2InGasPhaseInMobKrg][globalDofIdx] = 0;
+            }
+        }
+
+        if (!this->fip_[Inplace::Phase::CO2InGasPhaseMobKrg].empty()) {
+            if (sg > sgcr) {
+                const Scalar mobileGasKrg = massGas / mM * sg;
+                this->fip_[Inplace::Phase::CO2InGasPhaseMobKrg][globalDofIdx] = mobileGasKrg;
+            } else {
+                this->fip_[Inplace::Phase::CO2InGasPhaseMobKrg][globalDofIdx] = 0;
+            }
+        }
+
         if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseInMob].empty()) {
             const Scalar imMobileMassGas = massGas * std::min(sgcr , sg);
             this->fip_[Inplace::Phase::CO2MassInGasPhaseInMob][globalDofIdx] = imMobileMassGas;
@@ -1627,6 +1649,24 @@ private:
         if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMob].empty()) {
             const Scalar mobileMassGas = massGas * std::max(0.0, sg - sgcr);
             this->fip_[Inplace::Phase::CO2MassInGasPhaseMob][globalDofIdx] = mobileMassGas;
+        }
+
+        if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseInMobKrg].empty()) {
+            if (sgcr >= sg) {
+                const Scalar imMobileMassGasKrg = massGas * sg;
+                this->fip_[Inplace::Phase::CO2MassInGasPhaseInMobKrg][globalDofIdx] = imMobileMassGasKrg;
+            } else {
+                this->fip_[Inplace::Phase::CO2MassInGasPhaseInMobKrg][globalDofIdx] = 0;
+            }
+        }
+
+        if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg].empty()) {
+            if (sg > sgcr) {
+                const Scalar mobileMassGasKrg = massGas * sg;
+                this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg][globalDofIdx] = mobileMassGasKrg;
+            } else {
+                this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg][globalDofIdx] = 0;
+            }
         }
     }
 
