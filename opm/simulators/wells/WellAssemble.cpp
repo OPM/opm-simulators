@@ -281,48 +281,55 @@ assembleControlEqInj(const WellState<Scalar>& well_state,
     }
 }
 
-#define INSTANCE_METHODS(A,...) \
-template void WellAssemble<A>:: \
-assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar>&, \
+#define INSTANTIATE_METHODS(A,...)                                        \
+template void WellAssemble<A>::                                           \
+assembleControlEqProd<__VA_ARGS__>(const WellState<typename A::Scalar>&,  \
                                    const GroupState<typename A::Scalar>&, \
-                                   const Schedule&, \
-                                   const SummaryState&, \
-                                   const Well::ProductionControls&, \
-                                   const __VA_ARGS__&, \
-                                   const std::vector<__VA_ARGS__>&, \
-                                   const std::function<__VA_ARGS__()>&, \
-                                   __VA_ARGS__&, \
-                                   DeferredLogger&) const; \
-template void WellAssemble<A>:: \
-assembleControlEqInj<__VA_ARGS__>(const WellState<typename A::Scalar>&, \
-                                  const GroupState<typename A::Scalar>&, \
-                                  const Schedule&, \
-                                  const SummaryState&, \
-                                  const Well::InjectionControls&, \
-                                  const __VA_ARGS__&, \
-                                  const __VA_ARGS__&, \
-                                  const std::function<__VA_ARGS__()>&, \
-                                  __VA_ARGS__&, \
+                                   const Schedule&,                       \
+                                   const SummaryState&,                   \
+                                   const Well::ProductionControls&,       \
+                                   const __VA_ARGS__&,                    \
+                                   const std::vector<__VA_ARGS__>&,       \
+                                   const std::function<__VA_ARGS__()>&,   \
+                                   __VA_ARGS__&,                          \
+                                   DeferredLogger&) const;                \
+template void WellAssemble<A>::                                           \
+assembleControlEqInj<__VA_ARGS__>(const WellState<typename A::Scalar>&,   \
+                                  const GroupState<typename A::Scalar>&,  \
+                                  const Schedule&,                        \
+                                  const SummaryState&,                    \
+                                  const Well::InjectionControls&,         \
+                                  const __VA_ARGS__&,                     \
+                                  const __VA_ARGS__&,                     \
+                                  const std::function<__VA_ARGS__()>&,    \
+                                  __VA_ARGS__&,                           \
                                   DeferredLogger&) const;
 
-using FluidSys = BlackOilFluidSystem<double, BlackOilDefaultIndexTraits>;
+template<class Scalar>
+using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
 
-template class WellAssemble<FluidSys>;
+#define INSTANTIATE_TYPE(T)                                   \
+    template class WellAssemble<FS<T>>;                       \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,3,0u>)   \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,4,0u>)   \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,5,0u>)   \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,6,0u>)   \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,7,0u>)   \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,8,0u>)   \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,9,0u>)   \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,-1,4u>)  \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,-1,5u>)  \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,-1,6u>)  \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,-1,7u>)  \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,-1,8u>)  \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,-1,9u>)  \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,-1,10u>) \
+    INSTANTIATE_METHODS(FS<T>, DenseAd::Evaluation<T,-1,11u>)
 
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,3,0u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,4,0u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,5,0u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,6,0u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,7,0u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,8,0u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,9,0u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,4u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,5u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,6u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,7u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,8u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,9u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,10u>)
-INSTANCE_METHODS(FluidSys, DenseAd::Evaluation<double,-1,11u>)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm
