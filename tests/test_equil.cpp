@@ -137,7 +137,7 @@ static std::vector<std::pair<double,double>> cellVerticalExtent(const GridView& 
     for (; elemIt != elemEndIt; ++elemIt) {
         const auto& element = *elemIt;
         const unsigned int elemIdx = elemMapper.index(element);
-        cellZMinMax[elemIdx] = Opm::EQUIL::Details::cellZMinMax(element);
+        cellZMinMax[elemIdx] = Opm::EQUIL::Details::cellZMinMax<double>(element);
     }
     return cellZMinMax;
 }

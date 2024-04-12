@@ -60,14 +60,14 @@ namespace EQUIL {
 
 namespace Details {
 
-template <typename CellRange>
+template <typename CellRange, class Scalar>
 void verticalExtent(const CellRange&      cells,
-                    const std::vector<std::pair<double, double>>& cellZMinMax,
+                    const std::vector<std::pair<Scalar, Scalar>>& cellZMinMax,
                     const Parallel::Communication& comm,
-                    std::array<double,2>& span)
+                    std::array<Scalar,2>& span)
 {
-    span[0] = std::numeric_limits<double>::max();
-    span[1] = std::numeric_limits<double>::lowest();
+    span[0] = std::numeric_limits<Scalar>::max();
+    span[1] = std::numeric_limits<Scalar>::lowest();
 
     // Define vertical span as
     //
@@ -85,10 +85,11 @@ void verticalExtent(const CellRange&      cells,
     span[1] = comm.max(span[1]);
 }
 
-void subdivisionCentrePoints(const double                            left,
-                             const double                            right,
+template<class Scalar>
+void subdivisionCentrePoints(const Scalar left,
+                             const Scalar right,
                              const int                               numIntervals,
-                             std::vector<std::pair<double, double>>& subdiv)
+                             std::vector<std::pair<Scalar, Scalar>>& subdiv)
 {
     const auto h = (right - left) / numIntervals;
 
@@ -101,13 +102,13 @@ void subdivisionCentrePoints(const double                            left,
     }
 }
 
-template <typename CellID>
-std::vector<std::pair<double, double>>
+template <typename CellID, typename Scalar>
+std::vector<std::pair<Scalar, Scalar>>
 horizontalSubdivision(const CellID cell,
-                      const std::pair<double, double> topbot,
+                      const std::pair<Scalar, Scalar> topbot,
                       const int    numIntervals)
 {
-    auto subdiv = std::vector<std::pair<double, double>>{};
+    auto subdiv = std::vector<std::pair<Scalar, Scalar>>{};
     subdiv.reserve(2 * numIntervals);
 
     if (topbot.first > topbot.second) {
@@ -123,12 +124,12 @@ horizontalSubdivision(const CellID cell,
     return subdiv;
 }
 
-template <class Element>
-double cellCenterDepth(const Element& element)
+template <class Scalar, class Element>
+Scalar cellCenterDepth(const Element& element)
 {
     typedef typename Element::Geometry Geometry;
     static constexpr int zCoord = Element::dimension - 1;
-    double zz = 0.0;
+    Scalar zz = 0.0;
 
     const Geometry& geometry = element.geometry();
     const int corners = geometry.corners();
@@ -138,13 +139,13 @@ double cellCenterDepth(const Element& element)
     return zz/corners;
 }
 
-template <class Element>
-std::pair<double,double> cellZSpan(const Element& element)
+template <class Scalar, class Element>
+std::pair<Scalar,Scalar> cellZSpan(const Element& element)
 {
     typedef typename Element::Geometry Geometry;
     static constexpr int zCoord = Element::dimension - 1;
-    double bot = 0.0;
-    double top = 0.0;
+    Scalar bot = 0.0;
+    Scalar top = 0.0;
 
     const Geometry& geometry = element.geometry();
     const int corners = geometry.corners();
@@ -157,36 +158,36 @@ std::pair<double,double> cellZSpan(const Element& element)
     return std::make_pair(bot/4, top/4);
 }
 
-template <class Element>
-std::pair<double,double> cellZMinMax(const Element& element)
+template <class Scalar, class Element>
+std::pair<Scalar,Scalar> cellZMinMax(const Element& element)
 {
     typedef typename Element::Geometry Geometry;
     static constexpr int zCoord = Element::dimension - 1;
     const Geometry& geometry = element.geometry();
     const int corners = geometry.corners();
     assert(corners == 8);
-    auto min = std::numeric_limits<double>::max();
-    auto max = std::numeric_limits<double>::lowest();
+    auto min = std::numeric_limits<Scalar>::max();
+    auto max = std::numeric_limits<Scalar>::lowest();
 
 
     for (int i=0; i < corners; ++i) {
-        min = std::min(min, geometry.corner(i)[zCoord]);
-        max = std::max(max, geometry.corner(i)[zCoord]);
+        min = std::min(min, static_cast<Scalar>(geometry.corner(i)[zCoord]));
+        max = std::max(max, static_cast<Scalar>(geometry.corner(i)[zCoord]));
     }
     return std::make_pair(min, max);
 }
 
-template<class RHS>
-RK4IVP<RHS>::RK4IVP(const RHS& f,
-                    const std::array<double,2>& span,
-                    const double y0,
-                    const int N)
+template<class Scalar, class RHS>
+RK4IVP<Scalar,RHS>::RK4IVP(const RHS& f,
+                           const std::array<Scalar,2>& span,
+                           const Scalar y0,
+                           const int N)
     : N_(N)
     , span_(span)
 {
-    const double h = stepsize();
-    const double h2 = h / 2;
-    const double h6 = h / 6;
+    const Scalar h = stepsize();
+    const Scalar h2 = h / 2;
+    const Scalar h6 = h / 6;
 
     y_.reserve(N + 1);
     f_.reserve(N + 1);
@@ -195,39 +196,39 @@ RK4IVP<RHS>::RK4IVP(const RHS& f,
     f_.push_back(f(span_[0], y0));
 
     for (int i = 0; i < N; ++i) {
-        const double x = span_[0] + i*h;
-        const double y = y_.back();
+        const Scalar x = span_[0] + i*h;
+        const Scalar y = y_.back();
 
-        const double k1 = f_[i];
-        const double k2 = f(x + h2, y + h2*k1);
-        const double k3 = f(x + h2, y + h2*k2);
-        const double k4 = f(x + h, y + h*k3);
+        const Scalar k1 = f_[i];
+        const Scalar k2 = f(x + h2, y + h2*k1);
+        const Scalar k3 = f(x + h2, y + h2*k2);
+        const Scalar k4 = f(x + h, y + h*k3);
 
         y_.push_back(y + h6*(k1 + 2*(k2 + k3) + k4));
         f_.push_back(f(x + h, y_.back()));
     }
 
-    assert (y_.size() == std::vector<double>::size_type(N + 1));
+    assert (y_.size() == typename std::vector<Scalar>::size_type(N + 1));
 }
 
-template<class RHS>
-double RK4IVP<RHS>::
-operator()(const double x) const
+template<class Scalar, class RHS>
+Scalar RK4IVP<Scalar,RHS>::
+operator()(const Scalar x) const
 {
     // Dense output (O(h**3)) according to Shampine
     // (Hermite interpolation)
-    const double h = stepsize();
+    const Scalar h = stepsize();
     int i = (x - span_[0]) / h;
-    const double t = (x - (span_[0] + i*h)) / h;
+    const Scalar t = (x - (span_[0] + i*h)) / h;
 
     // Crude handling of evaluation point outside "span_";
     if (i  <  0) { i = 0;      }
     if (N_ <= i) { i = N_ - 1; }
 
-    const double y0 = y_[i], y1 = y_[i + 1];
-    const double f0 = f_[i], f1 = f_[i + 1];
+    const Scalar y0 = y_[i], y1 = y_[i + 1];
+    const Scalar f0 = f_[i], f1 = f_[i + 1];
 
-    double u = (1 - 2*t) * (y1 - y0);
+    Scalar u = (1 - 2*t) * (y1 - y0);
     u += h * ((t - 1)*f0 + t*f1);
     u *= t * (t - 1);
     u += (1 - t)*y0 + t*y1;
@@ -235,8 +236,8 @@ operator()(const double x) const
     return u;
 }
 
-template<class RHS>
-double RK4IVP<RHS>::
+template<class Scalar, class RHS>
+Scalar RK4IVP<Scalar,RHS>::
 stepsize() const
 {
     return (span_[1] - span_[0]) / N_;
@@ -249,7 +250,7 @@ Water<FluidSystem>::
 Water(const TabulatedFunction& tempVdTable,
       const TabulatedFunction& saltVdTable,
       const int pvtRegionIdx,
-      const double normGrav)
+      const Scalar normGrav)
     : tempVdTable_(tempVdTable)
     , saltVdTable_(saltVdTable)
     , pvtRegionIdx_(pvtRegionIdx)
@@ -258,22 +259,28 @@ Water(const TabulatedFunction& tempVdTable,
 }
 
 template<class FluidSystem>
-double Water<FluidSystem>::
-operator()(const double depth,
-           const double press) const
+typename Water<FluidSystem>::Scalar
+Water<FluidSystem>::
+operator()(const Scalar depth,
+           const Scalar press) const
 {
     return this->density(depth, press) * g_;
 }
 
 template<class FluidSystem>
-double Water<FluidSystem>::
-density(const double depth,
-        const double press) const
+typename Water<FluidSystem>::Scalar
+Water<FluidSystem>::
+density(const Scalar depth,
+        const Scalar press) const
 {
     // The initializing algorithm can give depths outside the range due to numerical noise i.e. we extrapolate
-    double saltConcentration = saltVdTable_.eval(depth, /*extrapolate=*/true);
-    double temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
-    double rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, 0.0 /*=Rsw*/, saltConcentration);
+    Scalar saltConcentration = saltVdTable_.eval(depth, /*extrapolate=*/true);
+    Scalar temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
+    Scalar rho = FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIdx_,
+                                                                      temp,
+                                                                      press,
+                                                                      Scalar{0.0} /*=Rsw*/,
+                                                                      saltConcentration);
     rho *= FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
     return rho;
 }
@@ -283,7 +290,7 @@ Oil<FluidSystem,RS>::
 Oil(const TabulatedFunction& tempVdTable,
     const RS& rs,
     const int pvtRegionIdx,
-    const double normGrav)
+    const Scalar normGrav)
     : tempVdTable_(tempVdTable)
     , rs_(rs)
     , pvtRegionIdx_(pvtRegionIdx)
@@ -292,31 +299,33 @@ Oil(const TabulatedFunction& tempVdTable,
 }
 
 template<class FluidSystem, class RS>
-double Oil<FluidSystem,RS>::
-operator()(const double depth,
-           const double press) const
+typename Oil<FluidSystem,RS>::Scalar
+Oil<FluidSystem,RS>::
+operator()(const Scalar depth,
+           const Scalar press) const
 {
     return this->density(depth, press) * g_;
 }
 
 template<class FluidSystem, class RS>
-double Oil<FluidSystem,RS>::
-density(const double depth,
-        const double press) const
+typename Oil<FluidSystem,RS>::Scalar
+Oil<FluidSystem,RS>::
+density(const Scalar depth,
+        const Scalar press) const
 {
-    const double temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
-    double rs = 0.0;
-    if(FluidSystem::enableDissolvedGas())
+    const Scalar temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
+    Scalar rs = 0.0;
+    if (FluidSystem::enableDissolvedGas())
         rs = rs_(depth, press, temp);
 
-    double bOil = 0.0;
+    Scalar bOil = 0.0;
     if (rs >= FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIdx_, temp, press)) {
         bOil = FluidSystem::oilPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp, press);
     }
     else {
         bOil = FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, rs);
     }
-    double rho = bOil * FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, pvtRegionIdx_);
+    Scalar rho = bOil * FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, pvtRegionIdx_);
     if (FluidSystem::enableDissolvedGas()) {
         rho += rs * bOil * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
     }
@@ -330,7 +339,7 @@ Gas(const TabulatedFunction& tempVdTable,
     const RV& rv,
     const RVW& rvw,
     const int pvtRegionIdx,
-    const double normGrav)
+    const Scalar normGrav)
     : tempVdTable_(tempVdTable)
     , rv_(rv)
     , rvw_(rvw)
@@ -340,28 +349,30 @@ Gas(const TabulatedFunction& tempVdTable,
 }
 
 template<class FluidSystem, class RV, class RVW>
-double Gas<FluidSystem,RV,RVW>::
-operator()(const double depth,
-           const double press) const
+typename Gas<FluidSystem,RV,RVW>::Scalar
+Gas<FluidSystem,RV,RVW>::
+operator()(const Scalar depth,
+           const Scalar press) const
 {
     return this->density(depth, press) * g_;
 }
 
 template<class FluidSystem, class RV, class RVW>
-double Gas<FluidSystem,RV,RVW>::
-density(const double depth,
-        const double press) const
+typename Gas<FluidSystem,RV,RVW>::Scalar
+Gas<FluidSystem,RV,RVW>::
+density(const Scalar depth,
+        const Scalar press) const
 {
-    const double temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
-    double rv = 0.0;
+    const Scalar temp = tempVdTable_.eval(depth, /*extrapolate=*/true);
+    Scalar rv = 0.0;
     if (FluidSystem::enableVaporizedOil())
         rv = rv_(depth, press, temp);
 
-    double rvw = 0.0;
+    Scalar rvw = 0.0;
     if (FluidSystem::enableVaporizedWater())
         rvw = rvw_(depth, press, temp);
 
-    double bGas = 0.0;
+    Scalar bGas = 0.0;
 
     if (FluidSystem::enableVaporizedOil() && FluidSystem::enableVaporizedWater()) {
         if (rv >= FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp, press)
@@ -371,7 +382,7 @@ density(const double depth,
         } else {
             bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, rv, rvw);
         }
-        double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
+        Scalar rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
         rho += rv * bGas * FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, pvtRegionIdx_)
                + rvw * bGas * FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
         return rho;
@@ -381,9 +392,13 @@ density(const double depth,
         if (rv >= FluidSystem::gasPvt().saturatedOilVaporizationFactor(pvtRegionIdx_, temp, press)) {
             bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp, press);
         } else {
-            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, rv, 0.0/*=rvw*/);
+            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_,
+                                                                      temp,
+                                                                      press,
+                                                                      rv,
+                                                                      Scalar{0.0}/*=rvw*/);
         }
-        double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
+        Scalar rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
         rho += rv * bGas * FluidSystem::referenceDensity(FluidSystem::oilPhaseIdx, pvtRegionIdx_);
         return rho;
      }
@@ -393,16 +408,23 @@ density(const double depth,
             bGas = FluidSystem::gasPvt().saturatedInverseFormationVolumeFactor(pvtRegionIdx_, temp, press);
         }
         else {
-            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, 0.0/*=rv*/, rvw);
+            bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_,
+                                                                      temp,
+                                                                      press,
+                                                                      Scalar{0.0} /*=rv*/,
+                                                                      rvw);
         }
-        double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
+        Scalar rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
         rho += rvw * bGas * FluidSystem::referenceDensity(FluidSystem::waterPhaseIdx, pvtRegionIdx_);
         return rho;
     }
 
     // immiscible gas
-    bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp, press, 0.0/*=rv*/, 0.0/*=rvw*/);
-    double rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
+    bGas = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIdx_, temp,
+                                                              press,
+                                                              Scalar{0.0} /*=rv*/,
+                                                              Scalar{0.0} /*=rvw*/);
+    Scalar rho = bGas * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIdx_);
 
     return rho;
 }
@@ -471,10 +493,10 @@ operator=(PressureFunction&& rhs)
 
 template<class FluidSystem, class Region>
 template<class ODE>
-double
+typename PressureTable<FluidSystem,Region>::Scalar
 PressureTable<FluidSystem,Region>::
 PressureFunction<ODE>::
-value(const double depth) const
+value(const Scalar depth) const
 {
     if (depth < this->initial_.depth) {
         // Value above initial condition depth.
@@ -548,7 +570,7 @@ copyInPointers(const PressureTable& rhs)
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
 PhaseSaturations<MaterialLawManager,FluidSystem,Region,CellID>::
 PhaseSaturations(MaterialLawManager& matLawMgr,
-                 const std::vector<double>& swatInit)
+                 const std::vector<Scalar>& swatInit)
     : matLawMgr_(matLawMgr)
     , swatInit_ (swatInit)
 {
@@ -569,7 +591,7 @@ PhaseSaturations(const PhaseSaturations& rhs)
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-const PhaseQuantityValue&
+const PhaseQuantityValue<typename FluidSystem::Scalar>&
 PhaseSaturations<MaterialLawManager,FluidSystem,Region,CellID>::
 deriveSaturations(const Position& x,
                   const Region&   reg,
@@ -864,17 +886,17 @@ accountForScaledSaturations()
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-std::pair<double, bool>
+std::pair<typename FluidSystem::Scalar, bool>
 PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
-applySwatInit(const double pcow)
+applySwatInit(const Scalar pcow)
 {
     return this->applySwatInit(pcow, this->swatInit_[this->evalPt_.position->cell]);
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-std::pair<double, bool>
+std::pair<typename FluidSystem::Scalar, bool>
 PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
-applySwatInit(const double pcow, const double sw)
+applySwatInit(const Scalar pcow, const Scalar sw)
 {
     return this->matLawMgr_.applySwatinit(this->evalPt_.position->cell, pcow, sw);
 }
@@ -892,7 +914,8 @@ computeMaterialLawCapPress()
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-double PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
+typename FluidSystem::Scalar
+PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
 materialLawCapPressGasOil() const
 {
     return this->matLawCapPress_[this->oilPos()]
@@ -900,7 +923,8 @@ materialLawCapPressGasOil() const
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-double PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
+typename FluidSystem::Scalar
+PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
 materialLawCapPressOilWater() const
 {
     return this->matLawCapPress_[this->oilPos()]
@@ -908,7 +932,8 @@ materialLawCapPressOilWater() const
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-double PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
+typename FluidSystem::Scalar
+PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
 materialLawCapPressGasWater() const
 {
     return this->matLawCapPress_[this->gasPos()]
@@ -933,8 +958,9 @@ isOverlappingTransition() const
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-double PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
-fromDepthTable(const double   contactdepth,
+typename FluidSystem::Scalar
+PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
+fromDepthTable(const Scalar   contactdepth,
                const PhaseIdx phasePos,
                const bool     isincr) const
 {
@@ -945,8 +971,9 @@ fromDepthTable(const double   contactdepth,
 }
 
 template <class MaterialLawManager, class FluidSystem, class Region, typename CellID>
-double PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
-invertCapPress(const double   pc,
+typename FluidSystem::Scalar
+PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::
+invertCapPress(const Scalar pc,
                const PhaseIdx phasePos,
                const bool     isincr) const
 {
@@ -957,7 +984,7 @@ invertCapPress(const double   pc,
 
 template<class FluidSystem, class Region>
 PressureTable<FluidSystem,Region>::
-PressureTable(const double gravity,
+PressureTable(const Scalar gravity,
               const int    samplePoints)
     : gravity_(gravity)
     , nsample_(samplePoints)
@@ -1044,8 +1071,9 @@ waterActive() const
 }
 
 template <class FluidSystem, class Region>
-double PressureTable<FluidSystem,Region>::
-oil(const double depth) const
+typename FluidSystem::Scalar
+PressureTable<FluidSystem,Region>::
+oil(const Scalar depth) const
 {
     this->checkPtr(this->oil_.get(), "OIL");
 
@@ -1053,8 +1081,9 @@ oil(const double depth) const
 }
 
 template <class FluidSystem, class Region>
-double PressureTable<FluidSystem,Region>::
-gas(const double depth) const
+typename FluidSystem::Scalar
+PressureTable<FluidSystem,Region>::
+gas(const Scalar depth) const
 {
     this->checkPtr(this->gas_.get(), "GAS");
 
@@ -1063,8 +1092,9 @@ gas(const double depth) const
 
 
 template <class FluidSystem, class Region>
-double PressureTable<FluidSystem,Region>::
-water(const double depth) const
+typename FluidSystem::Scalar
+PressureTable<FluidSystem,Region>::
+water(const Scalar depth) const
 {
     this->checkPtr(this->wat_.get(), "WATER");
 
@@ -1310,16 +1340,16 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                      const Grid& grid,
                      const GridView& gridView,
                      const CartesianIndexMapper& cartMapper,
-                     const double grav,
+                     const Scalar grav,
                      const int num_pressure_points,
                      const bool applySwatInit)
     : temperature_(grid.size(/*codim=*/0), eclipseState.getTableManager().rtemp()),
       saltConcentration_(grid.size(/*codim=*/0)),
       saltSaturation_(grid.size(/*codim=*/0)),
       pp_(FluidSystem::numPhases,
-          std::vector<double>(grid.size(/*codim=*/0))),
+          std::vector<Scalar>(grid.size(/*codim=*/0))),
       sat_(FluidSystem::numPhases,
-           std::vector<double>(grid.size(/*codim=*/0))),
+           std::vector<Scalar>(grid.size(/*codim=*/0))),
       rs_(grid.size(/*codim=*/0)),
       rv_(grid.size(/*codim=*/0)),
       rvw_(grid.size(/*codim=*/0)),
@@ -1329,7 +1359,13 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     //Check for presence of kw SWATINIT
     if (applySwatInit) {
         if (eclipseState.fieldProps().has_double("SWATINIT")) {
-            swatInit_ = eclipseState.fieldProps().get_double("SWATINIT");
+            if constexpr (std::is_same_v<Scalar,double>) {
+                swatInit_ = eclipseState.fieldProps().get_double("SWATINIT");
+            } else {
+                const auto& input = eclipseState.fieldProps().get_double("SWATINIT");
+                swatInit_.resize(input.size());
+                std::copy(input.begin(), input.end(), swatInit_.begin());
+            }
         }
     }
 
@@ -1349,6 +1385,19 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
 
     // Create Rs functions.
     rsFunc_.reserve(rec.size());
+
+    auto getArray = [](const std::vector<double>& input)
+    {
+        if constexpr (std::is_same_v<Scalar,double>) {
+            return input;
+        } else {
+            std::vector<Scalar> output;
+            output.resize(input.size());
+            std::copy(input.begin(), input.end(), output.begin());
+            return output;
+        }
+    };
+
     if (FluidSystem::enableDissolvedGas()) {
         for (std::size_t i = 0; i < rec.size(); ++i) {
             if (eqlmap.cells(i).empty()) {
@@ -1360,16 +1409,15 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                 const TableContainer& rsvdTables = tables.getRsvdTables();
                 const TableContainer& pbvdTables = tables.getPbvdTables();
                 if (rsvdTables.size() > 0) {
-
                     const RsvdTable& rsvdTable = rsvdTables.getTable<RsvdTable>(i);
-                    std::vector<double> depthColumn = rsvdTable.getColumn("DEPTH").vectorCopy();
-                    std::vector<double> rsColumn = rsvdTable.getColumn("RS").vectorCopy();
+                    auto depthColumn = getArray(rsvdTable.getColumn("DEPTH").vectorCopy());
+                    auto rsColumn = getArray(rsvdTable.getColumn("RS").vectorCopy());
                     rsFunc_.push_back(std::make_shared<Miscibility::RsVD<FluidSystem>>(pvtIdx,
                                                                                        depthColumn, rsColumn));
                 } else if (pbvdTables.size() > 0) {
                     const PbvdTable& pbvdTable = pbvdTables.getTable<PbvdTable>(i);
-                    std::vector<double> depthColumn = pbvdTable.getColumn("DEPTH").vectorCopy();
-                    std::vector<double> pbubColumn = pbvdTable.getColumn("PBUB").vectorCopy();
+                    auto depthColumn = getArray(pbvdTable.getColumn("DEPTH").vectorCopy());
+                    auto pbubColumn = getArray(pbvdTable.getColumn("PBUB").vectorCopy());
                     rsFunc_.push_back(std::make_shared<Miscibility::PBVD<FluidSystem>>(pvtIdx,
                                                                                        depthColumn, pbubColumn));
 
@@ -1384,15 +1432,15 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                                              "datum depth must be at the gas-oil-contact. "
                                              "In EQUIL region "+std::to_string(i + 1)+"  (counting from 1), this does not hold.");
                 }
-                const double pContact = rec[i].datumDepthPressure();
-                const double TContact = 273.15 + 20; // standard temperature for now
+                const Scalar pContact = rec[i].datumDepthPressure();
+                const Scalar TContact = 273.15 + 20; // standard temperature for now
                 rsFunc_.push_back(std::make_shared<Miscibility::RsSatAtContact<FluidSystem>>(pvtIdx, pContact, TContact));
             }
         }
     }
     else {
         for (std::size_t i = 0; i < rec.size(); ++i) {
-            rsFunc_.push_back(std::make_shared<Miscibility::NoMixing<double>>());
+            rsFunc_.push_back(std::make_shared<Miscibility::NoMixing<Scalar>>());
         }
     }
 
@@ -1410,14 +1458,14 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
 
                 if (rvvdTables.size() > 0) {
                     const RvvdTable& rvvdTable = rvvdTables.getTable<RvvdTable>(i);
-                    std::vector<double> depthColumn = rvvdTable.getColumn("DEPTH").vectorCopy();
-                    std::vector<double> rvColumn = rvvdTable.getColumn("RV").vectorCopy();
+                    auto depthColumn = getArray(rvvdTable.getColumn("DEPTH").vectorCopy());
+                    auto rvColumn = getArray(rvvdTable.getColumn("RV").vectorCopy());
                     rvFunc_.push_back(std::make_shared<Miscibility::RvVD<FluidSystem>>(pvtIdx,
                                                                                        depthColumn, rvColumn));
                 } else if (pdvdTables.size() > 0) {
                     const PdvdTable& pdvdTable = pdvdTables.getTable<PdvdTable>(i);
-                    std::vector<double> depthColumn = pdvdTable.getColumn("DEPTH").vectorCopy();
-                    std::vector<double> pdewColumn = pdvdTable.getColumn("PDEW").vectorCopy();
+                    auto depthColumn = getArray(pdvdTable.getColumn("DEPTH").vectorCopy());
+                    auto pdewColumn = getArray(pdvdTable.getColumn("PDEW").vectorCopy());
                     rvFunc_.push_back(std::make_shared<Miscibility::PDVD<FluidSystem>>(pvtIdx,
                                                                                        depthColumn, pdewColumn));
                 } else {
@@ -1431,19 +1479,19 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                               "datum depth must be at the gas-oil-contact. "
                               "In EQUIL region "+std::to_string(i + 1)+" (counting from 1), this does not hold.");
                 }
-                const double pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
-                const double TContact = 273.15 + 20; // standard temperature for now
+                const Scalar pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
+                const Scalar TContact = 273.15 + 20; // standard temperature for now
                 rvFunc_.push_back(std::make_shared<Miscibility::RvSatAtContact<FluidSystem>>(pvtIdx,pContact, TContact));
             }
         }
     }
     else {
         for (std::size_t i = 0; i < rec.size(); ++i) {
-            rvFunc_.push_back(std::make_shared<Miscibility::NoMixing<double>>());
+            rvFunc_.push_back(std::make_shared<Miscibility::NoMixing<Scalar>>());
         }
     }
 
- rvwFunc_.reserve(rec.size());
+    rvwFunc_.reserve(rec.size());
     if (FluidSystem::enableVaporizedWater()) {
         for (std::size_t i = 0; i < rec.size(); ++i) {
             if (eqlmap.cells(i).empty()) {
@@ -1456,8 +1504,8 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
 
                 if (rvwvdTables.size() > 0) {
                     const RvwvdTable& rvwvdTable = rvwvdTables.getTable<RvwvdTable>(i);
-                    std::vector<double> depthColumn = rvwvdTable.getColumn("DEPTH").vectorCopy();
-                    std::vector<double> rvwvdColumn = rvwvdTable.getColumn("RVWVD").vectorCopy();
+                    auto depthColumn = getArray(rvwvdTable.getColumn("DEPTH").vectorCopy());
+                    auto rvwvdColumn = getArray(rvwvdTable.getColumn("RVWVD").vectorCopy());
                     rvwFunc_.push_back(std::make_shared<Miscibility::RvwVD<FluidSystem>>(pvtIdx,
                                                                                        depthColumn, rvwvdColumn));
                 } else {
@@ -1466,9 +1514,9 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
             }
             else {
                 const auto oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
-                if (oilActive){
+                if (oilActive) {
                     if (rec[i].gasOilContactDepth() != rec[i].datumDepth()) {
-                        rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing<double>>());
+                        rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing<Scalar>>());
                         const auto msg = "No explicit RVWVD table is given for EQUIL region " + std::to_string(i + 1) +". \n"
                                         "and datum depth is not at the gas-oil-contact. \n"
                                         "Rvw is set to 0.0 in all cells. \n";
@@ -1476,8 +1524,8 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                     } else {
                         // pg = po + Pcgo = po + (pg - po)
                         // for gas-condensate with initial no oil zone: water-oil contact depth (OWC) equal gas-oil contact depth (GOC)
-                        const double pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
-                        const double TContact = 273.15 + 20; // standard temperature for now
+                        const Scalar pContact = rec[i].datumDepthPressure() + rec[i].gasOilContactCapillaryPressure();
+                        const Scalar TContact = 273.15 + 20; // standard temperature for now
                         rvwFunc_.push_back(std::make_shared<Miscibility::RvwSatAtContact<FluidSystem>>(pvtIdx,pContact, TContact));
                     }
                 }
@@ -1485,15 +1533,15 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
                      // two-phase gas-water sytem:  water-oil contact depth is taken equal to gas-water contact depth (GWC)
                      // and water-oil capillary pressure (Pcwo) is taken equal to gas-water capillary pressure (Pcgw) at GWC
                      if (rec[i].waterOilContactDepth() != rec[i].datumDepth()) {
-                        rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing<double>>());
+                        rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing<Scalar>>());
                         const auto msg = "No explicit RVWVD table is given for EQUIL region " + std::to_string(i + 1) +". \n"
-                                        "and datum depth is not at the gas-water-contact. \n"
-                                        "Rvw is set to 0.0 in all cells. \n";
+                                         "and datum depth is not at the gas-water-contact. \n"
+                                         "Rvw is set to 0.0 in all cells. \n";
                         OpmLog::warning(msg);
                     } else {
                         // pg = pw + Pcgw = pw + (pg - pw)
-                        const double pContact = rec[i].datumDepthPressure() + rec[i].waterOilContactCapillaryPressure();
-                        const double TContact = 273.15 + 20; // standard temperature for now
+                        const Scalar pContact = rec[i].datumDepthPressure() + rec[i].waterOilContactCapillaryPressure();
+                        const Scalar TContact = 273.15 + 20; // standard temperature for now
                         rvwFunc_.push_back(std::make_shared<Miscibility::RvwSatAtContact<FluidSystem>>(pvtIdx,pContact, TContact));
                     }
                 }
@@ -1502,7 +1550,7 @@ InitialStateComputer(MaterialLawManager& materialLawManager,
     }
     else {
         for (std::size_t i = 0; i < rec.size(); ++i) {
-            rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing<double>>());
+            rvwFunc_.push_back(std::make_shared<Miscibility::NoMixing<Scalar>>());
         }
     }
 
@@ -1544,8 +1592,9 @@ updateInitialTemperature_(const EclipseState& eclState, const RMap& reg)
     tempVdTable_.resize(numEquilReg);
     const auto& tables = eclState.getTableManager();
     if (!tables.hasTables("RTEMPVD")) {
-        std::vector<double> x = {0.0,1.0};
-        std::vector<double> y = {tables.rtemp(),tables.rtemp()};
+        std::vector<Scalar> x = {0.0,1.0};
+        std::vector<Scalar> y = {static_cast<Scalar>(tables.rtemp()),
+                                 static_cast<Scalar>(tables.rtemp())};
         for (auto& table : this->tempVdTable_) {
             table.setXYContainers(x, y);
         }
@@ -1556,7 +1605,7 @@ updateInitialTemperature_(const EclipseState& eclState, const RMap& reg)
             tempVdTable_[i].setXYContainers(tempvdTable.getDepthColumn(), tempvdTable.getTemperatureColumn());
             const auto& cells = reg.cells(i);
             for (const auto& cell : cells) {
-                const double depth = cellCenterDepth_[cell];
+                const Scalar depth = cellCenterDepth_[cell];
                 this->temperature_[cell] = tempVdTable_[i].eval(depth, /*extrapolate=*/true);
             }
         }
@@ -1583,8 +1632,8 @@ updateInitialSaltConcentration_(const EclipseState& eclState, const RMap& reg)
 
     // If no saltvd table is given, we create a trivial table for the density calculations
     if (saltvdTables.empty()) {
-        std::vector<double> x = {0.0,1.0};
-        std::vector<double> y = {0.0,0.0};
+        std::vector<Scalar> x = {0.0,1.0};
+        std::vector<Scalar> y = {0.0,0.0};
         for (auto& table : this->saltVdTable_) {
             table.setXYContainers(x, y);
         }
@@ -1595,7 +1644,7 @@ updateInitialSaltConcentration_(const EclipseState& eclState, const RMap& reg)
 
             const auto& cells = reg.cells(i);
             for (const auto& cell : cells) {
-                const double depth = cellCenterDepth_[cell];
+                const Scalar depth = cellCenterDepth_[cell];
                 this->saltConcentration_[cell] = saltVdTable_[i].eval(depth, /*extrapolate=*/true);
             }
         }
@@ -1626,7 +1675,7 @@ updateInitialSaltSaturation_(const EclipseState& eclState, const RMap& reg)
 
         const auto& cells = reg.cells(i);
         for (const auto& cell : cells) {
-            const double depth = cellCenterDepth_[cell];
+            const Scalar depth = cellCenterDepth_[cell];
             this->saltSaturation_[cell] = saltpVdTable_[i].eval(depth, /*extrapolate=*/true);
         }
     }
@@ -1658,15 +1707,15 @@ updateCellProps_(const GridView& gridView,
     for (; elemIt != elemEndIt; ++elemIt) {
         const Element& element = *elemIt;
         const unsigned int elemIdx = elemMapper.index(element);
-        cellCenterDepth_[elemIdx] = Details::cellCenterDepth(element);
+        cellCenterDepth_[elemIdx] = Details::cellCenterDepth<Scalar>(element);
         const auto cartIx = cartesianIndexMapper_.cartesianIndex(elemIdx);
-        cellZSpan_[elemIdx] = Details::cellZSpan(element);
-        cellZMinMax_[elemIdx] = Details::cellZMinMax(element);
+        cellZSpan_[elemIdx] = Details::cellZSpan<Scalar>(element);
+        cellZMinMax_[elemIdx] = Details::cellZMinMax<Scalar>(element);
         if (!num_aqu_cells.empty()) {
             const auto search = num_aqu_cells.find(cartIx);
             if (search != num_aqu_cells.end()) {
                 const auto* aqu_cell = num_aqu_cells.at(cartIx);
-                const double depth_change_num_aqu = aqu_cell->depth - cellCenterDepth_[elemIdx];
+                const Scalar depth_change_num_aqu = aqu_cell->depth - cellCenterDepth_[elemIdx];
                 cellCenterDepth_[elemIdx] += depth_change_num_aqu;
                 cellZSpan_[elemIdx].first += depth_change_num_aqu;
                 cellZSpan_[elemIdx].second += depth_change_num_aqu;
@@ -1731,7 +1780,7 @@ applyNumericalAquifers_(const GridView& gridView,
             // if pressure is specified for numerical aquifers, we use these pressure values
             // for numerical aquifer cells
             if (aqu_cell->init_pressure) {
-                const double pres = *(aqu_cell->init_pressure);
+                const Scalar pres = *(aqu_cell->init_pressure);
                 this->pp_[watPos][elemIdx] = pres;
                 if (FluidSystem::phaseIsActive(gasPos)) {
                     this->pp_[gasPos][elemIdx] = pres;
@@ -1780,15 +1829,15 @@ calcPressSatRsRv(const RMap& reg,
                  const std::vector<EquilRecord>& rec,
                  MaterialLawManager& materialLawManager,
                  const Comm& comm,
-                 const double grav)
+                 const Scalar grav)
 {
     using PhaseSat = Details::PhaseSaturations<
-        MaterialLawManager, FluidSystem, EquilReg<double>, typename RMap::CellId
+        MaterialLawManager, FluidSystem, EquilReg<Scalar>, typename RMap::CellId
     >;
     
-    auto ptable = Details::PressureTable<FluidSystem, EquilReg<double>>{ grav, this->num_pressure_points_ };
+    auto ptable = Details::PressureTable<FluidSystem, EquilReg<Scalar>>{ grav, this->num_pressure_points_ };
     auto psat   = PhaseSat { materialLawManager, this->swatInit_ };
-    auto vspan  = std::array<double, 2>{};
+    auto vspan  = std::array<Scalar, 2>{};
 
     std::vector<int> regionIsEmpty(rec.size(), 0);
     for (std::size_t r = 0; r < rec.size(); ++r) {
@@ -1867,11 +1916,11 @@ cellLoop(const CellRange&      cells,
     const auto gasActive = FluidSystem::phaseIsActive(gasPos);
     const auto watActive = FluidSystem::phaseIsActive(watPos);
 
-    auto pressures   = Details::PhaseQuantityValue{};
-    auto saturations = Details::PhaseQuantityValue{};
-    auto Rs          = 0.0;
-    auto Rv          = 0.0;
-    auto Rvw         = 0.0;
+    auto pressures   = Details::PhaseQuantityValue<Scalar>{};
+    auto saturations = Details::PhaseQuantityValue<Scalar>{};
+    Scalar Rs          = 0.0;
+    Scalar Rv          = 0.0;
+    Scalar Rvw         = 0.0;
 
     for (const auto& cell : cells) {
         eqmethod(cell, pressures, saturations, Rs, Rv, Rvw);
@@ -1914,7 +1963,7 @@ void InitialStateComputer<FluidSystem,
                           ElementMapper,
                           CartesianIndexMapper>::
 equilibrateCellCentres(const CellRange&         cells,
-                       const EquilReg<double>&  eqreg,
+                       const EquilReg<Scalar>&  eqreg,
                        const PressTable&        ptable,
                        PhaseSat&                psat)
 {
@@ -1923,11 +1972,11 @@ equilibrateCellCentres(const CellRange&         cells,
         decltype(std::declval<CellPos>().cell)>>;
     this->cellLoop(cells, [this, &eqreg,  &ptable, &psat]
         (const CellID                 cell,
-         Details::PhaseQuantityValue& pressures,
-         Details::PhaseQuantityValue& saturations,
-         double&                      Rs,
-         double&                      Rv,
-         double&                      Rvw) -> void
+         Details::PhaseQuantityValue<Scalar>& pressures,
+         Details::PhaseQuantityValue<Scalar>& saturations,
+         Scalar&                      Rs,
+         Scalar&                      Rv,
+         Scalar&                      Rvw) -> void
     {
         const auto pos = CellPos {
             cell, cellCenterDepth_[cell]
@@ -1961,7 +2010,7 @@ void InitialStateComputer<FluidSystem,
                           ElementMapper,
                           CartesianIndexMapper>::
 equilibrateHorizontal(const CellRange&        cells,
-                      const EquilReg<double>& eqreg,
+                      const EquilReg<Scalar>& eqreg,
                       const int               acc,
                       const PressTable&       ptable,
                       PhaseSat&               psat)
@@ -1972,16 +2021,16 @@ equilibrateHorizontal(const CellRange&        cells,
 
     this->cellLoop(cells, [this, acc, &eqreg, &ptable, &psat]
         (const CellID                 cell,
-         Details::PhaseQuantityValue& pressures,
-         Details::PhaseQuantityValue& saturations,
-         double&                      Rs,
-         double&                      Rv,
-         double&                      Rvw) -> void
+         Details::PhaseQuantityValue<Scalar>& pressures,
+         Details::PhaseQuantityValue<Scalar>& saturations,
+         Scalar&                      Rs,
+         Scalar&                      Rv,
+         Scalar&                      Rvw) -> void
     {
         pressures  .reset();
         saturations.reset();
 
-        auto totfrac = 0.0;
+        Scalar totfrac = 0.0;
         for (const auto& [depth, frac] : Details::horizontalSubdivision(cell, cellZSpan_[cell], acc)) {
             const auto pos = CellPos { cell, depth };
 

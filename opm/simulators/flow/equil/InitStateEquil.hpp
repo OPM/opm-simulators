@@ -62,96 +62,102 @@ template<class Scalar> class EquilReg;
 namespace Miscibility { template<class Scalar> class RsFunction; }
 
 namespace Details {
-template <class RHS>
-class RK4IVP {
+template <class Scalar, class RHS>
+class RK4IVP
+{
 public:
     RK4IVP(const RHS& f,
-           const std::array<double,2>& span,
-           const double y0,
+           const std::array<Scalar,2>& span,
+           const Scalar y0,
            const int N);
 
-    double
-    operator()(const double x) const;
+    Scalar operator()(const Scalar x) const;
 
 private:
     int N_;
-    std::array<double,2> span_;
-    std::vector<double>  y_;
-    std::vector<double>  f_;
+    std::array<Scalar,2> span_;
+    std::vector<Scalar>  y_;
+    std::vector<Scalar>  f_;
 
-    double stepsize() const;
+    Scalar stepsize() const;
 };
 
 namespace PhasePressODE {
 template <class FluidSystem>
 class Water
 {
-using TabulatedFunction = Tabulated1DFunction<double>;
+    using Scalar = typename FluidSystem::Scalar;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+
 public:
     Water(const TabulatedFunction& tempVdTable,
           const TabulatedFunction& saltVdTable,
           const int pvtRegionIdx,
-          const double normGrav);
+          const Scalar normGrav);
 
-    double operator()(const double depth,
-                      const double press) const;
+    Scalar operator()(const Scalar depth,
+                      const Scalar press) const;
 
 private:
     const TabulatedFunction& tempVdTable_;
     const TabulatedFunction& saltVdTable_;
     const int pvtRegionIdx_;
-    const double g_;
+    const Scalar g_;
 
-    double density(const double depth,
-                   const double press) const;
+    Scalar density(const Scalar depth,
+                   const Scalar press) const;
 };
 
 template <class FluidSystem, class RS>
 class Oil
 {
-using TabulatedFunction = Tabulated1DFunction<double>;
+    using Scalar = typename FluidSystem::Scalar;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+
 public:
     Oil(const TabulatedFunction& tempVdTable,
         const RS& rs,
         const int pvtRegionIdx,
-        const double normGrav);
+        const Scalar normGrav);
 
-    double operator()(const double depth,
-                      const double press) const;
+    Scalar operator()(const Scalar depth,
+                      const Scalar press) const;
 
 private:
     const TabulatedFunction& tempVdTable_;
     const RS& rs_;
     const int pvtRegionIdx_;
-    const double g_;
+    const Scalar g_;
 
-    double density(const double depth,
-                   const double press) const;
+    Scalar density(const Scalar depth,
+                   const Scalar press) const;
 };
 
 template <class FluidSystem, class RV, class RVW>
 class Gas
 {
-using TabulatedFunction = Tabulated1DFunction<double>;
+    using Scalar = typename FluidSystem::Scalar;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
+
 public:
     Gas(const TabulatedFunction& tempVdTable,
         const RV& rv,
         const RVW& rvw,
         const int pvtRegionIdx,
-        const double normGrav);
+        const Scalar normGrav);
 
-    double operator()(const double depth,
-                      const double press) const;
+    Scalar operator()(const Scalar depth,
+                      const Scalar press) const;
 
 private:
     const TabulatedFunction& tempVdTable_;
     const RV& rv_;
     const RVW& rvw_;
     const int pvtRegionIdx_;
-    const double g_;
+    const Scalar g_;
 
-    double density(const double depth,
-                   const double press) const;
+    Scalar density(const Scalar depth,
+                   const Scalar press) const;
 };
 
 } // namespace PhasePressODE
@@ -160,7 +166,8 @@ template <class FluidSystem, class Region>
 class PressureTable
 {
 public:
-    using VSpan = std::array<double, 2>;
+    using Scalar = typename FluidSystem::Scalar;
+    using VSpan = std::array<Scalar, 2>;
 
     /// Constructor
     ///
@@ -170,7 +177,7 @@ public:
     ///
     /// \param[in] samplePoints Number of equally spaced depth sample points
     ///    in each internal phase pressure table.
-    explicit PressureTable(const double gravity,
+    explicit PressureTable(const Scalar gravity,
                            const int    samplePoints = 2000);
 
     /// Copy constructor
@@ -220,7 +227,7 @@ public:
     ///    \endcode.
     ///
     /// \return Oil phase pressure at specified depth.
-    double oil(const double depth) const;
+    Scalar oil(const Scalar depth) const;
 
     /// Evaluate gas phase pressure at specified depth.
     ///
@@ -229,7 +236,7 @@ public:
     ///    \endcode.
     ///
     /// \return Gas phase pressure at specified depth.
-    double gas(const double depth) const;
+    Scalar gas(const Scalar depth) const;
 
     /// Evaluate water phase pressure at specified depth.
     ///
@@ -238,7 +245,7 @@ public:
     ///    \endcode.
     ///
     /// \return Water phase pressure at specified depth.
-    double water(const double depth) const;
+    Scalar water(const Scalar depth) const;
 
 private:
     template <class ODE>
@@ -246,8 +253,8 @@ private:
     {
     public:
         struct InitCond {
-            double depth;
-            double pressure;
+            Scalar depth;
+            Scalar pressure;
         };
 
         explicit PressureFunction(const ODE&      ode,
@@ -263,12 +270,12 @@ private:
 
         PressureFunction& operator=(PressureFunction&& rhs);
 
-        double value(const double depth) const;
+        Scalar value(const Scalar depth) const;
 
     private:
         enum Direction : std::size_t { Up, Down, NumDir };
 
-        using Distribution = Details::RK4IVP<ODE>;
+        using Distribution = Details::RK4IVP<Scalar,ODE>;
         using DistrPtr = std::unique_ptr<Distribution>;
 
         InitCond initial_;
@@ -292,7 +299,7 @@ private:
     using Strategy = void (PressureTable::*)
         (const Region&, const VSpan&);
 
-    double gravity_;
+    Scalar gravity_;
     int    nsample_;
 
     std::unique_ptr<OPress> oil_{};
@@ -327,12 +334,13 @@ private:
 // ===========================================================================
 
 /// Simple set of per-phase (named by primary component) quantities.
+template<class Scalar>
 struct PhaseQuantityValue {
-    double oil{0.0};
-    double gas{0.0};
-    double water{0.0};
+    Scalar oil{0.0};
+    Scalar gas{0.0};
+    Scalar water{0.0};
 
-    PhaseQuantityValue& axpy(const PhaseQuantityValue& rhs, const double a)
+    PhaseQuantityValue& axpy(const PhaseQuantityValue& rhs, const Scalar a)
     {
         this->oil   += a * rhs.oil;
         this->gas   += a * rhs.gas;
@@ -341,7 +349,7 @@ struct PhaseQuantityValue {
         return *this;
     }
 
-    PhaseQuantityValue& operator/=(const double x)
+    PhaseQuantityValue& operator/=(const Scalar x)
     {
         this->oil   /= x;
         this->gas   /= x;
@@ -377,12 +385,13 @@ template <class MaterialLawManager, class FluidSystem, class Region, typename Ce
 class PhaseSaturations
 {
 public:
+    using Scalar = typename FluidSystem::Scalar;
     /// Evaluation point within a model geometry.
     ///
     /// Associates a particular depth to specific cell.
     struct Position {
         CellID cell;
-        double depth;
+        Scalar depth;
     };
 
     /// Convenience type alias
@@ -396,7 +405,7 @@ public:
     /// \param[in] swatInit Initial water saturation array (from SWATINIT
     ///    data).  Empty if SWATINIT is not used in this simulation model.
     explicit PhaseSaturations(MaterialLawManager&        matLawMgr,
-                              const std::vector<double>& swatInit);
+                              const std::vector<Scalar>& swatInit);
 
     /// Copy constructor.
     ///
@@ -421,7 +430,7 @@ public:
     ///    pertaining to the equilibration region \p reg.
     ///
     /// \return Set of phase saturation values defined at particular point.
-    const PhaseQuantityValue&
+    const PhaseQuantityValue<Scalar>&
     deriveSaturations(const Position& x,
                       const Region&   reg,
                       const PTable&   ptable);
@@ -430,7 +439,7 @@ public:
     ///
     /// Values associated with evaluation point of previous call to \code
     /// deriveSaturations() \endcode.
-    const PhaseQuantityValue& correctedPhasePressures() const
+    const PhaseQuantityValue<Scalar>& correctedPhasePressures() const
     {
         return this->press_;
     }
@@ -448,7 +457,7 @@ private:
     /// information needed to calculate the capillary pressure values from
     /// the current set of material laws.
     using FluidState = ::Opm::
-        SimpleModularFluidState<double, /*numPhases=*/3, /*numComponents=*/3,
+        SimpleModularFluidState<Scalar, /*numPhases=*/3, /*numComponents=*/3,
                                 FluidSystem,
                                 /*storePressure=*/false,
                                 /*storeTemperature=*/false,
@@ -471,13 +480,13 @@ private:
     MaterialLawManager& matLawMgr_;
 
     /// Client's SWATINIT data.
-    const std::vector<double>& swatInit_;
+    const std::vector<Scalar>& swatInit_;
 
     /// Evaluated phase saturations.
-    PhaseQuantityValue sat_;
+    PhaseQuantityValue<Scalar> sat_;
 
     /// Saturation-corrected phase pressure values.
-    PhaseQuantityValue press_;
+    PhaseQuantityValue<Scalar> press_;
 
     /// Current evaluation point.
     EvaluationPoint evalPt_;
@@ -486,7 +495,7 @@ private:
     FluidState fluidState_;
 
     /// Evaluated capillary pressures from current set of material laws.
-    std::array<double, FluidSystem::numPhases> matLawCapPress_;
+    std::array<Scalar, FluidSystem::numPhases> matLawCapPress_;
 
     /// Capture the input evaluation point information in internal state.
     ///
@@ -547,7 +556,7 @@ private:
     /// \param[in] pcow O/W capillary pressure value (Po - Pw).
     ///
     /// \return Water saturation value.
-    std::pair<double, bool> applySwatInit(const double pcow);
+    std::pair<Scalar, bool> applySwatInit(const Scalar pcow);
 
     /// Derive water saturation from SWATINIT data.
     ///
@@ -561,7 +570,7 @@ private:
     ///
     /// \return Water saturation value.  Input value, possibly mollified by
     ///    current set of material laws.
-    std::pair<double, bool> applySwatInit(const double pc, const double sw);
+    std::pair<Scalar, bool> applySwatInit(const Scalar pc, const Scalar sw);
 
     /// Invoke material law container's capillary pressure calculator on
     /// current fluid state.
@@ -569,15 +578,15 @@ private:
 
     /// Extract gas/oil capillary pressure value (Pg - Po) from current
     /// fluid state.
-    double materialLawCapPressGasOil() const;
+    Scalar materialLawCapPressGasOil() const;
 
     /// Extract oil/water capillary pressure value (Po - Pw) from current
     /// fluid state.
-    double materialLawCapPressOilWater() const;
+    Scalar materialLawCapPressOilWater() const;
 
     /// Extract gas/water capillary pressure value (Pg - Pw) from current
     /// fluid state.
-    double materialLawCapPressGasWater() const;
+    Scalar materialLawCapPressGasWater() const;
 
     /// Predicate for whether specific phase has constant capillary pressure
     /// curve in current cell.
@@ -614,7 +623,7 @@ private:
     ///    function of phase saturation.
     ///
     /// \return Phase saturation.
-    double fromDepthTable(const double   contactdepth,
+    Scalar fromDepthTable(const Scalar   contactdepth,
                           const PhaseIdx phasePos,
                           const bool     isincr) const;
 
@@ -635,7 +644,7 @@ private:
     ///
     /// \return Phase saturation at which capillary pressure attains target
     ///    value.
-    double invertCapPress(const double   pc,
+    Scalar invertCapPress(const Scalar   pc,
                           const PhaseIdx phasePos,
                           const bool     isincr) const;
 
@@ -660,14 +669,14 @@ private:
 
 // ===========================================================================
 
-template <typename CellRange>
+template <typename CellRange, class Scalar>
 void verticalExtent(const CellRange&      cells,
-                    const std::vector<std::pair<double, double>>& cellZMinMax,
+                    const std::vector<std::pair<Scalar, Scalar>>& cellZMinMax,
                     const Parallel::Communication& comm,
-                    std::array<double,2>& span);
+                    std::array<Scalar,2>& span);
 
-template <class Element>
-std::pair<double,double> cellZMinMax(const Element& element);
+template <class Scalar, class Element>
+std::pair<Scalar,Scalar> cellZMinMax(const Element& element);
 
 } // namespace Details
 
@@ -681,6 +690,7 @@ template<class FluidSystem,
 class InitialStateComputer
 {
     using Element = typename GridView::template Codim<0>::Entity;
+    using Scalar = typename FluidSystem::Scalar;
 public:
     template<class MaterialLawManager>
     InitialStateComputer(MaterialLawManager& materialLawManager,
@@ -688,11 +698,11 @@ public:
                          const Grid& grid,
                          const GridView& gridView,
                          const CartesianIndexMapper& cartMapper,
-                         const double grav,
+                         const Scalar grav,
                          const int num_pressure_points = 2000,
                          const bool applySwatInit = true);
 
-    using Vec = std::vector<double>;
+    using Vec = std::vector<Scalar>;
     using PVec = std::vector<Vec>; // One per phase.
 
     const Vec& temperature() const { return temperature_; }
@@ -729,7 +739,7 @@ private:
                           const std::vector<EquilRecord>& rec,
                           MaterialLawManager& materialLawManager,
                           const Comm& comm,
-                          const double grav);
+                          const Scalar grav);
 
     template <class CellRange, class EquilibrationMethod>
     void cellLoop(const CellRange&      cells,
@@ -737,21 +747,21 @@ private:
 
     template <class CellRange, class PressTable, class PhaseSat>
     void equilibrateCellCentres(const CellRange&        cells,
-                                const EquilReg<double>& eqreg,
+                                const EquilReg<Scalar>& eqreg,
                                 const PressTable&       ptable,
                                 PhaseSat&               psat);
 
     template <class CellRange, class PressTable, class PhaseSat>
     void equilibrateHorizontal(const CellRange&        cells,
-                               const EquilReg<double>& eqreg,
+                               const EquilReg<Scalar>& eqreg,
                                const int               acc,
                                const PressTable&       ptable,
                                PhaseSat&               psat);
 
-    std::vector< std::shared_ptr<Miscibility::RsFunction<double>> > rsFunc_;
-    std::vector< std::shared_ptr<Miscibility::RsFunction<double>> > rvFunc_;
-    std::vector< std::shared_ptr<Miscibility::RsFunction<double>> > rvwFunc_;
-    using TabulatedFunction = Tabulated1DFunction<double>;
+    std::vector< std::shared_ptr<Miscibility::RsFunction<Scalar>> > rsFunc_;
+    std::vector< std::shared_ptr<Miscibility::RsFunction<Scalar>> > rvFunc_;
+    std::vector< std::shared_ptr<Miscibility::RsFunction<Scalar>> > rvwFunc_;
+    using TabulatedFunction = Tabulated1DFunction<Scalar>;
     std::vector<TabulatedFunction> tempVdTable_;
     std::vector<TabulatedFunction> saltVdTable_;
     std::vector<TabulatedFunction> saltpVdTable_;
@@ -767,8 +777,8 @@ private:
     const CartesianIndexMapper& cartesianIndexMapper_;
     Vec swatInit_;
     Vec cellCenterDepth_;
-    std::vector<std::pair<double,double>> cellZSpan_;
-    std::vector<std::pair<double,double>> cellZMinMax_;
+    std::vector<std::pair<Scalar,Scalar>> cellZSpan_;
+    std::vector<std::pair<Scalar,Scalar>> cellZMinMax_;
     int num_pressure_points_;
 };
 
