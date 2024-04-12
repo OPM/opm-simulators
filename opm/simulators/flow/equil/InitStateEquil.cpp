@@ -43,29 +43,33 @@ using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<Scalar,0,1,2>>;
 namespace EQUIL {
 namespace DeckDependent {
 
-#define INSTANTIATE_COMP(T, GridView, Mapper) \
-    template class InitialStateComputer<BlackOilFluidSystem<T>, \
-                                        Dune::CpGrid, \
-                                        GridView, \
-                                        Mapper, \
+#define INSTANTIATE_COMP(T, GridView, Mapper)                                      \
+    template class InitialStateComputer<BlackOilFluidSystem<T>,                    \
+                                        Dune::CpGrid,                              \
+                                        GridView,                                  \
+                                        Mapper,                                    \
                                         Dune::CartesianIndexMapper<Dune::CpGrid>>; \
-    template InitialStateComputer<BlackOilFluidSystem<T>, \
-                                  Dune::CpGrid, \
-                                  GridView, \
-                                  Mapper, \
-                                  Dune::CartesianIndexMapper<Dune::CpGrid>>::\
-             InitialStateComputer(MatLaw<T>&, \
-                                  const EclipseState&, \
-                                  const Dune::CpGrid&, \
-                                  const GridView&, \
+    template InitialStateComputer<BlackOilFluidSystem<T>,                          \
+                                  Dune::CpGrid,                                    \
+                                  GridView,                                        \
+                                  Mapper,                                          \
+                                  Dune::CartesianIndexMapper<Dune::CpGrid>>::      \
+             InitialStateComputer(MatLaw<T>&,                                      \
+                                  const EclipseState&,                             \
+                                  const Dune::CpGrid&,                             \
+                                  const GridView&,                                 \
                                   const Dune::CartesianIndexMapper<Dune::CpGrid>&, \
-                                  const T, \
-                                  const int, \
+                                  const T,                                         \
+                                  const int,                                       \
                                   const bool);
 
 using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
 using Mapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
+
 INSTANTIATE_COMP(double, GridView, Mapper)
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_COMP(float, GridView, Mapper)
+#endif
 
 #if HAVE_DUNE_FEM
 #if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
@@ -83,23 +87,30 @@ using MapperFem = Dune::MultipleCodimMultipleGeomTypeMapper<GridViewFem>;
 
 INSTANTIATE_COMP(double, GridViewFem, MapperFem)
 
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_COMP(float, GridViewFem, MapperFem)
+#endif
+
 #endif // HAVE_DUNE_FEM
 
 } // namespace DeckDependent
 
 namespace Details {
-#define INSTANTIATE_TYPE(T) \
-    template class PressureTable<BlackOilFluidSystem<T>,EquilReg<T>>; \
-    template void verticalExtent(const std::vector<int>&, \
-                                 const std::vector<std::pair<T,T>>&, \
-                                 const Parallel::Communication&, \
-                                 std::array<T,2>&); \
-    template class PhaseSaturations<MatLaw<T>,BlackOilFluidSystem<T>, \
-                                    EquilReg<T>,std::size_t>; \
+#define INSTANTIATE_TYPE(T)                                                 \
+    template class PressureTable<BlackOilFluidSystem<T>,EquilReg<T>>;       \
+    template void verticalExtent(const std::vector<int>&,                   \
+                                 const std::vector<std::pair<T,T>>&,        \
+                                 const Parallel::Communication&,            \
+                                 std::array<T,2>&);                         \
+    template class PhaseSaturations<MatLaw<T>,BlackOilFluidSystem<T>,       \
+                                    EquilReg<T>,std::size_t>;               \
     template std::pair<T,T> cellZMinMax<T>(const Dune::cpgrid::Entity<0>&);
 
 INSTANTIATE_TYPE(double)
 
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 }
 
 } // namespace EQUIL
