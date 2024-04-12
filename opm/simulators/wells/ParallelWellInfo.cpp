@@ -256,7 +256,7 @@ int CommunicateAboveBelow<Scalar>::endReset()
         using FromSet = Dune::EnumItem<Attribute,owner>;
         using ToSet = Dune::AllSet<Attribute>;
         interface_.build(remote_indices_, FromSet(), ToSet());
-        communicator_.build<double*>(interface_);
+        communicator_.build<Scalar*>(interface_);
     }
 #endif
     return num_local_perfs_;
@@ -549,9 +549,6 @@ T ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(const T& t) const
     return res;
 }
 
-template int ParallelWellInfo<double>::broadcastFirstPerforationValue<int>(const int&) const;
-template double ParallelWellInfo<double>::broadcastFirstPerforationValue<double>(const double&) const;
-
 template<class Scalar>
 std::vector<Scalar> ParallelWellInfo<Scalar>::
 communicateAboveValues(Scalar zero_value,
@@ -713,26 +710,44 @@ checkAllConnectionsFound()
 template<class Scalar> using dIter = typename std::vector<Scalar>::iterator;
 template<class Scalar> using cdIter = typename std::vector<Scalar>::const_iterator;
 
-#define INSTANCE(T) \
-    template class CheckDistributedWellConnections<T>; \
-    template class CommunicateAboveBelow<T>; \
-    template class GlobalPerfContainerFactory<T>; \
-    template class ParallelWellInfo<T>; \
-    template typename cdIter<T>::value_type \
-        ParallelWellInfo<T>::sumPerfValues<cdIter<T>>(cdIter<T>,cdIter<T>) const; \
-    template typename dIter<T>::value_type \
-        ParallelWellInfo<T>::sumPerfValues<dIter<T>>(dIter<T>,dIter<T>) const; \
-    template void CommunicateAboveBelow<T>::partialSumPerfValues<dIter<T>>(dIter<T>, dIter<T>) const; \
-    template bool operator<(const ParallelWellInfo<T>&, const ParallelWellInfo<T>&); \
-    template bool operator<(const ParallelWellInfo<T>&, const std::pair<std::string, bool>&); \
-    template bool operator<(const std::pair<std::string, bool>&, const ParallelWellInfo<T>&); \
-    template bool operator==(const ParallelWellInfo<T>&, const ParallelWellInfo<T>&); \
-    template bool operator==(const ParallelWellInfo<T>& well, const std::pair<std::string, bool>&); \
-    template bool operator==(const std::pair<std::string, bool>&, const ParallelWellInfo<T>&); \
-    template bool operator!=(const ParallelWellInfo<T>&, const ParallelWellInfo<T>&); \
-    template bool operator!=(const std::pair<std::string, bool>&, const ParallelWellInfo<T>&); \
-    template bool operator!=(const ParallelWellInfo<T>&, const std::pair<std::string, bool>&);
+#define INSTANTIATE_TYPE(T)                                                         \
+    template class CheckDistributedWellConnections<T>;                              \
+    template class CommunicateAboveBelow<T>;                                        \
+    template class GlobalPerfContainerFactory<T>;                                   \
+    template class ParallelWellInfo<T>;                                             \
+    template typename cdIter<T>::value_type                                         \
+        ParallelWellInfo<T>::sumPerfValues<cdIter<T>>(cdIter<T>,cdIter<T>) const;   \
+    template typename dIter<T>::value_type                                          \
+        ParallelWellInfo<T>::sumPerfValues<dIter<T>>(dIter<T>,dIter<T>) const;      \
+     template int ParallelWellInfo<T>::                                             \
+        broadcastFirstPerforationValue<int>(const int&) const;                      \
+     template T ParallelWellInfo<T>::                                               \
+        broadcastFirstPerforationValue<T>(const T&) const;                          \
+    template void CommunicateAboveBelow<T>::                                        \
+        partialSumPerfValues<dIter<T>>(dIter<T>, dIter<T>) const;                   \
+    template bool operator<(const ParallelWellInfo<T>&,                             \
+                            const ParallelWellInfo<T>&);                            \
+    template bool operator<(const ParallelWellInfo<T>&,                             \
+                            const std::pair<std::string, bool>&);                   \
+    template bool operator<(const std::pair<std::string, bool>&,                    \
+                            const ParallelWellInfo<T>&);                            \
+    template bool operator==(const ParallelWellInfo<T>&,                            \
+                             const ParallelWellInfo<T>&);                           \
+    template bool operator==(const ParallelWellInfo<T>& well,                       \
+                             const std::pair<std::string, bool>&);                  \
+    template bool operator==(const std::pair<std::string, bool>&,                   \
+                             const ParallelWellInfo<T>&);                           \
+    template bool operator!=(const ParallelWellInfo<T>&,                            \
+                             const ParallelWellInfo<T>&);                           \
+    template bool operator!=(const std::pair<std::string, bool>&,                   \
+                             const ParallelWellInfo<T>&);                           \
+    template bool operator!=(const ParallelWellInfo<T>&,                            \
+                             const std::pair<std::string, bool>&);
 
-INSTANCE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // end namespace Opm
