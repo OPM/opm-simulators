@@ -802,7 +802,7 @@ updateGpMaintTargetForGroups(const Group& group,
     } else {
         gpm->resetState(gpmaint_state);
     }
-    group_state.update_gpmaint_target(group.name(), std::max(0.0, sign * rate));
+    group_state.update_gpmaint_target(group.name(), std::max(Scalar{0.0}, sign * rate));
 }
 
 template<class Scalar>
