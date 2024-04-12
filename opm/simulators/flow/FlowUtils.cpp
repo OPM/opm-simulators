@@ -264,4 +264,8 @@ void hideUnusedParameters()
 
 template void hideUnusedParameters<double>();
 
+#if FLOW_INSTANTIATE_FLOAT
+template void hideUnusedParameters<float>();
+#endif
+
 } // namespace Opm::detail
