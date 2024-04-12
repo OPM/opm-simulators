@@ -55,5 +55,9 @@ template<class Scalar> using FS = BlackOilFluidSystem<Scalar>;
 
 INSTANTIATE_TYPE(double)
 
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
+
 } // namespace Equil
 } // namespace Opm
