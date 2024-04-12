@@ -89,8 +89,8 @@ class RebuildOnUpdatePreconditioner : public PreconditionerWithUpdate<typename O
                                                                       typename OriginalPreconditioner::range_type>
 {
 public:
-    RebuildOnUpdatePreconditioner(MatrixPtr mat_ptr, const int n, const double w, const bool resort)
-        : orig_precond_(std::make_unique<OriginalPreconditioner>(*mat_ptr, n, w, resort))
+    RebuildOnUpdatePreconditioner(const MatrixPtr &mat_ptr, const int n, const double w, const bool resort)
+        : orig_precond_(std::make_unique<OriginalPreconditioner>(mat_ptr, n, w, resort))
         , mat_ptr_(mat_ptr)
         , n_(n)
         , w_(w)
@@ -124,12 +124,12 @@ public:
     // Rebuild the preconditioner on update
     void update() override
     {
-        orig_precond_ = std::make_unique<OriginalPreconditioner>(*mat_ptr_, n_, w_, resort_);
+        orig_precond_ = std::make_unique<OriginalPreconditioner>(mat_ptr_, n_, w_, resort_);
     }
 
 private:
     std::unique_ptr<OriginalPreconditioner> orig_precond_;
-    const MatrixPtr mat_ptr_;
+    const MatrixPtr &mat_ptr_;
     const int n_;
     const double w_;
     const bool resort_;
@@ -137,7 +137,7 @@ private:
 
 template <class OriginalPreconditioner, class MatrixPtr>
 std::shared_ptr<RebuildOnUpdatePreconditioner<OriginalPreconditioner, MatrixPtr>>
-getRebuildOnUpdateWrapper(MatrixPtr mat_ptr, const int n, const double w, const bool resort)
+getRebuildOnUpdateWrapper(const MatrixPtr &mat_ptr, const int n, const double w, const bool resort)
 {
     return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner, MatrixPtr>>(mat_ptr, n, w, resort);
 }
