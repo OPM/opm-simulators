@@ -766,7 +766,7 @@ setRestart(const data::Solution& sol,
 
     if (!rswSol_.empty()) {
         if (sol.has("RSWSOL"))
-            rswSol_[elemIdx] = sol.data<Scalar>("RSWSOL")[globalDofIndex];
+            rswSol_[elemIdx] = sol.data<double>("RSWSOL")[globalDofIndex];
 
     }
 
