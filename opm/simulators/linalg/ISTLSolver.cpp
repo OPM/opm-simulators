@@ -158,10 +158,10 @@ void FlexibleSolverInfo<Matrix,Vector,Comm>::create(const Matrix& matrix,
     }
 }
 
-template<int Dim>
-using BM = Dune::BCRSMatrix<MatrixBlock<double,Dim,Dim>>;
-template<int Dim>
-using BV = Dune::BlockVector<Dune::FieldVector<double,Dim>>;
+template<class Scalar, int Dim>
+using BM = Dune::BCRSMatrix<MatrixBlock<Scalar,Dim,Dim>>;
+template<class Scalar, int Dim>
+using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
 
 #if HAVE_MPI
 using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
@@ -169,16 +169,23 @@ using CommunicationType = Dune::OwnerOverlapCopyCommunication<int,int>;
 using CommunicationType = Dune::CollectiveCommunication<int>;
 #endif
 
-#define INSTANCE_FLEX(Dim) \
-    template void makeOverlapRowsInvalid<BM<Dim>>(BM<Dim>&, const std::vector<int>&); \
-    template struct FlexibleSolverInfo<BM<Dim>,BV<Dim>,CommunicationType>;
+#define INSTANTIATE_FLEX(T,Dim)                                                           \
+    template void makeOverlapRowsInvalid<BM<T,Dim>>(BM<T,Dim>&, const std::vector<int>&); \
+    template struct FlexibleSolverInfo<BM<T,Dim>,BV<T,Dim>,CommunicationType>;
 
-INSTANCE_FLEX(1)
-INSTANCE_FLEX(2)
-INSTANCE_FLEX(3)
-INSTANCE_FLEX(4)
-INSTANCE_FLEX(5)
-INSTANCE_FLEX(6)
+#define INSTANTIATE_TYPE(T) \
+    INSTANTIATE_FLEX(T,1)   \
+    INSTANTIATE_FLEX(T,2)   \
+    INSTANTIATE_FLEX(T,3)   \
+    INSTANTIATE_FLEX(T,4)   \
+    INSTANTIATE_FLEX(T,5)   \
+    INSTANTIATE_FLEX(T,6)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 }
 }
