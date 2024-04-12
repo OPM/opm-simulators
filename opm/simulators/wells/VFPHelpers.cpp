@@ -557,7 +557,7 @@ intersectWithIPR(const VFPProdTable& table,
         if (y0 < 0 && y1 >= 0){
             // crossing with positive slope
             Scalar w = -y0/(y1-y0);
-            w = std::clamp(w, 0.0, 1.0); // just to be safe (if y0~y1~0)
+            w = std::clamp(w, Scalar{0.0}, Scalar{1.0}); // just to be safe (if y0~y1~0)
             flo_x = flo0 + w*(flo1 - flo0);
         }
         flo0 = flo1;
