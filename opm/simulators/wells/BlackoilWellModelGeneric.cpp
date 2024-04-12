@@ -113,7 +113,13 @@ BlackoilWellModelGeneric(Schedule& schedule,
 
     const auto& node_pressures = eclState.getRestartNetworkPressures();
     if (node_pressures.has_value()) {
-        this->node_pressures_ = node_pressures.value();
+        if constexpr (std::is_same_v<Scalar,double>) {
+            this->node_pressures_ = node_pressures.value();
+        } else {
+            for (const auto& it : node_pressures.value()) {
+                this->node_pressures_[it.first] = it.second;
+            }
+        }
     }
 }
 
