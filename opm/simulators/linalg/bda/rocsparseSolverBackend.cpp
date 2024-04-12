@@ -89,6 +89,7 @@
 
 #if HAVE_OPENMP
 #include <thread>
+#include <omp.h>
 extern std::shared_ptr<std::thread> copyThread;
 #endif //HAVE_OPENMP
 
@@ -441,7 +442,8 @@ void rocsparseSolverBackend<block_size>::copy_system_to_gpu(double *b) {
     
     if (useJacMatrix) {
 #if HAVE_OPENMP
-        copyThread->join();
+	if(omp_get_max_threads() > 1)
+	   copyThread->join();
 #endif
         HIP_CHECK(hipMemcpyAsync(d_Mrows, jacMat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, stream));
         HIP_CHECK(hipMemcpyAsync(d_Mcols, jacMat->colIndices, sizeof(rocsparse_int) * nnzbs_prec, hipMemcpyHostToDevice, stream));
@@ -472,7 +474,8 @@ void rocsparseSolverBackend<block_size>::update_system_on_gpu(double *b) {
     
     if (useJacMatrix) {
 #if HAVE_OPENMP
-        copyThread->join();
+	if (omp_get_max_threads() > 1)
+	    copyThread->join();
 #endif
         HIP_CHECK(hipMemcpyAsync(d_Mvals, jacMat->nnzValues, sizeof(double) * nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, stream));
     } else {

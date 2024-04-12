@@ -40,6 +40,7 @@
 
 #if HAVE_OPENMP
 #include <thread>
+#include <omp.h>
 extern std::shared_ptr<std::thread> copyThread;
 #endif // HAVE_OPENMP
 
@@ -328,7 +329,8 @@ void cusparseSolverBackend<block_size>::copy_system_to_gpu(std::shared_ptr<Block
     cudaMemcpyAsync(d_bVals, matrix->nnzValues, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
     if (useJacMatrix) {
 #if HAVE_OPENMP
-        copyThread->join();
+	if(omp_get_max_threads() > 1)
+	   copyThread->join();
 #endif
         cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, nnzbs_prec * block_size * block_size * sizeof(double), cudaMemcpyHostToDevice, stream);
     } else {
@@ -372,7 +374,8 @@ void cusparseSolverBackend<block_size>::update_system_on_gpu(std::shared_ptr<Blo
     cudaMemcpyAsync(d_bVals, matrix->nnzValues, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
     if (useJacMatrix) {
 #if HAVE_OPENMP
-        copyThread->join();
+	if(omp_get_max_threads() > 1)
+	   copyThread->join();
 #endif
         cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, nnzbs_prec * block_size * block_size * sizeof(double), cudaMemcpyHostToDevice, stream);
     } else {
