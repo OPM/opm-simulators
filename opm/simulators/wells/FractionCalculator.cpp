@@ -193,4 +193,8 @@ getGroupRateVector(const std::string& group_name)
 
 template class FractionCalculator<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class FractionCalculator<float>;
+#endif
+
 } // namespace Opm::WGHelpers
