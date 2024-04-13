@@ -76,31 +76,36 @@ namespace Opm
 
     namespace Details
     {
-        using PressureMatrixType = Dune::BCRSMatrix<Opm::MatrixBlock<double, 1, 1>>;
-        using PressureVectorType = Dune::BlockVector<Dune::FieldVector<double, 1>>;
-        using SeqCoarseOperatorType = Dune::MatrixAdapter<PressureMatrixType, PressureVectorType, PressureVectorType>;
-        template <class Comm>
+        template<class Scalar> using PressureMatrixType = Dune::BCRSMatrix<MatrixBlock<Scalar, 1, 1>>;
+        template<class Scalar> using PressureVectorType = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
+        template<class Scalar> using SeqCoarseOperatorType = Dune::MatrixAdapter<PressureMatrixType<Scalar>,
+                                                                                 PressureVectorType<Scalar>,
+                                                                                 PressureVectorType<Scalar>>;
+        template<class Scalar, class Comm>
         using ParCoarseOperatorType
-            = Dune::OverlappingSchwarzOperator<PressureMatrixType, PressureVectorType, PressureVectorType, Comm>;
-        template <class Comm>
+            = Dune::OverlappingSchwarzOperator<PressureMatrixType<Scalar>,
+                                               PressureVectorType<Scalar>,
+                                               PressureVectorType<Scalar>,
+                                               Comm>;
+        template<class Scalar, class Comm>
         using CoarseOperatorType = std::conditional_t<std::is_same<Comm, Dune::Amg::SequentialInformation>::value,
-                                                      SeqCoarseOperatorType,
-                                                      ParCoarseOperatorType<Comm>>;
+                                                      SeqCoarseOperatorType<Scalar>,
+                                                      ParCoarseOperatorType<Scalar,Comm>>;
     } // namespace Details
 
-    template <class FineOperator, class Communication, bool transpose = false>
-    class PressureBhpTransferPolicy : public Dune::Amg::LevelTransferPolicyCpr<FineOperator, Details::CoarseOperatorType<Communication>>
+    template<class FineOperator, class Communication, class Scalar, bool transpose = false>
+    class PressureBhpTransferPolicy : public Dune::Amg::LevelTransferPolicyCpr<FineOperator, Details::CoarseOperatorType<Scalar,Communication>>
     {
     public:
-        typedef typename Details::CoarseOperatorType<Communication> CoarseOperator;
-        typedef Dune::Amg::LevelTransferPolicyCpr<FineOperator, CoarseOperator> ParentType;
-        typedef Communication ParallelInformation;
-        typedef typename FineOperator::domain_type FineVectorType;
+        using CoarseOperator = typename Details::CoarseOperatorType<Scalar,Communication>;
+        using ParentType = Dune::Amg::LevelTransferPolicyCpr<FineOperator, CoarseOperator>;
+        using ParallelInformation = Communication;
+        using FineVectorType= typename FineOperator::domain_type;
 
     public:
         PressureBhpTransferPolicy(const Communication& comm,
                                   const FineVectorType& weights,
-                                  const Opm::PropertyTree& prm,
+                                  const PropertyTree& prm,
                                   const std::size_t pressureIndex)
             : communication_(&const_cast<Communication&>(comm))
             , weights_(weights)
@@ -109,7 +114,7 @@ namespace Opm
         {
         }
 
-        virtual void createCoarseLevelSystem(const FineOperator& fineOperator) override
+        void createCoarseLevelSystem(const FineOperator& fineOperator) override
         {
             OPM_TIMEBLOCK(createCoarseLevelSystem);
             using CoarseMatrix = typename CoarseOperator::matrix_type;
@@ -164,7 +169,7 @@ namespace Opm
         this->operator_ = Dune::Amg::ConstructionTraits<CoarseOperator>::construct(oargs);
     }
 
-    virtual void calculateCoarseEntries(const FineOperator& fineOperator) override
+    void calculateCoarseEntries(const FineOperator& fineOperator) override
     {
         OPM_TIMEBLOCK(calculateCoarseEntries);
         const auto& fineMatrix = fineOperator.getmat();
@@ -175,7 +180,7 @@ namespace Opm
             auto entryCoarse = rowCoarse->begin();
             for (auto entry = row->begin(), entryEnd = row->end(); entry != entryEnd; ++entry, ++entryCoarse) {
                 assert(entry.index() == entryCoarse.index());
-                double matrix_el = 0;
+                Scalar matrix_el = 0;
                 if (transpose) {
                     const auto& bw = weights_[entry.index()];
                     for (std::size_t i = 0; i < bw.size(); ++i) {
@@ -203,7 +208,7 @@ namespace Opm
         }
     }
 
-    virtual void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override
+    void moveToCoarseLevel(const typename ParentType::FineRangeType& fine) override
     {
         OPM_TIMEBLOCK(moveToCoarseLevel);
         //NB we iterate over fine assumming welldofs is at the end
@@ -214,7 +219,7 @@ namespace Opm
 
         for (auto block = begin; block != end; ++block) {
             const auto& bw = weights_[block.index()];
-            double rhs_el = 0.0;
+            Scalar rhs_el = 0.0;
             if (transpose) {
                 rhs_el = (*block)[pressure_var_index_];
             } else {
@@ -228,7 +233,7 @@ namespace Opm
         this->lhs_ = 0;
     }
 
-    virtual void moveToFineLevel(typename ParentType::FineDomainType& fine) override
+    void moveToFineLevel(typename ParentType::FineDomainType& fine) override
     {
         OPM_TIMEBLOCK(moveToFineLevel);
         //NB we iterate over fine assumming welldofs is at the end
@@ -246,7 +251,7 @@ namespace Opm
         }
     }
 
-    virtual PressureBhpTransferPolicy* clone() const override
+    PressureBhpTransferPolicy* clone() const override
     {
         return new PressureBhpTransferPolicy(*this);
     }
