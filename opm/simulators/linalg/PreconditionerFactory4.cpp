@@ -4,6 +4,10 @@
 
 namespace Opm {
 
-INSTANCE_PF(4)
+INSTANTIATE_PF(double,4)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_PF(float,4)
+#endif
 
 }

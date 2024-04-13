@@ -17,11 +17,13 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#include <config.h>
+
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 
 #include <opm/simulators/linalg/PreconditionerFactory.hpp>
-
 
 #include <opm/simulators/linalg/DILU.hpp>
 #include <opm/simulators/linalg/ExtraSmoothers.hpp>
@@ -43,8 +45,6 @@
 #include <dune/istl/paamg/fastamg.hh>
 #include <dune/istl/paamg/kamg.hh>
 #include <dune/istl/preconditioners.hh>
-
-#include <config.h>
 
 // Include all cuistl/GPU preconditioners inside of this headerfile
 #include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
@@ -751,76 +751,77 @@ PreconditionerFactory<Operator, Comm>::addCreator(const std::string& type, ParCr
 
 using CommSeq = Dune::Amg::SequentialInformation;
 
-template <int Dim>
-using OpFSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<Dune::FieldMatrix<double, Dim, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>>;
-template <int Dim>
-using OpBSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<MatrixBlock<double, Dim, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>>;
+template<class Scalar, int Dim>
+using OpFSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, Dim, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>>;
+template<class Scalar, int Dim>
+using OpBSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>>;
 
-template <int Dim, bool overlap>
-using OpW = WellModelMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<double, Dim, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                   Dune::BlockVector<Dune::FieldVector<double, Dim>>,
+template<class Scalar, int Dim, bool overlap>
+using OpW = WellModelMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                   Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
                                    overlap>;
 
-template <int Dim, bool overlap>
-using OpWG = WellModelGhostLastMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<double, Dim, Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<double, Dim>>,
+template<class Scalar, int Dim, bool overlap>
+using OpWG = WellModelGhostLastMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
                                              overlap>;
 
 #if HAVE_MPI
 using CommPar = Dune::OwnerOverlapCopyCommunication<int, int>;
 
-template <int Dim>
-using OpFPar = Dune::OverlappingSchwarzOperator<Dune::BCRSMatrix<Dune::FieldMatrix<double, Dim, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<double, Dim>>,
+template<class Scalar, int Dim>
+using OpFPar = Dune::OverlappingSchwarzOperator<Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, Dim, Dim>>,
+                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
                                                 CommPar>;
 
-template <int Dim>
-using OpBPar = Dune::OverlappingSchwarzOperator<Dune::BCRSMatrix<MatrixBlock<double, Dim, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<double, Dim>>,
-                                                Dune::BlockVector<Dune::FieldVector<double, Dim>>,
+template<class Scalar, int Dim>
+using OpBPar = Dune::OverlappingSchwarzOperator<Dune::BCRSMatrix<MatrixBlock<Scalar, Dim, Dim>>,
+                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
+                                                Dune::BlockVector<Dune::FieldVector<Scalar, Dim>>,
                                                 CommPar>;
-template<int Dim>
-using OpGLFPar = Opm::GhostLastMatrixAdapter<Dune::BCRSMatrix<Dune::FieldMatrix<double,Dim,Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<double,Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<double,Dim>>,
+template<class Scalar, int Dim>
+using OpGLFPar = Opm::GhostLastMatrixAdapter<Dune::BCRSMatrix<Dune::FieldMatrix<Scalar,Dim,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
                                              CommPar>;
 
-template<int Dim>
-using OpGLBPar = Opm::GhostLastMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<double,Dim,Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<double,Dim>>,
-                                             Dune::BlockVector<Dune::FieldVector<double,Dim>>,
+template<class Scalar, int Dim>
+using OpGLBPar = Opm::GhostLastMatrixAdapter<Dune::BCRSMatrix<MatrixBlock<Scalar,Dim,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
+                                             Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>,
                                              CommPar>;
 
-#define INSTANCE_PF_PAR(Dim)                                                                                           \
-    template class PreconditionerFactory<OpBSeq<Dim>, CommPar>;                                                        \
-    template class PreconditionerFactory<OpFPar<Dim>, CommPar>;                                                        \
-    template class PreconditionerFactory<OpBPar<Dim>, CommPar>;                                                        \
-    template class PreconditionerFactory<OpGLFPar<Dim>,CommPar>;                                                       \
-    template class PreconditionerFactory<OpGLBPar<Dim>,CommPar>;                                                       \
-    template class PreconditionerFactory<OpW<Dim, false>, CommPar>;                                                    \
-    template class PreconditionerFactory<OpWG<Dim, true>, CommPar>;                                                    \
-    template class PreconditionerFactory<OpBPar<Dim>,CommSeq>;                                                         \
-    template class PreconditionerFactory<OpGLBPar<Dim>,CommSeq>;
+#define INSTANTIATE_PF_PAR(T,Dim)                                     \
+    template class PreconditionerFactory<OpBSeq<T,Dim>, CommPar>;     \
+    template class PreconditionerFactory<OpFPar<T,Dim>, CommPar>;     \
+    template class PreconditionerFactory<OpBPar<T,Dim>, CommPar>;     \
+    template class PreconditionerFactory<OpGLFPar<T,Dim>, CommPar>;   \
+    template class PreconditionerFactory<OpGLBPar<T,Dim>, CommPar>;   \
+    template class PreconditionerFactory<OpW<T,Dim, false>, CommPar>; \
+    template class PreconditionerFactory<OpWG<T,Dim, true>, CommPar>; \
+    template class PreconditionerFactory<OpBPar<T,Dim>, CommSeq>;     \
+    template class PreconditionerFactory<OpGLBPar<T,Dim>, CommSeq>;
 #endif
 
-#define INSTANCE_PF_SEQ(Dim)                                                                                           \
-    template class PreconditionerFactory<OpFSeq<Dim>, CommSeq>;                                                        \
-    template class PreconditionerFactory<OpBSeq<Dim>, CommSeq>;                                                        \
-    template class PreconditionerFactory<OpW<Dim, false>, CommSeq>;                                                    \
-    template class PreconditionerFactory<OpWG<Dim, true>, CommSeq>;
+#define INSTANTIATE_PF_SEQ(T,Dim)                                     \
+    template class PreconditionerFactory<OpFSeq<T,Dim>, CommSeq>;     \
+    template class PreconditionerFactory<OpBSeq<T,Dim>, CommSeq>;     \
+    template class PreconditionerFactory<OpW<T,Dim, false>, CommSeq>; \
+    template class PreconditionerFactory<OpWG<T,Dim, true>, CommSeq>;
 
 #if HAVE_MPI
-#define INSTANCE_PF(Dim)                                                                                               \
-    INSTANCE_PF_PAR(Dim)                                                                                               \
-    INSTANCE_PF_SEQ(Dim)
+#define INSTANTIATE_PF(T,Dim) \
+    INSTANTIATE_PF_PAR(T,Dim) \
+    INSTANTIATE_PF_SEQ(T,Dim)
 #else
-#define INSTANCE_PF(Dim) INSTANCE_PF_SEQ(Dim)
+#define INSTANTIATE_PF(T,Dim) INSTANTIATE_PF_SEQ(T,Dim)
 #endif
+
 } // namespace Opm
