@@ -195,9 +195,13 @@ namespace Dune
                                                                                           verbosity);
 #if HAVE_SUITESPARSE_UMFPACK
         } else if (solver_type == "umfpack") {
+            if constexpr (std::is_same_v<typename VectorType::field_type,float>) {
+                OPM_THROW(std::invalid_argument, "UMFPack cannot be used with floats");
+            } else {
             using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
             linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), verbosity, false);
             direct_solver_ = true;
+            }
 #endif
 #if HAVE_CUDA
         } else if (solver_type == "cubicgstab") {
@@ -227,8 +231,12 @@ namespace Dune
     recreateDirectSolver()
     {
 #if HAVE_SUITESPARSE_UMFPACK
+        if constexpr (std::is_same_v<typename VectorType::field_type, float>) {
+            OPM_THROW(std::invalid_argument, "UMFPack cannot be used with floats");
+        } else {
         using MatrixType = std::remove_const_t<std::remove_reference_t<decltype(linearoperator_for_solver_->getmat())>>;
         linsolver_ = std::make_shared<Dune::UMFPack<MatrixType>>(linearoperator_for_solver_->getmat(), 0, false);
+        }
 #else
         OPM_THROW(std::logic_error, "Direct solver specified, but the FlexibleSolver class was not compiled with SuiteSparse support.");
 #endif
