@@ -110,18 +110,21 @@ applyUMFPack(Dune::UMFPack<MatrixType>& linsolver,
 
     // Object storing some statistics about the solving process
     Dune::InverseOperatorResult res;
+    if constexpr (std::is_same_v<typename VectorType::field_type,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use applyUMFPack() with floats.");
+    } else {
+        // Solve
+        linsolver.apply(y, x, res);
 
-    // Solve
-    linsolver.apply(y, x, res);
-
-    // Checking if there is any inf or nan in y
-    // it will be the solution before we find a way to catch the singularity of the matrix
-    for (std::size_t i_block = 0; i_block < y.size(); ++i_block) {
-        for (std::size_t i_elem = 0; i_elem < y[i_block].size(); ++i_elem) {
-            if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
-                const std::string msg{"nan or inf value found after UMFPack solve due to singular matrix"};
-                OpmLog::debug(msg);
-                OPM_THROW_NOLOG(NumericalProblem, msg);
+        // Checking if there is any inf or nan in y
+        // it will be the solution before we find a way to catch the singularity of the matrix
+        for (std::size_t i_block = 0; i_block < y.size(); ++i_block) {
+            for (std::size_t i_elem = 0; i_elem < y[i_block].size(); ++i_elem) {
+                if (std::isinf(y[i_block][i_elem]) || std::isnan(y[i_block][i_elem]) ) {
+                    const std::string msg{"nan or inf value found after UMFPack solve due to singular matrix"};
+                    OpmLog::debug(msg);
+                    OPM_THROW_NOLOG(NumericalProblem, msg);
+                }
             }
         }
     }
@@ -146,17 +149,21 @@ invertWithUMFPack(const int size,
     // Make a full block matrix.
     Dune::Matrix<typename MatrixType::block_type> inv(size, size);
 
-    // Create inverse by passing basis vectors to the solver.
-    for (int ii = 0; ii < size; ++ii) {
-        for (int jj = 0; jj < bsize; ++jj) {
-            e[ii][jj] = 1.0;
-            auto col = applyUMFPack(linsolver, e);
-            for (int cc = 0; cc < size; ++cc) {
-                for (int dd = 0; dd < bsize; ++dd) {
-                    inv[cc][ii][dd][jj] = col[cc][dd];
+    if constexpr (std::is_same_v<typename VectorType::field_type,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use invertWithUMFPack() with floats.");
+    } else {
+        // Create inverse by passing basis vectors to the solver.
+        for (int ii = 0; ii < size; ++ii) {
+            for (int jj = 0; jj < bsize; ++jj) {
+                e[ii][jj] = 1.0;
+                auto col = applyUMFPack(linsolver, e);
+                for (int cc = 0; cc < size; ++cc) {
+                    for (int dd = 0; dd < bsize; ++dd) {
+                        inv[cc][ii][dd][jj] = col[cc][dd];
+                    }
                 }
+                e[ii][jj] = 0.0;
             }
-            e[ii][jj] = 0.0;
         }
     }
 
