@@ -177,8 +177,8 @@ struct StandardPreconditioners
           return createParILU(op, prm, comm, prm.get<int>("ilulevel", 0));
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
-          DUNE_UNUSED_PARAMETER(prm);
-          return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat());
+          const int preconditioner_verbosity = prm.get<int>("verbosity", 0);
+          return wrapBlockPreconditioner<MultithreadDILU<M, V, V>>(comm, op.getmat(), preconditioner_verbosity);
         });
         F::addCreator("Jac", [](const O& op, const P& prm, const std::function<V()>&,
                      std::size_t, const C& comm) {
@@ -286,9 +286,10 @@ struct StandardPreconditioners
         });
 
         F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            const int preconditioner_verbosity = prm.get<int>("verbosity", 0);
             using field_type = typename V::field_type;
             using CuDILU = typename Opm::cuistl::CuDILU<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
-            auto cuDILU = std::make_shared<CuDILU>(op.getmat());
+            auto cuDILU = std::make_shared<CuDILU>(op.getmat(), preconditioner_verbosity);
 
             auto adapted = std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuDILU>>(cuDILU);
             auto wrapped = std::make_shared<Opm::cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
@@ -373,8 +374,8 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
                 op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-            DUNE_UNUSED_PARAMETER(prm);
-            return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat());
+            const int preconditioner_verbosity = prm.get<int>("verbosity", 0);
+            return std::make_shared<MultithreadDILU<M, V, V>>(op.getmat(), preconditioner_verbosity);
         });
         F::addCreator("Jac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("repeats", 1);
@@ -516,9 +517,10 @@ struct StandardPreconditioners<Operator,Dune::Amg::SequentialInformation>
         });
 
         F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+            const int preconditioner_verbosity = prm.get<int>("verbosity", 0);
             using field_type = typename V::field_type;
             using CUDILU = typename Opm::cuistl::CuDILU<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
-            return std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CUDILU>>(std::make_shared<CUDILU>(op.getmat()));
+            return std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CUDILU>>(std::make_shared<CUDILU>(op.getmat(), preconditioner_verbosity));
         });
 
         F::addCreator("CUDILUFloat", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {

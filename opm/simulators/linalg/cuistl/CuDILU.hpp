@@ -60,9 +60,16 @@ public:
     //!
     //!  Constructor gets all parameters to operate the prec.
     //! \param A The matrix to operate on.
-    //! \param w The relaxation factor.
     //!
     explicit CuDILU(const M& A);
+
+    //! \brief Constructor accounting for verbosity.
+    //!
+    //!  Constructor gets all parameters to operate the prec.
+    //! \param A The matrix to operate on.
+    //! \param verbosity The verbosity level.
+    //!
+    explicit CuDILU(const M& A, int verbosity);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
