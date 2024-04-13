@@ -50,11 +50,11 @@
 #include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
 
 
-namespace Opm
-{
+namespace Opm {
 
 template <class Smoother>
-struct AMGSmootherArgsHelper {
+struct AMGSmootherArgsHelper
+{
     static auto args(const PropertyTree& prm)
     {
         using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
@@ -69,7 +69,8 @@ struct AMGSmootherArgsHelper {
 };
 
 template <class M, class V, class C>
-struct AMGSmootherArgsHelper<ParallelOverlappingILU0<M, V, V, C>> {
+struct AMGSmootherArgsHelper<ParallelOverlappingILU0<M, V, V, C>>
+{
     static auto args(const PropertyTree& prm)
     {
         using Smoother = ParallelOverlappingILU0<M, V, V, C>;
@@ -87,7 +88,6 @@ struct AMGSmootherArgsHelper<ParallelOverlappingILU0<M, V, V, C>> {
         return smootherArgs;
     }
 };
-
 
 // trailing return type with decltype used for detecting existence of setUseFixedOrder member function by overloading the setUseFixedOrder function
 template <typename C>
@@ -279,7 +279,8 @@ struct StandardPreconditioners {
                               OPM_THROW(std::logic_error,
                                         "Pressure index out of bounds. It needs to specified for CPR");
                           }
-                          using LevelTransferPolicy = PressureTransferPolicy<O, Comm, double, false>;
+                          using Scalar = typename V::field_type;
+                          using LevelTransferPolicy = PressureTransferPolicy<O, Comm, Scalar, false>;
                           return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(
                               op, prm, weightsCalculator, pressureIndex, comm);
                       });
@@ -294,7 +295,8 @@ struct StandardPreconditioners {
                               OPM_THROW(std::logic_error,
                                         "Pressure index out of bounds. It needs to specified for CPR");
                           }
-                          using LevelTransferPolicy = PressureTransferPolicy<O, Comm, double, true>;
+                          using Scalar = typename V::field_type;
+                          using LevelTransferPolicy = PressureTransferPolicy<O, Comm, Scalar, true>;
                           return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(
                               op, prm, weightsCalculator, pressureIndex, comm);
                       });
@@ -311,7 +313,8 @@ struct StandardPreconditioners {
                                   OPM_THROW(std::logic_error,
                                             "Pressure index out of bounds. It needs to specified for CPR");
                               }
-                              using LevelTransferPolicy = PressureBhpTransferPolicy<O, Comm, double, false>;
+                              using Scalar = typename V::field_type;
+                              using LevelTransferPolicy = PressureBhpTransferPolicy<O, Comm, Scalar, false>;
                               return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(
                                   op, prm, weightsCalculator, pressureIndex, comm);
                           });
@@ -513,11 +516,16 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 }
             });
             F::addCreator("famg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-                auto crit = AMGHelper<O, C, M, V>::criterion(prm);
-                Dune::Amg::Parameters parms;
-                parms.setNoPreSmoothSteps(1);
-                parms.setNoPostSmoothSteps(1);
-                return getRebuildOnUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
+                if  constexpr (std::is_same_v<typename V::field_type, float>) {
+                    OPM_THROW(std::logic_error, "famg requires UMFPack which is not available for floats");
+                    return nullptr;
+                } else {
+                    auto crit = AMGHelper<O, C, M, V>::criterion(prm);
+                    Dune::Amg::Parameters parms;
+                    parms.setNoPreSmoothSteps(1);
+                    parms.setNoPostSmoothSteps(1);
+                    return getRebuildOnUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
+                }
             });
         }
         if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V, false>>) {
@@ -527,8 +535,9 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                     if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                         OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                     }
+                    using Scalar = typename V::field_type;
                     using LevelTransferPolicy
-                        = PressureBhpTransferPolicy<O, Dune::Amg::SequentialInformation, double, false>;
+                        = PressureBhpTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, false>;
                     return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(
                         op, prm, weightsCalculator, pressureIndex);
                 });
@@ -540,7 +549,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                 }
-                using LevelTransferPolicy = PressureTransferPolicy<O, Dune::Amg::SequentialInformation, double, false>;
+                using Scalar = typename V::field_type;
+                using LevelTransferPolicy = PressureTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, false>;
                 return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(
                     op, prm, weightsCalculator, pressureIndex);
             });
@@ -550,7 +560,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                 }
-                using LevelTransferPolicy = PressureTransferPolicy<O, Dune::Amg::SequentialInformation, double, true>;
+                using Scalar = typename V::field_type;
+                using LevelTransferPolicy = PressureTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, true>;
                 return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(
                     op, prm, weightsCalculator, pressureIndex);
             });
