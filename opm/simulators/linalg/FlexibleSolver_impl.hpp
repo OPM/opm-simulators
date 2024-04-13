@@ -265,57 +265,57 @@ namespace Dune
 // Macros to simplify explicit instantiation of FlexibleSolver for various block sizes.
 
 // Vectors and matrices.
-template <int N>
-using BV = Dune::BlockVector<Dune::FieldVector<double, N>>;
-template <int N>
-using OBM = Dune::BCRSMatrix<Opm::MatrixBlock<double, N, N>>;
+template<class Scalar, int N>
+using BV = Dune::BlockVector<Dune::FieldVector<Scalar, N>>;
+template<class Scalar, int N>
+using OBM = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, N, N>>;
 
 // Sequential operators.
-template <int N>
-using SeqOpM = Dune::MatrixAdapter<OBM<N>, BV<N>, BV<N>>;
-template <int N>
-using SeqOpW = Opm::WellModelMatrixAdapter<OBM<N>, BV<N>, BV<N>, false>;
+template<class Scalar, int N>
+using SeqOpM = Dune::MatrixAdapter<OBM<Scalar,N>, BV<Scalar,N>, BV<Scalar,N>>;
+template<class Scalar, int N>
+using SeqOpW = Opm::WellModelMatrixAdapter<OBM<Scalar,N>, BV<Scalar,N>, BV<Scalar,N>, false>;
 
 #if HAVE_MPI
 
 // Parallel communicator and operators.
 using Comm = Dune::OwnerOverlapCopyCommunication<int, int>;
-template <int N>
-using ParOpM = Opm::GhostLastMatrixAdapter<OBM<N>, BV<N>, BV<N>, Comm>;
-template <int N>
-using ParOpW = Opm::WellModelGhostLastMatrixAdapter<OBM<N>, BV<N>, BV<N>, true>;
-template <int N>
-using ParOpD = Dune::OverlappingSchwarzOperator<OBM<N>, BV<N>, BV<N>, Comm>;
+template<class Scalar, int N>
+using ParOpM = Opm::GhostLastMatrixAdapter<OBM<Scalar,N>, BV<Scalar,N>, BV<Scalar,N>, Comm>;
+template<class Scalar, int N>
+using ParOpW = Opm::WellModelGhostLastMatrixAdapter<OBM<Scalar,N>, BV<Scalar,N>, BV<Scalar,N>, true>;
+template<class Scalar, int N>
+using ParOpD = Dune::OverlappingSchwarzOperator<OBM<Scalar,N>, BV<Scalar,N>, BV<Scalar,N>, Comm>;
 
 // Note: we must instantiate the constructor that is a template.
 // This is only needed in the parallel case, since otherwise the Comm type is
 // not a template argument but always SequentialInformation.
 
-#define INSTANTIATE_FLEXIBLESOLVER_OP(Operator)                                                          \
-template class Dune::FlexibleSolver<Operator>;                                                           \
-template Dune::FlexibleSolver<Operator>::FlexibleSolver(Operator& op,                                    \
-                                                        const Comm& comm,                                \
-                                                        const Opm::PropertyTree& prm,                    \
-                                                        const std::function<typename Operator::domain_type()>& weightsCalculator, \
-                                                        std::size_t pressureIndex);
-#define INSTANTIATE_FLEXIBLESOLVER(N)     \
-INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpM<N>); \
-INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpW<N>); \
-INSTANTIATE_FLEXIBLESOLVER_OP(ParOpM<N>); \
-INSTANTIATE_FLEXIBLESOLVER_OP(ParOpW<N>); \
-INSTANTIATE_FLEXIBLESOLVER_OP(ParOpD<N>);
+#define INSTANTIATE_FLEXIBLESOLVER_OP(...)                                                          \
+    template class Dune::FlexibleSolver<__VA_ARGS__>;                                               \
+    template Dune::FlexibleSolver<__VA_ARGS__>::                                                    \
+        FlexibleSolver(__VA_ARGS__& op,                                                             \
+                       const Comm& comm,                                                            \
+                       const Opm::PropertyTree& prm,                                                \
+                       const std::function<typename __VA_ARGS__::domain_type()>& weightsCalculator, \
+                       std::size_t pressureIndex);
+
+#define INSTANTIATE_FLEXIBLESOLVER(T,N)         \
+    INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpM<T,N>); \
+    INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpW<T,N>); \
+    INSTANTIATE_FLEXIBLESOLVER_OP(ParOpM<T,N>); \
+    INSTANTIATE_FLEXIBLESOLVER_OP(ParOpW<T,N>); \
+    INSTANTIATE_FLEXIBLESOLVER_OP(ParOpD<T,N>);
 
 #else // HAVE_MPI
 
-#define INSTANTIATE_FLEXIBLESOLVER_OP(Operator) \
-template class Dune::FlexibleSolver<Operator>;
+#define INSTANTIATE_FLEXIBLESOLVER_OP(...) \
+    template class Dune::FlexibleSolver<__VA_ARGS__>;
 
-#define INSTANTIATE_FLEXIBLESOLVER(N)     \
-INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpM<N>); \
-INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpW<N>);
+#define INSTANTIATE_FLEXIBLESOLVER(T,N)         \
+    INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpM<T,N>); \
+    INSTANTIATE_FLEXIBLESOLVER_OP(SeqOpW<T,N>);
 
 #endif // HAVE_MPI
-
-
 
 #endif // OPM_FLEXIBLE_SOLVER_IMPL_HEADER_INCLUDED
