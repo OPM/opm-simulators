@@ -880,15 +880,18 @@ public:
      *
      * If the parameter in question has not been registered, this throws an exception.
      */
-    template <class ParamType>
-    static bool isSet(const char* paramName,
-                      bool errorIfNotRegistered = true)
+    template <template<class,class> class Param>
+    static bool isSet(bool errorIfNotRegistered = true)
     {
-
+        const std::string paramName = getPropName<TypeTag,Param>();
 #ifndef NDEBUG
         // make sure that the parameter is used consistently. since
         // this is potentially quite expensive, it is only done if
         // debugging code is not explicitly turned off.
+        const auto defaultValue = getPropValue<TypeTag,Param>();
+        using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
+                                                            const char* const>, std::string,
+                                             std::remove_const_t<decltype(defaultValue)>>;
         check_(Dune::className<ParamType>(), paramName);
 #endif
 
@@ -902,12 +905,9 @@ public:
                                          +" without prior registration is not allowed.");
         }
 
-        std::string canonicalName(paramName);
-
         // check whether the parameter is in the parameter tree
-        return ParamsMeta::tree().hasKey(canonicalName);
+        return ParamsMeta::tree().hasKey(paramName);
     }
-
 
 private:
     struct Blubb
@@ -1033,11 +1033,10 @@ void reset()
     return Param<TypeTag>::clear();
 }
 
-template <class TypeTag, class ParamType>
-bool isSet(const char* paramName, bool errorIfNotRegistered = true)
+template <class TypeTag, template<class, class> class Property>
+bool isSet(bool errorIfNotRegistered = true)
 {
-    return Param<TypeTag>::template isSet<ParamType>(paramName,
-                                                     errorIfNotRegistered);
+    return Param<TypeTag>::template isSet<Property>(errorIfNotRegistered);
 }
 
 /*!
