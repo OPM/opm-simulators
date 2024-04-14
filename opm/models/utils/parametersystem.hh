@@ -51,7 +51,6 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
-#include <unordered_map>
 
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -884,16 +883,6 @@ public:
     static bool isSet(bool errorIfNotRegistered = true)
     {
         const std::string paramName = getPropName<TypeTag,Param>();
-#ifndef NDEBUG
-        // make sure that the parameter is used consistently. since
-        // this is potentially quite expensive, it is only done if
-        // debugging code is not explicitly turned off.
-        const auto defaultValue = getPropValue<TypeTag,Param>();
-        using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
-                                                            const char* const>, std::string,
-                                             std::remove_const_t<decltype(defaultValue)>>;
-        check_(Dune::className<ParamType>(), paramName);
-#endif
 
         if (errorIfNotRegistered) {
             if (ParamsMeta::registrationOpen())
@@ -910,55 +899,11 @@ public:
     }
 
 private:
-    struct Blubb
-    {
-        std::string paramTypeName;
-        std::string groupName;
-
-        Blubb& operator=(const Blubb& b)
-        {
-            paramTypeName = b.paramTypeName;
-            groupName = b.groupName;
-            return *this;
-        }
-    };
-
-    static void check_(const std::string& paramTypeName,
-                       const std::string& paramName)
-    {
-        using StaticData = std::unordered_map<std::string, Blubb>;
-        static StaticData staticData;
-
-        typename StaticData::iterator it = staticData.find(paramName);
-        Blubb *b;
-        if (it == staticData.end()) {
-            Blubb a;
-            a.paramTypeName = paramTypeName;
-            staticData[paramName] = a;
-            b = &staticData[paramName];
-        }
-        else
-            b = &(it->second);
-
-        if (b->paramTypeName != paramTypeName) {
-            throw std::logic_error("GET_*_PARAM for parameter '" + paramName
-                                   +"' called with at least two different types ("
-                                   + b->paramTypeName + " and " + paramTypeName+")");
-        }
-    }
-
     template <class ParamType>
     static ParamType retrieve_(const std::string& paramName,
                                const ParamType& defaultValue,
                                bool errorIfNotRegistered = true)
     {
-#ifndef NDEBUG
-        // make sure that the parameter is used consistently. since
-        // this is potentially quite expensive, it is only done if
-        // debugging code is not explicitly turned off.
-        check_(Dune::className<ParamType>(), paramName);
-#endif
-
         if (errorIfNotRegistered) {
             if (ParamsMeta::registrationOpen())
                 throw std::runtime_error("Parameters can only retrieved after _all_ of them have "
