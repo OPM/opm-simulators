@@ -157,13 +157,13 @@ public:
 
     virtual void initPrimaryVariablesEvaluation() = 0;
 
-    virtual ConvergenceReport getWellConvergence(const SummaryState& summary_state,
+    virtual ConvergenceReport getWellConvergence(const Simulator& simulator,
                                                  const WellState<Scalar>& well_state,
                                                  const std::vector<double>& B_avg,
                                                  DeferredLogger& deferred_logger,
                                                  const bool relax_tolerance) const = 0;
 
-    virtual void solveEqAndUpdateWellState(const SummaryState& summary_state,
+    virtual void solveEqAndUpdateWellState(const Simulator& simulator,
                                            WellState<Scalar>& well_state,
                                            DeferredLogger& deferred_logger) = 0;
 
@@ -203,7 +203,7 @@ public:
 
     /// using the solution x to recover the solution xw for wells and applying
     /// xw to update Well State
-    virtual void recoverWellSolutionAndUpdateWellState(const SummaryState& summary_state,
+    virtual void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
                                                        const BVector& x,
                                                        WellState<Scalar>& well_state,
                                                        DeferredLogger& deferred_logger) = 0;
@@ -229,11 +229,6 @@ public:
                                                    const Scalar& bhp,
                                                    std::vector<double>& well_flux,
                                                    DeferredLogger& deferred_logger) const = 0;
-
-    bool wellUnderZeroRateTargetGroup(const Simulator& simulator,
-                                      const WellState& well_state,
-                                      const GroupState& group_state,
-                                      DeferredLogger& deferred_logger) const;
 
     bool wellUnderZeroRateTarget(const Simulator& simulator,
                                  const WellState& well_state,
@@ -264,7 +259,7 @@ public:
                                                   const bool fixed_control = false, 
                                                   const bool fixed_status = false);
 
-    virtual void updatePrimaryVariables(const SummaryState& summary_state,
+    virtual void updatePrimaryVariables(const Simulator& simulator,
                                         const WellState<Scalar>& well_state,
                                         DeferredLogger& deferred_logger) = 0;
 

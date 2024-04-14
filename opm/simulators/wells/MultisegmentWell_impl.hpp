@@ -162,11 +162,17 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
+<<<<<<< HEAD
     updatePrimaryVariables(const SummaryState& summary_state,
                            const WellState<Scalar>& well_state,
                            DeferredLogger& /* deferred_logger */)
+=======
+    updatePrimaryVariables(const Simulator& simulator,
+                           const WellState& well_state,
+                           DeferredLogger& deferred_logger)
+>>>>>>> 1b3491770 (refactoring lightly the PR opm-simulators#5232)
     {
-        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTargetIndividual(summary_state, well_state);
+        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
         this->primary_variables_.update(well_state, stop_or_zero_rate_target);
     }
 
@@ -199,8 +205,13 @@ namespace Opm
     template <typename TypeTag>
     ConvergenceReport
     MultisegmentWell<TypeTag>::
+<<<<<<< HEAD
     getWellConvergence(const SummaryState& /* summary_state */,
                        const WellState<Scalar>& well_state,
+=======
+    getWellConvergence(const Simulator& /* simulator */,
+                       const WellState& well_state,
+>>>>>>> 1b3491770 (refactoring lightly the PR opm-simulators#5232)
                        const std::vector<double>& B_avg,
                        DeferredLogger& deferred_logger,
                        const bool relax_tolerance) const
@@ -260,7 +271,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    recoverWellSolutionAndUpdateWellState(const SummaryState& summary_state,
+    recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
                                           const BVector& x,
                                           WellState<Scalar>& well_state,
                                           DeferredLogger& deferred_logger)
@@ -271,7 +282,7 @@ namespace Opm
 
         BVectorWell xw(1);
         this->linSys_.recoverSolutionWell(x, xw);
-        updateWellState(summary_state, xw, well_state, deferred_logger);
+        updateWellState(simulator, xw, well_state, deferred_logger);
     }
 
 
@@ -577,7 +588,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    solveEqAndUpdateWellState(const SummaryState& summary_state,
+    solveEqAndUpdateWellState(const Simulator& simulator,
                               WellState<Scalar>& well_state,
                               DeferredLogger& deferred_logger)
     {
@@ -588,7 +599,7 @@ namespace Opm
         try{
             const BVectorWell dx_well = this->linSys_.solve();
 
-            updateWellState(summary_state, dx_well, well_state, deferred_logger);
+            updateWellState(simulator, dx_well, well_state, deferred_logger);
         }
         catch(const NumericalProblem& exp) {
             // Add information about the well and log to deferred logger
@@ -680,7 +691,7 @@ namespace Opm
     template <typename TypeTag>
     void
     MultisegmentWell<TypeTag>::
-    updateWellState(const SummaryState& summary_state,
+    updateWellState(const Simulator& simulator,
                     const BVectorWell& dwells,
                     WellState<Scalar>& well_state,
                     DeferredLogger& deferred_logger,
@@ -690,13 +701,14 @@ namespace Opm
 
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double max_pressure_change = this->param_.max_pressure_change_ms_wells_;
-        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTargetIndividual(summary_state, well_state);
+        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
         this->primary_variables_.updateNewton(dwells,
                                               relaxation_factor,
                                               dFLimit,
                                               stop_or_zero_rate_target,
                                               max_pressure_change);
 
+        const auto& summary_state = simulator.vanguard().summaryState();
         this->primary_variables_.copyToWellState(*this, getRefDensity(), stop_or_zero_rate_target,
                                                  well_state, summary_state, deferred_logger);
 
@@ -719,8 +731,7 @@ namespace Opm
                                 const WellState<Scalar>& well_state,
                                 DeferredLogger& deferred_logger)
     {
-        const auto& summary_state = simulator.vanguard().summaryState();
-        updatePrimaryVariables(summary_state, well_state, deferred_logger);
+        updatePrimaryVariables(simulator, well_state, deferred_logger);
         initPrimaryVariablesEvaluation();
         computePerfCellPressDiffs(simulator);
         computeInitialSegmentFluids(simulator);
@@ -1488,8 +1499,7 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            const auto& summary_state = simulator.vanguard().summaryState();
-            const auto report = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, relax_convergence);
+            const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
             if (report.converged()) {
                 converged = true;
                 break;
@@ -1525,7 +1535,7 @@ namespace Opm
                     ++stagnate_count;
                     if (stagnate_count == 6) {
                         sstr << " well " << this->name() << " observes severe stagnation and/or oscillation. We relax the tolerance and check for convergence. \n";
-                        const auto reportStag = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, true);
+                        const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, true);
                         if (reportStag.converged()) {
                             converged = true;
                             sstr << " well " << this->name() << " manages to get converged with relaxed tolerances in " << it << " inner iterations";
@@ -1552,7 +1562,7 @@ namespace Opm
                 this->regularize_ = true;
                 deferred_logger.debug(sstr.str());
             }
-            updateWellState(summary_state, dx_well, well_state, deferred_logger, relaxation_factor);
+            updateWellState(simulator, dx_well, well_state, deferred_logger, relaxation_factor);
             initPrimaryVariablesEvaluation();
         }
 
@@ -1670,7 +1680,7 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            const auto report = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, relax_convergence);
+            const auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
             converged = report.converged();
             if (converged) {
                 // if equations are sufficiently linear they might converge in less than min_its_after_switch
@@ -1714,7 +1724,7 @@ namespace Opm
                         if (false) { // this disables the usage of the relaxed tolerance
                             fmt::format_to(std::back_inserter(message), " Well {} observes severe stagnation and/or oscillation."
                                                                         " We relax the tolerance and check for convergence. \n", this->name());
-                            const auto reportStag = getWellConvergence(summary_state, well_state, Base::B_avg_,
+                            const auto reportStag = getWellConvergence(simulator, well_state, Base::B_avg_,
                                                                        deferred_logger, true);
                             if (reportStag.converged()) {
                                 converged = true;
@@ -1742,7 +1752,7 @@ namespace Opm
                     deferred_logger.debug(message);
                 }
             }
-            updateWellState(summary_state, dx_well, well_state, deferred_logger, relaxation_factor);
+            updateWellState(simulator, dx_well, well_state, deferred_logger, relaxation_factor);
             initPrimaryVariablesEvaluation();
         }
 

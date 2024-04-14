@@ -290,6 +290,40 @@ getGroupProductionTargetRate(const Group& group,
                                                                  deferred_logger);
 }
 
+template<typename FluidSystem>
+bool
+WellInterfaceFluidSystem<FluidSystem>::
+wellUnderZeroRateTargetGroup(const SummaryState& summary_state,
+                             const Schedule& schedule,
+                             const WellState& well_state,
+                             const GroupState& group_state,
+                             DeferredLogger& deferred_logger) const
+{
+    const auto& well = this->well_ecl_;
+    const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
+    const double efficiencyFactor = well.getEfficiencyFactor();
+    if (this->isInjector()) {
+        // Check injector under group control
+        const auto& controls = well.injectionControls(summary_state);
+        const std::optional<double> target = this->getGroupInjectionTargetRate(group, well_state,
+                                                                               group_state, schedule,
+                                                                               summary_state, controls.injector_type,
+                                                                               efficiencyFactor, deferred_logger);
+        if (target.has_value()) {
+            return target.value() == 0.0;
+        } else {
+            return false;
+        }
+    } else {
+        // Check producer under group control
+        const double scale = this->getGroupProductionTargetRate(group, well_state,
+                                                                group_state, schedule,
+                                                                summary_state, efficiencyFactor,
+                                                                deferred_logger);
+        return scale == 0.0;
+    }
+}
+
 template class WellInterfaceFluidSystem<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
 
 } // namespace Opm

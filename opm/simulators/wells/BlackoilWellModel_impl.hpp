@@ -1070,8 +1070,7 @@ namespace Opm {
             }
             ++iter;
             for (auto& well : this->well_container_) {
-                const auto& summary_state = this->simulator_.vanguard().summaryState();
-                well->solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
+                well->solveEqAndUpdateWellState(simulator_, well_state, deferred_logger);
             }
             this->initPrimaryVariablesEvaluation();
         } while (iter < max_iter);
@@ -1698,9 +1697,8 @@ namespace Opm {
         DeferredLogger local_deferredLogger;
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         {
-            const auto& summary_state = simulator_.vanguard().summaryState();
             for (auto& well : well_container_) {
-                well->recoverWellSolutionAndUpdateWellState(summary_state, x, this->wellState(), local_deferredLogger);
+                well->recoverWellSolutionAndUpdateWellState(simulator_, x, this->wellState(), local_deferredLogger);
             }
         }
         OPM_END_PARALLEL_TRY_CATCH_LOG(local_deferredLogger,
@@ -1718,10 +1716,9 @@ namespace Opm {
         // try/catch here, as this function is not called in
         // parallel but for each individual domain of each rank.
         DeferredLogger local_deferredLogger;
-        const auto& summary_state = this->simulator_.vanguard().summaryState();
         for (auto& well : well_container_) {
             if (well_domain_.at(well->name()) == domain.index) {
-                well->recoverWellSolutionAndUpdateWellState(summary_state, x,
+                well->recoverWellSolutionAndUpdateWellState(simulator_, x,
                                                             this->wellState(),
                                                             local_deferredLogger);
             }
@@ -1769,7 +1766,6 @@ namespace Opm {
                              const std::vector<Scalar>& B_avg,
                              DeferredLogger& local_deferredLogger) const
     {
-        const auto& summary_state = simulator_.vanguard().summaryState();
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         const bool relax_tolerance = iterationIdx > param_.strict_outer_iter_wells_;
 
@@ -1777,7 +1773,7 @@ namespace Opm {
         for (const auto& well : well_container_) {
             if ((well_domain_.at(well->name()) == domain.index)) {
                 if (well->isOperableAndSolvable() || well->wellIsStopped()) {
-                    report += well->getWellConvergence(summary_state,
+                    report += well->getWellConvergence(simulator_,
                                                        this->wellState(),
                                                        B_avg,
                                                        local_deferredLogger,
@@ -1820,9 +1816,8 @@ namespace Opm {
         const int iterationIdx = simulator_.model().newtonMethod().numIterations();
         for (const auto& well : well_container_) {
             if (well->isOperableAndSolvable() || well->wellIsStopped()) {
-                const auto& summary_state = simulator_.vanguard().summaryState();
                 local_report += well->getWellConvergence(
-                        summary_state, this->wellState(), B_avg, local_deferredLogger,
+                        simulator_, this->wellState(), B_avg, local_deferredLogger,
                         iterationIdx > param_.strict_outer_iter_wells_);
             } else {
                 ConvergenceReport report;
@@ -2347,8 +2342,7 @@ namespace Opm {
             auto& events = this->wellState().well(well->indexOfWell()).events;
             if (events.hasEvent(WellState<Scalar>::event_mask)) {
                 well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), deferred_logger);
-                const auto& summary_state = simulator_.vanguard().summaryState();
-                well->updatePrimaryVariables(summary_state, this->wellState(), deferred_logger);
+                well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
                 well->initPrimaryVariablesEvaluation();
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
@@ -2432,8 +2426,7 @@ namespace Opm {
     updatePrimaryVariables(DeferredLogger& deferred_logger)
     {
         for (const auto& well : well_container_) {
-            const auto& summary_state = simulator_.vanguard().summaryState();
-            well->updatePrimaryVariables(summary_state, this->wellState(), deferred_logger);
+            well->updatePrimaryVariables(simulator_, this->wellState(), deferred_logger);
         }
     }
 

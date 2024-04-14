@@ -258,7 +258,7 @@ namespace Opm
 
             this->well_control_log_.push_back(from);
             updateWellStateWithTarget(simulator, group_state, well_state, deferred_logger);
-            updatePrimaryVariables(summaryState, well_state, deferred_logger);
+            updatePrimaryVariables(simulator, well_state, deferred_logger);
         }
 
         return changed;
@@ -310,7 +310,7 @@ namespace Opm
                         } else {
                             ws.thp = this->getTHPConstraint(summary_state);
                         }  
-                        updatePrimaryVariables(summary_state, well_state, deferred_logger);
+                        updatePrimaryVariables(simulator, well_state, deferred_logger);
                     }
                 }
                 return changed;
@@ -365,8 +365,7 @@ namespace Opm
 
         updateWellStateWithTarget(simulator, group_state, well_state_copy, deferred_logger);
         calculateExplicitQuantities(simulator, well_state_copy, deferred_logger);
-        const auto& summary_state = simulator.vanguard().summaryState();
-        updatePrimaryVariables(summary_state, well_state_copy, deferred_logger);
+        updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
         initPrimaryVariablesEvaluation();
 
         if (this->isProducer()) {
@@ -1407,41 +1406,6 @@ namespace Opm
     template<typename TypeTag>
     bool
     WellInterface<TypeTag>::
-    wellUnderZeroRateTargetGroup(const Simulator& simulator,
-                                 const WellState& well_state,
-                                 const GroupState& group_state,
-                                 DeferredLogger& deferred_logger) const
-    {
-        const auto& well = this->well_ecl_;
-        const auto& schedule = simulator.vanguard().schedule();
-        const auto& group = schedule.getGroup(well.groupName(), this->currentStep());
-        const auto& summaryState = simulator.vanguard().summaryState();
-        const double efficiencyFactor = well.getEfficiencyFactor();
-        if (this->isInjector()) {
-            // Check injector under group control
-            const auto& controls = well.injectionControls(summaryState);
-            const std::optional<double> target = this->getGroupInjectionTargetRate(group, well_state,
-                                                                                   group_state, schedule, 
-                                                                                   summaryState, controls.injector_type,
-                                                                                   efficiencyFactor, deferred_logger);
-        if (target.has_value()) {
-            return target.value() == 0.0;
-        } else {
-            return false;
-        }
-        } else {
-            // Check producer under group control
-            const double scale = this->getGroupProductionTargetRate(group, well_state,
-                                                                    group_state, schedule,
-                                                                    summaryState, efficiencyFactor,
-                                                                    deferred_logger);
-            return scale == 0.0;
-        }
-    }                                 
-
-    template<typename TypeTag>
-    bool
-    WellInterface<TypeTag>::
     wellUnderZeroRateTarget(const Simulator& simulator,
                             const WellState& well_state,
                             DeferredLogger& deferred_logger) const
@@ -1455,8 +1419,10 @@ namespace Opm
             const auto& summaryState = simulator.vanguard().summaryState();
             return this->wellUnderZeroRateTargetIndividual(summaryState, well_state);
         } else {
+            const auto& summaryState = simulator.vanguard().summaryState();
             const auto& group_state = simulator.problem().wellModel().groupState();
-            return wellUnderZeroRateTargetGroup(simulator, well_state, group_state, deferred_logger);
+            const auto& schedule = simulator.vanguard().schedule();
+            return this->wellUnderZeroRateTargetGroup(summaryState, schedule, well_state, group_state, deferred_logger);
         }
     }
 

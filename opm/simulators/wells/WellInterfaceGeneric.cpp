@@ -24,6 +24,7 @@
 
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/Well/FilterCake.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellBrineProperties.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
@@ -562,13 +563,6 @@ bool WellInterfaceGeneric::wellUnderZeroRateTarget(const SummaryState& summary_s
         const auto inj_mode = well_state.well(this->indexOfWell()).injection_cmode;
         return wellhelpers::rateControlWithZeroInjTarget(inj_controls, inj_mode);
     }
-}
-
-bool WellInterfaceGeneric::stopppedOrZeroRateTarget(const SummaryState& summary_state,
-                                                    const WellState<double>& well_state) const
-{
-    return (this->wellIsStopped() || this->wellUnderZeroRateTargetIndividual(summary_state, well_state));
-
 }
 
 void WellInterfaceGeneric::resetWellOperability()

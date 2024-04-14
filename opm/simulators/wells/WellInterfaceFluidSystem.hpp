@@ -114,6 +114,12 @@ protected:
                                  double efficiencyFactor,
                                  DeferredLogger& deferred_logger) const;
 
+    bool wellUnderZeroRateTargetGroup(const SummaryState& summary_state,
+                                      const Schedule& schedule,
+                                      const WellState& well_state,
+                                      const GroupState& group_state,
+                                      DeferredLogger& deferredLogger) const;
+
     // For the conversion between the surface volume rate and reservoir voidage rate
     const RateConverterType& rateConverter_;
 };
