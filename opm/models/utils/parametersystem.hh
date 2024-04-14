@@ -184,12 +184,10 @@ private:
     }
 };
 
-
 } // namespace Opm::Properties
 
-namespace Opm {
+namespace Opm::Parameters {
 
-namespace Parameters {
 // function prototype declarations
 void printParamUsage_(std::ostream& os, const ParamInfo& paramInfo);
 void getFlattenedKeyList_(std::list<std::string>& dest,
@@ -853,89 +851,33 @@ bool printUnused(std::ostream& os = std::cout)
     return false;
 }
 
-//! \cond SKIP_THIS
-template <class TypeTag>
-class Param
-{
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-
-public:
-    template <class ParamType>
-    static ParamType get(const std::string& paramName,
-                         const ParamType& defaultValue,
-                         bool errorIfNotRegistered = true)
-    {
-        return retrieve_<ParamType>(paramName, defaultValue, errorIfNotRegistered);
-    }
-
-    static void clear()
-    {
-        ParamsMeta::clear();
-    }
-
-    /*!
-     * \brief Returns true if a parameter has been specified at runtime, false
-     *        otherwise.
-     *
-     * If the parameter in question has not been registered, this throws an exception.
-     */
-    template <template<class,class> class Param>
-    static bool isSet(bool errorIfNotRegistered = true)
-    {
-        const std::string paramName = getPropName<TypeTag,Param>();
-
-        if (errorIfNotRegistered) {
-            if (ParamsMeta::registrationOpen())
-                throw std::runtime_error("Parameters can only checked after _all_ of them have "
-                                         "been registered.");
-
-            if (ParamsMeta::registry().find(paramName) == ParamsMeta::registry().end())
-                throw std::runtime_error("Accessing parameter "+std::string(paramName)
-                                         +" without prior registration is not allowed.");
-        }
-
-        // check whether the parameter is in the parameter tree
-        return ParamsMeta::tree().hasKey(paramName);
-    }
-
-private:
-    template <class ParamType>
-    static ParamType retrieve_(const std::string& paramName,
-                               const ParamType& defaultValue,
-                               bool errorIfNotRegistered = true)
-    {
-        if (errorIfNotRegistered) {
-            if (ParamsMeta::registrationOpen())
-                throw std::runtime_error("Parameters can only retrieved after _all_ of them have "
-                                         "been registered.");
-
-            if (ParamsMeta::registry().find(paramName) == ParamsMeta::registry().end())
-                throw std::runtime_error("Accessing parameter " + paramName
-                                         +" without prior registration is not allowed.");
-        }
-
-        // prefix the parameter name by the model's GroupName. E.g. If
-        // the model specifies its group name to be 'Stokes', in an
-        // INI file this would result in something like:
-        //
-        // [Stokes]
-        // NewtonWriteConvergence = true
-        std::string canonicalName(paramName);
-
-        // retrieve actual parameter from the parameter tree
-        return ParamsMeta::tree().template get<ParamType>(canonicalName, defaultValue);
-    }
-};
-
-template <class TypeTag, template<class,class> class Property>
+template <class TypeTag, template<class,class> class Param>
 auto get(bool errorIfNotRegistered)
 {
-    const std::string paramName = getPropName<TypeTag,Property>();
-    const auto defaultValue = getPropValue<TypeTag, Property>();
+    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
+    const std::string paramName = getPropName<TypeTag, Param>();
+    const auto defaultValue = getPropValue<TypeTag, Param>();
     using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
                                                         const char* const>, std::string,
                                          std::remove_const_t<decltype(defaultValue)>>;
-    return Param<TypeTag>::template get<ParamType>(paramName, defaultValue, errorIfNotRegistered);
+    if (errorIfNotRegistered) {
+        if (ParamsMeta::registrationOpen())
+            throw std::runtime_error("Parameters can only retrieved after _all_ of them have "
+                                     "been registered.");
+
+        if (ParamsMeta::registry().find(paramName) == ParamsMeta::registry().end())
+            throw std::runtime_error("Accessing parameter " + paramName
+                                     +" without prior registration is not allowed.");
+    }
+
+    // prefix the parameter name by the model's GroupName. E.g. If
+    // the model specifies its group name to be 'Stokes', in an
+    // INI file this would result in something like:
+    //
+    // [Stokes]
+    // NewtonWriteConvergence = true
+    // retrieve actual parameter from the parameter tree
+    return ParamsMeta::tree().template get<ParamType>(paramName, defaultValue);
 }
 
 /*!
@@ -975,13 +917,34 @@ void getLists(Container& usedParams, Container& unusedParams)
 template <class TypeTag>
 void reset()
 {
-    return Param<TypeTag>::clear();
+    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
+    ParamsMeta::clear();
 }
 
-template <class TypeTag, template<class, class> class Property>
+/*!
+ * \brief Returns true if a parameter has been specified at runtime, false
+ *        otherwise.
+ *
+ * If the parameter in question has not been registered, this throws an exception.
+ */
+template <class TypeTag, template<class, class> class Param>
 bool isSet(bool errorIfNotRegistered = true)
 {
-    return Param<TypeTag>::template isSet<Property>(errorIfNotRegistered);
+    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
+    const std::string paramName = getPropName<TypeTag,Param>();
+
+    if (errorIfNotRegistered) {
+        if (ParamsMeta::registrationOpen())
+            throw std::runtime_error("Parameters can only checked after _all_ of them have "
+                                     "been registered.");
+
+        if (ParamsMeta::registry().find(paramName) == ParamsMeta::registry().end())
+            throw std::runtime_error("Accessing parameter "+std::string(paramName)
+                                     +" without prior registration is not allowed.");
+    }
+
+    // check whether the parameter is in the parameter tree
+    return ParamsMeta::tree().hasKey(paramName);
 }
 
 /*!
@@ -1089,7 +1052,6 @@ void endParamRegistration()
 }
 //! \endcond
 
-} // namespace Parameters
-} // namespace Opm
+} // namespace Opm::Parameters
 
 #endif // OPM_PARAMETER_SYSTEM_HH
