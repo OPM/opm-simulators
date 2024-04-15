@@ -51,7 +51,6 @@
 #include <string>
 #include <tuple>
 #include <type_traits>
-#include <unordered_map>
 
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -185,12 +184,10 @@ private:
     }
 };
 
-
 } // namespace Opm::Properties
 
-namespace Opm {
+namespace Opm::Parameters {
 
-namespace Parameters {
 // function prototype declarations
 void printParamUsage_(std::ostream& os, const ParamInfo& paramInfo);
 void getFlattenedKeyList_(std::list<std::string>& dest,
@@ -355,23 +352,15 @@ inline void getFlattenedKeyList_(std::list<std::string>& dest,
                                  const std::string& prefix)
 {
     // add the keys of the current sub-structure
-    auto keyIt = tree.getValueKeys().begin();
-    const auto& keyEndIt = tree.getValueKeys().end();
-    for (; keyIt != keyEndIt; ++keyIt) {
-        std::string newKey(prefix);
-        newKey += *keyIt;
+    for (const auto& valueKey : tree.getValueKeys()) {
+        std::string newKey(prefix + valueKey);
         dest.push_back(newKey);
     }
 
     // recursively add all substructure keys
-    auto subStructIt = tree.getSubKeys().begin();
-    const auto& subStructEndIt = tree.getSubKeys().end();
-    for (; subStructIt != subStructEndIt; ++subStructIt) {
-        std::string newPrefix(prefix);
-        newPrefix += *subStructIt;
-        newPrefix += ".";
-
-        getFlattenedKeyList_(dest, tree.sub(*subStructIt), newPrefix);
+    for (const auto& subKey : tree.getSubKeys()) {
+        std::string newPrefix(prefix + subKey + '.');
+        getFlattenedKeyList_(dest, tree.sub(subKey), newPrefix);
     }
 }
 
@@ -383,15 +372,13 @@ void printParamList_(std::ostream& os, const std::list<std::string>& keyList, bo
 
     const Dune::ParameterTree& tree = ParamsMeta::tree();
 
-    auto keyIt = keyList.begin();
-    const auto& keyEndIt = keyList.end();
-    for (; keyIt != keyEndIt; ++keyIt) {
-        const auto& paramInfo = ParamsMeta::registry().at(*keyIt);
+    for (const auto& key : keyList) {
+        const auto& paramInfo = ParamsMeta::registry().at(key);
         const std::string& defaultValue = paramInfo.compileTimeValue;
         std::string value = defaultValue;
-        if (tree.hasKey(*keyIt))
-            value = tree.get(*keyIt, "");
-        os << *keyIt << "=\"" << value << "\"";
+        if (tree.hasKey(key))
+            value = tree.get(key, "");
+        os << key << "=\"" << value << "\"";
         if (printDefaults)
             os << " # default: \"" << defaultValue << "\"";
         os << "\n";
@@ -767,30 +754,26 @@ void printValues(std::ostream& os = std::cout)
     std::list<std::string> unknownKeyList;
 
     getFlattenedKeyList_(runTimeAllKeyList, tree);
-    auto keyIt = runTimeAllKeyList.begin();
-    const auto& keyEndIt = runTimeAllKeyList.end();
-    for (; keyIt != keyEndIt; ++keyIt) {
-        if (ParamsMeta::registry().find(*keyIt) == ParamsMeta::registry().end()) {
+    for (const auto& key : runTimeAllKeyList) {
+        if (ParamsMeta::registry().find(key) == ParamsMeta::registry().end()) {
             // key was not registered by the program!
-            unknownKeyList.push_back(*keyIt);
+            unknownKeyList.push_back(key);
         }
         else {
             // the key was specified at run-time
-            runTimeKeyList.push_back(*keyIt);
+            runTimeKeyList.push_back(key);
         }
     }
 
     // loop over all registered parameters
     std::list<std::string> compileTimeKeyList;
-    auto paramInfoIt = ParamsMeta::registry().begin();
-    const auto& paramInfoEndIt = ParamsMeta::registry().end();
-    for (; paramInfoIt != paramInfoEndIt; ++paramInfoIt) {
+    for (const auto& reg : ParamsMeta::registry()) {
         // check whether the key was specified at run-time
-        const auto& keyName = paramInfoIt->first;
-        if (tree.hasKey(keyName))
+        if (tree.hasKey(reg.first)) {
             continue;
-        else
-            compileTimeKeyList.push_back(keyName);
+        } else  {
+            compileTimeKeyList.push_back(reg.first);
+        }
     }
 
     // report the values of all registered (and unregistered)
@@ -807,10 +790,8 @@ void printValues(std::ostream& os = std::cout)
 
     if (unknownKeyList.size() > 0) {
         os << "# [unused run-time specified parameters]\n";
-        auto unusedKeyIt = unknownKeyList.begin();
-        const auto& unusedKeyEndIt = unknownKeyList.end();
-        for (; unusedKeyIt != unusedKeyEndIt; ++unusedKeyIt) {
-            os << *unusedKeyIt << "=\"" << tree.get(*unusedKeyIt, "") << "\"\n" << std::flush;
+        for (const auto& unused : unknownKeyList) {
+            os << unused << "=\"" << tree.get(unused, "") << "\"\n" << std::flush;
         }
     }
 }
@@ -833,164 +814,50 @@ bool printUnused(std::ostream& os = std::cout)
     std::list<std::string> unknownKeyList;
 
     getFlattenedKeyList_(runTimeAllKeyList, tree);
-    auto keyIt = runTimeAllKeyList.begin();
-    const auto& keyEndIt = runTimeAllKeyList.end();
-    for (; keyIt != keyEndIt; ++keyIt) {
-        if (ParamsMeta::registry().find(*keyIt) == ParamsMeta::registry().end()) {
+    for (const auto& key : runTimeAllKeyList) {
+        if (ParamsMeta::registry().find(key) == ParamsMeta::registry().end()) {
             // key was not registered by the program!
-            unknownKeyList.push_back(*keyIt);
+            unknownKeyList.push_back(key);
         }
     }
 
     if (unknownKeyList.size() > 0) {
         os << "# [unused run-time specified parameters]\n";
-        auto unusedKeyIt = unknownKeyList.begin();
-        const auto& unusedKeyEndIt = unknownKeyList.end();
-        for (; unusedKeyIt != unusedKeyEndIt; ++unusedKeyIt) {
-            os << *unusedKeyIt << "=\"" << tree.get(*unusedKeyIt, "") << "\"\n" << std::flush;
+        for (const auto& unused : unknownKeyList) {
+            os << unused << "=\"" << tree.get(unused, "") << "\"\n" << std::flush;
         }
         return true;
     }
     return false;
 }
 
-//! \cond SKIP_THIS
-template <class TypeTag>
-class Param
-{
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-
-public:
-    template <class ParamType>
-    static ParamType get(const std::string& paramName,
-                         const ParamType& defaultValue,
-                         bool errorIfNotRegistered = true)
-    {
-        return retrieve_<ParamType>(paramName, defaultValue, errorIfNotRegistered);
-    }
-
-    static void clear()
-    {
-        ParamsMeta::clear();
-    }
-
-    /*!
-     * \brief Returns true if a parameter has been specified at runtime, false
-     *        otherwise.
-     *
-     * If the parameter in question has not been registered, this throws an exception.
-     */
-    template <template<class,class> class Param>
-    static bool isSet(bool errorIfNotRegistered = true)
-    {
-        const std::string paramName = getPropName<TypeTag,Param>();
-#ifndef NDEBUG
-        // make sure that the parameter is used consistently. since
-        // this is potentially quite expensive, it is only done if
-        // debugging code is not explicitly turned off.
-        const auto defaultValue = getPropValue<TypeTag,Param>();
-        using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
-                                                            const char* const>, std::string,
-                                             std::remove_const_t<decltype(defaultValue)>>;
-        check_(Dune::className<ParamType>(), paramName);
-#endif
-
-        if (errorIfNotRegistered) {
-            if (ParamsMeta::registrationOpen())
-                throw std::runtime_error("Parameters can only checked after _all_ of them have "
-                                         "been registered.");
-
-            if (ParamsMeta::registry().find(paramName) == ParamsMeta::registry().end())
-                throw std::runtime_error("Accessing parameter "+std::string(paramName)
-                                         +" without prior registration is not allowed.");
-        }
-
-        // check whether the parameter is in the parameter tree
-        return ParamsMeta::tree().hasKey(paramName);
-    }
-
-private:
-    struct Blubb
-    {
-        std::string paramTypeName;
-        std::string groupName;
-
-        Blubb& operator=(const Blubb& b)
-        {
-            paramTypeName = b.paramTypeName;
-            groupName = b.groupName;
-            return *this;
-        }
-    };
-
-    static void check_(const std::string& paramTypeName,
-                       const std::string& paramName)
-    {
-        using StaticData = std::unordered_map<std::string, Blubb>;
-        static StaticData staticData;
-
-        typename StaticData::iterator it = staticData.find(paramName);
-        Blubb *b;
-        if (it == staticData.end()) {
-            Blubb a;
-            a.paramTypeName = paramTypeName;
-            staticData[paramName] = a;
-            b = &staticData[paramName];
-        }
-        else
-            b = &(it->second);
-
-        if (b->paramTypeName != paramTypeName) {
-            throw std::logic_error("GET_*_PARAM for parameter '" + paramName
-                                   +"' called with at least two different types ("
-                                   + b->paramTypeName + " and " + paramTypeName+")");
-        }
-    }
-
-    template <class ParamType>
-    static ParamType retrieve_(const std::string& paramName,
-                               const ParamType& defaultValue,
-                               bool errorIfNotRegistered = true)
-    {
-#ifndef NDEBUG
-        // make sure that the parameter is used consistently. since
-        // this is potentially quite expensive, it is only done if
-        // debugging code is not explicitly turned off.
-        check_(Dune::className<ParamType>(), paramName);
-#endif
-
-        if (errorIfNotRegistered) {
-            if (ParamsMeta::registrationOpen())
-                throw std::runtime_error("Parameters can only retrieved after _all_ of them have "
-                                         "been registered.");
-
-            if (ParamsMeta::registry().find(paramName) == ParamsMeta::registry().end())
-                throw std::runtime_error("Accessing parameter " + paramName
-                                         +" without prior registration is not allowed.");
-        }
-
-        // prefix the parameter name by the model's GroupName. E.g. If
-        // the model specifies its group name to be 'Stokes', in an
-        // INI file this would result in something like:
-        //
-        // [Stokes]
-        // NewtonWriteConvergence = true
-        std::string canonicalName(paramName);
-
-        // retrieve actual parameter from the parameter tree
-        return ParamsMeta::tree().template get<ParamType>(canonicalName, defaultValue);
-    }
-};
-
-template <class TypeTag, template<class,class> class Property>
+template <class TypeTag, template<class,class> class Param>
 auto get(bool errorIfNotRegistered)
 {
-    const std::string paramName = getPropName<TypeTag,Property>();
-    const auto defaultValue = getPropValue<TypeTag, Property>();
+    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
+    const std::string paramName = getPropName<TypeTag, Param>();
+    const auto defaultValue = getPropValue<TypeTag, Param>();
     using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
                                                         const char* const>, std::string,
                                          std::remove_const_t<decltype(defaultValue)>>;
-    return Param<TypeTag>::template get<ParamType>(paramName, defaultValue, errorIfNotRegistered);
+    if (errorIfNotRegistered) {
+        if (ParamsMeta::registrationOpen())
+            throw std::runtime_error("Parameters can only retrieved after _all_ of them have "
+                                     "been registered.");
+
+        if (ParamsMeta::registry().find(paramName) == ParamsMeta::registry().end())
+            throw std::runtime_error("Accessing parameter " + paramName
+                                     +" without prior registration is not allowed.");
+    }
+
+    // prefix the parameter name by the model's GroupName. E.g. If
+    // the model specifies its group name to be 'Stokes', in an
+    // INI file this would result in something like:
+    //
+    // [Stokes]
+    // NewtonWriteConvergence = true
+    // retrieve actual parameter from the parameter tree
+    return ParamsMeta::tree().template get<ParamType>(paramName, defaultValue);
 }
 
 /*!
@@ -1030,13 +897,34 @@ void getLists(Container& usedParams, Container& unusedParams)
 template <class TypeTag>
 void reset()
 {
-    return Param<TypeTag>::clear();
+    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
+    ParamsMeta::clear();
 }
 
-template <class TypeTag, template<class, class> class Property>
+/*!
+ * \brief Returns true if a parameter has been specified at runtime, false
+ *        otherwise.
+ *
+ * If the parameter in question has not been registered, this throws an exception.
+ */
+template <class TypeTag, template<class, class> class Param>
 bool isSet(bool errorIfNotRegistered = true)
 {
-    return Param<TypeTag>::template isSet<Property>(errorIfNotRegistered);
+    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
+    const std::string paramName = getPropName<TypeTag,Param>();
+
+    if (errorIfNotRegistered) {
+        if (ParamsMeta::registrationOpen())
+            throw std::runtime_error("Parameters can only checked after _all_ of them have "
+                                     "been registered.");
+
+        if (ParamsMeta::registry().find(paramName) == ParamsMeta::registry().end())
+            throw std::runtime_error("Accessing parameter "+std::string(paramName)
+                                     +" without prior registration is not allowed.");
+    }
+
+    // check whether the parameter is in the parameter tree
+    return ParamsMeta::tree().hasKey(paramName);
 }
 
 /*!
@@ -1136,15 +1024,13 @@ void endParamRegistration()
 
     // loop over all parameters and retrieve their values to make sure
     // that there is no syntax error
-    auto pIt = ParamsMeta::registrationFinalizers().begin();
-    const auto& pEndIt = ParamsMeta::registrationFinalizers().end();
-    for (; pIt != pEndIt; ++pIt)
-        (*pIt)->retrieve();
+    for (const auto& param : ParamsMeta::registrationFinalizers()) {
+        param->retrieve();
+    }
     ParamsMeta::registrationFinalizers().clear();
 }
 //! \endcond
 
-} // namespace Parameters
-} // namespace Opm
+} // namespace Opm::Parameters
 
 #endif // OPM_PARAMETER_SYSTEM_HH
