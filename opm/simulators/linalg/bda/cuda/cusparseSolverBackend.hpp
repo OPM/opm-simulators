@@ -82,7 +82,8 @@ private:
     /// Initialize GPU and allocate memory
     /// \param[in] matrix         matrix for spmv
     /// \param[in] jacMatrix      matrix for preconditioner
-    void initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix);
+    void initialize(std::shared_ptr<BlockedMatrix<double>> matrix,
+                    std::shared_ptr<BlockedMatrix<double>> jacMatrix);
 
     /// Clean memory
     void finalize();
@@ -92,14 +93,18 @@ private:
     /// \param[in] matrix         matrix for spmv
     /// \param[in] b              input vector, contains N values
     /// \param[in] jacMatrix      matrix for preconditioner
-    void copy_system_to_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix);
+    void copy_system_to_gpu(std::shared_ptr<BlockedMatrix<double>> matrix,
+                            double *b,
+                            std::shared_ptr<BlockedMatrix<double>> jacMatrix);
 
     /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
     /// also copy matrix for preconditioner if needed
     /// \param[in] matrix         matrix for spmv
     /// \param[in] b              input vector, contains N values
     /// \param[in] jacMatrix      matrix for preconditioner
-    void update_system_on_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix);
+    void update_system_on_gpu(std::shared_ptr<BlockedMatrix<double>> matrix,
+                              double *b,
+                              std::shared_ptr<BlockedMatrix<double>> jacMatrix);
 
     /// Analyse sparsity pattern to extract parallelism
     /// \return true iff analysis was successful
@@ -134,8 +139,10 @@ public:
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b,
-        std::shared_ptr<BlockedMatrix> jacMatrix, WellContributions& wellContribs, BdaResult &res) override;
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
+                              double *b,
+                              std::shared_ptr<BlockedMatrix<double>> jacMatrix,
+                              WellContributions& wellContribs, BdaResult& res) override;
     
     /// Get resulting vector x after linear solve, also includes post processing if necessary
     /// \param[inout] x        resulting x vector, caller must guarantee that x points to a valid array

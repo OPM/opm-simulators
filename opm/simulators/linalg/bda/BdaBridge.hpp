@@ -39,9 +39,9 @@ private:
     int verbosity = 0;
     bool use_gpu = false;
     std::string accelerator_mode;
-    std::unique_ptr<Opm::Accelerator::BdaSolver<block_size> > backend;
-    std::shared_ptr<Opm::Accelerator::BlockedMatrix> matrix;  // 'stores' matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
-    std::shared_ptr<Opm::Accelerator::BlockedMatrix> jacMatrix;  // 'stores' preconditioner matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
+    std::unique_ptr<Accelerator::BdaSolver<block_size> > backend;
+    std::shared_ptr<Accelerator::BlockedMatrix<double>> matrix;  // 'stores' matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
+    std::shared_ptr<Accelerator::BlockedMatrix<double>> jacMatrix;  // 'stores' preconditioner matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
     std::vector<int> h_rows, h_cols;  // store the sparsity pattern of the matrix
     std::vector<int> h_jacRows, h_jacCols;  // store the sparsity pattern of the jacMatrix
     std::vector<typename BridgeMatrix::size_type> diagIndices;   // contains offsets of the diagonal blocks wrt start of the row, used for replaceZeroDiagonal()

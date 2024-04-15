@@ -216,9 +216,11 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
     }
 }
 
-
 template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix) {
+void cusparseSolverBackend<block_size>::
+initialize(std::shared_ptr<BlockedMatrix<double>> matrix,
+           std::shared_ptr<BlockedMatrix<double>> jacMatrix)
+{
     this->Nb = matrix->Nb;
     this->N = Nb * block_size;
     this->nnzb = matrix->nnzbs;
@@ -309,7 +311,11 @@ void cusparseSolverBackend<block_size>::finalize() {
 
 
 template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::copy_system_to_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix) {
+void cusparseSolverBackend<block_size>::
+copy_system_to_gpu(std::shared_ptr<BlockedMatrix<double>> matrix,
+                   double *b,
+                   std::shared_ptr<BlockedMatrix<double>> jacMatrix)
+{
     Timer t;
 
     cudaMemcpyAsync(d_bCols, matrix->colIndices, nnzb * sizeof(int), cudaMemcpyHostToDevice, stream);
@@ -356,7 +362,11 @@ void cusparseSolverBackend<block_size>::copy_system_to_gpu(std::shared_ptr<Block
 
 // don't copy rowpointers and colindices, they stay the same
 template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::update_system_on_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix) {
+void cusparseSolverBackend<block_size>::
+update_system_on_gpu(std::shared_ptr<BlockedMatrix<double>> matrix,
+                     double *b,
+                     std::shared_ptr<BlockedMatrix<double>> jacMatrix)
+{
     Timer t;
 
     cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
@@ -523,14 +533,13 @@ void cusparseSolverBackend<block_size>::get_result(double *x) {
     }
 } // end get_result()
 
-
-
 template <unsigned int block_size>
-SolverStatus cusparseSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
-                                                              double *b,
-                                                              std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                              WellContributions& wellContribs,
-                                                              BdaResult &res)
+SolverStatus cusparseSolverBackend<block_size>::
+solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
+             double *b,
+             std::shared_ptr<BlockedMatrix<double>> jacMatrix,
+             WellContributions& wellContribs,
+             BdaResult& res)
 {
     if (initialized == false) {
         initialize(matrix, jacMatrix);

@@ -76,9 +76,9 @@ rocalutionSolverBackend<block_size>::~rocalutionSolverBackend() {
     rocalution::stop_rocalution();
 }
 
-
 template <unsigned int block_size>
-void rocalutionSolverBackend<block_size>::initialize(BlockedMatrix *matrix) {
+void rocalutionSolverBackend<block_size>::initialize(BlockedMatrix<double>* matrix)
+{
     this->Nb = matrix->Nb;
     this->N = Nb * block_size;
     this->nnzb = matrix->nnzbs;
@@ -94,9 +94,9 @@ void rocalutionSolverBackend<block_size>::initialize(BlockedMatrix *matrix) {
     initialized = true;
 } // end initialize()
 
-
 template <unsigned int block_size>
-void rocalutionSolverBackend<block_size>::convert_matrix(BlockedMatrix *matrix) {
+void rocalutionSolverBackend<block_size>::convert_matrix(BlockedMatrix<double>* matrix)
+{
     Timer t;
 
     for(int i = 0; i < Nb+1; ++i){
@@ -147,13 +147,13 @@ void rocalutionSolverBackend<block_size>::get_result(double *x) {
     }
 } // end get_result()
 
-
 template <unsigned int block_size>
-SolverStatus rocalutionSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
-                                                           double *b,
-                                                           [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                           [[maybe_unused]] WellContributions& wellContribs,
-                                                           BdaResult &res)
+SolverStatus rocalutionSolverBackend<block_size>::
+solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
+             double *b,
+             [[maybe_unused]] std::shared_ptr<BlockedMatrix<double>> jacMatrix,
+             [[maybe_unused]] WellContributions& wellContribs,
+             BdaResult& res)
 {
     if (initialized == false) {
         initialize(matrix.get());

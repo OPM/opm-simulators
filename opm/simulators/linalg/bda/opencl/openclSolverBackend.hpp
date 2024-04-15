@@ -67,8 +67,8 @@ private:
                                                                   // can perform blocked ILU0 and AMG on pressure component
     bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge
     bool analysis_done = false;
-    std::shared_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
-    std::shared_ptr<BlockedMatrix> jacMat = nullptr;              // matrix for preconditioner
+    std::shared_ptr<BlockedMatrix<double>> mat{};                 // original matrix
+    std::shared_ptr<BlockedMatrix<double>> jacMat{};              // matrix for preconditioner
     bool opencl_ilu_parallel;                                     // parallelize ILU operations (with level_scheduling)
     std::vector<cl::Event> events;
     cl_int err;
@@ -81,7 +81,8 @@ private:
     /// Initialize GPU and allocate memory
     /// \param[in] matrix     matrix A
     /// \param[in] jacMatrix  matrix for preconditioner
-    void initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix);
+    void initialize(std::shared_ptr<BlockedMatrix<double>> matrix,
+                    std::shared_ptr<BlockedMatrix<double>> jacMatrix);
 
     /// Copy linear system to GPU
     void copy_system_to_gpu();
@@ -134,8 +135,11 @@ public:
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b,
-        std::shared_ptr<BlockedMatrix> jacMatrix, WellContributions& wellContribs, BdaResult &res) override;
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
+                              double *b,
+                              std::shared_ptr<BlockedMatrix<double>> jacMatrix,
+                              WellContributions& wellContribs,
+                              BdaResult& res) override;
 
     /// Solve scalar linear system, for example a coarse system of an AMG preconditioner
     /// Data is already on the GPU

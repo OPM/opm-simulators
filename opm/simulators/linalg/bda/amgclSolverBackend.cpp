@@ -403,13 +403,13 @@ void amgclSolverBackend<block_size>::get_result(double *x_) {
     }
 } // end get_result()
 
-
 template <unsigned int block_size>
-SolverStatus amgclSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
-                                                          double *b,
-                                                          [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                          [[maybe_unused]] WellContributions& wellContribs,
-                                                          BdaResult &res)
+SolverStatus amgclSolverBackend<block_size>::
+solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
+             double *b,
+             [[maybe_unused]] std::shared_ptr<BlockedMatrix<double>> jacMatrix,
+             [[maybe_unused]] WellContributions& wellContribs,
+             BdaResult& res)
 {
     if (initialized == false) {
         initialize(matrix->Nb, matrix->nnzbs);

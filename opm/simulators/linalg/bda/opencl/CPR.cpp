@@ -61,10 +61,9 @@ void CPR<block_size>::setOpencl(std::shared_ptr<cl::Context>& context_, std::sha
     bilu0->setOpencl(context, queue);
 }
 
-
 template <unsigned int block_size>
-bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_) {
-
+bool CPR<block_size>::analyze_matrix(BlockedMatrix<double>* mat_)
+{
     this->Nb = mat_->Nb;
     this->nnzb = mat_->nnzbs;
     this->N = Nb * block_size;
@@ -76,7 +75,9 @@ bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_) {
 }
 
 template <unsigned int block_size>
-bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
+bool CPR<block_size>::analyze_matrix(BlockedMatrix<double>* mat_,
+                                     BlockedMatrix<double>* jacMat)
+{
     this->Nb = mat_->Nb;
     this->nnzb = mat_->nnzbs;
     this->N = Nb * block_size;
@@ -89,7 +90,10 @@ bool CPR<block_size>::analyze_matrix(BlockedMatrix *mat_, BlockedMatrix *jacMat)
 }
 
 template <unsigned int block_size>
-bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *jacMat) {
+bool CPR<block_size>::
+    create_preconditioner(BlockedMatrix<double>* mat_,
+                          BlockedMatrix<double>* jacMat)
+{
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_, jacMat);
     if (verbosity >= 3) {
@@ -109,7 +113,8 @@ bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_, BlockedMatrix *
 }
 
 template <unsigned int block_size>
-bool CPR<block_size>::create_preconditioner(BlockedMatrix *mat_) {
+bool CPR<block_size>::create_preconditioner(BlockedMatrix<double>* mat_)
+{
     Dune::Timer t_bilu0;
     bool result = bilu0->create_preconditioner(mat_);
     if (verbosity >= 3) {
@@ -212,9 +217,9 @@ void CPR<block_size>::opencl_upload() {
     }
 }
 
-
 template <unsigned int block_size>
-void CPR<block_size>::create_preconditioner_amg(BlockedMatrix *mat_) {
+void CPR<block_size>::create_preconditioner_amg(BlockedMatrix<double>* mat_)
+{
     this->mat = mat_;
 
     coarse_vals.resize(nnzb);

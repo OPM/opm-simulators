@@ -221,12 +221,16 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
             return;
         }
 
+        using Mat = Accelerator::BlockedMatrix<double>;
         if (!matrix) {
             h_rows.reserve(Nb+1);
             h_cols.reserve(nnzb);
             copySparsityPatternFromISTL(*bridgeMat, h_rows, h_cols);
             checkMemoryContiguous(*bridgeMat);
-            matrix = std::make_unique<Opm::Accelerator::BlockedMatrix>(Nb, nnzb, block_size, static_cast<double*>(&(((*bridgeMat)[0][0][0][0]))), h_cols.data(), h_rows.data());
+            matrix = std::make_unique<Mat>(Nb, nnzb, block_size,
+                                           static_cast<double*>(&(((*bridgeMat)[0][0][0][0]))),
+                                           h_cols.data(),
+                                           h_rows.data());
         }
 
         Dune::Timer t_zeros;
@@ -245,7 +249,10 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
                 h_jacCols.reserve(jacNnzb);
                 copySparsityPatternFromISTL(*jacMat, h_jacRows, h_jacCols);
                 checkMemoryContiguous(*jacMat);
-                jacMatrix = std::make_unique<Opm::Accelerator::BlockedMatrix>(Nb, jacNnzb, block_size, static_cast<double*>(&(((*jacMat)[0][0][0][0]))), h_jacCols.data(), h_jacRows.data());
+                jacMatrix = std::make_unique<Mat>(Nb, jacNnzb, block_size,
+                                                  static_cast<double*>(&(((*jacMat)[0][0][0][0]))),
+                                                  h_jacCols.data(),
+                                                  h_jacRows.data());
             }
 
             Dune::Timer t_zeros2;

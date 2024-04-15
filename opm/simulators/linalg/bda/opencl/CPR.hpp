@@ -38,7 +38,7 @@ namespace Opm
 namespace Accelerator
 {
 
-class BlockedMatrix;
+template<class Scalar> class BlockedMatrix;
 
 /// This class implements a Constrained Pressure Residual (CPR) preconditioner
 template <unsigned int block_size>
@@ -73,7 +73,7 @@ private:
     std::once_flag opencl_buffers_allocated;  // only allocate OpenCL Buffers once
 
     std::unique_ptr<BILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
-    BlockedMatrix *mat = nullptr;    // input matrix, blocked
+    BlockedMatrix<double>* mat = nullptr;    // input matrix, blocked
 
     using DuneMat = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1> >;
     using DuneVec = Dune::BlockVector<Dune::FieldVector<double, 1> >;
@@ -112,13 +112,14 @@ private:
 
     void amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x);
 
-    void create_preconditioner_amg(BlockedMatrix *mat);
+    void create_preconditioner_amg(BlockedMatrix<double>* mat);
 
 public:
     CPR(bool opencl_ilu_parallel, int verbosity);
 
-    bool analyze_matrix(BlockedMatrix *mat) override;
-    bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    bool analyze_matrix(BlockedMatrix<double>* mat) override;
+    bool analyze_matrix(BlockedMatrix<double>* mat,
+                        BlockedMatrix<double>* jacMat) override;
 
     // set own Opencl variables, but also that of the bilu0 preconditioner
     void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
@@ -127,8 +128,9 @@ public:
     // also applies amg for pressure component
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
 
-    bool create_preconditioner(BlockedMatrix *mat) override;
-    bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    bool create_preconditioner(BlockedMatrix<double>* mat) override;
+    bool create_preconditioner(BlockedMatrix<double>* mat,
+                               BlockedMatrix<double>* jacMat) override;
 };
 
 // solve A^T * x = b

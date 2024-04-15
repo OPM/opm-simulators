@@ -405,9 +405,11 @@ void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContr
     }
 }
 
-
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix) {
+void openclSolverBackend<block_size>::
+initialize(std::shared_ptr<BlockedMatrix<double>> matrix,
+           std::shared_ptr<BlockedMatrix<double>> jacMatrix)
+{
     this->Nb = matrix->Nb;
     this->N = Nb * block_size;
     this->nnzb = matrix->nnzbs;
@@ -637,13 +639,13 @@ void openclSolverBackend<block_size>::get_result(double *x) {
     }
 } // end get_result()
 
-
 template <unsigned int block_size>
-SolverStatus openclSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
-                                                           double *b,
-                                                           std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                           WellContributions& wellContribs,
-                                                           BdaResult &res)
+SolverStatus openclSolverBackend<block_size>::
+solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
+             double *b,
+             std::shared_ptr<BlockedMatrix<double>> jacMatrix,
+             WellContributions& wellContribs,
+             BdaResult& res)
 {
     if (initialized == false) {
         initialize(matrix, jacMatrix);

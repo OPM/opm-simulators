@@ -78,13 +78,14 @@ std::vector<int> buildCsrToCscOffsetMap(std::vector<int> colPointers, std::vecto
 }
 
 template <unsigned int block_size>
-bool BISAI<block_size>::analyze_matrix(BlockedMatrix *mat)
+bool BISAI<block_size>::analyze_matrix(BlockedMatrix<double>* mat)
 {
     return analyze_matrix(mat, nullptr);
 }
 
 template <unsigned int block_size>
-bool BISAI<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat)
+bool BISAI<block_size>::analyze_matrix(BlockedMatrix<double>* mat,
+                                       BlockedMatrix<double>* jacMat)
 {
     const unsigned int bs = block_size;
     auto *m = mat;
@@ -176,7 +177,9 @@ void BISAI<block_size>::buildUpperSubsystemsStructures(){
 }
 
 template <unsigned int block_size>
-bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat)
+bool BISAI<block_size>::
+create_preconditioner(BlockedMatrix<double>* mat,
+                      BlockedMatrix<double>* jacMat)
 {
     const unsigned int bs = block_size;
 
@@ -274,7 +277,7 @@ bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix 
 }
 
 template <unsigned int block_size>
-bool BISAI<block_size>::create_preconditioner(BlockedMatrix *mat)
+bool BISAI<block_size>::create_preconditioner(BlockedMatrix<double>* mat)
 {
     return create_preconditioner(mat, nullptr);
 }

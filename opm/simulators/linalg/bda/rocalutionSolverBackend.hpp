@@ -65,12 +65,12 @@ private:
 
     /// Initialize sizes and allocate memory
     /// \param[in] matrix     matrix A
-    void initialize(BlockedMatrix *matrix);
+    void initialize(BlockedMatrix<double>* matrix);
 
     /// Convert matrix to rocalution format
     /// copy matrix to raw pointers, which are given to and freed by rocalution
     /// \param[in] matrix     matrix A
-    void convert_matrix(BlockedMatrix *matrix);
+    void convert_matrix(BlockedMatrix<double>* matrix);
 
 public:
 
@@ -91,8 +91,11 @@ public:
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b,
-        std::shared_ptr<BlockedMatrix> jacMatrix, WellContributions& wellContribs, BdaResult &res) override;
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
+                              double *b,
+                              std::shared_ptr<BlockedMatrix<double>> jacMatrix,
+                              WellContributions& wellContribs,
+                              BdaResult& res) override;
 
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x          resulting x vector, caller must guarantee that x points to a valid array

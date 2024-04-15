@@ -53,9 +53,9 @@ class BILU0 : public Preconditioner<block_size>
     using Base::err;
 
 private:
-    std::unique_ptr<BlockedMatrix> LUmat = nullptr;
+    std::unique_ptr<BlockedMatrix<double>> LUmat = nullptr;
 #if CHOW_PATEL
-    std::unique_ptr<BlockedMatrix> Lmat = nullptr, Umat = nullptr;
+    std::unique_ptr<BlockedMatrix<double>> Lmat = nullptr, Umat = nullptr;
 #endif
     std::vector<double> invDiagVals;
     std::vector<int> diagIndex;
@@ -93,12 +93,14 @@ public:
     BILU0(bool opencl_ilu_parallel, int verbosity);
 
     // analysis, extract parallelism if specified
-    bool analyze_matrix(BlockedMatrix *mat) override;
-    bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    bool analyze_matrix(BlockedMatrix<double>* mat) override;
+    bool analyze_matrix(BlockedMatrix<double>* mat,
+                        BlockedMatrix<double>* jacMat) override;
 
     // ilu_decomposition
-    bool create_preconditioner(BlockedMatrix *mat) override;
-    bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    bool create_preconditioner(BlockedMatrix<double>* mat) override;
+    bool create_preconditioner(BlockedMatrix<double>* mat,
+                               BlockedMatrix<double>* jacMat) override;
 
     // apply preconditioner, x = prec(y)
     // via Lz = y

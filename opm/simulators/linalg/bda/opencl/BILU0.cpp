@@ -50,14 +50,15 @@ BILU0<block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_) :
 
 
 template <unsigned int block_size>
-bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat)
+bool BILU0<block_size>::analyze_matrix(BlockedMatrix<double>* mat)
 {
     return analyze_matrix(mat, nullptr);
 }
 
 
 template <unsigned int block_size>
-bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat)
+bool BILU0<block_size>::analyze_matrix(BlockedMatrix<double>* mat,
+                                       BlockedMatrix<double>* jacMat)
 {
     const unsigned int bs = block_size;
 
@@ -77,7 +78,7 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
         CSCRowIndices.resize(matToDecompose->nnzbs);
         CSCColPointers.resize(Nb + 1);
 
-        LUmat = std::make_unique<BlockedMatrix>(*matToDecompose);
+        LUmat = std::make_unique<BlockedMatrix<double>>(*matToDecompose);
 
         Timer t_convert;
         csrPatternToCsc(matToDecompose->colIndices, matToDecompose->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), Nb);
@@ -87,7 +88,7 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
             OpmLog::info(out.str());
         }
     } else {
-        LUmat = std::make_unique<BlockedMatrix>(*matToDecompose);
+        LUmat = std::make_unique<BlockedMatrix<double>>(*matToDecompose);
     }
 
     Timer t_analysis;
@@ -168,17 +169,16 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat
     return true;
 }
 
-
-
 template <unsigned int block_size>
-bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat)
+bool BILU0<block_size>::create_preconditioner(BlockedMatrix<double>* mat)
 {
     return create_preconditioner(mat, nullptr);
 }
 
-
 template <unsigned int block_size>
-bool BILU0<block_size>::create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat)
+bool BILU0<block_size>::
+create_preconditioner(BlockedMatrix<double>* mat,
+                      BlockedMatrix<double>* jacMat)
 {
     const unsigned int bs = block_size;
 

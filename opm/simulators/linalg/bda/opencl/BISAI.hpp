@@ -31,7 +31,7 @@ namespace Opm
 namespace Accelerator
 {
 
-class BlockedMatrix;
+template<class Scalar> class BlockedMatrix;
 
 /// This class implements a Blocked version of the Incomplete Sparse Approximate Inverse (ISAI) preconditioner.
 /// Inspired by the paper "Incomplete Sparse Approximate Inverses for Parallel Preconditioning" by Anzt et. al.
@@ -116,12 +116,14 @@ public:
     void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
 
     // analysis, extract parallelism
-    bool analyze_matrix(BlockedMatrix *mat) override;
-    bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    bool analyze_matrix(BlockedMatrix<double>* mat) override;
+    bool analyze_matrix(BlockedMatrix<double>* mat,
+                        BlockedMatrix<double>* jacMat) override;
 
     // ilu_decomposition
-    bool create_preconditioner(BlockedMatrix *mat) override;
-    bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    bool create_preconditioner(BlockedMatrix<double>* mat) override;
+    bool create_preconditioner(BlockedMatrix<double>* mat,
+                               BlockedMatrix<double>* jacMat) override;
 
     // apply preconditioner, x = prec(y)
     void apply(const cl::Buffer& y, cl::Buffer& x) override;

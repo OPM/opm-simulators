@@ -375,9 +375,11 @@ void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellCont
     }
 }
 
-
 template <unsigned int block_size>
-void rocsparseSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix) {
+void rocsparseSolverBackend<block_size>::
+initialize(std::shared_ptr<BlockedMatrix<double>> matrix,
+           std::shared_ptr<BlockedMatrix<double>> jacMatrix)
+{
     this->Nb = matrix->Nb;
     this->N = Nb * block_size;
     this->nnzb = matrix->nnzbs;
@@ -634,11 +636,12 @@ void rocsparseSolverBackend<block_size>::get_result(double *x) {
 
 
 template <unsigned int block_size>
-SolverStatus rocsparseSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
-                                                              double *b,
-                                                              std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                              WellContributions& wellContribs,
-                                                              BdaResult &res)
+SolverStatus rocsparseSolverBackend<block_size>::
+    solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
+                 double *b,
+                 std::shared_ptr<BlockedMatrix<double>> jacMatrix,
+                 WellContributions& wellContribs,
+                 BdaResult& res)
 {
     if (initialized == false) {
         initialize(matrix, jacMatrix);
