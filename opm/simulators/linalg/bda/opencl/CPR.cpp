@@ -45,7 +45,7 @@ CPR<block_size>::CPR(bool opencl_ilu_parallel_, int verbosity_)
     : Base(verbosity_)
     , opencl_ilu_parallel(opencl_ilu_parallel_)
 {
-    bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_parallel, verbosity_);
+    bilu0 = std::make_unique<BILU0<double,block_size> >(opencl_ilu_parallel, verbosity_);
     diagIndices.resize(1);
 }
 

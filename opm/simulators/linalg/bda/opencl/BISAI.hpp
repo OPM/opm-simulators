@@ -68,7 +68,7 @@ private:
     cl::Buffer d_invL_x;
 
     bool opencl_ilu_parallel;
-    std::unique_ptr<BILU0<block_size> > bilu0;
+    std::unique_ptr<BILU0<double,block_size>> bilu0;
 
     /// Struct that holds the structure of the small subsystems for each column
     typedef struct{

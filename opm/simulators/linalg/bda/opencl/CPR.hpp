@@ -69,7 +69,7 @@ private:
     std::unique_ptr<cl::Buffer> d_coarse_y, d_coarse_x; // stores the scalar vectors
     std::once_flag opencl_buffers_allocated;  // only allocate OpenCL Buffers once
 
-    std::unique_ptr<BILU0<block_size> > bilu0;                    // Blocked ILU0 preconditioner
+    std::unique_ptr<BILU0<double,block_size>> bilu0;                    // Blocked ILU0 preconditioner
     BlockedMatrix<double>* mat = nullptr;    // input matrix, blocked
 
     using DuneMat = Dune::BCRSMatrix<Dune::FieldMatrix<double, 1, 1> >;

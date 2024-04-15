@@ -47,7 +47,7 @@ Preconditioner<Scalar,block_size>::create(Type type, bool opencl_ilu_parallel, i
 {
     switch (type ) {
     case Type::BILU0:
-        return std::make_unique<BILU0<block_size> >(opencl_ilu_parallel, verbosity);
+        return std::make_unique<BILU0<Scalar,block_size> >(opencl_ilu_parallel, verbosity);
     case Type::CPR:
         return std::make_unique<CPR<block_size> >(opencl_ilu_parallel, verbosity);
     case Type::BISAI:

@@ -35,8 +35,8 @@ namespace Opm::Accelerator {
 
 using Dune::Timer;
 
-template <unsigned int block_size>
-BILU0<block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_)
+template<class Scalar, unsigned int block_size>
+BILU0<Scalar,block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_)
     : Base(verbosity_)
     , opencl_ilu_parallel(opencl_ilu_parallel_)
 {
@@ -45,17 +45,15 @@ BILU0<block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_)
 #endif
 }
 
-
-template <unsigned int block_size>
-bool BILU0<block_size>::analyze_matrix(BlockedMatrix<double>* mat)
+template<class Scalar, unsigned int block_size>
+bool BILU0<Scalar,block_size>::analyze_matrix(BlockedMatrix<Scalar>* mat)
 {
     return analyze_matrix(mat, nullptr);
 }
 
-
-template <unsigned int block_size>
-bool BILU0<block_size>::analyze_matrix(BlockedMatrix<double>* mat,
-                                       BlockedMatrix<double>* jacMat)
+template<class Scalar, unsigned int block_size>
+bool BILU0<Scalar,block_size>::
+analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 {
     const unsigned int bs = block_size;
 
@@ -75,30 +73,33 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix<double>* mat,
         CSCRowIndices.resize(matToDecompose->nnzbs);
         CSCColPointers.resize(Nb + 1);
 
-        LUmat = std::make_unique<BlockedMatrix<double>>(*matToDecompose);
+        LUmat = std::make_unique<BlockedMatrix<Scalar>>(*matToDecompose);
 
         Timer t_convert;
-        csrPatternToCsc(matToDecompose->colIndices, matToDecompose->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), Nb);
+        csrPatternToCsc(matToDecompose->colIndices, matToDecompose->rowPointers,
+                        CSCRowIndices.data(), CSCColPointers.data(), Nb);
         if(verbosity >= 3){
             std::ostringstream out;
             out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
             OpmLog::info(out.str());
         }
     } else {
-        LUmat = std::make_unique<BlockedMatrix<double>>(*matToDecompose);
+        LUmat = std::make_unique<BlockedMatrix<Scalar>>(*matToDecompose);
     }
 
     Timer t_analysis;
     std::ostringstream out;
     if (opencl_ilu_parallel) {
         out << "opencl_ilu_parallel: true (level_scheduling)\n";
-        findLevelScheduling(matToDecompose->colIndices, matToDecompose->rowPointers, CSCRowIndices.data(), CSCColPointers.data(), Nb, &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
+        findLevelScheduling(matToDecompose->colIndices, matToDecompose->rowPointers,
+                            CSCRowIndices.data(), CSCColPointers.data(), Nb,
+                            &numColors, toOrder.data(), fromOrder.data(), rowsPerColor);
     } else {
         out << "opencl_ilu_parallel: false\n";
         // numColors = 1;
         // rowsPerColor.emplace_back(Nb);
         numColors = Nb;
-        for(int i = 0; i < Nb; ++i){
+        for (int i = 0; i < Nb; ++i) {
             rowsPerColor.emplace_back(1);
         }
     }
@@ -116,44 +117,52 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix<double>* mat,
     invDiagVals.resize(mat->Nb * bs * bs);
 
 #if CHOW_PATEL
-    Lmat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2, block_size);
-    Umat = std::make_unique<BlockedMatrix>(mat->Nb, (mat->nnzbs - mat->Nb) / 2, block_size);
+    Lmat = std::make_unique<BlockedMatrix<Scalar>>(mat->Nb, (mat->nnzbs - mat->Nb) / 2, block_size);
+    Umat = std::make_unique<BlockedMatrix<Scalar>>(mat->Nb, (mat->nnzbs - mat->Nb) / 2, block_size);
 #endif
 
-    s.invDiagVals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * mat->Nb);
+    s.invDiagVals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(Scalar) * bs * bs * mat->Nb);
     s.rowsPerColor = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (numColors + 1));
     s.diagIndex = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * LUmat->Nb);
     s.rowIndices = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(unsigned) * LUmat->Nb);
 #if CHOW_PATEL
-    s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
+    s.Lvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(Scalar) * bs * bs * Lmat->nnzbs);
     s.Lcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Lmat->nnzbs);
     s.Lrows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Lmat->Nb + 1));
-    s.Uvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * Lmat->nnzbs);
+    s.Uvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(Scalar) * bs * bs * Lmat->nnzbs);
     s.Ucols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * Lmat->nnzbs);
     s.Urows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (Lmat->Nb + 1));
 #else
-    s.LUvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(double) * bs * bs * LUmat->nnzbs);
+    s.LUvals = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(Scalar) * bs * bs * LUmat->nnzbs);
     s.LUcols = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * LUmat->nnzbs);
     s.LUrows = cl::Buffer(*context, CL_MEM_READ_WRITE, sizeof(int) * (LUmat->Nb + 1));
 #endif
 
     events.resize(3);
-    err = queue->enqueueWriteBuffer(s.invDiagVals, CL_FALSE, 0, mat->Nb * sizeof(double) * bs * bs, invDiagVals.data(), nullptr, &events[0]);
+    err = queue->enqueueWriteBuffer(s.invDiagVals, CL_FALSE, 0,
+                                    mat->Nb * sizeof(Scalar) * bs * bs,
+                                    invDiagVals.data(), nullptr, &events[0]);
 
     rowsPerColorPrefix.resize(numColors + 1); // resize initializes value 0.0
     for (int i = 0; i < numColors; ++i) {
         rowsPerColorPrefix[i + 1] = rowsPerColorPrefix[i] + rowsPerColor[i];
     }
 
-    err |= queue->enqueueWriteBuffer(s.rowsPerColor, CL_FALSE, 0, (numColors + 1) * sizeof(int), rowsPerColorPrefix.data(), nullptr, &events[1]);
+    err |= queue->enqueueWriteBuffer(s.rowsPerColor, CL_FALSE, 0,
+                                     (numColors + 1) * sizeof(int),
+                                     rowsPerColorPrefix.data(), nullptr, &events[1]);
 
     if (opencl_ilu_parallel) {
-        err |= queue->enqueueWriteBuffer(s.rowIndices, CL_FALSE, 0, Nb * sizeof(unsigned), fromOrder.data(), nullptr, &events[2]);
+        err |= queue->enqueueWriteBuffer(s.rowIndices, CL_FALSE, 0,
+                                         Nb * sizeof(unsigned), fromOrder.data(),
+                                         nullptr, &events[2]);
     } else {
         // fromOrder is not initialized, so use something else to fill s.rowIndices
         // s.rowIndices[i] == i must hold, since every rowidx is mapped to itself (i.e. no actual mapping)
         // rowsPerColorPrefix is misused here, it contains an increasing sequence (0, 1, 2, ...)
-        err |= queue->enqueueWriteBuffer(s.rowIndices, CL_FALSE, 0, Nb * sizeof(unsigned), rowsPerColorPrefix.data(), nullptr, &events[2]);
+        err |= queue->enqueueWriteBuffer(s.rowIndices, CL_FALSE, 0,
+                                         Nb * sizeof(unsigned),
+                                         rowsPerColorPrefix.data(), nullptr, &events[2]);
     }
 
     cl::WaitForEvents(events);
@@ -166,16 +175,15 @@ bool BILU0<block_size>::analyze_matrix(BlockedMatrix<double>* mat,
     return true;
 }
 
-template <unsigned int block_size>
-bool BILU0<block_size>::create_preconditioner(BlockedMatrix<double>* mat)
+template<class Scalar, unsigned int block_size>
+bool BILU0<Scalar,block_size>::create_preconditioner(BlockedMatrix<Scalar>* mat)
 {
     return create_preconditioner(mat, nullptr);
 }
 
-template <unsigned int block_size>
-bool BILU0<block_size>::
-create_preconditioner(BlockedMatrix<double>* mat,
-                      BlockedMatrix<double>* jacMat)
+template<class Scalar, unsigned int block_size>
+bool BILU0<Scalar,block_size>::
+create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 {
     const unsigned int bs = block_size;
 
@@ -183,7 +191,8 @@ create_preconditioner(BlockedMatrix<double>* mat,
 
     // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp
     Timer t_copy;
-    memcpy(LUmat->nnzValues, matToDecompose->nnzValues, sizeof(double) * bs * bs * matToDecompose->nnzbs);
+    memcpy(LUmat->nnzValues, matToDecompose->nnzValues,
+           sizeof(Scalar) * bs * bs * matToDecompose->nnzbs);
 
     if (verbosity >= 3){
         std::ostringstream out;
@@ -202,7 +211,9 @@ create_preconditioner(BlockedMatrix<double>* mat,
     Timer t_copyToGpu;
 
     events.resize(1);
-    queue->enqueueWriteBuffer(s.LUvals, CL_FALSE, 0, LUmat->nnzbs * bs * bs * sizeof(double), LUmat->nnzValues, nullptr, &events[0]);
+    queue->enqueueWriteBuffer(s.LUvals, CL_FALSE, 0,
+                              LUmat->nnzbs * bs * bs * sizeof(Scalar),
+                              LUmat->nnzValues, nullptr, &events[0]);
 
     std::call_once(pattern_uploaded, [&](){
         // find the positions of each diagonal block
@@ -210,14 +221,18 @@ create_preconditioner(BlockedMatrix<double>* mat,
             int rowStart = LUmat->rowPointers[row];
             int rowEnd = LUmat->rowPointers[row+1];
 
-            auto candidate = std::find(LUmat->colIndices + rowStart, LUmat->colIndices + rowEnd, row);
+            auto candidate = std::find(LUmat->colIndices + rowStart,
+                                       LUmat->colIndices + rowEnd, row);
             assert(candidate != LUmat->colIndices + rowEnd);
             diagIndex[row] = candidate - LUmat->colIndices;
         }
         events.resize(4);
-        queue->enqueueWriteBuffer(s.diagIndex, CL_FALSE, 0, Nb * sizeof(int), diagIndex.data(), nullptr, &events[1]);
-        queue->enqueueWriteBuffer(s.LUcols, CL_FALSE, 0, LUmat->nnzbs * sizeof(int), LUmat->colIndices, nullptr, &events[2]);
-        queue->enqueueWriteBuffer(s.LUrows, CL_FALSE, 0, (LUmat->Nb + 1) * sizeof(int), LUmat->rowPointers, nullptr, &events[3]);
+        queue->enqueueWriteBuffer(s.diagIndex, CL_FALSE, 0, Nb * sizeof(int),
+                                  diagIndex.data(), nullptr, &events[1]);
+        queue->enqueueWriteBuffer(s.LUcols, CL_FALSE, 0, LUmat->nnzbs * sizeof(int),
+                                  LUmat->colIndices, nullptr, &events[2]);
+        queue->enqueueWriteBuffer(s.LUrows, CL_FALSE, 0, (LUmat->Nb + 1) * sizeof(int),
+                                  LUmat->rowPointers, nullptr, &events[3]);
     });
 
     cl::WaitForEvents(events);
@@ -239,9 +254,10 @@ create_preconditioner(BlockedMatrix<double>* mat,
         const unsigned int firstRow = rowsPerColorPrefix[color];
         const unsigned int lastRow = rowsPerColorPrefix[color + 1];
         if (verbosity >= 5) {
-            out << "color " << color << ": " << firstRow << " - " << lastRow << " = " << lastRow - firstRow << "\n";
+            out << "color " << color << ": " << firstRow << " - " << lastRow
+                << " = " << lastRow - firstRow << "\n";
         }
-        OpenclKernels<double>::ILU_decomp(firstRow, lastRow, s.rowIndices,
+        OpenclKernels<Scalar>::ILU_decomp(firstRow, lastRow, s.rowIndices,
                                           s.LUvals, s.LUcols, s.LUrows, s.diagIndex,
                                           s.invDiagVals, rowsPerColor[color], block_size);
     }
@@ -256,24 +272,23 @@ create_preconditioner(BlockedMatrix<double>* mat,
     return true;
 } // end create_preconditioner()
 
-
 // kernels are blocking on an NVIDIA GPU, so waiting for events is not needed
 // however, if individual kernel calls are timed, waiting for events is needed
 // behavior on other GPUs is untested
-template <unsigned int block_size>
-void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
+template<class Scalar, unsigned int block_size>
+void BILU0<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 {
-    const double relaxation = 0.9;
+    const Scalar relaxation = 0.9;
     cl::Event event;
     Timer t_apply;
 
     for (int color = 0; color < numColors; ++color) {
 #if CHOW_PATEL
-        OpenclKernels<double>::ILU_apply1(s.rowIndices, s.Lvals, s.Lcols, s.Lrows,
+        OpenclKernels<Scalar>::ILU_apply1(s.rowIndices, s.Lvals, s.Lcols, s.Lrows,
                                           s.diagIndex, y, x, s.rowsPerColor,
                                           color, rowsPerColor[color], block_size);
 #else
-        OpenclKernels<double>::ILU_apply1(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
+        OpenclKernels<Scalar>::ILU_apply1(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
                                           s.diagIndex, y, x, s.rowsPerColor,
                                           color, rowsPerColor[color], block_size);
 #endif
@@ -281,18 +296,18 @@ void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 
     for (int color = numColors - 1; color >= 0; --color) {
 #if CHOW_PATEL
-        OpenclKernels<double>::ILU_apply2(s.rowIndices, s.Uvals, s.Ucols, s.Urows,
-                                         s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
-                                         color, rowsPerColor[color], block_size);
+        OpenclKernels<Scalar>::ILU_apply2(s.rowIndices, s.Uvals, s.Ucols, s.Urows,
+                                          s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
+                                          color, rowsPerColor[color], block_size);
 #else
-        OpenclKernels<double>::ILU_apply2(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
+        OpenclKernels<Scalar>::ILU_apply2(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
                                           s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
                                           color, rowsPerColor[color], block_size);
 #endif
     }
 
     // apply relaxation
-    OpenclKernels<double>::scale(x, relaxation, N);
+    OpenclKernels<Scalar>::scale(x, relaxation, N);
 
     if (verbosity >= 4) {
         std::ostringstream out;
@@ -301,19 +316,14 @@ void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
     }
 }
 
+#define INSTANCE_TYPE(T)       \
+    template class BILU0<T,1>; \
+    template class BILU0<T,2>; \
+    template class BILU0<T,3>; \
+    template class BILU0<T,4>; \
+    template class BILU0<T,5>; \
+    template class BILU0<T,6>;
 
-
-#define INSTANTIATE_BDA_FUNCTIONS(n) \
-template class BILU0<n>;
-
-
-INSTANTIATE_BDA_FUNCTIONS(1);
-INSTANTIATE_BDA_FUNCTIONS(2);
-INSTANTIATE_BDA_FUNCTIONS(3);
-INSTANTIATE_BDA_FUNCTIONS(4);
-INSTANTIATE_BDA_FUNCTIONS(5);
-INSTANTIATE_BDA_FUNCTIONS(6);
-
-#undef INSTANTIATE_BDA_FUNCTIONS
+INSTANCE_TYPE(double)
 
 } // namespace Opm::Accelerator
