@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
     // Add preconditioner to factory for block size 1.
     PF<1>::addCreator("nothing", [](const O<1>&, const Opm::PropertyTree&, const std::function<V<1>()>&,
                                     std::size_t) {
-            return Dune::wrapPreconditioner<NothingPreconditioner<V<1>>>();
+            return Dune::getDummyUpdateWrapper<NothingPreconditioner<V<1>>>();
         });
 
 
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(TestAddingPreconditioner)
     // Add preconditioner to factory for block size 3.
     PF<3>::addCreator("nothing", [](const O<3>&, const Opm::PropertyTree&, const std::function<V<3>()>&,
                                     std::size_t) {
-            return Dune::wrapPreconditioner<NothingPreconditioner<V<3>>>();
+            return Dune::getDummyUpdateWrapper<NothingPreconditioner<V<3>>>();
         });
 
     // Test with 1x1 block solvers.
@@ -303,7 +303,7 @@ testPrecRepeating(const Opm::PropertyTree& prm, const std::string& matrix_filena
     // Add no-oppreconditioner to factory for block size 1.
     PrecFactory::addCreator("nothing", [](const Operator&, const Opm::PropertyTree&, const std::function<Vector()>&,
                                           std::size_t) {
-        return Dune::wrapPreconditioner<NothingPreconditioner<Vector>>();
+        return Dune::getDummyUpdateWrapper<NothingPreconditioner<Vector>>();
     });
 
     auto prec = PrecFactory::create(op, prm.get_child("preconditioner"));
