@@ -104,7 +104,7 @@ apply(Vector& rhs,
 {
     bool use_gpu = bridge_->getUseGpu();
     if (use_gpu) {
-        auto wellContribs = WellContributions::create(accelerator_mode_, useWellConn);
+        auto wellContribs = WellContributions<double>::create(accelerator_mode_, useWellConn);
         bridge_->initWellContributions(*wellContribs, x.N() * x[0].N());
 
          // the WellContributions can only be applied separately with CUDA, OpenCL or rocsparse, not with amgcl or rocalution

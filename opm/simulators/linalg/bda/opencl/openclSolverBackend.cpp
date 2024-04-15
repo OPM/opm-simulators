@@ -233,7 +233,9 @@ void openclSolverBackend<block_size>::setOpencl(std::shared_ptr<cl::Context>& co
 
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
+void openclSolverBackend<block_size>::
+gpu_pbicgstab(WellContributions<double>& wellContribs, BdaResult& res)
+{
     float it;
     double rho, rhop, beta, alpha, omega, tmp1, tmp2;
     double norm, norm_0;
@@ -598,7 +600,9 @@ bool openclSolverBackend<block_size>::create_preconditioner() {
 
 
 template <unsigned int block_size>
-void openclSolverBackend<block_size>::solve_system(WellContributions &wellContribs, BdaResult &res) {
+void openclSolverBackend<block_size>::
+solve_system(WellContributions<double>& wellContribs, BdaResult& res)
+{
     Timer t;
 
     // actually solve
@@ -620,7 +624,6 @@ void openclSolverBackend<block_size>::solve_system(WellContributions &wellContri
         out << "openclSolver::solve_system(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
-
 } // end solve_system()
 
 
@@ -644,7 +647,7 @@ SolverStatus openclSolverBackend<block_size>::
 solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
              double *b,
              std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-             WellContributions& wellContribs,
+             WellContributions<double>& wellContribs,
              BdaResult& res)
 {
     if (initialized == false) {

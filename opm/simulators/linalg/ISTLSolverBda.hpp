@@ -35,13 +35,13 @@ namespace Opm {
 class Well;
 
 template<class Matrix, class Vector, int block_size> class BdaBridge;
-class WellContributions;
+template<class Scalar> class WellContributions;
 namespace detail {
 
 template<class Matrix, class Vector>
 struct BdaSolverInfo
 {
-  using WellContribFunc = std::function<void(WellContributions&)>;
+  using WellContribFunc = std::function<void(WellContributions<double>&)>;
   using Bridge = BdaBridge<Matrix,Vector,Matrix::block_type::rows>;
 
   BdaSolverInfo(const std::string& accelerator_mode,
@@ -249,8 +249,8 @@ public:
         // Solve system.
         Dune::InverseOperatorResult result;
 
-        std::function<void(WellContributions&)> getContribs =
-            [this](WellContributions& w)
+        std::function<void(WellContributions<double>&)> getContribs =
+            [this](WellContributions<double>& w)
             {
                 this->simulator_.problem().wellModel().getWellContributions(w);
             };

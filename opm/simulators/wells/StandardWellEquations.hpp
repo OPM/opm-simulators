@@ -37,7 +37,7 @@ namespace Opm
 template<class Scalar> class ParallelWellInfo;
 template<class Scalar, int numEq> class StandardWellEquationAccess;
 #if COMPILE_BDA_BRIDGE
-class WellContributions;
+template<class Scalar> class WellContributions;
 #endif
 template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
@@ -102,7 +102,7 @@ public:
 #if COMPILE_BDA_BRIDGE
     //! \brief Add the matrices of this well to the WellContributions object.
     void extract(const int numStaticWellEq,
-                 WellContributions& wellContribs) const;
+                 WellContributions<Scalar>& wellContribs) const;
 #endif
 
     //! \brief Add the matrices of this well to the sparse matrix adapter.

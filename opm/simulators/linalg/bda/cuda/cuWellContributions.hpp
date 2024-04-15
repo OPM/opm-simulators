@@ -28,7 +28,7 @@
 namespace Opm
 {
 
-class WellContributionsCuda : public WellContributions
+class WellContributionsCuda : public WellContributions<double>
 {
 public:
     ~WellContributionsCuda() override;

@@ -408,7 +408,7 @@ SolverStatus amgclSolverBackend<block_size>::
 solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
              double *b,
              [[maybe_unused]] std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-             [[maybe_unused]] WellContributions& wellContribs,
+             [[maybe_unused]] WellContributions<double>& wellContribs,
              BdaResult& res)
 {
     if (initialized == false) {

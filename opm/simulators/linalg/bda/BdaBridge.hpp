@@ -27,7 +27,7 @@
 namespace Opm
 {
 
-class WellContributions;
+template<class Scalar> class WellContributions;
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
 
@@ -39,7 +39,7 @@ private:
     int verbosity = 0;
     bool use_gpu = false;
     std::string accelerator_mode;
-    std::unique_ptr<Accelerator::BdaSolver<block_size> > backend;
+    std::unique_ptr<Accelerator::BdaSolver<block_size>> backend;
     std::shared_ptr<Accelerator::BlockedMatrix<double>> matrix;  // 'stores' matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
     std::shared_ptr<Accelerator::BlockedMatrix<double>> jacMatrix;  // 'stores' preconditioner matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
     std::vector<int> h_rows, h_cols;  // store the sparsity pattern of the matrix
@@ -69,7 +69,12 @@ public:
     /// \param[in] b               vector b, should be of type Dune::BlockVector
     /// \param[in] wellContribs    contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] result       summary of solver result
-    void solve_system(BridgeMatrix *bridgeMat, BridgeMatrix *jacMat, int numJacobiBlocks, BridgeVector &b, WellContributions& wellContribs, InverseOperatorResult &result);
+    void solve_system(BridgeMatrix* bridgeMat,
+                      BridgeMatrix* jacMat,
+                      int numJacobiBlocks,
+                      BridgeVector& b,
+                      WellContributions<double>& wellContribs,
+                      InverseOperatorResult &result);
 
     /// Get the resulting x vector
     /// \param[inout] x    vector x, should be of type Dune::BlockVector
@@ -91,7 +96,7 @@ public:
     /// those must be set before calling BlackOilWellModel::getWellContributions() in ISTL
     /// \param[in] wellContribs   container to hold all WellContributions
     /// \param[in] N              number of rows in scalar vector that wellContribs will be applied on
-    void initWellContributions(WellContributions& wellContribs, unsigned N);
+    void initWellContributions(WellContributions<double>& wellContribs, unsigned N);
 
     /// Return the selected accelerator mode, this is input via the command-line
     std::string getAccleratorName(){

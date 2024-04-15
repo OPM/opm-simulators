@@ -32,7 +32,7 @@
 namespace Opm
 {
 
-class WellContributionsOCL : public WellContributions
+class WellContributionsOCL : public WellContributions<double>
 {
 public:
     void setOpenCLEnv(cl::Context *context_, cl::CommandQueue *queue_);

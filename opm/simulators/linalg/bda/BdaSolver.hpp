@@ -29,7 +29,7 @@
 
 namespace Opm {
 
-class WellContributions;
+template<class Scalar> class WellContributions;
 
 namespace Accelerator {
     enum class SolverStatus {
@@ -86,7 +86,8 @@ namespace Accelerator {
         virtual SolverStatus solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
                                           double *b,
                                           std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-                                          WellContributions& wellContribs, BdaResult& res) = 0;
+                                          WellContributions<double>& wellContribs,
+                                          BdaResult& res) = 0;
 
         virtual void get_result(double *x) = 0;
 

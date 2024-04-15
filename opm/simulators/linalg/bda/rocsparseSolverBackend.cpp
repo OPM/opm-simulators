@@ -149,8 +149,9 @@ rocsparseSolverBackend<block_size>::~rocsparseSolverBackend() {
 
 
 template <unsigned int block_size>
-void rocsparseSolverBackend<block_size>::gpu_pbicgstab([[maybe_unused]] WellContributions& wellContribs,
-                                                       BdaResult& res)
+void rocsparseSolverBackend<block_size>::
+gpu_pbicgstab([[maybe_unused]] WellContributions<double>& wellContribs,
+              BdaResult& res)
 {
     float it = 0.5;
     double rho, rhop, beta, alpha, nalpha, omega, nomega, tmp1, tmp2;
@@ -602,7 +603,9 @@ bool rocsparseSolverBackend<block_size>::create_preconditioner() {
 
 
 template <unsigned int block_size>
-void rocsparseSolverBackend<block_size>::solve_system(WellContributions &wellContribs, BdaResult &res) {
+void rocsparseSolverBackend<block_size>::
+solve_system(WellContributions<double>& wellContribs, BdaResult& res)
+{
     Timer t;
 
     // actually solve
@@ -640,7 +643,7 @@ SolverStatus rocsparseSolverBackend<block_size>::
     solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
                  double *b,
                  std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-                 WellContributions& wellContribs,
+                 WellContributions<double>& wellContribs,
                  BdaResult& res)
 {
     if (initialized == false) {

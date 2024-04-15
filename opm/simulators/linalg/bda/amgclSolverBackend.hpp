@@ -143,7 +143,7 @@ public:
     SolverStatus solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
                               double *b,
                               std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-                              WellContributions& wellContribs,
+                              WellContributions<double>& wellContribs,
                               BdaResult& res) override;
     
     /// Get result after linear solve, and peform postprocessing if necessary

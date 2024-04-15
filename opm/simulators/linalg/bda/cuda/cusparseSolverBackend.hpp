@@ -77,7 +77,7 @@ private:
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res);
+    void gpu_pbicgstab(WellContributions<double>& wellContribs, BdaResult& res);
 
     /// Initialize GPU and allocate memory
     /// \param[in] matrix         matrix for spmv
@@ -117,7 +117,7 @@ private:
     /// Solve linear system
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void solve_system(WellContributions& wellContribs, BdaResult &res);
+    void solve_system(WellContributions<double>& wellContribs, BdaResult &res);
 
 public:
 
@@ -142,7 +142,8 @@ public:
     SolverStatus solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
                               double *b,
                               std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-                              WellContributions& wellContribs, BdaResult& res) override;
+                              WellContributions<double>& wellContribs,
+                              BdaResult& res) override;
     
     /// Get resulting vector x after linear solve, also includes post processing if necessary
     /// \param[inout] x        resulting x vector, caller must guarantee that x points to a valid array

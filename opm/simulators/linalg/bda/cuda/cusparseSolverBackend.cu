@@ -90,7 +90,9 @@ cusparseSolverBackend<block_size>::~cusparseSolverBackend() {
 }
 
 template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
+void cusparseSolverBackend<block_size>::
+gpu_pbicgstab(WellContributions<double>& wellContribs, BdaResult& res)
+{
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
     int n = N;
     double rho = 1.0, rhop;
@@ -509,7 +511,9 @@ bool cusparseSolverBackend<block_size>::create_preconditioner() {
 
 
 template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::solve_system(WellContributions& wellContribs, BdaResult &res) {
+void cusparseSolverBackend<block_size>::
+solve_system(WellContributions<double>& wellContribs, BdaResult& res)
+{
     // actually solve
     gpu_pbicgstab(wellContribs, res);
     cudaStreamSynchronize(stream);
@@ -538,7 +542,7 @@ SolverStatus cusparseSolverBackend<block_size>::
 solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
              double *b,
              std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-             WellContributions& wellContribs,
+             WellContributions<double>& wellContribs,
              BdaResult& res)
 {
     if (initialized == false) {

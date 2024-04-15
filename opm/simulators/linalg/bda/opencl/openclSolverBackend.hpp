@@ -76,7 +76,7 @@ private:
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res);
+    void gpu_pbicgstab(WellContributions<double>& wellContribs, BdaResult& res);
 
     /// Initialize GPU and allocate memory
     /// \param[in] matrix     matrix A
@@ -107,7 +107,7 @@ private:
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     ///                           could be empty
     /// \param[inout] res         summary of solver result
-    void solve_system(WellContributions &wellContribs, BdaResult &res);
+    void solve_system(WellContributions<double>& wellContribs, BdaResult& res);
 
 public:
     std::shared_ptr<cl::Context> context;
@@ -138,7 +138,7 @@ public:
     SolverStatus solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
                               double *b,
                               std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-                              WellContributions& wellContribs,
+                              WellContributions<double>& wellContribs,
                               BdaResult& res) override;
 
     /// Solve scalar linear system, for example a coarse system of an AMG preconditioner

@@ -30,7 +30,7 @@
 namespace Opm
 {
 
-class WellContributionsRocsparse : public WellContributions
+class WellContributionsRocsparse : public WellContributions<double>
 {
 private:
     hipStream_t stream;

@@ -201,12 +201,13 @@ void checkMemoryContiguous(const BridgeMatrix& mat) {
 
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatrix* bridgeMat,
-                                                                     BridgeMatrix* jacMat,
-                                                                     int numJacobiBlocks,
-                                                                     BridgeVector& b,
-                                                                     WellContributions& wellContribs,
-                                                                     InverseOperatorResult& res)
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::
+solve_system(BridgeMatrix* bridgeMat,
+             BridgeMatrix* jacMat,
+             int numJacobiBlocks,
+             BridgeVector& b,
+             WellContributions<double>& wellContribs,
+             InverseOperatorResult& res)
 {
     if (use_gpu) {
         BdaResult result;
@@ -302,8 +303,10 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result([[maybe_unuse
 }
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[maybe_unused]] WellContributions& wellContribs,
-                                                                              [[maybe_unused]] unsigned N) {
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::
+initWellContributions([[maybe_unused]] WellContributions<double>& wellContribs,
+                      [[maybe_unused]] unsigned N)
+{
     if(accelerator_mode.compare("opencl") == 0){
 #if HAVE_OPENCL
         const auto openclBackend = static_cast<const Opm::Accelerator::openclSolverBackend<block_size>*>(backend.get());

@@ -1569,7 +1569,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    getWellContributions(WellContributions& wellContribs) const
+    getWellContributions(WellContributions<Scalar>& wellContribs) const
     {
         // prepare for StandardWells
         wellContribs.setBlockSize(StandardWell<TypeTag>::Indices::numEq, StandardWell<TypeTag>::numStaticWellEq);
