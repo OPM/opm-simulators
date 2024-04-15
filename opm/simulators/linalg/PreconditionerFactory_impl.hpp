@@ -523,7 +523,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 Dune::Amg::Parameters parms;
                 parms.setNoPreSmoothSteps(1);
                 parms.setNoPostSmoothSteps(1);
-                return getDummyUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
+                return getRebuildOnUpdateWrapper<Dune::Amg::FastAMG<O, V>, O, decltype(crit), decltype(parms)>(op, crit, parms);
             });
         }
         if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V, false>>) {
