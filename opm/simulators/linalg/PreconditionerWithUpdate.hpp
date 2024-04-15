@@ -87,9 +87,10 @@ getDummyUpdateWrapper(Args&&... args)
 /// @brief Interface class ensuring make function is overriden
 /// @tparam OriginalPreconditioner - An arbitrary Preconditioner type
 template <class OriginalPreconditioner>
-struct GeneralPreconditionerMaker
-{
-    virtual std::unique_ptr<Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>> make() = 0;
+struct GeneralPreconditionerMaker {
+    virtual std::unique_ptr<
+        Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>>
+    make() = 0;
 };
 
 /// @brief Struct implementing a make function which creates a preconditioner
@@ -97,15 +98,18 @@ struct GeneralPreconditionerMaker
 /// @tparam OriginalPreconditioner - An arbitrary preconditioner type
 /// @tparam ...Args - All arguments needed to construct the preconditioner of choice
 template <class OriginalPreconditioner, class... Args>
-struct PreconditionerMaker : public GeneralPreconditionerMaker<OriginalPreconditioner>
-{
+struct PreconditionerMaker : public GeneralPreconditionerMaker<OriginalPreconditioner> {
     PreconditionerMaker(Args&&... args)
         : args_(args...)
     {
     }
-    std::unique_ptr<Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>> make() override
+    std::unique_ptr<
+        Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>>
+    make() override
     {
-        return std::unique_ptr<Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>>{new auto(std::make_from_tuple<OriginalPreconditioner>(args_))};
+        return std::unique_ptr<
+            Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>> {
+            new auto(std::make_from_tuple<OriginalPreconditioner>(args_))};
     }
     std::tuple<Args...> args_;
 };
@@ -119,8 +123,8 @@ class RebuildOnUpdatePreconditioner : public PreconditionerWithUpdate<typename O
 {
 public:
     RebuildOnUpdatePreconditioner(Args... args)
-        : preconditioner_params_(args...),
-        preconditioner_maker_(std::make_unique<ConcreteMakerType>(std::forward<Args>(args)...))
+        : preconditioner_params_(args...)
+        , preconditioner_maker_(std::make_unique<ConcreteMakerType>(std::forward<Args>(args)...))
     {
         update();
     }
@@ -160,7 +164,9 @@ private:
 
     std::tuple<Args...> preconditioner_params_;
     std::unique_ptr<AbstractMakerType> preconditioner_maker_;
-    std::unique_ptr<Preconditioner<typename OriginalPreconditioner::domain_type,typename OriginalPreconditioner::range_type>> orig_precond_;
+    std::unique_ptr<
+        Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>>
+        orig_precond_;
 };
 
 /// @brief Wrapper function creating and return a shared pointer to a preconditioner which is reconstructed on update
@@ -172,7 +178,8 @@ template <class OriginalPreconditioner, class... Args>
 std::shared_ptr<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Args...>>
 getRebuildOnUpdateWrapper(Args... args)
 {
-    return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Args...>>(std::forward<Args>(args)...);
+    return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Args...>>(
+        std::forward<Args>(args)...);
 }
 
 } // namespace Dune
