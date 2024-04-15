@@ -1400,20 +1400,27 @@ namespace WellGroupHelpers
         return std::make_pair(current_rate > target_rate, scale);
     }
 
-    template <class Comm>
-    std::pair<std::optional<std::string>, double> worstOffendingWell(   const Group& group,
-                                                                        const Schedule& schedule,
-                                                                        const int reportStepIdx,
-                                                                        const Group::ProductionCMode& offendedControl,
-                                                                        const PhaseUsage& pu,
-                                                                        const Comm& comm,
-                                                                        const WellState& wellState,
-                                                                        DeferredLogger& deferred_logger) 
+    std::pair<std::optional<std::string>, double>
+    worstOffendingWell(const Group& group,
+                       const Schedule& schedule,
+                       const int reportStepIdx,
+                       const Group::ProductionCMode& offendedControl,
+                       const PhaseUsage& pu,
+                       const Parallel::Communication& comm,
+                       const WellState& wellState,
+                       DeferredLogger& deferred_logger)
     {
         std::pair<std::optional<std::string>, double> offending_well {std::nullopt, 0.0};
         for (const std::string& child_group : group.groups()) {
             const auto& this_group = schedule.getGroup(child_group, reportStepIdx);
-            const auto & offending_well_this = worstOffendingWell(this_group, schedule, reportStepIdx, offendedControl, pu, comm, wellState, deferred_logger);
+            const auto & offending_well_this = worstOffendingWell(this_group,
+                                                                 schedule,
+                                                                 reportStepIdx,
+                                                                 offendedControl,
+                                                                 pu,
+                                                                 comm,
+                                                                 wellState,
+                                                                 deferred_logger);
             if (offending_well_this.second > offending_well.second) {
                 offending_well = offending_well_this;
             }
@@ -1440,7 +1447,8 @@ namespace WellGroupHelpers
                     case Group::ProductionCMode::LRAT:
                         assert(pu.phase_used[BlackoilPhases::Liquid]);
                         assert(pu.phase_used[BlackoilPhases::Aqua]);
-                        violating_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] + ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
+                        violating_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]] +
+                                         ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
                         break;
                     case Group::ProductionCMode::RESV:
                         for (int p = 0; p < pu.num_phases; ++p) {
@@ -1452,12 +1460,15 @@ namespace WellGroupHelpers
                     case Group::ProductionCMode::FLD:
                         break;
                     case Group::ProductionCMode::PRBL:
-                        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionCMode PRBL not implemented", deferred_logger);
+                        OPM_DEFLOG_THROW(std::runtime_error,
+                                         "Group " + group.name() +
+                                         "GroupProductionCMode PRBL not implemented", deferred_logger);
                         break;    
                     case Group::ProductionCMode::CRAT:
-                        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionCMode CRAT not implemented", deferred_logger);
+                        OPM_DEFLOG_THROW(std::runtime_error,
+                                         "Group " + group.name() +
+                                         "GroupProductionCMode CRAT not implemented", deferred_logger);
                         break;    
-
                 }
                 const auto preferred_phase = schedule.getWell(child_well, reportStepIdx).getPreferredPhase();
                  switch (preferred_phase) {
@@ -1485,8 +1496,7 @@ namespace WellGroupHelpers
             }
         }
         return offending_well; 
-    };
-
+    }
 
     template <class AverageRegionalPressureType>
     void setRegionAveragePressureCalculator(const Group& group,
@@ -1663,17 +1673,6 @@ namespace WellGroupHelpers
                                             const FieldPropsManager&,
                                             const PhaseUsage&,
                                             AvgPMap&);
-
-template
-std::pair<std::optional<std::string>, double>  worstOffendingWell<Parallel::Communication>( const Group& group,
-                                                                                            const Schedule& schedule,
-                                                                                            const int reportStepIdx,
-                                                                                            const Group::ProductionCMode& offendedControl,
-                                                                                            const PhaseUsage& pu,
-                                                                                            const Parallel::Communication& comm,
-                                                                                            const WellState& wellState,
-                                                                                            DeferredLogger& deferred_logger);
-
 } // namespace WellGroupHelpers
 
 } // namespace Opm
