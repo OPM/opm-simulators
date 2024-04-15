@@ -30,7 +30,7 @@
 
 namespace Opm {
 
-class MultisegmentWellContribution;
+template<class Scalar> class MultisegmentWellContribution;
 
 /// This class serves to eliminate the need to include the WellContributions into the matrix (with --matrix-add-well-contributions=true) for the cusparseSolver or openclSolver.
 /// If the --matrix-add-well-contributions commandline parameter is true, this class should still be used, but be empty.
@@ -74,7 +74,7 @@ protected:
     unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
     std::vector<unsigned int> val_pointers;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
 
-    std::vector<std::unique_ptr<MultisegmentWellContribution>> multisegments;
+    std::vector<std::unique_ptr<MultisegmentWellContribution<double>>> multisegments;
 
 public:
     unsigned int getNumWells(){

@@ -41,6 +41,7 @@ namespace Opm
 /// B*x and D*B*x are a vector with M*numWellEq doubles
 /// C*D*B*x is a vector with N*numEq doubles.
 
+template<class Scalar>
 class MultisegmentWellContribution
 {
 
@@ -57,15 +58,15 @@ private:
     // C and B are stored in BCRS format, D is stored in CSC format (Dune::UMFPack)
     // Sparsity pattern for C is not stored, since it is the same as B
     unsigned int DnumBlocks;             // number of blocks in D
-    std::vector<double> Cvals;
-    std::vector<double> Dvals;
-    std::vector<double> Bvals;
+    std::vector<Scalar> Cvals;
+    std::vector<Scalar> Dvals;
+    std::vector<Scalar> Bvals;
     std::vector<int> Dcols;              // Columnpointers, contains M+1 entries
     std::vector<unsigned int> Bcols;
     std::vector<int> Drows;              // Rowindicies, contains DnumBlocks*dim*dim_wells entries
     std::vector<unsigned int> Brows;
-    std::vector<double> z1;          // z1 = B * x
-    std::vector<double> z2;          // z2 = D^-1 * B * x
+    std::vector<Scalar> z1;          // z1 = B * x
+    std::vector<Scalar> z2;          // z2 = D^-1 * B * x
     void *UMFPACK_Symbolic, *UMFPACK_Numeric;
 
     /// Translate the columnIndex if needed
@@ -97,9 +98,14 @@ public:
     /// \param[in] Cvalues          nonzero values of matrix C
     MultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
                                  unsigned int Mb,
-                                 std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
-                                 unsigned int DnumBlocks, double *Dvalues, UMFPackIndex *DcolPointers,
-                                 UMFPackIndex *DrowIndices, std::vector<double> &Cvalues);
+                                 std::vector<Scalar>& Bvalues,
+                                 std::vector<unsigned int>& BcolIndices,
+                                 std::vector<unsigned int>& BrowPointers,
+                                 unsigned int DnumBlocks,
+                                 Scalar* Dvalues,
+                                 UMFPackIndex* DcolPointers,
+                                 UMFPackIndex* DrowIndices,
+                                 std::vector<Scalar>& Cvalues);
 
     /// Destroy a MultisegmentWellContribution, and free memory
     ~MultisegmentWellContribution();
@@ -108,7 +114,7 @@ public:
     /// performs y -= (C^T * (D^-1 * (B*x))) for MultisegmentWell
     /// \param[in] h_x          vector x, must be on CPU
     /// \param[inout] h_y       vector y, must be on CPU
-    void apply(double *h_x, double *h_y);
+    void apply(Scalar* h_x, Scalar* h_y);
 };
 
 } //namespace Opm

@@ -157,17 +157,18 @@ void WellContributions::addMultisegmentWellContribution(unsigned int dim_,
                                                         std::vector<double>& Cvalues)
 {
     assert(dim==dim_);
-    multisegments.push_back(std::make_unique<MultisegmentWellContribution>(dim_,
-                                                                           dim_wells_,
-                                                                           Mb,
-                                                                           Bvalues,
-                                                                           BcolIndices,
-                                                                           BrowPointers,
-                                                                           DnumBlocks,
-                                                                           Dvalues,
-                                                                           DcolPointers,
-                                                                           DrowIndices,
-                                                                           Cvalues));
+    using MSW = MultisegmentWellContribution<double>;
+    multisegments.push_back(std::make_unique<MSW>(dim_,
+                                                  dim_wells_,
+                                                  Mb,
+                                                  Bvalues,
+                                                  BcolIndices,
+                                                  BrowPointers,
+                                                  DnumBlocks,
+                                                  Dvalues,
+                                                  DcolPointers,
+                                                  DrowIndices,
+                                                  Cvalues));
     ++num_ms_wells;
 }
 
