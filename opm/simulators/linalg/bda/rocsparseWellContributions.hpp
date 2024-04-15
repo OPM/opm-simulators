@@ -26,33 +26,35 @@
 
 #include <vector>
 
+namespace Opm {
 
-namespace Opm
-{
-
-class WellContributionsRocsparse : public WellContributions<double>
+template<class Scalar>
+class WellContributionsRocsparse : public WellContributions<Scalar>
 {
 private:
     hipStream_t stream;
 
 public:
-    void apply_stdwells(double *d_x, double *d_y);
-    void apply_mswells(double *d_x, double *d_y);
-    void apply(double *d_x, double *d_y);
+    void apply_stdwells(Scalar* d_x, Scalar* d_y);
+    void apply_mswells(Scalar* d_x, Scalar* d_y);
+    void apply(Scalar* d_x, Scalar* d_y);
     void setStream(hipStream_t stream);
 
 protected:
     /// Allocate memory for the StandardWells
     void APIalloc() override;
 
-    void APIaddMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size) override;
+    using MatrixType = typename WellContributions<Scalar>::MatrixType;
 
-    double *d_Cnnzs_hip, *d_Dnnzs_hip, *d_Bnnzs_hip;
+    void APIaddMatrix(MatrixType type, int* colIndices,
+                      Scalar* values, unsigned int val_size) override;
+
+    Scalar *d_Cnnzs_hip, *d_Dnnzs_hip, *d_Bnnzs_hip;
     unsigned *d_Ccols_hip, *d_Bcols_hip;
     unsigned *d_val_pointers_hip;
 
-    std::vector<double> h_x;
-    std::vector<double> h_y;
+    std::vector<Scalar> h_x;
+    std::vector<Scalar> h_y;
 };
 
 } //namespace Opm

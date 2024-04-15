@@ -164,8 +164,8 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<double>& wellContribs,
 
     // set stream here, the WellContributions object is destroyed every linear solve
     // the number of wells can change every linear solve
-    if(wellContribs.getNumWells() > 0){
-        static_cast<WellContributionsRocsparse&>(wellContribs).setStream(stream);
+    if (wellContribs.getNumWells() > 0) {
+        static_cast<WellContributionsRocsparse<double>&>(wellContribs).setStream(stream);
     }
 
 // HIP_VERSION is defined as (HIP_VERSION_MAJOR * 10000000 + HIP_VERSION_MINOR * 100000 + HIP_VERSION_PATCH)
@@ -254,8 +254,8 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<double>& wellContribs,
         }
 
         // apply wellContributions
-        if(wellContribs.getNumWells() > 0){
-            static_cast<WellContributionsRocsparse&>(wellContribs).apply(d_pw, d_v);
+        if (wellContribs.getNumWells() > 0) {
+            static_cast<WellContributionsRocsparse<double>&>(wellContribs).apply(d_pw, d_v);
         }
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
@@ -313,15 +313,15 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<double>& wellContribs,
                                             d_Avals, d_Arows, d_Acols, block_size,
                                             d_s, &zero, d_t));
 #endif
-        if(verbosity >= 3){
+        if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
             t_spmv.stop();
             t_well.start();
         }
 
         // apply wellContributions
-        if(wellContribs.getNumWells() > 0){
-            static_cast<WellContributionsRocsparse&>(wellContribs).apply(d_s, d_t);
+        if (wellContribs.getNumWells() > 0) {
+            static_cast<WellContributionsRocsparse<double>&>(wellContribs).apply(d_s, d_t);
         }
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
