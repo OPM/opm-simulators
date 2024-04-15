@@ -173,10 +173,10 @@ void CPR<block_size>::init_opencl_buffers() {
     d_Amatrices.reserve(num_levels);
     d_Rmatrices.reserve(num_levels - 1);
     d_invDiags.reserve(num_levels - 1);
-    for (Matrix& m : Amatrices) {
+    for (Matrix<double>& m : Amatrices) {
         d_Amatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
     }
-    for (Matrix& m : Rmatrices) {
+    for (Matrix<double>& m : Rmatrices) {
         d_Rmatrices.emplace_back(context.get(), m.N, m.M, m.nnzs, 1);
         d_f.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);
         d_u.emplace_back(*context, CL_MEM_READ_WRITE, sizeof(double) * m.N);

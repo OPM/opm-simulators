@@ -59,7 +59,7 @@ class CPR : public Preconditioner<block_size>
 private:
     int num_levels;
     std::vector<double> weights, coarse_vals, coarse_x, coarse_y;
-    std::vector<Matrix> Amatrices, Rmatrices; // scalar matrices that represent the AMG hierarchy
+    std::vector<Matrix<double>> Amatrices, Rmatrices; // scalar matrices that represent the AMG hierarchy
     std::vector<OpenclMatrix> d_Amatrices, d_Rmatrices; // scalar matrices that represent the AMG hierarchy
     std::vector<std::vector<int> > PcolIndices; // prolongation does not need a full matrix, only store colIndices
     std::vector<cl::Buffer> d_PcolIndices;

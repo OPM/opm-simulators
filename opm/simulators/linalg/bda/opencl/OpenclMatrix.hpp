@@ -29,7 +29,7 @@ namespace Opm
 namespace Accelerator
 {
 
-class Matrix;
+template<class Scalar> class Matrix;
 template<class Scalar> class BlockedMatrix;
 
 /// This struct resembles a csr matrix, only doubles are supported
@@ -49,7 +49,7 @@ public:
     }
 
     void upload(cl::CommandQueue *queue, double *vals, int *cols, int *rows);
-    void upload(cl::CommandQueue *queue, Matrix *matrix);
+    void upload(cl::CommandQueue* queue, Matrix<double>* matrix);
     void upload(cl::CommandQueue* queue, BlockedMatrix<double>* matrix);
 
     cl::Buffer nnzValues;

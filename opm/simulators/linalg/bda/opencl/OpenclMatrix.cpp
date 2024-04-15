@@ -46,7 +46,8 @@ void OpenclMatrix::upload(cl::CommandQueue *queue, double *vals, int *cols, int 
     }
 }
 
-void OpenclMatrix::upload(cl::CommandQueue *queue, Matrix *matrix) {
+void OpenclMatrix::upload(cl::CommandQueue* queue, Matrix<double>* matrix)
+{
     if (block_size != 1) {
         OPM_THROW(std::logic_error, "Error trying to upload a BlockedMatrix to OpenclMatrix with different block_size");
     }
