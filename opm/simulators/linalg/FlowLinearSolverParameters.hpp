@@ -279,7 +279,7 @@ namespace Opm
             cpr_reuse_setup_  = Parameters::get<TypeTag, Properties::CprReuseSetup>();
             cpr_reuse_interval_  = Parameters::get<TypeTag, Properties::CprReuseInterval>();
 
-            if (!Parameters::isSet<TypeTag, std::string>("LinearSolver") && cprRequestedInDataFile) {
+            if (!Parameters::isSet<TypeTag, Properties::LinearSolver>() && cprRequestedInDataFile) {
                 linsolver_ = "cpr";
             } else {
                 linsolver_ = Parameters::get<TypeTag, Properties::LinearSolver>();
