@@ -494,20 +494,21 @@ void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer& y, cl::Buffer& 
     // presmooth
     double jacobi_damping = 0.65; // default value in amgcl: 0.72
     for (unsigned i = 0; i < num_pre_smooth_steps; ++i){
-        OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
-        OpenclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
+        OpenclKernels<double>::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
+        OpenclKernels<double>::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
     }
 
     // move to coarser level
-    OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
-    OpenclKernels::spmv(R->nnzValues, R->colIndices, R->rowPointers, t, f, Nnext, 1, true);
+    OpenclKernels<double>::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
+    OpenclKernels<double>::spmv(R->nnzValues, R->colIndices, R->rowPointers, t, f, Nnext, 1, true);
     amg_cycle_gpu(level + 1, f, u);
-    OpenclKernels::prolongate_vector(u, x, d_PcolIndices[level], Ncur);
+    OpenclKernels<double>::prolongate_vector(u, x, d_PcolIndices[level], Ncur);
 
     // postsmooth
     for (unsigned i = 0; i < num_post_smooth_steps; ++i){
-        OpenclKernels::residual(A->nnzValues, A->colIndices, A->rowPointers, x, y, t, Ncur, 1);
-        OpenclKernels::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
+        OpenclKernels<double>::residual(A->nnzValues, A->colIndices, A->rowPointers,
+                                        x, y, t, Ncur, 1);
+        OpenclKernels<double>::vmul(jacobi_damping, d_invDiags[level], t, x, Ncur);
     }
 }
 
@@ -528,12 +529,13 @@ void CPR<block_size>::apply_amg(const cl::Buffer& y, cl::Buffer& x) {
         OPM_THROW(std::logic_error, "CPR OpenCL enqueueWriteBuffer error");
     }
 
-    OpenclKernels::residual(d_mat->nnzValues, d_mat->colIndices, d_mat->rowPointers, x, y, *d_rs, Nb, block_size);
-    OpenclKernels::full_to_pressure_restriction(*d_rs, *d_weights, *d_coarse_y, Nb);
+    OpenclKernels<double>::residual(d_mat->nnzValues, d_mat->colIndices,
+                                    d_mat->rowPointers, x, y, *d_rs, Nb, block_size);
+    OpenclKernels<double>::full_to_pressure_restriction(*d_rs, *d_weights, *d_coarse_y, Nb);
 
     amg_cycle_gpu(0, *d_coarse_y, *d_coarse_x);
 
-    OpenclKernels::add_coarse_pressure_correction(*d_coarse_x, x, pressure_idx, Nb);
+    OpenclKernels<double>::add_coarse_pressure_correction(*d_coarse_x, x, pressure_idx, Nb);
 }
 
 template <unsigned int block_size>

@@ -36,9 +36,12 @@ void WellContributionsOCL::setOpenCLEnv(cl::Context* context_, cl::CommandQueue*
 }
 
 
-void WellContributionsOCL::apply_stdwells(cl::Buffer d_x, cl::Buffer d_y){
-    OpenclKernels::apply_stdwells(*d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl, *d_Ccols_ocl, *d_Bcols_ocl,
-        d_x, d_y, dim, dim_wells, *d_val_pointers_ocl, num_std_wells);
+void WellContributionsOCL::apply_stdwells(cl::Buffer d_x, cl::Buffer d_y)
+{
+    OpenclKernels<double>::apply_stdwells(*d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl,
+                                          *d_Ccols_ocl, *d_Bcols_ocl,
+                                          d_x, d_y, dim, dim_wells,
+                                          *d_val_pointers_ocl, num_std_wells);
 }
 
 void WellContributionsOCL::apply_mswells(cl::Buffer d_x, cl::Buffer d_y){

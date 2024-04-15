@@ -263,8 +263,14 @@ create_preconditioner(BlockedMatrix<double>* mat,
     cl::WaitForEvents(events);
     events.clear();
 
-    OpenclKernels::isaiL(d_diagIndex, d_colPointers, d_csrToCscOffsetMap, d_lower.subsystemPointers, d_lower.nzIndices, d_lower.unknownRhsIndices, d_lower.knownRhsIndices, d_LUvals, d_invLvals, Nb);
-    OpenclKernels::isaiU(d_diagIndex, d_colPointers, d_rowIndices, d_csrToCscOffsetMap, d_upper.subsystemPointers, d_upper.nzIndices, d_upper.unknownRhsIndices, d_upper.knownRhsIndices, d_LUvals,
+    OpenclKernels<double>::isaiL(d_diagIndex, d_colPointers, d_csrToCscOffsetMap,
+                                 d_lower.subsystemPointers, d_lower.nzIndices,
+                                 d_lower.unknownRhsIndices, d_lower.knownRhsIndices,
+                                 d_LUvals, d_invLvals, Nb);
+    OpenclKernels<double>::isaiU(d_diagIndex, d_colPointers, d_rowIndices,
+                                 d_csrToCscOffsetMap, d_upper.subsystemPointers,
+                                 d_upper.nzIndices, d_upper.unknownRhsIndices,
+                                 d_upper.knownRhsIndices, d_LUvals,
             d_invDiagVals, d_invUvals, Nb);
 
     if(verbosity >= 4){
@@ -286,10 +292,12 @@ template <unsigned int block_size>
 void BISAI<block_size>::apply(const cl::Buffer& x, cl::Buffer& y){
     const unsigned int bs = block_size;
 
-    OpenclKernels::spmv(d_invLvals, d_rowIndices, d_colPointers, x, d_invL_x, Nb, bs, true, true); // application of isaiL is a simple spmv with addition
-                                                                                                   // (to compensate for the unitary diagonal that is not
-                                                                                                   // included in isaiL, for simplicity)
-    OpenclKernels::spmv(d_invUvals, d_rowIndices, d_colPointers, d_invL_x, y, Nb, bs); // application of isaiU is a simple spmv
+    OpenclKernels<double>::spmv(d_invLvals, d_rowIndices, d_colPointers,
+                                x, d_invL_x, Nb, bs, true, true); // application of isaiL is a simple spmv with addition
+                                                                  // (to compensate for the unitary diagonal that is not
+                                                                  // included in isaiL, for simplicity)
+    OpenclKernels<double>::spmv(d_invUvals, d_rowIndices, d_colPointers,
+                                d_invL_x, y, Nb, bs); // application of isaiU is a simple spmv
 }
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \

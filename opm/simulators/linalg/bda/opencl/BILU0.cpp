@@ -244,9 +244,9 @@ create_preconditioner(BlockedMatrix<double>* mat,
         if (verbosity >= 5) {
             out << "color " << color << ": " << firstRow << " - " << lastRow << " = " << lastRow - firstRow << "\n";
         }
-        OpenclKernels::ILU_decomp(firstRow, lastRow, s.rowIndices,
-                                  s.LUvals, s.LUcols, s.LUrows, s.diagIndex,
-                                  s.invDiagVals, rowsPerColor[color], block_size);
+        OpenclKernels<double>::ILU_decomp(firstRow, lastRow, s.rowIndices,
+                                          s.LUvals, s.LUcols, s.LUrows, s.diagIndex,
+                                          s.invDiagVals, rowsPerColor[color], block_size);
     }
 
     if (verbosity >= 3) {
@@ -272,30 +272,30 @@ void BILU0<block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 
     for (int color = 0; color < numColors; ++color) {
 #if CHOW_PATEL
-        OpenclKernels::ILU_apply1(s.rowIndices, s.Lvals, s.Lcols, s.Lrows,
-                                  s.diagIndex, y, x, s.rowsPerColor,
-                                  color, rowsPerColor[color], block_size);
+        OpenclKernels<double>::ILU_apply1(s.rowIndices, s.Lvals, s.Lcols, s.Lrows,
+                                          s.diagIndex, y, x, s.rowsPerColor,
+                                          color, rowsPerColor[color], block_size);
 #else
-        OpenclKernels::ILU_apply1(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
-                                  s.diagIndex, y, x, s.rowsPerColor,
-                                  color, rowsPerColor[color], block_size);
+        OpenclKernels<double>::ILU_apply1(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
+                                          s.diagIndex, y, x, s.rowsPerColor,
+                                          color, rowsPerColor[color], block_size);
 #endif
     }
 
     for (int color = numColors - 1; color >= 0; --color) {
 #if CHOW_PATEL
-        OpenclKernels::ILU_apply2(s.rowIndices, s.Uvals, s.Ucols, s.Urows,
-                                  s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
-                                  color, rowsPerColor[color], block_size);
+        OpenclKernels<double>::ILU_apply2(s.rowIndices, s.Uvals, s.Ucols, s.Urows,
+                                         s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
+                                         color, rowsPerColor[color], block_size);
 #else
-        OpenclKernels::ILU_apply2(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
-                                  s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
-                                  color, rowsPerColor[color], block_size);
+        OpenclKernels<double>::ILU_apply2(s.rowIndices, s.LUvals, s.LUcols, s.LUrows,
+                                          s.diagIndex, s.invDiagVals, x, s.rowsPerColor,
+                                          color, rowsPerColor[color], block_size);
 #endif
     }
 
     // apply relaxation
-    OpenclKernels::scale(x, relaxation, N);
+    OpenclKernels<double>::scale(x, relaxation, N);
 
     if (verbosity >= 4) {
         std::ostringstream out;
