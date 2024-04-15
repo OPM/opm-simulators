@@ -60,7 +60,7 @@ private:
     int num_levels;
     std::vector<double> weights, coarse_vals, coarse_x, coarse_y;
     std::vector<Matrix<double>> Amatrices, Rmatrices; // scalar matrices that represent the AMG hierarchy
-    std::vector<OpenclMatrix> d_Amatrices, d_Rmatrices; // scalar matrices that represent the AMG hierarchy
+    std::vector<OpenclMatrix<double>> d_Amatrices, d_Rmatrices; // scalar matrices that represent the AMG hierarchy
     std::vector<std::vector<int> > PcolIndices; // prolongation does not need a full matrix, only store colIndices
     std::vector<cl::Buffer> d_PcolIndices;
     std::vector<std::vector<double> > invDiags; // inverse of diagonal of Amatrices
@@ -68,7 +68,7 @@ private:
     std::vector<cl::Buffer> d_t, d_f, d_u; // intermediate vectors used during amg cycle
     std::unique_ptr<cl::Buffer> d_rs;      // use before extracting the pressure
     std::unique_ptr<cl::Buffer> d_weights; // the quasiimpes weights, used to extract pressure
-    std::unique_ptr<OpenclMatrix> d_mat;   // stores blocked matrix
+    std::unique_ptr<OpenclMatrix<double>> d_mat;   // stores blocked matrix
     std::unique_ptr<cl::Buffer> d_coarse_y, d_coarse_x; // stores the scalar vectors
     std::once_flag opencl_buffers_allocated;  // only allocate OpenCL Buffers once
 

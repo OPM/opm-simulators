@@ -187,7 +187,7 @@ void CPR<block_size>::init_opencl_buffers() {
     }
     d_weights = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
     d_rs = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * N);
-    d_mat = std::make_unique<OpenclMatrix>(context.get(), Nb, Nb, nnzb, block_size);
+    d_mat = std::make_unique<OpenclMatrix<double>>(context.get(), Nb, Nb, nnzb, block_size);
     d_coarse_y = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * Nb);
     d_coarse_x = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * Nb);
 }
@@ -453,9 +453,10 @@ void CPR<block_size>::analyzeAggregateMaps() {
 
 
 template <unsigned int block_size>
-void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer &y, cl::Buffer &x) {
-    OpenclMatrix *A = &d_Amatrices[level];
-    OpenclMatrix *R = &d_Rmatrices[level];
+void CPR<block_size>::amg_cycle_gpu(const int level, cl::Buffer& y, cl::Buffer& x)
+{
+    OpenclMatrix<double>* A = &d_Amatrices[level];
+    OpenclMatrix<double>* R = &d_Rmatrices[level];
     int Ncur = A->Nb;
 
     if (level == num_levels - 1) {
