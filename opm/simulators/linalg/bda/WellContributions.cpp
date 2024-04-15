@@ -46,11 +46,11 @@ template<class Scalar>
 std::unique_ptr<WellContributions<Scalar>>
 WellContributions<Scalar>::create(const std::string& accelerator_mode, bool useWellConn)
 {
-    if(accelerator_mode.compare("cusparse") == 0){
+    if (accelerator_mode.compare("cusparse") == 0) {
 #if HAVE_CUDA
-    return std::make_unique<WellContributionsCuda>();
+        return std::make_unique<WellContributionsCuda<Scalar>>();
 #else
-    OPM_THROW(std::runtime_error, "Cannot initialize well contributions: CUDA is not enabled");
+        OPM_THROW(std::runtime_error, "Cannot initialize well contributions: CUDA is not enabled");
 #endif
     }
     else if (accelerator_mode.compare("opencl") == 0) {
@@ -69,7 +69,6 @@ WellContributions<Scalar>::create(const std::string& accelerator_mode, bool useW
 #endif
         }
         return std::make_unique<WellContributions>();
-
     }
     else if(accelerator_mode.compare("amgcl") == 0){
         if (!useWellConn) {

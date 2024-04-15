@@ -25,10 +25,10 @@
 #include <cuda_runtime.h>
 
 
-namespace Opm
-{
+namespace Opm {
 
-class WellContributionsCuda : public WellContributions<double>
+template<class Scalar>
+class WellContributionsCuda : public WellContributions<Scalar>
 {
 public:
     ~WellContributionsCuda() override;
@@ -41,33 +41,35 @@ public:
     /// performs y -= (C^T * (D^-1 * (B*x))) for all Wells
     /// \param[in] d_x        vector x, must be on GPU
     /// \param[inout] d_y     vector y, must be on GPU
-    void apply(double *d_x, double *d_y);
+    void apply(Scalar* d_x, Scalar* d_y);
 
 protected:
     /// Allocate memory for the StandardWells
     void APIalloc() override;
+
+    using MatrixType = typename WellContributions<Scalar>::MatrixType;
 
     /// Store a matrix in this object, in blocked csr format, can only be called after alloc() is called
     /// \param[in] type        indicate if C, D or B is sent
     /// \param[in] colIndices  columnindices of blocks in C or B, ignored for D
     /// \param[in] values      array of nonzeroes
     /// \param[in] val_size    number of blocks in C or B, ignored for D
-    void APIaddMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size) override;
+    void APIaddMatrix(MatrixType type, int* colIndices,
+                      Scalar* values, unsigned int val_size) override;
 
     cudaStream_t stream;
 
     // data for StandardWells, could remain nullptrs if not used
-    double *d_Cnnzs = nullptr;
-    double *d_Dnnzs = nullptr;
-    double *d_Bnnzs = nullptr;
-    int *d_Ccols = nullptr;
-    int *d_Bcols = nullptr;
-    double *d_z1 = nullptr;
-    double *d_z2 = nullptr;
+    Scalar* d_Cnnzs = nullptr;
+    Scalar* d_Dnnzs = nullptr;
+    Scalar* d_Bnnzs = nullptr;
+    int* d_Ccols = nullptr;
+    int* d_Bcols = nullptr;
+    Scalar* d_z1 = nullptr;
+    Scalar* d_z2 = nullptr;
     unsigned int *d_val_pointers = nullptr;
-    double* h_x = nullptr;
-    double* h_y = nullptr;
-
+    Scalar* h_x = nullptr;
+    Scalar* h_y = nullptr;
 };
 
 } //namespace Opm

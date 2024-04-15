@@ -105,7 +105,7 @@ gpu_pbicgstab(WellContributions<double>& wellContribs, BdaResult& res)
     float it;
 
     if (wellContribs.getNumWells() > 0) {
-        static_cast<WellContributionsCuda&>(wellContribs).setCudaStream(stream);
+        static_cast<WellContributionsCuda<double>&>(wellContribs).setCudaStream(stream);
     }
 
     cusparseDbsrmv(cusparseHandle, order, operation, Nb, Nb, nnzb, &one, descr_M, d_bVals, d_bRows, d_bCols, block_size, d_x, &zero, d_r);
@@ -149,7 +149,7 @@ gpu_pbicgstab(WellContributions<double>& wellContribs, BdaResult& res)
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
-            static_cast<WellContributionsCuda&>(wellContribs).apply(d_pw, d_v);
+            static_cast<WellContributionsCuda<double>&>(wellContribs).apply(d_pw, d_v);
         }
 
         cublasDdot(cublasHandle, n, d_rw, 1, d_v, 1, &tmp1);
@@ -180,7 +180,7 @@ gpu_pbicgstab(WellContributions<double>& wellContribs, BdaResult& res)
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
-            static_cast<WellContributionsCuda&>(wellContribs).apply(d_s, d_t);
+            static_cast<WellContributionsCuda<double>&>(wellContribs).apply(d_s, d_t);
         }
 
         cublasDdot(cublasHandle, n, d_t, 1, d_r, 1, &tmp1);
