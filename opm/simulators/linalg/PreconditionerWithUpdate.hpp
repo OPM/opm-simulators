@@ -77,6 +77,48 @@ private:
     OriginalPreconditioner orig_precond_;
 };
 
+template <class OriginalPreconditioner>
+struct AbstractPreconditionerWithUpdateMaker
+{
+    virtual std::unique_ptr<Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>> make() = 0;
+    // virtual ~AbstractMaker() {};
+};
+
+template <class OriginalPreconditioner, class... Args>
+struct PreconditionerMaker : public AbstractPreconditionerWithUpdateMaker<OriginalPreconditioner>
+{
+    PreconditionerMaker(Args&&... args)
+        : args_(args...)
+    {
+    }
+    std::unique_ptr<Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>> make() override
+    {
+        return std::unique_ptr<Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>>{new auto(std::make_from_tuple<OriginalPreconditioner>(args_))};
+    }
+    std::tuple<Args...> args_;
+};
+
+// struct Contain
+// {
+//     Contain()
+//     {
+//     }
+
+//     template <class Product, class... Args>
+//     void fill(Args&&... args)
+//     {
+//         using MakerType = Maker<Product, Args...>;
+//         maker = std::make_unique<MakerType>(std::forward<Args>(args)...);
+//         recreate();
+//     }
+//     void recreate()
+//     {
+//         product = maker->make();
+//     }
+//     std::unique_ptr<AbstractMaker> maker;
+//     std::unique_ptr<AbstractProduct> product;
+// };
+
 template <class OriginalPreconditioner, class... Args>
 std::shared_ptr<DummyUpdatePreconditioner<OriginalPreconditioner>>
 getDummyUpdateWrapper(Args&&... args)
@@ -84,18 +126,16 @@ getDummyUpdateWrapper(Args&&... args)
     return std::make_shared<DummyUpdatePreconditioner<OriginalPreconditioner>>(std::forward<Args>(args)...);
 }
 
-template <class OriginalPreconditioner, class Matrix>
+template <class OriginalPreconditioner, class... Args>
 class RebuildOnUpdatePreconditioner : public PreconditionerWithUpdate<typename OriginalPreconditioner::domain_type,
                                                                       typename OriginalPreconditioner::range_type>
 {
 public:
-    RebuildOnUpdatePreconditioner(const Matrix &mat, const int n, const double w, const bool resort)
-        : orig_precond_(std::make_unique<OriginalPreconditioner>(mat, n, w, resort))
-        , mat_(mat)
-        , n_(n)
-        , w_(w)
-        , resort_(resort)
+    RebuildOnUpdatePreconditioner(Args... args)
+        : preconditioner_params_(args...),
+        preconditioner_maker_(std::make_unique<ConcreteMakerType>(std::forward<Args>(args)...))
     {
+        update();
     }
 
     using X = typename OriginalPreconditioner::domain_type;
@@ -124,23 +164,34 @@ public:
     // Rebuild the preconditioner on update
     void update() override
     {
-        orig_precond_ = std::make_unique<OriginalPreconditioner>(mat_, n_, w_, resort_);
+        // orig_precond_ = std::make_unique<OriginalPreconditioner>(mat_, n_, w_, resort_);
+        orig_precond_ = preconditioner_maker_->make();
     }
 
 private:
-    std::unique_ptr<OriginalPreconditioner> orig_precond_;
-    const Matrix &mat_;
-    const int n_;
-    const double w_;
-    const bool resort_;
+    using AbstractMakerType = AbstractPreconditionerWithUpdateMaker<OriginalPreconditioner>;
+    using ConcreteMakerType = PreconditionerMaker<OriginalPreconditioner, Args...>;
+
+    std::tuple<Args...> preconditioner_params_;
+    std::unique_ptr<AbstractMakerType> preconditioner_maker_;
+    // std::unique_ptr<ConcreteMakerType> preconditioner_maker_;
+    // std::unique_ptr<OriginalPreconditioner> orig_precond_;
+    std::unique_ptr<Preconditioner<typename OriginalPreconditioner::domain_type,typename OriginalPreconditioner::range_type>> orig_precond_;
 };
 
-template <class OriginalPreconditioner, class Matrix>
-std::shared_ptr<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Matrix>>
-getRebuildOnUpdateWrapper(const Matrix &mat, const int n, const double w, const bool resort)
+template <class OriginalPreconditioner, class... Args>
+std::shared_ptr<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Args...>>
+getRebuildOnUpdateWrapper(Args... args)
 {
-    return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Matrix>>(mat, n, w, resort);
+    return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Args...>>(std::forward<Args>(args)...);
 }
+
+// template <class OriginalPreconditioner, class Matrix>
+// std::shared_ptr<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Matrix>>
+// getRebuildOnUpdateWrapper(const Matrix &mat, const int n, const double w, const bool resort)
+// {
+//     return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Matrix>>(mat, n, w, resort);
+// }
 
 } // namespace Dune
 
