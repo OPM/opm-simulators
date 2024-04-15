@@ -32,10 +32,10 @@ template<class Scalar> class BlockedMatrix;
 
 /// This class implements a Blocked version of the Incomplete Sparse Approximate Inverse (ISAI) preconditioner.
 /// Inspired by the paper "Incomplete Sparse Approximate Inverses for Parallel Preconditioning" by Anzt et. al.
-template <unsigned int block_size>
-class BISAI : public Preconditioner<double,block_size>
+template<class Scalar, unsigned int block_size>
+class BISAI : public Preconditioner<Scalar,block_size>
 {
-    using Base = Preconditioner<double,block_size>;
+    using Base = Preconditioner<Scalar,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -54,8 +54,8 @@ private:
     std::vector<int> rowIndices;
     std::vector<int> diagIndex;
     std::vector<int> csrToCscOffsetMap;
-    std::vector<double> invLvals;
-    std::vector<double> invUvals;
+    std::vector<Scalar> invLvals;
+    std::vector<Scalar> invUvals;
 
     cl::Buffer d_colPointers;
     cl::Buffer d_rowIndices;
@@ -68,10 +68,10 @@ private:
     cl::Buffer d_invL_x;
 
     bool opencl_ilu_parallel;
-    std::unique_ptr<BILU0<double,block_size>> bilu0;
+    std::unique_ptr<BILU0<Scalar,block_size>> bilu0;
 
     /// Struct that holds the structure of the small subsystems for each column
-    typedef struct{
+    struct subsystemStructure {
         /// This vector holds the cumulative sum for the number of non-zero blocks for each subsystem.
         /// Works similarly to row and column pointers for the CSR and CSC matrix representations.
         std::vector<int> subsystemPointers;
@@ -85,15 +85,15 @@ private:
         std::vector<int> knownRhsIndices;
         /// This vector holds the indices of the unknown values of the right hand sides of the subsystems.
         std::vector<int> unknownRhsIndices;
-    } subsystemStructure;
+    };
 
     /// GPU version of subsystemStructure
-    typedef struct{
+    struct subsystemStructureGPU {
         cl::Buffer subsystemPointers;
         cl::Buffer nzIndices;
         cl::Buffer knownRhsIndices;
         cl::Buffer unknownRhsIndices;
-    } subsystemStructureGPU;
+    } ;
 
     subsystemStructure lower, upper;
     subsystemStructureGPU d_lower, d_upper;
@@ -110,17 +110,18 @@ public:
     BISAI(bool opencl_ilu_parallel, int verbosity);
 
     // set own Opencl variables, but also that of the bilu0 preconditioner
-    void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue) override;
+    void setOpencl(std::shared_ptr<cl::Context>& context,
+                   std::shared_ptr<cl::CommandQueue>& queue) override;
 
     // analysis, extract parallelism
-    bool analyze_matrix(BlockedMatrix<double>* mat) override;
-    bool analyze_matrix(BlockedMatrix<double>* mat,
-                        BlockedMatrix<double>* jacMat) override;
+    bool analyze_matrix(BlockedMatrix<Scalar>* mat) override;
+    bool analyze_matrix(BlockedMatrix<Scalar>* mat,
+                        BlockedMatrix<Scalar>* jacMat) override;
 
     // ilu_decomposition
-    bool create_preconditioner(BlockedMatrix<double>* mat) override;
-    bool create_preconditioner(BlockedMatrix<double>* mat,
-                               BlockedMatrix<double>* jacMat) override;
+    bool create_preconditioner(BlockedMatrix<Scalar>* mat) override;
+    bool create_preconditioner(BlockedMatrix<Scalar>* mat,
+                               BlockedMatrix<Scalar>* jacMat) override;
 
     // apply preconditioner, x = prec(y)
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
