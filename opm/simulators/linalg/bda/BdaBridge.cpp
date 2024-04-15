@@ -310,7 +310,8 @@ initWellContributions([[maybe_unused]] WellContributions<double>& wellContribs,
     if(accelerator_mode.compare("opencl") == 0){
 #if HAVE_OPENCL
         const auto openclBackend = static_cast<const Opm::Accelerator::openclSolverBackend<block_size>*>(backend.get());
-        static_cast<WellContributionsOCL&>(wellContribs).setOpenCLEnv(openclBackend->context.get(), openclBackend->queue.get());
+        static_cast<WellContributionsOCL<double>&>(wellContribs).setOpenCLEnv(openclBackend->context.get(),
+                                                                              openclBackend->queue.get());
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif

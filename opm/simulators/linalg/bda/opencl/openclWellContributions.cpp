@@ -25,96 +25,122 @@
 
 #include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
 
-namespace Opm
-{
+namespace Opm {
 
 using Accelerator::OpenclKernels;
 
-void WellContributionsOCL::setOpenCLEnv(cl::Context* context_, cl::CommandQueue* queue_) {
+template<class Scalar>
+void WellContributionsOCL<Scalar>::
+setOpenCLEnv(cl::Context* context_, cl::CommandQueue* queue_)
+{
     this->context = context_;
     this->queue = queue_;
 }
 
-
-void WellContributionsOCL::apply_stdwells(cl::Buffer d_x, cl::Buffer d_y)
+template<class Scalar>
+void WellContributionsOCL<Scalar>::apply_stdwells(cl::Buffer d_x, cl::Buffer d_y)
 {
-    OpenclKernels<double>::apply_stdwells(*d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl,
+    OpenclKernels<Scalar>::apply_stdwells(*d_Cnnzs_ocl, *d_Dnnzs_ocl, *d_Bnnzs_ocl,
                                           *d_Ccols_ocl, *d_Bcols_ocl,
-                                          d_x, d_y, dim, dim_wells,
-                                          *d_val_pointers_ocl, num_std_wells);
+                                          d_x, d_y, this->dim, this->dim_wells,
+                                          *d_val_pointers_ocl, this->num_std_wells);
 }
 
-void WellContributionsOCL::apply_mswells(cl::Buffer d_x, cl::Buffer d_y){
+template<class Scalar>
+void WellContributionsOCL<Scalar>::apply_mswells(cl::Buffer d_x, cl::Buffer d_y)
+{
     if (h_x.empty()) {
-        h_x.resize(N);
-        h_y.resize(N);
+        h_x.resize(this->N);
+        h_y.resize(this->N);
     }
 
     events.resize(2);
-    queue->enqueueReadBuffer(d_x, CL_FALSE, 0, sizeof(double) * N, h_x.data(), nullptr, &events[0]);
-    queue->enqueueReadBuffer(d_y, CL_FALSE, 0, sizeof(double) * N, h_y.data(), nullptr, &events[1]);
+    queue->enqueueReadBuffer(d_x, CL_FALSE, 0, sizeof(Scalar) * this->N,
+                             h_x.data(), nullptr, &events[0]);
+    queue->enqueueReadBuffer(d_y, CL_FALSE, 0, sizeof(Scalar) * this->N,
+                             h_y.data(), nullptr, &events[1]);
     cl::WaitForEvents(events);
     events.clear();
 
     // actually apply MultisegmentWells
-    for (auto& well : multisegments) {
+    for (auto& well : this->multisegments) {
         well->apply(h_x.data(), h_y.data());
     }
 
     // copy vector y from CPU to GPU
     events.resize(1);
-    queue->enqueueWriteBuffer(d_y, CL_FALSE, 0, sizeof(double) * N, h_y.data(), nullptr, &events[0]);
+    queue->enqueueWriteBuffer(d_y, CL_FALSE, 0, sizeof(Scalar) * this->N,
+                              h_y.data(), nullptr, &events[0]);
     events[0].wait();
     events.clear();
 }
 
-void WellContributionsOCL::apply(cl::Buffer d_x, cl::Buffer d_y){
-    if(num_std_wells > 0){
+template<class Scalar>
+void WellContributionsOCL<Scalar>::apply(cl::Buffer d_x, cl::Buffer d_y)
+{
+    if (this->num_std_wells > 0){
         apply_stdwells(d_x, d_y);
     }
 
-    if(num_ms_wells > 0){
+    if (this->num_ms_wells > 0) {
         apply_mswells(d_x, d_y);
     }
 }
 
-void WellContributionsOCL::APIaddMatrix(MatrixType type,
-                                        int* colIndices,
-                                        double* values,
-                                        unsigned int val_size)
+template<class Scalar>
+void WellContributionsOCL<Scalar>::
+APIaddMatrix(MatrixType type,
+             int* colIndices,
+             Scalar* values,
+             unsigned int val_size)
 {
-    if (!allocated) {
+    if (!this->allocated) {
         OPM_THROW(std::logic_error, "Error cannot add wellcontribution before allocating memory in WellContributions");
     }
 
     switch (type) {
     case MatrixType::C:
         events.resize(2);
-        queue->enqueueWriteBuffer(*d_Cnnzs_ocl, CL_FALSE, sizeof(double) * num_blocks_so_far * dim * dim_wells, sizeof(double) * val_size * dim * dim_wells, values, nullptr, &events[0]);
-        queue->enqueueWriteBuffer(*d_Ccols_ocl, CL_FALSE, sizeof(int) * num_blocks_so_far, sizeof(int) * val_size, colIndices, nullptr, &events[1]);
+        queue->enqueueWriteBuffer(*d_Cnnzs_ocl, CL_FALSE,
+                                  sizeof(Scalar) * this->num_blocks_so_far * this->dim * this->dim_wells,
+                                  sizeof(Scalar) * val_size * this->dim * this->dim_wells,
+                                  values, nullptr, &events[0]);
+        queue->enqueueWriteBuffer(*d_Ccols_ocl, CL_FALSE,
+                                  sizeof(int) * this->num_blocks_so_far,
+                                  sizeof(int) * val_size, colIndices, nullptr, &events[1]);
         cl::WaitForEvents(events);
         events.clear();
         break;
 
     case MatrixType::D:
         events.resize(1);
-        queue->enqueueWriteBuffer(*d_Dnnzs_ocl, CL_FALSE, sizeof(double) * num_std_wells_so_far * dim_wells * dim_wells, sizeof(double) * dim_wells * dim_wells, values, nullptr, &events[0]);
+        queue->enqueueWriteBuffer(*d_Dnnzs_ocl, CL_FALSE,
+                                  sizeof(Scalar) * this->num_std_wells_so_far * this->dim_wells * this->dim_wells,
+                                  sizeof(Scalar) * this->dim_wells * this->dim_wells,
+                                  values, nullptr, &events[0]);
         events[0].wait();
         events.clear();
         break;
 
     case MatrixType::B:
         events.resize(2);
-        queue->enqueueWriteBuffer(*d_Bnnzs_ocl, CL_FALSE, sizeof(double) * num_blocks_so_far * dim * dim_wells, sizeof(double) * val_size * dim * dim_wells, values, nullptr, &events[0]);
-        queue->enqueueWriteBuffer(*d_Bcols_ocl, CL_FALSE, sizeof(int) * num_blocks_so_far, sizeof(int) * val_size, colIndices, nullptr, &events[1]);
+        queue->enqueueWriteBuffer(*d_Bnnzs_ocl, CL_FALSE,
+                                  sizeof(Scalar) * this->num_blocks_so_far * this->dim * this->dim_wells,
+                                  sizeof(Scalar) * val_size * this->dim * this->dim_wells,
+                                  values, nullptr, &events[0]);
+        queue->enqueueWriteBuffer(*d_Bcols_ocl, CL_FALSE,
+                                  sizeof(int) * this->num_blocks_so_far, sizeof(int) * val_size,
+                                  colIndices, nullptr, &events[1]);
         cl::WaitForEvents(events);
         events.clear();
 
-        val_pointers[num_std_wells_so_far] = num_blocks_so_far;
-        if (num_std_wells_so_far == num_std_wells - 1) {
-            val_pointers[num_std_wells] = num_blocks;
+        this->val_pointers[this->num_std_wells_so_far] = this->num_blocks_so_far;
+        if (this->num_std_wells_so_far == this->num_std_wells - 1) {
+            this->val_pointers[this->num_std_wells] = this->num_blocks;
             events.resize(1);
-            queue->enqueueWriteBuffer(*d_val_pointers_ocl, CL_FALSE, 0, sizeof(unsigned int) * (num_std_wells + 1), val_pointers.data(), nullptr, &events[0]);
+            queue->enqueueWriteBuffer(*d_val_pointers_ocl, CL_FALSE, 0,
+                                      sizeof(unsigned int) * (this->num_std_wells + 1),
+                                      this->val_pointers.data(), nullptr, &events[0]);
             events[0].wait();
             events.clear();
         }
@@ -125,14 +151,21 @@ void WellContributionsOCL::APIaddMatrix(MatrixType type,
     }
 }
 
-void WellContributionsOCL::APIalloc()
+template<class Scalar>
+void WellContributionsOCL<Scalar>::APIalloc()
 {
-    d_Cnnzs_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
-    d_Dnnzs_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * num_std_wells * dim_wells * dim_wells);
-    d_Bnnzs_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(double) * num_blocks * dim * dim_wells);
-    d_Ccols_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
-    d_Bcols_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(int) * num_blocks);
-    d_val_pointers_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(unsigned int) * (num_std_wells + 1));
+    d_Cnnzs_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE,
+                                               sizeof(Scalar) * this->num_blocks * this->dim * this->dim_wells);
+    d_Dnnzs_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE,
+                                               sizeof(Scalar) * this->num_std_wells * this->dim_wells * this->dim_wells);
+    d_Bnnzs_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE,
+                                               sizeof(Scalar) * this->num_blocks * this->dim * this->dim_wells);
+    d_Ccols_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(int) * this->num_blocks);
+    d_Bcols_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE, sizeof(int) * this->num_blocks);
+    d_val_pointers_ocl = std::make_unique<cl::Buffer>(*context, CL_MEM_READ_WRITE,
+                                                      sizeof(unsigned int) * (this->num_std_wells + 1));
 }
 
-} //namespace Opm
+template class WellContributionsOCL<double>;
+
+} // namespace Opm

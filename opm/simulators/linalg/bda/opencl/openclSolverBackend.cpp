@@ -308,8 +308,8 @@ gpu_pbicgstab(WellContributions<double>& wellContribs, BdaResult& res)
         }
 
         // apply wellContributions
-        if(wellContribs.getNumWells() > 0){
-            static_cast<WellContributionsOCL&>(wellContribs).apply(d_pw, d_v);
+        if (wellContribs.getNumWells() > 0){
+            static_cast<WellContributionsOCL<double>&>(wellContribs).apply(d_pw, d_v);
         }
         if(verbosity >= 3) {
             queue->finish();
@@ -354,7 +354,7 @@ gpu_pbicgstab(WellContributions<double>& wellContribs, BdaResult& res)
 
         // apply wellContributions
         if(wellContribs.getNumWells() > 0){
-            static_cast<WellContributionsOCL&>(wellContribs).apply(d_s, d_t);
+            static_cast<WellContributionsOCL<double>&>(wellContribs).apply(d_s, d_t);
         }
         if (verbosity >= 3) {
             queue->finish();

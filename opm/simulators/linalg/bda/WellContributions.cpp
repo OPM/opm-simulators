@@ -53,9 +53,9 @@ WellContributions<Scalar>::create(const std::string& accelerator_mode, bool useW
     OPM_THROW(std::runtime_error, "Cannot initialize well contributions: CUDA is not enabled");
 #endif
     }
-    else if(accelerator_mode.compare("opencl") == 0){
+    else if (accelerator_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
-        return std::make_unique<WellContributionsOCL>();
+        return std::make_unique<WellContributionsOCL<Scalar>>();
 #else
         OPM_THROW(std::runtime_error, "Cannot initialize well contributions: OpenCL is not enabled");
 #endif
