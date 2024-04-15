@@ -84,14 +84,14 @@ getDummyUpdateWrapper(Args&&... args)
     return std::make_shared<DummyUpdatePreconditioner<OriginalPreconditioner>>(std::forward<Args>(args)...);
 }
 
-template <class OriginalPreconditioner, class MatrixRef>
+template <class OriginalPreconditioner, class Matrix>
 class RebuildOnUpdatePreconditioner : public PreconditionerWithUpdate<typename OriginalPreconditioner::domain_type,
                                                                       typename OriginalPreconditioner::range_type>
 {
 public:
-    RebuildOnUpdatePreconditioner(const MatrixRef &mat_ref, const int n, const double w, const bool resort)
-        : orig_precond_(std::make_unique<OriginalPreconditioner>(mat_ref, n, w, resort))
-        , mat_ref_(mat_ref)
+    RebuildOnUpdatePreconditioner(const Matrix &mat, const int n, const double w, const bool resort)
+        : orig_precond_(std::make_unique<OriginalPreconditioner>(mat, n, w, resort))
+        , mat_(mat)
         , n_(n)
         , w_(w)
         , resort_(resort)
@@ -124,22 +124,22 @@ public:
     // Rebuild the preconditioner on update
     void update() override
     {
-        orig_precond_ = std::make_unique<OriginalPreconditioner>(mat_ref_, n_, w_, resort_);
+        orig_precond_ = std::make_unique<OriginalPreconditioner>(mat_, n_, w_, resort_);
     }
 
 private:
     std::unique_ptr<OriginalPreconditioner> orig_precond_;
-    const MatrixRef &mat_ref_;
+    const Matrix &mat_;
     const int n_;
     const double w_;
     const bool resort_;
 };
 
-template <class OriginalPreconditioner, class MatrixRef>
-std::shared_ptr<RebuildOnUpdatePreconditioner<OriginalPreconditioner, MatrixRef>>
-getRebuildOnUpdateWrapper(const MatrixRef &mat_ref, const int n, const double w, const bool resort)
+template <class OriginalPreconditioner, class Matrix>
+std::shared_ptr<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Matrix>>
+getRebuildOnUpdateWrapper(const Matrix &mat, const int n, const double w, const bool resort)
 {
-    return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner, MatrixRef>>(mat_ref, n, w, resort);
+    return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Matrix>>(mat, n, w, resort);
 }
 
 } // namespace Dune
