@@ -30,21 +30,20 @@
 #include <memory>
 #include <string>
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
-
-template <unsigned int block_size>
-void Preconditioner<block_size>::setOpencl(std::shared_ptr<cl::Context>& context_, std::shared_ptr<cl::CommandQueue>& queue_) {
+template<class Scalar, unsigned int block_size>
+void Preconditioner<Scalar,block_size>::
+ setOpencl(std::shared_ptr<cl::Context>& context_,
+           std::shared_ptr<cl::CommandQueue>& queue_)
+{
     context = context_;
     queue = queue_;
 }
 
-template <unsigned int block_size>
-std::unique_ptr<Preconditioner<block_size>>
-Preconditioner<block_size>::create(Type type, bool opencl_ilu_parallel, int verbosity)
+template<class Scalar, unsigned int block_size>
+std::unique_ptr<Preconditioner<Scalar,block_size>>
+Preconditioner<Scalar,block_size>::create(Type type, bool opencl_ilu_parallel, int verbosity)
 {
     switch (type ) {
     case Type::BILU0:
@@ -59,37 +58,30 @@ Preconditioner<block_size>::create(Type type, bool opencl_ilu_parallel, int verb
               "Invalid preconditioner type " + std::to_string(static_cast<int>(type)));
 }
 
-template <unsigned int block_size>
-bool Preconditioner<block_size>::
-analyze_matrix(BlockedMatrix<double>* mat,
-               [[maybe_unused]] BlockedMatrix<double>* jacMat)
+template<class Scalar, unsigned int block_size>
+bool Preconditioner<Scalar,block_size>::
+analyze_matrix(BlockedMatrix<Scalar>* mat,
+               [[maybe_unused]] BlockedMatrix<Scalar>* jacMat)
 {
     return analyze_matrix(mat);
 }
 
-template <unsigned int block_size>
-bool Preconditioner<block_size>::
-create_preconditioner(BlockedMatrix<double>* mat,
-                      [[maybe_unused]] BlockedMatrix<double>* jacMat)
+template<class Scalar, unsigned int block_size>
+bool Preconditioner<Scalar,block_size>::
+create_preconditioner(BlockedMatrix<Scalar>* mat,
+                      [[maybe_unused]] BlockedMatrix<Scalar>* jacMat)
 {
     return create_preconditioner(mat);
 }
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)  \
-template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(Type, bool, int);         \
-template void Preconditioner<n>::setOpencl(std::shared_ptr<cl::Context>&, std::shared_ptr<cl::CommandQueue>&); \
-template bool Preconditioner<n>::analyze_matrix(BlockedMatrix<double> *, BlockedMatrix<double> *);                             \
-template bool Preconditioner<n>::create_preconditioner(BlockedMatrix<double> *, BlockedMatrix<double> *);
+#define INSTANCE_TYPE(T)                \
+    template class Preconditioner<T,1>; \
+    template class Preconditioner<T,2>; \
+    template class Preconditioner<T,3>; \
+    template class Preconditioner<T,4>; \
+    template class Preconditioner<T,5>; \
+    template class Preconditioner<T,6>;
 
-INSTANTIATE_BDA_FUNCTIONS(1);
-INSTANTIATE_BDA_FUNCTIONS(2);
-INSTANTIATE_BDA_FUNCTIONS(3);
-INSTANTIATE_BDA_FUNCTIONS(4);
-INSTANTIATE_BDA_FUNCTIONS(5);
-INSTANTIATE_BDA_FUNCTIONS(6);
+INSTANCE_TYPE(double)
 
-#undef INSTANTIATE_BDA_FUNCTIONS
-
-} //namespace Accelerator
-} //namespace Opm
-
+} // namespace Opm::Accelerator

@@ -65,13 +65,16 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
         OPM_THROW(std::logic_error, "Error unknown value for argument --linear-solver, " + linsolver);
     }
 
-    using PreconditionerType = typename Preconditioner<block_size>::Type;
+    using PreconditionerType = Preconditioner<double,block_size>;
     if (use_cpr) {
-        prec = Preconditioner<block_size>::create(PreconditionerType::CPR, opencl_ilu_parallel, verbosity);
+        prec = PreconditionerType::create(PreconditionerType::Type::CPR,
+                                          opencl_ilu_parallel, verbosity);
     } else if (use_isai) {
-        prec = Preconditioner<block_size>::create(PreconditionerType::BISAI, opencl_ilu_parallel, verbosity);
+        prec = PreconditionerType::create(PreconditionerType::Type::BISAI,
+                                          opencl_ilu_parallel, verbosity);
     } else {
-        prec = Preconditioner<block_size>::create(PreconditionerType::BILU0, opencl_ilu_parallel, verbosity);
+        prec = PreconditionerType::create(PreconditionerType::Type::BILU0,
+                                          opencl_ilu_parallel, verbosity);
     }
 
     std::ostringstream out;

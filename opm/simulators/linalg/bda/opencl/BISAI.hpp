@@ -26,19 +26,16 @@
 #include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
 template<class Scalar> class BlockedMatrix;
 
 /// This class implements a Blocked version of the Incomplete Sparse Approximate Inverse (ISAI) preconditioner.
 /// Inspired by the paper "Incomplete Sparse Approximate Inverses for Parallel Preconditioning" by Anzt et. al.
 template <unsigned int block_size>
-class BISAI : public Preconditioner<block_size>
+class BISAI : public Preconditioner<double,block_size>
 {
-    typedef Preconditioner<block_size> Base;
+    using Base = Preconditioner<double,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -134,7 +131,6 @@ public:
 /// in the csrToCscOffsetMap[i]-th position in the CSC representation.
 std::vector<int> buildCsrToCscOffsetMap(std::vector<int> colPointers, std::vector<int> rowIndices);
 
-} // namespace Accelerator
-} // namespace Opm
+} // namespace Opm::Accelerator
 
 #endif

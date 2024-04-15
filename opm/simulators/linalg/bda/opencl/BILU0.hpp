@@ -29,18 +29,15 @@
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
 
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
 /// This class implements a Blocked ILU0 preconditioner
 /// The decomposition is done on GPU, using exact decomposition, or ChowPatel decomposition
 /// The preconditioner is applied via two exact triangular solves
 template <unsigned int block_size>
-class BILU0 : public Preconditioner<block_size>
+class BILU0 : public Preconditioner<double,block_size>
 {
-    typedef Preconditioner<block_size> Base;
+    using Base = Preconditioner<double,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -53,9 +50,9 @@ class BILU0 : public Preconditioner<block_size>
     using Base::err;
 
 private:
-    std::unique_ptr<BlockedMatrix<double>> LUmat = nullptr;
+    std::unique_ptr<BlockedMatrix<double>> LUmat{};
 #if CHOW_PATEL
-    std::unique_ptr<BlockedMatrix<double>> Lmat = nullptr, Umat = nullptr;
+    std::unique_ptr<BlockedMatrix<double>> Lmat{}, Umat{};
 #endif
     std::vector<double> invDiagVals;
     std::vector<int> diagIndex;
@@ -122,8 +119,7 @@ public:
     }
 };
 
-} // namespace Accelerator
-} // namespace Opm
+} // namespace Opm::Accelerator
 
 #endif
 

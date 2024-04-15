@@ -63,7 +63,7 @@ private:
 
     bool useJacMatrix = false;
 
-    std::unique_ptr<Preconditioner<block_size> > prec;
+    std::unique_ptr<Preconditioner<double,block_size> > prec;
                                                                   // can perform blocked ILU0 and AMG on pressure component
     bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge
     bool analysis_done = false;

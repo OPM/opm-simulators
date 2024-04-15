@@ -31,17 +31,14 @@
 
 #include <sstream>
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
-using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-BILU0<block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_) :
-    Preconditioner<block_size>(verbosity_), opencl_ilu_parallel(opencl_ilu_parallel_)
+BILU0<block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_)
+    : Base(verbosity_)
+    , opencl_ilu_parallel(opencl_ilu_parallel_)
 {
 #if CHOW_PATEL
     chowPatelIlu.setVerbosity(verbosity);
@@ -319,5 +316,4 @@ INSTANTIATE_BDA_FUNCTIONS(6);
 
 #undef INSTANTIATE_BDA_FUNCTIONS
 
-} // namespace Accelerator
-} // namespace Opm
+} // namespace Opm::Accelerator

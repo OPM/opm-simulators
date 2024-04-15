@@ -33,18 +33,15 @@
 
 #include <opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp>
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
 template<class Scalar> class BlockedMatrix;
 
 /// This class implements a Constrained Pressure Residual (CPR) preconditioner
 template <unsigned int block_size>
-class CPR : public Preconditioner<block_size>
+class CPR : public Preconditioner<double,block_size>
 {
-    typedef Preconditioner<block_size> Base;
+    using Base = Preconditioner<double,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -138,8 +135,7 @@ public:
 // x and b are vectors with 3 elements
 void solve_transposed_3x3(const double *A, const double *b, double *x);
 
-} // namespace Accelerator
-} // namespace Opm
+} // namespace Opm::Accelerator
 
 #endif
 

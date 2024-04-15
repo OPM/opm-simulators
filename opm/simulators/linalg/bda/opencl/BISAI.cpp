@@ -34,17 +34,14 @@
 
 #include <sstream>
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
 using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-BISAI<block_size>::BISAI(bool opencl_ilu_parallel_, int verbosity_) :
-    Preconditioner<block_size>(verbosity_)
+BISAI<block_size>::BISAI(bool opencl_ilu_parallel_, int verbosity_)
+    : Base(verbosity_)
 {
 #if CHOW_PATEL
     OPM_THROW(std::logic_error, "Error --linear-solver=isai cannot be used if ChowPatelIlu is used, probably defined by CMake\n");
@@ -312,5 +309,4 @@ INSTANTIATE_BDA_FUNCTIONS(6);
 
 #undef INSTANTIATE_BDA_FUNCTIONS
 
-}
-}
+} // namespace Opm::Accelerator
