@@ -168,4 +168,8 @@ void WellContributionsOCL<Scalar>::APIalloc()
 
 template class WellContributionsOCL<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class WellContributionsOCL<float>;
+#endif
+
 } // namespace Opm
