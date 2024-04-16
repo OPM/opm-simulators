@@ -88,7 +88,7 @@ private:
     unsigned num_pre_smooth_steps;              // number of Jacobi smooth steps before restriction
     unsigned num_post_smooth_steps;             // number of Jacobi smooth steps after prolongation
 
-    std::unique_ptr<openclSolverBackend<1> > coarse_solver; // coarse solver is scalar
+    std::unique_ptr<openclSolverBackend<Scalar,1>> coarse_solver; // coarse solver is scalar
     bool opencl_ilu_parallel;                   // whether ILU0 operation should be parallelized
 
     // Analyze the AMG hierarchy build by Dune

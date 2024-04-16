@@ -80,7 +80,14 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
     } else if (accelerator_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
         use_gpu = true;
-        backend.reset(new Opm::Accelerator::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_parallel, linsolver));
+        using OCL = Accelerator::openclSolverBackend<double,block_size>;
+        backend = std::make_unique<OCL>(linear_solver_verbosity,
+                                        maxit,
+                                        tolerance,
+                                        platformID,
+                                        deviceID,
+                                        opencl_ilu_parallel,
+                                        linsolver);
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
@@ -307,11 +314,13 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::
 initWellContributions([[maybe_unused]] WellContributions<double>& wellContribs,
                       [[maybe_unused]] unsigned N)
 {
-    if(accelerator_mode.compare("opencl") == 0){
+    if (accelerator_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
-        const auto openclBackend = static_cast<const Opm::Accelerator::openclSolverBackend<block_size>*>(backend.get());
-        static_cast<WellContributionsOCL<double>&>(wellContribs).setOpenCLEnv(openclBackend->context.get(),
-                                                                              openclBackend->queue.get());
+        using OCL = Accelerator::openclSolverBackend<double,block_size>;
+        const auto openclBackend = static_cast<const OCL*>(backend.get());
+        using WCOCL = WellContributionsOCL<double>;
+        static_cast<WCOCL&>(wellContribs).setOpenCLEnv(openclBackend->context.get(),
+                                                       openclBackend->queue.get());
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
