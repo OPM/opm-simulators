@@ -41,54 +41,54 @@ namespace detail {
 template<class Matrix, class Vector>
 struct BdaSolverInfo
 {
-  using WellContribFunc = std::function<void(WellContributions<double>&)>;
-  using Bridge = BdaBridge<Matrix,Vector,Matrix::block_type::rows>;
+    using WellContribFunc = std::function<void(WellContributions<double>&)>;
+    using Bridge = BdaBridge<Matrix,Vector,Matrix::block_type::rows>;
 
-  BdaSolverInfo(const std::string& accelerator_mode,
-                const int linear_solver_verbosity,
-                const int maxit,
-                const double tolerance,
-                const int platformID,
-                const int deviceID,
-                const bool opencl_ilu_parallel,
-                const std::string& linsolver);
+    BdaSolverInfo(const std::string& accelerator_mode,
+                  const int linear_solver_verbosity,
+                  const int maxit,
+                  const double tolerance,
+                  const int platformID,
+                  const int deviceID,
+                  const bool opencl_ilu_parallel,
+                  const std::string& linsolver);
 
-  ~BdaSolverInfo();
+    ~BdaSolverInfo();
 
-  template<class Grid>
-  void prepare(const Grid& grid,
-               const Dune::CartesianIndexMapper<Grid>& cartMapper,
-               const std::vector<Well>& wellsForConn,
-               const std::vector<int>& cellPartition,
-               const std::size_t nonzeroes,
-               const bool useWellConn);
+    template<class Grid>
+    void prepare(const Grid& grid,
+                 const Dune::CartesianIndexMapper<Grid>& cartMapper,
+                 const std::vector<Well>& wellsForConn,
+                 const std::vector<int>& cellPartition,
+                 const std::size_t nonzeroes,
+                 const bool useWellConn);
 
-  bool apply(Vector& rhs,
-             const bool useWellConn,
-             WellContribFunc getContribs,
-             const int rank,
-             Matrix& matrix,
-             Vector& x,
-             Dune::InverseOperatorResult& result);
+    bool apply(Vector& rhs,
+               const bool useWellConn,
+               WellContribFunc getContribs,
+               const int rank,
+               Matrix& matrix,
+               Vector& x,
+               Dune::InverseOperatorResult& result);
 
-  bool gpuActive();
+    bool gpuActive();
 
-  int numJacobiBlocks_ = 0;
+    int numJacobiBlocks_ = 0;
 
 private:
-  /// Create sparsity pattern for block-Jacobi matrix based on partitioning of grid.
-  /// Do not initialize the values, that is done in copyMatToBlockJac()
-  template<class Grid>
-  void blockJacobiAdjacency(const Grid& grid,
-                            const std::vector<int>& cell_part,
-                            std::size_t nonzeroes);
+    /// Create sparsity pattern for block-Jacobi matrix based on partitioning of grid.
+    /// Do not initialize the values, that is done in copyMatToBlockJac()
+    template<class Grid>
+    void blockJacobiAdjacency(const Grid& grid,
+                              const std::vector<int>& cell_part,
+                              std::size_t nonzeroes);
 
-  void copyMatToBlockJac(const Matrix& mat, Matrix& blockJac);
+    void copyMatToBlockJac(const Matrix& mat, Matrix& blockJac);
 
-  std::unique_ptr<Bridge> bridge_;
-  std::string accelerator_mode_;
-  std::unique_ptr<Matrix> blockJacobiForGPUILU0_;
-  std::vector<std::set<int>> wellConnectionsGraph_;
+    std::unique_ptr<Bridge> bridge_;
+    std::string accelerator_mode_;
+    std::unique_ptr<Matrix> blockJacobiForGPUILU0_;
+    std::vector<std::set<int>> wellConnectionsGraph_;
 };
 
 }
