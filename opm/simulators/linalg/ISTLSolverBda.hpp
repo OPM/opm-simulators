@@ -41,13 +41,14 @@ namespace detail {
 template<class Matrix, class Vector>
 struct BdaSolverInfo
 {
-    using WellContribFunc = std::function<void(WellContributions<double>&)>;
+    using Scalar = typename Vector::field_type;
+    using WellContribFunc = std::function<void(WellContributions<Scalar>&)>;
     using Bridge = BdaBridge<Matrix,Vector,Matrix::block_type::rows>;
 
     BdaSolverInfo(const std::string& accelerator_mode,
                   const int linear_solver_verbosity,
                   const int maxit,
-                  const double tolerance,
+                  const Scalar tolerance,
                   const int platformID,
                   const int deviceID,
                   const bool opencl_ilu_parallel,
@@ -249,8 +250,8 @@ public:
         // Solve system.
         Dune::InverseOperatorResult result;
 
-        std::function<void(WellContributions<double>&)> getContribs =
-            [this](WellContributions<double>& w)
+        std::function<void(WellContributions<Scalar>&)> getContribs =
+            [this](WellContributions<Scalar>& w)
             {
                 this->simulator_.problem().wellModel().getWellContributions(w);
             };

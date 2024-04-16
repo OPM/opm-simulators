@@ -50,15 +50,14 @@
 std::shared_ptr<std::thread> copyThread;
 #endif // HAVE_OPENMP
 
-namespace Opm {
-namespace detail {
+namespace Opm::detail {
 
 template<class Matrix, class Vector>
 BdaSolverInfo<Matrix,Vector>::
 BdaSolverInfo(const std::string& accelerator_mode,
               const int linear_solver_verbosity,
               const int maxit,
-              const double tolerance,
+              const Scalar tolerance,
               const int platformID,
               const int deviceID,
               const bool opencl_ilu_parallel,
@@ -104,7 +103,7 @@ apply(Vector& rhs,
 {
     bool use_gpu = bridge_->getUseGpu();
     if (use_gpu) {
-        auto wellContribs = WellContributions<double>::create(accelerator_mode_, useWellConn);
+        auto wellContribs = WellContributions<Scalar>::create(accelerator_mode_, useWellConn);
         bridge_->initWellContributions(*wellContribs, x.N() * x[0].N());
 
          // the WellContributions can only be applied separately with CUDA, OpenCL or rocsparse, not with amgcl or rocalution
@@ -179,8 +178,9 @@ blockJacobiAdjacency(const Grid& grid,
     const auto& gridView = grid.leafGridView();
     auto elemIt = gridView.template begin<0>(); // should never overrun, since blockJacobiForGPUILU0_ is initialized with numCells rows
 
-    //Loop over cells
-    for (Iter row = blockJacobiForGPUILU0_->createbegin(); row != blockJacobiForGPUILU0_->createend(); ++elemIt, ++row)
+    // Loop over cells
+    for (Iter row = blockJacobiForGPUILU0_->createbegin();
+              row != blockJacobiForGPUILU0_->createend(); ++elemIt, ++row)
     {
         const auto& elem = *elemIt;
         size_type idx = lid.id(elem);
@@ -221,25 +221,26 @@ copyMatToBlockJac(const Matrix& mat, Matrix& blockJac)
         auto outerCol = (*outerRow).begin();
         for (auto col = (*row).begin(); col != (*row).end(); ++col) {
             // outerRow is guaranteed to have all column entries that row has!
-            while(outerCol.index() < col.index()) ++outerCol;
+            while (outerCol.index() < col.index()) {
+                ++outerCol;
+            }
             assert(outerCol.index() == col.index());
             *col = *outerCol; // copy nonzero block
         }
     }
 }
 
-template<int Dim>
-using BM = Dune::BCRSMatrix<MatrixBlock<double,Dim,Dim>>;
-template<int Dim>
-using BV = Dune::BlockVector<Dune::FieldVector<double,Dim>>;
+template<class Scalar, int Dim>
+using BM = Dune::BCRSMatrix<MatrixBlock<Scalar,Dim,Dim>>;
+template<class Scalar, int Dim>
+using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
 
-
-#define INSTANCE_GRID(Dim, Grid)                   \
-    template void BdaSolverInfo<BM<Dim>,BV<Dim>>:: \
-    prepare(const Grid&, \
-            const Dune::CartesianIndexMapper<Grid>&, \
-            const std::vector<Well>&, \
-            const std::vector<int>&, \
+#define INSTANTIATE_GRID(T, Dim, Grid)                   \
+    template void BdaSolverInfo<BM<T,Dim>,BV<T,Dim>>::   \
+    prepare(const Grid&,                                 \
+            const Dune::CartesianIndexMapper<Grid>&,     \
+            const std::vector<Well>&,                    \
+            const std::vector<int>&,                     \
             const std::size_t, const bool);
 using PolyHedralGrid3D = Dune::PolyhedralGrid<3, 3>;
 #if HAVE_DUNE_ALUGRID
@@ -248,23 +249,26 @@ using PolyHedralGrid3D = Dune::PolyhedralGrid<3, 3>;
 #else
     using ALUGrid3CN = Dune::ALUGrid<3, 3, Dune::cube, Dune::nonconforming, Dune::ALUGridNoComm>;
 #endif //HAVE_MPI
-#define INSTANCE(Dim) \
-    template struct BdaSolverInfo<BM<Dim>,BV<Dim>>; \
-    INSTANCE_GRID(Dim,Dune::CpGrid) \
-    INSTANCE_GRID(Dim,ALUGrid3CN) \
-    INSTANCE_GRID(Dim,PolyHedralGrid3D)
+#define INSTANTIATE(T,Dim)                              \
+    template struct BdaSolverInfo<BM<T,Dim>,BV<T,Dim>>; \
+    INSTANTIATE_GRID(T,Dim,Dune::CpGrid)                \
+    INSTANTIATE_GRID(T,Dim,ALUGrid3CN)                  \
+    INSTANTIATE_GRID(T,Dim,PolyHedralGrid3D)
 #else
-#define INSTANCE(Dim) \
-    template struct BdaSolverInfo<BM<Dim>,BV<Dim>>; \
-    INSTANCE_GRID(Dim,Dune::CpGrid) \
-    INSTANCE_GRID(Dim,PolyHedralGrid3D)
+#define INSTANTIATE(T,Dim)                              \
+    template struct BdaSolverInfo<BM<T,Dim>,BV<T,Dim>>; \
+    INSTANTIATE_GRID(T,Dim,Dune::CpGrid)                \
+    INSTANTIATE_GRID(T,Dim,PolyHedralGrid3D)
 #endif
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
 
-} // namespace detail
-} // namespace Opm
+#define INSTANTIATE_TYPE(T) \
+    INSTANTIATE(T,1)        \
+    INSTANTIATE(T,2)        \
+    INSTANTIATE(T,3)        \
+    INSTANTIATE(T,4)        \
+    INSTANTIATE(T,5)        \
+    INSTANTIATE(T,6)
+
+INSTANTIATE_TYPE(double)
+
+} // namespace Opm::detail
