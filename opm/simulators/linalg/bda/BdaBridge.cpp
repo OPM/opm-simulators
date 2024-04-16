@@ -370,4 +370,8 @@ initWellContributions([[maybe_unused]] WellContributions<Scalar>& wellContribs,
 
 INSTANTIATE_TYPE(double)
 
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
+
 } // namespace Opm
