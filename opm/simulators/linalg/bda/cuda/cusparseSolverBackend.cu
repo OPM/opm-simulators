@@ -108,13 +108,27 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res)
         static_cast<WellContributionsCuda<Scalar>&>(wellContribs).setCudaStream(stream);
     }
 
-    cusparseDbsrmv(cusparseHandle, order, operation, Nb, Nb, nnzb, &one, descr_M, d_bVals, d_bRows, d_bCols, block_size, d_x, &zero, d_r);
+    if constexpr (std::is_same_v<Scalar,float>) {
+        cusparseSbsrmv(cusparseHandle, order, operation, Nb, Nb, nnzb, &one,
+                       descr_M, d_bVals, d_bRows, d_bCols, block_size, d_x, &zero, d_r);
+    } else {
+        cusparseDbsrmv(cusparseHandle, order, operation, Nb, Nb, nnzb, &one,
+                       descr_M, d_bVals, d_bRows, d_bCols, block_size, d_x, &zero, d_r);
+    }
 
-    cublasDscal(cublasHandle, n, &mone, d_r, 1);
-    cublasDaxpy(cublasHandle, n, &one, d_b, 1, d_r, 1);
-    cublasDcopy(cublasHandle, n, d_r, 1, d_rw, 1);
-    cublasDcopy(cublasHandle, n, d_r, 1, d_p, 1);
-    cublasDnrm2(cublasHandle, n, d_r, 1, &norm_0);
+    if constexpr (std::is_same_v<Scalar,float>) {
+        cublasSscal(cublasHandle, n, &mone, d_r, 1);
+        cublasSaxpy(cublasHandle, n, &one, d_b, 1, d_r, 1);
+        cublasScopy(cublasHandle, n, d_r, 1, d_rw, 1);
+        cublasScopy(cublasHandle, n, d_r, 1, d_p, 1);
+        cublasSnrm2(cublasHandle, n, d_r, 1, &norm_0);
+    } else {
+        cublasDscal(cublasHandle, n, &mone, d_r, 1);
+        cublasDaxpy(cublasHandle, n, &one, d_b, 1, d_r, 1);
+        cublasDcopy(cublasHandle, n, d_r, 1, d_rw, 1);
+        cublasDcopy(cublasHandle, n, d_r, 1, d_p, 1);
+        cublasDnrm2(cublasHandle, n, d_r, 1, &norm_0);
+    }
 
     if (verbosity > 1) {
         std::ostringstream out;
@@ -124,40 +138,80 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res)
 
     for (it = 0.5; it < maxit; it += 0.5) {
         rhop = rho;
-        cublasDdot(cublasHandle, n, d_rw, 1, d_r, 1, &rho);
+        if constexpr (std::is_same_v<Scalar,float>) {
+            cublasSdot(cublasHandle, n, d_rw, 1, d_r, 1, &rho);
+        } else {
+            cublasDdot(cublasHandle, n, d_rw, 1, d_r, 1, &rho);
+        }
 
         if (it > 1) {
             beta = (rho / rhop) * (alpha / omega);
             nomega = -omega;
-            cublasDaxpy(cublasHandle, n, &nomega, d_v, 1, d_p, 1);
-            cublasDscal(cublasHandle, n, &beta, d_p, 1);
-            cublasDaxpy(cublasHandle, n, &one, d_r, 1, d_p, 1);
+            if constexpr (std::is_same_v<Scalar,float>) {
+                cublasSaxpy(cublasHandle, n, &nomega, d_v, 1, d_p, 1);
+                cublasSscal(cublasHandle, n, &beta, d_p, 1);
+                cublasSaxpy(cublasHandle, n, &one, d_r, 1, d_p, 1);
+            } else {
+                cublasDaxpy(cublasHandle, n, &nomega, d_v, 1, d_p, 1);
+                cublasDscal(cublasHandle, n, &beta, d_p, 1);
+                cublasDaxpy(cublasHandle, n, &one, d_r, 1, d_p, 1);
+            }
         }
 
-        // apply ilu0
-        cusparseDbsrsv2_solve(cusparseHandle, order, \
-                              operation, Nb, nnzbs_prec, &one, \
-                              descr_L, d_mVals, d_mRows, d_mCols, block_size, info_L, d_p, d_t, policy, d_buffer);
-        cusparseDbsrsv2_solve(cusparseHandle, order, \
-                              operation, Nb, nnzbs_prec, &one, \
-                              descr_U, d_mVals, d_mRows, d_mCols, block_size, info_U, d_t, d_pw, policy, d_buffer);
-
-        // spmv
-        cusparseDbsrmv(cusparseHandle, order, \
-                       operation, Nb, Nb, nnzb, \
-                       &one, descr_M, d_bVals, d_bRows, d_bCols, block_size, d_pw, &zero, d_v);
+        if constexpr (std::is_same_v<Scalar,float>) {
+            // apply ilu0
+            cusparseSbsrsv2_solve(cusparseHandle, order,
+                                  operation, Nb, nnzbs_prec, &one,
+                                  descr_L, d_mVals, d_mRows, d_mCols, block_size,
+                                  info_L, d_p, d_t, policy, d_buffer);
+            cusparseSbsrsv2_solve(cusparseHandle, order,
+                                  operation, Nb, nnzbs_prec, &one,
+                                  descr_U, d_mVals, d_mRows, d_mCols, block_size,
+                                  info_U, d_t, d_pw, policy, d_buffer);
+            // spmv
+            cusparseSbsrmv(cusparseHandle, order,
+                           operation, Nb, Nb, nnzb,
+                           &one, descr_M, d_bVals, d_bRows,
+                           d_bCols, block_size, d_pw, &zero, d_v);
+        } else {
+            // apply ilu0
+            cusparseDbsrsv2_solve(cusparseHandle, order,
+                                       operation, Nb, nnzbs_prec, &one,
+                                       descr_L, d_mVals, d_mRows, d_mCols, block_size,
+                                       info_L, d_p, d_t, policy, d_buffer);
+            cusparseDbsrsv2_solve(cusparseHandle, order,
+                                  operation, Nb, nnzbs_prec, &one,
+                                  descr_U, d_mVals, d_mRows, d_mCols, block_size,
+                                  info_U, d_t, d_pw, policy, d_buffer);
+            // spmv
+            cusparseDbsrmv(cusparseHandle, order,
+                           operation, Nb, Nb, nnzb,
+                           &one, descr_M, d_bVals, d_bRows, d_bCols, block_size,
+                           d_pw, &zero, d_v);
+        }
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
             static_cast<WellContributionsCuda<Scalar>&>(wellContribs).apply(d_pw, d_v);
         }
 
-        cublasDdot(cublasHandle, n, d_rw, 1, d_v, 1, &tmp1);
+        if constexpr (std::is_same_v<Scalar,float>) {
+            cublasSdot(cublasHandle, n, d_rw, 1, d_v, 1, &tmp1);
+        } else {
+            cublasDdot(cublasHandle, n, d_rw, 1, d_v, 1, &tmp1);
+        }
+
         alpha = rho / tmp1;
         nalpha = -alpha;
-        cublasDaxpy(cublasHandle, n, &nalpha, d_v, 1, d_r, 1);
-        cublasDaxpy(cublasHandle, n, &alpha, d_pw, 1, d_x, 1);
-        cublasDnrm2(cublasHandle, n, d_r, 1, &norm);
+        if constexpr (std::is_same_v<Scalar,float>) {
+            cublasSaxpy(cublasHandle, n, &nalpha, d_v, 1, d_r, 1);
+            cublasSaxpy(cublasHandle, n, &alpha, d_pw, 1, d_x, 1);
+            cublasSnrm2(cublasHandle, n, d_r, 1, &norm);
+        } else {
+            cublasDaxpy(cublasHandle, n, &nalpha, d_v, 1, d_r, 1);
+            cublasDaxpy(cublasHandle, n, &alpha, d_pw, 1, d_x, 1);
+            cublasDnrm2(cublasHandle, n, d_r, 1, &norm);
+        }
 
         if (norm < tolerance * norm_0) {
             break;
@@ -165,32 +219,65 @@ gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res)
 
         it += 0.5;
 
-        // apply ilu0
-        cusparseDbsrsv2_solve(cusparseHandle, order, \
-                              operation, Nb, nnzbs_prec, &one, \
-                              descr_L, d_mVals, d_mRows, d_mCols, block_size, info_L, d_r, d_t, policy, d_buffer);
-        cusparseDbsrsv2_solve(cusparseHandle, order, \
-                              operation, Nb, nnzbs_prec, &one, \
-                              descr_U, d_mVals, d_mRows, d_mCols, block_size, info_U, d_t, d_s, policy, d_buffer);
+        if constexpr (std::is_same_v<Scalar,float>) {
+            // apply ilu0
+            cusparseSbsrsv2_solve(cusparseHandle, order,
+                                  operation, Nb, nnzbs_prec, &one,
+                                  descr_L, d_mVals, d_mRows, d_mCols, block_size,
+                                  info_L, d_r, d_t, policy, d_buffer);
 
-        // spmv
-        cusparseDbsrmv(cusparseHandle, order, \
-                       operation, Nb, Nb, nnzb, &one, descr_M, \
-                       d_bVals, d_bRows, d_bCols, block_size, d_s, &zero, d_t);
+            cusparseSbsrsv2_solve(cusparseHandle, order,
+                                  operation, Nb, nnzbs_prec, &one,
+                                  descr_U, d_mVals, d_mRows, d_mCols, block_size,
+                                  info_U, d_t, d_s, policy, d_buffer);
+
+            // spmv
+            cusparseSbsrmv(cusparseHandle, order,
+                           operation, Nb, Nb, nnzb, &one, descr_M,
+                           d_bVals, d_bRows, d_bCols, block_size, d_s, &zero, d_t);
+        } else {
+            // apply ilu0
+            cusparseDbsrsv2_solve(cusparseHandle, order,
+                                       operation, Nb, nnzbs_prec, &one,
+                                       descr_L, d_mVals, d_mRows, d_mCols, block_size,
+                                       info_L, d_r, d_t, policy, d_buffer);
+
+            cusparseDbsrsv2_solve(cusparseHandle, order,
+                                  operation, Nb, nnzbs_prec, &one,
+                                  descr_U, d_mVals, d_mRows, d_mCols, block_size,
+                                  info_U, d_t, d_s, policy, d_buffer);
+
+            // spmv
+            cusparseDbsrmv(cusparseHandle, order,
+                           operation, Nb, Nb, nnzb, &one, descr_M,
+                           d_bVals, d_bRows, d_bCols, block_size, d_s, &zero, d_t);
+        }
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
             static_cast<WellContributionsCuda<Scalar>&>(wellContribs).apply(d_s, d_t);
         }
 
-        cublasDdot(cublasHandle, n, d_t, 1, d_r, 1, &tmp1);
-        cublasDdot(cublasHandle, n, d_t, 1, d_t, 1, &tmp2);
+        if constexpr (std::is_same_v<Scalar,float>) {
+            cublasSdot(cublasHandle, n, d_t, 1, d_r, 1, &tmp1);
+            cublasSdot(cublasHandle, n, d_t, 1, d_t, 1, &tmp2);
+        } else {
+            cublasDdot(cublasHandle, n, d_t, 1, d_r, 1, &tmp1);
+            cublasDdot(cublasHandle, n, d_t, 1, d_t, 1, &tmp2);
+        }
+
         omega = tmp1 / tmp2;
         nomega = -omega;
-        cublasDaxpy(cublasHandle, n, &omega, d_s, 1, d_x, 1);
-        cublasDaxpy(cublasHandle, n, &nomega, d_t, 1, d_r, 1);
 
-        cublasDnrm2(cublasHandle, n, d_r, 1, &norm);
+        if constexpr (std::is_same_v<Scalar,float>) {
+            cublasSaxpy(cublasHandle, n, &omega, d_s, 1, d_x, 1);
+            cublasSaxpy(cublasHandle, n, &nomega, d_t, 1, d_r, 1);
+            cublasSnrm2(cublasHandle, n, d_r, 1, &norm);
+        } else {
+            cublasDaxpy(cublasHandle, n, &omega, d_s, 1, d_x, 1);
+            cublasDaxpy(cublasHandle, n, &nomega, d_t, 1, d_r, 1);
+            cublasDnrm2(cublasHandle, n, d_r, 1, &norm);
+        }
 
         if (norm < tolerance * norm_0) {
             break;
@@ -458,21 +545,42 @@ bool cusparseSolverBackend<Scalar,block_size>::analyse_matrix()
     cusparseCreateBsrsv2Info(&info_U);
     cudaCheckLastError("Could not create analysis info");
 
-    cusparseDbsrilu02_bufferSize(cusparseHandle, order, Nb, nnzbs_prec,
-                                 descr_M, d_mVals, d_mRows, d_mCols, block_size, info_M, &d_bufferSize_M);
-    cusparseDbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzbs_prec,
-                               descr_L, d_mVals, d_mRows, d_mCols, block_size, info_L, &d_bufferSize_L);
-    cusparseDbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzbs_prec,
-                               descr_U, d_mVals, d_mRows, d_mCols, block_size, info_U, &d_bufferSize_U);
-    cudaCheckLastError();
+    if constexpr (std::is_same_v<Scalar,float>) {
+        cusparseSbsrilu02_bufferSize(cusparseHandle, order, Nb, nnzbs_prec,
+                                     descr_M, d_mVals, d_mRows, d_mCols, block_size,
+                                     info_M, &d_bufferSize_M);
+        cusparseSbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzbs_prec,
+                                   descr_L, d_mVals, d_mRows, d_mCols, block_size,
+                                   info_L, &d_bufferSize_L);
+        cusparseSbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzbs_prec,
+                                   descr_U, d_mVals, d_mRows, d_mCols, block_size,
+                                   info_U, &d_bufferSize_U);
+    } else {
+        cusparseDbsrilu02_bufferSize(cusparseHandle, order, Nb, nnzbs_prec,
+                                     descr_M, d_mVals, d_mRows, d_mCols, block_size,
+                                     info_M, &d_bufferSize_M);
+        cusparseDbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzbs_prec,
+                                   descr_L, d_mVals, d_mRows, d_mCols, block_size,
+                                   info_L, &d_bufferSize_L);
+        cusparseDbsrsv2_bufferSize(cusparseHandle, order, operation, Nb, nnzbs_prec,
+                                   descr_U, d_mVals, d_mRows, d_mCols, block_size,
+                                   info_U, &d_bufferSize_U);
+    }
+
     d_bufferSize = std::max(d_bufferSize_M, std::max(d_bufferSize_L, d_bufferSize_U));
 
     cudaMalloc((void**)&d_buffer, d_bufferSize);
 
     // analysis of ilu LU decomposition
-    cusparseDbsrilu02_analysis(cusparseHandle, order, \
-                               Nb, nnzbs_prec, descr_B, d_mVals, d_mRows, d_mCols, \
-                               block_size, info_M, policy, d_buffer);
+    if constexpr (std::is_same_v<Scalar,float>) {
+        cusparseSbsrilu02_analysis(cusparseHandle, order,
+                                   Nb, nnzbs_prec, descr_B, d_mVals, d_mRows, d_mCols,
+                                   block_size, info_M, policy, d_buffer);
+    } else {
+        cusparseDbsrilu02_analysis(cusparseHandle, order,
+                                   Nb, nnzbs_prec, descr_B, d_mVals, d_mRows, d_mCols,
+                                   block_size, info_M, policy, d_buffer);
+    }
 
     int structural_zero;
     cusparseStatus_t status = cusparseXbsrilu02_zeroPivot(cusparseHandle, info_M, &structural_zero);
@@ -481,13 +589,21 @@ bool cusparseSolverBackend<Scalar,block_size>::analyse_matrix()
     }
 
     // analysis of ilu apply
-    cusparseDbsrsv2_analysis(cusparseHandle, order, operation, \
-                             Nb, nnzbs_prec, descr_L, d_mVals, d_mRows, d_mCols, \
-                             block_size, info_L, policy, d_buffer);
-
-    cusparseDbsrsv2_analysis(cusparseHandle, order, operation, \
-                             Nb, nnzbs_prec, descr_U, d_mVals, d_mRows, d_mCols, \
-                             block_size, info_U, policy, d_buffer);
+    if constexpr (std::is_same_v<Scalar,float>) {
+        cusparseSbsrsv2_analysis(cusparseHandle, order, operation,
+                                 Nb, nnzbs_prec, descr_L, d_mVals, d_mRows, d_mCols,
+                                 block_size, info_L, policy, d_buffer);
+        cusparseSbsrsv2_analysis(cusparseHandle, order, operation,
+                                 Nb, nnzbs_prec, descr_U, d_mVals, d_mRows, d_mCols,
+                                 block_size, info_U, policy, d_buffer);
+    } else {
+        cusparseDbsrsv2_analysis(cusparseHandle, order, operation,
+                                 Nb, nnzbs_prec, descr_L, d_mVals, d_mRows, d_mCols,
+                                 block_size, info_L, policy, d_buffer);
+        cusparseDbsrsv2_analysis(cusparseHandle, order, operation,
+                                 Nb, nnzbs_prec, descr_U, d_mVals, d_mRows, d_mCols,
+                                 block_size, info_U, policy, d_buffer);
+    }
     cudaCheckLastError("Could not analyse level information");
 
     if (verbosity > 2) {
@@ -507,9 +623,15 @@ bool cusparseSolverBackend<Scalar,block_size>::create_preconditioner()
 {
     Timer t;
 
-    cusparseDbsrilu02(cusparseHandle, order, \
-                      Nb, nnzbs_prec, descr_M, d_mVals, d_mRows, d_mCols, \
-                      block_size, info_M, policy, d_buffer);
+    if constexpr (std::is_same_v<Scalar,float>) {
+        cusparseSbsrilu02(cusparseHandle, order,
+                          Nb, nnzbs_prec, descr_M, d_mVals, d_mRows, d_mCols,
+                          block_size, info_M, policy, d_buffer);
+    } else {
+        cusparseDbsrilu02(cusparseHandle, order,
+                          Nb, nnzbs_prec, descr_M, d_mVals, d_mRows, d_mCols,
+                          block_size, info_M, policy, d_buffer);
+    }
     cudaCheckLastError("Could not perform ilu decomposition");
 
     int structural_zero;
