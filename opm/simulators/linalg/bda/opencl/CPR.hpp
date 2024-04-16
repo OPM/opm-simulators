@@ -115,8 +115,7 @@ private:
     void create_preconditioner_amg(BlockedMatrix *mat);
 
 public:
-
-    CPR(int verbosity, bool opencl_ilu_parallel);
+    CPR(bool opencl_ilu_parallel, int verbosity);
 
     bool analyze_matrix(BlockedMatrix *mat) override;
     bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;

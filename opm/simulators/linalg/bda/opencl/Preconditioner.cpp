@@ -18,14 +18,17 @@
 */
 
 #include <config.h>
-#include <memory>
+#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
+
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/BISAI.hpp>
 #include <opm/simulators/linalg/bda/opencl/CPR.hpp>
-#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
+
+#include <memory>
+#include <string>
 
 namespace Opm
 {
@@ -40,16 +43,20 @@ void Preconditioner<block_size>::setOpencl(std::shared_ptr<cl::Context>& context
 }
 
 template <unsigned int block_size>
-std::unique_ptr<Preconditioner<block_size> > Preconditioner<block_size>::create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel) {
-    if (type == PreconditionerType::BILU0) {
-        return std::make_unique<Opm::Accelerator::BILU0<block_size> >(opencl_ilu_parallel, verbosity);
-    } else if (type == PreconditionerType::CPR) {
-        return std::make_unique<Opm::Accelerator::CPR<block_size> >(verbosity, opencl_ilu_parallel);
-    } else if (type == PreconditionerType::BISAI) {
-        return std::make_unique<Opm::Accelerator::BISAI<block_size> >(opencl_ilu_parallel, verbosity);
-    } else {
-        OPM_THROW(std::logic_error, "Invalid PreconditionerType");
+std::unique_ptr<Preconditioner<block_size>>
+Preconditioner<block_size>::create(Type type, bool opencl_ilu_parallel, int verbosity)
+{
+    switch (type ) {
+    case Type::BILU0:
+        return std::make_unique<BILU0<block_size> >(opencl_ilu_parallel, verbosity);
+    case Type::CPR:
+        return std::make_unique<CPR<block_size> >(opencl_ilu_parallel, verbosity);
+    case Type::BISAI:
+        return std::make_unique<BISAI<block_size> >(opencl_ilu_parallel, verbosity);
     }
+
+    OPM_THROW(std::logic_error,
+              "Invalid preconditioner type " + std::to_string(static_cast<int>(type)));
 }
 
 template <unsigned int block_size>
@@ -63,7 +70,7 @@ bool Preconditioner<block_size>::create_preconditioner(BlockedMatrix *mat, [[may
 }
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \
-template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(PreconditionerType, int, bool);         \
+template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(Type, bool, int);         \
 template void Preconditioner<n>::setOpencl(std::shared_ptr<cl::Context>&, std::shared_ptr<cl::CommandQueue>&); \
 template bool Preconditioner<n>::analyze_matrix(BlockedMatrix *, BlockedMatrix *);                             \
 template bool Preconditioner<n>::create_preconditioner(BlockedMatrix *, BlockedMatrix *);
