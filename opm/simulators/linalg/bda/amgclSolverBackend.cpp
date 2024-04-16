@@ -55,12 +55,13 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-amgclSolverBackend<block_size>::amgclSolverBackend(const int          verbosity_,
-                                                   const int          maxit_,
-                                                   const double       tolerance_,
-                                                   const unsigned int platformID_,
-                                                   const unsigned int deviceID_)
-    : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_)
+amgclSolverBackend<block_size>::
+amgclSolverBackend(const int          verbosity_,
+                   const int          maxit_,
+                   const double       tolerance_,
+                   const unsigned int platformID_,
+                   const unsigned int deviceID_)
+    : Base(verbosity_, maxit_, tolerance_, platformID_, deviceID_)
 {}
 
 template <unsigned int block_size>

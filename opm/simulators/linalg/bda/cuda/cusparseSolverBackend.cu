@@ -58,8 +58,11 @@ const cusparseDirection_t order = CUSPARSE_DIRECTION_ROW;
 
 
 template <unsigned int block_size>
-cusparseSolverBackend<block_size>::cusparseSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, deviceID_) {
-
+cusparseSolverBackend<block_size>::
+cusparseSolverBackend(int verbosity_, int maxit_,
+                      double tolerance_, unsigned int deviceID_)
+    : Base(verbosity_, maxit_, tolerance_, deviceID_)
+{
     // initialize CUDA device, stream and libraries
     cudaSetDevice(deviceID);
     cudaCheckLastError("Could not get device");

@@ -38,9 +38,9 @@ namespace Accelerator
 
 /// This class implements a rocsparse-based ilu0-bicgstab solver on GPU
 template <unsigned int block_size>
-class rocsparseSolverBackend : public BdaSolver<block_size>
+class rocsparseSolverBackend : public BdaSolver<double,block_size>
 {
-    typedef BdaSolver<block_size> Base;
+    using Base = BdaSolver<double,block_size>;
 
     using Base::N;
     using Base::Nb;

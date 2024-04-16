@@ -25,7 +25,6 @@
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
 #include <memory>
-#include <string>
 
 namespace Opm {
 
@@ -42,7 +41,7 @@ enum class SolverStatus {
 
 /// This class serves to simplify choosing between different backend solvers, such as cusparseSolver and openclSolver
 /// This class is abstract, no instantiations can of it can be made, only of its children
-template <unsigned int block_size>
+template<class Scalar, unsigned int block_size>
 class BdaSolver
 {
 protected:
@@ -51,11 +50,10 @@ protected:
     // 1: print number of iterations and final norm
     // 2: also print norm each iteration
     // 3: also print timings of different backend functions
-
     int verbosity = 0;
 
     int maxit = 200;
-    double tolerance = 1e-2;
+    Scalar tolerance = 1e-2;
 
     int N;           // number of rows
     int Nb;          // number of blocked rows (Nb*block_size == N)
@@ -74,22 +72,38 @@ public:
     /// \param[in] tolerance                  required relative tolerance for solver
     /// \param[in] platformID                 the OpenCL platform to be used, only used in openclSolver
     /// \param[in] deviceID                   the device to be used
-    BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_) {};
-    BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_, unsigned int deviceID_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_), deviceID(deviceID_) {};
-    BdaSolver(int linear_solver_verbosity, int max_it, double tolerance_, unsigned int platformID_, unsigned int deviceID_) : verbosity(linear_solver_verbosity), maxit(max_it), tolerance(tolerance_), platformID(platformID_), deviceID(deviceID_) {};
+    BdaSolver(int linear_solver_verbosity, int max_it, Scalar tolerance_)
+        : verbosity(linear_solver_verbosity)
+        , maxit(max_it)
+        , tolerance(tolerance_)
+    {}
+    BdaSolver(int linear_solver_verbosity, int max_it,
+              Scalar tolerance_, unsigned int deviceID_)
+        : verbosity(linear_solver_verbosity)
+        , maxit(max_it)
+        , tolerance(tolerance_)
+        , deviceID(deviceID_) {};
+    BdaSolver(int linear_solver_verbosity, int max_it,
+              double tolerance_, unsigned int platformID_,
+              unsigned int deviceID_)
+        : verbosity(linear_solver_verbosity)
+        , maxit(max_it)
+        , tolerance(tolerance_)
+        , platformID(platformID_)
+        , deviceID(deviceID_)
+    {}
 
     /// Define virtual destructor, so that the derivedclass destructor will be called
-    virtual ~BdaSolver() {};
+    virtual ~BdaSolver() = default;
 
     /// Define as pure virtual functions, so derivedclass must implement them
-    virtual SolverStatus solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
-                                      double *b,
-                                      std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-                                      WellContributions<double>& wellContribs,
+    virtual SolverStatus solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+                                      Scalar* b,
+                                      std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
+                                      WellContributions<Scalar>& wellContribs,
                                       BdaResult& res) = 0;
 
-    virtual void get_result(double *x) = 0;
-
+    virtual void get_result(Scalar* x) = 0;
 }; // end class BdaSolver
 
 } // namespace Accelerator

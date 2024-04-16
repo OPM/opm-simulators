@@ -46,8 +46,17 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_, bool opencl_ilu_parallel_, std::string linsolver) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_), opencl_ilu_parallel(opencl_ilu_parallel_) {
-
+openclSolverBackend<block_size>::
+openclSolverBackend(int verbosity_,
+                    int maxit_,
+                    double tolerance_,
+                    unsigned int platformID_,
+                    unsigned int deviceID_,
+                    bool opencl_ilu_parallel_,
+                    std::string linsolver)
+    : Base(verbosity_, maxit_, tolerance_, platformID_, deviceID_)
+    , opencl_ilu_parallel(opencl_ilu_parallel_)
+{
     bool use_cpr, use_isai;
 
     if (linsolver.compare("ilu0") == 0) {
@@ -221,8 +230,11 @@ openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_,
 }
 
 template <unsigned int block_size>
-openclSolverBackend<block_size>::openclSolverBackend(int verbosity_, int maxit_, double tolerance_, bool opencl_ilu_parallel_) :
-    BdaSolver<block_size>(verbosity_, maxit_, tolerance_), opencl_ilu_parallel(opencl_ilu_parallel_)
+openclSolverBackend<block_size>::
+openclSolverBackend(int verbosity_, int maxit_,
+                    double tolerance_, bool opencl_ilu_parallel_)
+    : Base(verbosity_, maxit_, tolerance_)
+    , opencl_ilu_parallel(opencl_ilu_parallel_)
 {
     // prec = std::make_unique<BILU0<block_size> >(opencl_ilu_parallel, verbosity_);
     // cpr = std::make_unique<CPR<block_size> >(verbosity_, opencl_ilu_parallel, /*use_amg=*/false);

@@ -39,9 +39,9 @@ namespace Accelerator
 /// This class implements a rocalution based linear solver solver on GPU
 /// It uses ilu0-bicgstab
 template <unsigned int block_size>
-class rocalutionSolverBackend : public BdaSolver<block_size>
+class rocalutionSolverBackend : public BdaSolver<double,block_size>
 {
-    typedef BdaSolver<block_size> Base;
+    using Base = BdaSolver<double,block_size>;
 
     using Base::N;
     using Base::Nb;

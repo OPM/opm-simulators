@@ -49,9 +49,9 @@ namespace Accelerator
 /// This class does not implement a solver, but converts the BCSR format to normal CSR and uses amgcl for solving
 /// Note amgcl also implements blocked solvers, but looks like it needs unblocked input data
 template <unsigned int block_size>
-class amgclSolverBackend : public BdaSolver<block_size>
+class amgclSolverBackend : public BdaSolver<double,block_size>
 {
-    typedef BdaSolver<block_size> Base;
+    using Base = BdaSolver<double,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -74,7 +74,6 @@ class amgclSolverBackend : public BdaSolver<block_size>
                                           amgcl::runtime::solver::wrapper<CPU_Backend>>;
 
 private:
-
     // amgcl can use different backends, this lets the user choose
     enum Amgcl_backend_type {
         cpu,

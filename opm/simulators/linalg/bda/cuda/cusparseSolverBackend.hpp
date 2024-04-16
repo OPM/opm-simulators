@@ -35,9 +35,9 @@ namespace Accelerator
 
 /// This class implements a cusparse-based ilu0-bicgstab solver on GPU
 template <unsigned int block_size>
-class cusparseSolverBackend : public BdaSolver<block_size> {
+class cusparseSolverBackend : public BdaSolver<double,block_size> {
 
-    typedef BdaSolver<block_size> Base;
+    using Base = BdaSolver<double,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -50,7 +50,6 @@ class cusparseSolverBackend : public BdaSolver<block_size> {
     using Base::initialized;
 
 private:
-
     cublasHandle_t cublasHandle;
     cusparseHandle_t cusparseHandle;
     cudaStream_t stream;

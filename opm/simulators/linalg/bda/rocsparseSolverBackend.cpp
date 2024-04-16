@@ -102,7 +102,11 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-rocsparseSolverBackend<block_size>::rocsparseSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int platformID_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, platformID_, deviceID_) {
+rocsparseSolverBackend<block_size>::
+rocsparseSolverBackend(int verbosity_, int maxit_, double tolerance_,
+                       unsigned int platformID_, unsigned int deviceID_)
+    : Base(verbosity_, maxit_, tolerance_, platformID_, deviceID_)
+{
     int numDevices = 0;
     HIP_CHECK(hipGetDeviceCount(&numDevices));
     if (static_cast<int>(deviceID) >= numDevices) {

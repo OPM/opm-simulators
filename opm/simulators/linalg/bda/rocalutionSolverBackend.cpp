@@ -56,7 +56,10 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-rocalutionSolverBackend<block_size>::rocalutionSolverBackend(int verbosity_, int maxit_, double tolerance_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_) {
+rocalutionSolverBackend<block_size>::
+rocalutionSolverBackend(int verbosity_, int maxit_, double tolerance_)
+    : Base(verbosity_, maxit_, tolerance_)
+{
     rocalution::init_rocalution();
     rocalution::info_rocalution();
     roc_solver = std::make_unique<rocalution::BiCGStab<rocalution::LocalMatrix<double>, rocalution::LocalVector<double>, double> >();
