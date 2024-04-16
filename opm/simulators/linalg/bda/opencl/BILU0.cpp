@@ -316,7 +316,7 @@ void BILU0<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
     }
 }
 
-#define INSTANCE_TYPE(T)       \
+#define INSTANTIATE_TYPE(T)    \
     template class BILU0<T,1>; \
     template class BILU0<T,2>; \
     template class BILU0<T,3>; \
@@ -324,6 +324,10 @@ void BILU0<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
     template class BILU0<T,5>; \
     template class BILU0<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::Accelerator

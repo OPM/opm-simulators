@@ -576,7 +576,7 @@ void CPR<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
     }
 }
 
-#define INSTANCE_TYPE(T)     \
+#define INSTANTIATE_TYPE(T)  \
     template class CPR<T,1>; \
     template class CPR<T,2>; \
     template class CPR<T,3>; \
@@ -584,6 +584,10 @@ void CPR<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
     template class CPR<T,5>; \
     template class CPR<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::Accelerator
