@@ -18,14 +18,17 @@
 */
 
 #include <config.h>
-#include <memory>
+#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
+
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/BISAI.hpp>
 #include <opm/simulators/linalg/bda/opencl/CPR.hpp>
-#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
+
+#include <memory>
+#include <string>
 
 namespace Opm
 {
@@ -43,15 +46,17 @@ template <unsigned int block_size>
 std::unique_ptr<Preconditioner<block_size>>
 Preconditioner<block_size>::create(Type type, int verbosity, bool opencl_ilu_parallel)
 {
-    if (type == Type::BILU0) {
+    switch (type ) {
+    case Type::BILU0:
         return std::make_unique<BILU0<block_size> >(opencl_ilu_parallel, verbosity);
-    } else if (type == Type::CPR) {
+    case Type::CPR:
         return std::make_unique<CPR<block_size> >(verbosity, opencl_ilu_parallel);
-    } else if (type == Type::BISAI) {
+    case Type::BISAI:
         return std::make_unique<BISAI<block_size> >(opencl_ilu_parallel, verbosity);
-    } else {
-        OPM_THROW(std::logic_error, "Invalid PreconditionerType");
     }
+
+    OPM_THROW(std::logic_error,
+              "Invalid preconditioner type " + std::to_string(static_cast<int>(type)));
 }
 
 template <unsigned int block_size>
