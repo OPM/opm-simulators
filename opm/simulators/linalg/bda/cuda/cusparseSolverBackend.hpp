@@ -28,16 +28,13 @@
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
 /// This class implements a cusparse-based ilu0-bicgstab solver on GPU
-template <unsigned int block_size>
-class cusparseSolverBackend : public BdaSolver<double,block_size> {
-
-    using Base = BdaSolver<double,block_size>;
+template<class Scalar, unsigned int block_size>
+class cusparseSolverBackend : public BdaSolver<Scalar,block_size>
+{
+    using Base = BdaSolver<Scalar,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -57,13 +54,13 @@ private:
     bsrilu02Info_t info_M;
     bsrsv2Info_t info_L, info_U;
     // b: bsr matrix, m: preconditioner
-    double *d_bVals, *d_mVals;
+    Scalar *d_bVals, *d_mVals;
     int *d_bCols, *d_mCols;
     int *d_bRows, *d_mRows;
-    double *d_x, *d_b, *d_r, *d_rw, *d_p;     // vectors, used during linear solve
-    double *d_pw, *d_s, *d_t, *d_v;
+    Scalar *d_x, *d_b, *d_r, *d_rw, *d_p;     // vectors, used during linear solve
+    Scalar *d_pw, *d_s, *d_t, *d_v;
     void *d_buffer;
-    double *vals_contiguous;                  // only used if COPY_ROW_BY_ROW is true in cusparseSolverBackend.cpp
+    Scalar *vals_contiguous;                  // only used if COPY_ROW_BY_ROW is true in cusparseSolverBackend.cpp
 
     bool analysis_done = false;
 
@@ -76,13 +73,13 @@ private:
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void gpu_pbicgstab(WellContributions<double>& wellContribs, BdaResult& res);
+    void gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res);
 
     /// Initialize GPU and allocate memory
     /// \param[in] matrix         matrix for spmv
     /// \param[in] jacMatrix      matrix for preconditioner
-    void initialize(std::shared_ptr<BlockedMatrix<double>> matrix,
-                    std::shared_ptr<BlockedMatrix<double>> jacMatrix);
+    void initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+                    std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix);
 
     /// Clean memory
     void finalize();
@@ -92,18 +89,18 @@ private:
     /// \param[in] matrix         matrix for spmv
     /// \param[in] b              input vector, contains N values
     /// \param[in] jacMatrix      matrix for preconditioner
-    void copy_system_to_gpu(std::shared_ptr<BlockedMatrix<double>> matrix,
-                            double *b,
-                            std::shared_ptr<BlockedMatrix<double>> jacMatrix);
+    void copy_system_to_gpu(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+                            Scalar* b,
+                            std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix);
 
     /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
     /// also copy matrix for preconditioner if needed
     /// \param[in] matrix         matrix for spmv
     /// \param[in] b              input vector, contains N values
     /// \param[in] jacMatrix      matrix for preconditioner
-    void update_system_on_gpu(std::shared_ptr<BlockedMatrix<double>> matrix,
-                              double *b,
-                              std::shared_ptr<BlockedMatrix<double>> jacMatrix);
+    void update_system_on_gpu(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+                              Scalar* b,
+                              std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix);
 
     /// Analyse sparsity pattern to extract parallelism
     /// \return true iff analysis was successful
@@ -116,17 +113,16 @@ private:
     /// Solve linear system
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void solve_system(WellContributions<double>& wellContribs, BdaResult &res);
+    void solve_system(WellContributions<Scalar>& wellContribs, BdaResult &res);
 
 public:
-
-
     /// Construct a cusparseSolver
     /// \param[in] linear_solver_verbosity    verbosity of cusparseSolver
     /// \param[in] maxit                      maximum number of iterations for cusparseSolver
     /// \param[in] tolerance                  required relative tolerance for cusparseSolver
     /// \param[in] deviceID                   the device to be used
-    cusparseSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int deviceID);
+    cusparseSolverBackend(int linear_solver_verbosity, int maxit,
+                          Scalar tolerance, unsigned int deviceID);
 
     /// Destroy a cusparseSolver, and free memory
     ~cusparseSolverBackend();
@@ -138,20 +134,19 @@ public:
     /// \param[in] wellContribs   contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
-                              double *b,
-                              std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-                              WellContributions<double>& wellContribs,
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+                              Scalar* b,
+                              std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
+                              WellContributions<Scalar>& wellContribs,
                               BdaResult& res) override;
     
     /// Get resulting vector x after linear solve, also includes post processing if necessary
     /// \param[inout] x        resulting x vector, caller must guarantee that x points to a valid array
-    void get_result(double *x) override;
+    void get_result(Scalar* x) override;
 
 }; // end class cusparseSolverBackend
 
-} // namespace Accelerator
-} // namespace Opm
+} // namespace Opm::Accelerator
 
 #endif
 
