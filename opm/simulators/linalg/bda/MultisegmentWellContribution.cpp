@@ -137,5 +137,9 @@ void MultisegmentWellContribution<Scalar>::setCudaStream(cudaStream_t stream_)
 
 template class MultisegmentWellContribution<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class MultisegmentWellContribution<float>;
+#endif
+
 } //namespace Opm
 
