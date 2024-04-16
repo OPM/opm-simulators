@@ -93,24 +93,20 @@
 extern std::shared_ptr<std::thread> copyThread;
 #endif //HAVE_OPENMP
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
-using Opm::OpmLog;
 using Dune::Timer;
 
-template <unsigned int block_size>
-rocsparseSolverBackend<block_size>::
-rocsparseSolverBackend(int verbosity_, int maxit_, double tolerance_,
+template<class Scalar, unsigned int block_size>
+rocsparseSolverBackend<Scalar,block_size>::
+rocsparseSolverBackend(int verbosity_, int maxit_, Scalar tolerance_,
                        unsigned int platformID_, unsigned int deviceID_)
     : Base(verbosity_, maxit_, tolerance_, platformID_, deviceID_)
 {
     int numDevices = 0;
     HIP_CHECK(hipGetDeviceCount(&numDevices));
     if (static_cast<int>(deviceID) >= numDevices) {
-        OPM_THROW(std::runtime_error, "Error chosen too high HIP device ID");
+        OPM_THROW(std::runtime_error, "Invalid HIP device ID");
     }
     HIP_CHECK(hipSetDevice(deviceID));
 
@@ -130,46 +126,45 @@ rocsparseSolverBackend(int verbosity_, int maxit_, double tolerance_,
     ROCBLAS_CHECK(rocblas_set_stream(blas_handle, stream));
 }
 
-
-template <unsigned int block_size>
-rocsparseSolverBackend<block_size>::~rocsparseSolverBackend() {
+template<class Scalar, unsigned int block_size>
+rocsparseSolverBackend<Scalar,block_size>::~rocsparseSolverBackend()
+{
     hipError_t hipstatus = hipStreamSynchronize(stream);
-    if(hipstatus != hipSuccess){
+    if (hipstatus != hipSuccess) {
         OpmLog::error("Could not synchronize with hipStream");
     }
     hipstatus = hipStreamDestroy(stream);
-    if(hipstatus != hipSuccess){
+    if (hipstatus != hipSuccess) {
         OpmLog::error("Could not destroy hipStream");
     }
     rocsparse_status status1 = rocsparse_destroy_handle(handle);
-    if(status1 != rocsparse_status_success){
+    if (status1 != rocsparse_status_success) {
         OpmLog::error("Could not destroy rocsparse handle");
     }
     rocblas_status status2 = rocblas_destroy_handle(blas_handle);
-    if(status2 != rocblas_status_success){
+    if (status2 != rocblas_status_success) {
         OpmLog::error("Could not destroy rocblas handle");
     }
 }
 
-
-template <unsigned int block_size>
-void rocsparseSolverBackend<block_size>::
-gpu_pbicgstab([[maybe_unused]] WellContributions<double>& wellContribs,
+template<class Scalar, unsigned int block_size>
+void rocsparseSolverBackend<Scalar,block_size>::
+gpu_pbicgstab([[maybe_unused]] WellContributions<Scalar>& wellContribs,
               BdaResult& res)
 {
     float it = 0.5;
-    double rho, rhop, beta, alpha, nalpha, omega, nomega, tmp1, tmp2;
-    double norm, norm_0;
-    double zero = 0.0;
-    double one  = 1.0;
-    double mone = -1.0;
+    Scalar rho, rhop, beta, alpha, nalpha, omega, nomega, tmp1, tmp2;
+    Scalar norm, norm_0;
+    Scalar zero = 0.0;
+    Scalar one  = 1.0;
+    Scalar mone = -1.0;
 
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
 
     // set stream here, the WellContributions object is destroyed every linear solve
     // the number of wells can change every linear solve
     if (wellContribs.getNumWells() > 0) {
-        static_cast<WellContributionsRocsparse<double>&>(wellContribs).setStream(stream);
+        static_cast<WellContributionsRocsparse<Scalar>&>(wellContribs).setStream(stream);
     }
 
 // HIP_VERSION is defined as (HIP_VERSION_MAJOR * 10000000 + HIP_VERSION_MINOR * 100000 + HIP_VERSION_PATCH)
@@ -259,7 +254,7 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<double>& wellContribs,
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
-            static_cast<WellContributionsRocsparse<double>&>(wellContribs).apply(d_pw, d_v);
+            static_cast<WellContributionsRocsparse<Scalar>&>(wellContribs).apply(d_pw, d_v);
         }
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
@@ -325,7 +320,7 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<double>& wellContribs,
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
-            static_cast<WellContributionsRocsparse<double>&>(wellContribs).apply(d_s, d_t);
+            static_cast<WellContributionsRocsparse<Scalar>&>(wellContribs).apply(d_s, d_t);
         }
         if (verbosity >= 3) {
             HIP_CHECK(hipStreamSynchronize(stream));
@@ -365,8 +360,11 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<double>& wellContribs,
 
     if (verbosity >= 1) {
         std::ostringstream out;
-        out << "=== converged: " << res.converged << ", conv_rate: " << res.conv_rate << ", time: " << res.elapsed << \
-            ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
+        out << "=== converged: " << res.converged
+            << ", conv_rate: " << res.conv_rate
+            << ", time: " << res.elapsed << \
+            ", time per iteration: " << res.elapsed / it
+            << ", iterations: " << it;
         OpmLog::info(out.str());
     }
     if (verbosity >= 3) {
@@ -380,10 +378,10 @@ gpu_pbicgstab([[maybe_unused]] WellContributions<double>& wellContribs,
     }
 }
 
-template <unsigned int block_size>
-void rocsparseSolverBackend<block_size>::
-initialize(std::shared_ptr<BlockedMatrix<double>> matrix,
-           std::shared_ptr<BlockedMatrix<double>> jacMatrix)
+template<class Scalar, unsigned int block_size>
+void rocsparseSolverBackend<Scalar,block_size>::
+initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+           std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix)
 {
     this->Nb = matrix->Nb;
     this->N = Nb * block_size;
@@ -397,12 +395,14 @@ initialize(std::shared_ptr<BlockedMatrix<double>> matrix,
     }
 
     std::ostringstream out;
-    out << "Initializing GPU, matrix size: " << Nb << " blockrows, nnzb: " << nnzb << "\n";
+    out << "Initializing GPU, matrix size: "
+        << Nb << " blockrows, nnzb: " << nnzb << "\n";
     if (useJacMatrix) {
         out << "Blocks in ILU matrix: " << jacMatrix->nnzbs << "\n";
     }
-    out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
-    out << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
+    out << "Maxit: " << maxit
+        << std::scientific << ", tolerance: " << tolerance << "\n"
+        << "PlatformID: " << platformID << ", deviceID: " << deviceID << "\n";
     OpmLog::info(out.str());
     out.str("");
     out.clear();
@@ -410,26 +410,26 @@ initialize(std::shared_ptr<BlockedMatrix<double>> matrix,
     mat = matrix;
     jacMat = jacMatrix;
 
-    HIP_CHECK(hipMalloc((void**)&d_r, sizeof(double) * N));
-    HIP_CHECK(hipMalloc((void**)&d_rw, sizeof(double) * N));
-    HIP_CHECK(hipMalloc((void**)&d_p, sizeof(double) * N));
-    HIP_CHECK(hipMalloc((void**)&d_pw, sizeof(double) * N));
-    HIP_CHECK(hipMalloc((void**)&d_s, sizeof(double) * N));
-    HIP_CHECK(hipMalloc((void**)&d_t, sizeof(double) * N));
-    HIP_CHECK(hipMalloc((void**)&d_v, sizeof(double) * N));
+    HIP_CHECK(hipMalloc((void**)&d_r, sizeof(Scalar) * N));
+    HIP_CHECK(hipMalloc((void**)&d_rw, sizeof(Scalar) * N));
+    HIP_CHECK(hipMalloc((void**)&d_p, sizeof(Scalar) * N));
+    HIP_CHECK(hipMalloc((void**)&d_pw, sizeof(Scalar) * N));
+    HIP_CHECK(hipMalloc((void**)&d_s, sizeof(Scalar) * N));
+    HIP_CHECK(hipMalloc((void**)&d_t, sizeof(Scalar) * N));
+    HIP_CHECK(hipMalloc((void**)&d_v, sizeof(Scalar) * N));
 
     HIP_CHECK(hipMalloc((void**)&d_Arows, sizeof(rocsparse_int) * (Nb + 1)));
     HIP_CHECK(hipMalloc((void**)&d_Acols, sizeof(rocsparse_int) * nnzb));
-    HIP_CHECK(hipMalloc((void**)&d_Avals, sizeof(double) * nnz));
-    HIP_CHECK(hipMalloc((void**)&d_x, sizeof(double) * N));
-    HIP_CHECK(hipMalloc((void**)&d_b, sizeof(double) * N));
+    HIP_CHECK(hipMalloc((void**)&d_Avals, sizeof(Scalar) * nnz));
+    HIP_CHECK(hipMalloc((void**)&d_x, sizeof(Scalar) * N));
+    HIP_CHECK(hipMalloc((void**)&d_b, sizeof(Scalar) * N));
 
     if (useJacMatrix) {
         HIP_CHECK(hipMalloc((void**)&d_Mrows, sizeof(rocsparse_int) * (Nb + 1)));
         HIP_CHECK(hipMalloc((void**)&d_Mcols, sizeof(rocsparse_int) * nnzbs_prec));
-        HIP_CHECK(hipMalloc((void**)&d_Mvals, sizeof(double) * nnzbs_prec * block_size * block_size));
+        HIP_CHECK(hipMalloc((void**)&d_Mvals, sizeof(Scalar) * nnzbs_prec * block_size * block_size));
     } else { // preconditioner matrix is same
-        HIP_CHECK(hipMalloc((void**)&d_Mvals, sizeof(double) * nnzbs_prec * block_size * block_size));
+        HIP_CHECK(hipMalloc((void**)&d_Mvals, sizeof(Scalar) * nnzbs_prec * block_size * block_size));
         d_Mcols = d_Acols;
         d_Mrows = d_Arows;
     }
@@ -437,26 +437,43 @@ initialize(std::shared_ptr<BlockedMatrix<double>> matrix,
     initialized = true;
 } // end initialize()
 
-template <unsigned int block_size>
-void rocsparseSolverBackend<block_size>::copy_system_to_gpu(double *b) {
+template<class Scalar, unsigned int block_size>
+void rocsparseSolverBackend<Scalar,block_size>::
+copy_system_to_gpu(Scalar *b)
+{
     Timer t;
 
-    HIP_CHECK(hipMemcpyAsync(d_Arows, mat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, stream));
-    HIP_CHECK(hipMemcpyAsync(d_Acols, mat->colIndices, sizeof(rocsparse_int) * nnzb, hipMemcpyHostToDevice, stream));
-    HIP_CHECK(hipMemcpyAsync(d_Avals, mat->nnzValues, sizeof(double) * nnz, hipMemcpyHostToDevice, stream));
-    HIP_CHECK(hipMemsetAsync(d_x, 0, sizeof(double) * N, stream));
-    HIP_CHECK(hipMemcpyAsync(d_b, b, sizeof(double) * N, hipMemcpyHostToDevice, stream));
+    HIP_CHECK(hipMemcpyAsync(d_Arows, mat->rowPointers,
+                             sizeof(rocsparse_int) * (Nb + 1), 
+                             hipMemcpyHostToDevice, stream));
+    HIP_CHECK(hipMemcpyAsync(d_Acols, mat->colIndices, 
+                             sizeof(rocsparse_int) * nnzb,
+                             hipMemcpyHostToDevice, stream));
+    HIP_CHECK(hipMemcpyAsync(d_Avals, mat->nnzValues,
+                             sizeof(Scalar) * nnz,
+                             hipMemcpyHostToDevice, stream));
+    HIP_CHECK(hipMemsetAsync(d_x, 0, N * sizeof(Scalar), stream));
+    HIP_CHECK(hipMemcpyAsync(d_b, b, N * sizeof(Scalar) * N,
+                             hipMemcpyHostToDevice, stream));
     
     if (useJacMatrix) {
 #if HAVE_OPENMP
-	if(omp_get_max_threads() > 1)
-	   copyThread->join();
+        if (omp_get_max_threads() > 1) {
+           copyThread->join();
+        }
 #endif
-        HIP_CHECK(hipMemcpyAsync(d_Mrows, jacMat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, stream));
-        HIP_CHECK(hipMemcpyAsync(d_Mcols, jacMat->colIndices, sizeof(rocsparse_int) * nnzbs_prec, hipMemcpyHostToDevice, stream));
-        HIP_CHECK(hipMemcpyAsync(d_Mvals, jacMat->nnzValues, sizeof(double) * nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, stream));
+        HIP_CHECK(hipMemcpyAsync(d_Mrows, jacMat->rowPointers,
+                                 sizeof(rocsparse_int) * (Nb + 1),
+                                 hipMemcpyHostToDevice, stream));
+        HIP_CHECK(hipMemcpyAsync(d_Mcols, jacMat->colIndices,
+                                 sizeof(rocsparse_int) * nnzbs_prec,
+                                 hipMemcpyHostToDevice, stream));
+        HIP_CHECK(hipMemcpyAsync(d_Mvals, jacMat->nnzValues,
+                                 sizeof(Scalar) * nnzbs_prec * block_size * block_size,
+                                 hipMemcpyHostToDevice, stream));
     } else {
-        HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(double) * nnz, hipMemcpyDeviceToDevice, stream));
+        HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals,
+                                 sizeof(Scalar) * nnz, hipMemcpyDeviceToDevice, stream));
     }
 
     if (verbosity >= 3) {
@@ -466,29 +483,36 @@ void rocsparseSolverBackend<block_size>::copy_system_to_gpu(double *b) {
         std::ostringstream out;
         out << "-----rocsparseSolver::copy_system_to_gpu(): " << t.elapsed() << " s\n";
         out << "---rocsparseSolver::cum copy: " << c_copy << " s";
-	OpmLog::info(out.str());
+        OpmLog::info(out.str());
     }
 } // end copy_system_to_gpu()
 
 // don't copy rowpointers and colindices, they stay the same
-template <unsigned int block_size>
-void rocsparseSolverBackend<block_size>::update_system_on_gpu(double *b) {
+template<class Scalar, unsigned int block_size>
+void rocsparseSolverBackend<Scalar,block_size>::
+update_system_on_gpu(Scalar* b)
+{
     Timer t;
 
-    HIP_CHECK(hipMemcpyAsync(d_Avals, mat->nnzValues, sizeof(double) * nnz, hipMemcpyHostToDevice, stream));
-    HIP_CHECK(hipMemsetAsync(d_x, 0, sizeof(double) * N, stream));
-    HIP_CHECK(hipMemcpyAsync(d_b, b, sizeof(double) * N, hipMemcpyHostToDevice, stream));
+    HIP_CHECK(hipMemcpyAsync(d_Avals, mat->nnzValues, sizeof(Scalar) * nnz,
+                             hipMemcpyHostToDevice, stream));
+    HIP_CHECK(hipMemsetAsync(d_x, 0, N * sizeof(Scalar), stream));
+    HIP_CHECK(hipMemcpyAsync(d_b, b, N* sizeof(Scalar),
+                             hipMemcpyHostToDevice, stream));
     
     if (useJacMatrix) {
 #if HAVE_OPENMP
-	if (omp_get_max_threads() > 1)
-	    copyThread->join();
+        if (omp_get_max_threads() > 1) {
+            copyThread->join();
+        }
 #endif
-        HIP_CHECK(hipMemcpyAsync(d_Mvals, jacMat->nnzValues, sizeof(double) * nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, stream));
+        HIP_CHECK(hipMemcpyAsync(d_Mvals, jacMat->nnzValues,
+                                 sizeof(Scalar) * nnzbs_prec * block_size * block_size,
+                                 hipMemcpyHostToDevice, stream));
     } else {
-        HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(double) * nnz, hipMemcpyDeviceToDevice, stream));
+        HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals,
+                                 sizeof(Scalar) * nnz, hipMemcpyDeviceToDevice, stream));
     }
-    
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(stream));
 
@@ -500,8 +524,10 @@ void rocsparseSolverBackend<block_size>::update_system_on_gpu(double *b) {
     }
 } // end update_system_on_gpu()
 
-template <unsigned int block_size>
-bool rocsparseSolverBackend<block_size>::analyze_matrix() {
+template<class Scalar, unsigned int block_size>
+bool rocsparseSolverBackend<Scalar,block_size>::
+analyze_matrix()
+{
     std::size_t d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
     Timer t;
 
@@ -530,7 +556,8 @@ bool rocsparseSolverBackend<block_size>::analyze_matrix() {
     ROCSPARSE_CHECK(rocsparse_dbsrsv_buffer_size(handle, dir, operation, Nb, nnzbs_prec,
                                descr_U, d_Mvals, d_Mrows, d_Mcols, block_size, ilu_info, &d_bufferSize_U));
 
-    d_bufferSize = std::max(d_bufferSize_M, std::max(d_bufferSize_L, d_bufferSize_U));
+    d_bufferSize = std::max(d_bufferSize_M,
+                            std::max(d_bufferSize_L, d_bufferSize_U));
 
     HIP_CHECK(hipMalloc((void**)&d_buffer, d_bufferSize));
 
@@ -578,9 +605,10 @@ bool rocsparseSolverBackend<block_size>::analyze_matrix() {
     return true;
 } // end analyze_matrix()
 
-
-template <unsigned int block_size>
-bool rocsparseSolverBackend<block_size>::create_preconditioner() {
+template<class Scalar, unsigned int block_size>
+bool rocsparseSolverBackend<Scalar,block_size>::
+create_preconditioner()
+{
     Timer t;
 
     bool result = true;
@@ -605,10 +633,9 @@ bool rocsparseSolverBackend<block_size>::create_preconditioner() {
     return result;
 } // end create_preconditioner()
 
-
-template <unsigned int block_size>
-void rocsparseSolverBackend<block_size>::
-solve_system(WellContributions<double>& wellContribs, BdaResult& res)
+template<class Scalar, unsigned int block_size>
+void rocsparseSolverBackend<Scalar,block_size>::
+solve_system(WellContributions<Scalar>& wellContribs, BdaResult& res)
 {
     Timer t;
 
@@ -621,17 +648,18 @@ solve_system(WellContributions<double>& wellContribs, BdaResult& res)
         out << "rocsparseSolver::solve_system(): " << t.stop() << " s";
         OpmLog::info(out.str());
     }
-
 } // end solve_system()
-
 
 // copy result to host memory
 // caller must be sure that x is a valid array
-template <unsigned int block_size>
-void rocsparseSolverBackend<block_size>::get_result(double *x) {
+template<class Scalar, unsigned int block_size>
+void rocsparseSolverBackend<Scalar,block_size>::
+get_result(Scalar* x)
+{
     Timer t;
 
-    HIP_CHECK(hipMemcpyAsync(x, d_x, sizeof(double) * N, hipMemcpyDeviceToHost, stream));
+    HIP_CHECK(hipMemcpyAsync(x, d_x, sizeof(Scalar) * N,
+                             hipMemcpyDeviceToHost, stream));
     HIP_CHECK(hipStreamSynchronize(stream)); // always wait, caller might want to use x immediately
 
     if (verbosity >= 3) {
@@ -641,14 +669,13 @@ void rocsparseSolverBackend<block_size>::get_result(double *x) {
     }
 } // end get_result()
 
-
-template <unsigned int block_size>
-SolverStatus rocsparseSolverBackend<block_size>::
-    solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
-                 double *b,
-                 std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-                 WellContributions<double>& wellContribs,
-                 BdaResult& res)
+template<class Scalar, unsigned int block_size>
+SolverStatus rocsparseSolverBackend<Scalar,block_size>::
+solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+             Scalar* b,
+             std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
+             WellContributions<Scalar>& wellContribs,
+             BdaResult& res)
 {
     if (initialized == false) {
         initialize(matrix, jacMatrix);
@@ -672,19 +699,14 @@ SolverStatus rocsparseSolverBackend<block_size>::
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 
+#define INSTANTIATE_TYPE(T)                     \
+    template class rocsparseSolverBackend<T,1>; \
+    template class rocsparseSolverBackend<T,2>; \
+    template class rocsparseSolverBackend<T,3>; \
+    template class rocsparseSolverBackend<T,4>; \
+    template class rocsparseSolverBackend<T,5>; \
+    template class rocsparseSolverBackend<T,6>;
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                        \
-template rocsparseSolverBackend<n>::rocsparseSolverBackend(                 \
-    int, int, double, unsigned int, unsigned int);
+INSTANTIATE_TYPE(double)
 
-INSTANTIATE_BDA_FUNCTIONS(1);
-INSTANTIATE_BDA_FUNCTIONS(2);
-INSTANTIATE_BDA_FUNCTIONS(3);
-INSTANTIATE_BDA_FUNCTIONS(4);
-INSTANTIATE_BDA_FUNCTIONS(5);
-INSTANTIATE_BDA_FUNCTIONS(6);
-
-#undef INSTANTIATE_BDA_FUNCTIONS
-
-} // namespace Accelerator
-} // namespace Opm
+} // namespace Opm::Accelerator
