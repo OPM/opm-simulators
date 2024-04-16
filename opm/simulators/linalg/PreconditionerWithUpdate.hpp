@@ -99,32 +99,34 @@ struct GeneralPreconditionerMaker {
 /// @tparam ...Args - All arguments needed to construct the preconditioner of choice
 template <class OriginalPreconditioner, class... Args>
 struct PreconditionerMaker : public GeneralPreconditionerMaker<OriginalPreconditioner> {
+    using GenericPreconditioner = Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>;
+    
     PreconditionerMaker(Args&&... args)
         : args_(args...)
     {
     }
-    std::unique_ptr<
-        Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>>
+    std::unique_ptr<GenericPreconditioner>
     make() override
     {
-        return std::unique_ptr<
-            Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>> {
-            new auto(std::make_from_tuple<OriginalPreconditioner>(args_))};
+        // return std::unique_ptr<GenericPreconditioner> {new auto(std::make_from_tuple<OriginalPreconditioner>(args_))};
+        return std::apply(
+            [](auto&&... args) {
+                return std::make_unique<OriginalPreconditioner>(std::forward<Args>(args)...);
+            }, args_);
     }
     std::tuple<Args...> args_;
 };
 
 /// @brief Wrapper class of preconditioners that should be reconstructed on update
 /// @tparam OriginalPreconditioner - Preconditioner of your choice
-/// @tparam ...Args - All arguments neededc to construct the preconditioner of choice
-template <class OriginalPreconditioner, class... Args>
+template <class OriginalPreconditioner>
 class RebuildOnUpdatePreconditioner : public PreconditionerWithUpdate<typename OriginalPreconditioner::domain_type,
                                                                       typename OriginalPreconditioner::range_type>
 {
 public:
+    template<class... Args>
     RebuildOnUpdatePreconditioner(Args... args)
-        : preconditioner_params_(args...)
-        , preconditioner_maker_(std::make_unique<ConcreteMakerType>(std::forward<Args>(args)...))
+        : preconditioner_maker_(std::make_unique<PreconditionerMaker<OriginalPreconditioner, Args...>>(std::forward<Args>(args)...))
     {
         update();
     }
@@ -160,13 +162,10 @@ public:
 
 private:
     using AbstractMakerType = GeneralPreconditionerMaker<OriginalPreconditioner>;
-    using ConcreteMakerType = PreconditionerMaker<OriginalPreconditioner, Args...>;
+    using GenericPreconditioner = Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>;
 
-    std::tuple<Args...> preconditioner_params_;
     std::unique_ptr<AbstractMakerType> preconditioner_maker_;
-    std::unique_ptr<
-        Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>>
-        orig_precond_;
+    std::unique_ptr<GenericPreconditioner> orig_precond_;
 };
 
 /// @brief Wrapper function creating and return a shared pointer to a preconditioner which is reconstructed on update
@@ -175,10 +174,10 @@ private:
 /// @param ...args - Arguments needed to construct the preconditioner of choice
 /// @return Shared pointer to preconditioner which has an update function that reconstrcuts the preconditioner
 template <class OriginalPreconditioner, class... Args>
-std::shared_ptr<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Args...>>
+auto
 getRebuildOnUpdateWrapper(Args... args)
 {
-    return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner, Args...>>(
+    return std::make_shared<RebuildOnUpdatePreconditioner<OriginalPreconditioner>>(
         std::forward<Args>(args)...);
 }
 
