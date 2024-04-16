@@ -89,10 +89,14 @@ void blockMult(Scalar* mat1, Scalar* mat2, Scalar* resMat, unsigned int block_si
     }
 }
 
-#define INSTANCE_TYPE(T) \
-    template void blockMultSub(double*, double*, double*, unsigned int); \
-    template void blockMult(double*, double*, double*, unsigned int);
+#define INSTANTIATE_TYPE(T)                               \
+    template void blockMultSub(T*, T*, T*, unsigned int); \
+    template void blockMult(T*, T*, T*, unsigned int);
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::Accelerator
