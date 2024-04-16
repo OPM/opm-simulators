@@ -284,7 +284,7 @@ analyzeAggregateMaps()
     }
 }
 
-#define INSTANCE_TYPE(T)                \
+#define INSTANTIATE_TYPE(T)          \
     template class CprCreation<T,1>; \
     template class CprCreation<T,2>; \
     template class CprCreation<T,3>; \
@@ -292,7 +292,11 @@ analyzeAggregateMaps()
     template class CprCreation<T,5>; \
     template class CprCreation<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm
 

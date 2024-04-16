@@ -1,7 +1,9 @@
-#include <cmath>
-#include <algorithm>
+#include <config.h>
 
 #include <opm/simulators/linalg/bda/Misc.hpp>
+
+#include <cmath>
+#include <algorithm>
 
 namespace Opm::Accelerator {
 
@@ -58,5 +60,9 @@ void solve_transposed_3x3(const Scalar* A,
     template T get_absmax<T>(const T* data, const int N);
 
 INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 }
