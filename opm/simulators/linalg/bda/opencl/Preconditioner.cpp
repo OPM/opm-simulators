@@ -74,7 +74,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat,
     return create_preconditioner(mat);
 }
 
-#define INSTANCE_TYPE(T)                \
+#define INSTANTIATE_TYPE(T)             \
     template class Preconditioner<T,1>; \
     template class Preconditioner<T,2>; \
     template class Preconditioner<T,3>; \
@@ -82,6 +82,10 @@ create_preconditioner(BlockedMatrix<Scalar>* mat,
     template class Preconditioner<T,5>; \
     template class Preconditioner<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::Accelerator

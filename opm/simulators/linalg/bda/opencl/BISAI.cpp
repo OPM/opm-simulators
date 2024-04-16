@@ -353,7 +353,7 @@ void BISAI<Scalar,block_size>::apply(const cl::Buffer& x, cl::Buffer& y)
                                 d_invL_x, y, Nb, bs); // application of isaiU is a simple spmv
 }
 
-#define INSTANCE_TYPE(T)       \
+#define INSTANTIATE_TYPE(T)    \
     template class BISAI<T,1>; \
     template class BISAI<T,2>; \
     template class BISAI<T,3>; \
@@ -361,6 +361,10 @@ void BISAI<Scalar,block_size>::apply(const cl::Buffer& x, cl::Buffer& y)
     template class BISAI<T,5>; \
     template class BISAI<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::Accelerator
