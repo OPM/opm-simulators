@@ -95,7 +95,9 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
     } else if (accelerator_mode.compare("amgcl") == 0) {
 #if HAVE_AMGCL
         use_gpu = true; // should be replaced by a 'use_bridge' boolean
-        backend.reset(new Opm::Accelerator::amgclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
+        using AMGCL = Accelerator::amgclSolverBackend<double,block_size>;
+        backend = std::make_unique<AMGCL>(linear_solver_verbosity, maxit,
+                                          tolerance, platformID, deviceID);
 #else
         OPM_THROW(std::logic_error, "Error amgclSolver was chosen, but amgcl was not found by CMake");
 #endif
