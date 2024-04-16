@@ -20,10 +20,12 @@
 */
 
 #include <config.h>
-#include <opm/common/TimingMacros.hpp>
-
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
+
 #include <dune/istl/umfpack.hh>
+
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/TimingMacros.hpp>
 
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 
@@ -167,7 +169,12 @@ void MultisegmentWellEquations<Scalar,numWellEq,numEq>::createSolver()
         return;
     }
 
-    duneDSolver_ = std::make_shared<Dune::UMFPack<DiagMatWell>>(duneD_, 0);
+    if constexpr (std::is_same_v<Scalar,float>) {
+        OPM_THROW(std::runtime_error, "MultisegmentWell support requires UMFPACK, "
+                                      "and UMFPACK does not support float");
+    } else {
+        duneDSolver_ = std::make_shared<Dune::UMFPack<DiagMatWell>>(duneD_, 0);
+    }
 #else
     OPM_THROW(std::runtime_error, "MultisegmentWell support requires UMFPACK. "
               "Reconfigure opm-simulators with SuiteSparse/UMFPACK support and recompile.");
@@ -225,46 +232,50 @@ extract(WellContributions<Scalar>& wellContribs) const
     }
 
     // duneD
-    Dune::UMFPack<DiagMatWell> umfpackMatrix(duneD_, 0);
-    double* Dvals = umfpackMatrix.getInternalMatrix().getValues();
-    auto* Dcols = umfpackMatrix.getInternalMatrix().getColStart();
-    auto* Drows = umfpackMatrix.getInternalMatrix().getRowIndex();
+    if constexpr (std::is_same_v<Scalar,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use UMFPack with floats");
+    } else {
+        Dune::UMFPack<DiagMatWell> umfpackMatrix(duneD_, 0);
+        double* Dvals = umfpackMatrix.getInternalMatrix().getValues();
+        auto* Dcols = umfpackMatrix.getInternalMatrix().getColStart();
+        auto* Drows = umfpackMatrix.getInternalMatrix().getRowIndex();
 
-    // duneB
-    std::vector<unsigned int> Bcols;
-    std::vector<unsigned int> Brows;
-    std::vector<double> Bvals;
-    Bcols.reserve(BnumBlocks);
-    Brows.reserve(Mb+1);
-    Bvals.reserve(BnumBlocks * numEq * numWellEq);
-    Brows.emplace_back(0);
-    unsigned int sumBlocks = 0;
-    for (auto rowB = duneB_.begin(); rowB != duneB_.end(); ++rowB) {
-        int sizeRow = 0;
-        for (auto colB = rowB->begin(), endB = rowB->end(); colB != endB; ++colB) {
-            Bcols.emplace_back(colB.index());
-            for (int i = 0; i < numWellEq; ++i) {
-                for (int j = 0; j < numEq; ++j) {
-                    Bvals.emplace_back((*colB)[i][j]);
+        // duneB
+        std::vector<unsigned int> Bcols;
+        std::vector<unsigned int> Brows;
+        std::vector<double> Bvals;
+        Bcols.reserve(BnumBlocks);
+        Brows.reserve(Mb+1);
+        Bvals.reserve(BnumBlocks * numEq * numWellEq);
+        Brows.emplace_back(0);
+        unsigned int sumBlocks = 0;
+        for (auto rowB = duneB_.begin(); rowB != duneB_.end(); ++rowB) {
+            int sizeRow = 0;
+            for (auto colB = rowB->begin(), endB = rowB->end(); colB != endB; ++colB) {
+                Bcols.emplace_back(colB.index());
+                for (int i = 0; i < numWellEq; ++i) {
+                    for (int j = 0; j < numEq; ++j) {
+                        Bvals.emplace_back((*colB)[i][j]);
+                    }
                 }
+                sizeRow++;
             }
-            sizeRow++;
+            sumBlocks += sizeRow;
+            Brows.emplace_back(sumBlocks);
         }
-        sumBlocks += sizeRow;
-        Brows.emplace_back(sumBlocks);
-    }
 
-    wellContribs.addMultisegmentWellContribution(numEq,
-                                                 numWellEq,
-                                                 Mb,
-                                                 Bvals,
-                                                 Bcols,
-                                                 Brows,
-                                                 DnumBlocks,
-                                                 Dvals,
-                                                 Dcols,
-                                                 Drows,
-                                                 Cvals);
+        wellContribs.addMultisegmentWellContribution(numEq,
+                                                     numWellEq,
+                                                     Mb,
+                                                     Bvals,
+                                                     Bcols,
+                                                     Brows,
+                                                     DnumBlocks,
+                                                     Dvals,
+                                                     Dcols,
+                                                     Drows,
+                                                     Cvals);
+    }
 }
 #endif
 
