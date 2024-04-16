@@ -273,4 +273,8 @@ using PolyHedralGrid3D = Dune::PolyhedralGrid<3, 3>;
 
 INSTANTIATE_TYPE(double)
 
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
+
 } // namespace Opm::detail
