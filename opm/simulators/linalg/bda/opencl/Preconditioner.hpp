@@ -22,11 +22,12 @@
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 
+#include <memory>
+
 namespace Opm
 {
 namespace Accelerator
 {
-
 
 class BlockedMatrix;
 
@@ -51,13 +52,13 @@ protected:
     {};
 
 public:
-    enum PreconditionerType {
+    enum class Type {
         BILU0,
         CPR,
         BISAI
     };
 
-    static std::unique_ptr<Preconditioner> create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel);
+    static std::unique_ptr<Preconditioner> create(Type type, int verbosity, bool opencl_ilu_parallel);
 
     virtual ~Preconditioner() = default;
 
