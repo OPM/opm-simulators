@@ -20,8 +20,6 @@
 #ifndef OPM_CPR_HPP
 #define OPM_CPR_HPP
 
-#include <mutex>
-
 #include <dune/istl/paamg/matrixhierarchy.hh>
 #include <dune/istl/umfpack.hh>
 
@@ -32,6 +30,8 @@
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp>
+
+#include <type_traits>
 
 namespace Opm::Accelerator {
 
@@ -81,7 +81,7 @@ private:
     std::shared_ptr<MatrixOperator> dune_op;    // operator, input to Dune AMG
     std::vector<int> level_sizes;               // size of each level in the AMG hierarchy
     std::vector<std::vector<int> > diagIndices; // index of diagonal value for each level
-    Dune::UMFPack<DuneMat> umfpack;             // dune/istl/umfpack object used to solve the coarsest level of AMG
+    std::conditional_t<std::is_same_v<Scalar,float>,int,Dune::UMFPack<DuneMat>> umfpack; // dune/istl/umfpack object used to solve the coarsest level of AMG
     bool always_recalculate_aggregates = false; // OPM always reuses the aggregates by default
     bool recalculate_aggregates = true;         // only rerecalculate if true
     const int pressure_idx = 1;                 // hardcoded to mimic OPM

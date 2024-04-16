@@ -367,6 +367,9 @@ void CPR<Scalar,block_size>::analyzeHierarchy()
 {
     const typename DuneAmg::ParallelMatrixHierarchy& matrixHierarchy = dune_amg->matrices();
 
+    if constexpr (std::is_same_v<Scalar,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use CPR with floats due to UMFPACK");
+    } else {
     // store coarsest AMG level in umfpack format, also performs LU decomposition
     umfpack.setMatrix((*matrixHierarchy.coarsest()).getmat());
 
@@ -414,6 +417,7 @@ void CPR<Scalar,block_size>::analyzeHierarchy()
         for (unsigned int row = 0; row < A.N(); ++row) {
             invDiags.back()[row] = 1.0 / Amatrices.back().nnzValues[diagIndices[level][row]];
         }
+    }
     }
 }
 
@@ -479,7 +483,12 @@ void CPR<Scalar,block_size>::amg_cycle_gpu(const int level, cl::Buffer& y, cl::B
         }
 
         // solve coarsest level using umfpack
-        umfpack.apply(h_x.data(), h_y.data());
+        if constexpr (std::is_same_v<Scalar,float>) {
+            OPM_THROW(std::runtime_error, "Cannot use CPR with floats due to UMFPACK");
+        } else {
+            umfpack.apply(h_x.data(), h_y.data());
+        }
+
 
         events.resize(1);
         err = queue->enqueueWriteBuffer(x, CL_FALSE, 0,
