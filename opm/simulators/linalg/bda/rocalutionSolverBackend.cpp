@@ -47,30 +47,28 @@
 #undef HIP_HAVE_CUDA_DEFINED
 #endif
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
-using Opm::OpmLog;
 using Dune::Timer;
 
-template <unsigned int block_size>
-rocalutionSolverBackend<block_size>::
-rocalutionSolverBackend(int verbosity_, int maxit_, double tolerance_)
+template<class Scalar, unsigned int block_size>
+rocalutionSolverBackend<Scalar,block_size>::
+rocalutionSolverBackend(int verbosity_, int maxit_, Scalar tolerance_)
     : Base(verbosity_, maxit_, tolerance_)
 {
     rocalution::init_rocalution();
     rocalution::info_rocalution();
-    roc_solver = std::make_unique<rocalution::BiCGStab<rocalution::LocalMatrix<double>, rocalution::LocalVector<double>, double> >();
-    roc_prec = std::make_unique<rocalution::ILU<rocalution::LocalMatrix<double>, rocalution::LocalVector<double>, double> >();
+    using BCGS = rocalution::BiCGStab<Mat,Vec,Scalar>;
+    roc_solver = std::make_unique<BCGS>();
+    using ILU = rocalution::ILU<Mat,Vec,Scalar>;
+    roc_prec = std::make_unique<ILU>();
     roc_solver->Verbose(0);
     roc_solver->Init(/*abs_tol=*/1e-15, tolerance, /*divergence_tol=*/1e3, maxit);
 }
 
-
-template <unsigned int block_size>
-rocalutionSolverBackend<block_size>::~rocalutionSolverBackend() {
+template<class Scalar, unsigned int block_size>
+rocalutionSolverBackend<Scalar,block_size>::~rocalutionSolverBackend()
+{
     // normally, these rocalution variables are destroyed after the destructor automatically,
     // but sometimes it segfaults, both with test_rocalutionSolver and with an actual case
     // release both variables here to prevent that segfault
@@ -79,8 +77,9 @@ rocalutionSolverBackend<block_size>::~rocalutionSolverBackend() {
     rocalution::stop_rocalution();
 }
 
-template <unsigned int block_size>
-void rocalutionSolverBackend<block_size>::initialize(BlockedMatrix<double>* matrix)
+template<class Scalar, unsigned int block_size>
+void rocalutionSolverBackend<Scalar,block_size>::
+initialize(BlockedMatrix<Scalar>* matrix)
 {
     this->Nb = matrix->Nb;
     this->N = Nb * block_size;
@@ -97,15 +96,16 @@ void rocalutionSolverBackend<block_size>::initialize(BlockedMatrix<double>* matr
     initialized = true;
 } // end initialize()
 
-template <unsigned int block_size>
-void rocalutionSolverBackend<block_size>::convert_matrix(BlockedMatrix<double>* matrix)
+template<class Scalar, unsigned int block_size>
+void rocalutionSolverBackend<Scalar,block_size>::
+convert_matrix(BlockedMatrix<Scalar>* matrix)
 {
     Timer t;
 
-    for(int i = 0; i < Nb+1; ++i){
+    for (int i = 0; i < Nb+1; ++i) {
         tmp_rowpointers[i] = matrix->rowPointers[i];
     }
-    for(int i = 0; i < nnzb; ++i){
+    for (int i = 0; i < nnzb; ++i) {
         tmp_colindices[i] = matrix->colIndices[i];
     }
 
@@ -115,7 +115,7 @@ void rocalutionSolverBackend<block_size>::convert_matrix(BlockedMatrix<double>* 
     // BCSR_IND_BASE == 0: rocalution expects column-major
     // BCSR_IND_BASE == 1: rocalution expects row-major
     if (BCSR_IND_BASE == 0) {
-        for(int i = 0; i < nnzb; ++i){
+        for (int i = 0; i < nnzb; ++i) {
             tmp_nnzvalues[i * block_size * block_size + 0] = matrix->nnzValues[i * block_size * block_size + 0];
             tmp_nnzvalues[i * block_size * block_size + 1] = matrix->nnzValues[i * block_size * block_size + 3];
             tmp_nnzvalues[i * block_size * block_size + 2] = matrix->nnzValues[i * block_size * block_size + 6];
@@ -136,8 +136,10 @@ void rocalutionSolverBackend<block_size>::convert_matrix(BlockedMatrix<double>* 
 
 // copy result to host memory
 // caller must be sure that x is a valid array
-template <unsigned int block_size>
-void rocalutionSolverBackend<block_size>::get_result(double *x) {
+template<class Scalar, unsigned int block_size>
+void rocalutionSolverBackend<Scalar,block_size>::
+get_result(Scalar* x)
+{
     Timer t;
 
     std::copy(h_x.begin(), h_x.end(), x);
@@ -149,12 +151,12 @@ void rocalutionSolverBackend<block_size>::get_result(double *x) {
     }
 } // end get_result()
 
-template <unsigned int block_size>
-SolverStatus rocalutionSolverBackend<block_size>::
-solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
-             double *b,
-             [[maybe_unused]] std::shared_ptr<BlockedMatrix<double>> jacMatrix,
-             [[maybe_unused]] WellContributions<double>& wellContribs,
+template<class Scalar, unsigned int block_size>
+SolverStatus rocalutionSolverBackend<Scalar,block_size>::
+solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+             Scalar* b,
+             [[maybe_unused]] std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
+             [[maybe_unused]] WellContributions<Scalar>& wellContribs,
              BdaResult& res)
 {
     if (initialized == false) {
@@ -163,21 +165,20 @@ solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
 
     tmp_rowpointers = new int[Nb+1];
     tmp_colindices = new int[nnzb];
-    tmp_nnzvalues = new double[nnzb*block_size*block_size];
+    tmp_nnzvalues = new Scalar[nnzb*block_size*block_size];
 
     convert_matrix(matrix.get());
 
-    rocalution::LocalVector<double> roc_x;
-    rocalution::LocalVector<double> roc_rhs;
-    rocalution::LocalMatrix<double> roc_mat;
+    Vec roc_x;
+    Vec roc_rhs;
+    Mat roc_mat;
 
     // this also transfers ownership to the allocated memory to rocalution
     // and sets the tmp_* pointers to nullptr
-    roc_mat.SetDataPtrBCSR(
-        &tmp_rowpointers,
-        &tmp_colindices,
-        &tmp_nnzvalues,
-        "matrix A", nnzb, Nb, Nb, block_size);
+    roc_mat.SetDataPtrBCSR(&tmp_rowpointers,
+                           &tmp_colindices,
+                           &tmp_nnzvalues,
+                           "matrix A", nnzb, Nb, Nb, block_size);
 
     roc_mat.MoveToAccelerator();
     roc_x.MoveToAccelerator();
@@ -198,7 +199,7 @@ solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
     // so it just calls ILU::Build() everytime
     roc_solver->ReBuildNumeric();
 
-    double norm_0 = roc_rhs.Norm(); // since the initial guess is a vector with 0s, initial error is norm(b)
+    Scalar norm_0 = roc_rhs.Norm(); // since the initial guess is a vector with 0s, initial error is norm(b)
 
     // actually solve
     Dune::Timer t_solve;
@@ -217,7 +218,6 @@ solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
     res.conv_rate  = static_cast<double>(pow(res.reduction, 1.0 / res.iterations));
     res.converged = (roc_solver->GetSolverStatus() == 2);
 
-
     // copy solution vector to host vector
     // if roc_x could be reused, this should be removed here
     // and roc_x should be directly copied into x in get_result()
@@ -226,26 +226,25 @@ solve_system(std::shared_ptr<BlockedMatrix<double>> matrix,
 
     if (verbosity >= 1) {
         std::ostringstream out;
-        out << "=== converged: " << res.converged << ", conv_rate: " << res.conv_rate << ", time: " << res.elapsed << \
-            ", time per iteration: " << res.elapsed / res.iterations << ", iterations: " << res.iterations;
+        out << "=== converged: " << res.converged
+            << ", conv_rate: " << res.conv_rate
+            << ", time: " << res.elapsed <<
+            ", time per iteration: " << res.elapsed / res.iterations
+            << ", iterations: " << res.iterations;
         OpmLog::info(out.str());
     }
 
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 
+#define INSTANTIATE_TYPE(T)                      \
+    template class rocalutionSolverBackend<T,1>; \
+    template class rocalutionSolverBackend<T,2>; \
+    template class rocalutionSolverBackend<T,3>; \
+    template class rocalutionSolverBackend<T,4>; \
+    template class rocalutionSolverBackend<T,5>; \
+    template class rocalutionSolverBackend<T,6>;
 
-#define INSTANTIATE_BDA_FUNCTIONS(n) \
-template rocalutionSolverBackend<n>::rocalutionSolverBackend(int, int, double);
+INSTANTIATE_TYPE(double)
 
-INSTANTIATE_BDA_FUNCTIONS(1);
-INSTANTIATE_BDA_FUNCTIONS(2);
-INSTANTIATE_BDA_FUNCTIONS(3);
-INSTANTIATE_BDA_FUNCTIONS(4);
-INSTANTIATE_BDA_FUNCTIONS(5);
-INSTANTIATE_BDA_FUNCTIONS(6);
-
-#undef INSTANTIATE_BDA_FUNCTIONS
-
-} // namespace Accelerator
-} // namespace Opm
+} // namespace Opm::Accelerator

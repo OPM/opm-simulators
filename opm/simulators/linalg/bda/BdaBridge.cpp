@@ -104,7 +104,8 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
     } else if (accelerator_mode.compare("rocalution") == 0) {
 #if HAVE_ROCALUTION
         use_gpu = true; // should be replaced by a 'use_bridge' boolean
-        backend.reset(new Opm::Accelerator::rocalutionSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance));
+        using ROCA = Accelerator::rocalutionSolverBackend<double,block_size>;
+        backend = std::make_unique<ROCA>(linear_solver_verbosity, maxit, tolerance);
 #else
         OPM_THROW(std::logic_error, "Error rocalutionSolver was chosen, but rocalution was not found by CMake");
 #endif
