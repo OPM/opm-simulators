@@ -184,4 +184,8 @@ addMultisegmentWellContribution(unsigned int dim_,
 
 template class WellContributions<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class WellContributions<float>;
+#endif
+
 } //namespace Opm
