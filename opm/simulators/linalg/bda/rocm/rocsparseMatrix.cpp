@@ -103,11 +103,15 @@ upload(Scalar *vals,
     HIP_CHECK(hipMemcpyAsync(nnzValues, vals, sizeof(Scalar) * size, hipMemcpyHostToDevice, stream));    
 }
 
-#define INSTANCE_TYPE(T)  \
-template class RocmVector<T>;\
-template class RocmMatrix<T>;
+#define INSTANTIATE_TYPE(T)       \
+    template class RocmVector<T>; \
+    template class RocmMatrix<T>;
 
-INSTANCE_TYPE(int);
-INSTANCE_TYPE(double);
+INSTANTIATE_TYPE(int)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm
