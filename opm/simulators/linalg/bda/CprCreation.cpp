@@ -190,7 +190,11 @@ analyzeHierarchy()
     const typename DuneAmg::ParallelMatrixHierarchy& matrixHierarchy = dune_amg->matrices();
 
     // store coarsest AMG level in umfpack format, also performs LU decomposition
-    umfpack.setMatrix((*matrixHierarchy.coarsest()).getmat());
+    if constexpr (std::is_same_v<Scalar,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use CPR with float Scalar due to UMFPACK");
+    } else {
+        umfpack.setMatrix((*matrixHierarchy.coarsest()).getmat());
+    }
 
     num_levels = dune_amg->levels();
     level_sizes.resize(num_levels);

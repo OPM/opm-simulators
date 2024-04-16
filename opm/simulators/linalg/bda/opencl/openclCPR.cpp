@@ -220,7 +220,11 @@ void openclCPR<Scalar,block_size>::amg_cycle_gpu(const int level, cl::Buffer& y,
         }
 
         // solve coarsest level using umfpack
-        this->umfpack.apply(h_x.data(), h_y.data());
+        if constexpr (std::is_same_v<Scalar,float>) {
+            OPM_THROW(std::runtime_error, "Cannot use CPR with floats due to UMFPACK usage");
+        } else {
+            this->umfpack.apply(h_x.data(), h_y.data());
+        }
 
         events.resize(1);
         err = queue->enqueueWriteBuffer(x, CL_FALSE, 0,
