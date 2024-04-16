@@ -339,4 +339,8 @@ apply(Scalar& y,
 
 INSTANTIATE_TYPE(double)
 
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
+
 } // namespace Opm
