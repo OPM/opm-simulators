@@ -44,7 +44,7 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template <unsigned int block_size>
-CPR<block_size>::CPR(int verbosity_, bool opencl_ilu_parallel_) :
+CPR<block_size>::CPR(bool opencl_ilu_parallel_, int verbosity_) :
     Preconditioner<block_size>(verbosity_), opencl_ilu_parallel(opencl_ilu_parallel_)
 {
     bilu0 = std::make_unique<BILU0<block_size> >(opencl_ilu_parallel, verbosity_);

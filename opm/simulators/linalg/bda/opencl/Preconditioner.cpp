@@ -44,13 +44,13 @@ void Preconditioner<block_size>::setOpencl(std::shared_ptr<cl::Context>& context
 
 template <unsigned int block_size>
 std::unique_ptr<Preconditioner<block_size>>
-Preconditioner<block_size>::create(Type type, int verbosity, bool opencl_ilu_parallel)
+Preconditioner<block_size>::create(Type type, bool opencl_ilu_parallel, int verbosity)
 {
     switch (type ) {
     case Type::BILU0:
         return std::make_unique<BILU0<block_size> >(opencl_ilu_parallel, verbosity);
     case Type::CPR:
-        return std::make_unique<CPR<block_size> >(verbosity, opencl_ilu_parallel);
+        return std::make_unique<CPR<block_size> >(opencl_ilu_parallel, verbosity);
     case Type::BISAI:
         return std::make_unique<BISAI<block_size> >(opencl_ilu_parallel, verbosity);
     }
@@ -70,7 +70,7 @@ bool Preconditioner<block_size>::create_preconditioner(BlockedMatrix *mat, [[may
 }
 
 #define INSTANTIATE_BDA_FUNCTIONS(n)  \
-template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(Type, int, bool);         \
+template std::unique_ptr<Preconditioner<n> > Preconditioner<n>::create(Type, bool, int);         \
 template void Preconditioner<n>::setOpencl(std::shared_ptr<cl::Context>&, std::shared_ptr<cl::CommandQueue>&); \
 template bool Preconditioner<n>::analyze_matrix(BlockedMatrix *, BlockedMatrix *);                             \
 template bool Preconditioner<n>::create_preconditioner(BlockedMatrix *, BlockedMatrix *);

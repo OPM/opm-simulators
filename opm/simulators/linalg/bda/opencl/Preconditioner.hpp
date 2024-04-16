@@ -58,7 +58,9 @@ public:
         BISAI
     };
 
-    static std::unique_ptr<Preconditioner> create(Type type, int verbosity, bool opencl_ilu_parallel);
+    static std::unique_ptr<Preconditioner> create(Type type,
+                                                  bool opencl_ilu_parallel,
+                                                  int verbosity);
 
     virtual ~Preconditioner() = default;
 
