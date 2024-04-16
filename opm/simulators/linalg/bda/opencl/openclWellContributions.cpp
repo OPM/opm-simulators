@@ -18,12 +18,12 @@
 */
 
 #include <config.h> // CMake
-
 #include <opm/simulators/linalg/bda/opencl/openclWellContributions.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
 
 namespace Opm
 {
