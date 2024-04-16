@@ -182,6 +182,10 @@ public:
 
 DECLARE_INSTANCE(double)
 
+#if FLOW_INSTANTIATE_FLOAT
+DECLARE_INSTANCE(float)
+#endif
+
 } // namespace Opm::Accelerator
 
 #endif

@@ -565,4 +565,8 @@ void OpenclKernels<Scalar>::isaiU(cl::Buffer& diagIndex, cl::Buffer& colPointers
 
 template class OpenclKernels<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class OpenclKernels<float>;
+#endif
+
 } // namespace Opm::Accelerator

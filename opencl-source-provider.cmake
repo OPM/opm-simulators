@@ -35,6 +35,12 @@ foreach(CL ${CL_LIST})
   file(READ "${CL}" CL_CONTENT)
   file(APPEND ${CL_SRC_FILE} "${CL_CONTENT}")
   file(APPEND ${CL_SRC_FILE} "\)\"; \n\n")
+  if(BUILD_FLOW_FLOAT_VARIANTS)
+    string(REPLACE double float CL_CONTENT "${CL_CONTENT}")
+    file(APPEND ${CL_SRC_FILE} "template<> const std::string OpenclKernels<float>::${FNAME}_str = R\"\( \n")
+    file(APPEND ${CL_SRC_FILE} "${CL_CONTENT}")
+    file(APPEND ${CL_SRC_FILE} "\)\"; \n\n")
+  endif()
 
   if(DEBUG_OPENCL_KERNELS_INTEL)
     execute_process(
