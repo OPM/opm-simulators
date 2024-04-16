@@ -95,10 +95,14 @@ BdaBridge(std::string accelerator_mode_,
 #endif
     } else if (accelerator_mode.compare("amgcl") == 0) {
 #if HAVE_AMGCL
-        use_gpu = true; // should be replaced by a 'use_bridge' boolean
-        using AMGCL = Accelerator::amgclSolverBackend<Scalar,block_size>;
-        backend = std::make_unique<AMGCL>(linear_solver_verbosity, maxit,
-                                          tolerance, platformID, deviceID);
+        if constexpr (std::is_same_v<Scalar,float>) {
+            OPM_THROW(std::logic_error, "Error amgclSolver disabled with float Scalar");
+        } else {
+            use_gpu = true; // should be replaced by a 'use_bridge' boolean
+            using AMGCL = Accelerator::amgclSolverBackend<Scalar,block_size>;
+            backend = std::make_unique<AMGCL>(linear_solver_verbosity, maxit,
+                                              tolerance, platformID, deviceID);
+        }
 #else
         OPM_THROW(std::logic_error, "Error amgclSolver was chosen, but amgcl was not found by CMake");
 #endif
