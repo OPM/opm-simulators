@@ -17,17 +17,17 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include <config.h> // CMake
+#include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
+
+#include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
+
 #if HAVE_UMFPACK
 #include <dune/istl/umfpack.hh>
 #endif // HAVE_UMFPACK
 
-#include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
-
-namespace Opm
-{
+namespace Opm {
 
 template<class Scalar>
 MultisegmentWellContribution<Scalar>::
@@ -59,15 +59,21 @@ MultisegmentWellContribution(unsigned int dim_, unsigned int dim_wells_,
     z1.resize(Mb * dim_wells);
     z2.resize(Mb * dim_wells);
 
-    umfpack_di_symbolic(M, M, Dcols.data(), Drows.data(), Dvals.data(), &UMFPACK_Symbolic, nullptr, nullptr);
-    umfpack_di_numeric(Dcols.data(), Drows.data(), Dvals.data(), UMFPACK_Symbolic, &UMFPACK_Numeric, nullptr, nullptr);
+    if constexpr (std::is_same_v<Scalar,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use multisegment wells with float");
+    } else {
+        umfpack_di_symbolic(M, M, Dcols.data(), Drows.data(), Dvals.data(), &UMFPACK_Symbolic, nullptr, nullptr);
+        umfpack_di_numeric(Dcols.data(), Drows.data(), Dvals.data(), UMFPACK_Symbolic, &UMFPACK_Numeric, nullptr, nullptr);
+    }
 }
 
 template<class Scalar>
 MultisegmentWellContribution<Scalar>::~MultisegmentWellContribution()
 {
-    umfpack_di_free_symbolic(&UMFPACK_Symbolic);
-    umfpack_di_free_numeric(&UMFPACK_Numeric);
+    if constexpr (std::is_same_v<Scalar,double>) {
+        umfpack_di_free_symbolic(&UMFPACK_Symbolic);
+        umfpack_di_free_numeric(&UMFPACK_Numeric);
+    }
 }
 
 // Apply the MultisegmentWellContribution, similar to MultisegmentWell::apply()
@@ -98,7 +104,11 @@ void MultisegmentWellContribution<Scalar>::apply(Scalar* h_x, Scalar* h_y)
 
     // z2 = D^-1 * (B * x)
     // umfpack
-    umfpack_di_solve(UMFPACK_A, Dcols.data(), Drows.data(), Dvals.data(), z2.data(), z1.data(), UMFPACK_Numeric, nullptr, nullptr);
+    if constexpr (std::is_same_v<Scalar,float>) {
+        OPM_THROW(std::runtime_error, "Cannot use multisegment wells with float");
+    } else {
+        umfpack_di_solve(UMFPACK_A, Dcols.data(), Drows.data(), Dvals.data(), z2.data(), z1.data(), UMFPACK_Numeric, nullptr, nullptr);
+    }
 
     // y -= (C^T * z2)
     // y -= (C^T * (D^-1 * (B * x)))
