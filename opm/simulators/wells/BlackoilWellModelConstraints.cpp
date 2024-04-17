@@ -412,15 +412,19 @@ actionOnBrokenConstraints(const Group& group,
 {
 
     bool changed = false;
-    const Group::ProductionCMode oldControl = wellModel_.groupState().production_control(group.name());
+    const Group::ProductionCMode oldControl =
+        wellModel_.groupState().production_control(group.name());
 
     std::string ss;
     switch(group_limit_action.allRates) {
     case Group::ExceedAction::NONE: {
         if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
-            if ((group_limit_action.water == Group::ExceedAction::RATE && newControl == Group::ProductionCMode::WRAT) ||
-                (group_limit_action.gas == Group::ExceedAction::RATE && newControl == Group::ProductionCMode::GRAT) ||
-                (group_limit_action.liquid == Group::ExceedAction::RATE && newControl == Group::ProductionCMode::LRAT)) {
+            if ((group_limit_action.water == Group::ExceedAction::RATE &&
+                 newControl == Group::ProductionCMode::WRAT) ||
+                (group_limit_action.gas == Group::ExceedAction::RATE &&
+                 newControl == Group::ProductionCMode::GRAT) ||
+                (group_limit_action.liquid == Group::ExceedAction::RATE &&
+                 newControl == Group::ProductionCMode::LRAT)) {
                 group_state.production_control(group.name(), newControl);
                 ss = fmt::format("Switching production control mode for group {} from {} to {}",
                                  group.name(),
@@ -430,7 +434,8 @@ actionOnBrokenConstraints(const Group& group,
                 changed = true;
             }
             else {
-                ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. Nothing is done.",
+                ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. "
+                                 "Nothing is done.",
                                  Group::ProductionCMode2String(oldControl),
                                  group.name());
             }
@@ -447,8 +452,10 @@ actionOnBrokenConstraints(const Group& group,
     }
     case Group::ExceedAction::WELL: {
 
-        std::tie(worst_offending_well, std::ignore) = WellGroupHelpers::worstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
-                                                            newControl, wellModel_.phaseUsage(), wellModel_.comm(), well_state, deferred_logger);
+        std::tie(worst_offending_well, std::ignore) =
+            WellGroupHelpers::worstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
+                                                 newControl, wellModel_.phaseUsage(),
+                                                 wellModel_.comm(), well_state, deferred_logger);
         break;
     }
     case Group::ExceedAction::PLUG: {
