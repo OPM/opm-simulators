@@ -45,6 +45,16 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_multx-_insert_kw
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH)
 
+add_test_compareSeparateECLFiles(CASENAME pyaction_next_insert_kw
+                                 DIR1 pyaction
+                                 FILENAME1 PYACTION_NEXT_INSERT_KW
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_NEXT
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH)
+
 add_test_compareSeparateECLFiles(CASENAME pyaction_wconprod_insert_kw
                                  DIR1 pyaction
                                  FILENAME1 PYACTION_WCONPROD_INSERT_KW
