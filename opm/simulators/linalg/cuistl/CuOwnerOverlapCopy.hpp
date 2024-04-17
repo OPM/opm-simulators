@@ -198,9 +198,9 @@ public:
             size_t i = 0;
             for(const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
                 processMap[i]=info->first;
-                if(info->second.second.size_) {
-                    MPI_Irecv(m_GPURecvBuf->data()+info->second.second.start_,
-                            info->second.second.size_,
+                if(info->second.second.m_size) {
+                    MPI_Irecv(m_GPURecvBuf->data()+info->second.second.m_start,
+                            info->second.second.m_size,
                             MPI_BYTE,
                             info->first,
                             m_commTag,
@@ -216,9 +216,9 @@ public:
         {
             size_t i = 0;
             for(const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
-                if(info->second.first.size_) {
-                    MPI_Issend(m_GPUSendBuf->data()+info->second.first.start_,
-                            info->second.first.size_,
+                if(info->second.first.m_size) {
+                    MPI_Issend(m_GPUSendBuf->data()+info->second.first.m_start,
+                            info->second.first.m_size,
                             MPI_BYTE,
                             info->first,
                             m_commTag,
@@ -258,10 +258,10 @@ private:
 
     struct MessageInformation
     {
-        MessageInformation() : start_(0), size_(0) {}
-        MessageInformation(size_t start, size_t size) : start_(start), size_(size) {}
-        size_t start_; // offset in elements of "field_type"
-        size_t size_;  // size in bytes
+        MessageInformation() : m_start(0), m_size(0) {}
+        MessageInformation(size_t start, size_t size) : m_start(start), m_size(size) {}
+        size_t m_start; // offset in elements of "field_type"
+        size_t m_size;  // size in bytes
     };
 
     using InformationMap = std::map<int,std::pair<MessageInformation,MessageInformation> >;
