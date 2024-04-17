@@ -33,6 +33,12 @@
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/detail/has_function.hpp>
 
+#ifdef OPEN_MPI
+#if OPEN_MPI
+#include "mpi-ext.h"
+#endif
+#endif
+
 namespace Opm::cuistl
 {
 //! @brief Wraps a CUDA solver to work with CPU data.
@@ -162,20 +168,23 @@ private:
             const auto& communication = m_opOnCPUWithMatrix.getCommunication();
 
             // Temporary solution use the GPU Direct communication solely based on these prepcrosessor statements
-            bool mpiMightBeSupportedDuringCompilation = true;
-            bool mpiMightBeSupportedDuringRuntime = true;
+            bool mpiSUpportsCudaAwareAtCompileTime = false;
+            bool mpiSupportsCudaAwareAtRunTime = false;
 
-            #if defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_CUDA_AWARE_SUPPORT
-                mpiMightBeSupportedDuringCompilation = false;
-            #endif /* MPIX_CUDA_AWARE_SUPPORT */
+#if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
+            mpiSupportsCudaAwareAtCompileTime = true;
+#endif /* MPIX_CUDA_AWARE_SUPPORT */
 
-            #if defined(MPIX_CUDA_AWARE_SUPPORT) && !MPIX_Query_cuda_support
-                mpiMightBeSupportedDuringRuntime = false;
-            #endif /* MPIX_CUDA_AWARE_SUPPORT */
+#if defined(MPIX_CUDA_AWARE_SUPPORT)
+            if (1 == MPIX_Query_cuda_support()) {
+                mpiSupportsCudaAwareAtRunTime = true;
+            }
+#endif /* MPIX_CUDA_AWARE_SUPPORT */
+
 
             // TODO add typename Operator communication type as a named type with using
             std::shared_ptr<Opm::cuistl::GPUSender<real_type, typename Operator::communication_type>> gpuComm;
-            if (mpiMightBeSupportedDuringCompilation && mpiMightBeSupportedDuringRuntime){
+            if (mpiSUpportsCudaAwareAtCompileTime && mpiSupportsCudaAwareAtRunTime){
                 gpuComm = std::make_shared<Opm::cuistl::GPUAwareMPISender<real_type, block_size, typename Operator::communication_type>>(communication);
             }
             else{
