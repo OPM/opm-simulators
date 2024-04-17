@@ -438,10 +438,10 @@ WellState::currentWellRates(const std::string& wellName) const
     return it->second.second;
 }
 
-template<class Communication>
-void WellState::gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
-                                                         std::vector<data::Connection>& to_connections,
-                                                         const Communication& comm) const
+void WellState::
+gatherVectorsOnRoot(const std::vector<data::Connection>& from_connections,
+                    std::vector<data::Connection>& to_connections,
+                    const Parallel::Communication& comm) const
 {
     auto send = std::set<int>{};
     auto recv = std::set<int>{};
@@ -836,8 +836,7 @@ void WellState::updateStatus(int well_index, WellStatus status)
     ws.updateStatus(status);
 }
 
-template<class Comm>
-void WellState::communicateGroupRates(const Comm& comm)
+void WellState::communicateGroupRates(const Parallel::Communication& comm)
 {
     // Compute the size of the data.
     std::size_t sz = 0;
@@ -885,8 +884,7 @@ void WellState::communicateGroupRates(const Comm& comm)
     assert(pos == sz);
 }
 
-template<class Comm>
-void WellState::updateGlobalIsGrup(const Comm& comm)
+void WellState::updateGlobalIsGrup(const Parallel::Communication& comm)
 {
     this->global_well_info.value().clear();
     for (std::size_t well_index = 0; well_index < this->size(); well_index++) {
@@ -1024,8 +1022,5 @@ WellState::parallelWellInfo(std::size_t well_index) const
     const auto& ws = this->well(well_index);
     return ws.parallel_info;
 }
-
-template void WellState::updateGlobalIsGrup<Parallel::Communication>(const Parallel::Communication& comm);
-template void WellState::communicateGroupRates<Parallel::Communication>(const Parallel::Communication& comm);
 
 } // namespace Opm

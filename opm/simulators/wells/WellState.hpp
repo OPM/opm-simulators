@@ -21,10 +21,18 @@
 #ifndef OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 #define OPM_WELLSTATEFULLYIMPLICITBLACKOIL_HEADER_INCLUDED
 
-#include <opm/common/ErrorMacros.hpp>
+#include <dune/common/version.hh>
+#include <dune/common/parallel/mpihelper.hh>
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
+#include <opm/common/ErrorMacros.hpp>
+
+#include <opm/input/eclipse/Schedule/Events.hpp>
+
+#include <opm/output/data/Wells.hpp>
+
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/ALQState.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
@@ -32,13 +40,6 @@
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
-
-#include <opm/output/data/Wells.hpp>
-
-#include <opm/input/eclipse/Schedule/Events.hpp>
-
-#include <dune/common/version.hh>
-#include <dune/common/parallel/mpihelper.hh>
 
 #include <functional>
 #include <map>
@@ -129,10 +130,9 @@ public:
         this->well_rates.clear();
     }
 
-    template<class Communication>
     void gatherVectorsOnRoot(const std::vector< data::Connection >& from_connections,
                              std::vector< data::Connection >& to_connections,
-                             const Communication& comm) const;
+                             const Parallel::Communication& comm) const;
 
     data::Wells
     report(const int* globalCellIdxMap,
@@ -150,11 +150,9 @@ public:
                                       const std::vector<double>& perforation_rates, const int np, const int segment, std::vector<double>& segment_rates);
 
 
-    template<class Comm>
-    void communicateGroupRates(const Comm& comm);
+    void communicateGroupRates(const Parallel::Communication& comm);
 
-    template<class Comm>
-    void updateGlobalIsGrup(const Comm& comm);
+    void updateGlobalIsGrup(const Parallel::Communication& comm);
 
     bool isInjectionGrup(const std::string& name) const {
         return this->global_well_info.value().in_injecting_group(name);
