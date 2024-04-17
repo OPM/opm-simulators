@@ -412,15 +412,19 @@ actionOnBrokenConstraints(const Group& group,
 {
 
     bool changed = false;
-    const Group::ProductionCMode oldControl = wellModel_.groupState().production_control(group.name());
+    const Group::ProductionCMode oldControl =
+        wellModel_.groupState().production_control(group.name());
 
     std::string ss;
     switch(group_limit_action.allRates) {
     case Group::ExceedAction::NONE: {
         if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
-            if ((group_limit_action.water == Group::ExceedAction::RATE && newControl == Group::ProductionCMode::WRAT) ||
-                (group_limit_action.gas == Group::ExceedAction::RATE && newControl == Group::ProductionCMode::GRAT) ||
-                (group_limit_action.liquid == Group::ExceedAction::RATE && newControl == Group::ProductionCMode::LRAT)) {
+            if ((group_limit_action.water == Group::ExceedAction::RATE &&
+                 newControl == Group::ProductionCMode::WRAT) ||
+                (group_limit_action.gas == Group::ExceedAction::RATE &&
+                 newControl == Group::ProductionCMode::GRAT) ||
+                (group_limit_action.liquid == Group::ExceedAction::RATE &&
+                 newControl == Group::ProductionCMode::LRAT)) {
                 group_state.production_control(group.name(), newControl);
                 ss = fmt::format("Switching production control mode for group {} from {} to {}",
                                  group.name(),
@@ -430,7 +434,8 @@ actionOnBrokenConstraints(const Group& group,
                 changed = true;
             }
             else {
-                ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. Nothing is done.",
+                ss = fmt::format("Procedure on exceeding {} limit is NONE for group {}. "
+                                 "Nothing is done.",
                                  Group::ProductionCMode2String(oldControl),
                                  group.name());
             }
@@ -438,21 +443,32 @@ actionOnBrokenConstraints(const Group& group,
         break;
     }
     case Group::ExceedAction::CON: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit CON not implemented", deferred_logger);
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         fmt::format("Group {} GroupProductionExceedLimit CON not implemented",
+                                     group.name()),
+                         deferred_logger);
         break;
     }
     case Group::ExceedAction::CON_PLUS: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit CON_PLUS not implemented", deferred_logger);
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         fmt::format("Group {} GroupProductionExceedLimit CON_PLUS not implemented",
+                                     group.name()),
+                         deferred_logger);
         break;
     }
     case Group::ExceedAction::WELL: {
 
-        std::tie(worst_offending_well, std::ignore) = WellGroupHelpers::worstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
-                                                            newControl, wellModel_.phaseUsage(), wellModel_.comm(), well_state, deferred_logger);
+        std::tie(worst_offending_well, std::ignore) =
+            WellGroupHelpers::worstOffendingWell(group, wellModel_.schedule(), reportStepIdx,
+                                                 newControl, wellModel_.phaseUsage(),
+                                                 wellModel_.comm(), well_state, deferred_logger);
         break;
     }
     case Group::ExceedAction::PLUG: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit PLUG not implemented", deferred_logger);
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         fmt::format("Group {} GroupProductionExceedLimit PLUG not implemented",
+                                     group.name()),
+                         deferred_logger);
         break;
     }
     case Group::ExceedAction::RATE: {
@@ -467,7 +483,8 @@ actionOnBrokenConstraints(const Group& group,
         break;
     }
     default:
-        throw("Invalid procedure for maximum rate limit selected for group" + group.name());
+        OPM_THROW(std::runtime_error,
+                  "Invalid procedure for maximum rate limit selected for group" + group.name());
     }
 
     if (!ss.empty() && wellModel_.comm().rank() == 0)
