@@ -76,7 +76,7 @@ public:
         const auto dotAtRank = x.dot(y, *m_indicesOwner);
         output = m_cpuOwnerOverlapCopy.communicator().sum(dotAtRank);
     }
-    
+
     /**
      * @brief norm computes the l^2-norm of x across processes.
      *
@@ -110,12 +110,12 @@ protected:
  * @tparam OwnerOverlapCopyCommunicationType is typically a Dune::LinearOperator::communication_type
 */
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
-class GPUObliviousMPISender : public GPUSender<field_type, OwnerOverlapCopyCommunicationType> 
+class GPUObliviousMPISender : public GPUSender<field_type, OwnerOverlapCopyCommunicationType>
 {
 public:
     using X = CuVector<field_type>;
 
-    GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) 
+    GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
         : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy)
         {
         }
@@ -236,15 +236,13 @@ public:
             MPI_Waitany(m_messageInformation.size(), recvRequests.data(), &finished, &status);
 
             if(status.MPI_ERROR!=MPI_SUCCESS) {
-                std::cerr<< rank << ": MPI_Error occurred while receiving message from "<< processMap[finished] << std::endl;
-                OPM_THROW(std::runtime_error, "MPI_Error while receiving message");
+                OPM_THROW(std::runtime_error, fmt::format("MPI_Error occurred while rank {} received a message from rank {}", rank, processMap[finished]));
             }
         }
         MPI_Status recvStatus;
         for(size_t i = 0; i < m_messageInformation.size(); i++) {
             if(MPI_SUCCESS!=MPI_Wait(&sendRequests[i], &recvStatus)) {
-                std::cerr << rank << ": MPI_Error occurred while sending message to " << processMap[finished] << std::endl;
-                OPM_THROW(std::runtime_error, "MPI_Error while sending message");
+                OPM_THROW(std::runtime_error, fmt::format("MPI_Error occurred while rank {} sent a message from rank {}", rank, processMap[finished]));
             }
         }
         // ...End of MPI stuff
