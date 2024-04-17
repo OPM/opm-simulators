@@ -58,7 +58,7 @@ public:
      */
     void project(X& x) const
     {
-        std::call_once(this->m_initializedIndices, [&]() { initIndexSet(); });
+        std::call_once(m_initializedIndices, [&]() { initIndexSet(); });
         x.setZeroAtIndexSet(*m_indicesCopy);
     }
 
@@ -86,7 +86,7 @@ public:
     field_type norm(const X& x) const
     {
         auto xDotX = field_type(0);
-        this->dot(x, x, xDotX);
+        dot(x, x, xDotX);
 
         // using std::sqrt;
         return std::sqrt(xDotX);
