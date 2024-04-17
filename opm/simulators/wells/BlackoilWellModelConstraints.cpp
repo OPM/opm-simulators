@@ -443,11 +443,17 @@ actionOnBrokenConstraints(const Group& group,
         break;
     }
     case Group::ExceedAction::CON: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit CON not implemented", deferred_logger);
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         fmt::format("Group {} GroupProductionExceedLimit CON not implemented",
+                                     group.name()),
+                         deferred_logger);
         break;
     }
     case Group::ExceedAction::CON_PLUS: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit CON_PLUS not implemented", deferred_logger);
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         fmt::format("Group {} GroupProductionExceedLimit CON_PLUS not implemented",
+                                     group.name()),
+                         deferred_logger);
         break;
     }
     case Group::ExceedAction::WELL: {
@@ -459,7 +465,10 @@ actionOnBrokenConstraints(const Group& group,
         break;
     }
     case Group::ExceedAction::PLUG: {
-        OPM_DEFLOG_THROW(std::runtime_error, "Group " + group.name() + "GroupProductionExceedLimit PLUG not implemented", deferred_logger);
+        OPM_DEFLOG_THROW(std::runtime_error,
+                         fmt::format("Group {} GroupProductionExceedLimit PLUG not implemented",
+                                     group.name()),
+                         deferred_logger);
         break;
     }
     case Group::ExceedAction::RATE: {
