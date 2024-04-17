@@ -39,9 +39,9 @@
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
+#include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
 
 #include <hip/hip_runtime.h>
-
 
 #define HIP_CHECK(stat)                               \
     {                                                 \

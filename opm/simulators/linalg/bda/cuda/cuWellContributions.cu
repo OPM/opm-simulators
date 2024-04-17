@@ -19,14 +19,15 @@
 
 
 #include <config.h> // CMake
+#include <opm/simulators/linalg/bda/cuda/cuWellContributions.hpp>
 
-#include "opm/simulators/linalg/bda/cuda/cuWellContributions.hpp"
-
-#include "opm/simulators/linalg/bda/cuda/cuda_header.hpp"
-#include <cuda_runtime.h>
-
-#include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
+
+#include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
+#include <opm/simulators/linalg/bda/cuda/cuda_header.hpp>
+
+#include <cuda_runtime.h>
 
 namespace Opm
 {

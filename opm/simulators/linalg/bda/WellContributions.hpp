@@ -23,14 +23,14 @@
 #include <memory>
 #include <vector>
 
-#include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
 #if HAVE_SUITESPARSE_UMFPACK
 #include<umfpack.h>
 #endif
 #include <dune/common/version.hh>
 
-namespace Opm
-{
+namespace Opm {
+
+class MultisegmentWellContribution;
 
 /// This class serves to eliminate the need to include the WellContributions into the matrix (with --matrix-add-well-contributions=true) for the cusparseSolver or openclSolver.
 /// If the --matrix-add-well-contributions commandline parameter is true, this class should still be used, but be empty.
@@ -89,7 +89,7 @@ public:
     void alloc();
 
     /// Empty destructor.
-    virtual ~WellContributions() = default;
+    virtual ~WellContributions();
 
     /// Indicate how large the blocks of the StandardWell (C and B) are
     /// \param[in] dim         number of columns

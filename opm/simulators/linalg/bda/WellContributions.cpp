@@ -18,11 +18,12 @@
 */
 
 #include <config.h> // CMake
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
+#include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
 
 #ifdef HAVE_OPENCL
 #include <opm/simulators/linalg/bda/opencl/openclWellContributions.hpp>
@@ -36,8 +37,9 @@
 #include <opm/simulators/linalg/bda/rocsparseWellContributions.hpp>
 #endif
 
-namespace Opm
-{
+namespace Opm {
+
+WellContributions::~WellContributions() = default;
 
 std::unique_ptr<WellContributions>
 WellContributions::create(const std::string& accelerator_mode, bool useWellConn)
