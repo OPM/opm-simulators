@@ -200,7 +200,7 @@ public:
                 processMap[i]=info->first;
                 if(info->second.second.m_size) {
                     MPI_Irecv(m_GPURecvBuf->data()+info->second.second.m_start,
-                            info->second.second.m_size,
+                            detail::to_int(info->second.second.m_size),
                             MPI_BYTE,
                             info->first,
                             m_commTag,
@@ -218,7 +218,7 @@ public:
             for(const_iterator info = m_messageInformation.begin(); info != end; ++info, ++i) {
                 if(info->second.first.m_size) {
                     MPI_Issend(m_GPUSendBuf->data()+info->second.first.m_start,
-                            info->second.first.m_size,
+                            detail::to_int(info->second.first.m_size),
                             MPI_BYTE,
                             info->first,
                             m_commTag,
