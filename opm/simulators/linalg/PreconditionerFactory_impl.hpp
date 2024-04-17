@@ -177,7 +177,7 @@ struct StandardPreconditioners {
             const int n = prm.get<int>("ilulevel", 0);
             const double w = prm.get<double>("relaxation", 1.0);
             const bool resort = prm.get<bool>("resort", false);
-            return wrapBlockPreconditioner<RebuildOnUpdatePreconditioner<Dune::SeqILU<M, V, V>, const M&>>(
+            return wrapBlockPreconditioner<RebuildOnUpdatePreconditioner<Dune::SeqILU<M, V, V>>>(
                 comm, op.getmat(), n, w, resort);
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
@@ -425,7 +425,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             const double w = prm.get<double>("relaxation", 1.0);
             const int n = prm.get<int>("ilulevel", 0);
             const bool resort = prm.get<bool>("resort", false);
-            return getRebuildOnUpdateWrapper<Dune::SeqILU<M, V, V>, const M&>(op.getmat(), n, w, resort);
+            return getRebuildOnUpdateWrapper<Dune::SeqILU<M, V, V>>(op.getmat(), n, w, resort);
         });
         F::addCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
@@ -523,7 +523,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 Dune::Amg::Parameters parms;
                 parms.setNoPreSmoothSteps(1);
                 parms.setNoPostSmoothSteps(1);
-                return getDummyUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
+                return getRebuildOnUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
             });
         }
         if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V, false>>) {
