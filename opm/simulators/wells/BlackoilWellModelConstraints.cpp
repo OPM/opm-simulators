@@ -483,7 +483,8 @@ actionOnBrokenConstraints(const Group& group,
         break;
     }
     default:
-        throw("Invalid procedure for maximum rate limit selected for group" + group.name());
+        OPM_THROW(std::runtime_error,
+                  "Invalid procedure for maximum rate limit selected for group" + group.name());
     }
 
     if (!ss.empty() && wellModel_.comm().rank() == 0)
