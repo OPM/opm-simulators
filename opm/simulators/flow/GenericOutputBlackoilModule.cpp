@@ -122,10 +122,10 @@ std::string EclString(const Opm::Inplace::Phase phase)
         return "GMIP";
 
     case Opm::Inplace::Phase::CO2MassInWaterPhase:
-        return "GMGP";
+        return "GMDS";
 
     case Opm::Inplace::Phase::CO2MassInGasPhase:
-        return "GMDS";
+        return "GMGP";
 
     case Opm::Inplace::Phase::CO2MassInGasPhaseInMob:
         return "GMTR";
