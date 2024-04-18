@@ -446,7 +446,9 @@ operator()(double s) const
     fluidState.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
     fluidState.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
     fluidState.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
-    fluidState.setSaturation(phase_, s);
+    fluidState.setSaturation(phase_, s);    
+    if (phase_ == FluidSystem::gasPhaseIdx)
+        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 1.0 - s);
 
     std::array<double, FluidSystem::numPhases> pc{0.0};
     using MaterialLaw = typename MaterialLawManager::MaterialLaw;
