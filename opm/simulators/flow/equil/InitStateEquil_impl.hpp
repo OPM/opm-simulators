@@ -578,8 +578,10 @@ deriveSaturations(const Position& x,
     this->setEvaluationPoint(x, reg, ptable);
     this->initializePhaseQuantities();
 
-    if (ptable.waterActive()) { this->deriveWaterSat(); }
     if (ptable.gasActive())   { this->deriveGasSat();   }
+
+    if (ptable.waterActive()) { this->deriveWaterSat(); }
+
 
     if (this->isOverlappingTransition()) {
         this->fixUnphysicalTransition();
@@ -667,36 +669,43 @@ void PhaseSaturations<MaterialLawManager, FluidSystem, Region, CellID>::deriveWa
 {
     auto& sw = this->sat_.water;
 
-    const auto isIncr = false; // dPcow/dSw <= 0 for all Sw.
-
-    if (this->isConstCapPress(this->waterPos())) {
-        // Sharp interface between phases.  Can derive phase saturation
-        // directly from knowing where 'depth' of evaluation point is
-        // relative to depth of O/W contact.
-        sw = this->fromDepthTable(this->evalPt_.region->zwoc(),
-                                  this->waterPos(), isIncr);
+    const auto oilActive = this->evalPt_.ptable->oilActive();
+    if (!oilActive) {
+        // for 2p gas+water we set the water saturation to 1.0 - sg
+        sw = 1.0 - this->sat_.gas;
     }
     else {
-        // Capillary pressure curve is non-constant, meaning there is a
-        // transition zone between the oil and water phases.  Invert
-        // capillary pressure relation
-        //
-        //    Pcow(Sw) = Po - Pw
-        //
-        // unless the model uses "SWATINIT".  In the latter case, pick the
-        // saturation directly from the SWATINIT array of the pertinent
-        // cell.
-        const auto pcow = this->press_.oil - this->press_.water;
+        const auto isIncr = false; // dPcow/dSw <= 0 for all Sw.
 
-        if (this->swatInit_.empty()) {
-            sw = this->invertCapPress(pcow, this->waterPos(), isIncr);
+        if (this->isConstCapPress(this->waterPos())) {
+            // Sharp interface between phases.  Can derive phase saturation
+            // directly from knowing where 'depth' of evaluation point is
+            // relative to depth of O/W contact.
+            sw = this->fromDepthTable(this->evalPt_.region->zwoc(),
+                                    this->waterPos(), isIncr);
         }
         else {
-            auto [swout, newSwatInit] = this->applySwatInit(pcow);
-            if (newSwatInit)
+            // Capillary pressure curve is non-constant, meaning there is a
+            // transition zone between the oil and water phases.  Invert
+            // capillary pressure relation
+            //
+            //    Pcow(Sw) = Po - Pw
+            //
+            // unless the model uses "SWATINIT".  In the latter case, pick the
+            // saturation directly from the SWATINIT array of the pertinent
+            // cell.
+            const auto pcow = this->press_.oil - this->press_.water;
+
+            if (this->swatInit_.empty()) {
                 sw = this->invertCapPress(pcow, this->waterPos(), isIncr);
+            }
             else {
-                sw = swout;
+                auto [swout, newSwatInit] = this->applySwatInit(pcow);
+                if (newSwatInit)
+                    sw = this->invertCapPress(pcow, this->waterPos(), isIncr);
+                else {
+                    sw = swout;
+                }
             }
         }
     }
