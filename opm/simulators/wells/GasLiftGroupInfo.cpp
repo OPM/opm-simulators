@@ -41,8 +41,8 @@ GasLiftGroupInfo(
     const int iteration_idx,
     const PhaseUsage &phase_usage,
     DeferredLogger &deferred_logger,
-    WellState &well_state,
-    const GroupState &group_state,
+    WellState<double>& well_state,
+    const GroupState<double>& group_state,
     const Communication &comm,
     bool glift_debug
 ) :

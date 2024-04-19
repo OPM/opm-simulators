@@ -31,7 +31,7 @@ namespace Opm
 class ConvergenceReport;
 class DeferredLogger;
 class WellInterfaceGeneric;
-class WellState;
+template<class Scalar> class WellState;
 
 class WellConvergence
 {
@@ -49,7 +49,7 @@ public:
     };
 
     // checking the convergence of the well control equations
-    void checkConvergenceControlEq(const WellState& well_state,
+    void checkConvergenceControlEq(const WellState<double>& well_state,
                                    const Tolerances& tolerances,
                                    const double well_control_residual,
                                    const bool well_is_stopped, 

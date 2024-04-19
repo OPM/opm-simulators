@@ -48,7 +48,7 @@ public:
 
     VFPProperties(const std::vector<std::reference_wrapper<const VFPInjTable>>& inj_tables,
                   const std::vector<std::reference_wrapper<const VFPProdTable>>& prod_tables,
-                  const WellState& well_state)
+                  const WellState<double>& well_state)
                   :well_state_(well_state)
     {
         for (const auto& vfpinj : inj_tables)
@@ -95,7 +95,7 @@ public:
 private:
     VFPInjProperties m_inj;
     VFPProdProperties m_prod;
-    const WellState& well_state_;
+    const WellState<double>& well_state_;
 
 };
 

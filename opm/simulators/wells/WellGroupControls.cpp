@@ -47,8 +47,8 @@ namespace Opm
 template<class EvalWell>
 void WellGroupControls::
 getGroupInjectionControl(const Group& group,
-                         const WellState& well_state,
-                         const GroupState& group_state,
+                         const WellState<double>& well_state,
+                         const GroupState<double>& group_state,
                          const Schedule& schedule,
                          const SummaryState& summaryState,
                          const InjectorType& injectorType,
@@ -187,8 +187,8 @@ getGroupInjectionControl(const Group& group,
 std::optional<double>
 WellGroupControls::
 getGroupInjectionTargetRate(const Group& group,
-                            const WellState& well_state,
-                            const GroupState& group_state,
+                            const WellState<double>& well_state,
+                            const GroupState<double>& group_state,
                             const Schedule& schedule,
                             const SummaryState& summaryState,
                             const InjectorType& injectorType,
@@ -302,8 +302,8 @@ getGroupInjectionTargetRate(const Group& group,
 
 template<class EvalWell>
 void WellGroupControls::getGroupProductionControl(const Group& group,
-                                                  const WellState& well_state,
-                                                  const GroupState& group_state,
+                                                  const WellState<double>& well_state,
+                                                  const GroupState<double>& group_state,
                                                   const Schedule& schedule,
                                                   const SummaryState& summaryState,
                                                   const EvalWell& bhp,
@@ -409,8 +409,8 @@ void WellGroupControls::getGroupProductionControl(const Group& group,
 
 double WellGroupControls::
 getGroupProductionTargetRate(const Group& group,
-                             const WellState& well_state,
-                             const GroupState& group_state,
+                             const WellState<double>& well_state,
+                             const GroupState<double>& group_state,
                              const Schedule& schedule,
                              const SummaryState& summaryState,
                              const RateConvFunc& rateConverter,
@@ -505,8 +505,8 @@ getGroupProductionTargetRate(const Group& group,
 #define INSTANCE(...) \
 template void WellGroupControls:: \
 getGroupInjectionControl<__VA_ARGS__>(const Group&, \
-                                      const WellState&, \
-                                      const GroupState&, \
+                                      const WellState<double>&, \
+                                      const GroupState<double>&, \
                                       const Schedule&, \
                                       const SummaryState&, \
                                       const InjectorType&, \
@@ -518,8 +518,8 @@ getGroupInjectionControl<__VA_ARGS__>(const Group&, \
                                       DeferredLogger& deferred_logger) const; \
 template void WellGroupControls:: \
 getGroupProductionControl<__VA_ARGS__>(const Group&, \
-                                       const WellState&, \
-                                       const GroupState&, \
+                                       const WellState<double>&, \
+                                       const GroupState<double>&, \
                                        const Schedule&, \
                                        const SummaryState&, \
                                        const __VA_ARGS__& bhp, \

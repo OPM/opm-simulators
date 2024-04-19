@@ -32,7 +32,7 @@ namespace Opm
 {
 
 class DeferredLogger;
-class GroupState;
+template<class Scalar> class GroupState;
 struct PhaseUsage;
 
 namespace WellGroupHelpers
@@ -48,7 +48,7 @@ namespace WellGroupHelpers
                          const std::vector<double>& resv_coeff,
                          const double group_grat_target_from_sales,
                          const std::string& group_name,
-                         const GroupState& group_state,
+                         const GroupState<double>& group_state,
                          const bool use_gpmaint);
 
         template <typename RateType>
@@ -70,7 +70,7 @@ namespace WellGroupHelpers
         const std::vector<double>& resv_coeff_;
         const double group_grat_target_from_sales_;
         const std::string& group_name_;
-        const GroupState& group_state_;
+        const GroupState<double>& group_state_;
         bool use_gpmaint_;
     };
 
@@ -84,7 +84,7 @@ namespace WellGroupHelpers
                                   const std::vector<double>& resv_coeff,
                                   const std::string& group_name,
                                   const double sales_target,
-                                  const GroupState& group_state,
+                                  const GroupState<double>& group_state,
                                   const Phase& injection_phase,
                                   const bool use_gpmaint,
                                   DeferredLogger& deferred_logger);
@@ -105,7 +105,7 @@ namespace WellGroupHelpers
         const std::vector<double>& resv_coeff_;
         const std::string& group_name_;
         double sales_target_;
-        const GroupState& group_state_;
+        const GroupState<double>& group_state_;
         bool use_gpmaint_;
         int pos_;
         GuideRateModel::Target target_;

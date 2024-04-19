@@ -286,7 +286,7 @@ void WellBhpThpCalculator::updateThp(const double rho,
                                      const bool stop_or_zero_rate_target,
                                      const std::function<double()>& alq_value,
                                      const std::array<unsigned,3>& active,
-                                     WellState& well_state,
+                                     WellState<double>& well_state,
                                      const SummaryState& summary_state,
                                      DeferredLogger& deferred_logger) const
 {
@@ -327,7 +327,7 @@ void WellBhpThpCalculator::updateThp(const double rho,
 
 template<class EvalWell>
 EvalWell WellBhpThpCalculator::
-calculateBhpFromThp(const WellState& well_state,
+calculateBhpFromThp(const WellState<double>& well_state,
                     const std::vector<EvalWell>& rates,
                     const Well& well,
                     const SummaryState& summaryState,
@@ -390,7 +390,7 @@ calculateBhpFromThp(const WellState& well_state,
 
 double
 WellBhpThpCalculator::
-calculateMinimumBhpFromThp(const WellState& well_state,
+calculateMinimumBhpFromThp(const WellState<double>& well_state,
                            const Well& well,
                            const SummaryState& summaryState,
                            const double rho) const
@@ -867,7 +867,7 @@ bruteForceBracket(const std::function<double(const double)>& eq,
 }
 
 bool WellBhpThpCalculator::
-isStableSolution(const WellState& well_state,
+isStableSolution(const WellState<double>& well_state,
                  const Well& well,
                  const std::vector<double>& rates,
                  const SummaryState& summaryState) const
@@ -902,7 +902,7 @@ isStableSolution(const WellState& well_state,
 }
 
 std::optional<double> WellBhpThpCalculator::
-estimateStableBhp(const WellState& well_state,
+estimateStableBhp(const WellState<double>& well_state,
                   const Well& well,
                   const std::vector<double>& rates,
                   const double rho,
@@ -945,7 +945,7 @@ estimateStableBhp(const WellState& well_state,
 }    
 
 std::pair<double, double> WellBhpThpCalculator::
-getFloIPR(const WellState& well_state,
+getFloIPR(const WellState<double>& well_state,
           const Well& well, 
           const SummaryState& summary_state) const 
 {
@@ -969,7 +969,7 @@ getFloIPR(const WellState& well_state,
 
 #define INSTANCE(...) \
 template __VA_ARGS__ WellBhpThpCalculator:: \
-calculateBhpFromThp<__VA_ARGS__>(const WellState&, \
+calculateBhpFromThp<__VA_ARGS__>(const WellState<double>&, \
                                  const std::vector<__VA_ARGS__>&, \
                                  const Well&, \
                                  const SummaryState&, \

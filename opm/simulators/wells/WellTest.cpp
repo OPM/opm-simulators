@@ -36,7 +36,7 @@ namespace Opm
 {
 
 template<class RatioFunc>
-bool WellTest::checkMaxRatioLimitWell(const SingleWellState& ws,
+bool WellTest::checkMaxRatioLimitWell(const SingleWellState<double>& ws,
                                       const double max_ratio_limit,
                                       const RatioFunc& ratioFunc) const
 {
@@ -52,7 +52,7 @@ bool WellTest::checkMaxRatioLimitWell(const SingleWellState& ws,
 }
 
 template<class RatioFunc>
-void WellTest::checkMaxRatioLimitCompletions(const SingleWellState& ws,
+void WellTest::checkMaxRatioLimitCompletions(const SingleWellState<double>& ws,
                                              const double max_ratio_limit,
                                              const RatioFunc& ratioFunc,
                                              RatioLimitCheckReport& report) const
@@ -97,7 +97,7 @@ void WellTest::checkMaxRatioLimitCompletions(const SingleWellState& ws,
 }
 
 void WellTest::checkMaxGORLimit(const WellEconProductionLimits& econ_production_limits,
-                                const SingleWellState& ws,
+                                const SingleWellState<double>& ws,
                                 RatioLimitCheckReport& report) const
 {
     static constexpr int Oil = BlackoilPhases::Liquid;
@@ -128,7 +128,7 @@ void WellTest::checkMaxGORLimit(const WellEconProductionLimits& econ_production_
 }
 
 void WellTest::checkMaxWGRLimit(const WellEconProductionLimits& econ_production_limits,
-                                const SingleWellState& ws,
+                                const SingleWellState<double>& ws,
                                 RatioLimitCheckReport& report) const
 {
     static constexpr int Gas = BlackoilPhases::Vapour;
@@ -160,7 +160,7 @@ void WellTest::checkMaxWGRLimit(const WellEconProductionLimits& econ_production_
 }
 
 void WellTest::checkMaxWaterCutLimit(const WellEconProductionLimits& econ_production_limits,
-                                     const SingleWellState& ws,
+                                     const SingleWellState<double>& ws,
                                      RatioLimitCheckReport& report) const
 {
     static constexpr int Oil = BlackoilPhases::Liquid;
@@ -241,7 +241,7 @@ bool WellTest::checkRateEconLimits(const WellEconProductionLimits& econ_producti
 
 WellTest::RatioLimitCheckReport WellTest::
 checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
-                     const SingleWellState& ws,
+                     const SingleWellState<double>& ws,
                      DeferredLogger& deferred_logger) const
 {
     // TODO: not sure how to define the worst-offending completion when more than one
@@ -289,7 +289,7 @@ checkRatioEconLimits(const WellEconProductionLimits& econ_production_limits,
     return report;
 }
 
-void WellTest::updateWellTestStateEconomic(const SingleWellState& ws,
+void WellTest::updateWellTestStateEconomic(const SingleWellState<double>& ws,
                                            const double simulation_time,
                                            const bool write_message_to_opmlog,
                                            WellTestState& well_test_state,

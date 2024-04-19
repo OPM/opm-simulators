@@ -38,7 +38,7 @@ namespace Opm
 class DeferredLogger;
 template<class Scalar> class MultisegmentWellGeneric;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-class WellState;
+template<class Scalar> class WellState;
 
 template<class FluidSystem, class Indices>
 class MultisegmentWellPrimaryVariables
@@ -92,7 +92,8 @@ public:
     void init();
 
     //! \brief Copy values from well state.
-    void update(const WellState& well_state, const bool stop_or_zero_rate_target);
+    void update(const WellState<Scalar>& well_state,
+                const bool stop_or_zero_rate_target);
 
     //! \brief Update values from newton update vector.
     void updateNewton(const BVectorWell& dwells,
@@ -105,7 +106,7 @@ public:
     void copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
                          const double rho,
                          const bool stop_or_zero_rate_target,
-                         WellState& well_state,
+                         WellState<Scalar>& well_state,
                          const SummaryState& summary_state,
                          DeferredLogger& deferred_logger) const;
 

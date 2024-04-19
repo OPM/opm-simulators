@@ -40,9 +40,6 @@
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
-#include <cassert>
-#include <cmath>
-
 namespace Opm
 {
 
@@ -67,7 +64,7 @@ WellInterfaceFluidSystem(const Well& well,
 template <typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
-calculateReservoirRates(SingleWellState& ws) const
+calculateReservoirRates(SingleWellState<double>& ws) const
 {
     const int np = number_of_phases_;
     const auto& pu = this->phaseUsage();
@@ -156,7 +153,7 @@ calculateReservoirRates(SingleWellState& ws) const
 template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkIndividualConstraints(SingleWellState& ws,
+checkIndividualConstraints(SingleWellState<double>& ws,
                            const SummaryState& summaryState,
                            DeferredLogger& deferred_logger,
                            const std::optional<Well::InjectionControls>& inj_controls,
@@ -180,8 +177,8 @@ checkIndividualConstraints(SingleWellState& ws,
 template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkGroupConstraints(WellState& well_state,
-                      const GroupState& group_state,
+checkGroupConstraints(WellState<double>& well_state,
+                      const GroupState<double>& group_state,
                       const Schedule& schedule,
                       const SummaryState& summaryState,
                       DeferredLogger& deferred_logger) const
@@ -207,8 +204,8 @@ checkGroupConstraints(WellState& well_state,
 template <typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-checkConstraints(WellState& well_state,
-                 const GroupState& group_state,
+checkConstraints(WellState<double>& well_state,
+                 const GroupState<double>& group_state,
                  const Schedule& schedule,
                  const SummaryState& summaryState,
                  DeferredLogger& deferred_logger) const
@@ -242,8 +239,8 @@ template<typename FluidSystem>
 std::optional<double>
 WellInterfaceFluidSystem<FluidSystem>::
 getGroupInjectionTargetRate(const Group& group,
-                            const WellState& well_state,
-                            const GroupState& group_state,
+                            const WellState<double>& well_state,
+                            const GroupState<double>& group_state,
                             const Schedule& schedule,
                             const SummaryState& summaryState,
                             const InjectorType& injectorType,
@@ -270,12 +267,12 @@ template<typename FluidSystem>
 double
 WellInterfaceFluidSystem<FluidSystem>::
 getGroupProductionTargetRate(const Group& group,
-                          const WellState& well_state,
-                          const GroupState& group_state,
-                          const Schedule& schedule,
-                          const SummaryState& summaryState,
-                          double efficiencyFactor,
-                          DeferredLogger& deferred_logger) const
+                             const WellState<double>& well_state,
+                             const GroupState<double>& group_state,
+                             const Schedule& schedule,
+                             const SummaryState& summaryState,
+                             double efficiencyFactor,
+                             DeferredLogger& deferred_logger) const
 {
     auto rCoeff = [this, &group_state](const RegionId id, const int region, const std::optional<std::string>& prod_gname, std::vector<double>& coeff)
     {

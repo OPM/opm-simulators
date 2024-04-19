@@ -136,11 +136,11 @@ struct Setup
 };
 
 namespace {
-    Opm::WellState
+    Opm::WellState<double>
     buildWellState(const Setup& setup, const std::size_t timeStep,
                    std::vector<Opm::ParallelWellInfo>& pinfos)
     {
-        auto state  = Opm::WellState{setup.pu};
+        auto state  = Opm::WellState<double>{setup.pu};
 
         const auto cpress =
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
@@ -171,7 +171,7 @@ namespace {
 
 
     void setSegPress(const std::vector<Opm::Well>& wells,
-                     Opm::WellState& wstate)
+                     Opm::WellState<double>& wstate)
     {
         const auto nWell = wells.size();
 
@@ -200,8 +200,8 @@ namespace {
 
 
   void setSegRates(const std::vector<Opm::Well>& wells,
-                     const Opm::PhaseUsage&               pu,
-                     Opm::WellState& wstate)
+                   const Opm::PhaseUsage&        pu,
+                   Opm::WellState<double>&       wstate)
     {
         const auto wat = pu.phase_used[Opm::BlackoilPhases::Aqua];
         const auto iw  = wat ? pu.phase_pos[Opm::BlackoilPhases::Aqua] : -1;
@@ -511,8 +511,8 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState) {
     const Setup setup{ "msw.data" };
     const auto& well = setup.sched.getWell("PROD01", 0);
     const auto& segments = well.getSegments();
-    Opm::SegmentState ss1(3, segments);
-    Opm::SegmentState ss2;
+    Opm::SegmentState<double> ss1(3, segments);
+    Opm::SegmentState<double> ss2;
 
 
     ss1.pressure_drop_hydrostatic[0] = 1;
@@ -553,10 +553,10 @@ BOOST_AUTO_TEST_CASE(TESTSegmentState2) {
 
 
 BOOST_AUTO_TEST_CASE(TESTPerfData) {
-    Opm::PerfData pd1(3, 100, true, 3);
-    Opm::PerfData pd2(3, 100, true, 3);
-    Opm::PerfData pd3(2, 100, true, 3);
-    Opm::PerfData pd4(3, 100, false, 3);
+    Opm::PerfData pd1(3, 100.0, true, 3);
+    Opm::PerfData pd2(3, 100.0, true, 3);
+    Opm::PerfData pd3(2, 100.0, true, 3);
+    Opm::PerfData pd4(3, 100.0, false, 3);
 
 
     for (std::size_t i = 0; i < 3; i++) {
@@ -587,9 +587,9 @@ BOOST_AUTO_TEST_CASE(TestSingleWellState) {
     // This is totally bonkers, but the pu needs a complete deck to initialize properly
     pu.num_phases = 3;
 
-    Opm::SingleWellState ws1("W1", pinfo, true,  100, connections, pu, 1);
-    Opm::SingleWellState ws2("W2", pinfo, true,  100, connections, pu, 2);
-    Opm::SingleWellState ws3("W3", pinfo, false, 100, connections, pu, 3);
+    Opm::SingleWellState ws1("W1", pinfo, true,  100.0, connections, pu, 1.0);
+    Opm::SingleWellState ws2("W2", pinfo, true,  100.0, connections, pu, 2.0);
+    Opm::SingleWellState ws3("W3", pinfo, false, 100.0, connections, pu, 3.0);
 
     ws1.bhp = 100;
     ws1.thp = 200;

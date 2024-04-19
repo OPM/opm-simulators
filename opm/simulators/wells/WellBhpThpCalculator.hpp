@@ -36,7 +36,7 @@ class DeferredLogger;
 class SummaryState;
 class Well;
 class WellInterfaceGeneric;
-class WellState;
+template<class Scalar> class WellState;
 
 //! \brief Class for computing BHP limits.
 class WellBhpThpCalculator {
@@ -86,37 +86,37 @@ public:
                    const bool stop_or_zero_rate_target,
                    const std::function<double()>& alq_value,
                    const std::array<unsigned,3>& active,
-                   WellState& well_state,
+                   WellState<double>& well_state,
                    const SummaryState& summary_state,
                    DeferredLogger& deferred_logger) const;
 
-  template<class EvalWell>
-  EvalWell calculateBhpFromThp(const WellState& well_state,
-                               const std::vector<EvalWell>& rates,
-                               const Well& well,
-                               const SummaryState& summaryState,
-                               const double rho,
-                               DeferredLogger& deferred_logger) const;
+    template<class EvalWell>
+    EvalWell calculateBhpFromThp(const WellState<double>& well_state,
+                                 const std::vector<EvalWell>& rates,
+                                 const Well& well,
+                                 const SummaryState& summaryState,
+                                 const double rho,
+                                 DeferredLogger& deferred_logger) const;
 
-  double calculateMinimumBhpFromThp(const WellState& well_state,
+  double calculateMinimumBhpFromThp(const WellState<double>& well_state,
                                     const Well& well,
                                     const SummaryState& summaryState,
-                                    const double rho) const;      
+                                    const double rho) const;
 
-  bool isStableSolution(const WellState& well_state,
+  bool isStableSolution(const WellState<double>& well_state,
                         const Well& well,
                         const std::vector<double>& rates,
                         const SummaryState& summaryState) const;   
 
   std::optional<double>
-  estimateStableBhp (const WellState& well_state,
+  estimateStableBhp (const WellState<double>& well_state,
                     const Well& well,
                     const std::vector<double>& rates,
                     const double rho,
                     const SummaryState& summaryState) const;    
 
   std::pair<double, double>
-  getFloIPR(const WellState& well_state,
+  getFloIPR(const WellState<double>& well_state,
             const Well& well, 
             const SummaryState& summary_state) const;                                                                                              
 

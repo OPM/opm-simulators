@@ -39,9 +39,10 @@ public:
 
 
 
-BOOST_AUTO_TEST_CASE(GroupStateCreate) {
+BOOST_AUTO_TEST_CASE(GroupStateCreate)
+{
     std::size_t num_phases{3};
-    GroupState gs(num_phases);
+    GroupState<double> gs(num_phases);
 
     BOOST_CHECK(!gs.has_production_rates("AGROUP"));
     BOOST_CHECK_THROW( gs.update_production_rates("AGROUP", {0}), std::exception);

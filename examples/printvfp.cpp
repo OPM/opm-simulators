@@ -62,7 +62,7 @@ struct Setup
 
         const int step = 0;
         const auto& sched_state = schedule->operator[](step);
-        WellState well_state(phaseUsage(runspec.phases()));
+        WellState<double> well_state(phaseUsage(runspec.phases()));
         vfp_properties = std::make_unique<VFPProperties>(sched_state.vfpinj(), sched_state.vfpprod(), well_state);
     };
 };

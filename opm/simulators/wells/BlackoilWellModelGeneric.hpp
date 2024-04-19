@@ -66,7 +66,7 @@ namespace Opm {
     class SummaryConfig;
     class VFPProperties;
     class WellInterfaceGeneric;
-    class WellState;
+    template<class Scalar> class WellState;
 } // namespace Opm
 
 namespace Opm { namespace data {
@@ -114,14 +114,14 @@ public:
     std::vector<Well> getLocalWells(const int timeStepIdx) const;
     const Schedule& schedule() const { return schedule_; }
     const PhaseUsage& phaseUsage() const { return phase_usage_; }
-    const GroupState& groupState() const { return this->active_wgstate_.group_state; }
+    const GroupState<double>& groupState() const { return this->active_wgstate_.group_state; }
     std::vector<const WellInterfaceGeneric*> genericWells() const
     { return {well_container_generic_.begin(), well_container_generic_.end()}; }
 
     /*
       Immutable version of the currently active wellstate.
     */
-    const WellState& wellState() const
+    const WellState<double>& wellState() const
     {
         return this->active_wgstate_.well_state;
     }
@@ -129,7 +129,7 @@ public:
     /*
       Mutable version of the currently active wellstate.
     */
-    WellState& wellState()
+    WellState<double>& wellState()
     {
         return this->active_wgstate_.well_state;
     }
@@ -138,11 +138,11 @@ public:
       Will return the currently active nupcolWellState; must initialize
       the internal nupcol wellstate with initNupcolWellState() first.
     */
-    const WellState& nupcolWellState() const
+    const WellState<double>& nupcolWellState() const
     {
         return this->nupcol_wgstate_.well_state;
     }
-    GroupState& groupState() { return this->active_wgstate_.group_state; }
+    GroupState<double>& groupState() { return this->active_wgstate_.group_state; }
 
     WellTestState& wellTestState() { return this->active_wgstate_.well_test_state; }
 
@@ -283,13 +283,13 @@ protected:
       prevWellState() must have been stored with the commitWellState()
       function first.
     */
-    const WellState& prevWellState() const
+    const WellState<double>& prevWellState() const
     {
         return this->last_valid_wgstate_.well_state;
     }
 
 
-    const WGState& prevWGState() const
+    const WGState<double>& prevWGState() const
     {
         return this->last_valid_wgstate_;
     }
@@ -301,7 +301,7 @@ protected:
       last_valid_well_state_ member, that state can then be recovered
       with a subsequent call to resetWellState().
     */
-    void commitWGState(WGState wgstate)
+    void commitWGState(WGState<double> wgstate)
     {
         this->last_valid_wgstate_ = std::move(wgstate);
     }
@@ -339,7 +339,7 @@ protected:
 
     void updateWsolvent(const Group& group,
                         const int reportStepIdx,
-                        const WellState& wellState);
+                        const WellState<double>& wellState);
     void setWsolvent(const Group& group,
                      const int reportStepIdx,
                      double wsolvent);
@@ -362,7 +362,7 @@ protected:
     void calculateEfficiencyFactors(const int reportStepIdx);
 
     void checkGconsaleLimits(const Group& group,
-                             WellState& well_state,
+                             WellState<double>& well_state,
                              const int reportStepIdx,
                              DeferredLogger& deferred_logger);
 
@@ -395,7 +395,7 @@ protected:
                                    const int episodeIndex);
 
     virtual void computePotentials(const std::size_t widx,
-                                   const WellState& well_state_copy,
+                                   const WellState<double>& well_state_copy,
                                    std::string& exc_msg,
                                    ExceptionType::ExcEnum& exc_type,
                                    DeferredLogger& deferred_logger) = 0;
@@ -567,7 +567,7 @@ protected:
     std::unordered_map<std::string, std::vector<double>> prev_inj_multipliers_;
 
     // Handling for filter cake injection multipliers
-    std::unordered_map<std::string, WellFilterCake> filter_cake_;
+    std::unordered_map<std::string, WellFilterCake<double>> filter_cake_;
 
     /*
       The various wellState members should be accessed and modified
@@ -575,9 +575,9 @@ protected:
       commitWellState(), resetWellState(), nupcolWellState() and
       updateNupcolWellState().
     */
-    WGState active_wgstate_;
-    WGState last_valid_wgstate_;
-    WGState nupcol_wgstate_;
+    WGState<double> active_wgstate_;
+    WGState<double> last_valid_wgstate_;
+    WGState<double> nupcol_wgstate_;
 
     bool glift_debug = false;
 

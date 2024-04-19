@@ -28,7 +28,8 @@
 
 namespace Opm {
 
-ALQState ALQState::serializationTestObject()
+template<class Scalar>
+ALQState<Scalar> ALQState<Scalar>::serializationTestObject()
 {
     ALQState result;
     result.current_alq_ = {{"test1", 1.0}};
@@ -40,7 +41,9 @@ ALQState ALQState::serializationTestObject()
     return result;
 }
 
-double ALQState::get(const std::string& wname) const {
+template<class Scalar>
+Scalar ALQState<Scalar>::get(const std::string& wname) const
+{
     auto iter = this->current_alq_.find(wname);
     if (iter != this->current_alq_.end())
         return iter->second;
@@ -52,7 +55,9 @@ double ALQState::get(const std::string& wname) const {
     throw std::logic_error("No ALQ value registered for well: " + wname);
 }
 
-void ALQState::update_default(const std::string& wname, double value) {
+template<class Scalar>
+void ALQState<Scalar>::update_default(const std::string& wname, Scalar value)
+{
     auto default_iter = this->default_alq_.find(wname);
     if (default_iter == this->default_alq_.end() || default_iter->second != value) {
         this->default_alq_.insert_or_assign(wname, value);
@@ -60,20 +65,28 @@ void ALQState::update_default(const std::string& wname, double value) {
     }
 }
 
-void ALQState::set(const std::string& wname, double value) {
+template<class Scalar>
+void ALQState<Scalar>::set(const std::string& wname, Scalar value)
+{
     this->current_alq_[wname] = value;
 }
 
-int ALQState::get_debug_counter() {
+template<class Scalar>
+int ALQState<Scalar>::get_debug_counter()
+{
     return this->debug_counter_;
 }
 
-int ALQState::update_debug_counter() {
+template<class Scalar>
+int ALQState<Scalar>::update_debug_counter()
+{
     this->debug_counter_++;
     return this->debug_counter_;
 }
 
-void ALQState::set_debug_counter(int value) {
+template<class Scalar>
+void ALQState<Scalar>::set_debug_counter(int value)
+{
     this->debug_counter_ = value;
 }
 
@@ -88,7 +101,9 @@ int get_counter(const std::map<std::string, int>& count_map, const std::string& 
 
 }
 
-bool ALQState::oscillation(const std::string& wname) const {
+template<class Scalar>
+bool ALQState<Scalar>::oscillation(const std::string& wname) const
+{
     auto inc_count = get_counter(this->alq_increase_count_, wname);
     if (inc_count == 0)
         return false;
@@ -97,35 +112,43 @@ bool ALQState::oscillation(const std::string& wname) const {
     return dec_count >= 1;
 }
 
-
-void ALQState::update_count(const std::string& wname, bool increase) {
+template<class Scalar>
+void ALQState<Scalar>::update_count(const std::string& wname, bool increase)
+{
     if (increase)
         this->alq_increase_count_[wname] += 1;
     else
         this->alq_decrease_count_[wname] += 1;
-
 }
 
-
-void ALQState::reset_count() {
+template<class Scalar>
+void ALQState<Scalar>::reset_count()
+{
     this->alq_decrease_count_.clear();
     this->alq_increase_count_.clear();
 }
 
-
-int ALQState::get_increment_count(const std::string& wname) const {
+template<class Scalar>
+int ALQState<Scalar>::get_increment_count(const std::string& wname) const
+{
     return get_counter(this->alq_increase_count_, wname);
 }
 
-int ALQState::get_decrement_count(const std::string& wname) const {
+template<class Scalar>
+int ALQState<Scalar>::get_decrement_count(const std::string& wname) const
+{
     return get_counter(this->alq_decrease_count_, wname);
 }
 
-std::size_t ALQState::pack_size() const {
+template<class Scalar>
+std::size_t ALQState<Scalar>::pack_size() const
+{
     return this->current_alq_.size();
 }
 
-std::size_t ALQState::pack_data(double * data) const {
+template<class Scalar>
+std::size_t ALQState<Scalar>::pack_data(Scalar* data) const
+{
     std::size_t index = 0;
     for (const auto& [_, value] : this->current_alq_) {
         (void)_;
@@ -134,7 +157,9 @@ std::size_t ALQState::pack_data(double * data) const {
     return index;
 }
 
-std::size_t ALQState::unpack_data(const double * data) {
+template<class Scalar>
+std::size_t ALQState<Scalar>::unpack_data(const Scalar* data)
+{
     std::size_t index = 0;
     for (auto& [_, value] : this->current_alq_) {
         (void)_;
@@ -143,7 +168,8 @@ std::size_t ALQState::unpack_data(const double * data) {
     return index;
 }
 
-bool ALQState::operator==(const ALQState& rhs) const
+template<class Scalar>
+bool ALQState<Scalar>::operator==(const ALQState& rhs) const
 {
     return this->current_alq_ == rhs.current_alq_ &&
            this->default_alq_ == rhs.default_alq_ &&
@@ -152,7 +178,6 @@ bool ALQState::operator==(const ALQState& rhs) const
            this->debug_counter_ == rhs.debug_counter_;
 }
 
+template class ALQState<double>;
+
 }
-
-
-

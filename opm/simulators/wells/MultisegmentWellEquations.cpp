@@ -313,7 +313,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const bool /*use_well_weights*/,
                          const WellInterfaceGeneric& well,
                          const int seg_pressure_var_ind,
-                         const WellState& well_state) const
+                         const WellState<Scalar>& well_state) const
 {
     // Add the pressure contribution to the cpr system for the well
 
@@ -397,7 +397,7 @@ template void MultisegmentWellEquations<double,numWellEq,numEq>:: \
                              const bool, \
                              const WellInterfaceGeneric&, \
                              const int, \
-                             const WellState&) const;
+                             const WellState<double>&) const;
 
 INSTANCE(2,1)
 INSTANCE(2,2)

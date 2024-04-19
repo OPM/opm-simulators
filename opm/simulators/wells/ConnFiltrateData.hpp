@@ -24,37 +24,38 @@
 #include <vector>
 
 namespace Opm {
-    struct ConnFiltrateData {
 
-        ConnFiltrateData() = default;
+template<class Scalar>
+struct ConnFiltrateData {
 
-        void resize(std::size_t num_perf);
+    void resize(std::size_t num_perf);
 
-        template<class Serializer>
-        void serializeOp(Serializer& serializer) {
-            serializer(rates);
-            serializer(total);
-            serializer(skin_factor);
-            serializer(thickness);
-            serializer(perm);
-            serializer(poro);
-            serializer(radius);
-            serializer(area_of_flow);
-        }
+    template<class Serializer>
+    void serializeOp(Serializer& serializer) {
+        serializer(rates);
+        serializer(total);
+        serializer(skin_factor);
+        serializer(thickness);
+        serializer(perm);
+        serializer(poro);
+        serializer(radius);
+        serializer(area_of_flow);
+    }
 
-        static ConnFiltrateData serializationTestObject();
+    static ConnFiltrateData serializationTestObject();
 
-        bool operator==(const ConnFiltrateData& rhs) const;
+    bool operator==(const ConnFiltrateData& rhs) const;
 
-        std::vector<double> rates;
-        std::vector<double> total;
-        std::vector<double> skin_factor;
-        std::vector<double> thickness;
-        std::vector<double> perm;
-        std::vector<double> poro;
-        std::vector<double> radius;
-        std::vector<double> area_of_flow;
-    };
+    std::vector<Scalar> rates;
+    std::vector<Scalar> total;
+    std::vector<Scalar> skin_factor;
+    std::vector<Scalar> thickness;
+    std::vector<Scalar> perm;
+    std::vector<Scalar> poro;
+    std::vector<Scalar> radius;
+    std::vector<Scalar> area_of_flow;
+};
+
 }
 
-#endif //OPM_CONNFILTRATEDATA_HPP
+#endif // OPM_CONNFILTRATEDATA_HPP

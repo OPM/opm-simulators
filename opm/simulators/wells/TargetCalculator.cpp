@@ -42,7 +42,7 @@ TargetCalculator::TargetCalculator(const Group::ProductionCMode cmode,
                                    const std::vector<double>& resv_coeff,
                                    const double group_grat_target_from_sales,
                                    const std::string& group_name,
-                                   const GroupState& group_state,
+                                   const GroupState<double>& group_state,
                                    const bool use_gpmaint)
     : cmode_(cmode)
     , pu_(pu)
@@ -157,7 +157,7 @@ InjectionTargetCalculator::InjectionTargetCalculator(const Group::InjectionCMode
                                                      const std::vector<double>& resv_coeff,
                                                      const std::string& group_name,
                                                      const double sales_target,
-                                                     const GroupState& group_state,
+                                                     const GroupState<double>& group_state,
                                                      const Phase& injection_phase,
                                                      const bool use_gpmaint,
                                                      DeferredLogger& deferred_logger)

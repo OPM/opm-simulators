@@ -37,10 +37,10 @@ class DeferredLogger;
 class GasLiftOpt;
 class GasLiftWellState;
 class Group;
-class GroupState;
+template<class Scalar> class GroupState;
 class Schedule;
 class WellInterfaceGeneric;
-class WellState;
+template<class Scalar> class WellState;
 
 class GasLiftStage2 : public GasLiftCommon {
     using GasLiftSingleWell = GasLiftSingleWellGeneric;
@@ -62,8 +62,8 @@ public:
         const Schedule& schedule,
         const SummaryState& summary_state,
         DeferredLogger& deferred_logger,
-        WellState& well_state,
-        const GroupState& group_state,
+        WellState<double>& well_state,
+        const GroupState<double>& group_state,
         GLiftProdWells& prod_wells,
         GLiftOptWells& glift_wells,
         GasLiftGroupInfo& group_info,

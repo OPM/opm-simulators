@@ -42,8 +42,8 @@ class GasLiftWellState;
 class Schedule;
 class SummaryState;
 class WellInterfaceGeneric;
-class WellState;
-class GroupState;
+template<class Scalar> class WellState;
+template<class Scalar> class GroupState;
 
 class GasLiftSingleWellGeneric : public GasLiftCommon
 {
@@ -104,8 +104,8 @@ public:
 protected:
     GasLiftSingleWellGeneric(
         DeferredLogger& deferred_logger,
-        WellState& well_state,
-        const GroupState& group_state,
+        WellState<double>& well_state,
+        const GroupState<double>& group_state,
         const Well& ecl_well,
         const SummaryState& summary_state,
         GasLiftGroupInfo& group_info,

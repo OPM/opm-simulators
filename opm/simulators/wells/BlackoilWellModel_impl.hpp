@@ -2206,7 +2206,7 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::computePotentials(const std::size_t widx,
-                                                  const WellState& well_state_copy,
+                                                  const WellState<Scalar>& well_state_copy,
                                                   std::string& exc_msg,
                                                   ExceptionType::ExcEnum& exc_type,
                                                   DeferredLogger& deferred_logger)
@@ -2311,14 +2311,14 @@ namespace Opm {
 
         for (const auto& well : well_container_) {
             auto& events = this->wellState().well(well->indexOfWell()).events;
-            if (events.hasEvent(WellState::event_mask)) {
+            if (events.hasEvent(WellState<Scalar>::event_mask)) {
                 well->updateWellStateWithTarget(simulator_, this->groupState(), this->wellState(), deferred_logger);
                 const auto& summary_state = simulator_.vanguard().summaryState();
                 well->updatePrimaryVariables(summary_state, this->wellState(), deferred_logger);
                 well->initPrimaryVariablesEvaluation();
                 // There is no new well control change input within a report step,
                 // so next time step, the well does not consider to have effective events anymore.
-                events.clearEvent(WellState::event_mask);
+                events.clearEvent(WellState<Scalar>::event_mask);
             }
             // these events only work for the first time step within the report step
             if (events.hasEvent(ScheduleEvents::REQUEST_OPEN_WELL)) {

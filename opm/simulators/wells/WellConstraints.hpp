@@ -37,7 +37,7 @@ namespace Opm
 class DeferredLogger;
 using RegionId = int;
 class Rates;
-class SingleWellState;
+template<class Scalar> class SingleWellState;
 class SummaryState;
 class WellInterfaceGeneric;
 enum class WellInjectorCMode;
@@ -54,7 +54,7 @@ public:
                                             std::vector<double>&)>;
 
     bool
-    checkIndividualConstraints(SingleWellState& ws,
+    checkIndividualConstraints(SingleWellState<double>& ws,
                                const SummaryState& summaryState,
                                const RateConvFunc& calcReservoirVoidageRates,
                                bool& thp_limit_violated_but_not_switched,
@@ -64,14 +64,14 @@ public:
 
 private:
     WellInjectorCMode
-    activeInjectionConstraint(const SingleWellState& ws,
+    activeInjectionConstraint(const SingleWellState<double>& ws,
                               const SummaryState& summaryState,
                               bool& thp_limit_violated_but_not_switched,
                               DeferredLogger& deferred_logger,
                               const std::optional<Well::InjectionControls>& inj_controls = std::nullopt) const;
 
     WellProducerCMode
-    activeProductionConstraint(const SingleWellState& ws,
+    activeProductionConstraint(const SingleWellState<double>& ws,
                                const SummaryState& summaryState,
                                const RateConvFunc& calcReservoirVoidageRates,
                                bool& thp_limit_violated_but_not_switched,

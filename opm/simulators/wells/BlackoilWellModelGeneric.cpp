@@ -407,7 +407,7 @@ checkGEconLimits(
         return;
     }
 
-    GroupEconomicLimitsChecker checker {
+    GroupEconomicLimitsChecker<double> checker {
         *this, wellTestState(), group, simulation_time, report_step_idx, deferred_logger
     };
     if (checker.minOilRate() || checker.minGasRate()) {
@@ -426,7 +426,7 @@ checkGEconLimits(
 void
 BlackoilWellModelGeneric::
 checkGconsaleLimits(const Group& group,
-                    WellState& well_state,
+                    WellState<double>& well_state,
                     const int reportStepIdx,
                     DeferredLogger& deferred_logger)
 {
@@ -793,7 +793,7 @@ void
 BlackoilWellModelGeneric::
 updateWsolvent(const Group& group,
                const int reportStepIdx,
-               const WellState& wellState)
+               const WellState<double>& wellState)
 {
     for (const std::string& groupName : group.groups()) {
         const Group& groupTmp = schedule_.getGroup(groupName, reportStepIdx);
@@ -1206,7 +1206,7 @@ updateNetworkPressures(const int reportStepIdx)
                 // set the dynamic THP constraint of the well accordingly.
                 const double new_limit = it->second;
                 well->setDynamicThpLimit(new_limit);
-                SingleWellState& ws = this->wellState()[well->indexOfWell()];
+                SingleWellState<double>& ws = this->wellState()[well->indexOfWell()];
                 const bool thp_is_limit = ws.production_cmode == Well::ProducerCMode::THP;
                 // TODO: not sure why the thp is NOT updated properly elsewhere
                 if (thp_is_limit) {

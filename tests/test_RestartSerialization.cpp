@@ -101,14 +101,18 @@ BOOST_AUTO_TEST_CASE(NAME) \
 #define TEST_FOR_TYPE(TYPE) \
     TEST_FOR_TYPE_NAMED(TYPE, TYPE)
 
-TEST_FOR_TYPE(ALQState)
-TEST_FOR_TYPE(GroupState)
+namespace Opm { using ALQS = ALQState<double>; }
+TEST_FOR_TYPE_NAMED(ALQS, ALQState)
+namespace Opm { using GroupS = GroupState<double>; }
+TEST_FOR_TYPE_NAMED(GroupS, GroupState)
 TEST_FOR_TYPE(HardcodedTimeStepControl)
 TEST_FOR_TYPE(Inplace)
-TEST_FOR_TYPE(PerfData)
+namespace Opm { using PerfD = PerfData<double>; }
+TEST_FOR_TYPE_NAMED(PerfD, PerfData)
 TEST_FOR_TYPE(PIDAndIterationCountTimeStepControl)
 TEST_FOR_TYPE(PIDTimeStepControl)
-TEST_FOR_TYPE(SegmentState)
+namespace Opm { using SegmState = SegmentState<double>; }
+TEST_FOR_TYPE_NAMED(SegmState, SegmentState)
 TEST_FOR_TYPE(SimpleIterationCountTimeStepControl)
 TEST_FOR_TYPE(SimulatorReport)
 TEST_FOR_TYPE(SimulatorReportSingle)
@@ -146,7 +150,7 @@ TEST_FOR_TYPE_NAMED(BVec, BlockVectorWrapper)
 BOOST_AUTO_TEST_CASE(SingleWellState)
 {
     Opm::ParallelWellInfo dummy;
-    auto data_out = Opm::SingleWellState::serializationTestObject(dummy);
+    auto data_out = Opm::SingleWellState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(data_out);
@@ -175,7 +179,7 @@ BOOST_AUTO_TEST_CASE(WellContainer)
 BOOST_AUTO_TEST_CASE(WellState)
 {
     Opm::ParallelWellInfo dummy;
-    auto data_out = Opm::WellState::serializationTestObject(dummy);
+    auto data_out = Opm::WellState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(data_out);
@@ -190,13 +194,13 @@ BOOST_AUTO_TEST_CASE(WellState)
 BOOST_AUTO_TEST_CASE(WGState)
 {
     Opm::ParallelWellInfo dummy;
-    auto data_out = Opm::WGState::serializationTestObject(dummy);
+    auto data_out = Opm::WGState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
     ser.pack(data_out);
     const size_t pos1 = ser.position();
     decltype(data_out) data_in(Opm::PhaseUsage{});
-    data_in.well_state = Opm::WellState(dummy);
+    data_in.well_state = Opm::WellState<double>(dummy);
     ser.unpack(data_in);
     const size_t pos2 = ser.position();
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for WGState");
@@ -268,9 +272,9 @@ public:
                                    eclState, phase_usage, comm)
     {
         if (deserialize) {
-            active_wgstate_.well_state = WellState(dummy);
-            last_valid_wgstate_.well_state = WellState(dummy);
-            nupcol_wgstate_.well_state = WellState(dummy);
+            active_wgstate_.well_state = WellState<double>(dummy);
+            last_valid_wgstate_.well_state = WellState<double>(dummy);
+            nupcol_wgstate_.well_state = WellState<double>(dummy);
         }
     }
 
@@ -283,9 +287,9 @@ public:
         closed_this_step_ = {"test1", "test2"};
         guideRate_.setSerializationTestData();
         node_pressures_ = {{"test3", 4.0}};
-        active_wgstate_ = WGState::serializationTestObject(dummy);
-        last_valid_wgstate_ = WGState::serializationTestObject(dummy);
-        nupcol_wgstate_ = WGState::serializationTestObject(dummy);
+        active_wgstate_ = WGState<double>::serializationTestObject(dummy);
+        last_valid_wgstate_ = WGState<double>::serializationTestObject(dummy);
+        nupcol_wgstate_ = WGState<double>::serializationTestObject(dummy);
         last_glift_opt_time_ = 5.0;
         switched_prod_groups_ = {{"test4", "test5"}};
         switched_inj_groups_ = {{{"test4", Phase::SOLVENT}, "test5"}};
@@ -299,7 +303,7 @@ public:
     {}
 
     void computePotentials(const std::size_t,
-                           const WellState&,
+                           const WellState<double>&,
                            std::string&,
                            ExceptionType::ExcEnum&,
                            DeferredLogger&) override

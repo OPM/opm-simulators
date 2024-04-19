@@ -42,7 +42,7 @@ template<class Scalar> class MultisegmentWellGeneric;
 class WellContributions;
 #endif
 class WellInterfaceGeneric;
-class WellState;
+template<class Scalar> class WellState;
 
 template<class Scalar, int numWellEq, int numEq>
 class MultisegmentWellEquations
@@ -120,7 +120,7 @@ public:
                                   const bool /*use_well_weights*/,
                                   const WellInterfaceGeneric& well,
                                   const int seg_pressure_var_ind,
-                                  const WellState& well_state) const;
+                                  const WellState<Scalar>& well_state) const;
 
     //! \brief Returns a const reference to the residual.
     const BVectorWell& residual() const

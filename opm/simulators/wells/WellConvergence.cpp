@@ -34,7 +34,7 @@ namespace Opm
 {
 
 void WellConvergence::
-checkConvergenceControlEq(const WellState& well_state,
+checkConvergenceControlEq(const WellState<double>& well_state,
                           const Tolerances& tolerances,
                           const double well_control_residual,
                           const bool well_is_stopped, 

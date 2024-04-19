@@ -287,7 +287,7 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
 
 template<class FluidSystem, class Indices>
 void StandardWellConnections<FluidSystem,Indices>::
-computePropertiesForPressures(const WellState& well_state,
+computePropertiesForPressures(const WellState<Scalar>& well_state,
                               const std::function<Scalar(int,int)>& getTemperature,
                               const std::function<Scalar(int)>& getSaltConcentration,
                               const std::function<int(int)>& pvtRegionIdx,
@@ -421,7 +421,7 @@ computePropertiesForPressures(const WellState& well_state,
 
 template<class FluidSystem, class Indices>
 void StandardWellConnections<FluidSystem,Indices>::
-computeProperties(const WellState& well_state,
+computeProperties(const WellState<Scalar>& well_state,
                   const std::function<Scalar(int,int)>& invB,
                   const std::function<Scalar(int,int)>& mobility,
                   const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,

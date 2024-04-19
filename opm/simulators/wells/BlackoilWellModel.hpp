@@ -489,7 +489,7 @@ namespace Opm {
             void updateAverageFormationFactor();
 
             void computePotentials(const std::size_t widx,
-                                   const WellState& well_state_copy,
+                                   const WellState<Scalar>& well_state_copy,
                                    std::string& exc_msg,
                                    ExceptionType::ExcEnum& exc_type,
                                    DeferredLogger& deferred_logger) override;

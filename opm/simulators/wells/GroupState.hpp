@@ -31,6 +31,7 @@
 
 namespace Opm {
 
+template<class Scalar>
 class GroupState {
 public:
     GroupState() = default;
@@ -41,38 +42,43 @@ public:
     bool operator==(const GroupState& other) const;
 
     bool has_production_rates(const std::string& gname) const;
-    void update_production_rates(const std::string& gname, const std::vector<double>& rates);
-    const std::vector<double>& production_rates(const std::string& gname) const;
+    void update_production_rates(const std::string& gname,
+                                 const std::vector<Scalar>& rates);
+    const std::vector<Scalar>& production_rates(const std::string& gname) const;
 
     bool has_production_reduction_rates(const std::string& gname) const;
-    void update_production_reduction_rates(const std::string& gname, const std::vector<double>& rates);
-    const std::vector<double>& production_reduction_rates(const std::string& gname) const;
+    void update_production_reduction_rates(const std::string& gname,
+                                           const std::vector<Scalar>& rates);
+    const std::vector<Scalar>& production_reduction_rates(const std::string& gname) const;
 
     bool has_injection_reduction_rates(const std::string& gname) const;
-    void update_injection_reduction_rates(const std::string& gname, const std::vector<double>& rates);
-    const std::vector<double>& injection_reduction_rates(const std::string& gname) const;
+    void update_injection_reduction_rates(const std::string& gname,
+                                          const std::vector<Scalar>& rates);
+    const std::vector<Scalar>& injection_reduction_rates(const std::string& gname) const;
 
     bool has_injection_reservoir_rates(const std::string& gname) const;
-    void update_injection_reservoir_rates(const std::string& gname, const std::vector<double>& rates);
-    const std::vector<double>& injection_reservoir_rates(const std::string& gname) const;
+    void update_injection_reservoir_rates(const std::string& gname,
+                                          const std::vector<Scalar>& rates);
+    const std::vector<Scalar>& injection_reservoir_rates(const std::string& gname) const;
 
     bool has_injection_surface_rates(const std::string& gname) const;
-    void update_injection_surface_rates(const std::string& gname, const std::vector<double>& rates);
-    const std::vector<double>& injection_surface_rates(const std::string& gname) const;
+    void update_injection_surface_rates(const std::string& gname,
+                                        const std::vector<Scalar>& rates);
+    const std::vector<Scalar>& injection_surface_rates(const std::string& gname) const;
 
+    void update_injection_rein_rates(const std::string& gname,
+                                     const std::vector<Scalar>& rates);
+    const std::vector<Scalar>& injection_rein_rates(const std::string& gname) const;
 
-    void update_injection_rein_rates(const std::string& gname, const std::vector<double>& rates);
-    const std::vector<double>& injection_rein_rates(const std::string& gname) const;
+    void update_injection_vrep_rate(const std::string& gname, Scalar rate);
+    Scalar injection_vrep_rate(const std::string& gname) const;
 
-    void update_injection_vrep_rate(const std::string& gname, double rate);
-    double injection_vrep_rate(const std::string& gname) const;
-
-    void update_grat_sales_target(const std::string& gname, double target);
-    double grat_sales_target(const std::string& gname) const;
+    void update_grat_sales_target(const std::string& gname, Scalar target);
+    Scalar grat_sales_target(const std::string& gname) const;
     bool has_grat_sales_target(const std::string& gname) const;
 
-    void update_gpmaint_target(const std::string& gname, double target);
-    double gpmaint_target(const std::string& gname) const;
+    void update_gpmaint_target(const std::string& gname, Scalar target);
+    Scalar gpmaint_target(const std::string& gname) const;
     bool has_gpmaint_target(const std::string& gname) const;
 
     bool has_production_control(const std::string& gname) const;
@@ -84,11 +90,10 @@ public:
     Group::InjectionCMode injection_control(const std::string& gname, Phase phase) const;
 
     std::size_t data_size() const;
-    std::size_t collect(double * data) const;
-    std::size_t distribute(const double * data);
+    std::size_t collect(Scalar* data) const;
+    std::size_t distribute(const Scalar* data);
 
     GPMaint::State& gpmaint(const std::string& gname);
-
 
     template<class Comm>
     void communicate_rates(const Comm& comm)
@@ -125,10 +130,8 @@ public:
         sz += this->inj_vrep_rate.size();
 
         // Make a vector and collect all data into it.
-        std::vector<double> data(sz);
+        std::vector<Scalar> data(sz);
         std::size_t pos = 0;
-
-
 
         // That the collect function mutates the vector v is an artifact for
         // testing.
@@ -183,17 +186,16 @@ public:
 
 private:
     std::size_t num_phases{};
-    std::map<std::string, std::vector<double>> m_production_rates;
+    std::map<std::string, std::vector<Scalar>> m_production_rates;
     std::map<std::string, Group::ProductionCMode> production_controls;
-    std::map<std::string, std::vector<double>> prod_red_rates;
-    std::map<std::string, std::vector<double>> inj_red_rates;
-    std::map<std::string, std::vector<double>> inj_surface_rates;
-    std::map<std::string, std::vector<double>> inj_resv_rates;
-    std::map<std::string, std::vector<double>> inj_rein_rates;
-    std::map<std::string, double> inj_vrep_rate;
-    std::map<std::string, double> m_grat_sales_target;
-    std::map<std::string, double> m_gpmaint_target;
-
+    std::map<std::string, std::vector<Scalar>> prod_red_rates;
+    std::map<std::string, std::vector<Scalar>> inj_red_rates;
+    std::map<std::string, std::vector<Scalar>> inj_surface_rates;
+    std::map<std::string, std::vector<Scalar>> inj_resv_rates;
+    std::map<std::string, std::vector<Scalar>> inj_rein_rates;
+    std::map<std::string, Scalar> inj_vrep_rate;
+    std::map<std::string, Scalar> m_grat_sales_target;
+    std::map<std::string, Scalar> m_gpmaint_target;
 
     std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;
     WellContainer<GPMaint::State> gpmaint_state;

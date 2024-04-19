@@ -35,7 +35,7 @@ namespace Opm
 {
 
 bool WellConstraints::
-checkIndividualConstraints(SingleWellState& ws,
+checkIndividualConstraints(SingleWellState<double>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,
@@ -70,7 +70,7 @@ checkIndividualConstraints(SingleWellState& ws,
 }
 
 Well::InjectorCMode WellConstraints::
-activeInjectionConstraint(const SingleWellState& ws,
+activeInjectionConstraint(const SingleWellState<double>& ws,
                           const SummaryState& summaryState,
                           bool& thp_limit_violated_but_not_switched,
                           DeferredLogger& deferred_logger,
@@ -167,7 +167,7 @@ activeInjectionConstraint(const SingleWellState& ws,
 }
 
 Well::ProducerCMode WellConstraints::
-activeProductionConstraint(const SingleWellState& ws,
+activeProductionConstraint(const SingleWellState<double>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,

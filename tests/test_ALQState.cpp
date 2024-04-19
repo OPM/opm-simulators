@@ -21,20 +21,17 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <stdexcept>
+#include <exception>
 #include <opm/simulators/wells/ALQState.hpp>
-
 
 #define BOOST_TEST_MODULE GroupStateTest
 #include <boost/test/unit_test.hpp>
 
 using namespace Opm;
 
-
-
-BOOST_AUTO_TEST_CASE(ALQStateCreate) {
-    ALQState alq_state;
-
+BOOST_AUTO_TEST_CASE(ALQStateCreate)
+{
+    ALQState<double> alq_state;
 
     alq_state.update_default("W1", 100);
     alq_state.update_default("W2", 200);

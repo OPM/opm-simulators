@@ -37,11 +37,11 @@ namespace RateConverter
 }
 
 class Group;
-class GroupState;
+template<class Scalar> class GroupState;
 class Schedule;
 struct RatioLimitCheckReport;
-class SingleWellState;
-class WellState;
+template<class Scalar> class SingleWellState;
+template<class Scalar> class WellState;
 
 template<class FluidSystem>
 class WellInterfaceFluidSystem : public WellInterfaceGeneric {
@@ -75,30 +75,30 @@ protected:
                              const std::vector<PerforationData>& perf_data);
 
     // updating the voidage rates in well_state when requested
-    void calculateReservoirRates(SingleWellState& ws) const;
+    void calculateReservoirRates(SingleWellState<double>& ws) const;
 
-    bool checkIndividualConstraints(SingleWellState& ws,
+    bool checkIndividualConstraints(SingleWellState<double>& ws,
                                     const SummaryState& summaryState,
                                     DeferredLogger& deferred_logger,
                                     const std::optional<Well::InjectionControls>& inj_controls = std::nullopt,
                                     const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
-    bool checkGroupConstraints(WellState& well_state,
-                               const GroupState& group_state,
+    bool checkGroupConstraints(WellState<double>& well_state,
+                               const GroupState<double>& group_state,
                                const Schedule& schedule,
                                const SummaryState& summaryState,
                                DeferredLogger& deferred_logger) const;
 
-    bool checkConstraints(WellState& well_state,
-                          const GroupState& group_state,
+    bool checkConstraints(WellState<double>& well_state,
+                          const GroupState<double>& group_state,
                           const Schedule& schedule,
                           const SummaryState& summaryState,
                           DeferredLogger& deferred_logger) const;
 
     std::optional<double>
     getGroupInjectionTargetRate(const Group& group,
-                                const WellState& well_state,
-                                const GroupState& group_state,
+                                const WellState<double>& well_state,
+                                const GroupState<double>& group_state,
                                 const Schedule& schedule,
                                 const SummaryState& summaryState,
                                 const InjectorType& injectorType,
@@ -107,8 +107,8 @@ protected:
 
     double
     getGroupProductionTargetRate(const Group& group,
-                                 const WellState& well_state,
-                                 const GroupState& group_state,
+                                 const WellState<double>& well_state,
+                                 const GroupState<double>& group_state,
                                  const Schedule& schedule,
                                  const SummaryState& summaryState,
                                  double efficiencyFactor,

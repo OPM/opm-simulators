@@ -36,12 +36,11 @@ namespace Opm
 
 class ConvergenceReport;
 class DeferredLogger;
-class GroupState;
 class Schedule;
 class SummaryState;
 class WellContributions;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
-class WellState;
+template<class Scalar> class WellState;
 
 template<class FluidSystem, class Indices>
 class StandardWellEval
@@ -79,7 +78,7 @@ protected:
     // computing the accumulation term for later use in well mass equations
     void computeAccumWell();
 
-    ConvergenceReport getWellConvergence(const WellState& well_state,
+    ConvergenceReport getWellConvergence(const WellState<Scalar>& well_state,
                                          const std::vector<double>& B_avg,
                                          const double maxResidualAllowed,
                                          const double tol_wells,
@@ -95,7 +94,7 @@ protected:
               const bool has_polymermw);
 
     void updateWellStateFromPrimaryVariables(const bool stop_or_zero_rate_target,
-                                             WellState& well_state,
+                                             WellState<Scalar>& well_state,
                                              const SummaryState& summary_state,
                                              DeferredLogger& deferred_logger) const;
 

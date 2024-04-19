@@ -35,11 +35,11 @@ namespace Opm
 class DeferredLogger;
 class GasLiftOpt;
 class Group;
-class GroupState;
+template<class Scalar> class GroupState;
 class Schedule;
 class SummaryState;
 class Well;
-class WellState;
+template<class Scalar> class WellState;
 
 class GasLiftGroupInfo : public GasLiftCommon
 {
@@ -74,8 +74,8 @@ public:
         const int iteration_idx,
         const PhaseUsage& phase_usage,
         DeferredLogger& deferred_logger,
-        WellState& well_state,
-        const GroupState& group_state,
+        WellState<double>& well_state,
+        const GroupState<double>& group_state,
         const Parallel::Communication& comm,
         bool glift_debug
     );

@@ -42,9 +42,8 @@ struct PhaseUsage;
 class SummaryState;
 class VFPProperties;
 class WellTestState;
-class WellState;
-class SingleWellState;
-class GroupState;
+template<class Scalar> class WellState;
+template<class Scalar> class SingleWellState;
 class Group;
 class Schedule;
 
@@ -95,7 +94,8 @@ public:
     void closeCompletions(const WellTestState& wellTestState);
 
     void setVFPProperties(const VFPProperties* vfp_properties_arg);
-    void setPrevSurfaceRates(WellState& well_state, const WellState& prev_well_state) const;
+    void setPrevSurfaceRates(WellState<double>& well_state,
+                             const WellState<double>& prev_well_state) const;
     void setGuideRate(const GuideRate* guide_rate_arg);
     void setWellEfficiencyFactor(const double efficiency_factor);
     void setRepRadiusPerfLength();
@@ -176,7 +176,7 @@ public:
     }
 
     double getTHPConstraint(const SummaryState& summaryState) const;
-    double getALQ(const WellState& well_state) const;
+    double getALQ(const WellState<double>& well_state) const;
     double wsolvent() const;
     double rsRvInj() const;
 
@@ -193,22 +193,22 @@ public:
     // whether a well is specified with a non-zero and valid VFP table number
     bool isVFPActive(DeferredLogger& deferred_logger) const;
 
-    void reportWellSwitching(const SingleWellState& ws, DeferredLogger& deferred_logger) const;
+    void reportWellSwitching(const SingleWellState<double>& ws, DeferredLogger& deferred_logger) const;
 
     bool changedToOpenThisStep() const {
         return this->changed_to_open_this_step_;
     }
 
-    void updateWellTestState(const SingleWellState& ws,
+    void updateWellTestState(const SingleWellState<double>& ws,
                              const double& simulationTime,
                              const bool& writeMessageToOPMLog,
                              WellTestState& wellTestState,
                              DeferredLogger& deferred_logger) const;
 
-    bool isPressureControlled(const WellState& well_state) const;
+    bool isPressureControlled(const WellState<double>& well_state) const;
 
     bool stopppedOrZeroRateTarget(const SummaryState& summary_state,
-                                  const WellState& well_state) const;
+                                  const WellState<double>& well_state) const;
 
     double wellEfficiencyFactor() const
     { return well_efficiency_factor_; }
@@ -236,18 +236,18 @@ protected:
     int polymerWaterTable_() const;
 
     bool wellUnderZeroRateTarget(const SummaryState& summary_state,
-                                 const WellState& well_state) const;
+                                 const WellState<double>& well_state) const;
 
     std::pair<bool,bool>
     computeWellPotentials(std::vector<double>& well_potentials,
-                          const WellState& well_state);
+                          const WellState<double>& well_state);
 
     void checkNegativeWellPotentials(std::vector<double>& well_potentials,
                                      const bool checkOperability,
                                      DeferredLogger& deferred_logger);
 
     void prepareForPotentialCalculations(const SummaryState& summary_state,
-                                         WellState& well_state, 
+                                         WellState<double>& well_state,
                                          Well::InjectionControls& inj_controls,
                                          Well::ProductionControls& prod_controls) const;
 

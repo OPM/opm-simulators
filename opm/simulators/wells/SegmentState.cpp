@@ -50,10 +50,10 @@ std::vector<int> make_segment_number(const Opm::WellSegments& segments)
 
 } // Anonymous namespace
 
-namespace Opm
-{
+namespace Opm {
 
-SegmentState::SegmentState(int num_phases, const WellSegments& segments)
+template<class Scalar>
+SegmentState<Scalar>::SegmentState(int num_phases, const WellSegments& segments)
     : rates                    (segments.size() * num_phases)
     , dissolved_gas_rate       (segments.size())
     , vaporized_oil_rate       (segments.size())
@@ -69,7 +69,8 @@ SegmentState::SegmentState(int num_phases, const WellSegments& segments)
     , m_segment_number         (make_segment_number(segments))
 {}
 
-SegmentState SegmentState::serializationTestObject()
+template<class Scalar>
+SegmentState<Scalar> SegmentState<Scalar>::serializationTestObject()
 {
     SegmentState result;
     result.rates = {1.0, 2.0};
@@ -89,19 +90,27 @@ SegmentState SegmentState::serializationTestObject()
     return result;
 }
 
-double SegmentState::pressure_drop(std::size_t index) const {
+template<class Scalar>
+Scalar SegmentState<Scalar>::pressure_drop(std::size_t index) const
+{
     return this->pressure_drop_friction[index] + this->pressure_drop_hydrostatic[index] + this->pressure_drop_accel[index];
 }
 
-bool SegmentState::empty() const {
+template<class Scalar>
+bool SegmentState<Scalar>::empty() const
+{
     return this->rates.empty();
 }
 
-std::size_t SegmentState::size() const {
+template<class Scalar>
+std::size_t SegmentState<Scalar>::size() const
+{
     return this->pressure.size();
 }
 
-void SegmentState::scale_pressure(const double bhp) {
+template<class Scalar>
+void SegmentState<Scalar>::scale_pressure(const Scalar bhp)
+{
     if (this->empty())
         throw std::logic_error("Tried to pressure scale empty SegmentState");
 
@@ -110,14 +119,18 @@ void SegmentState::scale_pressure(const double bhp) {
     std::transform(this->pressure.begin(),
                    this->pressure.end(),
                    this->pressure.begin(),
-                   [pressure_change] (const double& p) { return p + pressure_change;});
+                   [pressure_change] (const Scalar& p) { return p + pressure_change;});
 }
 
-const std::vector<int>& SegmentState::segment_number() const {
+template<class Scalar>
+const std::vector<int>&
+SegmentState<Scalar>::segment_number() const
+{
     return this->m_segment_number;
 }
 
-bool SegmentState::operator==(const SegmentState& rhs) const
+template<class Scalar>
+bool SegmentState<Scalar>::operator==(const SegmentState& rhs) const
 {
     return this->rates == rhs.rates &&
            this->dissolved_gas_rate == rhs.dissolved_gas_rate &&
@@ -133,5 +146,7 @@ bool SegmentState::operator==(const SegmentState& rhs) const
            this->pressure_drop_accel == rhs.pressure_drop_accel &&
            this->m_segment_number == rhs.m_segment_number;
 }
+
+template class SegmentState<double>;
 
 } // namespace Opm

@@ -22,22 +22,22 @@
 
 #include <map>
 #include <string>
-#include <vector>
-
 
 namespace Opm {
 
-class ALQState {
+template<class Scalar>
+class ALQState
+{
 public:
     static ALQState serializationTestObject();
 
     std::size_t pack_size() const;
-    std::size_t unpack_data(const double * data);
-    std::size_t pack_data(double * data) const;
+    std::size_t unpack_data(const Scalar* data);
+    std::size_t pack_data(Scalar* data) const;
 
-    double get(const std::string& wname) const;
-    void update_default(const std::string& wname, double value);
-    void set(const std::string& wname, double value);
+    Scalar get(const std::string& wname) const;
+    void update_default(const std::string& wname, Scalar value);
+    void set(const std::string& wname, Scalar value);
     bool oscillation(const std::string& wname) const;
     void update_count(const std::string& wname, bool increase);
     void reset_count();
@@ -60,13 +60,12 @@ public:
     bool operator==(const ALQState&) const;
 
 private:
-    std::map<std::string, double> current_alq_;
-    std::map<std::string, double> default_alq_;
+    std::map<std::string, Scalar> current_alq_;
+    std::map<std::string, Scalar> default_alq_;
     std::map<std::string, int> alq_increase_count_;
     std::map<std::string, int> alq_decrease_count_;
     int debug_counter_ = 0;
 };
-
 
 }
 
