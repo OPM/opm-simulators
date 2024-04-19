@@ -86,15 +86,17 @@ void RSTConv::gatherAndAccumulate(const std::vector<int>& lIdx,
         return;
     }
 
-    std::vector<double> values(comm_.rank() == 0 ? comm_.size() * N_ : N_);
-    std::vector<int> gIdx(comm_.rank() == 0 ? comm_.size() * N_ : N_);
+    std::vector<double> send_values(N_);
+    std::vector<double> values(comm_.rank() == 0 ? comm_.size() * N_ : 0);
+    std::vector<int> send_idx(N_);
+    std::vector<int> gIdx(comm_.rank() == 0 ? comm_.size() * N_ : 0);
     for (int i = 0; i < N_; ++i) {
-        values[i] = std::abs(resid[lIdx[i]][compIdx_[comp]]);
-        gIdx[i] = globalCell_[lIdx[i]];
+        send_values[i] = std::abs(resid[lIdx[i]][compIdx_[comp]]);
+        send_idx[i] = globalCell_[lIdx[i]];
     }
 
-    comm_.gather(gIdx.data(), gIdx.data(), N_, 0);
-    comm_.gather(values.data(), values.data(), N_, 0);
+    comm_.gather(send_idx.data(), gIdx.data(), N_, 0);
+    comm_.gather(send_values.data(), values.data(), N_, 0);
     if (comm_.rank() != 0) {
         return;
     }
