@@ -74,7 +74,7 @@ struct WellModel<TypeTag, TTag::EbosTypeTag> {
 
 template<class TypeTag>
 struct NewtonMethod<TypeTag, TTag::EbosTypeTag> {
-    using type = EclNewtonMethod<TypeTag>;
+    using type = FlowNewtonMethod<TypeTag>;
 };
 
 // currently, ebos uses the non-multisegment well model by default to avoid

@@ -25,8 +25,8 @@
  *
  * \brief Contains the classes required to extend the black-oil model by energy.
  */
-#ifndef OPM_BLACK_OIL_ENERGY_MODULE_TPFA_HH
-#define OPM_BLACK_OIL_ENERGY_MODULE_TPFA_HH
+#ifndef OPM_BLACK_OIL_ENERGY_MODULE_GLOBAL_INDEX_HH
+#define OPM_BLACK_OIL_ENERGY_MODULE_GLOBAL_INDEX_HH
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 
 namespace Opm {
@@ -36,7 +36,7 @@ namespace Opm {
  *        model by energy.
  */
 template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
-class BlackOilEnergyIntensiveQuantitiesFV: public BlackOilEnergyIntensiveQuantities<TypeTag,enableEnergyV>
+class BlackOilEnergyIntensiveQuantitiesGlobalIndex: public BlackOilEnergyIntensiveQuantities<TypeTag,enableEnergyV>
 {
     using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, enableEnergyV>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -97,7 +97,7 @@ public:
 
 };
 template <class TypeTag>
-class BlackOilEnergyIntensiveQuantitiesFV<TypeTag, false>: public BlackOilEnergyIntensiveQuantities<TypeTag, false>
+class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, false>: public BlackOilEnergyIntensiveQuantities<TypeTag, false>
     {
         using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, false>;
         using Problem = GetPropType<TypeTag, Properties::Problem>;

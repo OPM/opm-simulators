@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::EclNewtonMethod
+ * \copydoc Opm::FlowNewtonMethod
  */
-#ifndef EWOMS_ECL_NEWTON_METHOD_HH
-#define EWOMS_ECL_NEWTON_METHOD_HH
+#ifndef OPM_FLOW_NEWTON_METHOD_HPP
+#define OPM_FLOW_NEWTON_METHOD_HPP
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -62,10 +62,10 @@ struct EclNewtonRelaxedTolerance {
 namespace Opm {
 
 /*!
- * \brief A newton solver which is ebos specific.
+ * \brief A newton solver.
  */
 template <class TypeTag>
-class EclNewtonMethod : public BlackOilNewtonMethod<TypeTag>
+class FlowNewtonMethod : public BlackOilNewtonMethod<TypeTag>
 {
     using ParentType = BlackOilNewtonMethod<TypeTag>;
     using DiscNewtonMethod = GetPropType<TypeTag, Properties::DiscNewtonMethod>;
@@ -92,7 +92,7 @@ class EclNewtonMethod : public BlackOilNewtonMethod<TypeTag>
     friend ParentType;
 
 public:
-    EclNewtonMethod(Simulator& simulator) : ParentType(simulator)
+    explicit FlowNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {
         errorPvFraction_ = 1.0;
         relaxedMaxPvFraction_ = Parameters::get<TypeTag, Properties::EclNewtonRelaxedVolumeFraction>();

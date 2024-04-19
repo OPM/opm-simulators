@@ -18,14 +18,14 @@
 */
 #include "config.h"
 #include <opm/simulators/flow/FlowProblem.hpp>
-#include "eclnewtonmethod.hh"
+#include "flownewtonmethod.hpp"
 #include "flowexp.hpp"
 #include <opm/simulators/flow/Main.hpp>
 
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 #include <opm/models/discretization/common/tpfalinearizer.hh>
-#include "blackoilintensivequantitiessimple.hh"
-#include "BlackOilModelFvNoCache.hpp"
+#include "BlackOilIntensiveQuantitiesGlobalIndex.hpp"
+#include "FIBlackOilModelNoCache.hpp"
 // the current code use eclnewtonmethod adding other conditions to proceed_ should do the trick for KA
 // adding linearshe sould be chaning the update_ function in the same class with condition that the error is reduced.
 // the trick is to be able to recalculate the residual from here.
@@ -50,11 +50,11 @@ struct EclFlowProblemEbos {
 
 template<class TypeTag>
 struct Model<TypeTag, TTag::EclFlowProblemEbos> {
-    using type = BlackOilModelFvNoCache<TypeTag>;
+    using type = FIBlackOilModelNoCache<TypeTag>;
 };
 template<class TypeTag>
 struct IntensiveQuantities<TypeTag, TTag::EclFlowProblemEbos> {
-     using type = BlackOilIntensiveQuantitiesSimple<TypeTag>;
+     using type = BlackOilIntensiveQuantitiesGlobalIndex<TypeTag>;
 };
 // Set the problem class
 template<class TypeTag>

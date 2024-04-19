@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::BlackOilIntensiveQuantities
+ * \copydoc Opm::BlackOilIntensiveQuantitiesGlobalIndex
  */
-#ifndef OPM_BLACK_OIL_INTENSIVE_QUANTITIES_SIMPLE_HH
-#define OPM_BLACK_OIL_INTENSIVE_QUANTITIES_SIMPLE_HH
+#ifndef OPM_BLACK_OIL_INTENSIVE_QUANTITIES_GLOBAL_INDEX_HPP
+#define OPM_BLACK_OIL_INTENSIVE_QUANTITIES_GLOBAL_INDEX_HPP
 #include <opm/models/blackoil/blackoilproperties.hh>
 #include <opm/models/blackoil/blackoilsolventmodules.hh>
 #include <opm/models/blackoil/blackoilextbomodules.hh>
@@ -34,7 +34,7 @@
 #include <opm/models/blackoil/blackoilfoammodules.hh>
 #include <opm/models/blackoil/blackoilbrinemodules.hh>
 #include <opm/models/blackoil/blackoilenergymodules.hh>
-#include "blackoilenergymodulesfv.hh"
+#include "BlackOilEnergyIntensiveQuantitiesGlobalIndex.hpp"
 #include <opm/models/blackoil/blackoildiffusionmodule.hh>
 #include <opm/models/blackoil/blackoilmicpmodules.hh>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
@@ -60,7 +60,7 @@ namespace Opm {
  *        finite volume in the black-oil model.
  */
 template <class TypeTag>
-class BlackOilIntensiveQuantitiesSimple
+class BlackOilIntensiveQuantitiesGlobalIndex
     : public GetPropType<TypeTag, Properties::DiscIntensiveQuantities>
     , public GetPropType<TypeTag, Properties::FluxModule>::FluxIntensiveQuantities
     , public BlackOilDiffusionIntensiveQuantities<TypeTag, getPropValue<TypeTag, Properties::EnableDiffusion>() >
@@ -69,7 +69,7 @@ class BlackOilIntensiveQuantitiesSimple
     , public BlackOilPolymerIntensiveQuantities<TypeTag>
     , public BlackOilFoamIntensiveQuantities<TypeTag>
     , public BlackOilBrineIntensiveQuantities<TypeTag>
-    , public BlackOilEnergyIntensiveQuantitiesFV<TypeTag>
+    , public BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag>
     , public BlackOilMICPIntensiveQuantities<TypeTag>
 {
     using ParentType = GetPropType<TypeTag, Properties::DiscIntensiveQuantities>;
@@ -144,7 +144,7 @@ public:
                                                 Indices::numPhases>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 
-    BlackOilIntensiveQuantitiesSimple()
+    BlackOilIntensiveQuantitiesGlobalIndex()
     {
         if (compositionSwitchEnabled) {
             fluidState_.setRs(0.0);
@@ -154,9 +154,9 @@ public:
             fluidState_.setRvw(0.0);
         }
     }
-    BlackOilIntensiveQuantitiesSimple(const BlackOilIntensiveQuantitiesSimple& other) = default;
+    BlackOilIntensiveQuantitiesGlobalIndex(const BlackOilIntensiveQuantitiesGlobalIndex& other) = default;
 
-    BlackOilIntensiveQuantitiesSimple& operator=(const BlackOilIntensiveQuantitiesSimple& other) = default;
+    BlackOilIntensiveQuantitiesGlobalIndex& operator=(const BlackOilIntensiveQuantitiesGlobalIndex& other) = default;
 
     /*!
      * \copydoc IntensiveQuantities::update
@@ -597,7 +597,7 @@ private:
     friend BlackOilSolventIntensiveQuantities<TypeTag>;
     friend BlackOilExtboIntensiveQuantities<TypeTag>;
     friend BlackOilPolymerIntensiveQuantities<TypeTag>;
-    friend BlackOilEnergyIntensiveQuantitiesFV<TypeTag>;
+    friend BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag>;
     friend BlackOilFoamIntensiveQuantities<TypeTag>;
     friend BlackOilBrineIntensiveQuantities<TypeTag>;
     friend BlackOilMICPIntensiveQuantities<TypeTag>;
