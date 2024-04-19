@@ -19,7 +19,7 @@
 #include "config.h"
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include "eclnewtonmethod.hh"
-#include "ebos.hh"
+#include "flowexp.hpp"
 #include <opm/simulators/flow/Main.hpp>
 
 #include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
@@ -31,18 +31,17 @@
 // the trick is to be able to recalculate the residual from here.
 // unsure where the timestepping is done from suggestedtime??
 // suggestTimeStep is taken from newton solver in problem.limitTimestep
-namespace Opm{
+/* namespace Opm{
     template<typename TypeTag>
     class OutputAuxModule : public BaseAuxiliaryModule<TypeTag>
     {
 
     };
 
-}
+} */
 
 
-namespace Opm {
-namespace Properties {
+namespace Opm::Properties {
 namespace TTag {
 struct EclFlowProblemEbos {
     using InheritsFrom = std::tuple<EbosTypeTag>;
@@ -134,7 +133,7 @@ struct Simulator<TypeTag, TTag::EclFlowProblemEbos> { using type = Opm::Simulato
 //     static constexpr bool value = false;
 // };
 }
-}
+
 
 
 int main(int argc, char** argv)

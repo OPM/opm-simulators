@@ -72,6 +72,11 @@ struct WellModel<TypeTag, TTag::EbosTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 };
 
+template<class TypeTag>
+struct NewtonMethod<TypeTag, TTag::EbosTypeTag> {
+    using type = EclNewtonMethod<TypeTag>;
+};
+
 // currently, ebos uses the non-multisegment well model by default to avoid
 // regressions. the --use-multisegment-well=true|false command line parameter is still
 // available in ebos, but hidden from view.
@@ -151,6 +156,11 @@ struct EclNewtonSumTolerance<TypeTag, TTag::EbosTypeTag> {
     static constexpr type value = 1e-5;
 };
 
+template<class TypeTag>
+struct EclNewtonSumToleranceExponent<TypeTag, TTag::EbosTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1./3.;
+};
 // make all Newton iterations strict, i.e., the volumetric Newton tolerance must be
 // always be upheld in the majority of the spatial domain. In this context, "majority"
 // means 1 - EclNewtonRelaxedVolumeFraction.
@@ -193,15 +203,17 @@ template <class TypeTag>
 class EbosProblem : public FlowProblem<TypeTag> //, public FvBaseProblem<TypeTag>
 {
     typedef FlowProblem<TypeTag> ParentType;
-    using BaseType = GetPropType<TypeTag, Properties::BaseProblem>;
+    using BaseType = ParentType; // GetPropType<TypeTag, Properties::BaseProblem>;
 public:
     void writeOutput(bool verbose = true)
     {
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
-        if (Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() || this->simulator().episodeWillBeOver()){
-            BaseType::writeOutput(verbose);
+        if (Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() || this->simulator().episodeWillBeOver()) {
+            // \Note: the SimulatorTimer does not carry any useful information, so PRT file (if it gets output) will contain wrong
+            // timing information.
+            BaseType::writeOutput(SimulatorTimer{}, verbose);
         }
     }
 

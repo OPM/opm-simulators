@@ -672,13 +672,13 @@ opm_add_test(flow_distribute_z
   $<TARGET_OBJECTS:moduleVersion>
   )
 
-opm_add_test(ebos
+opm_add_test(flowexp_blackoil
   ONLY_COMPILE
   ALWAYS_ENABLE
   DEPENDS opmsimulators
   LIBRARIES opmsimulators
   SOURCES
-  flowexperimental/ebos.cpp
+  flowexperimental/flowexp_blackoil.cpp
   $<TARGET_OBJECTS:moduleVersion>
 )
 
