@@ -446,10 +446,15 @@ operator()(double s) const
     fluidState.setSaturation(FluidSystem::waterPhaseIdx, 0.0);
     fluidState.setSaturation(FluidSystem::oilPhaseIdx, 0.0);
     fluidState.setSaturation(FluidSystem::gasPhaseIdx, 0.0);
-    fluidState.setSaturation(phase_, s);    
-    if (phase_ == FluidSystem::gasPhaseIdx)
-        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 1.0 - s);
+    fluidState.setSaturation(phase_, s);
 
+    // This code should only be called for water or gas phase
+    assert(phase_ != FluidSystem::oilPhaseIdx);
+    // The capillaryPressure code only uses the wetting phase saturation
+    if (phase_ == FluidSystem::gasPhaseIdx) {
+        fluidState.setSaturation(FluidSystem::waterPhaseIdx, 1.0 - s);
+        fluidState.setSaturation(FluidSystem::oilPhaseIdx, 1.0 - s);
+    }
     std::array<double, FluidSystem::numPhases> pc{0.0};
     using MaterialLaw = typename MaterialLawManager::MaterialLaw;
     MaterialLaw::capillaryPressures(pc, matParams, fluidState);
