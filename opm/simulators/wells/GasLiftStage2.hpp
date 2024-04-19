@@ -201,7 +201,7 @@ protected:
 
         void addOrRemoveALQincrement(
             GradMap &grad_map, const std::string& well_name, bool add);
-        bool checkALQlimit(double delta_alq, double delta_gas);
+        bool checkALQlimit();
         bool checkEcoGradient(const std::string& well_name, double eco_grad);
         bool checkGasTarget(double delta_gas);
         bool checkLiquidTarget(double delta_liquid);
