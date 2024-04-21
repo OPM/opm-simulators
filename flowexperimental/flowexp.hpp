@@ -25,8 +25,8 @@
  *
  * \brief The common settings for all ebos variants.
  */
-#ifndef EBOS_HH
-#define EBOS_HH
+#ifndef FLOW_EXP_HPP
+#define FLOW_EXP_HPP
 
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemProperties.hpp>
@@ -41,39 +41,39 @@
 
 namespace Opm {
 template <class TypeTag>
-class EbosProblem;
+class FlowExpProblem;
 }
 
 namespace Opm::Properties {
 
 namespace TTag {
-struct EbosTypeTag {
+struct FlowExpTypeTag {
     using InheritsFrom = std::tuple<FlowModelParameters, FlowBaseProblem, BlackOilModel, EclTimeSteppingParameters>;
 };
 }
 
 // Set the problem class
 template<class TypeTag>
-struct Problem<TypeTag, TTag::EbosTypeTag> {
-    using type = EbosProblem<TypeTag>;
+struct Problem<TypeTag, TTag::FlowExpTypeTag> {
+    using type = FlowExpProblem<TypeTag>;
 };
 
 // Enable experimental features for ebos: ebos is the research simulator of the OPM
 // project. If you're looking for a more stable "production quality" simulator, consider
 // using `flow`
 template<class TypeTag>
-struct EnableExperiments<TypeTag, TTag::EbosTypeTag> {
+struct EnableExperiments<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr bool value = true;
 };
 
 // use flow's well model for now
 template<class TypeTag>
-struct WellModel<TypeTag, TTag::EbosTypeTag> {
+struct WellModel<TypeTag, TTag::FlowExpTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 };
 
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::EbosTypeTag> {
+struct NewtonMethod<TypeTag, TTag::FlowExpTypeTag> {
     using type = FlowNewtonMethod<TypeTag>;
 };
 
@@ -81,53 +81,53 @@ struct NewtonMethod<TypeTag, TTag::EbosTypeTag> {
 // regressions. the --use-multisegment-well=true|false command line parameter is still
 // available in ebos, but hidden from view.
 template<class TypeTag>
-struct UseMultisegmentWell<TypeTag, TTag::EbosTypeTag> {
+struct UseMultisegmentWell<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr bool value = false;
 };
 
 // set some properties that are only required by the well model
 template<class TypeTag>
-struct MatrixAddWellContributions<TypeTag, TTag::EbosTypeTag> {
+struct MatrixAddWellContributions<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr bool value = true;
 };
 
 template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, TTag::EbosTypeTag> {
+struct EnableTerminalOutput<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr bool value = false;
 };
 
 // flow's well model only works with surface volumes
 template<class TypeTag>
-struct BlackoilConserveSurfaceVolume<TypeTag, TTag::EbosTypeTag> {
+struct BlackoilConserveSurfaceVolume<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr bool value = true;
 };
 
 // the values for the residual are for the whole cell instead of for a cubic meter of the cell
 template<class TypeTag>
-struct UseVolumetricResidual<TypeTag, TTag::EbosTypeTag> {
+struct UseVolumetricResidual<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr bool value = false;
 };
 
 // by default use flow's aquifer model for now
 template<class TypeTag>
-struct AquiferModel<TypeTag, TTag::EbosTypeTag> {
+struct AquiferModel<TypeTag, TTag::FlowExpTypeTag> {
     using type = BlackoilAquiferModel<TypeTag>;
 };
 
 // use flow's linear solver backend for now
 template<class TypeTag>
-struct LinearSolverSplice<TypeTag, TTag::EbosTypeTag> {
+struct LinearSolverSplice<TypeTag, TTag::FlowExpTypeTag> {
     using type = TTag::FlowIstlSolver;
 };
 
 template<>
-struct LinearSolverBackend<TTag::EbosTypeTag, TTag::FlowIstlSolverParams> {
-    using type = ISTLSolver<TTag::EbosTypeTag>;
+struct LinearSolverBackend<TTag::FlowExpTypeTag, TTag::FlowIstlSolverParams> {
+    using type = ISTLSolver<TTag::FlowExpTypeTag>;
 };
 
 // the default for the allowed volumetric error for oil per second
 template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::EbosTypeTag> {
+struct NewtonTolerance<TypeTag, TTag::FlowExpTypeTag> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-1;
 };
@@ -135,14 +135,14 @@ struct NewtonTolerance<TypeTag, TTag::EbosTypeTag> {
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
 template<class TypeTag>
-struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::EbosTypeTag> {
+struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::FlowExpTypeTag> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.05;
 };
 
 // the maximum volumetric error of a cell in the relaxed region
 template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::EbosTypeTag> {
+struct EclNewtonRelaxedTolerance<TypeTag, TTag::FlowExpTypeTag> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e6*getPropValue<TypeTag, Properties::NewtonTolerance>();
 };
@@ -151,13 +151,13 @@ struct EclNewtonRelaxedTolerance<TypeTag, TTag::EbosTypeTag> {
 // reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
 // will tolerate larger residuals.
 template<class TypeTag>
-struct EclNewtonSumTolerance<TypeTag, TTag::EbosTypeTag> {
+struct EclNewtonSumTolerance<TypeTag, TTag::FlowExpTypeTag> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-5;
 };
 
 template<class TypeTag>
-struct EclNewtonSumToleranceExponent<TypeTag, TTag::EbosTypeTag> {
+struct EclNewtonSumToleranceExponent<TypeTag, TTag::FlowExpTypeTag> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1./3.;
 };
@@ -165,14 +165,14 @@ struct EclNewtonSumToleranceExponent<TypeTag, TTag::EbosTypeTag> {
 // always be upheld in the majority of the spatial domain. In this context, "majority"
 // means 1 - EclNewtonRelaxedVolumeFraction.
 template<class TypeTag>
-struct EclNewtonStrictIterations<TypeTag, TTag::EbosTypeTag> {
+struct EclNewtonStrictIterations<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr int value = 100;
 };
 
 // set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
 // relatively often)
 template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::EbosTypeTag> {
+struct NewtonMaxIterations<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr int value = 8;
 };
 
@@ -180,7 +180,7 @@ struct NewtonMaxIterations<TypeTag, TTag::EbosTypeTag> {
 // simulation to 2 (instead of grabbing everything that is available).
 #if _OPENMP
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, TTag::EbosTypeTag> {
+struct ThreadsPerProcess<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr int value = 2;
 };
 #endif
@@ -188,11 +188,11 @@ struct ThreadsPerProcess<TypeTag, TTag::EbosTypeTag> {
 // By default, ebos accepts the result of the time integration unconditionally if the
 // smallest time step size is reached.
 template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, TTag::EbosTypeTag> {
+struct ContinueOnConvergenceError<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr bool value = true;
 };
 template<class TypeTag>
-struct LinearSolverBackend<TypeTag, TTag::EbosTypeTag> {
+struct LinearSolverBackend<TypeTag, TTag::FlowExpTypeTag> {
     using type = ISTLSolver<TypeTag>;
 };
 
@@ -200,7 +200,7 @@ struct LinearSolverBackend<TypeTag, TTag::EbosTypeTag> {
 
 namespace Opm {
 template <class TypeTag>
-class EbosProblem : public FlowProblem<TypeTag> //, public FvBaseProblem<TypeTag>
+class FlowExpProblem : public FlowProblem<TypeTag> //, public FvBaseProblem<TypeTag>
 {
     typedef FlowProblem<TypeTag> ParentType;
     using BaseType = ParentType; // GetPropType<TypeTag, Properties::BaseProblem>;
@@ -254,4 +254,4 @@ public:
 };
 }
 
-#endif // EBOS_HH
+#endif

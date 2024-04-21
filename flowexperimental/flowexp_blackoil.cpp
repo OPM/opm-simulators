@@ -43,45 +43,45 @@
 
 namespace Opm::Properties {
 namespace TTag {
-struct EclFlowProblemEbos {
-    using InheritsFrom = std::tuple<EbosTypeTag>;
+struct FlowExpProblemBlackOil{
+    using InheritsFrom = std::tuple<FlowExpTypeTag>;
 };
 }
 
 template<class TypeTag>
-struct Model<TypeTag, TTag::EclFlowProblemEbos> {
+struct Model<TypeTag, TTag::FlowExpProblemBlackOil> {
     using type = FIBlackOilModelNoCache<TypeTag>;
 };
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::EclFlowProblemEbos> {
+struct IntensiveQuantities<TypeTag, TTag::FlowExpProblemBlackOil> {
      using type = BlackOilIntensiveQuantitiesGlobalIndex<TypeTag>;
 };
 // Set the problem class
 template<class TypeTag>
-struct Problem<TypeTag, TTag::EclFlowProblemEbos> {
-    using type = EbosProblem<TypeTag>;
+struct Problem<TypeTag, TTag::FlowExpProblemBlackOil> {
+    using type = FlowExpProblem<TypeTag>;
 };
 
 
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, TTag::EclFlowProblemEbos> {
+struct ThreadsPerProcess<TypeTag, TTag::FlowExpProblemBlackOil> {
     static constexpr int value = 1;
 };
 
 template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, TTag::EclFlowProblemEbos> {
+struct ContinueOnConvergenceError<TypeTag, TTag::FlowExpProblemBlackOil> {
     static constexpr bool value = false;
 };
 
 template<class TypeTag>
-struct EclNewtonSumTolerance<TypeTag, TTag::EclFlowProblemEbos> {
+struct EclNewtonSumTolerance<TypeTag, TTag::FlowExpProblemBlackOil> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-5;
 };
 
 // the default for the allowed volumetric error for oil per second
 template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::EclFlowProblemEbos> {
+struct NewtonTolerance<TypeTag, TTag::FlowExpProblemBlackOil> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-2;
 };
@@ -89,43 +89,43 @@ struct NewtonTolerance<TypeTag, TTag::EclFlowProblemEbos> {
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
 template<class TypeTag>
-struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::EclFlowProblemEbos> {
+struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::FlowExpProblemBlackOil> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.0;
 };
 
 template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::EclFlowProblemEbos> {
+struct EclNewtonRelaxedTolerance<TypeTag, TTag::FlowExpProblemBlackOil> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 10*getPropValue<TypeTag, Properties::NewtonTolerance>();
 };
 
 //template<class TypeTag>
-//struct Linearizer<TypeTag, TTag::EclFlowProblemEbos> { using type = TpfaLinearizer<TypeTag>; };
+//struct Linearizer<TypeTag, TTag::FlowExpProblemBlackOil> { using type = TpfaLinearizer<TypeTag>; };
 
 // template<class TypeTag>
-// struct LocalResidual<TypeTag, TTag::EclFlowProblemEbos> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
+// struct LocalResidual<TypeTag, TTag::FlowExpProblemBlackOil> { using type = BlackOilLocalResidualTPFA<TypeTag>; };
 
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::EclFlowProblemEbos> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::FlowExpProblemBlackOil> { static constexpr bool value = false; };
 
 template<class TypeTag>
-struct EnableDisgasInWater<TypeTag, TTag::EclFlowProblemEbos> { static constexpr bool value = false; };
+struct EnableDisgasInWater<TypeTag, TTag::FlowExpProblemBlackOil> { static constexpr bool value = false; };
 
 //static constexpr bool has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>();
 
 template<class TypeTag>
-struct Simulator<TypeTag, TTag::EclFlowProblemEbos> { using type = Opm::Simulator<TypeTag>; };
+struct Simulator<TypeTag, TTag::FlowExpProblemBlackOil> { using type = Opm::Simulator<TypeTag>; };
 
 // template<class TypeTag>
-// struct LinearSolverBackend<TypeTag, TTag::EclFlowProblemEbos> {
+// struct LinearSolverBackend<TypeTag, TTag::FlowExpProblemBlackOil> {
 //     using type = ISTLSolver<TypeTag>;
 // };
 
 // // Set the problem class
 // template<class TypeTag>
-// struct Problem<TypeTag, TTag::EbosTypeTag> {
-//     using type = EbosProblem<TypeTag>;
+// struct Problem<TypeTag, TTag::FlowExpTypeTag> {
+//     using type = FlowExpProblem<TypeTag>;
 // };
 
 // template<class TypeTag>
@@ -138,7 +138,7 @@ struct Simulator<TypeTag, TTag::EclFlowProblemEbos> { using type = Opm::Simulato
 
 int main(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowProblemEbos;
+    using TypeTag = Opm::Properties::TTag::FlowExpProblemBlackOil;
     Opm::registerEclTimeSteppingParameters<TypeTag>();
     return Opm::start<TypeTag>(argc, argv);
 }
