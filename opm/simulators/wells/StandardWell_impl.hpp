@@ -1178,13 +1178,8 @@ namespace Opm
     template<typename TypeTag>
     ConvergenceReport
     StandardWell<TypeTag>::
-<<<<<<< HEAD
-    getWellConvergence(const SummaryState& summary_state,
-                       const WellState<Scalar>& well_state,
-=======
     getWellConvergence(const Simulator& simulator,
-                       const WellState& well_state,
->>>>>>> 1b3491770 (refactoring lightly the PR opm-simulators#5232)
+                       const WellState<Scalar>& well_state,
                        const std::vector<double>& B_avg,
                        DeferredLogger& deferred_logger,
                        const bool relax_tolerance) const

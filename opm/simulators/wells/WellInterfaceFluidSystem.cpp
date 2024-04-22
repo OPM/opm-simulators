@@ -295,8 +295,8 @@ bool
 WellInterfaceFluidSystem<FluidSystem>::
 wellUnderZeroRateTargetGroup(const SummaryState& summary_state,
                              const Schedule& schedule,
-                             const WellState& well_state,
-                             const GroupState& group_state,
+                             const WellState<double>& well_state,
+                             const GroupState<double>& group_state,
                              DeferredLogger& deferred_logger) const
 {
     const auto& well = this->well_ecl_;

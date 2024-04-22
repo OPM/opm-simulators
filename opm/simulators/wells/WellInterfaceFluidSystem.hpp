@@ -116,8 +116,8 @@ protected:
 
     bool wellUnderZeroRateTargetGroup(const SummaryState& summary_state,
                                       const Schedule& schedule,
-                                      const WellState& well_state,
-                                      const GroupState& group_state,
+                                      const WellState<double>& well_state,
+                                      const GroupState<double>& group_state,
                                       DeferredLogger& deferredLogger) const;
 
     // For the conversion between the surface volume rate and reservoir voidage rate

@@ -231,11 +231,11 @@ public:
                                                    DeferredLogger& deferred_logger) const = 0;
 
     bool wellUnderZeroRateTarget(const Simulator& simulator,
-                                 const WellState& well_state,
+                                 const WellState<Scalar>& well_state,
                                  DeferredLogger& deferred_logger) const;
 
     bool stoppedOrZeroRateTarget(const Simulator& simulator,
-                                 const WellState& well_state,
+                                 const WellState<Scalar>& well_state,
                                  DeferredLogger& deferred_logger) const;
 
     bool updateWellStateWithTHPTargetProd(const Simulator& simulator,

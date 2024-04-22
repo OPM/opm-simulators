@@ -1407,7 +1407,7 @@ namespace Opm
     bool
     WellInterface<TypeTag>::
     wellUnderZeroRateTarget(const Simulator& simulator,
-                            const WellState& well_state,
+                            const WellState<Scalar>& well_state,
                             DeferredLogger& deferred_logger) const
     {
         // Check if well is under zero rate control, either directly or from group
@@ -1430,7 +1430,7 @@ namespace Opm
     bool
     WellInterface<TypeTag>::
     stoppedOrZeroRateTarget(const Simulator& simulator,
-                            const WellState& well_state,
+                            const WellState<Scalar>& well_state,
                             DeferredLogger& deferred_logger) const
     {
         // Check if well is stopped or under zero rate control, either directly or from group

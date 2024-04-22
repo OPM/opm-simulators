@@ -233,8 +233,8 @@ protected:
     int polymerInjTable_() const;
     int polymerWaterTable_() const;
 
-    bool wellUnderZeroRateTarget(const SummaryState& summary_state,
-                                 const WellState<double>& well_state) const;
+    bool wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
+                                           const WellState<double>& well_state) const;
 
 
 
