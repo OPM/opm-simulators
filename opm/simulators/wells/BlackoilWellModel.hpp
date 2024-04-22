@@ -558,5 +558,8 @@ namespace Opm {
 
 } // namespace Opm
 
+#ifndef OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED
 #include "BlackoilWellModel_impl.hpp"
+#endif
+
 #endif

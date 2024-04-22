@@ -20,6 +20,13 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+// Improve IDE experience
+#ifndef OPM_BLACKOILWELLMODEL_HEADER_INCLUDED
+#define OPM_BLACKOILWELLMODEL_IMPL_HEADER_INCLUDED
+#include <config.h>
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
+#endif
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 #include <opm/grid/utility/cartesianToCompressed.hpp>
