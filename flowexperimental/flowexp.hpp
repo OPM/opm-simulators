@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \brief The common settings for all ebos variants.
+ * \brief The common settings for all flowexp variants.
  */
 #ifndef FLOW_EXP_HPP
 #define FLOW_EXP_HPP
@@ -58,7 +58,7 @@ struct Problem<TypeTag, TTag::FlowExpTypeTag> {
     using type = FlowExpProblem<TypeTag>;
 };
 
-// Enable experimental features for ebos: ebos is the research simulator of the OPM
+// Enable experimental features for flowexp: flowexp is the research simulator of the OPM
 // project. If you're looking for a more stable "production quality" simulator, consider
 // using `flow`
 template<class TypeTag>
@@ -77,9 +77,9 @@ struct NewtonMethod<TypeTag, TTag::FlowExpTypeTag> {
     using type = FlowNewtonMethod<TypeTag>;
 };
 
-// currently, ebos uses the non-multisegment well model by default to avoid
+// currently, flowexp uses the non-multisegment well model by default to avoid
 // regressions. the --use-multisegment-well=true|false command line parameter is still
-// available in ebos, but hidden from view.
+// available in flowexp, but hidden from view.
 template<class TypeTag>
 struct UseMultisegmentWell<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr bool value = false;
@@ -185,7 +185,7 @@ struct ThreadsPerProcess<TypeTag, TTag::FlowExpTypeTag> {
 };
 #endif
 
-// By default, ebos accepts the result of the time integration unconditionally if the
+// By default, flowexp accepts the result of the time integration unconditionally if the
 // smallest time step size is reached.
 template<class TypeTag>
 struct ContinueOnConvergenceError<TypeTag, TTag::FlowExpTypeTag> {

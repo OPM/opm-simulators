@@ -33,7 +33,7 @@ namespace Opm {
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
- *        model by energy.
+ *        model by energy using global indices.
  */
 template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
 class BlackOilEnergyIntensiveQuantitiesGlobalIndex: public BlackOilEnergyIntensiveQuantities<TypeTag,enableEnergyV>
@@ -58,7 +58,6 @@ public:
                             unsigned timeIdx)
     {
         auto& fs = Parent::asImp_().fluidState_;
-        //const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         // set temperature
         fs.setTemperature(priVars.makeEvaluation(temperatureIdx, timeIdx));
     }
@@ -71,7 +70,7 @@ public:
         auto& fs = Parent::asImp_().fluidState_;
         
         // compute the specific enthalpy of the fluids, the specific enthalpy of the rock
-        // and the thermal condictivity coefficients
+        // and the thermal conductivity coefficients
         for (int phaseIdx = 0; phaseIdx < numPhases; ++ phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx)) {
                 continue;
@@ -115,7 +114,6 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, false>: public Black
             if constexpr (enableTemperature) {
                 // even if energy is conserved, the temperature can vary over the spatial
                 // domain if the EnableTemperature property is set to true
-                //auto& fs = Parent::asImp_().fluidState_;
                 auto& fs = this->asImp_().fluidState_;
                 Scalar T = problem.temperature(globalSpaceIdx, timeIdx);
                 fs.setTemperature(T);
