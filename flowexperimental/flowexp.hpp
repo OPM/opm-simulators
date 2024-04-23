@@ -74,7 +74,7 @@ struct WellModel<TypeTag, TTag::FlowExpTypeTag> {
 
 template<class TypeTag>
 struct NewtonMethod<TypeTag, TTag::FlowExpTypeTag> {
-    using type = FlowNewtonMethod<TypeTag>;
+    using type = FlowExpNewtonMethod<TypeTag>;
 };
 
 // currently, flowexp uses the non-multisegment well model by default to avoid

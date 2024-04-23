@@ -17,7 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include "config.h"
-#include "flownewtonmethod.hpp"
+#include "FlowExpNewtonMethod.hpp"
 #include "flowexp.hpp"
 
 #include <opm/models/discretization/common/tpfalinearizer.hh>

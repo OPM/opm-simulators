@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::FlowNewtonMethod
+ * \copydoc Opm::FlowExpNewtonMethod
  */
-#ifndef OPM_FLOW_NEWTON_METHOD_HPP
-#define OPM_FLOW_NEWTON_METHOD_HPP
+#ifndef OPM_FLOW_EXP_NEWTON_METHOD_HPP
+#define OPM_FLOW_EXP_NEWTON_METHOD_HPP
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -65,7 +65,7 @@ namespace Opm {
  * \brief A newton solver.
  */
 template <class TypeTag>
-class FlowNewtonMethod : public BlackOilNewtonMethod<TypeTag>
+class FlowExpNewtonMethod : public BlackOilNewtonMethod<TypeTag>
 {
     using ParentType = BlackOilNewtonMethod<TypeTag>;
     using DiscNewtonMethod = GetPropType<TypeTag, Properties::DiscNewtonMethod>;
@@ -92,7 +92,7 @@ class FlowNewtonMethod : public BlackOilNewtonMethod<TypeTag>
     friend ParentType;
 
 public:
-    explicit FlowNewtonMethod(Simulator& simulator) : ParentType(simulator)
+    explicit FlowExpNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {
         errorPvFraction_ = 1.0;
         relaxedMaxPvFraction_ = Parameters::get<TypeTag, Properties::EclNewtonRelaxedVolumeFraction>();
