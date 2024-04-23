@@ -164,9 +164,11 @@ namespace Opm
     MultisegmentWell<TypeTag>::
     updatePrimaryVariables(const Simulator& simulator,
                            const WellState<Scalar>& well_state,
-                           DeferredLogger& deferred_logger)
+                           DeferredLogger& /* deferred_logger */)
     {
-        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+        // const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+        const auto& summary_state = simulator.vanguard().summaryState();
+        const bool stop_or_zero_rate_target = this->wellIsStopped() || this->wellUnderZeroRateTargetIndividual(summary_state, well_state);
         this->primary_variables_.update(well_state, stop_or_zero_rate_target);
     }
 
@@ -690,14 +692,15 @@ namespace Opm
 
         const double dFLimit = this->param_.dwell_fraction_max_;
         const double max_pressure_change = this->param_.max_pressure_change_ms_wells_;
-        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+        // const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+        const auto& summary_state = simulator.vanguard().summaryState();
+        const bool stop_or_zero_rate_target = this->wellIsStopped() || this->wellUnderZeroRateTargetIndividual(summary_state, well_state);
         this->primary_variables_.updateNewton(dwells,
                                               relaxation_factor,
                                               dFLimit,
                                               stop_or_zero_rate_target,
                                               max_pressure_change);
 
-        const auto& summary_state = simulator.vanguard().summaryState();
         this->primary_variables_.copyToWellState(*this, getRefDensity(), stop_or_zero_rate_target,
                                                  well_state, summary_state, deferred_logger);
 

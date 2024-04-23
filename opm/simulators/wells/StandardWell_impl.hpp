@@ -701,10 +701,12 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+        const auto& summary_state = simulator.vanguard().summaryState();
+        const bool stop_or_zero_rate_target = this->wellIsStopped() || this->wellUnderZeroRateTargetIndividual(summary_state, well_state);
+        // const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
         updatePrimaryVariablesNewton(dwells, stop_or_zero_rate_target, deferred_logger);
 
-        const auto& summary_state = simulator.vanguard().summaryState();
+        // const auto& summary_state = simulator.vanguard().summaryState();
         updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, summary_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }
@@ -1780,7 +1782,9 @@ namespace Opm
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+        // const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+        const auto& summary_state = simulator.vanguard().summaryState();
+        const bool stop_or_zero_rate_target = this->wellIsStopped() || this->wellUnderZeroRateTargetIndividual(summary_state, well_state);
         this->primary_variables_.update(well_state, stop_or_zero_rate_target, deferred_logger);
 
         // other primary variables related to polymer injection
