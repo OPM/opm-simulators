@@ -73,7 +73,7 @@ do
   echo "=== Executing restart run from step: ${STEP} ==="
   mkdir -p ${RESULT_PATH}/restart
   cp -f ${RESULT_PATH}/${FILENAME}.UNRST ${RESULT_PATH}/restart
-  ${RST_DECK_COMMAND}  ${INPUT_DATA_PATH}/${FILENAME}.DATA ${FILENAME}:${STEP} -m inline -s > ${RESULT_PATH}/restart/${FILENAME}_RESTART_${STEP}.DATA
+  ${RST_DECK_COMMAND} -m inline -s ${INPUT_DATA_PATH}/${FILENAME}.DATA ${FILENAME}:${STEP} > ${RESULT_PATH}/restart/${FILENAME}_RESTART_${STEP}.DATA
   cd ${RESULT_PATH}/restart
   if test -n "$RESTART_SCHED"
   then
