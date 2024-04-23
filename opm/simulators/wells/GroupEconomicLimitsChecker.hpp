@@ -31,7 +31,7 @@
 namespace Opm
 {
 
-class BlackoilWellModelGeneric;
+template<class Scalar> class BlackoilWellModelGeneric;
 class DeferredLogger;
 class Group;
 template<class Scalar> class WellState;
@@ -41,7 +41,7 @@ template<class Scalar>
 class GroupEconomicLimitsChecker
 {
 public:
-    GroupEconomicLimitsChecker(const BlackoilWellModelGeneric& well_model,
+    GroupEconomicLimitsChecker(const BlackoilWellModelGeneric<Scalar>& well_model,
                                WellTestState& well_test_state,
                                const Group& group,
                                const double simulation_time,
@@ -73,7 +73,7 @@ private:
     bool closeWellsRecursive(const Group& group, int level = 0);
     void throwNotImplementedError(const std::string& error) const;
 
-    const BlackoilWellModelGeneric& well_model_;
+    const BlackoilWellModelGeneric<Scalar>& well_model_;
     const Group& group_;
     const double simulation_time_;
     const int report_step_idx_;

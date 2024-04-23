@@ -259,7 +259,7 @@ BOOST_AUTO_TEST_CASE(EclGenericProblem)
 
 namespace Opm {
 
-class BlackoilWellModelGenericTest : public BlackoilWellModelGeneric
+class BlackoilWellModelGenericTest : public BlackoilWellModelGeneric<double>
 {
 public:
     BlackoilWellModelGenericTest(Schedule& schedule,
@@ -268,8 +268,8 @@ public:
                                  const PhaseUsage& phase_usage,
                                  const Parallel::Communication& comm,
                                  bool deserialize)
-        : BlackoilWellModelGeneric(schedule, summaryState,
-                                   eclState, phase_usage, comm)
+        : BlackoilWellModelGeneric<double>(schedule, summaryState,
+                                           eclState, phase_usage, comm)
     {
         if (deserialize) {
             active_wgstate_.well_state = WellState<double>(dummy);
