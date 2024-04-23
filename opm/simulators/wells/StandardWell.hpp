@@ -170,9 +170,9 @@ namespace Opm
                                     const WellState<Scalar>& well_state,
                                     DeferredLogger& deferred_logger) override;
 
-        virtual void solveEqAndUpdateWellState(const Simulator& simulator,
-					       WellState<Scalar>& well_state,
-                                               DeferredLogger& deferred_logger) override;
+        void solveEqAndUpdateWellState(const Simulator& simulator,
+                                       WellState<Scalar>& well_state,
+                                       DeferredLogger& deferred_logger) override;
 
         void calculateExplicitQuantities(const Simulator& simulator,
                                          const WellState<Scalar>& well_state,

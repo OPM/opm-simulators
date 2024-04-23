@@ -94,11 +94,11 @@ namespace Opm
                                        DeferredLogger& deferred_logger) const override;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const Simulator& simulator,
-                                                     const WellState<Scalar>& well_state,
-                                                     const std::vector<double>& B_avg,
-                                                     DeferredLogger& deferred_logger,
-                                                     const bool relax_tolerance) const override;
+        ConvergenceReport getWellConvergence(const Simulator& simulator,
+                                             const WellState<Scalar>& well_state,
+                                             const std::vector<double>& B_avg,
+                                             DeferredLogger& deferred_logger,
+                                             const bool relax_tolerance) const override;
 
         /// Ax = Ax - C D^-1 B x
         void apply(const BVector& x, BVector& Ax) const override;
