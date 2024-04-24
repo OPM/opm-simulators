@@ -59,7 +59,7 @@ endfunction()
 # Details:
 #   - This test class compares output from a simulation to reference files.
 function(add_test_compareECLFiles)
-  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP RESTART_SCHED)
+  set(oneValueArgs CASENAME FILENAME SIMULATOR ABS_TOL REL_TOL DIR DIR_PREFIX PREFIX RESTART_STEP RESTART_SCHED ENVIRONMENT)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_DIR)
@@ -84,6 +84,10 @@ function(add_test_compareECLFiles)
   if(PARAM_RESTART_SCHED)
    list(APPEND DRIVER_ARGS -h ${PARAM_RESTART_SCHED})
   endif()
+  if(PARAM_ENVIRONMENT)
+    list(APPEND DRIVER_ARGS -v ${PARAM_ENVIRONMENT})
+  endif()
+
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_FILENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
@@ -96,7 +100,7 @@ function(add_test_compareECLFiles)
 endfunction()
 
 function(add_test_compareSeparateECLFiles)
-  set(oneValueArgs CASENAME FILENAME1 FILENAME2 DIR1 DIR2 SIMULATOR ABS_TOL REL_TOL IGNORE_EXTRA_KW DIR_PREFIX PREFIX)
+  set(oneValueArgs CASENAME FILENAME1 FILENAME2 DIR1 DIR2 SIMULATOR ABS_TOL REL_TOL IGNORE_EXTRA_KW DIR_PREFIX PREFIX ENVIRONMENT)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_PREFIX)
@@ -115,6 +119,9 @@ function(add_test_compareSeparateECLFiles)
                   -c ${COMPARE_ECL_COMMAND})
   if(PARAM_IGNORE_EXTRA_KW)
     list(APPEND DRIVER_ARGS -y ${PARAM_IGNORE_EXTRA_KW})
+  endif()
+  if(PARAM_ENVIRONMENT)
+    list(APPEND DRIVER_ARGS -v ${PARAM_ENVIRONMENT})
   endif()
   opm_add_test(${PARAM_PREFIX}_${PARAM_SIMULATOR}+${PARAM_CASENAME} NO_COMPILE
                EXE_NAME ${PARAM_SIMULATOR}

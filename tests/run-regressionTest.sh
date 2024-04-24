@@ -19,12 +19,13 @@ then
   echo -e "\tOptional options:"
   echo -e "\t\t -s <step>     Step to do restart testing from"
   echo -e "\t\t -h value      sched_restart value to use in restart test"
+  echo -e "\t\t -v <envpath>  String of environment paths, e.g. 'ENV_VARIABLE=value;ANOTHER_ENV_VARIABLE=another_value'"
   exit 1
 fi
 
 RESTART_STEP=""
 OPTIND=1
-while getopts "i:r:b:f:a:t:c:d:s:e:h:" OPT
+while getopts "i:r:b:f:a:t:c:d:s:e:h:v:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH=${OPTARG} ;;
@@ -38,10 +39,16 @@ do
     s) RESTART_STEP=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
     h) RESTART_SCHED=${OPTARG} ;;
+    v) ENVIRONMENT=${OPTARG} ;;
   esac
 done
 shift $(($OPTIND-1))
 TEST_ARGS="$@"
+
+if test -n "$ENVIRONMENT"
+then
+  export ${ENVIRONMENT}
+fi
 
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}

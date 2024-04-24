@@ -17,12 +17,13 @@ then
   echo -e "\t\t -t <tol>      Relative tolerance in comparison"
   echo -e "\t\t -c <path>     Path to comparison tool"
   echo -e "\t\t -e <filename> Simulator binary to use"
+  echo -e "\t\t -v <envpath>  String of environment paths, e.g. 'ENV_VARIABLE=value;ANOTHER_ENV_VARIABLE=another_value'"
   exit 1
 fi
 
 RESTART_STEP=""
 OPTIND=1
-while getopts "i:j:f:g:r:b:a:t:c:e:y:" OPT
+while getopts "i:j:f:g:r:b:a:t:c:e:y:v:" OPT
 do
   case "${OPT}" in
     i) INPUT_DATA_PATH1=${OPTARG} ;;
@@ -36,11 +37,16 @@ do
     c) COMPARE_ECL_COMMAND=${OPTARG} ;;
     e) EXE_NAME=${OPTARG} ;;
     y) IGNORE_EXTRA_KW=${OPTARG} ;;
+    v) ENVIRONMENT=${OPTARG} ;;
   esac
 done
 shift $(($OPTIND-1))
 TEST_ARGS="$@"
 
+if test -n "$ENVIRONMENT"
+then
+  export ${ENVIRONMENT}
+fi
 mkdir -p ${RESULT_PATH}
 cd ${RESULT_PATH}
 ${BINPATH}/${EXE_NAME} ${INPUT_DATA_PATH1}/${FILENAME1} ${TEST_ARGS} --output-dir=${RESULT_PATH}

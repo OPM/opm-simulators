@@ -710,7 +710,8 @@ if (opm-common_EMBEDDED_PYTHON)
                            SIMULATOR flow
                            ABS_TOL ${abs_tol}
                            REL_TOL ${rel_tol}
-                           DIR udq_actionx)
+                           DIR udq_actionx
+                           ENVIRONMENT "PYTHONPATH=${PROJECT_BINARY_DIR}/python:${opm-common_DIR}/python:$ENV{PYTHONPATH}")
 endif()
 
 add_test_compareECLFiles(CASENAME multxyz_model2

@@ -5,6 +5,8 @@ opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-comparison.sh "")
 set(abs_tol 1e+5)
 set(rel_tol 2e-5)
 set(coarse_rel_tol 1e-2)
+set(PYTHON_PATH ${PROJECT_BINARY_DIR}/python:${opm-common_DIR}/python:$ENV{PYTHONPATH})
+
 add_test_compareSeparateECLFiles(CASENAME pyaction_gconprod_insert_kw
                                  DIR1 pyaction
                                  FILENAME1 PYACTION_GCONPROD_INSERT_KW
@@ -13,7 +15,8 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_gconprod_insert_kw
                                  SIMULATOR flow
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
-                                 IGNORE_EXTRA_KW BOTH)
+                                 IGNORE_EXTRA_KW BOTH
+                                 ENVIRONMENT "PYTHONPATH=${PYTHON_PATH}")
 
 add_test_compareSeparateECLFiles(CASENAME pyaction_mult+_insert_kw
                                  DIR1 pyaction
@@ -23,7 +26,8 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_mult+_insert_kw
                                  SIMULATOR flow
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
-                                 IGNORE_EXTRA_KW BOTH)
+                                 IGNORE_EXTRA_KW BOTH
+                                 ENVIRONMENT "PYTHONPATH=${PYTHON_PATH}")
 
 add_test_compareSeparateECLFiles(CASENAME pyaction_multx+_insert_kw
                                  DIR1 pyaction
@@ -33,7 +37,8 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_multx+_insert_kw
                                  SIMULATOR flow
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
-                                 IGNORE_EXTRA_KW BOTH)
+                                 IGNORE_EXTRA_KW BOTH
+                                 ENVIRONMENT "PYTHONPATH=${PYTHON_PATH}")
 
 add_test_compareSeparateECLFiles(CASENAME pyaction_multx-_insert_kw
                                  DIR1 pyaction
@@ -43,7 +48,8 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_multx-_insert_kw
                                  SIMULATOR flow
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
-                                 IGNORE_EXTRA_KW BOTH)
+                                 IGNORE_EXTRA_KW BOTH
+                                 ENVIRONMENT "PYTHONPATH=${PYTHON_PATH}")
 
 add_test_compareSeparateECLFiles(CASENAME pyaction_next_insert_kw
                                  DIR1 pyaction
@@ -53,7 +59,8 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_next_insert_kw
                                  SIMULATOR flow
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
-                                 IGNORE_EXTRA_KW BOTH)
+                                 IGNORE_EXTRA_KW BOTH
+                                 ENVIRONMENT "PYTHONPATH=${PYTHON_PATH}")
 
 add_test_compareSeparateECLFiles(CASENAME pyaction_wconprod_insert_kw
                                  DIR1 pyaction
@@ -63,7 +70,8 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_wconprod_insert_kw
                                  SIMULATOR flow
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
-                                 IGNORE_EXTRA_KW BOTH)
+                                 IGNORE_EXTRA_KW BOTH
+                                 ENVIRONMENT "PYTHONPATH=${PYTHON_PATH}")
 
 add_test_compareSeparateECLFiles(CASENAME pyaction_wefac_insert_kw
                                  DIR1 pyaction
@@ -73,4 +81,5 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_wefac_insert_kw
                                  SIMULATOR flow
                                  ABS_TOL ${abs_tol}
                                  REL_TOL ${rel_tol}
-                                 IGNORE_EXTRA_KW BOTH)
+                                 IGNORE_EXTRA_KW BOTH
+                                 ENVIRONMENT "PYTHONPATH=${PYTHON_PATH}")
