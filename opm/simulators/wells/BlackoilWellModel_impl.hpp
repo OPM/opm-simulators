@@ -99,6 +99,9 @@ namespace Opm {
         using SourceDataSpan = typename
             PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
 
+        using SourceDataSpan =
+            typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
+
         this->wbpCalculationService_
             .localCellIndex([this](const std::size_t globalIndex)
             { return this->compressedIndexForInterior(globalIndex); })
@@ -1270,7 +1273,7 @@ namespace Opm {
     }
 
     // This function is to be used for well groups in an extended network that act as a subsea manifold
-    // The wells of such group should have a common THP and total phase rate(s) obeying (if possible) 
+    // The wells of such group should have a common THP and total phase rate(s) obeying (if possible)
     // the well group constraint set by GCONPROD
     template <typename TypeTag>
     void
@@ -1299,7 +1302,7 @@ namespace Opm {
                 const auto pu = this->phase_usage_;
                 //TODO: Auto choke combined with RESV control is not supported
                 std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
-                Scalar gratTargetFromSales = 0.0; 
+                Scalar gratTargetFromSales = 0.0;
                 if (group_state.has_grat_sales_target(group.name()))
                     gratTargetFromSales = group_state.grat_sales_target(group.name());
 
@@ -2355,7 +2358,7 @@ namespace Opm {
                                              this->groupState(),
                                              this->wellState(),
                                              deferred_logger);
-        
+
         if (changed_individual) {
             changed = true;
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
@@ -2733,14 +2736,18 @@ namespace Opm {
         const int nw = this->numLocalWells();
         for (auto wellID = 0*nw; wellID < nw; ++wellID) {
             const Well& well = this->wells_ecl_[wellID];
-            if (well.isInjector())
-                continue;
+            auto& ws = this->wellState().well(wellID);
+            if (well.isInjector()){
+                if( !(ws.status == WellStatus::STOP)){
+                    this->wellState().well(wellID).temperature = well.temperature();
+                    continue;
+                }
+            }
 
             std::array<Scalar,2> weighted{0.0,0.0};
             auto& [weighted_temperature, total_weight] = weighted;
 
             auto& well_info = this->local_parallel_well_info_[wellID].get();
-            auto& ws = this->wellState().well(wellID);
             auto& perf_data = ws.perf_data;
             auto& perf_phase_rate = perf_data.phase_rates;
 
@@ -2765,6 +2772,8 @@ namespace Opm {
                     perfPhaseRate = perf_phase_rate[ perf*np + phaseIdx ];
                     weight_factor += cellDensity  * perfPhaseRate/cellBinv * cellInternalEnergy/cellTemperatures;
                 }
+                //NB hack better method in progress
+                weight_factor = std::abs(weightfactor)+1e-13;
                 total_weight += weight_factor;
                 weighted_temperature += weight_factor * cellTemperatures;
             }
