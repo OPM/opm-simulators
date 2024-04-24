@@ -411,7 +411,7 @@ optimizeGroup_(const Group &group)
 {
     const auto& group_name = group.name();
     const auto prod_control = this->group_state_.production_control(group_name);
-    if ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD))
+    if (this->glo_.has_group(group.name()) || ((prod_control != Group::ProductionCMode::NONE) && (prod_control != Group::ProductionCMode::FLD)))
     {
         if (this->debug) {
             const std::string msg = fmt::format("optimizing (control = {})", Group::ProductionCMode2String(prod_control));
@@ -657,7 +657,7 @@ removeSurplusALQ_(const Group &group,
         const auto& [delta_oil, delta_gas, delta_water, delta_alq] = delta;
         if (state.checkOilTarget(delta_oil) || state.checkGasTarget(delta_gas)
               || state.checkLiquidTarget(delta_oil + delta_water) || state.checkWaterTarget(delta_water)
-              || state.checkALQlimit(delta_alq, delta_gas))
+              || state.checkALQlimit())
         {
             remove = true;
         }
@@ -938,11 +938,11 @@ addOrRemoveALQincrement(GradMap &grad_map, const std::string& well_name, bool ad
 
 bool
 GasLiftStage2::SurplusState::
-checkALQlimit(double delta_alq, double delta_gas)
+checkALQlimit()
 {
     if (this->max_glift) {
         double max_alq = *(this->max_glift);
-        if ((max_alq) < (this->alq + delta_alq)  ) {
+        if ((max_alq) < (this->alq)  ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
                     "ALQ rate {} is greater than ALQ limit {}", this->group.name(),
@@ -954,7 +954,7 @@ checkALQlimit(double delta_alq, double delta_gas)
     }
     if (this->max_total_gas) {
         double max_total = *(this->max_total_gas);
-        double total_gas_rate = (this->alq + delta_alq + this->gas_rate + delta_gas);
+        double total_gas_rate = (this->alq + this->gas_rate);
         if ((max_total) < total_gas_rate ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
@@ -991,6 +991,10 @@ GasLiftStage2::SurplusState::
 checkGasTarget(double delta_gas)
 {
     if (this->group.has_control(Group::ProductionCMode::GRAT)) {
+        // the change in gas rate is added to the gas rate to make sure the
+        // group still can produce its target
+        // i.e. we want to find the solution that optimize gas lift while still
+        // producing the given group limit     
         if (this->gas_target < (this->gas_rate + delta_gas) ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
@@ -1008,8 +1012,10 @@ GasLiftStage2::SurplusState::
 checkLiquidTarget(double delta_liquid)
 {
     if (this->group.has_control(Group::ProductionCMode::LRAT)) {
-        // the change in liquid rate from the is subtracted from the rate to make sure the
+        // the change in liquid rate is added to the liquid rate to make sure the
         // group still can produce its target
+        // i.e. we want to find the solution that optimize gas lift while still
+        // producing the given group limit
         auto liquid_rate = this->oil_rate + this->water_rate + delta_liquid;
         if (this->liquid_target < (liquid_rate) ) {
             if (this->parent.debug) {
@@ -1029,8 +1035,10 @@ GasLiftStage2::SurplusState::
 checkOilTarget(double delta_oil)
 {
     if (this->group.has_control(Group::ProductionCMode::ORAT)) {
-        // the change in oil rate from the eco_grad is subtracted from the rate to make sure the
+        // the change in oil rate is added to the oil rate to make sure the
         // group still can produce its target
+        // i.e. we want to find the solution that optimize gas lift while still
+        // producing the given group limit
         if (this->oil_target < (this->oil_rate + delta_oil) ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
@@ -1047,8 +1055,12 @@ checkOilTarget(double delta_oil)
 bool
 GasLiftStage2::SurplusState::
 checkWaterTarget(double delta_water)
-{
+{    
     if (this->group.has_control(Group::ProductionCMode::WRAT)) {
+        // the change in water rate is added to the water rate to make sure the
+        // group still can produce its target
+        // i.e. we want to find the solution that optimize gas lift while still
+        // producing the given group limit
         if (this->water_target < (this->water_rate + delta_water) ) {
             if (this->parent.debug) {
                 const std::string msg = fmt::format("group: {} : "
