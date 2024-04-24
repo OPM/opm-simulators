@@ -103,10 +103,9 @@ int main(int argc, char** argv )
                                             
                                             END)");
     Grid grid;
-    EclipseGrid eclGrid(deck);
     EclipseState eclState(deck);
 
-    grid.processEclipseFormat(&eclGrid, &eclState, false, false, false);
+    grid.processEclipseFormat(&eclState.getInputGrid(), &eclState, false, false, false);
     const auto& gridView = grid.leafGridView();
     
     CartesianIndexMapper cartMapper =  Dune::CartesianIndexMapper<Grid>(grid);
