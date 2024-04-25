@@ -27,16 +27,19 @@
  */
 #ifndef OPM_BLACK_OIL_ENERGY_MODULE_GLOBAL_INDEX_HH
 #define OPM_BLACK_OIL_ENERGY_MODULE_GLOBAL_INDEX_HH
+
 #include <opm/models/blackoil/blackoilenergymodules.hh>
 
 namespace Opm {
+
 /*!
  * \ingroup BlackOil
  * \brief Contains the high level supplements required to extend the black oil
  *        model by energy using global indices.
  */
 template <class TypeTag, bool enableEnergyV = getPropValue<TypeTag, Properties::EnableEnergy>()>
-class BlackOilEnergyIntensiveQuantitiesGlobalIndex: public BlackOilEnergyIntensiveQuantities<TypeTag,enableEnergyV>
+class BlackOilEnergyIntensiveQuantitiesGlobalIndex
+    : public BlackOilEnergyIntensiveQuantities<TypeTag,enableEnergyV>
 {
     using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, enableEnergyV>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -46,15 +49,17 @@ class BlackOilEnergyIntensiveQuantitiesGlobalIndex: public BlackOilEnergyIntensi
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using SolidEnergyLaw = GetPropType<TypeTag, Properties::SolidEnergyLaw>;
     using ThermalConductionLaw  = GetPropType<TypeTag, Properties::ThermalConductionLaw>;
+    using ParamCache = typename FluidSystem::template ParameterCache<Evaluation>;
     static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
     
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     static constexpr unsigned temperatureIdx = Indices::temperatureIdx;
     static constexpr unsigned numPhases = FluidSystem::numPhases;
+
 public:
-    void updateTemperature_(const Problem& problem,
+    void updateTemperature_([[maybe_unused]] const Problem& problem,
                             const PrimaryVariables& priVars,
-                            unsigned globalSpaceIndex,
+                            [[maybe_unused]] unsigned globalSpaceIndex,
                             unsigned timeIdx)
     {
         auto& fs = Parent::asImp_().fluidState_;
@@ -62,10 +67,10 @@ public:
         fs.setTemperature(priVars.makeEvaluation(temperatureIdx, timeIdx));
     }
     void updateEnergyQuantities_(const Problem& problem,
-                                 const PrimaryVariables& priVars,
+                                 [[maybe_unused]] const PrimaryVariables& priVars,
                                  unsigned globalSpaceIndex,
                                  unsigned timeIdx,
-                                 const typename FluidSystem::template ParameterCache<Evaluation>& paramCache)
+                                 const ParamCache& paramCache)
     {
         auto& fs = Parent::asImp_().fluidState_;
         
@@ -93,42 +98,43 @@ public:
         // multiplier. This is to avoid negative rock volume for pvmult*porosity > 1
         this->rockFraction_ = problem.rockFraction(globalSpaceIndex, timeIdx);
     }
-
 };
+
 template <class TypeTag>
-class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, false>: public BlackOilEnergyIntensiveQuantities<TypeTag, false>
+class BlackOilEnergyIntensiveQuantitiesGlobalIndex<TypeTag, false>
+    : public BlackOilEnergyIntensiveQuantities<TypeTag, false>
+{
+    using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, false>;
+    using Problem = GetPropType<TypeTag, Properties::Problem>;
+    using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
+
+public:
+    void updateTemperature_([[maybe_unused]] const Problem& problem,
+                            [[maybe_unused]] const PrimaryVariables& priVars,
+                            [[maybe_unused]] unsigned globalSpaceIdx,
+                            [[maybe_unused]] unsigned timeIdx)
     {
-        using Parent =  BlackOilEnergyIntensiveQuantities<TypeTag, false>;
-        using Problem = GetPropType<TypeTag, Properties::Problem>;
-        using PrimaryVariables = GetPropType<TypeTag, Properties::PrimaryVariables>;
-        using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
-        using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
-        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
-        static constexpr bool enableTemperature = getPropValue<TypeTag, Properties::EnableTemperature>();
-    public:
-        void updateTemperature_([[maybe_unused]] const Problem& problem,
-                                [[maybe_unused]] const PrimaryVariables& priVars,
-                                [[maybe_unused]] unsigned globalSpaceIdx,
-                                [[maybe_unused]] unsigned timeIdx)
-        {
-            if constexpr (enableTemperature) {
-                // even if energy is conserved, the temperature can vary over the spatial
-                // domain if the EnableTemperature property is set to true
-                auto& fs = this->asImp_().fluidState_;
-                Scalar T = problem.temperature(globalSpaceIdx, timeIdx);
-                fs.setTemperature(T);
-            }
+        if constexpr (enableTemperature) {
+            // even if energy is conserved, the temperature can vary over the spatial
+            // domain if the EnableTemperature property is set to true
+            auto& fs = this->asImp_().fluidState_;
+            Scalar T = problem.temperature(globalSpaceIdx, timeIdx);
+            fs.setTemperature(T);
         }
-        void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
-                                     [[maybe_unused]] const PrimaryVariables& priVars,
-                                     [[maybe_unused]] unsigned globalSpaceIdx,
-                                     [[maybe_unused]] unsigned timeIdx,
-                                     const typename FluidSystem::template ParameterCache<Evaluation>&)
-        { }
+    }
 
-
+    void updateEnergyQuantities_([[maybe_unused]] const Problem& problem,
+                                 [[maybe_unused]] const PrimaryVariables& priVars,
+                                 [[maybe_unused]] unsigned globalSpaceIdx,
+                                 [[maybe_unused]] unsigned timeIdx,
+                                 const typename FluidSystem::template ParameterCache<Evaluation>&)
+    { }
 };
     
-}
+} // namespace Opm
 
 #endif    

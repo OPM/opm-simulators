@@ -37,23 +37,32 @@
 namespace Opm::Properties {
 
 template<class TypeTag, class MyTypeTag>
-struct EclNewtonSumTolerance {
+struct EclNewtonSumTolerance
+{
     using type = UndefinedProperty;
 };
+
 template<class TypeTag, class MyTypeTag>
-struct EclNewtonStrictIterations {
+struct EclNewtonStrictIterations
+{
     using type = UndefinedProperty;
 };
+
 template<class TypeTag, class MyTypeTag>
-struct EclNewtonRelaxedVolumeFraction {
+struct EclNewtonRelaxedVolumeFraction
+{
     using type = UndefinedProperty;
 };
+
 template<class TypeTag, class MyTypeTag>
-struct EclNewtonSumToleranceExponent {
+struct EclNewtonSumToleranceExponent
+{
     using type = UndefinedProperty;
 };
+
 template<class TypeTag, class MyTypeTag>
-struct EclNewtonRelaxedTolerance {
+struct EclNewtonRelaxedTolerance
+{
     using type = UndefinedProperty;
 };
 
@@ -133,10 +142,11 @@ public:
      */
     bool converged() const
     {
-        if (errorPvFraction_ < relaxedMaxPvFraction_)
+        if (errorPvFraction_ < relaxedMaxPvFraction_) {
             return (this->error_ < relaxedTolerance_ && errorSum_ < sumTolerance_) ;
-        else if (this->numIterations() > numStrictIterations_)
+        } else if (this->numIterations() > numStrictIterations_) {
             return (this->error_ < relaxedTolerance_ && errorSum_ < sumTolerance_) ;
+        }
 
         return this->error_ <= this->tolerance() && errorSum_ <= sumTolerance_;
     }
@@ -159,22 +169,24 @@ public:
         for (unsigned dofIdx = 0; dofIdx < currentResidual.size(); ++dofIdx) {
             // do not consider auxiliary DOFs for the error
             if (dofIdx >= this->model().numGridDof()
-                || this->model().dofTotalVolume(dofIdx) <= 0.0)
+                || this->model().dofTotalVolume(dofIdx) <= 0.0) {
                 continue;
+            }
 
-            if (!this->model().isLocalDof(dofIdx))
+            if (!this->model().isLocalDof(dofIdx)) {
                 continue;
+            }
 
             // also do not consider DOFs which are constraint
             if (this->enableConstraints_()) {
-                if (constraintsMap.count(dofIdx) > 0)
+                if (constraintsMap.count(dofIdx) > 0) {
                     continue;
+                }
             }
 
             const auto& r = currentResidual[dofIdx];
-            Scalar pvValue =
-                this->simulator_.problem().referencePorosity(dofIdx, /*timeIdx=*/0)
-                * this->model().dofTotalVolume(dofIdx);
+            Scalar pvValue =   this->simulator_.problem().referencePorosity(dofIdx, /*timeIdx=*/0) *
+                               this->model().dofTotalVolume(dofIdx);
             sumPv += pvValue;
             bool cnvViolated = false;
 
@@ -193,13 +205,15 @@ public:
 
                 this->error_ = max(std::abs(tmpError), this->error_);
 
-                if (std::abs(tmpError) > this->tolerance_)
+                if (std::abs(tmpError) > this->tolerance_) {
                     cnvViolated = true;
+                }
 
                 componentSumError[eqIdx] += std::abs(tmpError2);
             }
-            if (cnvViolated)
+            if (cnvViolated) {
                 errorPvFraction_ += pvValue;
+            }
         }
 
         // take the other processes into account
@@ -214,8 +228,9 @@ public:
         errorPvFraction_ /= sumPv;
 
         errorSum_ = 0;
-        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx)
+        for (unsigned eqIdx = 0; eqIdx < numEq; ++eqIdx) {
             errorSum_ = std::max(std::abs(componentSumError[eqIdx]), errorSum_);
+        }
 
         // scale the tolerance for the total error with the pore volume. by default, the
         // exponent is 1/3, i.e., cubic root.
@@ -223,21 +238,26 @@ public:
         Scalar y = Parameters::get<TypeTag, Properties::EclNewtonSumToleranceExponent>();
         sumTolerance_ = x*std::pow(sumPv, y);
 
-        this->endIterMsg() << " (max: " << this->tolerance_ << ", violated for " << errorPvFraction_*100 << "% of the pore volume), aggegate error: " << errorSum_ << " (max: " << sumTolerance_ << ")";
+        this->endIterMsg() << " (max: " << this->tolerance_
+                           << ", violated for " << errorPvFraction_ * 100
+                           << "% of the pore volume), aggegate error: "
+                           << errorSum_ << " (max: " << sumTolerance_ << ")";
 
         // make sure that the error never grows beyond the maximum
         // allowed one
-        if (this->error_ > newtonMaxError)
+        if (this->error_ > newtonMaxError) {
             throw NumericalProblem("Newton: Error "+std::to_string(double(this->error_))
                                    + " is larger than maximum allowed error of "
                                    + std::to_string(double(newtonMaxError)));
+        }
 
         // make sure that the error never grows beyond the maximum
         // allowed one
-        if (errorSum_ > newtonMaxError)
+        if (errorSum_ > newtonMaxError) {
             throw NumericalProblem("Newton: Sum of the error "+std::to_string(double(errorSum_))
                                    + " is larger than maximum allowed error of "
                                    + std::to_string(double(newtonMaxError)));
+        }
     }
 
     void endIteration_(SolutionVector& nextSolution,
@@ -261,6 +281,7 @@ private:
 
     int numStrictIterations_;
 };
+
 } // namespace Opm
 
 #endif
