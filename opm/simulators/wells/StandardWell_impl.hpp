@@ -2337,7 +2337,7 @@ namespace Opm
     {
         const int max_iter = this->param_.max_inner_iter_wells_;
         int it = 0;
-        bool converged;
+        bool converged = false;
         bool relax_convergence = false;
         this->regularize_ = false;
         const auto& summary_state = simulator.vanguard().summaryState();
