@@ -116,7 +116,7 @@ public:
         double faceArea;
         double thpres;
         double dZg;
-        int dirId;
+        FaceDir::DirEnum faceDir;
         double Vin;
         double Vex;
         double inAlpha;
@@ -272,7 +272,7 @@ public:
         const auto& globalIndexEx = stencil.globalSpaceIndex(exteriorDofIdx);
         Scalar trans = problem.transmissibility(elemCtx, interiorDofIdx, exteriorDofIdx);
         Scalar faceArea = scvf.area();
-        const auto dirid = scvf.dirId();
+        const auto faceDir = faceDirFromDirId(scvf.dirId());
         Scalar thpres = problem.thresholdPressure(globalIndexIn, globalIndexEx);
 
         // estimate the gravity correction: for performance reasons we use a simplified
@@ -298,7 +298,7 @@ public:
         const Scalar diffusivity = problem.diffusivity(globalIndexEx, globalIndexIn);
         const Scalar dispersivity = problem.dispersivity(globalIndexEx, globalIndexIn);
 
-        const ResidualNBInfo res_nbinfo {trans, faceArea, thpres, distZ * g, dirid, Vin, Vex, inAlpha, outAlpha, diffusivity, dispersivity};
+        const ResidualNBInfo res_nbinfo {trans, faceArea, thpres, distZ * g, faceDir, Vin, Vex, inAlpha, outAlpha, diffusivity, dispersivity};
 
         calculateFluxes_(flux,
                          darcy,
@@ -324,7 +324,7 @@ public:
         const Scalar thpres = nbInfo.thpres;
         const Scalar trans = nbInfo.trans;
         const Scalar faceArea = nbInfo.faceArea;
-        FaceDir::DirEnum facedir = faceDirFromDirId(nbInfo.dirId);
+        FaceDir::DirEnum facedir = nbInfo.faceDir;
 
         for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
             if (!FluidSystem::phaseIsActive(phaseIdx))

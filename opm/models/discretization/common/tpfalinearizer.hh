@@ -469,8 +469,10 @@ private:
                         if (simulator_().vanguard().eclState().getSimulationConfig().rock_config().dispersion()) {
                             dispersivity = problem_().dispersivity(myIdx, neighborIdx);
                         }
-                        auto dirId = scvf.dirId();
-                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres, dZg, dirId, Vin, Vex, inAlpha, outAlpha, diffusivity, dispersivity}, nullptr};
+                        const auto dirId = scvf.dirId();
+                        auto faceDir = dirId < 0 ? FaceDir::DirEnum::Unknown
+                                                 : FaceDir::FromIntersectionIndex(dirId);
+                        loc_nbinfo[dofIdx - 1] = NeighborInfo{neighborIdx, {trans, area, thpres, dZg, faceDir, Vin, Vex, inAlpha, outAlpha, diffusivity, dispersivity}, nullptr};
 
                     }
                 }
