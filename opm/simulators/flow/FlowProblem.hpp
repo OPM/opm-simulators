@@ -330,6 +330,9 @@ public:
             this->numPressurePointsEquil_ = simulator.vanguard().eclState().getTableManager().getEqldims().getNumDepthNodesP();
         }
 
+        explicitRockCompaction_ = Parameters::get<TypeTag, Properties::ExplicitRockCompaction>();
+
+
         RelpermDiagnostics relpermDiagnostics;
         relpermDiagnostics.diagnosis(vanguard.eclState(), vanguard.cartesianIndexMapper());
     }
@@ -1708,7 +1711,7 @@ public:
     template <class LhsEval>
     LhsEval rockCompTransMultiplier(const IntensiveQuantities& intQuants, unsigned elementIdx) const
     {
-        bool implicit = !Parameters::get<TypeTag, Properties::ExplicitRockCompaction>();
+        const bool implicit = !this->explicitRockCompaction_;
         return implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<LhsEval>(intQuants, elementIdx)
                         : this->simulator().problem().getRockCompTransMultVal(elementIdx);
     }
@@ -1741,7 +1744,7 @@ public:
     {
         OPM_TIMEBLOCK_LOCAL(wellTransMultiplier);
         
-        bool implicit = !Parameters::get<TypeTag, Properties::ExplicitRockCompaction>();
+        const bool implicit = !this->explicitRockCompaction_;
         double trans_mult = implicit ? this->simulator().problem().template computeRockCompTransMultiplier_<double>(intQuants, elementIdx)
                                      : this->simulator().problem().getRockCompTransMultVal(elementIdx);
         trans_mult *= this->simulator().problem().template permFactTransMultiplier<double>(intQuants);
@@ -2824,6 +2827,7 @@ private:
 
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
+    bool explicitRockCompaction_ = false;
 };
 
 } // namespace Opm
