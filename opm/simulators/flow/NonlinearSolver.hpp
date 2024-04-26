@@ -24,6 +24,7 @@
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/timestepping/SimulatorTimerInterface.hpp>
+#include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
@@ -107,6 +108,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
     class NonlinearSolver
     {
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+        using TimeStepper = AdaptiveTimeStepping<TypeTag>;
 
     public:
         // Solver parameters controlling nonlinear process.
@@ -142,6 +144,8 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
 
             static void registerParameters()
             {
+                TimeStepper::registerParameters();
+                
                 Parameters::registerParam<TypeTag, Properties::NewtonMaxRelax>
                     ("The maximum relaxation factor of a Newton iteration");
                 Parameters::registerParam<TypeTag, Properties::NewtonMaxIterations>
@@ -237,6 +241,17 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
 
                 std::string msg = "Solver convergence failure - Failed to complete a time step within " + std::to_string(maxIter()) + " iterations.";
                 OPM_THROW_NOLOG(TooManyIterations, msg);
+            }
+
+            double error = model_->relativeChange();
+            const double timeStepControlTolerance = Parameters::get<TypeTag, Properties::TimeStepControlTolerance>();
+
+            if (error > timeStepControlTolerance) {
+                report.converged = false;
+                failureReport_ = report;
+
+                std::string msg = "Time step too large - Failed to satisfy the tolerance test, since the error (" + std::to_string(error) + ") was larger than the tolerance (" + std::to_string(timeStepControlTolerance) + ").";
+                OPM_THROW_NOLOG(TimeSteppingBreakdown, msg);
             }
 
             // Do model-specific post-step actions.
