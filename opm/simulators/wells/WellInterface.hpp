@@ -380,8 +380,8 @@ public:
                                             const double dt,
                                             const WellInjectionControls& inj_controls,
                                             const WellProductionControls& prod_controls,
-                                            WellState& well_state,
-                                            const GroupState& group_state,
+                                            WellState<Scalar>& well_state,
+                                            const GroupState<Scalar>& group_state,
                                             DeferredLogger& deferred_logger, 
                                             const bool fixed_control = false, 
                                             const bool fixed_status = false) = 0;

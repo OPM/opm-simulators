@@ -1259,8 +1259,8 @@ namespace Opm {
     computeWellGroupThp(const double dt, DeferredLogger& local_deferredLogger)
     {
         const int reportStepIdx = this->simulator_.episodeIndex();
-        const auto& network = schedule()[reportStepIdx].network();
-        const auto& balance = schedule()[reportStepIdx].network_balance();
+        const auto& network = this->schedule()[reportStepIdx].network();
+        const auto& balance = this->schedule()[reportStepIdx].network_balance();
         const double thp_tolerance = balance.thp_tolerance();
 
         if (!network.active()) {
@@ -1274,7 +1274,7 @@ namespace Opm {
             const bool has_choke = network.node(nodeName).as_choke();
             if (has_choke) {
                 const auto& summary_state = this->simulator_.vanguard().summaryState();
-                const Group& group = schedule().getGroup(nodeName, reportStepIdx);
+                const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
                 const auto ctrl = group.productionControls(summary_state);
                 const auto cmode = ctrl.cmode;
                 const auto pu = this->phase_usage_;
@@ -1284,7 +1284,7 @@ namespace Opm {
                 if (group_state.has_grat_sales_target(group.name()))
                     gratTargetFromSales = group_state.grat_sales_target(group.name());
 
-                WellGroupHelpers::TargetCalculator tcalc(cmode, pu, resv_coeff,
+                WGHelpers::TargetCalculator tcalc(cmode, pu, resv_coeff,
                                                          gratTargetFromSales, nodeName, group_state,
                                                          group.has_gpmaint_control(cmode));
                 const double orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
@@ -1297,7 +1297,7 @@ namespace Opm {
                         auto& ws = well_state.well(well_name);
                         if (group.hasWell(well_name)) {
                             well->setDynamicThpLimit(well_group_thp);
-                            const Well& well_ecl = wells_ecl_[well->indexOfWell()];
+                            const Well& well_ecl = this->wells_ecl_[well->indexOfWell()];
                             const auto inj_controls = Well::InjectionControls(0);
                             const auto prod_controls = well_ecl.productionControls(summary_state);
                             well->iterateWellEqWithSwitching(this->simulator_, dt, inj_controls, prod_controls, well_state, group_state, local_deferredLogger,  false, false);
@@ -1334,7 +1334,7 @@ namespace Opm {
                 }
 
                 const auto upbranch = network.uptree_branch(nodeName);
-                const auto it = node_pressures_.find((*upbranch).uptree_node());
+                const auto it = this->node_pressures_.find((*upbranch).uptree_node());
                 const double nodal_pressure = it->second;
                 double well_group_thp = nodal_pressure;
 
