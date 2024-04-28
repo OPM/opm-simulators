@@ -1320,11 +1320,7 @@ namespace Opm {
             const bool has_choke = network.node(nodeName).as_choke();
             if (has_choke) {
                 const auto& summary_state = this->simulator_.vanguard().summaryState();
-<<<<<<< HEAD
                 const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
-=======
-                const Group& group = schedule().getGroup(nodeName, reportStepIdx);
->>>>>>> 683b05e18 (rebasing fixes)
                 const auto ctrl = group.productionControls(summary_state);
                 const auto cmode = ctrl.cmode;
                 const auto pu = this->phase_usage_;
@@ -1372,7 +1368,7 @@ namespace Opm {
 
                     min_thp = network.node(node_name).terminal_pressure().value();
                     std::optional<double> approximate_solution0;
-                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
+                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp, local_deferredLogger);
 
                      // Narrow down the bracket
                     double low1, high1;
