@@ -2583,7 +2583,7 @@ namespace Opm
             }
         }
 
-        return result;
+        return result * this->well_efficiency_factor_;
     }
 
 
