@@ -860,7 +860,8 @@ namespace Opm {
                 {
                     using std::abs;
                     Scalar CNV = cellResidual[eqIdx] * dt * B_avg[eqIdx] / pvValue;
-                    cnvViolated = cnvViolated || (abs(CNV) > param_.tolerance_cnv_);
+                    double tol = has_energy_ && static_cast<int>(eqIdx) == contiEnergyEqIdx ? param_.tolerance_cnv_energy_ : param_.tolerance_cnv_;
+                    cnvViolated = cnvViolated || (abs(CNV) > tol);
                 }
 
                 if (cnvViolated)
@@ -940,6 +941,7 @@ namespace Opm {
             }
             const double tol_cnv = use_relaxed_cnv ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
             const double tol_mb  = use_relaxed_mb ? param_.tolerance_mb_relaxed_ : param_.tolerance_mb_;
+            const double tol_cnv_energy = param_.tolerance_cnv_energy_;
 
             // Finish computation
             std::vector<Scalar> CNV(numComp);
@@ -959,6 +961,9 @@ namespace Opm {
                 CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
                                                         CR::ReservoirFailure::Type::Cnv };
                 double tol[2] = { tol_mb, tol_cnv };
+                if (has_energy_ && compIdx == contiEnergyEqIdx)
+                    tol[1] = tol_cnv_energy;
+
                 for (int ii : {0, 1}) {
                     if (std::isnan(res[ii])) {
                         report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});

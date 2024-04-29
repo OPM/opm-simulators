@@ -70,6 +70,10 @@ struct ToleranceCnv {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
+struct ToleranceCnvEnergy {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
 struct ToleranceCnvRelaxed {
     using type = UndefinedProperty;
 };
@@ -277,6 +281,11 @@ template<class TypeTag>
 struct ToleranceCnv<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 1e-2;
+};
+template<class TypeTag>
+struct ToleranceCnvEnergy<TypeTag, TTag::FlowModelParameters> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e-4;
 };
 template<class TypeTag>
 struct ToleranceCnvRelaxed<TypeTag, TTag::FlowModelParameters> {
@@ -501,6 +510,8 @@ namespace Opm
         double tolerance_mb_relaxed_;
         /// Local convergence tolerance (max of local saturation errors).
         double tolerance_cnv_;
+        /// Local convergence tolerance (max of local energy errors).
+        double tolerance_cnv_energy_;
         /// Relaxed local convergence tolerance (can be used when iter >= min_strict_cnv_iter_ && cnvViolatedPV < relaxed_max_pv_fraction_).
         double tolerance_cnv_relaxed_;
         /// Well convergence tolerance.
@@ -626,6 +637,7 @@ namespace Opm
             tolerance_mb_ = Parameters::get<TypeTag, Properties::ToleranceMb>();
             tolerance_mb_relaxed_ = Parameters::get<TypeTag, Properties::ToleranceMbRelaxed>();
             tolerance_cnv_ = Parameters::get<TypeTag, Properties::ToleranceCnv>();
+            tolerance_cnv_energy_ = Parameters::get<TypeTag, Properties::ToleranceCnvEnergy>();
             tolerance_cnv_relaxed_ = Parameters::get<TypeTag, Properties::ToleranceCnvRelaxed>();
             tolerance_wells_ = Parameters::get<TypeTag, Properties::ToleranceWells>();
             tolerance_well_control_ = Parameters::get<TypeTag, Properties::ToleranceWellControl>();
@@ -698,6 +710,8 @@ namespace Opm
                  "after the iterations with the strict tolerance");
             Parameters::registerParam<TypeTag, Properties::ToleranceCnv>
                 ("Local convergence tolerance (Maximum of local saturation errors)");
+            Parameters::registerParam<TypeTag, Properties::ToleranceCnvEnergy>
+                ("Local energy convergence tolerance (Maximum of local energy errors)");
             Parameters::registerParam<TypeTag, Properties::ToleranceCnvRelaxed>
                 ("Relaxed local convergence tolerance that applies for iterations "
                  "after the iterations with the strict tolerance");
