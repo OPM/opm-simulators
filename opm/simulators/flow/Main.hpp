@@ -130,14 +130,16 @@ public:
     Main(int argc, char** argv, bool ownMPI = true);
 
     // This constructor can be called from Python
-    Main(const std::string& filename);
+    Main(const std::string& filename, bool mpi_init = true, bool mpi_finalize = true);
 
     // This constructor can be called from Python when Python has
     // already parsed a deck
     Main(const std::string& filename,
          std::shared_ptr<EclipseState> eclipseState,
          std::shared_ptr<Schedule> schedule,
-         std::shared_ptr<SummaryConfig> summaryConfig);
+         std::shared_ptr<SummaryConfig> summaryConfig,
+         bool mpi_init = true,
+         bool mpi_finalize = true);
 
     ~Main();
 
@@ -748,6 +750,8 @@ private:
     std::shared_ptr<EclipseState> eclipseState_{};
     std::shared_ptr<Schedule> schedule_{};
     std::shared_ptr<SummaryConfig> summaryConfig_{};
+    bool mpi_init_{true}; //!< True if MPI_Init should be called
+    bool mpi_finalize_{true}; //!< True if MPI_Finalize should be called
 
     // To demonstrate run with non_world_comm
     bool test_split_comm_ = false;

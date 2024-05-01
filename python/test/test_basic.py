@@ -71,3 +71,4 @@ class TestBasic(unittest.TestCase):
             poro2 = sim.get_porosity()
             self.assertAlmostEqual(poro2[0], 0.285, places=7, msg='value of porosity 2')
 
+

@@ -59,6 +59,10 @@
         "signature": "set_primary_variable(variable: str, value: NDArray[float]) -> None",
         "doc": "Set the primary variable's values for the simulation grid.\n\n:para variable: The name of the variable. Valid names are 'pressure', 'water', 'gas', and 'brine'.\n:type variable: str\n:para value: An array of primary variable values to be set. See ``get_primary_variable()`` for more information.\n:type value: NDArray[float]"
     },
+    "setupMpi": {
+        "signature": "mpi_init(init: bool, finalize: bool) -> None",
+        "doc": "Setup MPI for parallel simulation. This method should be called before any other method.\n:param init: Whether to call ``MPI_Init()`` or not.\n:param finalize:Whether to call ``MPI_Finalize()```when the simulator object goes out of scope.\n\n:return: None"
+    },
     "step": {
         "signature": "step() -> int",
         "doc": "Execute the next simulation report step.\n\n:return: Result of the simulation step."
