@@ -41,7 +41,10 @@
 #include <opm/simulators/wells/ParallelWBPCalculation.hpp>
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
+
+#if COMPILE_BDA_BRIDGE
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
+#endif
 
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
@@ -1556,6 +1559,7 @@ namespace Opm {
         }
     }
 
+#if COMPILE_BDA_BRIDGE
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
@@ -1591,6 +1595,7 @@ namespace Opm {
             }
         }
     }
+#endif
 
     // Ax = Ax - alpha * C D^-1 B x
     template<typename TypeTag>

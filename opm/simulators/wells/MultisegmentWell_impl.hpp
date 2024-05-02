@@ -46,7 +46,7 @@
 #include <cstddef>
 #include <string>
 
-#if HAVE_CUDA || HAVE_OPENCL
+#if COMPILE_BDA_BRIDGE && (HAVE_CUDA || HAVE_OPENCL)
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #endif
 
