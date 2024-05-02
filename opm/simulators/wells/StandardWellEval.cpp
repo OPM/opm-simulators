@@ -35,7 +35,6 @@
 #include <opm/simulators/wells/WellConvergence.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/linalg/bda/WellContributions.hpp>
 
 #include <cmath>
 #include <cstddef>

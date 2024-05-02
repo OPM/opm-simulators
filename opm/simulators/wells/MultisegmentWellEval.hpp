@@ -29,8 +29,6 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <array>
-#include <memory>
 #include <utility>
 #include <vector>
 
@@ -39,7 +37,6 @@ namespace Opm
 
 class ConvergenceReport;
 class Schedule;
-class WellContributions;
 class SummaryState;
 
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
