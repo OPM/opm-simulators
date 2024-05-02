@@ -62,6 +62,7 @@ public:
         const std::string &idx_name,
         py::array_t<double,
         py::array::c_style | py::array::forcecast> array);
+    void setupMpi(bool init_mpi, bool finalize_mpi);
     int step();
     int stepCleanup();
     int stepInit();
@@ -74,6 +75,8 @@ private:
     const std::string deck_filename_;
     bool has_run_init_ = false;
     bool has_run_cleanup_ = false;
+    bool mpi_init_ = true;
+    bool mpi_finalize_ = true;
     //bool debug_ = false;
     // This *must* be declared before other pointers
     // to simulator objects. This in order to deinitialize
