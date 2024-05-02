@@ -308,18 +308,18 @@ void export_PyBlackOilSimulator(py::module& m)
         .def("get_cell_volumes", &PyBlackOilSimulator::getCellVolumes, getCellVolumes_docstring)
         .def("get_dt", &PyBlackOilSimulator::getDT, getDT_docstring)
         .def("get_fluidstate_variable", &PyBlackOilSimulator::getFluidStateVariable,
-            py::return_value_policy::copy, py::arg("name"))
+            py::return_value_policy::copy, getFluidStateVariable_docstring, py::arg("name"))
         .def("get_porosity", &PyBlackOilSimulator::getPorosity, getPorosity_docstring)
         .def("get_primary_variable_meaning", &PyBlackOilSimulator::getPrimaryVarMeaning,
-            py::return_value_policy::copy, py::arg("variable"))
+            py::return_value_policy::copy, getPrimaryVarMeaning_docstring, py::arg("variable"))
         .def("get_primary_variable_meaning_map", &PyBlackOilSimulator::getPrimaryVarMeaningMap,
-            py::return_value_policy::copy, py::arg("variable"))
+            py::return_value_policy::copy, getPrimaryVarMeaningMap_docstring, py::arg("variable"))
         .def("get_primary_variable", &PyBlackOilSimulator::getPrimaryVariable,
-            py::return_value_policy::copy, py::arg("variable"))
+            py::return_value_policy::copy, getPrimaryVariable_docstring, py::arg("variable"))
         .def("run", &PyBlackOilSimulator::run, run_docstring)
         .def("set_porosity", &PyBlackOilSimulator::setPorosity, setPorosity_docstring, py::arg("array"))
         .def("set_primary_variable", &PyBlackOilSimulator::setPrimaryVariable,
-            py::arg("variable"), py::arg("value"))
+            py::arg("variable"), setPrimaryVariable_docstring, py::arg("value"))
         .def("setup_mpi", &PyBlackOilSimulator::setupMpi, setupMpi_docstring, py::arg("init"), py::arg("finalize"))
         .def("step", &PyBlackOilSimulator::step, step_docstring)
         .def("step_cleanup", &PyBlackOilSimulator::stepCleanup, stepCleanup_docstring)
