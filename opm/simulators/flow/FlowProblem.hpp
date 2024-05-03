@@ -707,6 +707,19 @@ public:
                         return vg.gridIdxToEquilGridIdx(i);
                     });
             });
+
+            // Rerun UDQ assignents following action processing to make sure
+            // that any UDQ ASSIGN operations triggered in action blocks
+            // take effect.  This is mainly to work around a shortcoming of
+            // the ScheduleState copy constructor which clears pending UDQ
+            // assignments under the assumption that all such assignments
+            // have been processed.  If an action block happens to trigger
+            // on the final time step of an episode and that action block
+            // runs a UDQ assignment, then that assignment would be dropped
+            // and the rest of the simulator will never see its effect
+            // without this hack.
+            this->actionHandler_
+                .evalUDQAssignments(episodeIdx, this->simulator().vanguard().udqState());
         }
 
         // deal with "clogging" for the MICP model
