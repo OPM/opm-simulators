@@ -19,6 +19,7 @@
 #ifndef OPM_CUISTL_VECTOR_OPERATIONS_HPP
 #define OPM_CUISTL_VECTOR_OPERATIONS_HPP
 #include <cstddef>
+#include <cublas_v2.h>
 namespace Opm::cuistl::detail
 {
 
@@ -42,6 +43,7 @@ void setZeroAtIndexSet(T* deviceData, size_t numberOfElements, const int* indice
 
 /**
  * @brief innerProductAtIndices computes the inner product between deviceA[indices] and deviceB[indices]
+ * @param cublasHandle a valid (initialized) cublas handle
  * @param deviceA data A (device memory)
  * @param deviceB data B (device memory)
  * @param buffer a buffer with number of elements equal to numberOfElements (device memory)
@@ -53,7 +55,7 @@ void setZeroAtIndexSet(T* deviceData, size_t numberOfElements, const int* indice
  * of those projected vectors.
  */
 template <class T>
-T innerProductAtIndices(const T* deviceA, const T* deviceB, T* buffer, size_t numberOfElements, const int* indices);
+T innerProductAtIndices(cublasHandle_t cublasHandle, const T* deviceA, const T* deviceB, T* buffer, size_t numberOfElements, const int* indices);
 
 template <class T>
 void prepareSendBuf(const T* deviceA, T* buffer, size_t numberOfElements, const int* indices);

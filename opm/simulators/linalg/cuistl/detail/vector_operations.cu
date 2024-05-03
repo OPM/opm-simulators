@@ -18,10 +18,10 @@
 */
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/detail/vector_operations.hpp>
-// TODO: [perf] Get rid of thrust.
+#include <opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp>
+#include <opm/simulators/linalg/cuistl/detail/cublas_wrapper.hpp>
+#include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <stdexcept>
-#include <thrust/device_ptr.h>
-#include <thrust/reduce.h>
 namespace Opm::cuistl::detail
 {
 
@@ -139,19 +139,22 @@ template void setZeroAtIndexSet(int*, size_t, const int*);
 
 template <class T>
 T
-innerProductAtIndices(const T* deviceA, const T* deviceB, T* buffer, size_t numberOfElements, const int* indices)
+innerProductAtIndices(cublasHandle_t cublasHandle, const T* deviceA, const T* deviceB, T* buffer, size_t numberOfElements, const int* indices)
 {
     elementWiseMultiplyKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
         deviceA, deviceB, buffer, numberOfElements, indices);
 
-    // TODO: [perf] Get rid of thrust and use a more direct reduction here.
-    auto bufferAsDevicePointer = thrust::device_pointer_cast(buffer);
-    return thrust::reduce(bufferAsDevicePointer, bufferAsDevicePointer + numberOfElements);
+    // TODO: [perf] Get rid of the allocation here.
+    CuVector<T> oneVector(numberOfElements);
+    oneVector = 1.0;
+    T result = 0.0;
+    OPM_CUBLAS_SAFE_CALL(cublasDot(cublasHandle, numberOfElements, oneVector.data(), 1, buffer, 1, &result));
+    return result;
 }
 
-template double innerProductAtIndices(const double*, const double*, double* buffer, size_t, const int*);
-template float innerProductAtIndices(const float*, const float*, float* buffer, size_t, const int*);
-template int innerProductAtIndices(const int*, const int*, int* buffer, size_t, const int*);
+template double innerProductAtIndices(cublasHandle_t, const double*, const double*, double* buffer, size_t, const int*);
+template float innerProductAtIndices(cublasHandle_t, const float*, const float*, float* buffer, size_t, const int*);
+template int innerProductAtIndices(cublasHandle_t, const int*, const int*, int* buffer, size_t, const int*);
 
 template <class T>
 void prepareSendBuf(const T* deviceA, T* buffer, size_t numberOfElements, const int* indices)

@@ -205,7 +205,7 @@ template <typename T>
 T
 CuVector<T>::dot(const CuVector<T>& other, const CuVector<int>& indexSet, CuVector<T>& buffer) const
 {
-    return detail::innerProductAtIndices(m_dataOnDevice, other.data(), buffer.data(), indexSet.dim(), indexSet.data());
+    return detail::innerProductAtIndices(m_cuBlasHandle.get(), m_dataOnDevice, other.data(), buffer.data(), indexSet.dim(), indexSet.data());
 }
 
 template <typename T>
@@ -221,7 +221,7 @@ T
 CuVector<T>::dot(const CuVector<T>& other, const CuVector<int>& indexSet) const
 {
     CuVector<T> buffer(indexSet.dim());
-    return detail::innerProductAtIndices(m_dataOnDevice, other.data(), buffer.data(), indexSet.dim(), indexSet.data());
+    return detail::innerProductAtIndices(m_cuBlasHandle.get(), m_dataOnDevice, other.data(), buffer.data(), indexSet.dim(), indexSet.data());
 }
 
 template <typename T>
