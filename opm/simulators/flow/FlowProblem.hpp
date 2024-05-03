@@ -632,80 +632,93 @@ public:
     void endTimeStep()
     {
         OPM_TIMEBLOCK(endTimeStep);
+
 #ifndef NDEBUG
         if constexpr (getPropValue<TypeTag, Properties::EnableDebuggingChecks>()) {
-            // in debug mode, we don't care about performance, so we check if the model does
-            // the right thing (i.e., the mass change inside the whole reservoir must be
-            // equivalent to the fluxes over the grid's boundaries plus the source rates
-            // specified by the problem)
-            int rank = this->simulator().gridView().comm().rank();
-            if (rank == 0)
+            // in debug mode, we don't care about performance, so we check
+            // if the model does the right thing (i.e., the mass change
+            // inside the whole reservoir must be equivalent to the fluxes
+            // over the grid's boundaries plus the source rates specified by
+            // the problem).
+            const int rank = this->simulator().gridView().comm().rank();
+            if (rank == 0) {
                 std::cout << "checking conservativeness of solution\n";
+            }
+
             this->model().checkConservativeness(/*tolerance=*/-1, /*verbose=*/true);
-            if (rank == 0)
+            if (rank == 0) {
                 std::cout << "solution is sufficiently conservative\n";
+            }
         }
 #endif // NDEBUG
 
         auto& simulator = this->simulator();
-        wellModel_.endTimeStep();
-        aquiferModel_.endTimeStep();
-        tracerModel_.endTimeStep();
 
+        this->wellModel_.endTimeStep();
+        this->aquiferModel_.endTimeStep();
+        this->tracerModel_.endTimeStep();
 
         // Compute flux for output
         this->model().linearizer().updateFlowsInfo();
 
         // deal with DRSDT and DRVDT
-        asImp_().updateCompositionChangeLimits_();
-        {
-        OPM_TIMEBLOCK(driftCompansation);
-        if (enableDriftCompensation_) {
+        this->asImp_().updateCompositionChangeLimits_();
+
+        if (this->enableDriftCompensation_) {
+            OPM_TIMEBLOCK(driftCompansation);
+
             const auto& residual = this->model().linearizer().residual();
+
             for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
-                drift_[globalDofIdx] = residual[globalDofIdx];
-                drift_[globalDofIdx] *= simulator.timeStepSize();
-                if constexpr (getPropValue<TypeTag, Properties::UseVolumetricResidual>())
-                    drift_[globalDofIdx] *= this->model().dofTotalVolume(globalDofIdx);
+                this->drift_[globalDofIdx] = residual[globalDofIdx] * simulator.timeStepSize();
+
+                if constexpr (getPropValue<TypeTag, Properties::UseVolumetricResidual>()) {
+                    this->drift_[globalDofIdx] *= this->model().dofTotalVolume(globalDofIdx);
+                }
             }
         }
-        }
-        bool isSubStep = !Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() &&
-                         !this->simulator().episodeWillBeOver();
+
+        const bool isSubStep = !Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>()
+            && !this->simulator().episodeWillBeOver();
+
         // For CpGrid with LGRs, ecl/vtk output is not supported yet.
-        const auto& grid =  this->simulator().vanguard().gridView().grid();
-        using GridType =  std::remove_cv_t< typename std::remove_reference<decltype(grid)>::type>;
-        bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
-        if ( !isCpGrid || (this->simulator().vanguard().gridView().grid().maxLevel()==0)) {
-            eclWriter_->evalSummaryState(isSubStep);
+        const auto& grid = this->simulator().vanguard().gridView().grid();
+
+        using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
+        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
+        if (!isCpGrid || (grid.maxLevel() == 0)) {
+            this->eclWriter_->evalSummaryState(isSubStep);
         }
 
-        int episodeIdx = this->episodeIndex();
-
-        // Re-ordering in case of Alugrid
-        std::function<unsigned int(unsigned int)> gridToEquilGrid = [&simulator](unsigned int i) {
-            return simulator.vanguard().gridIdxToEquilGridIdx(i);
-        };
-
-        std::function<void(bool)> transUp =
-            [this,gridToEquilGrid](bool global) {
-                this->transmissibilities_.update(global,gridToEquilGrid);
-            };
         {
-        OPM_TIMEBLOCK(applyActions);
-        actionHandler_.applyActions(episodeIdx,
-                                    simulator.time() + simulator.timeStepSize(),
-                                    transUp);
+            OPM_TIMEBLOCK(applyActions);
+
+            const int episodeIdx = this->episodeIndex();
+
+            // Re-ordering in case of Alugrid
+            this->actionHandler_
+                .applyActions(episodeIdx, simulator.time() + simulator.timeStepSize(),
+                              [this](const bool global)
+            {
+                this->transmissibilities_
+                    .update(global, [&vg = this->simulator().vanguard()]
+                            (const unsigned int i)
+                    {
+                        return vg.gridIdxToEquilGridIdx(i);
+                    });
+            });
         }
+
         // deal with "clogging" for the MICP model
-        if constexpr (enableMICP){
-          auto& model = this->model();
-          const auto& residual = this->model().linearizer().residual();
-          for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); globalDofIdx ++) {
-            auto& phi = this->referencePorosity_[/*timeIdx=*/1][globalDofIdx];
-            MICPModule::checkCloggingMICP(model, phi, globalDofIdx);
+        if constexpr (enableMICP) {
+            auto& model = this->model();
+            const auto& residual = model.linearizer().residual();
+
+            for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); ++globalDofIdx) {
+                auto& phi = this->referencePorosity_[/*timeIdx=*/1][globalDofIdx];
+                MICPModule::checkCloggingMICP(model, phi, globalDofIdx);
+            }
         }
-      }
     }
 
     /*!
