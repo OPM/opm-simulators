@@ -21,10 +21,7 @@
 #include <opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cublas_wrapper.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
-// TODO: [perf] Get rid of thrust.
 #include <stdexcept>
-#include <thrust/device_ptr.h>
-#include <thrust/reduce.h>
 namespace Opm::cuistl::detail
 {
 
