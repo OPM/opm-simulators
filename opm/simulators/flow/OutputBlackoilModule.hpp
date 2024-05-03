@@ -1610,7 +1610,7 @@ private:
         const Scalar mM = FluidSystem::molarMass(gasCompIdx, fs.pvtRegionIndex());
         const Scalar massGas = (1 - xgW) * pv * rhog;
         if (!this->fip_[Inplace::Phase::CO2Mass].empty()) {
-            this->fip_[Inplace::Phase::CO2Mass][globalDofIdx] = massGas;
+            this->fip_[Inplace::Phase::CO2Mass][globalDofIdx] = massGas * sg;
         }
 
         if (!this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty()) {
