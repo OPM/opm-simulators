@@ -73,6 +73,10 @@ struct ParsingStrictness {
     using type = UndefinedProperty;
 };
 template<class TypeTag, class MyTypeTag>
+struct InputSkipMode {
+    using type = UndefinedProperty;
+};
+template<class TypeTag, class MyTypeTag>
 struct SchedRestart {
     using type = UndefinedProperty;
 };
@@ -146,6 +150,10 @@ struct EnableOpmRstFile<TypeTag, TTag::FlowBaseVanguard> {
 template<class TypeTag>
 struct ParsingStrictness<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr auto value = "normal";
+};
+template<class TypeTag>
+struct InputSkipMode<TypeTag, TTag::FlowBaseVanguard> {
+    static constexpr auto value = "100";
 };
 template<class TypeTag>
 struct SchedRestart<TypeTag, TTag::FlowBaseVanguard> {
@@ -253,6 +261,11 @@ public:
              "high (stop for all errors) and "
              "low (as normal, except do not stop due to unsupported "
              "keywords even if marked critical");
+        Parameters::registerParam<TypeTag, Properties::InputSkipMode>
+            ("Set compatibility mode for the SKIP100/SKIP300 keywords. Options are "
+             "100 (skip SKIP100..ENDSKIP, keep SKIP300..ENDSKIP) [default], "
+             "300 (skip SKIP300..ENDSKIP, keep SKIP100..ENDSKIP) and "
+             "all (skip both SKIP100..ENDSKIP and SKIP300..ENDSKIP) ");
         Parameters::registerParam<TypeTag, Properties::SchedRestart>
             ("When restarting: should we try to initialize wells and "
              "groups from historical SCHEDULE section.");

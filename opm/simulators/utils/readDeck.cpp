@@ -536,6 +536,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    std::shared_ptr<SummaryConfig>& summaryConfig,
                    std::shared_ptr<Python>         python,
                    const std::string&              parsingStrictness,
+                   const std::string&              inputSkipMode,
                    const bool                      initFromRestart,
                    const bool                      checkDeck,
                    const std::optional<int>&       outputInterval)
@@ -550,6 +551,11 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                   fmt::format("Incorrect value {} for parameter ParsingStrictness, must be 'high', 'normal', or 'low'", parsingStrictness));
     }
 
+    if (inputSkipMode != "100" && inputSkipMode != "300" && inputSkipMode != "all") {
+        OPM_THROW(std::runtime_error,
+                  fmt::format("Incorrect value {} for parameter InputSkipMode, must be '100', '300', or 'all'", inputSkipMode));
+    }
+
     if (comm.rank() == 0) { // Always true when !HAVE_MPI
         const bool exitOnAllErrors = (parsingStrictness == "high");
         const bool treatCriticalAsNonCritical = (parsingStrictness == "low");
@@ -558,6 +564,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
             if (treatCriticalAsNonCritical) { // Continue with invalid names if parsing strictness is set to low
                 parseContext->update(ParseContext::SCHEDULE_INVALID_NAME, InputErrorAction::WARN);
             }
+            parseContext->setInputSkipMode(inputSkipMode);
             readOnIORank(comm, deckFilename, parseContext.get(),
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
