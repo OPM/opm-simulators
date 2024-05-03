@@ -842,7 +842,7 @@ namespace Opm {
             IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
 
             OPM_BEGIN_PARALLEL_TRY_CATCH();
-            for (const auto& elem : elements(gridView, Dune::Partitions::interiorBorder))
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior))
             {
                 // Skip cells of numerical Aquifer
                 if (isNumericalAquiferCell(elem))
