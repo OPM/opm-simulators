@@ -335,7 +335,6 @@ protected:
     void updateMiscnum_();
     void updatePlmixnum_();
     void updateKrnum_();
-    void updateImbnum_();
 
     const EclipseState& eclState_;
     const Schedule& schedule_;

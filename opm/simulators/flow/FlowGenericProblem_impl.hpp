@@ -419,16 +419,6 @@ updateKrnum_()
 }
 
 template<class GridView, class FluidSystem>
-void FlowGenericProblem<GridView,FluidSystem>::
-updateImbnum_()
-{
-    const auto num_regions = eclState_.getTableManager().getTabdims().getNumSatTables();
-    updateNum("IMBNUMX", imbnumx_, num_regions);
-    updateNum("IMBNUMY", imbnumy_, num_regions);
-    updateNum("IMBNUMZ", imbnumz_, num_regions);
-}
-
-template<class GridView, class FluidSystem>
 bool FlowGenericProblem<GridView,FluidSystem>::
 vapparsActive(int episodeIdx) const
 {
