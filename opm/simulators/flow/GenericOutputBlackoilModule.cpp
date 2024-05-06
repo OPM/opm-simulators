@@ -128,16 +128,28 @@ std::string EclString(const Opm::Inplace::Phase phase)
         return "GMDS";
 
     case Opm::Inplace::Phase::CO2MassInGasPhaseInMob:
-        return "GMTR";
+        return "GCDI_KG"; //Not used
         
     case Opm::Inplace::Phase::CO2MassInGasPhaseMob:
-        return "GMMO";
+        return "GKDM_KG"; //Not used
 
     case Opm::Inplace::Phase::CO2MassInGasPhaseInMobKrg:
         return "GKTR";
         
     case Opm::Inplace::Phase::CO2MassInGasPhaseMobKrg:
         return "GKMO";
+
+    case Opm::Inplace::Phase::CO2MassInGasPhaseMaximumTrapped:
+        return "GMIM";
+
+    case Opm::Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped:
+        return "GMMO";
+
+    case Opm::Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped:
+        return "GMST";
+
+    case Opm::Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped:
+        return "GMUS";
 
     default:
         throw std::logic_error {

@@ -975,6 +975,11 @@ fipUnitConvert_(std::unordered_map<Inplace::Phase, Scalar>& fip) const
         {Inplace::Phase::CO2MassInGasPhaseMob,      M::mass},
         {Inplace::Phase::CO2MassInGasPhaseInMobKrg, M::mass},
         {Inplace::Phase::CO2MassInGasPhaseMobKrg,   M::mass},
+        {Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped, M::mass},
+        {Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped, M::mass},
+        {Inplace::Phase::CO2MassInGasPhaseMaximumTrapped,  M::mass},
+        {Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped,  M::mass},
+
     };
 
     for (auto& [phase, value] : fip) {
