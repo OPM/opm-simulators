@@ -91,6 +91,7 @@ void readDeck(Parallel::Communication         comm,
               std::shared_ptr<SummaryConfig>& summaryConfig,
               std::shared_ptr<Python>         python,
               const std::string&              parsingStrictness,
+              const std::string&              inputSkipMode,
               bool                            initFromRestart,
               bool                            checkDeck,
               const std::optional<int>&       outputInterval);
