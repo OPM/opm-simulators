@@ -2221,6 +2221,14 @@ protected:
                 }
             }
 
+            // For CO2STORE and H2STORE we need to set the initial temperature for isothermal simulations
+            bool isThermal = eclState.getSimulationConfig().isThermal();
+            bool needTemperature = (eclState.runspec().co2Storage() || eclState.runspec().h2Storage());
+            if (!isThermal && needTemperature) {
+                const auto& fp = simulator.vanguard().eclState().fieldProps();
+                elemFluidState.setTemperature(fp.get_double("TEMPI")[elemIdx]);
+            }
+
             this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
 
             if constexpr (enablePolymer)
