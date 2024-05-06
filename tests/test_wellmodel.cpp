@@ -27,15 +27,19 @@
 #include <boost/test/unit_test.hpp>
 #include <opm/common/utility/platform_dependent/reenable_warnings.h>
 
-#include <opm/input/eclipse/Parser/Parser.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Schedule/SummaryState.hpp>
-#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
-#include <opm/input/eclipse/Deck/Deck.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
+
 #include <opm/input/eclipse/Python/Python.hpp>
 
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQParams.hpp>
+#include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+
 #include <opm/grid/GridManager.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
 #include <opm/common/utility/TimeService.hpp>
 
@@ -50,13 +54,18 @@
 #include <opm/simulators/wells/StandardWell.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
+#include <opm/input/eclipse/Deck/Deck.hpp>
+#include <opm/input/eclipse/Parser/Parser.hpp>
+
 #if HAVE_DUNE_FEM
 #include <dune/fem/misc/mpimanager.hh>
 #else
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
-
+#include <memory>
+#include <stdexcept>
+#include <vector>
 
 using StandardWell = Opm::StandardWell<Opm::Properties::TTag::FlowProblem>;
 
@@ -64,18 +73,21 @@ struct SetupTest {
 
     using Grid = UnstructuredGrid;
 
-    SetupTest ()
+    SetupTest()
     {
-        Opm::Parser parser;
-        auto deck = parser.parseFile("TESTWELLMODEL.DATA");
-        ecl_state.reset(new Opm::EclipseState(deck) );
-        {
-          const Opm::TableManager table ( deck );
-          const Opm::Runspec runspec (deck);
-          python = std::make_shared<Opm::Python>();
-          schedule.reset( new Opm::Schedule(deck, *ecl_state, python));
-          summaryState.reset( new Opm::SummaryState(Opm::TimeService::from_time_t(schedule->getStartTime())));
-        }
+        const auto deck = Opm::Parser{}.parseFile("TESTWELLMODEL.DATA");
+        this->ecl_state = std::make_unique<const Opm::EclipseState>(deck);
+
+        const Opm::TableManager table(deck);
+        const Opm::Runspec runspec(deck);
+
+        this->schedule = std::make_unique<const Opm::Schedule>
+            (deck, *this->ecl_state, std::make_shared<Opm::Python>());
+
+        this->summaryState = std::make_unique<Opm::SummaryState>
+            (Opm::TimeService::from_time_t(schedule->getStartTime()),
+             this->ecl_state->runspec().udqParams().undefinedValue());
+
         current_timestep = 0;
     };
 
@@ -135,7 +147,6 @@ BOOST_AUTO_TEST_CASE(TestStandardWellInput) {
 
     BOOST_CHECK_THROW( StandardWell( well, pinfo, -1, param, *rateConverter, 0, 3, 3, 0, pdata), std::invalid_argument);
 }
-
 
 BOOST_AUTO_TEST_CASE(TestBehavoir) {
     const SetupTest setup_test;

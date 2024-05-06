@@ -17,49 +17,59 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <algorithm>
 #include <config.h>
-#include <functional>
-#include <vector>
 
 #define BOOST_TEST_MODULE WellStateFIBOTest
 
-#include "MpiFixture.hpp"
-#include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/wells/GlobalWellInfo.hpp>
-#include <opm/simulators/wells/ParallelWellInfo.hpp>
-#include <opm/simulators/wells/PerforationData.hpp>
-#include <opm/simulators/wells/WellState.hpp>
-#include <opm/simulators/wells/SingleWellState.hpp>
-#include <opm/simulators/wells/SegmentState.hpp>
-#include <opm/simulators/wells/WellContainer.hpp>
-#include <opm/simulators/wells/PerfData.hpp>
-#include <opm/input/eclipse/Python/Python.hpp>
-
 #include <boost/test/unit_test.hpp>
 
-#include <opm/input/eclipse/Deck/Deck.hpp>
+#include "MpiFixture.hpp"
+
+#include <opm/common/ErrorMacros.hpp>
+#include <opm/common/utility/TimeService.hpp>
+
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Parser/Parser.hpp>
-#include <opm/input/eclipse/Parser/ParseContext.hpp>
+
+#include <opm/input/eclipse/Python/Python.hpp>
+
 #include <opm/input/eclipse/Schedule/MSW/WellSegments.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/input/eclipse/Schedule/SummaryState.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQParams.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+#include <opm/simulators/wells/GlobalWellInfo.hpp>
+#include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/PerfData.hpp>
+#include <opm/simulators/wells/PerforationData.hpp>
+#include <opm/simulators/wells/SegmentState.hpp>
+#include <opm/simulators/wells/SingleWellState.hpp>
+#include <opm/simulators/wells/WellContainer.hpp>
+#include <opm/simulators/wells/WellState.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
-#include <opm/common/utility/TimeService.hpp>
 
 #include <opm/grid/GridHelpers.hpp>
+#include <opm/grid/GridManager.hpp>
 
 #include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
-#include <opm/grid/GridManager.hpp>
+#include <opm/input/eclipse/Deck/Deck.hpp>
 
+#include <opm/input/eclipse/Parser/Parser.hpp>
+#include <opm/input/eclipse/Parser/ParseContext.hpp>
+
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
+#include <ctime>
+#include <functional>
+#include <memory>
+#include <stdexcept>
 #include <string>
+#include <vector>
 
 BOOST_GLOBAL_FIXTURE(MPIFixture);
 
@@ -73,9 +83,9 @@ struct Setup
         : es   (deck)
         , pu   (Opm::phaseUsageFromDeck(es))
         , grid (es.getInputGrid())
-        , python( std::make_shared<Opm::Python>() )
-        , sched(deck, es, python)
-        , st(Opm::TimeService::from_time_t(sched.getStartTime()))
+        , sched(deck, es, std::make_shared<Opm::Python>())
+        , st   { Opm::TimeService::from_time_t(sched.getStartTime()),
+                 es.runspec().udqParams().undefinedValue() }
     {
         initWellPerfData();
     }
