@@ -656,6 +656,7 @@ private:
                 } else if (res[ii] > tol[ii]) {
                     report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                 }
+
                 report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
             }
         }

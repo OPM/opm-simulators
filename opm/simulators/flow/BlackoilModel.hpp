@@ -897,7 +897,8 @@ namespace Opm {
             Vector R_sum(numComp, 0.0 );
             Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
             std::vector<int> maxCoeffCell(numComp, -1);
-            const auto [ pvSumLocal, numAquiferPvSumLocal] = localConvergenceData(R_sum, maxCoeff, B_avg, maxCoeffCell);
+            const auto [ pvSumLocal, numAquiferPvSumLocal] =
+                this->localConvergenceData(R_sum, maxCoeff, B_avg, maxCoeffCell);
 
             // compute global sum and max of quantities
             const auto [ pvSum, numAquiferPvSum ] =
@@ -905,9 +906,9 @@ namespace Opm {
                                      numAquiferPvSumLocal,
                                      R_sum, maxCoeff, B_avg);
 
-            auto cnvErrorPvFraction = computeCnvErrorPv(B_avg, dt);
-            cnvErrorPvFraction /= (pvSum - numAquiferPvSum);
-
+            const auto cnvErrorPvFraction =
+                computeCnvErrorPv(B_avg, dt)
+                / (pvSum - numAquiferPvSum);
 
             // For each iteration, we need to determine whether to use the relaxed tolerances.
             // To disable the usage of relaxed tolerances, you can set the relaxed tolerances as the strict tolerances.
@@ -927,7 +928,7 @@ namespace Opm {
             const bool relax_pv_fraction_cnv = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_;
             const bool use_relaxed_cnv = relax_final_iteration_cnv || relax_pv_fraction_cnv || relax_iter_cnv;
 
-            if  (relax_final_iteration_mb || relax_final_iteration_cnv)  {
+            if (relax_final_iteration_mb || relax_final_iteration_cnv) {
                 if ( terminal_output_ ) {
                     std::string message = "Number of newton iterations reached its maximum try to continue with relaxed tolerances:";
                     if (relax_final_iteration_mb)
@@ -944,7 +945,7 @@ namespace Opm {
             // Finish computation
             std::vector<Scalar> CNV(numComp);
             std::vector<Scalar> mass_balance_residual(numComp);
-            for ( int compIdx = 0; compIdx < numComp; ++compIdx )
+            for (int compIdx = 0; compIdx < numComp; ++compIdx)
             {
                 CNV[compIdx]                    = B_avg[compIdx] * dt * maxCoeff[compIdx];
                 mass_balance_residual[compIdx]  = std::abs(B_avg[compIdx]*R_sum[compIdx]) * dt / pvSum;
@@ -953,12 +954,15 @@ namespace Opm {
 
             // Create convergence report.
             ConvergenceReport report{reportTime};
+            report.setPoreVolCnvViolationFraction(cnvErrorPvFraction, pvSum - numAquiferPvSum);
+
             using CR = ConvergenceReport;
             for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
-                CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
+                const double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
+                const CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
                                                         CR::ReservoirFailure::Type::Cnv };
-                double tol[2] = { tol_mb, tol_cnv };
+                const double tol[2] = { tol_mb, tol_cnv };
+
                 for (int ii : {0, 1}) {
                     if (std::isnan(res[ii])) {
                         report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});

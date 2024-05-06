@@ -363,13 +363,16 @@ public:
                + schedule().seconds(timer.currentStepNum()),
             timer.currentStepLength());
         simulator_.setEpisodeIndex(timer.currentStepNum());
+
         if (serializer_.shouldLoad()) {
             wellModel_().prepareDeserialize(serializer_.loadStep() - 1);
             serializer_.loadState();
             simulator_.model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         }
-        solver_->model().beginReportStep();
-        bool enableTUNING = Parameters::get<TypeTag, Properties::EnableTuning>();
+
+        this->solver_->model().beginReportStep();
+
+        const bool enableTUNING = Parameters::get<TypeTag, Properties::EnableTuning>();
 
         // If sub stepping is enabled allow the solver to sub cycle
         // in case the report steps are too large for the solver to converge
@@ -442,10 +445,17 @@ public:
         report_.success.solver_time += solverTimer_->secsSinceStart();
 
         if (this->grid().comm().rank() == 0) {
-            // Grab the step convergence reports that are new since last we were here.
-            const auto& reps = solver_->model().stepReports();
-            this->writeConvergenceOutput(std::vector<StepReport>{reps.begin() + already_reported_steps_, reps.end()});
-            already_reported_steps_ = reps.size();
+            // Grab the step convergence reports that are new since last we
+            // were here.
+            const auto& reps = this->solver_->model().stepReports();
+
+            auto reports = std::vector<StepReport> {
+                reps.begin() + this->already_reported_steps_, reps.end()
+            };
+
+            this->writeConvergenceOutput(std::move(reports));
+
+            this->already_reported_steps_ = reps.size();
         }
 
         // Increment timer, remember well state.

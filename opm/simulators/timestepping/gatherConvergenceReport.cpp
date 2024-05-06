@@ -22,6 +22,8 @@
 
 #include <opm/simulators/timestepping/gatherConvergenceReport.hpp>
 
+#include <utility>
+
 #if HAVE_MPI
 
 #include <mpi.h>
@@ -76,15 +78,24 @@ namespace
     {
         // Pack the data.
         // Status will not be packed, it is possible to deduce from the other data.
-        // Reservoir failures.
         double reportTime = local_report.reportTime();
         MPI_Pack(&reportTime, 1, MPI_DOUBLE, buf.data(), buf.size(), &offset, mpi_communicator);
+
+        {
+            const auto cnvPvFrac = local_report.cnvViolatedPvFractionPack();
+
+            MPI_Pack(&cnvPvFrac.first , 1, MPI_DOUBLE, buf.data(), buf.size(), &offset, mpi_communicator);
+            MPI_Pack(&cnvPvFrac.second, 1, MPI_DOUBLE, buf.data(), buf.size(), &offset, mpi_communicator);
+        }
+
+        // Reservoir failures.
         const auto rf = local_report.reservoirFailures();
         int num_rf = rf.size();
         MPI_Pack(&num_rf, 1, MPI_INT, buf.data(), buf.size(), &offset, mpi_communicator);
         for (const auto& f : rf) {
             packReservoirFailure(f, buf, offset, mpi_communicator);
         }
+
         // Reservoir convergence metrics.
         const auto rm = local_report.reservoirConvergence();
         int num_rm = rm.size();
@@ -92,6 +103,7 @@ namespace
         for (const auto& m : rm) {
             packReservoirConvergenceMetric(m, buf, offset, mpi_communicator);
         }
+
         // Well failures.
         const auto wf = local_report.wellFailures();
         int num_wf = wf.size();
@@ -114,7 +126,7 @@ namespace
         for (const auto& f : local_report.wellFailures()) {
             wellnames_length += (f.wellName().size() + 1);
         }
-        return (3 + 3*num_rf + 2*num_rm + 4*num_wf)*int_pack_size + (1 + 1*num_rm)*double_pack_size + wellnames_length;
+        return (3 + 3*num_rf + 2*num_rm + 4*num_wf)*int_pack_size + (3 + 1*num_rm)*double_pack_size + wellnames_length;
     }
 
     ConvergenceReport::ReservoirFailure unpackReservoirFailure(const std::vector<char>& recv_buffer, int& offset, MPI_Comm mpi_communicator)
@@ -169,7 +181,15 @@ namespace
         auto* data = const_cast<char*>(recv_buffer.data());
         double reportTime{0.0};
         MPI_Unpack(data, recv_buffer.size(), &offset, &reportTime, 1, MPI_DOUBLE, mpi_communicator);
+
         ConvergenceReport cr{reportTime};
+
+        auto cnvPvFrac = std::pair { 0.0, 0.0 };
+        MPI_Unpack(data, recv_buffer.size(), &offset, &cnvPvFrac.first , 1, MPI_DOUBLE, mpi_communicator);
+        MPI_Unpack(data, recv_buffer.size(), &offset, &cnvPvFrac.second, 1, MPI_DOUBLE, mpi_communicator);
+
+        cr.setPoreVolCnvViolationFraction(cnvPvFrac.first, cnvPvFrac.second);
+
         int num_rf = -1;
         MPI_Unpack(data, recv_buffer.size(), &offset, &num_rf, 1, MPI_INT, mpi_communicator);
         for (int rf = 0; rf < num_rf; ++rf) {

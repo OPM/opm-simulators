@@ -40,56 +40,78 @@ namespace Opm
 
         // ----------- Types -----------
 
-        enum Status { AllGood            = 0,
-                      ReservoirFailed    = 1 << 0,
-                      WellFailed         = 1 << 1 };
-        enum struct Severity { None       = 0,
-                               Normal     = 1,
-                               TooLarge   = 2,
-                               NotANumber = 3 };
+        enum Status {
+            AllGood         = 0,
+            ReservoirFailed = 1 << 0,
+            WellFailed      = 1 << 1,
+        };
+
+        enum struct Severity {
+            None       = 0,
+            Normal     = 1,
+            TooLarge   = 2,
+            NotANumber = 3,
+        };
+
         class ReservoirFailure
         {
         public:
             enum struct Type { Invalid, MassBalance, Cnv };
+
             ReservoirFailure(Type t, Severity s, int phase)
                 : type_(t), severity_(s), phase_(phase)
-            {
-            }
+            {}
+
             Type type() const { return type_; }
             Severity severity() const { return severity_; }
             int phase() const { return phase_; }
+
         private:
             Type type_;
             Severity severity_;
             int phase_;
         };
+
         class ReservoirConvergenceMetric
         {
         public:
             ReservoirConvergenceMetric(ReservoirFailure::Type t, int phase, double value)
                 : type_(t), phase_(phase), value_(value)
-            {
-            }
+            {}
+
             ReservoirFailure::Type type() const { return type_; }
             int phase() const { return phase_; }
             double value() const { return value_; }
+
         private:
             ReservoirFailure::Type type_;
             int phase_;
             double value_;
         };
+
         class WellFailure
         {
         public:
-            enum struct Type { Invalid, MassBalance, Pressure, ControlBHP, ControlTHP, ControlRate, Unsolvable, WrongFlowDirection };
+            enum struct Type {
+                Invalid,
+                MassBalance,
+                Pressure,
+                ControlBHP,
+                ControlTHP,
+                ControlRate,
+                Unsolvable,
+                WrongFlowDirection,
+            };
+
             WellFailure(Type t, Severity s, int phase, const std::string& well_name)
                 : type_(t), severity_(s), phase_(phase), well_name_(well_name)
-            {
-            }
+            {}
+
             Type type() const { return type_; }
             Severity severity() const { return severity_; }
             int phase() const { return phase_; }
             const std::string& wellName() const { return well_name_; }
+
         private:
             Type type_;
             Severity severity_;
@@ -101,8 +123,7 @@ namespace Opm
 
         ConvergenceReport()
             : ConvergenceReport{0.0}
-        {
-        }
+        {}
 
         explicit ConvergenceReport(const double reportTime)
             : reportTime_{reportTime}
@@ -110,8 +131,7 @@ namespace Opm
             , res_failures_{}
             , well_failures_{}
             , wellGroupTargetsViolated_(false)
-        {
-        }
+        {}
 
         void clear()
         {
@@ -144,6 +164,13 @@ namespace Opm
             wellGroupTargetsViolated_ = wellGroupTargetsViolated;
         }
 
+        void setPoreVolCnvViolationFraction(const double cnvErrorPvFraction,
+                                            const double cnvErrorPvFractionDenom)
+        {
+            this->pvFracCnvViol_ = cnvErrorPvFraction;
+            this->pvFracCnvViolDenom_ = cnvErrorPvFractionDenom;
+        }
+
         ConvergenceReport& operator+=(const ConvergenceReport& other)
         {
             reportTime_ = std::max(reportTime_, other.reportTime_);
@@ -154,6 +181,21 @@ namespace Opm
             assert(reservoirFailed() != res_failures_.empty());
             assert(wellFailed() != well_failures_.empty());
             wellGroupTargetsViolated_ = (wellGroupTargetsViolated_ || other.wellGroupTargetsViolated_);
+
+            if ((this->pvFracCnvViolDenom_ > 0.0) ||
+                (other.pvFracCnvViolDenom_ > 0.0))
+            {
+                this->pvFracCnvViol_ = (this->pvFracCnvViol_ * this->pvFracCnvViolDenom_ +
+                                        other.pvFracCnvViol_ * other.pvFracCnvViolDenom_)
+                    / (this->pvFracCnvViolDenom_ + other.pvFracCnvViolDenom_);
+
+                this->pvFracCnvViolDenom_ += other.pvFracCnvViolDenom_;
+            }
+            else {
+                this->pvFracCnvViol_ = 0.0;
+                this->pvFracCnvViolDenom_  = 0.0;
+            }
+
             return *this;
         }
 
@@ -162,6 +204,16 @@ namespace Opm
         double reportTime() const
         {
             return reportTime_;
+        }
+
+        double cnvViolatedPvFraction() const
+        {
+            return this->pvFracCnvViol_;
+        }
+
+        std::pair<double, double> cnvViolatedPvFractionPack() const
+        {
+            return { this->pvFracCnvViol_, this->pvFracCnvViolDenom_ };
         }
 
         bool converged() const
@@ -211,7 +263,6 @@ namespace Opm
         }
 
     private:
-
         // ----------- Member variables -----------
         double reportTime_;
         Status status_;
@@ -219,6 +270,8 @@ namespace Opm
         std::vector<WellFailure> well_failures_;
         std::vector<ReservoirConvergenceMetric> res_convergence_;
         bool wellGroupTargetsViolated_;
+        double pvFracCnvViol_{};
+        double pvFracCnvViolDenom_{};
     };
 
     struct StepReport
@@ -227,7 +280,6 @@ namespace Opm
         int current_step;
         std::vector<ConvergenceReport> report;
     };
-
 
     std::string to_string(const ConvergenceReport::ReservoirFailure::Type t);
 
