@@ -37,6 +37,7 @@ sys.path.insert(0, os.path.abspath("../src"))
 extensions = ["opm_simulators_docs.sphinx_ext_docstrings"]
 # Path to docstrings.json
 opm_simulators_docstrings_path = os.path.abspath('../../docstrings.json')
+opm_common_docstrings_path = os.path.abspath('../../../../opm-common/python/cxx/docstrings.json')
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
