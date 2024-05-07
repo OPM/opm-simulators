@@ -100,8 +100,6 @@ cudaSafeCall(cudaError_t error,
  * @param functionName name of the function the error occured in (typically __func__)
  * @param lineNumber the line number the error occured in (typically __LINE__)
  *
- * @return the error sent in (for convenience).
- *
  * Example usage:
  * @code{.cpp}
  * #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
@@ -119,7 +117,7 @@ cudaSafeCall(cudaError_t error,
  *
  * @todo Refactor to use std::source_location once we shift to C++20
  */
-inline cudaError_t
+inline void
 cudaWarnIfError(cudaError_t error,
                 const std::string_view& expression,
                 const std::string_view& filename,
@@ -129,8 +127,6 @@ cudaWarnIfError(cudaError_t error,
     if (error != cudaSuccess) {
         OpmLog::warning(getCudaErrorMessage(error, expression, filename, functionName, lineNumber));
     }
-
-    return error;
 }
 } // namespace Opm::cuistl::detail
 

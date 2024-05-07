@@ -33,7 +33,13 @@ BOOST_AUTO_TEST_CASE(TestCudaMalloc)
 BOOST_AUTO_TEST_CASE(TestThrows)
 {
     // Just testing a subset here.
-    std::vector<cudaError_t> errorCodes {{cudaErrorAddressOfConstant, cudaErrorAlreadyAcquired}};
+    std::vector<cudaError_t> errorCodes;
+#if USE_HIP
+    // A HIP equivalent of cudaErrorAdressOfConstant does not exist.
+    errorCodes = {{cudaErrorAlreadyAcquired}};
+#else
+     errorCodes = {{cudaErrorAddressOfConstant, cudaErrorAlreadyAcquired}};
+#endif
     for (auto code : errorCodes) {
         BOOST_CHECK_THROW(OPM_CUDA_SAFE_CALL(code), std::exception);
     }

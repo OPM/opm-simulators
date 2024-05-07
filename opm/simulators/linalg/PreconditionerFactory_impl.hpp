@@ -45,15 +45,9 @@
 #include <dune/istl/preconditioners.hh>
 
 #include <config.h>
-#if HAVE_CUDA
-#include <opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/cuistl/CuDILU.hpp>
-#include <opm/simulators/linalg/cuistl/CuJac.hpp>
-#include <opm/simulators/linalg/cuistl/CuSeqILU0.hpp>
-#include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
-#include <opm/simulators/linalg/cuistl/PreconditionerConvertFieldTypeAdapter.hpp>
 
-#endif
+// Include all cuistl/GPU preconditioners inside of this headerfile
+#include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
 
 
 namespace Opm

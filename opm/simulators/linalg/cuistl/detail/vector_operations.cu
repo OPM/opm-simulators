@@ -20,6 +20,7 @@
 #include <opm/simulators/linalg/cuistl/detail/vector_operations.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cublas_wrapper.hpp>
+#include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <stdexcept>
 namespace Opm::cuistl::detail
@@ -160,7 +161,7 @@ template <class T>
 void prepareSendBuf(const T* deviceA, T* buffer, size_t numberOfElements, const int* indices)
 {
     prepareSendBufKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(deviceA, buffer, numberOfElements, indices);
-    cudaDeviceSynchronize(); // The buffers are prepared for MPI. Wait for them to finish.
+    OPM_CUDA_SAFE_CALL(cudaDeviceSynchronize()); // The buffers are prepared for MPI. Wait for them to finish.
 }
 template void prepareSendBuf(const double* deviceA, double* buffer, size_t numberOfElements, const int* indices);
 template void prepareSendBuf(const float* deviceA, float* buffer, size_t numberOfElements, const int* indices);

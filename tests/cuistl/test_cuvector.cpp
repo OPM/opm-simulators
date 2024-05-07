@@ -25,6 +25,7 @@
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <random>
 
 BOOST_AUTO_TEST_CASE(TestDocumentedUsage)
@@ -105,7 +106,7 @@ BOOST_AUTO_TEST_CASE(TestDataPointer)
     auto vectorOnGPU = Opm::cuistl::CuVector<double>(data.data(), data.size());
 
     std::vector<double> buffer(data.size(), 0.0);
-    cudaMemcpy(buffer.data(), vectorOnGPU.data(), sizeof(double) * data.size(), cudaMemcpyDeviceToHost);
+    OPM_CUDA_SAFE_CALL(cudaMemcpy(buffer.data(), vectorOnGPU.data(), sizeof(double) * data.size(), cudaMemcpyDeviceToHost));
     BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(), buffer.begin(), buffer.end());
 }
 

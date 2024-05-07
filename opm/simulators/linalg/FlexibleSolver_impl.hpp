@@ -38,7 +38,11 @@
 #include <dune/istl/paamg/pinfo.hh>
 
 #if HAVE_CUDA
+#if USE_HIP
+#include <opm/simulators/linalg/hipistl/SolverAdapter.hpp>
+#else
 #include <opm/simulators/linalg/cuistl/SolverAdapter.hpp>
+#endif
 #endif
 
 namespace Dune

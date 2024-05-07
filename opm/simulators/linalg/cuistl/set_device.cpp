@@ -28,7 +28,7 @@ setDevice(int mpiRank, [[maybe_unused]] int numberOfMpiRanks)
 {
 
     int deviceCount = -1;
-    cudaGetDeviceCount(&deviceCount);
+    [[maybe_unused]] auto cuError = cudaGetDeviceCount(&deviceCount);
 
     if (deviceCount <= 0) {
         // If they have CUDA enabled (ie. using a component that needs CUDA, eg. cubicgstab or CUILU0), this will fail
