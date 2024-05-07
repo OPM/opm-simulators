@@ -28,6 +28,7 @@
 
 #include <opm/simulators/flow/SubDomain.hpp>
 
+#include <algorithm>
 #include <stdexcept>
 #include <string>
 
@@ -624,9 +625,9 @@ namespace Opm
             max_residual_allowed_ = Parameters::get<TypeTag, Properties::MaxResidualAllowed>();
             relaxed_max_pv_fraction_ = Parameters::get<TypeTag, Properties::RelaxedMaxPvFraction>();
             tolerance_mb_ = Parameters::get<TypeTag, Properties::ToleranceMb>();
-            tolerance_mb_relaxed_ = Parameters::get<TypeTag, Properties::ToleranceMbRelaxed>();
+            tolerance_mb_relaxed_ = std::max(tolerance_mb_, Parameters::get<TypeTag, Properties::ToleranceMbRelaxed>());
             tolerance_cnv_ = Parameters::get<TypeTag, Properties::ToleranceCnv>();
-            tolerance_cnv_relaxed_ = Parameters::get<TypeTag, Properties::ToleranceCnvRelaxed>();
+            tolerance_cnv_relaxed_ = std::max(tolerance_cnv_, Parameters::get<TypeTag, Properties::ToleranceCnvRelaxed>());
             tolerance_wells_ = Parameters::get<TypeTag, Properties::ToleranceWells>();
             tolerance_well_control_ = Parameters::get<TypeTag, Properties::ToleranceWellControl>();
             max_welleq_iter_ = Parameters::get<TypeTag, Properties::MaxWelleqIter>();
