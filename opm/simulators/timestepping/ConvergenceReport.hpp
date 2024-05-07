@@ -53,6 +53,10 @@ namespace Opm
             NotANumber = 3,
         };
 
+        using CnvPvSplit = std::pair<
+            std::vector<double>,
+            std::vector<int>>;
+
         class ReservoirFailure
         {
         public:
@@ -164,11 +168,11 @@ namespace Opm
             wellGroupTargetsViolated_ = wellGroupTargetsViolated;
         }
 
-        void setPoreVolCnvViolationFraction(const double cnvErrorPvFraction,
-                                            const double cnvErrorPvFractionDenom)
+        void setCnvPoreVolSplit(const CnvPvSplit& cnvPvSplit,
+                                const double eligiblePoreVolume)
         {
-            this->pvFracCnvViol_ = cnvErrorPvFraction;
-            this->pvFracCnvViolDenom_ = cnvErrorPvFractionDenom;
+            this->cnvPvSplit_ = cnvPvSplit;
+            this->eligiblePoreVolume_ = eligiblePoreVolume;
         }
 
         ConvergenceReport& operator+=(const ConvergenceReport& other)
@@ -182,18 +186,16 @@ namespace Opm
             assert(wellFailed() != well_failures_.empty());
             wellGroupTargetsViolated_ = (wellGroupTargetsViolated_ || other.wellGroupTargetsViolated_);
 
-            if ((this->pvFracCnvViolDenom_ > 0.0) ||
-                (other.pvFracCnvViolDenom_ > 0.0))
-            {
-                this->pvFracCnvViol_ = (this->pvFracCnvViol_ * this->pvFracCnvViolDenom_ +
-                                        other.pvFracCnvViol_ * other.pvFracCnvViolDenom_)
-                    / (this->pvFracCnvViolDenom_ + other.pvFracCnvViolDenom_);
-
-                this->pvFracCnvViolDenom_ += other.pvFracCnvViolDenom_;
-            }
-            else {
-                this->pvFracCnvViol_ = 0.0;
-                this->pvFracCnvViolDenom_  = 0.0;
+            // Note regarding the CNV pore-volume split: We depend on the
+            // fact that the quantities have already been aggregated across
+            // all MPI ranks--see the implementation of member function
+            // BlackoilModel::getReservoirConvergence() for details--and are
+            // therefore equal on all ranks.  Consequently, we simply assign
+            // 'other's values here, if it is non-empty.  Empty splits
+            // typically come from well contributions.
+            if (! other.cnvPvSplit_.first.empty()) {
+                this->cnvPvSplit_ = other.cnvPvSplit_;
+                this->eligiblePoreVolume_ = other.eligiblePoreVolume_;
             }
 
             return *this;
@@ -206,14 +208,14 @@ namespace Opm
             return reportTime_;
         }
 
-        double cnvViolatedPvFraction() const
+        double eligiblePoreVolume() const
         {
-            return this->pvFracCnvViol_;
+            return this->eligiblePoreVolume_;
         }
 
-        std::pair<double, double> cnvViolatedPvFractionPack() const
+        const CnvPvSplit& cnvPvSplit() const
         {
-            return { this->pvFracCnvViol_, this->pvFracCnvViolDenom_ };
+            return this->cnvPvSplit_;
         }
 
         bool converged() const
@@ -270,8 +272,8 @@ namespace Opm
         std::vector<WellFailure> well_failures_;
         std::vector<ReservoirConvergenceMetric> res_convergence_;
         bool wellGroupTargetsViolated_;
-        double pvFracCnvViol_{};
-        double pvFracCnvViolDenom_{};
+        CnvPvSplit cnvPvSplit_{};
+        double eligiblePoreVolume_{};
     };
 
     struct StepReport

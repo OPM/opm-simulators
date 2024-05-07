@@ -62,10 +62,12 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <functional>
 #include <iomanip>
 #include <ios>
 #include <limits>
 #include <memory>
+#include <numeric>
 #include <sstream>
 #include <tuple>
 #include <utility>
@@ -824,57 +826,88 @@ namespace Opm {
         }
 
 
-        /// \brief Compute the total pore volume of cells violating CNV that are not part
-        ///        of a numerical aquifer.
-        Scalar computeCnvErrorPv(const std::vector<Scalar>& B_avg, double dt)
+        /// \brief Compute pore-volume/cell count split among "converged",
+        /// "relaxed converged", "unconverged" cells based on CNV point
+        /// measures.
+        std::pair<std::vector<double>, std::vector<int>>
+        characteriseCnvPvSplit(const std::vector<Scalar>& B_avg, const double dt)
         {
             OPM_TIMEBLOCK(computeCnvErrorPv);
-            Scalar errorPV{};
-            const auto& model = simulator_.model();
-            const auto& problem = simulator_.problem();
-            const auto& residual = simulator_.model().linearizer().residual();
-            const auto& gridView = simulator().gridView();
-            ElementContext elemCtx(simulator_);
-            IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
+
+            // 0: cnv <= tolerance_cnv
+            // 1: tolerance_cnv < cnv <= tolerance_cnv_relaxed
+            // 2: tolerance_cnv_relaxed < cnv
+            constexpr auto numPvGroups = std::vector<double>::size_type{3};
+
+            auto cnvPvSplit = std::pair<std::vector<double>, std::vector<int>> {
+                std::piecewise_construct,
+                std::forward_as_tuple(numPvGroups),
+                std::forward_as_tuple(numPvGroups)
+            };
+
+            auto maxCNV = [&B_avg, dt](const auto& residual, const double pvol)
+            {
+                return (dt / pvol) *
+                    std::inner_product(residual.begin(), residual.end(),
+                                       B_avg.begin(), Scalar{0},
+                                       [](const Scalar m, const auto& x)
+                                       {
+                                           using std::abs;
+                                           return std::max(m, abs(x));
+                                       }, std::multiplies<>{});
+            };
+
+            auto& [splitPV, cellCntPV] = cnvPvSplit;
+
+            const auto& model = this->simulator().model();
+            const auto& problem = this->simulator().problem();
+            const auto& residual = model.linearizer().residual();
+            const auto& gridView = this->simulator().gridView();
+
+            const IsNumericalAquiferCell isNumericalAquiferCell(gridView.grid());
+
+            ElementContext elemCtx(this->simulator());
 
             OPM_BEGIN_PARALLEL_TRY_CATCH();
-            for (const auto& elem : elements(gridView, Dune::Partitions::interior))
-            {
+            for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
                 // Skip cells of numerical Aquifer
-                if (isNumericalAquiferCell(elem))
-                {
+                if (isNumericalAquiferCell(elem)) {
                     continue;
                 }
+
                 elemCtx.updatePrimaryStencil(elem);
-                // elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
+
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const Scalar pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) * model.dofTotalVolume(cell_idx);
-                const auto& cellResidual = residual[cell_idx];
-                bool cnvViolated = false;
+                const auto pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0)
+                    * model.dofTotalVolume(cell_idx);
 
-                for (unsigned eqIdx = 0; eqIdx < cellResidual.size(); ++eqIdx)
-                {
-                    using std::abs;
-                    Scalar CNV = cellResidual[eqIdx] * dt * B_avg[eqIdx] / pvValue;
-                    cnvViolated = cnvViolated || (abs(CNV) > param_.tolerance_cnv_);
-                }
+                const auto maxCnv = maxCNV(residual[cell_idx], pvValue);
 
-                if (cnvViolated)
-                {
-                    errorPV += pvValue;
-                }
+                const auto ix = (maxCnv > this->param_.tolerance_cnv_)
+                    + (maxCnv > this->param_.tolerance_cnv_relaxed_);
+
+                splitPV[ix] += static_cast<double>(pvValue);
+                ++cellCntPV[ix];
             }
 
-            OPM_END_PARALLEL_TRY_CATCH("BlackoilModel::ComputeCnvError() failed: ", grid_.comm());
+            OPM_END_PARALLEL_TRY_CATCH("BlackoilModel::characteriseCnvPvSplit() failed: ",
+                                       this->grid_.comm());
 
-            return grid_.comm().sum(errorPV);
+            this->grid_.comm().sum(splitPV  .data(), splitPV  .size());
+            this->grid_.comm().sum(cellCntPV.data(), cellCntPV.size());
+
+            return cnvPvSplit;
         }
 
 
-        void updateTUNING(const Tuning& tuning) {
-            param_.tolerance_mb_ = tuning.XXXMBE;
-            if ( terminal_output_ ) {
-                OpmLog::debug(fmt::format("Setting BlackoilModel mass balance limit (XXXMBE) to {:.2e}", tuning.XXXMBE));
+        void updateTUNING(const Tuning& tuning)
+        {
+            this->param_.tolerance_mb_ = tuning.XXXMBE;
+
+            if (terminal_output_) {
+                OpmLog::debug(fmt::format("Setting BlackoilModel mass "
+                                          "balance limit (XXXMBE) to {:.2e}",
+                                          tuning.XXXMBE));
             }
         }
 
@@ -889,54 +922,93 @@ namespace Opm {
             OPM_TIMEBLOCK(getReservoirConvergence);
             using Vector = std::vector<Scalar>;
 
+            ConvergenceReport report{reportTime};
+
             const int numComp = numEq;
-            Vector R_sum(numComp, 0.0 );
-            Vector maxCoeff(numComp, std::numeric_limits< Scalar >::lowest() );
+
+            Vector R_sum(numComp, Scalar{0});
+            Vector maxCoeff(numComp, std::numeric_limits<Scalar>::lowest());
             std::vector<int> maxCoeffCell(numComp, -1);
-            const auto [ pvSumLocal, numAquiferPvSumLocal] =
+
+            const auto [pvSumLocal, numAquiferPvSumLocal] =
                 this->localConvergenceData(R_sum, maxCoeff, B_avg, maxCoeffCell);
 
             // compute global sum and max of quantities
-            const auto [ pvSum, numAquiferPvSum ] =
-                convergenceReduction(grid_.comm(), pvSumLocal,
-                                     numAquiferPvSumLocal,
-                                     R_sum, maxCoeff, B_avg);
+            const auto& [pvSum, numAquiferPvSum] =
+                this->convergenceReduction(this->grid_.comm(),
+                                           pvSumLocal,
+                                           numAquiferPvSumLocal,
+                                           R_sum, maxCoeff, B_avg);
 
-            const auto cnvErrorPvFraction =
-                computeCnvErrorPv(B_avg, dt)
-                / (pvSum - numAquiferPvSum);
+            report.setCnvPoreVolSplit(this->characteriseCnvPvSplit(B_avg, dt),
+                                      pvSum - numAquiferPvSum);
 
-            // For each iteration, we need to determine whether to use the relaxed tolerances.
-            // To disable the usage of relaxed tolerances, you can set the relaxed tolerances as the strict tolerances.
+            // For each iteration, we need to determine whether to use the
+            // relaxed tolerances.  To disable the usage of relaxed
+            // tolerances, you can set the relaxed tolerances as the strict
+            // tolerances.  If min_strict_mb_iter = -1 (default) we use a
+            // relaxed tolerance for the mass balance for the last
+            // iterations.  For positive values we use the relaxed tolerance
+            // after the given number of iterations
+            const bool relax_final_iteration_mb =
+                (this->param_.min_strict_mb_iter_ < 0)
+                && (iteration == maxIter);
 
-            // If min_strict_mb_iter = -1 (default) we use a relaxed tolerance for the mass balance for the last iterations
-            // For positive values we use the relaxed tolerance after the given number of iterations
-            const bool relax_final_iteration_mb = (param_.min_strict_mb_iter_ < 0) && (iteration == maxIter);
-            const bool use_relaxed_mb = relax_final_iteration_mb || (param_.min_strict_mb_iter_ >= 0 && iteration >= param_.min_strict_mb_iter_);
+            const bool use_relaxed_mb = relax_final_iteration_mb ||
+                ((this->param_.min_strict_mb_iter_ >= 0) &&
+                 (iteration >= this->param_.min_strict_mb_iter_));
 
+            // If min_strict_cnv_iter = -1 we use a relaxed tolerance for
+            // the cnv for the last iterations.  For positive values we use
+            // the relaxed tolerance after the given number of iterations.
+            // We also use relaxed tolerances for cells with total
+            // pore-volume less than relaxed_max_pv_fraction_.  Default
+            // value of relaxed_max_pv_fraction_ is 0.03
+            const bool relax_final_iteration_cnv =
+                (this->param_.min_strict_cnv_iter_ < 0)
+                && (iteration == maxIter);
 
-            // If min_strict_cnv_iter = -1 we use a relaxed tolerance for the cnv for the last iterations
-            // For positive values we use the relaxed tolerance after the given number of iterations
-            // We also use relaxed tolerances for cells with total poro volume less than relaxed_max_pv_fraction_
-            // Default value of relaxed_max_pv_fraction_ is 0.03
-            const bool relax_final_iteration_cnv = (param_.min_strict_cnv_iter_ < 0) && (iteration == maxIter);
-            const bool relax_iter_cnv = param_.min_strict_cnv_iter_ >= 0 && iteration >= param_.min_strict_cnv_iter_;
-            const bool relax_pv_fraction_cnv = cnvErrorPvFraction < param_.relaxed_max_pv_fraction_;
-            const bool use_relaxed_cnv = relax_final_iteration_cnv || relax_pv_fraction_cnv || relax_iter_cnv;
+            const bool relax_iter_cnv = (this->param_.min_strict_cnv_iter_ >= 0)
+                && (iteration >= this->param_.min_strict_cnv_iter_);
 
-            if (relax_final_iteration_mb || relax_final_iteration_cnv) {
-                if ( terminal_output_ ) {
-                    std::string message = "Number of newton iterations reached its maximum try to continue with relaxed tolerances:";
-                    if (relax_final_iteration_mb)
-                        message += fmt::format("  MB: {:.1e}", param_.tolerance_mb_relaxed_);
-                    if (relax_final_iteration_cnv)
-                        message += fmt::format(" CNV: {:.1e}", param_.tolerance_cnv_relaxed_);
+            // Note trailing parentheses here, just before the final
+            // semicolon.  This is an immediately invoked function
+            // expression which calculates a single boolean value.
+            const auto relax_pv_fraction_cnv =
+                [&report, pvSum, numAquiferPvSum, this]()
+            {
+                const auto& cnvPvSplit = report.cnvPvSplit().first;
 
-                    OpmLog::debug(message);
+                // [1]: tol < cnv <= relaxed
+                // [2]: relaxed < cnv
+                return static_cast<Scalar>(cnvPvSplit[1] + cnvPvSplit[2]) <
+                    this->param_.relaxed_max_pv_fraction_ * (pvSum - numAquiferPvSum);
+            }();
+
+            const bool use_relaxed_cnv = relax_final_iteration_cnv
+                || relax_pv_fraction_cnv
+                || relax_iter_cnv;
+
+            if ((relax_final_iteration_mb || relax_final_iteration_cnv) &&
+                this->terminal_output_)
+            {
+                std::string message =
+                    "Number of newton iterations reached its maximum "
+                    "try to continue with relaxed tolerances:";
+
+                if (relax_final_iteration_mb) {
+                    message += fmt::format("  MB: {:.1e}", param_.tolerance_mb_relaxed_);
                 }
+
+                if (relax_final_iteration_cnv) {
+                    message += fmt::format(" CNV: {:.1e}", param_.tolerance_cnv_relaxed_);
+                }
+
+                OpmLog::debug(message);
             }
-            const Scalar tol_cnv = use_relaxed_cnv ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
-            const Scalar tol_mb  = use_relaxed_mb ? param_.tolerance_mb_relaxed_ : param_.tolerance_mb_;
+
+            const auto tol_cnv = use_relaxed_cnv ? param_.tolerance_cnv_relaxed_ : param_.tolerance_cnv_;
+            const auto tol_mb  = use_relaxed_mb ? param_.tolerance_mb_relaxed_ : param_.tolerance_mb_;
 
             // Finish computation
             std::vector<Scalar> CNV(numComp);
@@ -948,43 +1020,48 @@ namespace Opm {
                 residual_norms.push_back(CNV[compIdx]);
             }
 
-            // Create convergence report.
-            ConvergenceReport report{reportTime};
-            report.setPoreVolCnvViolationFraction(cnvErrorPvFraction, pvSum - numAquiferPvSum);
-
             using CR = ConvergenceReport;
             for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                const Scalar res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
-                const CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
-                                                        CR::ReservoirFailure::Type::Cnv };
-                const Scalar tol[2] = { tol_mb, tol_cnv };
+                const Scalar res[2] = {
+                    mass_balance_residual[compIdx], CNV[compIdx],
+                };
+
+                const CR::ReservoirFailure::Type types[2] = {
+                    CR::ReservoirFailure::Type::MassBalance,
+                    CR::ReservoirFailure::Type::Cnv,
+                };
+
+                const Scalar tol[2] = { tol_mb, tol_cnv, };
 
                 for (int ii : {0, 1}) {
                     if (std::isnan(res[ii])) {
                         report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
-                        if ( terminal_output_ ) {
+                        if (this->terminal_output_) {
                             OpmLog::debug("NaN residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
-                    } else if (res[ii] > maxResidualAllowed()) {
+                    }
+                    else if (res[ii] > maxResidualAllowed()) {
                         report.setReservoirFailed({types[ii], CR::Severity::TooLarge, compIdx});
-                        if ( terminal_output_ ) {
+                        if (this->terminal_output_) {
                             OpmLog::debug("Too large residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
-                    } else if (res[ii] < 0.0) {
+                    }
+                    else if (res[ii] < 0.0) {
                         report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
-                        if ( terminal_output_ ) {
+                        if (this->terminal_output_) {
                             OpmLog::debug("Negative residual for " + this->compNames_.name(compIdx) + " equation.");
                         }
-                    } else if (res[ii] > tol[ii]) {
+                    }
+                    else if (res[ii] > tol[ii]) {
                         report.setReservoirFailed({types[ii], CR::Severity::Normal, compIdx});
                     }
+
                     report.setReservoirConvergenceMetric(types[ii], compIdx, res[ii]);
                 }
             }
 
             // Output of residuals.
-            if ( terminal_output_ )
-            {
+            if (this->terminal_output_) {
                 // Only rank 0 does print to std::cout
                 if (iteration == 0) {
                     std::string msg = "Iter";
@@ -993,25 +1070,32 @@ namespace Opm {
                         msg += this->compNames_.name(compIdx)[0];
                         msg += ")  ";
                     }
+
                     for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                         msg += "    CNV(";
                         msg += this->compNames_.name(compIdx)[0];
                         msg += ") ";
                     }
+
                     OpmLog::debug(msg);
                 }
+
                 std::ostringstream ss;
                 const std::streamsize oprec = ss.precision(3);
                 const std::ios::fmtflags oflags = ss.setf(std::ios::scientific);
+
                 ss << std::setw(4) << iteration;
                 for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                     ss << std::setw(11) << mass_balance_residual[compIdx];
                 }
+
                 for (int compIdx = 0; compIdx < numComp; ++compIdx) {
                     ss << std::setw(11) << CNV[compIdx];
                 }
+
                 ss.precision(oprec);
                 ss.flags(oflags);
+
                 OpmLog::debug(ss.str());
             }
 
