@@ -27,8 +27,8 @@
         "signature": "get_dt() -> float",
         "doc": "Get the timestep size of the last completed step.\n\n:return: Timestep size in days.\n:type return: float"
     },
-    "getFluidStateVariables": {
-        "signature": "get_fluid_state_variables(name: str) -> NDArray[float]",
+    "getFluidStateVariable": {
+        "signature": "get_fluid_state_variable(name: str) -> NDArray[float]",
         "doc": "Retrieve a fluid state variable for the simulation grid.\n\n:param name: The name of the variable. Valid names are 'pw' (pressure water), 'pg' (pressure gas), 'po' (pressure oil), 'rho_w' (density water), 'rho_g' (density gas), 'rho_o' (density oil)'Rs' (soultion gas-oil ratio), 'Rv' (volatile gas-oil ratio), 'Sw' (water saturation), 'Sg' (gas saturation), 'So' (oil saturation), and 'T' (temperature).\n:type name: str\n\n:return: An array of fluid state variables.\n:type return: NDArray[float]"
     },
     "getPorosity": {
