@@ -404,7 +404,6 @@ namespace Opm
                                                water_flux_s, deferred_logger);
                 }
             }
-            const int cell_idx = this->well_cells_[perf];
             for (int componentIdx = 0; componentIdx < this->num_components_; ++componentIdx) {
                 // the cq_s entering mass balance equations need to consider the efficiency factors.
                 const EvalWell cq_s_effective = cq_s[componentIdx] * this->well_efficiency_factor_;
@@ -414,7 +413,7 @@ namespace Opm
                 StandardWellAssemble<FluidSystem,Indices>(*this).
                     assemblePerforationEq(cq_s_effective,
                                           componentIdx,
-                                          cell_idx,
+                                          perf,
                                           this->primary_variables_.numWellEq(),
                                           this->linSys_);
 
@@ -430,7 +429,7 @@ namespace Opm
             if constexpr (has_zFraction) {
                 StandardWellAssemble<FluidSystem,Indices>(*this).
                     assembleZFracEq(cq_s_zfrac_effective,
-                                    cell_idx,
+                                    perf,
                                     this->primary_variables_.numWellEq(),
                                     this->linSys_);
             }
@@ -2132,7 +2131,7 @@ namespace Opm
                                       eq_wat_vel,
                                       pskin_index,
                                       wat_vel_index,
-                                      cell_idx,
+                                      perf,
                                       this->primary_variables_.numWellEq(),
                                       this->linSys_);
     }

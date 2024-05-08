@@ -78,8 +78,8 @@ init(const int num_cells,
         }
         duneD_.setSize(well_.numberOfSegments(), well_.numberOfSegments(), nnz_d);
     }
-    duneB_.setSize(well_.numberOfSegments(), num_cells, numPerfs);
-    duneC_.setSize(well_.numberOfSegments(), num_cells, numPerfs);
+    duneB_.setSize(well_.numberOfSegments(), numPerfs, numPerfs);
+    duneC_.setSize(well_.numberOfSegments(), numPerfs, numPerfs);
 
     // we need to add the off diagonal ones
     for (auto row = duneD_.createbegin(),
@@ -108,8 +108,7 @@ init(const int num_cells,
               end = duneC_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            const int cell_idx = cells[perf];
-            row.insert(cell_idx);
+            row.insert(perf);
         }
     }
 
@@ -118,8 +117,7 @@ init(const int num_cells,
               end = duneB_.createend(); row != end; ++row) {
         // the number of the row corresponds to the segment number now.
         for (const int& perf : perforations[row.index()]) {
-            const int cell_idx = cells[perf];
-            row.insert(cell_idx);
+            row.insert(perf);
         }
     }
 

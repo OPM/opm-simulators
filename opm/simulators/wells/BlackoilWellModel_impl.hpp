@@ -229,6 +229,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     linearize(SparseMatrixAdapter& jacobian, GlobalEqVector& res)
     {
+        GlobalEqVector res_local;
+
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (const auto& well: well_container_) {
             // Modifiy the Jacobian with explicit Schur complement
@@ -238,7 +240,19 @@ namespace Opm {
             }
             // Apply as Schur complement the well residual to reservoir residuals:
             // r = r - duneC_^T * invDuneD_ * resWell_
-            well->apply(res);
+            // Well equations B and C uses only the perforated cells, so need to apply on local residual
+            auto cells = well->cells();
+            res_local.resize(cells.size());
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                res_local[i] = res[cells[i]];
+            }
+
+            well->apply(res_local);
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                res[cells[i]] = res_local[i];
+            }
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::linearize failed: ",
                                    simulator_.gridView().comm());
@@ -250,6 +264,8 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     linearizeDomain(const Domain& domain, SparseMatrixAdapter& jacobian, GlobalEqVector& res)
     {
+        GlobalEqVector res_local;
+
         // Note: no point in trying to do a parallel gathering
         // try/catch here, as this function is not called in
         // parallel but for each individual domain of each rank.
@@ -262,7 +278,19 @@ namespace Opm {
                 }
                 // Apply as Schur complement the well residual to reservoir residuals:
                 // r = r - duneC_^T * invDuneD_ * resWell_
-                well->apply(res);
+                // Well equations B and C uses only the perforated cells, so need to apply on local residual
+                auto cells = well->cells();
+                res_local.resize(cells.size());
+
+                for (size_t i = 0; i < cells.size(); ++i) {
+                    res_local[i] = res[cells[i]];
+                }
+
+                well->apply(res_local);
+
+                for (size_t i = 0; i < cells.size(); ++i) {
+                    res[cells[i]] = res_local[i];
+                }
             }
         }
     }
@@ -1712,8 +1740,20 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     apply(BVector& r) const
     {
+        BVector r_local;
         for (auto& well : well_container_) {
-            well->apply(r);
+            auto cells = well->cells();
+            r_local.resize(cells.size());
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                r_local[i] = r[cells[i]];
+            }
+
+            well->apply(r_local);
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                r[cells[i]] = r_local[i];
+            }
         }
     }
 
@@ -1724,8 +1764,26 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     apply(const BVector& x, BVector& Ax) const
     {
+        BVector x_local;
+        BVector Ax_local;
+
         for (auto& well : well_container_) {
-            well->apply(x, Ax);
+            // Well equations B and C uses only the perforated cells, so need to apply on local vectors
+            auto cells = well->cells();
+            x_local.resize(cells.size());
+            Ax_local.resize(cells.size());
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                x_local[i] = x[cells[i]];
+                Ax_local[i] = Ax[cells[i]];
+            }
+
+            well->apply(x_local, Ax_local);
+
+            for (size_t i = 0; i < cells.size(); ++i) {
+                // only need to update Ax
+                Ax[cells[i]] = Ax_local[i];
+            }
         }
     }
 
