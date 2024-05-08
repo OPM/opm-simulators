@@ -13,7 +13,7 @@
 
 # Mandatory call to project
 
-cmake_minimum_required (VERSION 3.21)
+cmake_minimum_required (VERSION 3.10)
 
 project(opm-simulators C CXX)
 
@@ -35,7 +35,8 @@ option(USE_BDA_BRIDGE "Enable the BDA bridge (GPU/AMGCL solvers)" ON)
 option(USE_TRACY_PROFILER "Enable tracy profiling" OFF)
 option(CONVERT_CUDA_TO_HIP "Convert CUDA code to HIP (to run on AMD cards)" OFF)
 
-if (CONVERT_CUDA_TO_HIP)
+# HIP requires cmake version 3.21
+if (CONVERT_CUDA_TO_HIP AND CMAKE_VERSION VERSION_GREATER_EQUAL "3.21")
   enable_language(HIP)
   message("CUDA code will be hipified")
   set(HAVE_CUDA 1) # we still need this defined so that the preprocessor does not remove the code
