@@ -441,6 +441,9 @@ template<class Scalar> class WellContributions;
             // Keep track of the domain of each well, if using subdomains.
             std::map<std::string, int> well_domain_;
 
+            // Store the global index of the cells in the domain, if using sumdomains
+            std::vector<std::vector<int>> domains_cells_;
+
             const Grid& grid() const
             { return simulator_.vanguard().grid(); }
 
