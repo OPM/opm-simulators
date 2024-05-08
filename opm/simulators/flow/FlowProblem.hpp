@@ -2041,8 +2041,6 @@ protected:
         // the PLMIX region numbers (polymer model)
         this->updatePlmixnum_();
 
-        // directional relative permeabilities
-        this->updateKrnum_();
         OPM_END_PARALLEL_TRY_CATCH("Invalid region numbers: ", vanguard.gridView().comm());
         ////////////////////////////////
         // porosity
