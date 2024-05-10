@@ -256,11 +256,6 @@ public:
         return *globalTrans_;
     }
 
-    void releaseGlobalTransmissibility()
-    {
-        globalTrans_.reset();
-    }
-
     const std::vector<int>& globalCell()
     {
         return cartesianCellId_;
