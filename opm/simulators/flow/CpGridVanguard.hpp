@@ -212,11 +212,6 @@ public:
         return *globalTrans_;
     }
 
-    void releaseGlobalTransmissibility()
-    {
-        globalTrans_.reset();
-    }
-
     /*!
      * \brief Distribute the simulation grid over multiple processes
      *
