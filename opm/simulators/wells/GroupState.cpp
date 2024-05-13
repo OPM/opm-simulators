@@ -114,26 +114,6 @@ GroupState::update_well_group_thp(const std::string& gname, const double& thp)
 }
 
 template<class Scalar>
-double GroupState<Scalar>::
-GroupState::well_group_thp(const std::string& gname) const 
-{
-    auto group_iter = this->group_thp.find(gname);
-    if (group_iter == this->group_thp.end())
-        throw std::logic_error("No such group");
-
-    return group_iter->second;
-}
-
-//-------------------------------------------------------------------------
-
-template<class Scalar>
-void GroupState<Scalar>::
-GroupState::update_well_group_thp(const std::string& gname, const double& thp) 
-{
-    this->group_thp[gname] = thp;
-}
-
-template<class Scalar>
 Scalar GroupState<Scalar>::
 GroupState::well_group_thp(const std::string& gname) const 
 {
@@ -142,6 +122,13 @@ GroupState::well_group_thp(const std::string& gname) const
         throw std::logic_error("No such group");
 
     return group_iter->second;
+}
+
+template<class Scalar>
+bool GroupState<Scalar>::
+GroupState::is_autochoke_group(const std::string& gname) const
+{
+    return (this->group_thp.count(gname) > 0);
 }
 
 //-------------------------------------------------------------------------

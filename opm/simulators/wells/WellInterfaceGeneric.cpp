@@ -519,7 +519,7 @@ WellInterfaceGeneric<Scalar>::getDynamicThpLimit() const
 }
 
 template<class Scalar>
-void WellInterfaceGeneric::
+void WellInterfaceGeneric<Scalar>::
 setDynamicThpLimit(const std::optional<Scalar> thp_limit)
 {
     dynamic_thp_limit_ = thp_limit;

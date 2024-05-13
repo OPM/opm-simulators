@@ -37,6 +37,7 @@ FractionCalculator<Scalar>::
 FractionCalculator(const Schedule& schedule,
                    const WellState<Scalar>& well_state,
                    const GroupState<Scalar>& group_state,
+                   const SummaryState& summary_state,
                    const int report_step,
                    const GuideRate* guide_rate,
                    const GuideRateModel::Target target,
@@ -46,6 +47,7 @@ FractionCalculator(const Schedule& schedule,
     : schedule_(schedule)
     , well_state_(well_state)
     , group_state_(group_state)
+    , summary_state_(summary_state)
     , report_step_(report_step)
     , guide_rate_(guide_rate)
     , target_(target)
@@ -123,6 +125,7 @@ guideRateSum(const Group& group,
             total_guide_rate += guideRate(child_group, always_included_child);
         }
     }
+
     for (const std::string& child_well : group.wells()) {
         bool included = (child_well == always_included_child);
         if (is_producer_) {
@@ -147,7 +150,7 @@ guideRate(const std::string& name,
         return WellGroupHelpers<Scalar>::getGuideRate(name, schedule_, well_state_, group_state_,
                                                       report_step_, guide_rate_, target_, pu_);
     } else {
-        if (groupControlledWells(name, always_included_child) > 0) {
+        if ((groupControlledWells(name, always_included_child) > 0)) {
             if (is_producer_ && guide_rate_->has(name)) {
                 return guide_rate_->get(name, target_, getGroupRateVector(name));
             } else if (!is_producer_ && guide_rate_->has(name, injection_phase_)) {
@@ -174,6 +177,7 @@ groupControlledWells(const std::string& group_name,
     return WellGroupHelpers<Scalar>::groupControlledWells(schedule_,
                                                           well_state_,
                                                           this->group_state_,
+                                                          this->summary_state_,
                                                           report_step_,
                                                           group_name,
                                                           always_included_child,

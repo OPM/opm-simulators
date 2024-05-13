@@ -151,6 +151,7 @@ getGroupInjectionControl(const Group& group,
     WGHelpers::FractionCalculator fcalc(schedule,
                                         well_state,
                                         group_state,
+                                        summaryState,
                                         well_.currentStep(),
                                         well_.guideRate(),
                                         tcalc.guideTargetMode(),
@@ -284,6 +285,7 @@ getGroupInjectionTargetRate(const Group& group,
     WGHelpers::FractionCalculator fcalc(schedule,
                                         well_state,
                                         group_state,
+                                        summaryState,
                                         well_.currentStep(),
                                         well_.guideRate(),
                                         tcalc.guideTargetMode(),
@@ -401,6 +403,7 @@ getGroupProductionControl(const Group& group,
     WGHelpers::FractionCalculator fcalc(schedule,
                                         well_state,
                                         group_state,
+                                        summaryState,
                                         well_.currentStep(),
                                         well_.guideRate(),
                                         tcalc.guideTargetMode(),
@@ -499,6 +502,7 @@ getGroupProductionTargetRate(const Group& group,
     WGHelpers::FractionCalculator fcalc(schedule,
                                         well_state,
                                         group_state,
+                                        summaryState,
                                         well_.currentStep(),
                                         well_.guideRate(),
                                         tcalc.guideTargetMode(),
@@ -525,14 +529,17 @@ getGroupProductionTargetRate(const Group& group,
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
     Scalar target = orig_target;
+    std::cout << "target: " << target*86400 << " time: " << well_.currentStep() << " orig" << std::endl;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
             // Apply local reductions only at the control level
             // (top) and for levels where we have a specified
             // group guide rate.
             target -= localReduction(chain[ii]);
+             std::cout << "ii: " << ii << " group: " << chain[ii] << " LocRed:" << localReduction(chain[ii])*86400 << " target: " << target*86400 << std::endl;
         }
         target *= localFraction(chain[ii+1]);
+        std::cout << "ii: " << ii << " group: " << chain[ii+1] << " LocFrac: " << localFraction(chain[ii+1]) << " target: " << target*86400 << std::endl;
     }
     // Avoid negative target rates coming from too large local reductions.
     const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
@@ -547,6 +554,116 @@ getGroupProductionTargetRate(const Group& group,
     if (current_rate > 1e-14)
         scale = target_rate / current_rate;
     return scale;
+}
+
+template<class Scalar>
+std::pair<Scalar, Group::ProductionCMode> WellGroupControls<Scalar>::
+getAutoChokeGroupProductionTargetRate(const std::string& name,
+                                      const Group& group,
+                                      const WellState<Scalar>& well_state,
+                                      const GroupState<Scalar>& group_state,
+                                      const Schedule& schedule,
+                                      const SummaryState& summaryState,
+                                      const std::vector<Scalar>& resv_coeff,
+                                      Scalar efficiencyFactor,
+                                      const int reportStepIdx,
+                                      const PhaseUsage& pu,
+                                      const GuideRate* guideRate,
+                                      DeferredLogger& deferred_logger)
+{
+    const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
+    if (currentGroupControl == Group::ProductionCMode::FLD ||
+        currentGroupControl == Group::ProductionCMode::NONE) {
+        if (!group.productionGroupControlAvailable()) {
+            return std::make_pair(1.0, currentGroupControl);
+        } else {
+            // Produce share of parents control
+            const auto& parent = schedule.getGroup(group.parent(), reportStepIdx);
+            efficiencyFactor *= group.getGroupEfficiencyFactor();
+            return getAutoChokeGroupProductionTargetRate(name, parent, well_state, group_state,
+                                                schedule, summaryState,
+                                                resv_coeff, efficiencyFactor, reportStepIdx, pu,
+                                                guideRate, deferred_logger);
+        }
+    }
+
+    if (!group.isProductionGroup()) {
+        return std::make_pair(1.0, currentGroupControl);
+    }
+
+    // If we are here, we are at the topmost group to be visited in the recursion.
+    // This is the group containing the control we will check against.
+
+    // Make conversion factors for RESV <-> surface rates.
+    // std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    // rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+
+    // gconsale may adjust the grat target.
+    // the adjusted rates is send to the targetCalculator
+    Scalar gratTargetFromSales = 0.0;
+    if (group_state.has_grat_sales_target(group.name()))
+        gratTargetFromSales = group_state.grat_sales_target(group.name());
+
+    WGHelpers::TargetCalculator tcalc(currentGroupControl,
+                                      pu,
+                                      resv_coeff,
+                                      gratTargetFromSales,
+                                      group.name(),
+                                      group_state,
+                                      group.has_gpmaint_control(currentGroupControl));
+
+    WGHelpers::FractionCalculator fcalc(schedule,
+                                        well_state,
+                                        group_state,
+                                        summaryState,
+                                        reportStepIdx,
+                                        guideRate,
+                                        tcalc.guideTargetMode(),
+                                        pu,
+                                        true,
+                                        Phase::OIL);
+
+    auto localFraction = [&](const std::string& child) {
+        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
+    };
+
+    auto localReduction = [&](const std::string& group_name) {
+        const std::vector<Scalar>& groupTargetReductions = group_state.production_reduction_rates(group_name);
+        return tcalc.calcModeRateFromRates(groupTargetReductions);
+    };
+
+    std::optional<Group::ProductionControls> ctrl;
+    if (!group.has_gpmaint_control(currentGroupControl))
+        ctrl = group.productionControls(summaryState);
+
+    // Scalar fr_true = fcalc.fraction("B1", "M5S", true);
+    // fr_true = fcalc.fraction("B1", "M5S", true);
+    // Scalar fr_false = fcalc.fraction("B1", "M5S", false);
+    // fr_false = fcalc.fraction("B1", "M5S", false);
+    // std::cout << "fr_true: " << fr_true << " fr_false: " << fr_false << std::endl;
+
+    const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
+    const auto chain = WellGroupHelpers<Scalar>::groupChainTopBot(name, group.name(),
+                                                                  schedule, reportStepIdx);
+    // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
+    const std::size_t num_ancestors = chain.size() - 1;
+    double target = orig_target;
+    std::cout << "target: " << target*86400 << " time: " << reportStepIdx << " modified" << std::endl;
+    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
+        if ((ii == 0) || guideRate->has(chain[ii])) {
+        //     Apply local reductions only at the control level
+        //     (top) and for levels where we have a specified
+        //     group guide rate.
+            target -= localReduction(chain[ii]);
+            std::cout << "ii: " << ii << " group: " << chain[ii] << " LocRed:" << localReduction(chain[ii])*86400 << " target: " << target*86400 << std::endl;
+        }
+        target *= localFraction(chain[ii+1]);
+        std::cout << "ii: " << ii << " group: " << chain[ii+1] << " LocFrac: " << localFraction(chain[ii+1]) << " target: " << target*86400 << std::endl;
+    }
+    // Avoid negative target rates coming from too large local reductions.
+    const double target_rate = std::max(0.0, target / efficiencyFactor);
+
+    return std::make_pair(target_rate, currentGroupControl);
 }
 
 #define INSTANTIATE(T,...)                                               \

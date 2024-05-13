@@ -55,8 +55,8 @@ public:
     const std::vector<Scalar>& production_rates(const std::string& gname) const;
 
     void update_well_group_thp(const std::string& gname, const double& thp);
-
     Scalar well_group_thp(const std::string& gname) const;
+    bool is_autochoke_group(const std::string& gname) const;
 
     bool has_production_reduction_rates(const std::string& gname) const;
     void update_production_reduction_rates(const std::string& gname,
@@ -214,11 +214,7 @@ private:
     std::map<std::string, Scalar> inj_vrep_rate;
     std::map<std::string, Scalar> m_grat_sales_target;
     std::map<std::string, Scalar> m_gpmaint_target;
-<<<<<<< HEAD
     std::map<std::string, Scalar> group_thp;
-=======
-    std::map<std::string, double> group_thp;
->>>>>>> 8e410ac73 (Automatic choke)
 
     std::map<std::pair<Phase, std::string>, Group::InjectionCMode> injection_controls;
     WellContainer<GPMaint::State> gpmaint_state;
