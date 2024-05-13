@@ -1,7 +1,7 @@
 set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
 
 # Set the path to the input docstrings.json file and the output .hpp file
-set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings.json")
+set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings_simulators.json")
 set(PYTHON_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyBlackOilSimulatorDoc.hpp")
 #  Note: If the new find_package(Python3) is used in the top level CMakeLists.txt, the variable
 #    ${PYTHON_EXECUTABLE} is set there to ${Python3_EXECUTABLE}
@@ -20,6 +20,13 @@ add_custom_command(
     DEPENDS ${PYTHON_DOCSTRINGS_FILE}
     COMMENT "Generating PyBlackOilSimulatorDoc.hpp from JSON file"
 )
+
+find_file(DOCSTRINGS_JSON docstrings_common.json
+  PATHS ${opm-common_DIR} ${opm-common_PYTHON_COMMON_DIR}
+  PATH_SUFFIXES python NO_DEFAULT_PATH REQUIRED)
+
+configure_file(${DOCSTRINGS_JSON} ${PROJECT_SOURCE_DIR}/python/docstrings_common.json COPYONLY)
+
 # NOTE: The variable ${PYBIND11_SYSTEM} is set in python/CMakeLists.txt
 #   to the value "SYSTEM" or unset, depending on the current version of Pybind11.
 #   The value is then forwarded to target_include_directories(), see

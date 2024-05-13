@@ -38,6 +38,7 @@ build/
 
 # Python sphinx build
 python/sphinx_docs/docs/_build/
+python/docstrings_common.json
 
 # Python cache directories
 **/__pycache__/
