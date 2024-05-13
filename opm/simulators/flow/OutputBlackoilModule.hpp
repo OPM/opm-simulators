@@ -1442,12 +1442,17 @@ private:
              !this->fip_[Inplace::Phase::CO2MassInGasPhaseInMob].empty() ||
              !this->fip_[Inplace::Phase::CO2MassInGasPhaseMob].empty() ||
              !this->fip_[Inplace::Phase::CO2Mass].empty() ||
+             !this->fip_[Inplace::Phase::CO2MassInGasPhase].empty() ||
              !this->fip_[Inplace::Phase::CO2InGasPhaseInMobKrg].empty() ||
              !this->fip_[Inplace::Phase::CO2InGasPhaseMobKrg].empty() ||
              !this->fip_[Inplace::Phase::CO2MassInGasPhaseInMobKrg].empty() ||
-             !this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg].empty()))
+             !this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg].empty() ||
+             !this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped].empty() ||
+             !this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped].empty() ||
+             !this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumTrapped].empty() ||
+             !this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped].empty()))
         {
-            this->updateCO2InGas(globalDofIdx, pv, fs);
+            this->updateCO2InGas(globalDofIdx, pv, intQuants);
         }
         
         if ((!this->fip_[Inplace::Phase::CO2InWaterPhase].empty() ||
@@ -1587,18 +1592,19 @@ private:
         }
     }
 
-    template <typename FluidState>
+    template <typename IntensiveQuantities>
     void updateCO2InGas(const unsigned    globalDofIdx,
                         const double      pv,
-                        const FluidState& fs)
+                        const IntensiveQuantities& intQuants)
     {
         const auto& scaledDrainageInfo = this->simulator_.problem().materialLawManager()
             ->oilWaterScaledEpsInfoDrainage(globalDofIdx);
 
+        const auto& fs = intQuants.fluidState();
         Scalar sgcr = scaledDrainageInfo.Sgcr;
         if (this->simulator_.problem().materialLawManager()->enableHysteresis()) {
             const auto& matParams = simulator_.problem().materialLawParams(globalDofIdx);
-            sgcr = MaterialLaw::trappedGasSaturation(matParams);
+            sgcr = MaterialLaw::trappedGasSaturation(matParams, /*maximumTrapping*/false);
         }
 
         const double sg   = getValue(fs.saturation(gasPhaseIdx));
@@ -1611,6 +1617,10 @@ private:
         const Scalar massGas = (1 - xgW) * pv * rhog;
         if (!this->fip_[Inplace::Phase::CO2Mass].empty()) {
             this->fip_[Inplace::Phase::CO2Mass][globalDofIdx] = massGas * sg;
+        }
+
+        if (!this->fip_[Inplace::Phase::CO2MassInGasPhase].empty()) {
+            this->fip_[Inplace::Phase::CO2MassInGasPhase][globalDofIdx] = massGas * sg;
         }
 
         if (!this->fip_[Inplace::Phase::CO2InGasPhaseInMob].empty()) {
@@ -1666,6 +1676,42 @@ private:
                 this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg][globalDofIdx] = mobileMassGasKrg;
             } else {
                 this->fip_[Inplace::Phase::CO2MassInGasPhaseMobKrg][globalDofIdx] = 0;
+            }
+        }
+
+        if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumTrapped].empty() || 
+            !this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped].empty() ) {
+            Scalar trappedGasSaturation = scaledDrainageInfo.Sgcr;
+            if (this->simulator_.problem().materialLawManager()->enableHysteresis()) {
+                const auto& matParams = simulator_.problem().materialLawParams(globalDofIdx);
+                // Get the maximum trapped gas saturation 
+                trappedGasSaturation = MaterialLaw::trappedGasSaturation(matParams, /*maximumTrapping*/true);
+            }
+            if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumTrapped].empty()) {
+                const Scalar imMobileMassGas = massGas * std::min(trappedGasSaturation , sg);
+                this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumTrapped][globalDofIdx] = imMobileMassGas;
+            }
+            if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped].empty()) {
+                const Scalar mobileMassGas = massGas * std::max(0.0, sg - trappedGasSaturation);
+                this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped][globalDofIdx] = mobileMassGas;
+            }
+        }
+
+        if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped].empty() || 
+            !this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped].empty()) {
+            Scalar trappedGasSaturation = scaledDrainageInfo.Sgcr;
+            if (this->simulator_.problem().materialLawManager()->enableHysteresis()) {
+                const auto& matParams = simulator_.problem().materialLawParams(globalDofIdx);
+                const double krg = getValue(intQuants.relativePermeability(gasPhaseIdx));
+                trappedGasSaturation = MaterialLaw::strandedGasSaturation(matParams, sg, krg);
+            }
+            if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped].empty()) {
+                const Scalar imMobileMassGas = massGas * std::min(trappedGasSaturation , sg);
+                this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped][globalDofIdx] = imMobileMassGas;
+            }
+            if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped].empty()) {
+                const Scalar mobileMassGas = massGas * std::max(0.0, sg - trappedGasSaturation);
+                this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped][globalDofIdx] = mobileMassGas;
             }
         }
     }
