@@ -49,12 +49,9 @@
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
-<<<<<<< HEAD
 #if COMPILE_BDA_BRIDGE
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 #endif
-=======
->>>>>>> f92db77d3 (moved common thp calculation to updateWellControls)
 
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
