@@ -50,11 +50,13 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/utils/phaseUsageFromDeck.hpp>
+#include <opm/simulators/wells/WellBhpThpCalculator.hpp>
+#include <opm/simulators/wells/WellGroupControls.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>//pjpe not needed?
 
 #if COMPILE_GPU_BRIDGE
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
 #endif
-
 
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
@@ -1295,6 +1297,63 @@ namespace Opm {
         return {more_network_update, well_group_control_changed};
     }
 
+    template <typename TypeTag>
+    double
+    BlackoilWellModel<TypeTag>::
+    computeWellGroupTarget(DeferredLogger& local_deferredLogger)
+    {
+        double target;
+        const int reportStepIdx = this->simulator_.episodeIndex();
+        const auto& network = this->schedule()[reportStepIdx].network();
+        const auto& balance = this->schedule()[reportStepIdx].network_balance();
+        const double thp_tolerance = balance.thp_tolerance();
+
+        auto& well_state = this->wellState();
+        auto& group_state = this->groupState();
+
+        for (const std::string& nodeName : network.node_names()) {
+            const bool has_choke = network.node(nodeName).as_choke();
+            if (nodeName=="B1") {
+                const auto& summary_state = this->simulator_.vanguard().summaryState();
+                const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
+                const auto ctrl = group.productionControls(summary_state);
+                // const auto cmode = ctrl.cmode;
+                const auto cmode = ctrl.cmode;
+                const auto pu = this->phase_usage_;
+                //TODO: Auto choke combined with RESV control is not supported
+                std::vector<double> resv_coeff(pu.num_phases, 1.0);
+                double gratTargetFromSales = 0.0; 
+                if (group_state.has_grat_sales_target(group.name()))
+                    gratTargetFromSales = group_state.grat_sales_target(group.name());
+
+                WGHelpers::TargetCalculator tcalc(cmode, pu, resv_coeff,
+                                                         gratTargetFromSales, nodeName, group_state,
+                                                         group.has_gpmaint_control(cmode));
+                // const double orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
+                
+                //PJPE: conversion factor res<-> surface rates TODO: to be calculated 
+                // rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, 
+                double efficiencyFactor = 1.0;
+                // const Group& parentGroup = this->schedule().getGroup(group.parent(), reportStepIdx);
+                const GuideRate* guideRate = &this->guideRate_;
+                target = WellGroupControls::getAutoChokeGroupProductionTargetRate(nodeName,
+                                                 group,
+                                                 well_state,
+                                                 group_state,
+                                                 this->schedule(),
+                                                 summary_state,
+                                                 resv_coeff,
+                                                 efficiencyFactor,
+                                                 reportStepIdx,
+                                                 pu,
+                                                 guideRate,
+                                                 local_deferredLogger);
+                std::cout << "target:" << target << std::endl;
+                
+            }
+        }
+        return target;
+    }
     // This function is to be used for well groups in an extended network that act as a subsea manifold
     // The wells of such group should have a common THP and total phase rate(s) obeying (if possible)
     // the well group constraint set by GCONPROD
@@ -1322,7 +1381,9 @@ namespace Opm {
                 const auto& summary_state = this->simulator_.vanguard().summaryState();
                 const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
                 const auto ctrl = group.productionControls(summary_state);
-                const auto cmode = ctrl.cmode;
+                const auto cmode = Opm::Group::ProductionCMode::ORAT; //ctrl.cmode; Fix this
+                const double orig_target_test = computeWellGroupTarget(local_deferredLogger);
+                
                 const auto pu = this->phase_usage_;
 
                 //TODO: Auto choke combined with RESV control is not supported
@@ -2213,6 +2274,7 @@ namespace Opm {
         bool more_network_update = false;
         if (this->shouldBalanceNetwork(episodeIdx, iterationIdx) || mandatory_network_balance) {
             const double dt = this->simulator_.timeStepSize();
+            // const double target = computeWellGroupTarget(dt, deferred_logger);
             // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
             computeWellGroupThp(dt, deferred_logger);
             const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx);

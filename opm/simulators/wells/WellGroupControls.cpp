@@ -575,6 +575,122 @@ getGroupProductionTargetRate(const Group& group,
                                   T efficiencyFactor,                    \
                                   __VA_ARGS__& control_eq,               \
                                   DeferredLogger& deferred_logger) const;
+double WellGroupControls::
+getAutoChokeGroupProductionTargetRate(const std::string& name,
+                                      const Group& group,
+                                      const WellState<double>& well_state,
+                                      const GroupState<double>& group_state,
+                                      const Schedule& schedule,
+                                      const SummaryState& summaryState,
+                                      const std::vector<double>& resv_coeff,
+                                      double efficiencyFactor,
+                                      const int reportStepIdx,
+                                      const PhaseUsage& pu,
+                                      const GuideRate* guideRate,
+                                      DeferredLogger& deferred_logger)
+{
+    const Group::ProductionCMode& currentGroupControl = group_state.production_control(group.name());
+    if (currentGroupControl == Group::ProductionCMode::FLD ||
+        currentGroupControl == Group::ProductionCMode::NONE) {
+        if (!group.productionGroupControlAvailable()) {
+            return 1.0;
+        } else {
+            // Produce share of parents control
+            const auto& parent = schedule.getGroup(group.parent(), reportStepIdx);
+            efficiencyFactor *= group.getGroupEfficiencyFactor();
+            return getAutoChokeGroupProductionTargetRate(name, parent, well_state, group_state,
+                                                schedule, summaryState,
+                                                resv_coeff, efficiencyFactor, reportStepIdx, pu,
+                                                guideRate, deferred_logger);
+        }
+    }
+
+    // const auto pu = well_.phaseUsage();
+
+    if (!group.isProductionGroup()) {
+        return 1.0;
+    }
+
+    // If we are here, we are at the topmost group to be visited in the recursion.
+    // This is the group containing the control we will check against.
+
+    // Make conversion factors for RESV <-> surface rates.
+    // std::vector<double> resv_coeff(well_.phaseUsage().num_phases, 1.0);
+    // rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, should use FIPNUM from WELSPECS.
+
+    // gconsale may adjust the grat target.
+    // the adjusted rates is send to the targetCalculator
+    double gratTargetFromSales = 0.0;
+    if (group_state.has_grat_sales_target(group.name()))
+        gratTargetFromSales = group_state.grat_sales_target(group.name());
+
+    WGHelpers::TargetCalculator tcalc(currentGroupControl,
+                                      pu,
+                                      resv_coeff,
+                                      gratTargetFromSales,
+                                      group.name(),
+                                      group_state,
+                                      group.has_gpmaint_control(currentGroupControl));
+
+    WGHelpers::FractionCalculator fcalc(schedule,
+                                        well_state,
+                                        group_state,
+                                        reportStepIdx,
+                                        guideRate,
+                                        tcalc.guideTargetMode(),
+                                        pu,
+                                        true,
+                                        Phase::OIL);
+
+    auto localFraction = [&](const std::string& child) {
+        return fcalc.localFraction(child, child); //Note child needs to be passed to always include since the global isGrup map is not updated yet.
+    };
+
+    auto localReduction = [&](const std::string& group_name) {
+        const std::vector<double>& groupTargetReductions = group_state.production_reduction_rates(group_name);
+        return tcalc.calcModeRateFromRates(groupTargetReductions);
+    };
+
+    std::optional<Group::ProductionControls> ctrl;
+    if (!group.has_gpmaint_control(currentGroupControl))
+        ctrl = group.productionControls(summaryState);
+
+    const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
+    const Group& parent = schedule.getGroup(group.parent(), reportStepIdx);//pjpe remove
+    const auto chain = WellGroupHelpers<double>::groupChainTopBot(name, group.name(),
+                                                                  schedule, reportStepIdx);
+    // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
+    const std::size_t num_ancestors = chain.size() - 1;
+    double target = orig_target;
+    for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
+        if ((ii == 0) || guideRate->has(chain[ii])) {
+        // if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
+            // Apply local reductions only at the control level
+            // (top) and for levels where we have a specified
+            // group guide rate.
+            target -= localReduction(chain[ii]);
+            std::cout << "ii: " << ii << " group: " << chain[ii] << " LocRed:" << localReduction(chain[ii]) << " target: " << target << std::endl;
+        }
+        target *= localFraction(chain[ii+1]);
+        std::cout << "ii: " << ii << " group: " << chain[ii+1] << " LocFrac: " << localFraction(chain[ii+1]) << " target: " << target << std::endl;
+    }
+    // Avoid negative target rates coming from too large local reductions.
+    const double target_rate = std::max(0.0, target / efficiencyFactor);
+    // const auto& ws = well_state.well(well_.indexOfWell());
+    // const auto& rates = ws.surface_rates;
+    // const auto current_rate = -tcalc.calcModeRateFromRates(rates); // Switch sign since 'rates' are negative for producers.
+    // double scale = 1.0;
+    // if (target_rate == 0.0) {
+    //     return 0.0;
+    // }
+
+    // if (current_rate > 1e-14)
+    //     scale = target_rate/current_rate;
+    // return scale;
+    return target_rate;
+}
+
+template class WellGroupControls<double>;
 
 #define INSTANTIATE_TYPE(T)                      \
     template class WellGroupControls<T>;         \
