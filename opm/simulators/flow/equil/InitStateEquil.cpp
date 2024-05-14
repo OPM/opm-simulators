@@ -77,10 +77,10 @@ INSTANCE_COMP(GridViewFem, MapperFem)
 namespace Details {
     template class PressureTable<BlackOilFluidSystem<double>,EquilReg>;
     template void verticalExtent<std::vector<int>,
-                                 Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>>(
+                                 Dune::Communication<Dune::MPIHelper::MPICommunicator>>(
                                  const std::vector<int>&,
                                  const std::vector<std::pair<double,double>>&,
-                                 const Dune::CollectiveCommunication<Dune::MPIHelper::MPICommunicator>&,
+                                 const Dune::Communication<Dune::MPIHelper::MPICommunicator>&,
                                  std::array<double,2>&);
 
     using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<double,0,1,2>>;
