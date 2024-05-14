@@ -27,8 +27,7 @@
 
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 
-namespace Opm
-{
+namespace Opm {
 
 template<class FluidSystem, class Indices>
 class WellInterfaceIndices : public WellInterfaceFluidSystem<FluidSystem>
@@ -42,7 +41,7 @@ public:
 
     int flowPhaseToModelCompIdx(const int phaseIdx) const;
     int modelCompIdxToFlowCompIdx(const unsigned compIdx) const;
-    double scalingFactor(const int phaseIdx) const;
+    Scalar scalingFactor(const int phaseIdx) const;
 
     template <class EvalWell>
     Eval restrictEval(const EvalWell& in) const

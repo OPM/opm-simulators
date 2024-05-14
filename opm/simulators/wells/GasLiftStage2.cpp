@@ -1118,7 +1118,7 @@ computeDelta(const std::string& well_name)
         const GradInfo& gi = this->parent.dec_grads_.at(well_name);
         GasLiftWellState<Scalar>& state = *(this->parent.well_state_map_.at(well_name).get());
         GasLiftSingleWell& gs_well = *(this->parent.stage1_wells_.at(well_name).get());
-        const WellInterfaceGeneric& well = gs_well.getWell();
+        const WellInterfaceGeneric<Scalar>& well = gs_well.getWell();
         // only get deltas for wells owned by this rank
         if (this->parent.well_state_.wellIsOwned(well.indexOfWell(), well_name)) {
             const auto& well_ecl = well.wellEcl();

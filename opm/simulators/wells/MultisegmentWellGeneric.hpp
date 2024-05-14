@@ -32,7 +32,7 @@ namespace Opm
 
 class DeferredLogger;
 class SummaryState;
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 enum class WellSegmentCompPressureDrop;
 class WellSegments;
 template<class Scalar> class WellState;
@@ -52,7 +52,7 @@ public:
     int numberOfSegments() const;
 
 protected:
-    MultisegmentWellGeneric(WellInterfaceGeneric& baseif);
+    MultisegmentWellGeneric(WellInterfaceGeneric<Scalar>& baseif);
 
     // scale the segment rates and pressure based on well rates and bhp
     void scaleSegmentRatesWithWellRates(const std::vector<std::vector<int>>& segment_inlets,
@@ -75,7 +75,7 @@ protected:
                         const double density,
                         const std::vector<double>& seg_dp) const;
 
-    const WellInterfaceGeneric& baseif_;
+    const WellInterfaceGeneric<Scalar>& baseif_;
 };
 
 }

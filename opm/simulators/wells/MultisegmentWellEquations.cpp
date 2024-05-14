@@ -311,7 +311,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                          const BVector& weights,
                          const int pressureVarIndex,
                          const bool /*use_well_weights*/,
-                         const WellInterfaceGeneric& well,
+                         const WellInterfaceGeneric<Scalar>& well,
                          const int seg_pressure_var_ind,
                          const WellState<Scalar>& well_state) const
 {
@@ -395,7 +395,7 @@ template void MultisegmentWellEquations<double,numWellEq,numEq>:: \
                              const MultisegmentWellEquations<double,numWellEq,numEq>::BVector&, \
                              const int, \
                              const bool, \
-                             const WellInterfaceGeneric&, \
+                             const WellInterfaceGeneric<double>&, \
                              const int, \
                              const WellState<double>&) const;
 

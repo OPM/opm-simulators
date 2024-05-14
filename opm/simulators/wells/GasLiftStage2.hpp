@@ -38,7 +38,7 @@ template<class Scalar> class GasLiftWellState;
 class Group;
 template<class Scalar> class GroupState;
 class Schedule;
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 template<class Scalar>
@@ -46,7 +46,7 @@ class GasLiftStage2 : public GasLiftCommon<Scalar>
 {
     using GasLiftSingleWell = GasLiftSingleWellGeneric<Scalar>;
     using GLiftOptWells = std::map<std::string,std::unique_ptr<GasLiftSingleWell>>;
-    using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric*>;
+    using GLiftProdWells = std::map<std::string,const WellInterfaceGeneric<Scalar>*>;
     using GLiftWellStateMap = std::map<std::string,std::unique_ptr<GasLiftWellState<Scalar>>>;
     using GradPair = std::pair<std::string, Scalar>;
     using GradPairItr = typename std::vector<GradPair>::iterator;

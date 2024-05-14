@@ -64,7 +64,7 @@ namespace Opm {
     struct SimulatorUpdate;
     class SummaryConfig;
     class VFPProperties;
-    class WellInterfaceGeneric;
+    template<class Scalar> class WellInterfaceGeneric;
     template<class Scalar> class WellState;
 } // namespace Opm
 
@@ -84,7 +84,7 @@ class BlackoilWellModelGeneric
 public:
     // ---------      Types      ---------
     using GLiftOptWells = std::map<std::string, std::unique_ptr<GasLiftSingleWellGeneric<Scalar>>>;
-    using GLiftProdWells = std::map<std::string, const WellInterfaceGeneric*>;
+    using GLiftProdWells = std::map<std::string, const WellInterfaceGeneric<Scalar>*>;
     using GLiftWellStateMap = std::map<std::string, std::unique_ptr<GasLiftWellState<Scalar>>>;
 
     BlackoilWellModelGeneric(Schedule& schedule,
@@ -115,7 +115,7 @@ public:
     const Schedule& schedule() const { return schedule_; }
     const PhaseUsage& phaseUsage() const { return phase_usage_; }
     const GroupState<Scalar>& groupState() const { return this->active_wgstate_.group_state; }
-    std::vector<const WellInterfaceGeneric*> genericWells() const
+    std::vector<const WellInterfaceGeneric<Scalar>*> genericWells() const
     { return {well_container_generic_.begin(), well_container_generic_.end()}; }
 
     /*
@@ -542,7 +542,7 @@ protected:
     std::function<bool(const Well&)> not_on_process_{};
 
     // a vector of all the wells.
-    std::vector<WellInterfaceGeneric*> well_container_generic_{};
+    std::vector<WellInterfaceGeneric<Scalar>*> well_container_generic_{};
 
     std::vector<int> local_shut_wells_{};
 
@@ -589,7 +589,7 @@ protected:
     std::map<std::string, std::pair<std::string, std::string>> closed_offending_wells_;
 
 private:
-    WellInterfaceGeneric* getGenWell(const std::string& well_name);
+    WellInterfaceGeneric<Scalar>* getGenWell(const std::string& well_name);
 };
 
 

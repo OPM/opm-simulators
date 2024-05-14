@@ -238,7 +238,7 @@ checkThpControl_() const
     const Well::ProducerCMode& control_mode =
                          this->well_state_.well(well_index).production_cmode;
     bool thp_control = control_mode == Well::ProducerCMode::THP;
-    const WellInterfaceGeneric &well = getWell();
+    const auto& well = getWell();
     thp_control = thp_control || well.thpLimitViolatedButNotSwitched();
     if (this->debug) {
         if (!thp_control) {

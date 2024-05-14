@@ -34,18 +34,15 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
-#include <cassert>
 #include <cmath>
-#include <stdexcept>
 
 #include <fmt/format.h>
 
-namespace Opm
-{
+namespace Opm {
 
 template<typename Scalar>
 MultisegmentWellGeneric<Scalar>::
-MultisegmentWellGeneric(WellInterfaceGeneric& baseif)
+MultisegmentWellGeneric(WellInterfaceGeneric<Scalar>& baseif)
     : baseif_(baseif)
 {
 }

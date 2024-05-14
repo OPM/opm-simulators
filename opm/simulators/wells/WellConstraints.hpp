@@ -39,7 +39,7 @@ using RegionId = int;
 class Rates;
 template<class Scalar> class SingleWellState;
 class SummaryState;
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 enum class WellInjectorCMode;
 enum class WellProducerCMode;
 
@@ -47,7 +47,7 @@ enum class WellProducerCMode;
 class WellConstraints {
 public:
     //! \brief Constructor sets reference to well.
-    WellConstraints(const WellInterfaceGeneric& well) : well_(well) {}
+    WellConstraints(const WellInterfaceGeneric<double>& well) : well_(well) {}
 
     using RateConvFunc = std::function<void(const RegionId, const int,
                                             const std::vector<double>&,
@@ -78,7 +78,7 @@ private:
                                DeferredLogger& deferred_logger,
                                const std::optional<Well::ProductionControls>& prod_controls = std::nullopt) const;
 
-    const WellInterfaceGeneric& well_; //!< Reference to well interface
+    const WellInterfaceGeneric<double>& well_; //!< Reference to well interface
 };
 
 }

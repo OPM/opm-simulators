@@ -45,7 +45,6 @@
 
 #include <fmt/format.h>
 
-#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstddef>
@@ -61,7 +60,7 @@ namespace Opm
 template<class FluidSystem, class Indices>
 MultisegmentWellSegments<FluidSystem,Indices>::
 MultisegmentWellSegments(const int numSegments,
-                         WellInterfaceGeneric& well)
+                         WellInterfaceGeneric<Scalar>& well)
     : perforations_(numSegments)
     , perforation_depth_diffs_(well.numPerfs(), 0.0)
     , inlets_(well.wellEcl().getSegments().size())

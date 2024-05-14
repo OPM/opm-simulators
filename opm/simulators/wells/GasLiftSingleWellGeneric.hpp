@@ -40,7 +40,7 @@ class GasLiftWell;
 template<class Scalar> class GasLiftWellState;
 class Schedule;
 class SummaryState;
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 template<class Scalar> class GroupState;
 
@@ -107,7 +107,7 @@ public:
 
     std::unique_ptr<GasLiftWellState<Scalar>> runOptimize(const int iteration_idx);
 
-    virtual const WellInterfaceGeneric& getWell() const = 0;
+    virtual const WellInterfaceGeneric<Scalar>& getWell() const = 0;
 
 protected:
     GasLiftSingleWellGeneric(DeferredLogger& deferred_logger,

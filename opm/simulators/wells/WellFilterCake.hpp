@@ -26,7 +26,7 @@
 namespace Opm {
 
 class DeferredLogger;
-class WellInterfaceGeneric;
+template<class Scalar> class WellInterfaceGeneric;
 template<class Scalar> class WellState;
 
 //! \brief Class for well calculations related to filter cakes.
@@ -35,14 +35,14 @@ class WellFilterCake {
 public:
     //! \brief Update the water injection volume.
     //! \details Used for calculation related to cake filtration due to injection activity.
-    void updateFiltrationParticleVolume(const WellInterfaceGeneric& well,
+    void updateFiltrationParticleVolume(const WellInterfaceGeneric<Scalar>& well,
                                         const double dt,
                                         const Scalar conc,
                                         const std::size_t water_index,
                                         WellState<Scalar>& well_state);
 
     //! \brief Update the multiplier for well transmissbility due to cake filtration.
-    void updateInjFCMult(const WellInterfaceGeneric& well,
+    void updateInjFCMult(const WellInterfaceGeneric<Scalar>& well,
                          WellState<Scalar>& well_state,
                          DeferredLogger& deferred_logger);
 

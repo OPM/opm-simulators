@@ -33,7 +33,7 @@ namespace Opm {
     struct PhaseUsage;
     template<class Scalar> class SegmentState;
     class  UnitSystem;
-    class  WellInterfaceGeneric;
+    template<class Scalar> class WellInterfaceGeneric;
     class  SummaryState;
 
 } // namespace Opm
@@ -49,7 +49,7 @@ class MultisegmentWellSegments
 
 public:
     MultisegmentWellSegments(const int numSegments,
-                             WellInterfaceGeneric& well);
+                             WellInterfaceGeneric<Scalar>& well);
 
     void computeFluidProperties(const EvalWell& temperature,
                                 const EvalWell& saltConcentration,
@@ -172,7 +172,7 @@ private:
     std::vector<std::vector<EvalWell>> phase_fractions_;
     std::vector<std::vector<EvalWell>> phase_viscosities_;
 
-    WellInterfaceGeneric& well_;
+    WellInterfaceGeneric<Scalar>& well_;
 
     void copyPhaseDensities(const unsigned    phaseIdx,
                             const std::size_t stride,
