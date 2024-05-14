@@ -574,12 +574,18 @@ update(bool global, const TransUpdateQuantities update_quantities,
     }
 
     if (!disableNNC) {
-        this->applyEditNncToGridTrans_(globalToLocal);
+        // For EDITNNC and EDITNNCR we warn only once
+        // If transmissibility is used for load balancing this will be done
+        // when computing the gobal transmissibilities and all warnings will
+        // be seen in a parallel. Unfortunately, when we do not use transmissibilities
+        // we will only see warnings for the partition of process 0 and also false positives.
+        this->applyEditNncToGridTrans_(globalToLocal, warnEditNNC_);
         this->applyNncToGridTrans_(globalToLocal);
-        this->applyEditNncrToGridTrans_(globalToLocal);
+        this->applyEditNncrToGridTrans_(globalToLocal, warnEditNNC_);
         if (applyNncMultregT) {
             this->applyNncMultreg_(globalToLocal);
         }
+        warnEditNNC_ = false;
     }
 
     // If disableNNC == true, remove all non-neighbouring transmissibilities.
@@ -1124,7 +1130,7 @@ applyNncToGridTrans_(const std::unordered_map<std::size_t,int>& cartesianToCompr
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal)
+applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal, bool warn)
 {
     const auto& input = eclState_.getInputNNC();
     applyEditNncToGridTransHelper_(globalToLocal, "EDITNNC",
@@ -1132,12 +1138,13 @@ applyEditNncToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLoca
                                    [&input](const NNCdata& nnc){
                                        return input.edit_location(nnc);},
                                    // Multiply transmissibility with EDITNNC value
-                                   [](Scalar& trans, const Scalar& rhs){ trans *= rhs;});
+                                   [](Scalar& trans, const Scalar& rhs){ trans *= rhs;},
+                                   warn);
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-applyEditNncrToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal)
+applyEditNncrToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLocal, bool warn)
 {
     const auto& input = eclState_.getInputNNC();
     applyEditNncToGridTransHelper_(globalToLocal, "EDITNNCR",
@@ -1145,7 +1152,8 @@ applyEditNncrToGridTrans_(const std::unordered_map<std::size_t,int>& globalToLoc
                                    [&input](const NNCdata& nnc){
                                        return input.editr_location(nnc);},
                                    // Replace Transmissibility with EDITNNCR value
-                                   [](Scalar& trans, const Scalar& rhs){ trans = rhs;});
+                                   [](Scalar& trans, const Scalar& rhs){ trans = rhs;},
+                                   warn);
 }
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
@@ -1154,7 +1162,8 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
                                const std::string& keyword,
                                const std::vector<NNCdata>& nncs,
                                const std::function<KeywordLocation(const NNCdata&)>& getLocation,
-                               const std::function<void(Scalar&, const Scalar&)>& apply)
+                               const std::function<void(Scalar&, const Scalar&)>& apply,
+                               const bool warn)
 {
     if (nncs.empty())
         return;
@@ -1190,9 +1199,12 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
         auto highIt = globalToLocal.find(c2);
 
         if (lowIt == globalToLocal.end() || highIt == globalToLocal.end()) {
-            print_warning(*nnc);
+            // Prevent warnings for NNCs stored on other processes in parallel (both cells inactive)
+            if ( lowIt != highIt && warn) {
+                print_warning(*nnc);
+                warning_count++;
+            }
             ++nnc;
-            warning_count++;
             continue;
         }
 
@@ -1202,7 +1214,7 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
             std::swap(low, high);
 
         auto candidate = trans_.find(details::isId(low, high));
-        if (candidate == trans_.end()) {
+        if (candidate == trans_.end() && warn) {
             print_warning(*nnc);
             ++nnc;
             warning_count++;
