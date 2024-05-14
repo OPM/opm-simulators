@@ -42,7 +42,7 @@ int setPosition(const char* field, int rank, int64_t pos)
 {
     int dam_err = damaris_set_position(field, &pos);
     if (dam_err != DAMARIS_OK) {
-        OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{})"
+        OpmLog::error(fmt::format("damariswriter::setPosition()       : ( rank:{}) "
                                   "damaris_set_position({}, ...), Damaris Error: {}  ",
                                   rank, field, damaris_error_string(dam_err)));
     }
@@ -54,7 +54,7 @@ int setParameter(const char* field, int rank, int value)
 {
     int dam_err = damaris_parameter_set(field, &value, sizeof(int));
     if (dam_err != DAMARIS_OK) {
-        OpmLog::error(fmt::format("(rank:{}) Damaris library produced an error result for "
+        OpmLog::error(fmt::format("damariswriter::setParameter()       (rank:{}) "
                                   "damaris_parameter_set(\"{}\",...)", rank, field));
     }
 
@@ -65,7 +65,7 @@ int write(const char* field, int rank, const void* data)
 {
     int dam_err = damaris_write(field, data);
     if (dam_err != DAMARIS_OK) {
-        OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{}) "
+        OpmLog::error(fmt::format("damariswriter::write()       : ( rank:{}) "
                                   "damaris_write({}, ...), Damaris Error: {}  ",
                                   rank, field, damaris_error_string(dam_err)));
     }
@@ -77,7 +77,7 @@ int endIteration(int rank)
 {
     int dam_err =  damaris_end_iteration();
     if (dam_err != DAMARIS_OK) {
-        OpmLog::error(fmt::format("damariswriter::writeOutput()       : ( rank:{}) "
+        OpmLog::error(fmt::format("damariswriter::endIteration()       : ( rank:{}) "
                                   "damaris_end_iteration(), Damaris Error: {}  ",
                                   rank, damaris_error_string(dam_err)));
     }
@@ -130,17 +130,9 @@ int setupWritingPars(Parallel::Communication comm,
         OPM_THROW(std::runtime_error, "setupDamarisWritingPars() n_elements_global_max "
                                       "> std::numeric_limits<int>::max() " + std::to_string(dam_err));
     }
-
-    // Use damaris_set_position to set the offset in the global size of the array.
-    // This is used so that output functionality (e.g. HDF5Store) knows global offsets of the data of the ranks
-    setPosition("PRESSURE", comm.rank(), elements_rank_offsets[comm.rank()]);
-    dam_err = setPosition("GLOBAL_CELL_INDEX", comm.rank(), elements_rank_offsets[comm.rank()]);
-
-    // Set the size of the MPI variable
-    DamarisVar<int> mpi_rank_var(1, {"n_elements_local"}, "MPI_RANK", comm.rank());
-    mpi_rank_var.setDamarisPosition({static_cast<int64_t>(elements_rank_offsets[comm.rank()])});
-
+    
     return dam_err;
 }
+
 
 }

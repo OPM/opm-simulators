@@ -95,8 +95,9 @@ void DamarisSettings::SetRandString(void)
     std::uniform_int_distribution<int> uniform_dist(0, std::numeric_limits<int>::max());
     int rand_int = uniform_dist(e1);
     
-    rand_value_str_ = std::to_string(rand_int) ;            
+    rand_value_str_ = std::to_string(rand_int) ;
 }
+
 
 std::map<std::string, std::string>
 DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& comm,

@@ -387,6 +387,11 @@ template<class TypeTag>
 struct DamarisDaskFile<TypeTag, TTag::FlowBaseProblem> {
     static constexpr auto value = "";
 };
+// Specify the the exact variables to be passed through to Damaris (must exist in the XML file / intiDamarisXmlFile.cpp)
+template<class TypeTag>
+struct DamarisLimitVariables<TypeTag, TTag::FlowBaseProblem> {
+    static constexpr auto value = "";
+};
 #endif
 // If available, write the ECL output in a non-blocking manner
 template<class TypeTag>

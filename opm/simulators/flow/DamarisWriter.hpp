@@ -42,6 +42,7 @@
 #include <opm/simulators/flow/FlowBaseVanguard.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/utils/DamarisVar.hpp>
+#include <opm/simulators/utils/DamarisKeywords.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/GridDataOutput.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
@@ -53,6 +54,8 @@
 #include <numeric>
 #include <string>
 #include <vector>
+#include <unordered_set>
+
 
 namespace Opm {
 
@@ -154,6 +157,11 @@ public:
              "This name should be unique if multiple simulations are running on "
              "the same node/server as it is used for the Damaris shmem name and by "
              "the Python Dask library to locate sections of variables.");
+        Parameters::registerParam<TypeTag, Properties::DamarisLimitVariables>
+            ("A comma separated list of variable names that a user wants to pass"
+             "through via DamarisOutput::DamarisWriter::writeOutput)() to the "
+             "damaris_write() call. This can be used to limit the number of"
+             "variables being passed to the Daamis plugins (Paraview, Python and HDF5)");
     }
 
     // The Simulator object should preferably have been const - the
@@ -210,6 +218,8 @@ public:
             this->damarisOutputModule_ = std::make_unique<OutputBlackOilModule<TypeTag>>
                 (simulator, this->eclIO_->finalSummaryConfig(), this->collectOnIORank_);
         }
+        
+        wanted_vars_set_ = Opm::DamarisOutput::getSetOfIncludedVariables<TypeTag>();
     }
 
     /*!
@@ -247,7 +257,7 @@ public:
                 dam_err_ = DamarisOutput::setupWritingPars(simulator_.vanguard().grid().comm(),
                                                            numElements_, elements_rank_offsets_);
                 
-                // sets data for non-time-varying variables MPI_RANK and GLOBAL_CELL_INDEX
+                // sets positions and data for non-time-varying variables MPI_RANK and GLOBAL_CELL_INDEX
                 this->setGlobalIndexForDamaris() ; 
                 
                 // Set the geometry data for the mesh model.
@@ -259,7 +269,7 @@ public:
                 this->damarisUpdate_ = false; 
             }
 
-            if (this->damarisOutputModule_->getPRESSURE_ptr() != nullptr) 
+            /*if (this->damarisOutputModule_->getPRESSURE_ptr() != nullptr) 
             {
                 dam_err_ = DamarisOutput::setPosition("PRESSURE", rank_,
                                                       this->elements_rank_offsets_[rank_]);
@@ -267,7 +277,73 @@ public:
                                                 this->damarisOutputModule_->getPRESSURE_ptr());
 
                 dam_err_ =  DamarisOutput::endIteration(rank_);
+            }*/
+            
+            
+            // Call damaris_set_position() for all available variables
+            // There is an assumption that all variables are the same size, with the same offset.
+            // see initDamarisTemplateXmlFile.cpp for the Damaris XML descriptions.
+            for ( auto damVar : localCellData ) {
+                // std::map<std::string, data::CellData>
+                const std::string name = damVar.first ;
+                dam_err_ = DamarisOutput::setPosition(name.c_str(), rank_,
+                                                      this->elements_rank_offsets_[rank_]);
             }
+
+            // Call damaris_write() for all available variables
+            for ( auto damVar : localCellData ) 
+            {
+               // std::map<std::string, data::CellData>
+              const std::string& name = damVar.first ;
+              
+              std::unordered_set<std::string>::const_iterator is_in_set = wanted_vars_set_.find ( name );
+              
+              if ((is_in_set != wanted_vars_set_.end() ) || (wanted_vars_set_.size() == 0)) {
+                  data::CellData  dataCol = damVar.second ;
+                  OpmLog::debug(fmt::format("Name of Damaris Variable       : ( rank:{})  name: {}  ",  rank_, name));
+                  
+                  // It does not seem I can test for what type of data is present (double or int)
+                  // in the std::variant within the data::CellData, so I will use a try catch block. 
+                  // Although, only MPI_RANK and GLOBAL_CELL_INDEX are set as integer types (in the 
+                  // XML file) so it is a moot point. 
+                  // We could use damaris_get_type() to check what the type is specified as
+                  // within the Damaris XML file
+                  try {
+                    if (dataCol.data<double>().size() >= this->numElements_) {
+                        dam_err_ = DamarisOutput::write(name.c_str(), rank_,
+                                                        dataCol.data<double>().data()) ;
+                    }
+                  }
+                  catch (std::bad_variant_access const& ex) {
+                    // Not a std::vector<double>
+                    if (dataCol.data<int>().size() >= this->numElements_) {
+                        dam_err_ = DamarisOutput::write(name.c_str(), rank_,
+                                                      dataCol.data<int>().data()) ;
+                    }
+                  }
+              }
+              
+
+            }
+            
+           /*   
+            Code for when we want to pass to Damaris the single cell 'block' data variables
+            auto mybloc = damarisOutputModule_->getBlockData() ;
+            for ( auto damVar : mybloc ) {
+               // std::map<std::string, data::CellData>
+              const std::string name = std::get<0>(damVar.first) ;
+              const int part = std::get<1>(damVar.first) ;
+              double  dataCol = damVar.second ;
+              std::cout << "Name of Damaris Block Varaiable : (" << rank_ << ")  "  << name  << "  part : " << part << "  Value : "  << dataCol <<  std::endl ;  
+            } 
+            
+            dam_err_ =  DamarisOutput::endIteration(rank_);
+            */
+            if (this->damarisOutputModule_->getPRESSURE_ptr() != nullptr) 
+            {
+                dam_err_ =  DamarisOutput::endIteration(rank_);
+            }
+            
          } // end of ! isSubstep
     }
 
@@ -276,6 +352,7 @@ private:
     int rank_  ;       
     int nranks_ ;
     int numElements_ ;  ///<  size of the unique vector elements
+    std::unordered_set<std::string> wanted_vars_set_ ;
     
     Simulator& simulator_;
     std::unique_ptr<OutputBlackOilModule<TypeTag>> damarisOutputModule_;
@@ -289,6 +366,16 @@ private:
 
     void setGlobalIndexForDamaris () 
     {
+        // Use damaris_set_position to set the offset in the global size of the array.
+        // This is used so that output functionality (e.g. HDF5Store) knows global offsets of the data of the ranks
+        // setPosition("PRESSURE", comm.rank(), elements_rank_offsets_[comm.rank()]);
+        dam_err_ = DamarisOutput::setPosition("GLOBAL_CELL_INDEX", rank_, elements_rank_offsets_[rank_]);
+
+        // Set the size of the MPI variable
+        // N.B. MPI_RANK is only saved to HDF5 if --damaris-save-mesh-to-hdf=true is specified
+        DamarisVarInt mpi_rank_var(1, {"n_elements_local"}, "MPI_RANK", rank_);
+        mpi_rank_var.setDamarisPosition({static_cast<int64_t>(elements_rank_offsets_[rank_])});
+    
         // GLOBAL_CELL_INDEX is used to reorder variable data when writing to disk 
         // This is enabled using select-file="GLOBAL_CELL_INDEX" in the <variable> XML tag
         if (this->collectOnIORank_.isParallel()) {
@@ -307,10 +394,12 @@ private:
         // We will add the MPI rank value directly into shared memory using the DamarisVar 
         // wrapper of the C based Damaris API.
         // The shared memory is given back to Damaris when the DamarisVarInt goes out of scope.
-        DamarisVarInt mpi_rank_var_test(1, {"n_elements_local"},  "MPI_RANK", rank_);
-        mpi_rank_var_test.setDamarisParameterAndShmem( {this->numElements_ } ) ;
+        // DamarisVarInt mpi_rank_var_test(1, {"n_elements_local"},  "MPI_RANK", rank_);
+        mpi_rank_var.setDamarisParameterAndShmem( {this->numElements_ } ) ;
         // Fill the created memory area
-        std::fill(mpi_rank_var_test.data(), mpi_rank_var_test.data() + numElements_, rank_);
+        std::fill(mpi_rank_var.data(), mpi_rank_var.data() + numElements_, rank_);
+        
+       
     }
 
     void writeDamarisGridOutput()
@@ -374,7 +463,7 @@ private:
                                      "topologies/topo/elements/types", rank_) ;
             var_types.setDamarisParameterAndShmem({ geomData.getNCells()}) ;
 
-            // Copy the mesh data from the Durne grid
+            // Copy the mesh data from the Dune grid
             long i = 0 ;
             GridDataOutput::ConnectivityVertexOrder vtkorder = GridDataOutput::VTK ;
             

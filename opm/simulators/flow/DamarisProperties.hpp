@@ -87,7 +87,10 @@ template<class TypeTag, class MyTypeTag>
 struct DamarisDaskFile {
     using type = UndefinedProperty;
 };
-
+template<class TypeTag, class MyTypeTag>
+struct DamarisLimitVariables {
+    using type = UndefinedProperty;
+};
 } // namespace Opm::Properties
 
 #endif // OPM_DAMARIS_PROPERTIES_HPP
