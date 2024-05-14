@@ -80,6 +80,7 @@ public:
 
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
     using Indices = GetPropType<TypeTag, Properties::Indices>;
     using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
@@ -91,9 +92,7 @@ public:
     using GLiftProdWells = typename BlackoilWellModel<TypeTag>::GLiftProdWells;
     using GLiftWellStateMap =
         typename BlackoilWellModel<TypeTag>::GLiftWellStateMap;
-    using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
-
-    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
 
     using VectorBlockType = Dune::FieldVector<Scalar, Indices::numEq>;
     using MatrixBlockType = Dune::FieldMatrix<Scalar, Indices::numEq, Indices::numEq>;

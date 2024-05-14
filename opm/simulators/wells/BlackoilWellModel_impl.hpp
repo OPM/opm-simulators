@@ -1343,8 +1343,10 @@ namespace Opm {
     void
     BlackoilWellModel<TypeTag>::
     gasLiftOptimizationStage1(DeferredLogger& deferred_logger,
-        GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
-        GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map)
+                              GLiftProdWells& prod_wells,
+                              GLiftOptWells &glift_wells,
+                              GasLiftGroupInfo<Scalar>& group_info,
+                              GLiftWellStateMap& state_map)
     {
         auto comm = simulator_.vanguard().grid().comm();
         int num_procs = comm.size();
@@ -1448,11 +1450,13 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag> *well,
-        DeferredLogger& deferred_logger,
-        GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
-        GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map,
-        GLiftSyncGroups& sync_groups)
+    gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag>* well,
+                                        DeferredLogger& deferred_logger,
+                                        GLiftProdWells& prod_wells,
+                                        GLiftOptWells& glift_wells,
+                                        GasLiftGroupInfo<Scalar>& group_info,
+                                        GLiftWellStateMap& state_map,
+                                        GLiftSyncGroups& sync_groups)
     {
         const auto& summary_state = simulator_.vanguard().summaryState();
         std::unique_ptr<GasLiftSingleWell> glift

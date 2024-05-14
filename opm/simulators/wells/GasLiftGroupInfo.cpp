@@ -32,21 +32,20 @@
 
 namespace Opm {
 
-GasLiftGroupInfo::
-GasLiftGroupInfo(
-    GLiftEclWells &ecl_wells,
-    const Schedule &schedule,
-    const SummaryState &summary_state,
-    const int report_step_idx,
-    const int iteration_idx,
-    const PhaseUsage &phase_usage,
-    DeferredLogger &deferred_logger,
-    WellState<double>& well_state,
-    const GroupState<double>& group_state,
-    const Communication &comm,
-    bool glift_debug
-) :
-    GasLiftCommon(well_state, group_state, deferred_logger, comm, glift_debug)
+template<class Scalar>
+GasLiftGroupInfo<Scalar>::
+GasLiftGroupInfo(GLiftEclWells& ecl_wells,
+                 const Schedule& schedule,
+                 const SummaryState& summary_state,
+                 const int report_step_idx,
+                 const int iteration_idx,
+                 const PhaseUsage& phase_usage,
+                 DeferredLogger& deferred_logger,
+                 WellState<Scalar>& well_state,
+                 const GroupState<Scalar>& group_state,
+                 const Communication& comm,
+                 bool glift_debug)
+    : GasLiftCommon<Scalar>(well_state, group_state, deferred_logger, comm, glift_debug)
     , ecl_wells_{ecl_wells}
     , schedule_{schedule}
     , summary_state_{summary_state}
@@ -54,69 +53,70 @@ GasLiftGroupInfo(
     , iteration_idx_{iteration_idx}
     , phase_usage_{phase_usage}
     , glo_{schedule_.glo(report_step_idx_)}
-{
-
-}
+{}
 
 /****************************************
  * Public methods in alphabetical order
  ****************************************/
 
-double
-GasLiftGroupInfo::
+template<class Scalar>
+Scalar GasLiftGroupInfo<Scalar>::
 alqRate(const std::string& group_name)
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.alq();
 }
 
-int
-GasLiftGroupInfo::
+template<class Scalar>
+int GasLiftGroupInfo<Scalar>::
 getGroupIdx(const std::string& group_name)
 {
     return this->group_idx_.at(group_name);
 }
 
-double
-GasLiftGroupInfo::
+template<class Scalar>
+Scalar GasLiftGroupInfo<Scalar>::
 gasRate(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.gasRate();
 }
 
-double
-GasLiftGroupInfo::
+template<class Scalar>
+Scalar GasLiftGroupInfo<Scalar>::
 gasPotential(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.gasPotential();
 }
-double
-GasLiftGroupInfo::
+
+template<class Scalar>
+Scalar GasLiftGroupInfo<Scalar>::
 waterPotential(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.waterPotential();
 }
-double
-GasLiftGroupInfo::
+
+template<class Scalar>
+Scalar GasLiftGroupInfo<Scalar>::
 oilPotential(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.oilPotential();
 }
 
-std::optional<double>
-GasLiftGroupInfo::
+template<class Scalar>
+std::optional<Scalar>
+GasLiftGroupInfo<Scalar>::
 gasTarget(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.gasTarget();
 }
 
-double
-GasLiftGroupInfo::
+template<class Scalar>
+Scalar GasLiftGroupInfo<Scalar>::
 getRate(Rate rate_type, const std::string& group_name) const
 {
     switch (rate_type) {
@@ -133,8 +133,9 @@ getRate(Rate rate_type, const std::string& group_name) const
         throw std::runtime_error("This should not happen");
     }
 }
-double
-GasLiftGroupInfo::
+
+template<class Scalar>
+Scalar GasLiftGroupInfo<Scalar>::
 getPotential(Rate rate_type, const std::string& group_name) const
 {
     switch (rate_type) {
@@ -152,8 +153,9 @@ getPotential(Rate rate_type, const std::string& group_name) const
     }
 }
 
-std::tuple<double, double, double, double>
-GasLiftGroupInfo::
+template<class Scalar>
+std::tuple<Scalar, Scalar, Scalar, Scalar>
+GasLiftGroupInfo<Scalar>::
 getRates(const int group_idx) const
 {
     const auto& group_name = groupIdxToName(group_idx);
@@ -161,8 +163,9 @@ getRates(const int group_idx) const
     return std::make_tuple(rates.oilRate(), rates.gasRate(), rates.waterRate(), rates.alq());
 }
 
-std::optional<double>
-GasLiftGroupInfo::
+template<class Scalar>
+std::optional<Scalar>
+GasLiftGroupInfo<Scalar>::
 getTarget(Rate rate_type, const std::string& group_name) const
 {
     switch (rate_type) {
@@ -180,19 +183,21 @@ getTarget(Rate rate_type, const std::string& group_name) const
     }
 }
 
-std::vector<std::pair<std::string,double>>&
-GasLiftGroupInfo::
+template<class Scalar>
+std::vector<std::pair<std::string,Scalar>>&
+GasLiftGroupInfo<Scalar>::
 getWellGroups(const std::string& well_name)
 {
     assert(this->well_group_map_.count(well_name) == 1);
     return this->well_group_map_[well_name];
 }
 
+template<class Scalar>
 const std::string&
-GasLiftGroupInfo::
+GasLiftGroupInfo<Scalar>::
 groupIdxToName(int group_idx) const
 {
-    const std::string *group_name = nullptr;
+    const std::string* group_name = nullptr;
     // TODO:  An alternative to the below loop is to set up a reverse map from idx ->
     //   string, then we could in theory do faster lookup here..
     for (const auto& [key, value] : this->group_idx_) {
@@ -209,75 +214,80 @@ groupIdxToName(int group_idx) const
     return *group_name;
 }
 
-bool
-GasLiftGroupInfo::
+template<class Scalar>
+bool GasLiftGroupInfo<Scalar>::
 hasAnyTarget(const std::string& group_name) const
 {
     return oilTarget(group_name)   || gasTarget(group_name)
         || waterTarget(group_name) || liquidTarget(group_name);
 }
 
-bool
-GasLiftGroupInfo::
+template<class Scalar>
+bool GasLiftGroupInfo<Scalar>::
 hasWell(const std::string& well_name)
 {
     return this->well_group_map_.count(well_name) == 1;
 }
 
-void
-GasLiftGroupInfo::
+template<class Scalar>
+void GasLiftGroupInfo<Scalar>::
 initialize()
 {
     const auto& group = this->schedule_.getGroup("FIELD", this->report_step_idx_);
     initializeGroupRatesRecursive_(group);
     std::vector<std::string> group_names;
-    std::vector<double> group_efficiency;
+    std::vector<Scalar> group_efficiency;
     initializeWell2GroupMapRecursive_(
         group, group_names, group_efficiency, /*current efficiency=*/1.0);
 }
 
-std::optional<double>
-GasLiftGroupInfo::
-liquidTarget(const std::string &group_name) const
+template<class Scalar>
+std::optional<Scalar>
+GasLiftGroupInfo<Scalar>::
+liquidTarget(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.liquidTarget();
 }
 
-std::optional<double>
-GasLiftGroupInfo::
+template<class Scalar>
+std::optional<Scalar>
+GasLiftGroupInfo<Scalar>::
 maxAlq(const std::string& group_name)
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.maxAlq();
 }
 
-std::optional<double>
-GasLiftGroupInfo::
+template<class Scalar>
+std::optional<Scalar>
+GasLiftGroupInfo<Scalar>::
 maxTotalGasRate(const std::string& group_name)
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.maxTotalGasRate();
 }
 
-double
-GasLiftGroupInfo::
-oilRate(const std::string &group_name) const
+template<class Scalar>
+Scalar GasLiftGroupInfo<Scalar>::
+oilRate(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.oilRate();
 }
 
-std::optional<double>
-GasLiftGroupInfo::
-oilTarget(const std::string &group_name) const
+template<class Scalar>
+std::optional<Scalar>
+GasLiftGroupInfo<Scalar>::
+oilTarget(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.oilTarget();
 }
 
+template<class Scalar>
 const std::string
-GasLiftGroupInfo::
+GasLiftGroupInfo<Scalar>::
 rateToString(Rate rate) {
     switch (rate) {
     case Rate::oil:
@@ -293,34 +303,42 @@ rateToString(Rate rate) {
     }
 }
 
-double
-GasLiftGroupInfo::
-waterRate(const std::string &group_name) const
+template<class Scalar>
+Scalar GasLiftGroupInfo<Scalar>::
+waterRate(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.waterRate();
 }
 
-std::optional<double>
-GasLiftGroupInfo::
-waterTarget(const std::string &group_name) const
+template<class Scalar>
+std::optional<Scalar>
+GasLiftGroupInfo<Scalar>::
+waterTarget(const std::string& group_name) const
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     return group_rate.waterTarget();
 }
 
-void
-GasLiftGroupInfo::
-update(
-    const std::string &group_name, double delta_oil, double delta_gas, double delta_water, double delta_alq)
+template<class Scalar>
+void GasLiftGroupInfo<Scalar>::
+update(const std::string& group_name,
+        Scalar delta_oil,
+        Scalar delta_gas,
+        Scalar delta_water,
+        Scalar delta_alq)
 {
     auto& group_rate = this->group_rate_map_.at(group_name);
     group_rate.update(delta_oil, delta_gas, delta_water, delta_alq);
 }
 
-void
-GasLiftGroupInfo::
-updateRate(int idx, double oil_rate, double gas_rate, double water_rate, double alq)
+template<class Scalar>
+void GasLiftGroupInfo<Scalar>::
+updateRate(int idx,
+           Scalar oil_rate,
+           Scalar gas_rate,
+           Scalar water_rate,
+           Scalar alq)
 {
     const auto& group_name = groupIdxToName(idx);
     auto& rates = this->group_rate_map_.at(group_name);
@@ -331,10 +349,9 @@ updateRate(int idx, double oil_rate, double gas_rate, double water_rate, double 
  * Protected methods in alphabetical order
  ****************************************/
 
-
-bool
-GasLiftGroupInfo::
-checkDoGasLiftOptimization_(const std::string &well_name)
+template<class Scalar>
+bool GasLiftGroupInfo<Scalar>::
+checkDoGasLiftOptimization_(const std::string& well_name)
 {
     if (this->well_state_.gliftCheckAlqOscillation(well_name)) {
         displayDebugMessage_(
@@ -390,9 +407,9 @@ checkDoGasLiftOptimization_(const std::string &well_name)
     }
 }
 
-bool
-GasLiftGroupInfo::
-checkNewtonIterationIdxOk_(const std::string &well_name)
+template<class Scalar>
+bool GasLiftGroupInfo<Scalar>::
+checkNewtonIterationIdxOk_(const std::string& well_name)
 {
     if (this->glo_.all_newton()) {
         const int nupcol = this->schedule_[this->report_step_idx_].nupcol();
@@ -419,17 +436,20 @@ checkNewtonIterationIdxOk_(const std::string &well_name)
 }
 
 // This is called by each rank, but the value of "well_name" should be unique
-//   across ranks
-void
-GasLiftGroupInfo::
-debugDisplayWellContribution_(
-    const std::string& gr_name, const std::string& well_name,
-    double eff_factor,
-    double well_oil_rate, double well_gas_rate, double well_water_rate,
-    double well_alq,
-    double oil_rate, double gas_rate, double water_rate,
-    double alq
-) const
+// across ranks
+template<class Scalar>
+void GasLiftGroupInfo<Scalar>::
+debugDisplayWellContribution_(const std::string& gr_name,
+                              const std::string& well_name,
+                              Scalar eff_factor,
+                              Scalar well_oil_rate,
+                              Scalar well_gas_rate,
+                              Scalar well_water_rate,
+                              Scalar well_alq,
+                              Scalar oil_rate,
+                              Scalar gas_rate,
+                              Scalar water_rate,
+                              Scalar alq) const
 {
     const std::string msg = fmt::format("Group rate for {} : Well {} : "
         "eff_factor = {}, oil_rate = {}, gas_rate = {}, water_rate = {}, "
@@ -439,47 +459,49 @@ debugDisplayWellContribution_(
     displayDebugMessage_(msg);
 }
 
-void
-GasLiftGroupInfo::
-debugDisplayUpdatedGroupRates(
-      const std::string& name,
-      double oil_rate, double gas_rate, double water_rate, double alq) const
+template<class Scalar>
+void GasLiftGroupInfo<Scalar>::
+debugDisplayUpdatedGroupRates(const std::string& name,
+                              Scalar oil_rate,
+                              Scalar gas_rate,
+                              Scalar water_rate,
+                              Scalar alq) const
 {
     const std::string msg = fmt::format("Updated group info for {} : "
         "oil_rate = {}, gas_rate = {}, water_rate = {}, alq = {}",
         name, oil_rate, gas_rate, water_rate, alq);
-    displayDebugMessageOnRank0_(msg);
+    this->displayDebugMessageOnRank0_(msg);
 }
 
-void
-GasLiftGroupInfo::
+template<class Scalar>
+void GasLiftGroupInfo<Scalar>::
 debugEndInitializeGroup(const std::string& name) const
 {
     const std::string msg = fmt::format("Finished with group {} ...", name);
-    displayDebugMessageOnRank0_(msg);
+    this->displayDebugMessageOnRank0_(msg);
 }
 
-void
-GasLiftGroupInfo::
+template<class Scalar>
+void GasLiftGroupInfo<Scalar>::
 debugStartInitializeGroup(const std::string& name) const
 {
     const std::string msg = fmt::format("Initializing group {} ...", name);
-    displayDebugMessageOnRank0_(msg);
+    this->displayDebugMessageOnRank0_(msg);
 }
 
-void
-GasLiftGroupInfo::
-displayDebugMessage_(const std::string &msg) const
+template<class Scalar>
+void GasLiftGroupInfo<Scalar>::
+displayDebugMessage_(const std::string& msg) const
 {
     if (this->debug) {
         const std::string message = fmt::format("Init group info : {}", msg);
-        logMessage_(/*prefix=*/"GLIFT", message);
+        this->logMessage_(/*prefix=*/"GLIFT", message);
     }
 }
 
-void
-GasLiftGroupInfo::
-displayDebugMessage_(const std::string &msg, const std::string &well_name)
+template<class Scalar>
+void GasLiftGroupInfo<Scalar>::
+displayDebugMessage_(const std::string& msg, const std::string& well_name)
 {
     if (this->debug) {
         const std::string message = fmt::format("Well {} : {}", well_name, msg);
@@ -487,9 +509,9 @@ displayDebugMessage_(const std::string &msg, const std::string &well_name)
     }
 }
 
-
-std::tuple<double, double, double, double, double, double>
-GasLiftGroupInfo::
+template<class Scalar>
+std::tuple<Scalar, Scalar, Scalar, Scalar, Scalar, Scalar>
+GasLiftGroupInfo<Scalar>::
 getProducerWellRates_(const Well* well, int well_index)
 {
     const auto& pu = this->phase_usage_;
@@ -509,21 +531,21 @@ getProducerWellRates_(const Well* well, int well_index)
         : 0.0;
 
     const auto controls = well->productionControls(this->summary_state_);
-    double oil_rate = oil_pot;
+    Scalar oil_rate = oil_pot;
     if (controls.hasControl(Well::ProducerCMode::ORAT)) {
-        oil_rate = std::min(controls.oil_rate, oil_rate);
+        oil_rate = std::min(static_cast<Scalar>(controls.oil_rate), oil_rate);
     }
-    double gas_rate = gas_pot;
+    Scalar gas_rate = gas_pot;
     if (controls.hasControl(Well::ProducerCMode::GRAT)) {
-        gas_rate = std::min(controls.gas_rate, gas_rate);
+        gas_rate = std::min(static_cast<Scalar>(controls.gas_rate), gas_rate);
     }
-    double water_rate = water_pot;
+    Scalar water_rate = water_pot;
     if (controls.hasControl(Well::ProducerCMode::WRAT)) {
-        water_rate = std::min(controls.water_rate, water_rate);
+        water_rate = std::min(static_cast<Scalar>(controls.water_rate), water_rate);
     }
     if (controls.hasControl(Well::ProducerCMode::LRAT)) {
-        double liquid_rate = oil_rate + water_rate;
-        double liquid_rate_lim = std::min(controls.liquid_rate, liquid_rate);
+        Scalar liquid_rate = oil_rate + water_rate;
+        Scalar liquid_rate_lim = std::min(static_cast<Scalar>(controls.liquid_rate), liquid_rate);
         water_rate = water_rate / liquid_rate * liquid_rate_lim;
         oil_rate = oil_rate / liquid_rate * liquid_rate_lim;
     }
@@ -531,11 +553,12 @@ getProducerWellRates_(const Well* well, int well_index)
     return {oil_rate, gas_rate, water_rate, oil_pot, gas_pot, water_pot};
 }
 
-std::tuple<double, double, double, double, double, double, double>
-GasLiftGroupInfo::
-initializeGroupRatesRecursive_(const Group &group)
+template<class Scalar>
+std::tuple<Scalar, Scalar, Scalar, Scalar, Scalar, Scalar, Scalar>
+GasLiftGroupInfo<Scalar>::
+initializeGroupRatesRecursive_(const Group& group)
 {
-    std::array<double,7> rates{};
+    std::array<Scalar,7> rates{};
     if (this->debug) debugStartInitializeGroup(group.name());
     auto& [oil_rate, water_rate, gas_rate, oil_potential, water_potential, gas_potential, alq] = rates;
     if (group.wellgroup()) {
@@ -554,7 +577,7 @@ initializeGroupRatesRecursive_(const Group &group)
                 if (well->isProducer()) {
                     auto [sw_oil_rate, sw_gas_rate, sw_water_rate, sw_oil_pot, sw_gas_pot, sw_water_pot] = getProducerWellRates_(well, index);
                     auto sw_alq = this->well_state_.getALQ(well_name);
-                    double factor = well->getEfficiencyFactor();
+                    Scalar factor = well->getEfficiencyFactor();
                     oil_rate += (factor * sw_oil_rate);
                     gas_rate += (factor * sw_gas_rate);
                     water_rate += (factor * sw_water_rate);
@@ -595,7 +618,7 @@ initializeGroupRatesRecursive_(const Group &group)
         }
     }
     if (this->debug) debugEndInitializeGroup(group.name());
-    std::optional<double> oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq;
+    std::optional<Scalar> oil_target, gas_target, water_target, liquid_target, max_total_gas, max_alq;
     const auto controls = group.productionControls(this->summary_state_);
     if (group.has_control(Group::ProductionCMode::LRAT)) {
         liquid_target = controls.liquid_target;
@@ -610,21 +633,21 @@ initializeGroupRatesRecursive_(const Group &group)
         water_target = controls.water_target;
     }
     if (this->glo_.has_group(group.name())) {
-        const auto &gl_group = this->glo_.group(group.name());
+        const auto& gl_group = this->glo_.group(group.name());
         max_alq = gl_group.max_lift_gas();
         max_total_gas = gl_group.max_total_gas();
     }
     if (oil_target || liquid_target || water_target || gas_target || max_total_gas || max_alq) {
         updateGroupIdxMap_(group.name());
-        if(oil_target)
+        if (oil_target)
             oil_rate = std::min(oil_rate, *oil_target);
-        if(gas_target)
+        if (gas_target)
             gas_rate = std::min(gas_rate, *gas_target);
-        if(water_target)
+        if (water_target)
             water_rate = std::min(water_rate, *water_target);
-        if(liquid_target) {
-            double liquid_rate = oil_rate + water_rate;
-            double liquid_rate_limited = std::min(liquid_rate, *liquid_target);
+        if (liquid_target) {
+            Scalar liquid_rate = oil_rate + water_rate;
+            Scalar liquid_rate_limited = std::min(liquid_rate, *liquid_target);
             oil_rate = oil_rate / liquid_rate * liquid_rate_limited;
             water_rate = water_rate / liquid_rate * liquid_rate_limited;
         }
@@ -641,15 +664,14 @@ initializeGroupRatesRecursive_(const Group &group)
     return std::make_tuple(oil_rate, gas_rate, water_rate, oil_potential, gas_potential, water_potential, alq);
 }
 
-void
-GasLiftGroupInfo::
-initializeWell2GroupMapRecursive_(
-    const Group &group,
-    std::vector<std::string> &group_names,
-    std::vector<double> &group_efficiency,
-    double cur_efficiency)
+template<class Scalar>
+void GasLiftGroupInfo<Scalar>::
+initializeWell2GroupMapRecursive_(const Group& group,
+                                  std::vector<std::string>& group_names,
+                                  std::vector<Scalar>& group_efficiency,
+                                  Scalar cur_efficiency)
 {
-    double gfac = group.getGroupEfficiencyFactor();
+    Scalar gfac = group.getGroupEfficiencyFactor();
     cur_efficiency = gfac * cur_efficiency;
     for (auto &item : group_efficiency) {
         item *= gfac;
@@ -668,17 +690,17 @@ initializeWell2GroupMapRecursive_(
             if (checkDoGasLiftOptimization_(well_name)) {
                 const auto &well = this->schedule_.getWell(
                     well_name, this->report_step_idx_);
-                double wfac = well.getEfficiencyFactor();
+                Scalar wfac = well.getEfficiencyFactor();
                 auto [itr, success] = this->well_group_map_.insert(
                       {well_name, /*empty vector*/ {}});
                 assert(success);
-                auto &vec = itr->second;
+                auto& vec = itr->second;
                 assert(group_names.size() == group_efficiency.size());
                 auto iter2 = group_efficiency.begin();
                 for (auto iter1 = group_names.begin();
                      iter1 != group_names.end(); ++iter1)
                 {
-                    double efficiency = (*iter2) * wfac;
+                    Scalar efficiency = (*iter2) * wfac;
                     vec.emplace_back(/*group_name=*/*iter1, efficiency);
                     ++iter2;
                 }
@@ -701,15 +723,13 @@ initializeWell2GroupMapRecursive_(
     }
 }
 
-
-
 // TODO: It would be more efficient if the group idx map was build once
 //  per time step (or better: once per report step) and saved e.g. in
 //  the well state object, instead of rebuilding here for each of
 //  NUPCOL well iteration for each time step.
-void
-GasLiftGroupInfo::
-updateGroupIdxMap_(const std::string &group_name)
+template<class Scalar>
+void GasLiftGroupInfo<Scalar>::
+updateGroupIdxMap_(const std::string& group_name)
 {
     if (this->group_idx_.count(group_name) == 0) {
         //auto [itr, success] =
@@ -717,5 +737,7 @@ updateGroupIdxMap_(const std::string &group_name)
         this->next_group_idx_++;
     }
 }
+
+template class GasLiftGroupInfo<double>;
 
 } // namespace Opm

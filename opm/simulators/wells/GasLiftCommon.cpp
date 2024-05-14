@@ -28,30 +28,27 @@
 
 namespace Opm {
 
-GasLiftCommon::
-GasLiftCommon(
-    WellState<double>& well_state,
-    const GroupState<double>& group_state,
-    DeferredLogger &deferred_logger,
-    const Parallel::Communication& comm,
-    bool glift_debug
-) :
-    well_state_{well_state},
-    group_state_{group_state},
-    deferred_logger_{deferred_logger},
-    comm_{comm},
-    debug{glift_debug}
-{
-
-}
+template<class Scalar>
+GasLiftCommon<Scalar>::
+GasLiftCommon(WellState<Scalar>& well_state,
+              const GroupState<Scalar>& group_state,
+              DeferredLogger& deferred_logger,
+              const Parallel::Communication& comm,
+              bool glift_debug)
+    : well_state_{well_state}
+    , group_state_{group_state}
+    , deferred_logger_{deferred_logger}
+    , comm_{comm}
+    , debug{glift_debug}
+{}
 
 /****************************************
  * Protected methods in alphabetical order
  ****************************************/
 
+template<class Scalar>
 int
-GasLiftCommon::
-debugUpdateGlobalCounter_() const
+GasLiftCommon<Scalar>::debugUpdateGlobalCounter_() const
 {
     auto count = this->well_state_.gliftUpdateDebugCounter();
     const std::string msg = fmt::format("global counter = {}", count);
@@ -59,9 +56,9 @@ debugUpdateGlobalCounter_() const
     return count;
 }
 
-void
-GasLiftCommon::
-displayDebugMessageOnRank0_(const std::string &msg) const
+template<class Scalar>
+void GasLiftCommon<Scalar>::
+displayDebugMessageOnRank0_(const std::string& msg) const
 {
     // This output should be identical for all ranks.
 
@@ -71,12 +68,13 @@ displayDebugMessageOnRank0_(const std::string &msg) const
     }
 }
 
-void
-GasLiftCommon::
-logMessage_(
-    const std::string& prefix, const std::string& msg, MessageType msg_type) const
+template<class Scalar>
+void GasLiftCommon<Scalar>::
+logMessage_(const std::string& prefix,
+            const std::string& msg,
+            MessageType msg_type) const
 {
-    std::string rank = "";
+    std::string rank;
     if (this->comm_.size() > 1) {
         rank = fmt::format(" Rank #{} :", this->comm_.rank());
     }
@@ -105,9 +103,6 @@ logMessage_(
     }
 }
 
-/****************************************
- * Private methods in alphabetical order
- ****************************************/
-
+template class GasLiftCommon<double>;
 
 } // namespace Opm

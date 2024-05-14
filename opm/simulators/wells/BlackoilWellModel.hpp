@@ -118,8 +118,8 @@ class WellContributions;
             using GLiftProdWells = typename BlackoilWellModelGeneric<Scalar>::GLiftProdWells;
             using GLiftWellStateMap =
                 typename BlackoilWellModelGeneric<Scalar>::GLiftWellStateMap;
-            using GLiftEclWells = typename GasLiftGroupInfo::GLiftEclWells;
-            using GLiftSyncGroups = typename GasLiftSingleWellGeneric::GLiftSyncGroups;
+            using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
+            using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
             constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
             typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 
@@ -524,15 +524,19 @@ class WellContributions;
             bool maybeDoGasLiftOptimize(DeferredLogger& deferred_logger);
 
             void gasLiftOptimizationStage1(DeferredLogger& deferred_logger,
-                GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
-                GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map);
+                                           GLiftProdWells& prod_wells,
+                                           GLiftOptWells& glift_wells,
+                                           GasLiftGroupInfo<Scalar>& group_info,
+                                           GLiftWellStateMap& state_map);
 
             // cannot be const since it accesses the non-const WellState
-            void gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag> *well,
-                DeferredLogger& deferred_logger,
-                GLiftProdWells &prod_wells, GLiftOptWells &glift_wells,
-                GasLiftGroupInfo &group_info, GLiftWellStateMap &state_map,
-                GLiftSyncGroups& groups_to_sync);
+            void gasLiftOptimizationStage1SingleWell(WellInterface<TypeTag>* well,
+                                                     DeferredLogger& deferred_logger,
+                                                     GLiftProdWells& prod_wells,
+                                                     GLiftOptWells& glift_wells,
+                                                     GasLiftGroupInfo<Scalar>& group_info,
+                                                     GLiftWellStateMap& state_map,
+                                                     GLiftSyncGroups& groups_to_sync);
 
             void extractLegacyCellPvtRegionIndex_();
 
