@@ -371,7 +371,7 @@ struct EnableDebuggingChecks<TypeTag, Properties::TTag::FlowBaseProblem>
 // as default if experimental mode is enabled.
 template<class TypeTag>
 struct EnableDriftCompensation<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
+{ static constexpr bool value = false; };
 
 // enable the ECL output by default
 template<class TypeTag>
