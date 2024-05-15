@@ -584,6 +584,315 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
     this->removeNonCartesianTransmissibilities_(disableNNC);
 }
 
+    template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
+    void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
+    updateTrans(bool global, const std::function<unsigned int(unsigned int)>& map, const bool applyNncMultregT)
+    {
+        const auto& cartDims = cartMapper_.cartesianDimensions();
+        const auto& transMult = eclState_.getTransMult();
+        const auto& comm = gridView_.comm();
+        ElementMapper elemMapper(gridView_, Dune::mcmgElementLayout());
+
+        unsigned numElements = elemMapper.size();
+        // get the ntg values, the ntg values are modified for the cells merged with minpv
+        const std::vector<double>& ntg = this->lookUpData_.assignFieldPropsDoubleOnLeaf(eclState_.fieldProps(), "NTG");
+        const bool updateDiffusivity = eclState_.getSimulationConfig().isDiffusive();
+        const bool updateDispersivity = eclState_.getSimulationConfig().rock_config().dispersion();
+
+        const bool disableNNC = eclState_.getSimulationConfig().useNONNC();
+
+        if (map)
+            extractPermeability_(map);
+        else
+            extractPermeability_();
+
+        // calculate the axis specific centroids of all elements
+        std::array<std::vector<DimVector>, dimWorld> axisCentroids;
+
+        for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+            axisCentroids[dimIdx].resize(numElements);
+
+        for (const auto& elem : elements(gridView_)) {
+            unsigned elemIdx = elemMapper.index(elem);
+
+            // compute the axis specific "centroids" used for the transmissibilities. for
+            // consistency with the flow simulator, we use the element centers as
+            // computed by opm-parser's Opm::EclipseGrid class for all axes.
+            std::array<double, dimWorld> centroid = centroids_(elemIdx);
+
+            for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
+                for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+                    axisCentroids[axisIdx][elemIdx][dimIdx] = centroid[dimIdx];
+        }
+
+        // reserving some space in the hashmap upfront saves quite a bit of time because
+        // resizes are costly for hashmaps and there would be quite a few of them if we
+        // would not have a rough idea of how large the final map will be (the rough idea
+        // is a conforming Cartesian grid).
+        trans_.clear();
+        trans_.reserve(numElements*3*1.05);
+
+        transBoundary_.clear();
+
+        // The MULTZ needs special case if the option is ALL
+        // Then the smallest multiplier is applied.
+        // Default is to apply the top and bottom multiplier
+        bool useSmallestMultiplier;
+        bool pinchActive;
+        if (comm.rank() == 0) {
+            const auto& eclGrid = eclState_.getInputGrid();
+            pinchActive = eclGrid.isPinchActive();
+            useSmallestMultiplier = eclGrid.getMultzOption() == PinchMode::ALL;
+        }
+        if (global && comm.size() > 1) {
+            comm.broadcast(&useSmallestMultiplier, 1, 0);
+            comm.broadcast(&pinchActive, 1, 0);
+        }
+
+        // compute the transmissibilities for all intersections
+        for (const auto& elem : elements(gridView_)) {
+            unsigned elemIdx = elemMapper.index(elem);
+
+            auto isIt = gridView_.ibegin(elem);
+            const auto& isEndIt = gridView_.iend(elem);
+            unsigned boundaryIsIdx = 0;
+            for (; isIt != isEndIt; ++ isIt) {
+                // store intersection, this might be costly
+                const auto& intersection = *isIt;
+
+                // deal with grid boundaries
+                if (intersection.boundary()) {
+                    // compute the transmissibilty for the boundary intersection
+                    const auto& geometry = intersection.geometry();
+                    const auto& faceCenterInside = geometry.center();
+
+                    auto faceAreaNormal = intersection.centerUnitOuterNormal();
+                    faceAreaNormal *= geometry.volume();
+
+                    Scalar transBoundaryIs;
+                    computeHalfTrans_(transBoundaryIs,
+                                      faceAreaNormal,
+                                      intersection.indexInInside(),
+                                      distanceVector_(faceCenterInside,
+                                                      intersection.indexInInside(),
+                                                      elemIdx,
+                                                      axisCentroids),
+                                      permeability_[elemIdx]);
+
+                    // normally there would be two half-transmissibilities that would be
+                    // averaged. on the grid boundary there only is the half
+                    // transmissibility of the interior element.
+                    unsigned insideCartElemIdx = cartMapper_.cartesianIndex(elemIdx);
+                    applyMultipliers_(transBoundaryIs, intersection.indexInInside(), insideCartElemIdx, transMult);
+                    transBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] = transBoundaryIs;
+
+                    // for boundary intersections we also need to compute the thermal
+                    // half transmissibilities
+                    if (enableEnergy_) {
+                        Scalar transBoundaryEnergyIs;
+                        computeHalfDiffusivity_(transBoundaryEnergyIs,
+                                                faceAreaNormal,
+                                                distanceVector_(faceCenterInside,
+                                                                intersection.indexInInside(),
+                                                                elemIdx,
+                                                                axisCentroids),
+                                                1.0);
+                        thermalHalfTransBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] =
+                                transBoundaryEnergyIs;
+                    }
+
+                    ++ boundaryIsIdx;
+                    continue;
+                }
+
+                if (!intersection.neighbor()) {
+                    // elements can be on process boundaries, i.e. they are not on the
+                    // domain boundary yet they don't have neighbors.
+                    ++ boundaryIsIdx;
+                    continue;
+                }
+
+                const auto& outsideElem = intersection.outside();
+                unsigned outsideElemIdx = elemMapper.index(outsideElem);
+
+                // Get the Cartesian indices of the origen cells (parent or equivalent cell on level zero), for CpGrid with LGRs.
+                // For genral grids and no LGRs, get the usual Cartesian Index.
+                unsigned insideCartElemIdx = this-> lookUpCartesianData_.template getFieldPropCartesianIdx<Grid>(elemIdx);
+                unsigned outsideCartElemIdx =  this-> lookUpCartesianData_.template getFieldPropCartesianIdx<Grid>(outsideElemIdx);
+
+                // we only need to calculate a face's transmissibility
+                // once...
+                // In a parallel run insideCartElemIdx>outsideCartElemIdx does not imply elemIdx>outsideElemIdx for
+                // ghost cells and we need to use the cartesian index as this will be used when applying Z multipliers
+                // To cover the case where both cells are part of an LGR and as a consequence might have
+                // the same cartesian index, we tie their Cartesian indices and the ones on the leaf grid view.
+                if (std::tie(insideCartElemIdx, elemIdx) > std::tie(outsideCartElemIdx, outsideElemIdx))
+                    continue;
+
+                // local indices of the faces of the inside and
+                // outside elements which contain the intersection
+                int insideFaceIdx  = intersection.indexInInside();
+                int outsideFaceIdx = intersection.indexInOutside();
+
+                if (insideFaceIdx == -1) {
+                    // NNC. Set zero transmissibility, as it will be
+                    // *added to* by applyNncToGridTrans_() later.
+                    assert(outsideFaceIdx == -1);
+                    trans_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
+                    if (enableEnergy_){
+                        thermalHalfTrans_[details::directionalIsId(elemIdx, outsideElemIdx)] = 0.0;
+                        thermalHalfTrans_[details::directionalIsId(outsideElemIdx, elemIdx)] = 0.0;
+                    }
+
+                    if (updateDiffusivity) {
+                        diffusivity_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
+                    }
+                    if (updateDispersivity) {
+                        dispersivity_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
+                    }
+                    continue;
+                }
+
+                DimVector faceCenterInside;
+                DimVector faceCenterOutside;
+                DimVector faceAreaNormal;
+
+                typename std::is_same<Grid, Dune::CpGrid>::type isCpGrid;
+                computeFaceProperties(intersection,
+                                      elemIdx,
+                                      insideFaceIdx,
+                                      outsideElemIdx,
+                                      outsideFaceIdx,
+                                      faceCenterInside,
+                                      faceCenterOutside,
+                                      faceAreaNormal,
+                                      isCpGrid);
+
+                Scalar halfTrans1;
+                Scalar halfTrans2;
+
+                computeHalfTrans_(halfTrans1,
+                                  faceAreaNormal,
+                                  insideFaceIdx,
+                                  distanceVector_(faceCenterInside,
+                                                  intersection.indexInInside(),
+                                                  elemIdx,
+                                                  axisCentroids),
+                                  permeability_[elemIdx]);
+                computeHalfTrans_(halfTrans2,
+                                  faceAreaNormal,
+                                  outsideFaceIdx,
+                                  distanceVector_(faceCenterOutside,
+                                                  intersection.indexInOutside(),
+                                                  outsideElemIdx,
+                                                  axisCentroids),
+                                  permeability_[outsideElemIdx]);
+
+                applyNtg_(halfTrans1, insideFaceIdx, elemIdx, ntg);
+                applyNtg_(halfTrans2, outsideFaceIdx, outsideElemIdx, ntg);
+
+                // convert half transmissibilities to full face
+                // transmissibilities using the harmonic mean
+                Scalar trans;
+                if (std::abs(halfTrans1) < 1e-30 || std::abs(halfTrans2) < 1e-30)
+                    // avoid division by zero
+                    trans = 0.0;
+                else
+                    trans = 1.0 / (1.0/halfTrans1 + 1.0/halfTrans2);
+
+                // apply the full face transmissibility multipliers
+                // for the inside ...
+                if(!pinchActive){
+                    if (insideFaceIdx > 3){// top or bottom
+                        auto find_layer = [&cartDims](std::size_t cell){
+                            cell /= cartDims[0];
+                            auto k = cell / cartDims[1];
+                            return k;
+                        };
+                        int kup = find_layer(insideCartElemIdx);
+                        int kdown=find_layer(outsideCartElemIdx);
+                        // When a grid is a CpGrid with LGRs, insideCartElemIdx coincides with outsideCartElemIdx
+                        // for cells on the leaf with the same parent cell on level zero.
+                        assert((kup != kdown) || (insideCartElemIdx == outsideCartElemIdx));
+                        if(std::abs(kup -kdown) > 1){
+                            trans = 0.0;
+                        }
+                    }
+                }
+
+                if (useSmallestMultiplier)
+                {
+                    // Currently PINCH(4) is never queries and hence  PINCH(4) == TOPBOT is assumed
+                    // and in this branch PINCH(5) == ALL holds
+                    applyAllZMultipliers_(trans, insideFaceIdx, outsideFaceIdx, insideCartElemIdx,
+                                          outsideCartElemIdx, transMult, cartDims,
+                            /* pinchTop= */ false);
+                }
+                else
+                {
+                    applyMultipliers_(trans, insideFaceIdx, insideCartElemIdx, transMult);
+                    // ... and outside elements
+                    applyMultipliers_(trans, outsideFaceIdx, outsideCartElemIdx, transMult);
+                }
+
+                // apply the region multipliers (cf. the MULTREGT keyword)
+                FaceDir::DirEnum faceDir;
+                switch (insideFaceIdx) {
+                    case 0:
+                    case 1:
+                        faceDir = FaceDir::XPlus;
+                        break;
+
+                    case 2:
+                    case 3:
+                        faceDir = FaceDir::YPlus;
+                        break;
+
+                    case 4:
+                    case 5:
+                        faceDir = FaceDir::ZPlus;
+                        break;
+
+                    default:
+                        throw std::logic_error("Could not determine a face direction");
+                }
+
+                trans *= transMult.getRegionMultiplier(insideCartElemIdx,
+                                                       outsideCartElemIdx,
+                                                       faceDir);
+
+                trans_[details::isId(elemIdx, outsideElemIdx)] = trans;
+
+            }
+        }
+
+        // Potentially overwrite and/or modify transmissibilities based on input from deck
+        this->updateFromEclState_(global);
+
+        // Create mapping from global to local index
+        std::unordered_map<std::size_t,int> globalToLocal;
+
+        // Loop over all elements (global grid) and store Cartesian index
+        for (const auto& elem : elements(grid_.leafGridView())) {
+            int elemIdx = elemMapper.index(elem);
+            int cartElemIdx =  cartMapper_.cartesianIndex(elemIdx);
+            globalToLocal[cartElemIdx] = elemIdx;
+        }
+
+        if (!disableNNC) {
+            this->applyEditNncToGridTrans_(globalToLocal);
+            this->applyNncToGridTrans_(globalToLocal);
+            this->applyEditNncrToGridTrans_(globalToLocal);
+            if (applyNncMultregT) {
+                this->applyNncMultreg_(globalToLocal);
+            }
+        }
+
+        // If disableNNC == true, remove all non-neighbouring transmissibilities.
+        // If disableNNC == false, remove very small non-neighbouring transmissibilities.
+        this->removeNonCartesianTransmissibilities_(disableNNC);
+    }
+
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 extractPermeability_()

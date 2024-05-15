@@ -148,6 +148,7 @@ public:
      *   regional multipliers to explicit NNCs.
      */
     void update(bool global, const std::function<unsigned int(unsigned int)>& map = {}, bool applyNncMultRegT = false);
+    void updateTrans(bool global, const std::function<unsigned int(unsigned int)>& map = {}, const bool applyNncMultregT = false);
 
 protected:
     void updateFromEclState_(bool global);
