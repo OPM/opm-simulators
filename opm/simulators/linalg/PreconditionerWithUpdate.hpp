@@ -91,7 +91,7 @@ struct GeneralPreconditionerMaker {
     virtual std::unique_ptr<
         Preconditioner<typename OriginalPreconditioner::domain_type, typename OriginalPreconditioner::range_type>>
     make() = 0;
-    virtual ~GeneralPreconditionerMaker(){};
+    virtual ~GeneralPreconditionerMaker() = default;
 };
 
 /// @brief Struct implementing a make function which creates a preconditioner

@@ -60,10 +60,10 @@ namespace EQUIL {
 
 namespace Details {
 
-template <typename CellRange, typename Comm>
+template <typename CellRange>
 void verticalExtent(const CellRange&      cells,
                     const std::vector<std::pair<double, double>>& cellZMinMax,
-                    const Comm& comm,
+                    const Parallel::Communication& comm,
                     std::array<double,2>& span)
 {
     span[0] = std::numeric_limits<double>::max();
