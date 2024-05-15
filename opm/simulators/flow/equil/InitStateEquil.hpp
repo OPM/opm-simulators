@@ -34,6 +34,8 @@
 #include <opm/material/common/Tabulated1DFunction.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <array>
 #include <cstddef>
 #include <memory>
@@ -658,10 +660,10 @@ private:
 
 // ===========================================================================
 
-template <typename CellRange, typename Comm>
+template <typename CellRange>
 void verticalExtent(const CellRange&      cells,
                     const std::vector<std::pair<double, double>>& cellZMinMax,
-                    const Comm& comm,
+                    const Parallel::Communication& comm,
                     std::array<double,2>& span);
 
 template <class Element>
