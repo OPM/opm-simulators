@@ -416,8 +416,6 @@ public:
 
         tracerModel_.prepareTracerBatches();
 
-        updatePffDofData_();
-
         if constexpr (getPropValue<TypeTag, Properties::EnablePolymer>()) {
             const auto& vanguard = this->simulator().vanguard();
             const auto& gridView = vanguard.gridView();
