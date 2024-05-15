@@ -796,7 +796,12 @@ updateGpMaintTargetForGroups(const Group& group,
     // we only activate gpmaint if pressure is lower than the target regional pressure for injectors
     // (i.e. error > 0) and higher for producers.
     bool activate = (injection && error > 0) || (!injection && error < 0);
-    const Scalar rate = activate? gpm->rate(gpmaint_state, current_rate, error, dt) : 0.0;
+    Scalar rate = 0.0;
+    if (activate) {
+        rate = gpm->rate(gpmaint_state, current_rate, error, dt);
+    } else {
+        gpm->resetState(gpmaint_state);
+    }
     group_state.update_gpmaint_target(group.name(), std::max(0.0, sign * rate));
 }
 
