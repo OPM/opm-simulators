@@ -66,7 +66,7 @@ bool operator==(const Opm::ConvergenceReport::WellFailure& wf1,
 
 BOOST_AUTO_TEST_CASE(AllHaveFailure)
 {
-    auto cc = Dune::MPIHelper::getCollectiveCommunication();
+    auto cc = Dune::MPIHelper::getCommunication();
     std::ostringstream name;
     name << "WellRank" << cc.rank() << std::flush;
     using CR = Opm::ConvergenceReport;
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(AllHaveFailure)
 
 BOOST_AUTO_TEST_CASE(EvenHaveFailure)
 {
-    auto cc = Dune::MPIHelper::getCollectiveCommunication();
+    auto cc = Dune::MPIHelper::getCommunication();
     using CR = Opm::ConvergenceReport;
     CR cr;
     if (cc.rank() % 2 == 0) {
