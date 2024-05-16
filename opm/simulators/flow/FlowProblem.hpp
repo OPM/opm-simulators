@@ -358,6 +358,7 @@ public:
         // length of the initial episode is set to zero for the same reason.
         simulator.setEpisodeIndex(-1);
         simulator.setEpisodeLength(0.0);
+#if 0
         // write the static output files (EGRID, INIT, SMSPEC, etc.)
         if (enableEclOutput_) {
             if (simulator.vanguard().grid().comm().size() > 1) {
@@ -378,6 +379,7 @@ public:
             };
             eclWriter_->writeInit(equilGridToGrid);
         }
+#endif
 
         // the "NOGRAV" keyword from Frontsim or setting the EnableGravity to false
         // disables gravity, else the standard value of the gravity constant at sea level
@@ -421,14 +423,20 @@ public:
         readMaterialParameters_();
         readThermalParameters_();
 
-#if 0
+#if 1
         // write the static output files (EGRID, INIT, SMSPEC, etc.)
         if (enableEclOutput_) {
             if (simulator.vanguard().grid().comm().size() > 1) {
                 if (simulator.vanguard().grid().comm().rank() == 0)
                     eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
-            } else
+            } else {
+                // Re-ordering in case of ALUGrid
+                std::function<unsigned int(unsigned int)> gridToEquilGrid = [&simulator](unsigned int i) {
+                    return simulator.vanguard().gridIdxToEquilGridIdx(i);
+                };
+                transmissibilities_.finishInit(gridToEquilGrid);
                 eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
+            }
 
             // Re-ordering in case of ALUGrid
             std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
