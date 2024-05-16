@@ -68,6 +68,8 @@ public:
     const std::string& name(int tracerIdx) const;
     std::string fname(int tracerIdx) const;
     std::string sname(int tracerIdx) const;
+    std::string wellfname(int tracerIdx) const;
+    std::string wellsname(int tracerIdx) const;
 
 
     /*!
@@ -83,12 +85,18 @@ public:
     */
     const std::map<std::pair<std::string, std::string>, Scalar>&
     getWellTracerRates() const {return wellTracerRate_;}
+    const std::map<std::pair<std::string, std::string>, double>&
+    getWellFreeTracerRates() const {return wellFreeTracerRate_;}
+    const std::map<std::pair<std::string, std::string>, double>&
+    getWellSolTracerRates() const {return wellSolTracerRate_;}
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
         serializer(tracerConcentration_);
         serializer(wellTracerRate_);
+        serializer(wellFreeTracerRate_);
+        serializer(wellSolTracerRate_);
     }
 
 protected:
@@ -128,6 +136,8 @@ protected:
 
     // <wellName, tracerIdx> -> wellRate
     std::map<std::pair<std::string, std::string>, Scalar> wellTracerRate_;
+    std::map<std::pair<std::string, std::string>, double> wellFreeTracerRate_;
+    std::map<std::pair<std::string, std::string>, double> wellSolTracerRate_;
     /// \brief Function returning the cell centers
     std::function<std::array<double,dimWorld>(int)> centroids_;
 };

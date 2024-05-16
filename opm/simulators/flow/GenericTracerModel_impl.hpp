@@ -168,6 +168,20 @@ sname(int tracerIdx) const
 }
 
 template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
+std::string GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+wellfname(int tracerIdx) const
+{
+    return this->eclState_.tracer()[tracerIdx].wellfname();
+}
+
+template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
+std::string GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
+wellsname(int tracerIdx) const
+{
+    return this->eclState_.tracer()[tracerIdx].wellsname();
+}
+
+template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar>
 Scalar GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 currentConcentration_(const Well& eclWell, const std::string& name) const
 {
@@ -376,7 +390,7 @@ template<class Grid,class GridView, class DofMapper, class Stencil, class Scalar
 bool GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>::
 linearSolveBatchwise_(const TracerMatrix& M, std::vector<TracerVector>& x, std::vector<TracerVector>& b)
 {
-    Scalar tolerance = 1e-2;
+    Scalar tolerance = 1e-6;
     int maxIter = 100;
 
     int verbosity = 0;
