@@ -207,7 +207,7 @@ BOOST_AUTO_TEST_CASE(WGState)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized WGState differ");
 }
 
-BOOST_AUTO_TEST_CASE(EclGenericVanguard)
+BOOST_AUTO_TEST_CASE(FlowGenericVanguard)
 {
     auto in_params = Opm::FlowGenericVanguard::serializationTestParams();
     Opm::FlowGenericVanguard val1(std::move(in_params));
@@ -229,20 +229,13 @@ BOOST_AUTO_TEST_CASE(EclGenericVanguard)
     BOOST_CHECK_MESSAGE(val1 == val2, "Deserialized FlowGenericVanguard differ");
 }
 
-BOOST_AUTO_TEST_CASE(EclGenericProblem)
+BOOST_AUTO_TEST_CASE(FlowGenericProblem)
 {
     Opm::EclipseState eclState;
     Opm::Schedule schedule;
     Dune::CpGrid grid;
-#if HAVE_DUNE_FEM
-    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
-    using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
-    auto gridPart = GridPart(grid);
-    auto gridView = GridView(static_cast<GridView>(gridPart));
-#else
     using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
     auto gridView = grid.leafGridView();
-#endif // HAVE_DUNE_FEM
     auto data_out
         = Opm::FlowGenericProblem<GridView, Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>>::
             serializationTestObject(eclState, schedule, gridView);
@@ -256,6 +249,31 @@ BOOST_AUTO_TEST_CASE(EclGenericProblem)
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericProblem");
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericProblem differ");
 }
+
+#if HAVE_DUNE_FEM
+BOOST_AUTO_TEST_CASE(FlowGenericProblemFem)
+{
+    Opm::EclipseState eclState;
+    Opm::Schedule schedule;
+    Dune::CpGrid grid;
+    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
+    using GridView = Dune::GridView<GridPart>;
+    auto gridPart = GridPart(grid);
+    auto gridView = GridView(static_cast<GridView>(gridPart));
+    auto data_out
+        = Opm::FlowGenericProblem<GridView, Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>>::
+            serializationTestObject(eclState, schedule, gridView);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in(eclState, schedule, gridView);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericProblem");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericProblem differ");
+}
+#endif // HAVE_DUNE_FEM
 
 namespace Opm {
 
@@ -400,21 +418,14 @@ public:
     }
 };
 
-BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
+BOOST_AUTO_TEST_CASE(FlowGenericTracerModel)
 {
     Dune::CpGrid grid;
     Opm::EclipseState eclState;
     Dune::CartesianIndexMapper<Dune::CpGrid> mapper(grid);
     auto centroids = [](int) { return std::array<double,Dune::CpGrid::dimensionworld>{}; };
-#if HAVE_DUNE_FEM
-    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
-    using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
-    auto gridPart = GridPart(grid);
-    auto gridView = GridView(static_cast<GridView>(gridPart));
-#else
     using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
     auto gridView = grid.leafGridView();
-#endif // HAVE_DUNE_FEM
     Dune::MultipleCodimMultipleGeomTypeMapper<GridView> dofMapper(gridView, Dune::mcmgElementLayout());
     auto data_out = GenericTracerModelTest<Dune::CpGrid,
                                            GridView,
@@ -432,6 +443,36 @@ BOOST_AUTO_TEST_CASE(EclGenericTracerModel)
     BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericTracerModel");
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericTracerModel differ");
 }
+
+#if HAVE_DUNE_FEM
+BOOST_AUTO_TEST_CASE(FlowGenericTracerModelFem)
+{
+    Dune::CpGrid grid;
+    Opm::EclipseState eclState;
+    Dune::CartesianIndexMapper<Dune::CpGrid> mapper(grid);
+    auto centroids = [](int) { return std::array<double,Dune::CpGrid::dimensionworld>{}; };
+    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
+    using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
+    auto gridPart = GridPart(grid);
+    auto gridView = GridView(static_cast<GridView>(gridPart));
+    Dune::MultipleCodimMultipleGeomTypeMapper<GridView> dofMapper(gridView, Dune::mcmgElementLayout());
+    auto data_out = GenericTracerModelTest<Dune::CpGrid,
+                                           GridView,
+                                           Dune::MultipleCodimMultipleGeomTypeMapper<GridView>,
+                                           Opm::EcfvStencil<double, GridView, false, false>,
+                                           double>
+        ::serializationTestObject(gridView, eclState, mapper, dofMapper, centroids);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in(gridView, eclState, mapper, dofMapper, centroids);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericTracerModel");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericTracerModel differ");
+}
+#endif // HAVE_DUNE_FEM
 
 namespace Opm {
 
@@ -458,7 +499,7 @@ struct AquiferFixture {
         BlackoilModelParameters<TT>::registerParameters();
         Parameters::registerParam<TT, Properties::EnableTerminalOutput>("Do *NOT* use!");
         setupParameters_<TT>(2, argv, /*registerParams=*/true);
-        FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+        Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
     }
 };
 
