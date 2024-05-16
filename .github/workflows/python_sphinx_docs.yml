@@ -2,12 +2,12 @@ name: Build Python Sphinx Docs and push to gh-pages
 
 on:
     push:
-        branches: main
+        branches: master
         paths:
           - 'python/**'
           - '.github/workflows/python_sphinx_docs.yml'
     pull_request:
-        branches: main
+        branches: master
         paths:
           - 'python/**'
           - '.github/workflows/python_sphinx_docs.yml'
@@ -17,7 +17,7 @@ jobs:
     build:
       runs-on: ubuntu-latest
       steps:
-        - name: checkout source code
+        - name: Checkout source code
           uses: actions/checkout@v4
           with:
             fetch-depth: 0   # Fetch all history for all tags and branches
@@ -39,8 +39,8 @@ jobs:
             cd sphinx_docs
             # Currently we build only docs for the HEAD of the master branch
             # Later we can add release tags to the list to get the docs for the releases
-            # For example: -b "main, release/2024.04/final" will build the docs for
-            # the main branch and the release/2024.04/final tag
+            # For example: -b "master, release/2024.04/final" will build the docs for
+            # the master branch and the release/2024.04/final tag
             poetry run sphinx-versioned -m master -b master --git-root ../../
         - name: Copy documentation to gh-pages
           run: |
