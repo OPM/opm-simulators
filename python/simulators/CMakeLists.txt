@@ -7,11 +7,16 @@ set(PYTHON_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyBlackOilSimu
 #    ${PYTHON_EXECUTABLE} is set there to ${Python3_EXECUTABLE}
 #
 # Command to run the Python script
+
+find_file(PYTHON_GENERATE_DOCSTRINGS_PY generate_docstring_hpp.py
+  PATHS ${opm-common_DIR} ${opm-common_PYTHON_COMMON_DIR}
+  PATH_SUFFIXES python NO_DEFAULT_PATH REQUIRED)
+
 add_custom_command(
     OUTPUT ${PYTHON_DOCSTRINGS_GENERATED_HPP}
     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-            ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/python/generate_docstring_hpp.py
-            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_DOCSTRINGS_GENERATED_HPP}
+            ${PYTHON_EXECUTABLE} ${PYTHON_GENERATE_DOCSTRINGS_PY}
+            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_DOCSTRINGS_GENERATED_HPP} PYBLACKOILSIMULATORDOC_HPP "Opm::Pybind::DocStrings"
     DEPENDS ${PYTHON_DOCSTRINGS_FILE}
     COMMENT "Generating PyBlackOilSimulatorDoc.hpp from JSON file"
 )
