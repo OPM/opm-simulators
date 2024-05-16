@@ -44,7 +44,7 @@ jobs:
             poetry run sphinx-versioned -m master -b master --git-root ../../
         - name: Copy documentation to gh-pages
           run: |
-            cp -r python/sphinx_docs/docs/_build/* gh-pages/
+            cp -r python/sphinx_docs/docs/_build/* python/gh-pages/
         - name: Deploy documentation
           if: ${{ github.event_name == 'push' }}
           uses: JamesIves/github-pages-deploy-action@v4
