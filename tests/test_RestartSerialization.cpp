@@ -256,10 +256,17 @@ BOOST_AUTO_TEST_CASE(FlowGenericProblemFem)
     Opm::EclipseState eclState;
     Opm::Schedule schedule;
     Dune::CpGrid grid;
+#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
     using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
-    using GridView = Dune::GridView<GridPart>;
+    using GridView = GridPart::GridViewType;
+    auto gridPart = GridPart(grid);
+    auto gridView = gridPart.gridView();
+#else
+    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
+    using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
     auto gridPart = GridPart(grid);
     auto gridView = GridView(static_cast<GridView>(gridPart));
+#endif
     auto data_out
         = Opm::FlowGenericProblem<GridView, Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>>::
             serializationTestObject(eclState, schedule, gridView);
@@ -451,10 +458,17 @@ BOOST_AUTO_TEST_CASE(FlowGenericTracerModelFem)
     Opm::EclipseState eclState;
     Dune::CartesianIndexMapper<Dune::CpGrid> mapper(grid);
     auto centroids = [](int) { return std::array<double,Dune::CpGrid::dimensionworld>{}; };
+#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
+    using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
+    using GridView = GridPart::GridViewType;
+    auto gridPart = GridPart(grid);
+    auto gridView = gridPart.gridView();
+#else
     using GridPart = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>;
     using GridView = Dune::GridView<Dune::Fem::GridPart2GridViewTraits<GridPart>>;
     auto gridPart = GridPart(grid);
     auto gridView = GridView(static_cast<GridView>(gridPart));
+#endif
     Dune::MultipleCodimMultipleGeomTypeMapper<GridView> dofMapper(gridView, Dune::mcmgElementLayout());
     auto data_out = GenericTracerModelTest<Dune::CpGrid,
                                            GridView,
