@@ -42,6 +42,7 @@ int setPosition(const char* field, int rank, int64_t pos)
 {
     int dam_err = damaris_set_position(field, &pos);
     if (dam_err != DAMARIS_OK) {
+        // OpmLog::error only prints from rank 0
         OpmLog::error(fmt::format("damariswriter::setPosition()       : ( rank:{}) "
                                   "damaris_set_position({}, ...), Damaris Error: {}  ",
                                   rank, field, damaris_error_string(dam_err)));
@@ -54,6 +55,7 @@ int setParameter(const char* field, int rank, int value)
 {
     int dam_err = damaris_parameter_set(field, &value, sizeof(int));
     if (dam_err != DAMARIS_OK) {
+        // OpmLog::error only prints from rank 0
         OpmLog::error(fmt::format("damariswriter::setParameter()       (rank:{}) "
                                   "damaris_parameter_set(\"{}\",...)", rank, field));
     }
@@ -65,6 +67,7 @@ int write(const char* field, int rank, const void* data)
 {
     int dam_err = damaris_write(field, data);
     if (dam_err != DAMARIS_OK) {
+        // OpmLog::error only prints from rank 0
         OpmLog::error(fmt::format("damariswriter::write()       : ( rank:{}) "
                                   "damaris_write({}, ...), Damaris Error: {}  ",
                                   rank, field, damaris_error_string(dam_err)));

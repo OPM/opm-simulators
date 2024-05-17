@@ -48,13 +48,18 @@ std::string initDamarisXmlFile()
     <parameter name="n_elements_total"     type="int" value="1" />
     <parameter name="n_elements_local"     type="int" value="1" />
     <parameter name="n"     type="int" value="1" />
-
+    <parameter name="path_string_length"     type="int" value="1" />
+    
+    <layout   name="path_string_layout"  type="char" dimensions="path_string_length"    comment="The length of the output directory path string"  />
+    <variable name="OUTPUTDIR"  layout="path_string_layout"  type="scalar"  visualizable="false" mesh="#"  unit=""  time-varying="false"  store="#"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
+    
+    
     <layout   name="zonal_layout_usmesh_integer"             type="int" dimensions="n_elements_local"   global="n_elements_total"   comment="For the field data e.g. Pressure"  />
     <variable name="GLOBAL_CELL_INDEX"    layout="zonal_layout_usmesh_integer"     type="scalar"  visualizable="false"  time-varying="false"  centering="zonal" store="_MYSTORE_OR_EMPTY_REGEX_" script="_MAKE_AVAILABLE_IN_PYTHON_" />
     <layout   name="zonal_layout_usmesh"             type="double" dimensions="n_elements_local"   global="n_elements_total"   comment="For the field data e.g. Pressure"  />
     <variable name="PRESSURE"    layout="zonal_layout_usmesh"     type="scalar"  visualizable="true"  mesh="us_mesh"   unit="_PRESSURE_UNIT_"   centering="zonal" select-file="GLOBAL_CELL_INDEX" store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" />
 
-    <variable name="MY_TEST_VAR"  layout="zonal_layout_usmesh"  type="scalar"  visualizable="true" mesh="us_mesh"  unit=""  centering="zonal"  time-varying="true"  select-file="GLOBAL_CELL_INDEX"  store="_MYSTORE_OR_EMPTY_REGEX_"  script="_MAKE_AVAILABLE_IN_PYTHON_" /> 
+     
     
     _MORE_VARIABLES_REGEX_
     <variable name="MPI_RANK"  layout="zonal_layout_usmesh_integer"   type="scalar"  visualizable="true" mesh="us_mesh" unit="rank"  centering="zonal"  store="_MYSTORE_MESH_OR_EMPTY_REGEX_" time-varying="false"  select-file="GLOBAL_CELL_INDEX"  script="_MAKE_AVAILABLE_IN_PYTHON_" comment="The MPI rank of each cell"/>

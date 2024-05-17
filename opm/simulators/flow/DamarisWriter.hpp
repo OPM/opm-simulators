@@ -158,10 +158,10 @@ public:
              "the same node/server as it is used for the Damaris shmem name and by "
              "the Python Dask library to locate sections of variables.");
         Parameters::registerParam<TypeTag, Properties::DamarisLimitVariables>
-            ("A comma separated list of variable names that a user wants to pass"
+            ("A comma separated list of variable names that a user wants to pass "
              "through via DamarisOutput::DamarisWriter::writeOutput)() to the "
-             "damaris_write() call. This can be used to limit the number of"
-             "variables being passed to the Daamis plugins (Paraview, Python and HDF5)");
+             "damaris_write() call. This can be used to limit the number of "
+             "variables being passed to the Damaris plugins (Paraview, Python and HDF5)");
     }
 
     // The Simulator object should preferably have been const - the
@@ -269,39 +269,26 @@ public:
                 this->damarisUpdate_ = false; 
             }
 
-            /*if (this->damarisOutputModule_->getPRESSURE_ptr() != nullptr) 
-            {
-                dam_err_ = DamarisOutput::setPosition("PRESSURE", rank_,
-                                                      this->elements_rank_offsets_[rank_]);
-                dam_err_ = DamarisOutput::write("PRESSURE", rank_,
-                                                this->damarisOutputModule_->getPRESSURE_ptr());
-
-                dam_err_ =  DamarisOutput::endIteration(rank_);
-            }*/
             
-            
-            // Call damaris_set_position() for all available variables
-            // There is an assumption that all variables are the same size, with the same offset.
-            // see initDamarisTemplateXmlFile.cpp for the Damaris XML descriptions.
-            for ( auto damVar : localCellData ) {
-                // std::map<std::string, data::CellData>
-                const std::string name = damVar.first ;
-                dam_err_ = DamarisOutput::setPosition(name.c_str(), rank_,
-                                                      this->elements_rank_offsets_[rank_]);
-            }
-
+            int cell_data_written = 0 ;
             // Call damaris_write() for all available variables
-            for ( auto damVar : localCellData ) 
+            for ( const auto& damVar : localCellData ) 
             {
                // std::map<std::string, data::CellData>
               const std::string& name = damVar.first ;
-              
-              std::unordered_set<std::string>::const_iterator is_in_set = wanted_vars_set_.find ( name );
-              
-              if ((is_in_set != wanted_vars_set_.end() ) || (wanted_vars_set_.size() == 0)) {
-                  data::CellData  dataCol = damVar.second ;
+              // If the wanted_vars_set_ set is empty then we default to passing through 
+              // all the variables/
+              if (wanted_vars_set_.count(name) || wanted_vars_set_.empty()) 
+              {
+                  const data::CellData&  dataCol = damVar.second ;
                   OpmLog::debug(fmt::format("Name of Damaris Variable       : ( rank:{})  name: {}  ",  rank_, name));
-                  
+
+                  // Call damaris_set_position() for all available variables
+                  // There is an assumption that all variables are the same size, with the same offset.
+                  // see initDamarisTemplateXmlFile.cpp for the Damaris XML descriptions.
+                  dam_err_ = DamarisOutput::setPosition(name.c_str(), rank_,
+                                                          this->elements_rank_offsets_[rank_]);
+
                   // It does not seem I can test for what type of data is present (double or int)
                   // in the std::variant within the data::CellData, so I will use a try catch block. 
                   // Although, only MPI_RANK and GLOBAL_CELL_INDEX are set as integer types (in the 
@@ -312,6 +299,8 @@ public:
                     if (dataCol.data<double>().size() >= this->numElements_) {
                         dam_err_ = DamarisOutput::write(name.c_str(), rank_,
                                                         dataCol.data<double>().data()) ;
+                    } else {
+                        OpmLog::info(fmt::format("( rank:{}) The variable \"{}\" was found to be of a different size {} (not {}).",  rank_, name, dataCol.data<double>().size(), this->numElements_ ));
                     }
                   }
                   catch (std::bad_variant_access const& ex) {
@@ -319,13 +308,20 @@ public:
                     if (dataCol.data<int>().size() >= this->numElements_) {
                         dam_err_ = DamarisOutput::write(name.c_str(), rank_,
                                                       dataCol.data<int>().data()) ;
+                    } else {
+                        OpmLog::info(fmt::format("( rank:{}) The variable \"{}\" was found to be of a different size {} (not {}).",  rank_, name, dataCol.data<int>().size(), this->numElements_ ));
                     }
                   }
+                  ++cell_data_written ;
               }
-              
-
             }
-            
+
+            if (!cell_data_written) {
+                  OpmLog::info(fmt::format("( rank:{}) No simulation data written to the Damaris server - check --damaris-limit-variables command line option (if used) has valid variable name(s) and that the Damaris XML file contains variable names that are available in your simulation.",  rank_));
+            } else {
+                  OpmLog::debug(fmt::format("( rank:{}) {} Damaris Variables written to the Damaris servers",  rank_, cell_data_written));
+            }
+
            /*   
             Code for when we want to pass to Damaris the single cell 'block' data variables
             auto mybloc = damarisOutputModule_->getBlockData() ;
@@ -399,7 +395,13 @@ private:
         // Fill the created memory area
         std::fill(mpi_rank_var.data(), mpi_rank_var.data() + numElements_, rank_);
         
-       
+        // Pass the output directory string through as a Damaris variable so that 
+        // Python code (as an example) can use the path as required.
+        const auto& outputDir = simulator_.vanguard().eclState().cfg().io().getOutputDir();
+        if (outputDir.size() > 0) {
+            dam_err_ = DamarisOutput::setParameter("path_string_length", rank_, outputDir.size()) ;
+            dam_err_ = DamarisOutput::write("OUTPUTDIR", rank_, outputDir.c_str());
+        }
     }
 
     void writeDamarisGridOutput()

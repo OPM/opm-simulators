@@ -85,6 +85,8 @@ struct DamarisSettings {
  * Damaris and perform checks and logic so as to create a valid XML file.
  * N.B. The created XML file can be overridden using an environment variable
  * FLOW_DAMARIS_XML_FILE that points to a Damaris XML file.
+ *
+ * N.B. This needs to be called before damaris_init()
  */
 template<class TypeTag>
 std::map<std::string, std::string>
@@ -116,6 +118,7 @@ getSetOfIncludedVariables(void)
 {
     std::unordered_set<std::string> resuset ;
     std::string tstr;
+    // The --damaris-limit-variables command line option (defaults to empty string)
     std::string damarisLimitVars = Parameters::get<TypeTag, Properties::DamarisLimitVariables>();
     std::stringstream ss(damarisLimitVars); 
 
@@ -125,8 +128,10 @@ getSetOfIncludedVariables(void)
         // tstr.erase(std::remove_if(tstr.begin(), tstr.end(), ::isspace), tstr.end());
         std::string::iterator end_pos = std::remove(tstr.begin(), tstr.end(), ' ');
         tstr.erase(end_pos, tstr.end());
-        // place in set (no duplicates possible in set)
-        resuset.insert(tstr) ;
+        // place in set (no duplicates possible in set and no empty string)
+        if (tstr != "") {
+            resuset.insert(tstr) ;
+        }
     }
     return (resuset) ;
 }
