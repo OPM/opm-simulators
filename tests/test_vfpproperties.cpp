@@ -68,12 +68,12 @@ BOOST_AUTO_TEST_CASE(findInterpData)
     double first = 1;
     double last = 15;
 
-    Opm::detail::InterpData eval0 = Opm::detail::findInterpData(exact, values);
-    Opm::detail::InterpData eval1 = Opm::detail::findInterpData(interpolate, values);
-    Opm::detail::InterpData eval2 = Opm::detail::findInterpData(extrapolate_left, values);
-    Opm::detail::InterpData eval3 = Opm::detail::findInterpData(extrapolate_right, values);
-    Opm::detail::InterpData eval4 = Opm::detail::findInterpData(first, values);
-    Opm::detail::InterpData eval5 = Opm::detail::findInterpData(last, values);
+    auto eval0 = Opm::VFPHelpers<double>::findInterpData(exact, values);
+    auto eval1 = Opm::VFPHelpers<double>::findInterpData(interpolate, values);
+    auto eval2 = Opm::VFPHelpers<double>::findInterpData(extrapolate_left, values);
+    auto eval3 = Opm::VFPHelpers<double>::findInterpData(extrapolate_right, values);
+    auto eval4 = Opm::VFPHelpers<double>::findInterpData(first, values);
+    auto eval5 = Opm::VFPHelpers<double>::findInterpData(last, values);
 
     BOOST_CHECK_EQUAL(eval0.ind_[0], 2);
     BOOST_CHECK_EQUAL(eval0.ind_[1], 3);
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_SUITE_END() // HelperTests
  * values data is given at
  */
 struct TrivialFixture {
-    typedef Opm::detail::VFPEvaluation VFPEvaluation;
+    typedef Opm::detail::VFPEvaluation<double> VFPEvaluation;
 
     TrivialFixture() : table_ids(1, 1),
             thp_axis{0.0, 1.0},
@@ -208,7 +208,7 @@ struct TrivialFixture {
                                           alq_axis,
                                           data));
 
-        properties = std::make_shared<Opm::VFPProdProperties>();
+        properties = std::make_shared<Opm::VFPProdProperties<double>>();
         properties->addTable( *table );
     }
 
@@ -219,7 +219,7 @@ struct TrivialFixture {
 
 
 
-    std::shared_ptr<Opm::VFPProdProperties> properties;
+    std::shared_ptr<Opm::VFPProdProperties<double>> properties;
     std::shared_ptr<Opm::VFPProdTable> table;
     std::vector<int> table_ids;
 
@@ -612,7 +612,7 @@ VFPPROD \n\
     auto deck = parser.parseString(table_str);
     bool gaslift_active = false;
     Opm::VFPProdTable table(deck["VFPPROD"].front(), gaslift_active, units);
-    Opm::VFPProdProperties properties;
+    Opm::VFPProdProperties<double> properties;
     properties.addTable( table );
 
     const int n = 5; //Number of points to check per axis
@@ -673,7 +673,7 @@ BOOST_AUTO_TEST_CASE(ParseInterpolateRealisticVFPPROD)
 
     bool gaslift_active = false;
     Opm::VFPProdTable table(deck["VFPPROD"].front(), gaslift_active, units);
-    Opm::VFPProdProperties properties;
+    Opm::VFPProdProperties<double> properties;
     properties.addTable(table);
 
     //Do some rudimentary testing

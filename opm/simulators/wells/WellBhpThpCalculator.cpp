@@ -919,7 +919,9 @@ isStableSolution(const WellState<Scalar>& well_state,
     const auto& table = well_.vfpProperties()->getProd()->getTable(controls.vfp_table_number);
     const bool use_vfpexplicit = well_.useVfpExplicit();
 
-    detail::VFPEvaluation bhp = detail::bhp(table, aqua, liquid, vapour, thp, well_.getALQ(well_state), wfr, gfr, use_vfpexplicit);
+    auto bhp = VFPHelpers<double>::bhp(table, aqua, liquid, vapour, thp,
+                                       well_.getALQ(well_state), wfr, gfr,
+                                       use_vfpexplicit);
 
     if (bhp.dflo >= 0) {
         return true;
@@ -964,7 +966,10 @@ estimateStableBhp(const WellState<Scalar>& well_state,
     auto bhp_adjusted = [this, &thp, &dp_hydro](const Scalar bhp) {
            return bhp - dp_hydro + getVfpBhpAdjustment(bhp, thp);
        };
-    const auto retval = detail::intersectWithIPR(table, thp, wfr, gfr, well_.getALQ(well_state), ipr.first, ipr.second, bhp_adjusted);
+    const auto retval = VFPHelpers<double>::intersectWithIPR(table, thp, wfr, gfr,
+                                                             well_.getALQ(well_state),
+                                                             ipr.first, ipr.second,
+                                                             bhp_adjusted);
     if (retval.has_value()) {
         // returned pair is (flo, bhp)
         return retval.value().second;

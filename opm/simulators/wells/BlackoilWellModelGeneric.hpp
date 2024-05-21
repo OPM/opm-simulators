@@ -63,7 +63,7 @@ namespace Opm {
     class Schedule;
     struct SimulatorUpdate;
     class SummaryConfig;
-    class VFPProperties;
+    template<class Scalar> class VFPProperties;
     template<class Scalar> class WellInterfaceGeneric;
     template<class Scalar> class WellState;
 } // namespace Opm
@@ -557,7 +557,7 @@ protected:
     mutable std::unordered_set<std::string> closed_this_step_;
 
     GuideRate guideRate_;
-    std::unique_ptr<VFPProperties> vfp_properties_{};
+    std::unique_ptr<VFPProperties<Scalar>> vfp_properties_{};
     std::map<std::string, Scalar> node_pressures_; // Storing network pressures for output.
 
     // previous injection multiplier, it is used in the injection multiplier calculation for WINJMULT keyword

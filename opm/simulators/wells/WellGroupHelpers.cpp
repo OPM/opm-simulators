@@ -811,7 +811,7 @@ WellGroupHelpers<Scalar>::
 computeNetworkPressures(const Network::ExtNetwork& network,
                         const WellState<Scalar>& well_state,
                         const GroupState<Scalar>& group_state,
-                        const VFPProdProperties& vfp_prod_props,
+                        const VFPProdProperties<Scalar>& vfp_prod_props,
                         const Schedule& schedule,
                         const int report_time_step)
 {

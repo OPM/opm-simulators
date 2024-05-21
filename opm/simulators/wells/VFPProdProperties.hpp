@@ -34,9 +34,9 @@ class VFPProdTable;
  * water fraction, gas fraction, and artificial lift for production VFP tables, and similarly
  * the BHP as a function of the rate and tubing head pressure.
  */
+template<class Scalar>
 class VFPProdProperties {
 public:
-    VFPProdProperties() = default;
     /**
      * Takes *no* ownership of data.
      */
@@ -60,15 +60,15 @@ public:
      * input ADB objects.
      */
     template <class EvalWell>
-    EvalWell bhp(const int table_id,
+    EvalWell bhp(const int       table_id,
                  const EvalWell& aqua,
                  const EvalWell& liquid,
                  const EvalWell& vapour,
-                 const double& thp,
-                 const double& alq,
-                 const double& explicit_wfr,
-                 const double& explicit_gfr,
-                 const bool    use_expvfp) const;
+                 const Scalar    thp,
+                 const Scalar    alq,
+                 const Scalar    explicit_wfr,
+                 const Scalar    explicit_gfr,
+                 const bool      use_expvfp) const;
 
     /**
      * Linear interpolation of bhp as a function of the input parameters
@@ -82,15 +82,15 @@ public:
      * @return The bottom hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    double bhp(int table_id,
-            const double& aqua,
-            const double& liquid,
-            const double& vapour,
-            const double& thp,
-            const double& alq,
-            const double& explicit_wfr,
-            const double& explicit_gfr,
-            const bool    use_expvfp) const;
+    Scalar bhp(const int    table_id,
+               const Scalar aqua,
+               const Scalar liquid,
+               const Scalar vapour,
+               const Scalar thp,
+               const Scalar alq,
+               const Scalar explicit_wfr,
+               const Scalar explicit_gfr,
+               const bool   use_expvfp) const;
 
     /**
      * Linear interpolation of thp as a function of the input parameters
@@ -104,12 +104,12 @@ public:
      * @return The tubing hole pressure, interpolated/extrapolated linearly using
      * the above parameters from the values in the input table.
      */
-    double thp(int table_id,
-            const double& aqua,
-            const double& liquid,
-            const double& vapour,
-            const double& bhp,
-            const double& alq) const;
+    Scalar thp(const int table_id,
+               const Scalar aqua,
+               const Scalar liquid,
+               const Scalar vapour,
+               const Scalar bhp,
+               const Scalar alq) const;
 
     /**
      * Returns the table associated with the ID, or throws an exception if
@@ -125,33 +125,31 @@ public:
     /**
      * Returns true if no vfp tables are in the current map
      */
-    bool empty() const {
+    bool empty() const
+    {
         return m_tables.empty();
     }
 
     /**
      * Returns minimum bhp for given thp, wfr, gfr and alq 
      */
-    double minimumBHP(const int table_id, const double thp, 
-                      const double wfr, const double gfr, const double alq) const;
+    Scalar minimumBHP(const int table_id, const Scalar thp,
+                      const Scalar wfr, const Scalar gfr, const Scalar alq) const;
+
 protected:
     // calculate a group bhp values with a group of flo rate values
-    std::vector<double> bhpwithflo(const std::vector<double>& flos,
+    std::vector<Scalar> bhpwithflo(const std::vector<Scalar>& flos,
                                    const int table_id,
-                                   const double wfr,
-                                   const double gfr,
-                                   const double thp,
-                                   const double alq,
-                                   const double dp) const;
+                                   const Scalar wfr,
+                                   const Scalar gfr,
+                                   const Scalar thp,
+                                   const Scalar alq,
+                                   const Scalar dp) const;
 
     // Map which connects the table number with the table itself
     std::map<int, std::reference_wrapper<const VFPProdTable>> m_tables;
 };
 
-
-
-
-} //namespace
-
+} // namespace Opm
 
 #endif /* OPM_AUTODIFF_VFPPRODPROPERTIES_HPP_ */
