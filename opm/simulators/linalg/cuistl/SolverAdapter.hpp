@@ -168,7 +168,7 @@ private:
             const auto& communication = m_opOnCPUWithMatrix.getCommunication();
 
             // Temporary solution use the GPU Direct communication solely based on these prepcrosessor statements
-            bool mpiSUpportsCudaAwareAtCompileTime = false;
+            bool mpiSupportsCudaAwareAtCompileTime = false;
             bool mpiSupportsCudaAwareAtRunTime = false;
 
 #if defined(MPIX_CUDA_AWARE_SUPPORT) && MPIX_CUDA_AWARE_SUPPORT
@@ -184,7 +184,7 @@ private:
 
             // TODO add typename Operator communication type as a named type with using
             std::shared_ptr<Opm::cuistl::GPUSender<real_type, typename Operator::communication_type>> gpuComm;
-            if (mpiSUpportsCudaAwareAtCompileTime && mpiSupportsCudaAwareAtRunTime){
+            if (mpiSupportsCudaAwareAtCompileTime && mpiSupportsCudaAwareAtRunTime){
                 gpuComm = std::make_shared<Opm::cuistl::GPUAwareMPISender<real_type, block_size, typename Operator::communication_type>>(communication);
             }
             else{
