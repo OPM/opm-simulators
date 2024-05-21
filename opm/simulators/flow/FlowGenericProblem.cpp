@@ -33,8 +33,11 @@
 #include <opm/simulators/flow/FlowGenericProblem_impl.hpp>
 
 #if HAVE_DUNE_FEM
+#include <dune/common/version.hh>
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
+#if !DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
 #include <dune/fem/gridpart/common/gridpart2gridview.hh>
+#endif
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #endif // HAVE_DUNE_FEM
 
@@ -44,6 +47,13 @@ template class FlowGenericProblem<Dune::GridView<Dune::DefaultLeafGridViewTraits
                                   BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
 
 #if HAVE_DUNE_FEM
+#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
+using GV = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
+                                           (Dune::PartitionIteratorType)4,
+                                           false>;
+template class FlowGenericProblem<GV,
+                                  BlackOilFluidSystem<double, BlackOilDefaultIndexTraits>>;
+#else
 template class FlowGenericProblem<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
                                   BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
 template class FlowGenericProblem<Dune::Fem::GridPart2GridViewImpl<
@@ -52,6 +62,7 @@ template class FlowGenericProblem<Dune::Fem::GridPart2GridViewImpl<
                                          Dune::PartitionIteratorType(4),
                                          false> >,
                                   BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
+#endif
 #endif // HAVE_DUNE_FEM
 
 } // end namespace Opm
