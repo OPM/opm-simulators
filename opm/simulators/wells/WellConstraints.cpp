@@ -31,11 +31,11 @@
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 
-namespace Opm
-{
+namespace Opm {
 
-bool WellConstraints::
-checkIndividualConstraints(SingleWellState<double>& ws,
+template<class Scalar>
+bool WellConstraints<Scalar>::
+checkIndividualConstraints(SingleWellState<Scalar>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,
@@ -69,8 +69,9 @@ checkIndividualConstraints(SingleWellState<double>& ws,
     return false;
 }
 
-Well::InjectorCMode WellConstraints::
-activeInjectionConstraint(const SingleWellState<double>& ws,
+template<class Scalar>
+Well::InjectorCMode WellConstraints<Scalar>::
+activeInjectionConstraint(const SingleWellState<Scalar>& ws,
                           const SummaryState& summaryState,
                           bool& thp_limit_violated_but_not_switched,
                           DeferredLogger& deferred_logger,
@@ -84,7 +85,7 @@ activeInjectionConstraint(const SingleWellState<double>& ws,
     if (controls.hasControl(Well::InjectorCMode::BHP) && currentControl != Well::InjectorCMode::BHP)
     {
         const auto& bhp = controls.bhp_limit;
-        double current_bhp = ws.bhp;
+        Scalar current_bhp = ws.bhp;
         if (bhp < current_bhp)
             return Well::InjectorCMode::BHP;
     }
@@ -92,7 +93,7 @@ activeInjectionConstraint(const SingleWellState<double>& ws,
     if (controls.hasControl(Well::InjectorCMode::RATE) && currentControl != Well::InjectorCMode::RATE)
     {
         InjectorType injectorType = controls.injector_type;
-        double current_rate = 0.0;
+        Scalar current_rate = 0.0;
 
         switch (injectorType) {
         case InjectorType::WATER:
@@ -120,14 +121,14 @@ activeInjectionConstraint(const SingleWellState<double>& ws,
 
     if (controls.hasControl(Well::InjectorCMode::RESV) && currentControl != Well::InjectorCMode::RESV)
     {
-        double current_rate = 0.0;
-        if( pu.phase_used[BlackoilPhases::Aqua] )
+        Scalar current_rate = 0.0;
+        if (pu.phase_used[BlackoilPhases::Aqua])
             current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Aqua] ];
 
-        if( pu.phase_used[BlackoilPhases::Liquid] )
+        if (pu.phase_used[BlackoilPhases::Liquid])
             current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Liquid] ];
 
-        if( pu.phase_used[BlackoilPhases::Vapour] )
+        if (pu.phase_used[BlackoilPhases::Vapour])
             current_rate += ws.reservoir_rates[ pu.phase_pos[BlackoilPhases::Vapour] ];
 
         if (controls.reservoir_rate < current_rate)
@@ -140,7 +141,7 @@ activeInjectionConstraint(const SingleWellState<double>& ws,
     if (controls.hasControl(Well::InjectorCMode::THP) && currentControl != Well::InjectorCMode::THP)
     {
         const auto& thp = well_.getTHPConstraint(summaryState);
-        double current_thp = ws.thp;
+        Scalar current_thp = ws.thp;
         if (thp < current_thp) {
             bool rate_less_than_potential = true;
             for (int p = 0; p < well_.numPhases(); ++p) {
@@ -166,8 +167,9 @@ activeInjectionConstraint(const SingleWellState<double>& ws,
     return currentControl;
 }
 
-Well::ProducerCMode WellConstraints::
-activeProductionConstraint(const SingleWellState<double>& ws,
+template<class Scalar>
+Well::ProducerCMode WellConstraints<Scalar>::
+activeProductionConstraint(const SingleWellState<Scalar>& ws,
                            const SummaryState& summaryState,
                            const RateConvFunc& calcReservoirVoidageRates,
                            bool& thp_limit_violated_but_not_switched,
@@ -179,37 +181,37 @@ activeProductionConstraint(const SingleWellState<double>& ws,
     const auto currentControl = ws.production_cmode;
 
     if (controls.hasControl(Well::ProducerCMode::BHP) && currentControl != Well::ProducerCMode::BHP) {
-        const double bhp_limit = controls.bhp_limit;
-        double current_bhp = ws.bhp;
+        const Scalar bhp_limit = controls.bhp_limit;
+        Scalar current_bhp = ws.bhp;
         if (bhp_limit > current_bhp)
             return Well::ProducerCMode::BHP;
     }
 
     if (controls.hasControl(Well::ProducerCMode::ORAT) && currentControl != Well::ProducerCMode::ORAT) {
-        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
+        Scalar current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
         if (controls.oil_rate < current_rate)
             return Well::ProducerCMode::ORAT;
     }
 
     if (controls.hasControl(Well::ProducerCMode::WRAT) && currentControl != Well::ProducerCMode::WRAT) {
-        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
+        Scalar current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
         if (controls.water_rate < current_rate)
             return Well::ProducerCMode::WRAT;
     }
 
     if (controls.hasControl(Well::ProducerCMode::GRAT) && currentControl != Well::ProducerCMode::GRAT) {
-        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]];
+        Scalar current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Vapour]];
         if (controls.gas_rate < current_rate)
             return Well::ProducerCMode::GRAT;
     }
 
     if (controls.hasControl(Well::ProducerCMode::LRAT) && currentControl != Well::ProducerCMode::LRAT) {
-        double current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
+        Scalar current_rate = -ws.surface_rates[pu.phase_pos[BlackoilPhases::Liquid]];
         current_rate -= ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
 
         bool skip = false;
         if (controls.liquid_rate == controls.oil_rate) {
-            const double current_water_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
+            const Scalar current_water_rate = ws.surface_rates[pu.phase_pos[BlackoilPhases::Aqua]];
             if (std::abs(current_water_rate) < 1e-12) {
                 skip = true;
                 deferred_logger.debug("LRAT_ORAT_WELL", "Well " + well_.name() + " The LRAT target is equal the ORAT target and the water rate is zero, skip checking LRAT");
@@ -220,7 +222,7 @@ activeProductionConstraint(const SingleWellState<double>& ws,
     }
 
     if (controls.hasControl(Well::ProducerCMode::RESV) && currentControl != Well::ProducerCMode::RESV) {
-        double current_rate = 0.0;
+        Scalar current_rate = 0.0;
         if (pu.phase_used[BlackoilPhases::Aqua])
             current_rate -= ws.reservoir_rates[pu.phase_pos[BlackoilPhases::Aqua]];
 
@@ -237,7 +239,7 @@ activeProductionConstraint(const SingleWellState<double>& ws,
             const int fipreg = 0; // not considering the region for now
             const int np = well_.numPhases();
 
-            std::vector<double> surface_rates(np, 0.0);
+            std::vector<Scalar> surface_rates(np, 0.0);
             if (pu.phase_used[BlackoilPhases::Aqua])
                 surface_rates[pu.phase_pos[BlackoilPhases::Aqua]] = controls.water_rate;
             if (pu.phase_used[BlackoilPhases::Liquid])
@@ -245,10 +247,10 @@ activeProductionConstraint(const SingleWellState<double>& ws,
             if (pu.phase_used[BlackoilPhases::Vapour])
                 surface_rates[pu.phase_pos[BlackoilPhases::Vapour]] = controls.gas_rate;
 
-            std::vector<double> voidage_rates(np, 0.0);
+            std::vector<Scalar> voidage_rates(np, 0.0);
             calcReservoirVoidageRates(fipreg, well_.pvtRegionIdx(), surface_rates, voidage_rates);
 
-            double resv_rate = 0.0;
+            Scalar resv_rate = 0.0;
             for (int p = 0; p < np; ++p)
                 resv_rate += voidage_rates[p];
 
@@ -259,7 +261,7 @@ activeProductionConstraint(const SingleWellState<double>& ws,
 
     if (well_.wellHasTHPConstraints(summaryState) && currentControl != Well::ProducerCMode::THP) {
         const auto& thp = well_.getTHPConstraint(summaryState);
-        double current_thp = ws.thp;
+        Scalar current_thp = ws.thp;
         if (thp > current_thp && !ws.trivial_target) {
             // If WVFPEXP item 4 is set to YES1 or YES2
             // switching to THP is prevented if the well will
@@ -290,5 +292,7 @@ activeProductionConstraint(const SingleWellState<double>& ws,
 
     return currentControl;
 }
+
+template class WellConstraints<double>;
 
 } // namespace Opm

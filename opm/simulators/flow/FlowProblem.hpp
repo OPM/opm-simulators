@@ -2800,7 +2800,7 @@ private:
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
 
-    ActionHandler actionHandler_;
+    ActionHandler<Scalar> actionHandler_;
 
     template<class T>
     struct BCData

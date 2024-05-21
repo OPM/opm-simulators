@@ -122,11 +122,12 @@ mmv (const X& x, Y& y) const
     }
 }
 
-double computeHydrostaticCorrection(const double well_ref_depth, const double vfp_ref_depth,
-                                    const double rho, const double gravity)
+template<class Scalar>
+Scalar computeHydrostaticCorrection(const Scalar well_ref_depth, const Scalar vfp_ref_depth,
+                                    const Scalar rho, const Scalar gravity)
 {
-    const double dh = vfp_ref_depth - well_ref_depth;
-    const double dp = rho * gravity * dh;
+    const Scalar dh = vfp_ref_depth - well_ref_depth;
+    const Scalar dp = rho * gravity * dh;
 
     return dp;
 }
@@ -200,7 +201,6 @@ bool rateControlWithZeroProdTarget(const WellProductionControls& controls,
     }
 }
 
-
 bool rateControlWithZeroInjTarget(const WellInjectionControls& controls,
                                   const WellInjectorCMode mode)
 {
@@ -213,7 +213,6 @@ bool rateControlWithZeroInjTarget(const WellInjectionControls& controls,
             return false;
     }
 }
-
 
 template class ParallelStandardWellB<double>;
 
@@ -238,6 +237,11 @@ template void sumDistributedWellEntries<double,Comm>(Dune::DynamicMatrix<double>
 
 using DMatrix = Dune::DynamicMatrix<double>;
 template DMatrix transposeDenseDynMatrix<DMatrix>(const DMatrix&);
+
+template double computeHydrostaticCorrection<double>(const double,
+                                                     const double,
+                                                     const double,
+                                                     const double);
 
 } // namespace wellhelpers
 } // namespace Opm

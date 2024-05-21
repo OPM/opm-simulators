@@ -112,12 +112,14 @@ namespace {
 
 namespace Opm {
 
-ActionHandler::ActionHandler(EclipseState& ecl_state,
-                             Schedule& schedule,
-                             Action::State& actionState,
-                             SummaryState& summaryState,
-                             BlackoilWellModelGeneric<double>& wellModel,
-                             Parallel::Communication comm)
+template<class Scalar>
+ActionHandler<Scalar>::
+ActionHandler(EclipseState& ecl_state,
+              Schedule& schedule,
+              Action::State& actionState,
+              SummaryState& summaryState,
+              BlackoilWellModelGeneric<Scalar>& wellModel,
+              Parallel::Communication comm)
     : ecl_state_(ecl_state)
     , schedule_(schedule)
     , actionState_(actionState)
@@ -126,9 +128,11 @@ ActionHandler::ActionHandler(EclipseState& ecl_state,
     , comm_(comm)
 {}
 
-void ActionHandler::applyActions(const int reportStep,
-                                 const double sim_time,
-                                 const TransFunc& transUp)
+template<class Scalar>
+void ActionHandler<Scalar>::
+applyActions(const int reportStep,
+             const double sim_time,
+             const TransFunc& transUp)
 {
     OPM_TIMEBLOCK(applyActions);
     const auto& actions = schedule_[reportStep].actions();
@@ -184,10 +188,12 @@ void ActionHandler::applyActions(const int reportStep,
     }
 }
 
-void ActionHandler::applySimulatorUpdate(const int report_step,
-                                         const SimulatorUpdate& sim_update,
-                                         bool& commit_wellstate,
-                                         const TransFunc& updateTrans)
+template<class Scalar>
+void ActionHandler<Scalar>::
+applySimulatorUpdate(const int report_step,
+                     const SimulatorUpdate& sim_update,
+                     bool& commit_wellstate,
+                     const TransFunc& updateTrans)
 {
     OPM_TIMEBLOCK(applySimulatorUpdate);
 
@@ -207,12 +213,13 @@ void ActionHandler::applySimulatorUpdate(const int report_step,
     }
 }
 
-std::unordered_map<std::string, double>
-ActionHandler::fetchWellPI(const int reportStep,
-                           const Action::ActionX& action,
-                           const std::vector<std::string>& matching_wells) const
+template<class Scalar>
+std::unordered_map<std::string, Scalar>
+ActionHandler<Scalar>::
+fetchWellPI(const int reportStep,
+            const Action::ActionX& action,
+            const std::vector<std::string>& matching_wells) const
 {
-
   auto wellpi_wells = action.wellpi_wells(WellMatcher(schedule_[reportStep].well_order(),
                                                       schedule_[reportStep].wlist_manager()),
                                           matching_wells);
@@ -221,7 +228,7 @@ ActionHandler::fetchWellPI(const int reportStep,
       return {};
 
   const auto num_wells = schedule_[reportStep].well_order().size();
-  std::vector<double> wellpi_vector(num_wells);
+  std::vector<Scalar> wellpi_vector(num_wells);
   for (const auto& wname : wellpi_wells) {
       if (this->wellModel_.hasWell(wname)) {
           const auto& well = schedule_.getWell( wname, reportStep );
@@ -230,10 +237,10 @@ ActionHandler::fetchWellPI(const int reportStep,
   }
 
   if (comm_.size() > 1) {
-      std::vector<double> wellpi_buffer(num_wells * comm_.size());
+      std::vector<Scalar> wellpi_buffer(num_wells * comm_.size());
       comm_.gather( wellpi_vector.data(), wellpi_buffer.data(), num_wells, 0 );
       if (comm_.rank() == 0) {
-          for (int rank=1; rank < comm_.size(); rank++) {
+          for (int rank = 1; rank < comm_.size(); rank++) {
               for (std::size_t well_index=0; well_index < num_wells; well_index++) {
                   const auto global_index = rank*num_wells + well_index;
                   const auto value = wellpi_buffer[global_index];
@@ -245,7 +252,7 @@ ActionHandler::fetchWellPI(const int reportStep,
       comm_.broadcast(wellpi_vector.data(), wellpi_vector.size(), 0);
   }
 
-  std::unordered_map<std::string, double> wellpi;
+  std::unordered_map<std::string, Scalar> wellpi;
   for (const auto& wname : wellpi_wells) {
       const auto& well = schedule_.getWell( wname, reportStep );
       wellpi[wname] = wellpi_vector[ well.seqIndex() ];
@@ -253,8 +260,10 @@ ActionHandler::fetchWellPI(const int reportStep,
   return wellpi;
 }
 
-void ActionHandler::evalUDQAssignments(const unsigned episodeIdx,
-                                       UDQState& udq_state)
+template<class Scalar>
+void ActionHandler<Scalar>::
+evalUDQAssignments(const unsigned episodeIdx,
+                   UDQState& udq_state)
 {
     const auto& udq = schedule_[episodeIdx].udq();
 
@@ -265,5 +274,7 @@ void ActionHandler::evalUDQAssignments(const unsigned episodeIdx,
                     this->summaryState_,
                     udq_state);
 }
+
+template class ActionHandler<double>;
 
 } // namespace Opm
