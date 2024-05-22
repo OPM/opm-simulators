@@ -96,8 +96,8 @@ public:
     using Eval = typename WellInterfaceIndices<FluidSystem,Indices>::Eval;
     using EvalWell = typename StandardWellPrimaryVariables<FluidSystem,Indices>::EvalWell;
 
-    Eval connectionRateBrine(double& rate,
-                             const double vap_wat_rate,
+    Eval connectionRateBrine(Scalar& rate,
+                             const Scalar vap_wat_rate,
                              const std::vector<EvalWell>& cq_s,
                              const std::variant<Scalar,EvalWell>& saltConcentration) const;
 
@@ -107,7 +107,7 @@ public:
                             DeferredLogger& deferred_logger) const;
 
     std::tuple<Eval,EvalWell>
-    connectionRatePolymer(double& rate,
+    connectionRatePolymer(Scalar& rate,
                           const std::vector<EvalWell>& cq_s,
                           const std::variant<Scalar,EvalWell>& polymerConcentration) const;
 
@@ -118,8 +118,8 @@ public:
                         const std::variant<Scalar,EvalWell>& ureaConcentration) const;
 
     std::tuple<Eval,EvalWell>
-    connectionRatezFraction(double& rate,
-                            const double dis_gas_rate,
+    connectionRatezFraction(Scalar& rate,
+                            const Scalar dis_gas_rate,
                             const std::vector<EvalWell>& cq_s,
                             const std::variant<Scalar, std::array<EvalWell,2>>& solventConcentration) const;
 

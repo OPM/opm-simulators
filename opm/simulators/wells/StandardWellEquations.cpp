@@ -201,7 +201,7 @@ extract(const int numStaticWellEq,
         WellContributions& wellContribs) const
 {
     std::vector<int> colIndices;
-    std::vector<double> nnzValues;
+    std::vector<Scalar> nnzValues;
     colIndices.reserve(duneB_.nonzeroes());
     nnzValues.reserve(duneB_.nonzeroes() * numStaticWellEq * numEq);
 
@@ -320,7 +320,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                   endC = duneC_[0].end(); colC != endC; ++colC) {
             const auto row_ind = colC.index();
             const auto& bw = weights[row_ind];
-            double matel = 0;
+            Scalar matel = 0;
             assert((*colC).M() == bw.size());
             for (std::size_t i = 0; i < bw.size(); ++i) {
                 matel += (*colC)[bhp_var_index][i] * bw[i];
@@ -337,12 +337,12 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
     std::size_t blockSz = duneD_[0][0].N();
     bweights[0].resize(blockSz);
     bweights[0] = 0.0;
-    double diagElem = 0;
+    Scalar diagElem = 0;
     if (use_well_weights ) {
         // calculate weighs and set diagonal element
         //NB! use this options without treating pressure controlled separated
         //NB! calculate quasiimpes well weights NB do not work well with trueimpes reservoir weights
-        double abs_max = 0;
+        Scalar abs_max = 0;
         BVectorWell rhs(1);
         rhs[0].resize(blockSz);
         rhs[0][bhp_var_index] = 1.0;
@@ -387,7 +387,7 @@ extractCPRPressureMatrix(PressureMatrix& jacobian,
                   endB = duneB_[0].end(); colB != endB; ++colB) {
             const auto col_index = colB.index();
             const auto& bw = bweights[0];
-            double matel = 0;
+            Scalar matel = 0;
             for (std::size_t i = 0; i < bw.size(); ++i) {
                  matel += (*colB)[i][pressureVarIndex] * bw[i];
             }
