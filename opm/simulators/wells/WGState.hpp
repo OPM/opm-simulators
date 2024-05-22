@@ -26,7 +26,7 @@
 
 namespace Opm {
 
-class ParallelWellInfo;
+template<class Scalar> class ParallelWellInfo;
 
 /*
   Microscopic class to handle well, group and well test state.
@@ -39,7 +39,7 @@ struct WGState
 {
     WGState(const PhaseUsage& pu);
 
-    static WGState serializationTestObject(const ParallelWellInfo& pinfo);
+    static WGState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
 
     void wtest_state(WellTestState wtest_state);
 

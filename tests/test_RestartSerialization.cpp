@@ -149,7 +149,7 @@ TEST_FOR_TYPE_NAMED(BVec, BlockVectorWrapper)
 
 BOOST_AUTO_TEST_CASE(SingleWellState)
 {
-    Opm::ParallelWellInfo dummy;
+    Opm::ParallelWellInfo<double> dummy;
     auto data_out = Opm::SingleWellState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
@@ -178,7 +178,7 @@ BOOST_AUTO_TEST_CASE(WellContainer)
 
 BOOST_AUTO_TEST_CASE(WellState)
 {
-    Opm::ParallelWellInfo dummy;
+    Opm::ParallelWellInfo<double> dummy;
     auto data_out = Opm::WellState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE(WellState)
 
 BOOST_AUTO_TEST_CASE(WGState)
 {
-    Opm::ParallelWellInfo dummy;
+    Opm::ParallelWellInfo<double> dummy;
     auto data_out = Opm::WGState<double>::serializationTestObject(dummy);
     Opm::Serialization::MemPacker packer;
     Opm::Serializer ser(packer);
@@ -354,7 +354,7 @@ public:
     }
 
 private:
-    ParallelWellInfo dummy;
+    ParallelWellInfo<double> dummy;
 };
 
 }

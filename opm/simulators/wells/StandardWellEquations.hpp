@@ -34,7 +34,7 @@
 namespace Opm
 {
 
-class ParallelWellInfo;
+template<class Scalar> class ParallelWellInfo;
 template<class Scalar, int numEq> class StandardWellEquationAccess;
 #if COMPILE_BDA_BRIDGE
 class WellContributions;
@@ -65,7 +65,7 @@ public:
     // block vector type
     using BVector = Dune::BlockVector<Dune::FieldVector<Scalar,numEq>>;
 
-    StandardWellEquations(const ParallelWellInfo& parallel_well_info);
+    StandardWellEquations(const ParallelWellInfo<Scalar>& parallel_well_info);
 
     //! \brief Setup sparsity pattern for the matrices.
     //! \param num_cells Total number of cells

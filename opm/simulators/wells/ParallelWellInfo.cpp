@@ -45,15 +45,33 @@ struct CommPolicy<double*>
         return 1;
     }
 };
+
+template<>
+struct CommPolicy<float*>
+{
+    using Type = float*;
+    using IndexedType = float;
+    using IndexedTypeFlag = Dune::SizeOne;
+    static const void* getAddress(const float*& v, int index)
+    {
+        return v + index;
+    }
+    static int getSize(const float*&, int)
+    {
+        return 1;
+    }
+};
 #endif
 }
 
 namespace Opm
 {
 
-GlobalPerfContainerFactory::GlobalPerfContainerFactory(const IndexSet& local_indices,
-                                                       const Parallel::Communication comm,
-                                                       const int num_local_perfs)
+template<class Scalar>
+GlobalPerfContainerFactory<Scalar>::
+GlobalPerfContainerFactory(const IndexSet& local_indices,
+                           const Parallel::Communication comm,
+                           const int num_local_perfs)
     : local_indices_(local_indices), comm_(comm)
 {
     if ( comm_.size() > 1 )
@@ -101,13 +119,13 @@ GlobalPerfContainerFactory::GlobalPerfContainerFactory(const IndexSet& local_ind
     }
 }
 
-
-
-std::vector<double> GlobalPerfContainerFactory::createGlobal(const std::vector<double>& local_perf_container,
-                                                             std::size_t num_components) const
+template<class Scalar>
+std::vector<Scalar> GlobalPerfContainerFactory<Scalar>::
+createGlobal(const std::vector<Scalar>& local_perf_container,
+             std::size_t num_components) const
 {
     // Could be become templated later.
-    using Value = double;
+    using Value = Scalar;
 
     if (comm_.size() > 1)
     {
@@ -152,8 +170,11 @@ std::vector<double> GlobalPerfContainerFactory::createGlobal(const std::vector<d
     }
 }
 
-void GlobalPerfContainerFactory::copyGlobalToLocal(const std::vector<double>& global, std::vector<double>& local,
-                                                   std::size_t num_components) const
+template<class Scalar>
+void GlobalPerfContainerFactory<Scalar>::
+copyGlobalToLocal(const std::vector<Scalar>& global,
+                  std::vector<Scalar>& local,
+                  std::size_t num_components) const
 {
     if (global.empty())
     {
@@ -182,19 +203,22 @@ void GlobalPerfContainerFactory::copyGlobalToLocal(const std::vector<double>& gl
     }
 }
 
-int GlobalPerfContainerFactory::numGlobalPerfs() const
+template<class Scalar>
+int GlobalPerfContainerFactory<Scalar>::numGlobalPerfs() const
 {
     return num_global_perfs_;
 }
 
-
-CommunicateAboveBelow::CommunicateAboveBelow([[maybe_unused]] const Parallel::Communication& comm)
+template<class Scalar>
+CommunicateAboveBelow<Scalar>::
+CommunicateAboveBelow([[maybe_unused]] const Parallel::Communication& comm)
 #if HAVE_MPI
     : comm_(comm), interface_(comm_)
 #endif
 {}
 
-void CommunicateAboveBelow::clear()
+template<class Scalar>
+void CommunicateAboveBelow<Scalar>::clear()
 {
 #if HAVE_MPI
     above_indices_ = {};
@@ -205,7 +229,8 @@ void CommunicateAboveBelow::clear()
     num_local_perfs_ = 0;
 }
 
-void CommunicateAboveBelow::beginReset()
+template<class Scalar>
+void CommunicateAboveBelow<Scalar>::beginReset()
 {
     clear();
 #if HAVE_MPI
@@ -217,7 +242,8 @@ void CommunicateAboveBelow::beginReset()
 #endif
 }
 
-int CommunicateAboveBelow::endReset()
+template<class Scalar>
+int CommunicateAboveBelow<Scalar>::endReset()
 {
 #if HAVE_MPI
     if (comm_.size() > 1)
@@ -226,7 +252,7 @@ int CommunicateAboveBelow::endReset()
         current_indices_.endResize();
         remote_indices_.setIndexSets(current_indices_, above_indices_, comm_);
         // It is mandatory to not set includeSelf to true, as this will skip some entries.
-        remote_indices_.rebuild<true>();
+        remote_indices_.template rebuild<true>();
         using FromSet = Dune::EnumItem<Attribute,owner>;
         using ToSet = Dune::AllSet<Attribute>;
         interface_.build(remote_indices_, FromSet(), ToSet());
@@ -236,8 +262,9 @@ int CommunicateAboveBelow::endReset()
     return num_local_perfs_;
 }
 
+template<class Scalar>
 template<class RAIterator>
-void CommunicateAboveBelow::partialSumPerfValues(RAIterator begin, RAIterator end) const
+void CommunicateAboveBelow<Scalar>::partialSumPerfValues(RAIterator begin, RAIterator end) const
 {
     if (this->comm_.size() < 2)
     {
@@ -295,28 +322,27 @@ void CommunicateAboveBelow::partialSumPerfValues(RAIterator begin, RAIterator en
     }
 }
 
-using dIter = typename std::vector<double>::iterator;
-template void CommunicateAboveBelow::partialSumPerfValues<dIter>(dIter begin, dIter end) const;
-
+template<class Scalar>
 struct CopyGatherScatter
 {
-    static const double& gather(const double* a, std::size_t i)
+    static const Scalar& gather(const Scalar* a, std::size_t i)
     {
         return a[i];
     }
 
-    static void scatter(double* a, const double& v, std::size_t i)
+    static void scatter(Scalar* a, const Scalar& v, std::size_t i)
     {
         a[i] = v;
     }
 };
 
-
-std::vector<double> CommunicateAboveBelow::communicateAbove(double first_above,
-                                                            const double* current,
-                                                            std::size_t size)
+template<class Scalar>
+std::vector<Scalar> CommunicateAboveBelow<Scalar>::
+communicateAbove(Scalar first_above,
+                 const Scalar* current,
+                 std::size_t size)
 {
-    std::vector<double> above(size, first_above);
+    std::vector<Scalar> above(size, first_above);
 
 #if HAVE_MPI
     if (comm_.size() > 1)
@@ -326,7 +352,7 @@ std::vector<double> CommunicateAboveBelow::communicateAbove(double first_above,
         // passing const double*& and double* as parameter is
         // incompatible with function decl template<Data> forward(const Data&, Data&))
         // That would need the first argument to be double* const&
-        communicator_.forward<CopyGatherScatter>(const_cast<double*>(current), aboveData);
+        communicator_.forward<CopyGatherScatter<Scalar>>(const_cast<Scalar*>(current), aboveData);
     }
     else
 #endif
@@ -339,11 +365,14 @@ std::vector<double> CommunicateAboveBelow::communicateAbove(double first_above,
     }
     return above;
 }
-std::vector<double> CommunicateAboveBelow::communicateBelow(double last_below,
-                                                            const double* current,
-                                                            std::size_t size)
+
+template<class Scalar>
+std::vector<Scalar> CommunicateAboveBelow<Scalar>::
+communicateBelow(Scalar last_below,
+                 const Scalar* current,
+                 std::size_t size)
 {
-    std::vector<double> below(size, last_below);
+    std::vector<Scalar> below(size, last_below);
 
 #if HAVE_MPI
     if (comm_.size() > 1)
@@ -353,7 +382,7 @@ std::vector<double> CommunicateAboveBelow::communicateBelow(double last_below,
         // passing const double*& and double* as parameter is
         // incompatible with function decl template<Data> backward(Data&, const Data&)
         // That would need the first argument to be double* const&
-        communicator_.backward<CopyGatherScatter>(belowData, const_cast<double*>(current));
+        communicator_.backward<CopyGatherScatter<Scalar>>(belowData, const_cast<Scalar*>(current));
     }
     else
 #endif
@@ -367,9 +396,11 @@ std::vector<double> CommunicateAboveBelow::communicateBelow(double last_below,
     return below;
 }
 
-void CommunicateAboveBelow::pushBackEclIndex([[maybe_unused]] int above,
-                                             [[maybe_unused]] int current,
-                                             [[maybe_unused]] bool isOwner)
+template<class Scalar>
+void CommunicateAboveBelow<Scalar>::
+pushBackEclIndex([[maybe_unused]] int above,
+                 [[maybe_unused]] int current,
+                 [[maybe_unused]] bool isOwner)
 {
 #if HAVE_MPI
     if (comm_.size() > 1)
@@ -386,8 +417,8 @@ void CommunicateAboveBelow::pushBackEclIndex([[maybe_unused]] int above,
     ++num_local_perfs_;
 }
 
-
-void ParallelWellInfo::DestroyComm::operator()(Parallel::Communication* comm)
+template<class Scalar>
+void ParallelWellInfo<Scalar>::DestroyComm::operator()(Parallel::Communication* comm)
 {
 #if HAVE_MPI
     // Only delete custom communicators.
@@ -406,28 +437,31 @@ void ParallelWellInfo::DestroyComm::operator()(Parallel::Communication* comm)
     delete comm;
 }
 
-
-const CommunicateAboveBelow::IndexSet& CommunicateAboveBelow::getIndexSet() const
+template<class Scalar>
+const typename CommunicateAboveBelow<Scalar>::IndexSet&
+CommunicateAboveBelow<Scalar>::getIndexSet() const
 {
     return current_indices_;
 }
 
-int CommunicateAboveBelow::numLocalPerfs() const
+template<class Scalar>
+int CommunicateAboveBelow<Scalar>::numLocalPerfs() const
 {
     return num_local_perfs_;
 }
 
-ParallelWellInfo::ParallelWellInfo(const std::string& name,
-                                   bool hasLocalCells)
+template<class Scalar>
+ParallelWellInfo<Scalar>::ParallelWellInfo(const std::string& name,
+                                           bool hasLocalCells)
     : name_(name), hasLocalCells_ (hasLocalCells),
       isOwner_(true), rankWithFirstPerf_(-1),
       comm_(new Parallel::Communication(Dune::MPIHelper::getLocalCommunicator())),
-      commAboveBelow_(new CommunicateAboveBelow(*comm_))
+      commAboveBelow_(new CommunicateAboveBelow<Scalar>(*comm_))
 {}
 
-
-ParallelWellInfo::ParallelWellInfo(const std::pair<std::string, bool>& well_info,
-                                   [[maybe_unused]] Parallel::Communication allComm)
+template<class Scalar>
+ParallelWellInfo<Scalar>::ParallelWellInfo(const std::pair<std::string, bool>& well_info,
+                                           [[maybe_unused]] Parallel::Communication allComm)
     : name_(well_info.first), hasLocalCells_(well_info.second),
       rankWithFirstPerf_(-1)
 {
@@ -439,12 +473,12 @@ ParallelWellInfo::ParallelWellInfo(const std::pair<std::string, bool>& well_info
 #else
     comm_.reset(new Parallel::Communication(Dune::MPIHelper::getLocalCommunicator()));
 #endif
-    commAboveBelow_.reset(new CommunicateAboveBelow(*comm_));
+    commAboveBelow_.reset(new CommunicateAboveBelow<Scalar>(*comm_));
     isOwner_ = (comm_->rank() == 0);
 }
 
-
-void ParallelWellInfo::communicateFirstPerforation(bool hasFirst)
+template<class Scalar>
+void ParallelWellInfo<Scalar>::communicateFirstPerforation(bool hasFirst)
 {
     int first = hasFirst;
     std::vector<int> firstVec(comm_->size());
@@ -455,29 +489,32 @@ void ParallelWellInfo::communicateFirstPerforation(bool hasFirst)
         rankWithFirstPerf_ = found - firstVec.begin();
 }
 
-void ParallelWellInfo::pushBackEclIndex(int above, int current)
+template<class Scalar>
+void ParallelWellInfo<Scalar>::pushBackEclIndex(int above, int current)
 {
     commAboveBelow_->pushBackEclIndex(above, current);
 }
 
-void ParallelWellInfo::beginReset()
+template<class Scalar>
+void ParallelWellInfo<Scalar>::beginReset()
 {
     commAboveBelow_->beginReset();
 }
 
-
-void ParallelWellInfo::endReset()
+template<class Scalar>
+void ParallelWellInfo<Scalar>::endReset()
 {
     int local_num_perfs = commAboveBelow_->endReset();
     globalPerfCont_
-        .reset(new GlobalPerfContainerFactory(commAboveBelow_->getIndexSet(),
-                                              *comm_,
-                                              local_num_perfs));
+        .reset(new GlobalPerfContainerFactory<Scalar>(commAboveBelow_->getIndexSet(),
+                                                      *comm_,
+                                                      local_num_perfs));
 }
 
+template<class Scalar>
 template<typename It>
 typename It::value_type
-ParallelWellInfo::sumPerfValues(It begin, It end) const
+ParallelWellInfo<Scalar>::sumPerfValues(It begin, It end) const
 {
     using V = typename It::value_type;
     /// \todo cater for overlap later. Currently only owner
@@ -485,19 +522,16 @@ ParallelWellInfo::sumPerfValues(It begin, It end) const
     return communication().sum(local);
 }
 
-using cdIter = typename std::vector<double>::const_iterator;
-template typename cdIter::value_type ParallelWellInfo::sumPerfValues<cdIter>(cdIter,cdIter) const;
-template typename dIter::value_type ParallelWellInfo::sumPerfValues<dIter>(dIter,dIter) const;
-
-void ParallelWellInfo::clear()
+template<class Scalar>
+void ParallelWellInfo<Scalar>::clear()
 {
     commAboveBelow_->clear();
     globalPerfCont_.reset();
 }
 
-
+template<class Scalar>
 template<class T>
-T ParallelWellInfo::broadcastFirstPerforationValue(const T& t) const
+T ParallelWellInfo<Scalar>::broadcastFirstPerforationValue(const T& t) const
 {
     T res = t;
     if (rankWithFirstPerf_ >= 0) {
@@ -515,41 +549,50 @@ T ParallelWellInfo::broadcastFirstPerforationValue(const T& t) const
     return res;
 }
 
-template int ParallelWellInfo::broadcastFirstPerforationValue<int>(const int&) const;
-template double ParallelWellInfo::broadcastFirstPerforationValue<double>(const double&) const;
+template int ParallelWellInfo<double>::broadcastFirstPerforationValue<int>(const int&) const;
+template double ParallelWellInfo<double>::broadcastFirstPerforationValue<double>(const double&) const;
 
-std::vector<double> ParallelWellInfo::communicateAboveValues(double zero_value,
-                                                             const double* current_values,
-                                                             std::size_t size) const
+template<class Scalar>
+std::vector<Scalar> ParallelWellInfo<Scalar>::
+communicateAboveValues(Scalar zero_value,
+                       const Scalar* current_values,
+                       std::size_t size) const
 {
     return commAboveBelow_->communicateAbove(zero_value, current_values,
                                              size);
 }
 
-std::vector<double> ParallelWellInfo::communicateAboveValues(double zero_value,
-                                                             const std::vector<double>& current_values) const
+template<class Scalar>
+std::vector<Scalar> ParallelWellInfo<Scalar>::
+communicateAboveValues(Scalar zero_value,
+                       const std::vector<Scalar>& current_values) const
 {
     return commAboveBelow_->communicateAbove(zero_value, current_values.data(),
                                              current_values.size());
 }
 
-std::vector<double> ParallelWellInfo::communicateBelowValues(double last_value,
-                                                             const double* current_values,
-                                                             std::size_t size) const
+template<class Scalar>
+std::vector<Scalar> ParallelWellInfo<Scalar>::
+communicateBelowValues(Scalar last_value,
+                       const Scalar* current_values,
+                       std::size_t size) const
 {
     return commAboveBelow_->communicateBelow(last_value, current_values,
                                              size);
 }
 
-std::vector<double> ParallelWellInfo::communicateBelowValues(double last_value,
-                                                             const std::vector<double>& current_values) const
+template<class Scalar>
+std::vector<Scalar> ParallelWellInfo<Scalar>::
+communicateBelowValues(Scalar last_value,
+                       const std::vector<Scalar>& current_values) const
 {
     return commAboveBelow_->communicateBelow(last_value, current_values.data(),
                                              current_values.size());
 }
 
-const GlobalPerfContainerFactory&
-ParallelWellInfo::getGlobalPerfContainerFactory() const
+template<class Scalar>
+const GlobalPerfContainerFactory<Scalar>&
+ParallelWellInfo<Scalar>::getGlobalPerfContainerFactory() const
 {
     if(globalPerfCont_)
         return *globalPerfCont_;
@@ -558,12 +601,15 @@ ParallelWellInfo::getGlobalPerfContainerFactory() const
                   "No ecl indices have been added via beginReset, pushBackEclIndex, endReset");
 }
 
-bool operator<(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
+template<class Scalar>
+bool operator<(const ParallelWellInfo<Scalar>& well1, const ParallelWellInfo<Scalar>& well2)
 {
-    return well1.name() < well2.name() || (! (well2.name() < well1.name()) && well1.hasLocalCells() < well2.hasLocalCells());
+    return well1.name() < well2.name() || (! (well2.name() < well1.name()) &&
+                                              well1.hasLocalCells() < well2.hasLocalCells());
 }
 
-bool operator==(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
+template<class Scalar>
+bool operator==(const ParallelWellInfo<Scalar>& well1, const ParallelWellInfo<Scalar>& well2)
 {
     bool ret = well1.name() == well2.name() && well1.hasLocalCells() == well2.hasLocalCells()
         && well1.isOwner() == well2.isOwner();
@@ -575,56 +621,67 @@ bool operator==(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
     return ret;
 }
 
-bool operator!=(const ParallelWellInfo& well1, const ParallelWellInfo& well2)
+template<class Scalar>
+bool operator!=(const ParallelWellInfo<Scalar>& well1, const ParallelWellInfo<Scalar>& well2)
 {
     return ! (well1 == well2);
 }
 
-bool operator<(const std::pair<std::string, bool>& pair, const ParallelWellInfo& well)
+template<class Scalar>
+bool operator<(const std::pair<std::string, bool>& pair, const ParallelWellInfo<Scalar>& well)
 {
     return pair.first < well.name() || ( !( well.name() < pair.first ) && pair.second < well.hasLocalCells() );
 }
 
-bool operator<( const ParallelWellInfo& well, const std::pair<std::string, bool>& pair)
+template<class Scalar>
+bool operator<( const ParallelWellInfo<Scalar>& well, const std::pair<std::string, bool>& pair)
 {
     return well.name() < pair.first || ( !( pair.first < well.name() ) && well.hasLocalCells() < pair.second );
 }
 
-bool operator==(const std::pair<std::string, bool>& pair, const ParallelWellInfo& well)
+template<class Scalar>
+bool operator==(const std::pair<std::string, bool>& pair, const ParallelWellInfo<Scalar>& well)
 {
     return pair.first == well.name() && pair.second == well.hasLocalCells();
 }
 
-bool operator==(const ParallelWellInfo& well, const std::pair<std::string, bool>& pair)
+template<class Scalar>
+bool operator==(const ParallelWellInfo<Scalar>& well, const std::pair<std::string, bool>& pair)
 {
     return pair == well;
 }
 
-bool operator!=(const std::pair<std::string, bool>& pair, const ParallelWellInfo& well)
+template<class Scalar>
+bool operator!=(const std::pair<std::string, bool>& pair, const ParallelWellInfo<Scalar>& well)
 {
     return pair.first != well.name() || pair.second != well.hasLocalCells();
 }
 
-bool operator!=(const ParallelWellInfo& well, const std::pair<std::string, bool>& pair)
+template<class Scalar>
+bool operator!=(const ParallelWellInfo<Scalar>& well, const std::pair<std::string, bool>& pair)
 {
     return pair != well;
 }
 
-CheckDistributedWellConnections::CheckDistributedWellConnections(const Well& well,
-                                                                 const ParallelWellInfo& info)
+template<class Scalar>
+CheckDistributedWellConnections<Scalar>::
+CheckDistributedWellConnections(const Well& well,
+                                const ParallelWellInfo<Scalar>& info)
     : well_(well), pwinfo_(info)
 {
     foundConnections_.resize(well.getConnections().size(), 0);
 }
 
-void
-CheckDistributedWellConnections::connectionFound(std::size_t i)
+template<class Scalar>
+void CheckDistributedWellConnections<Scalar>::
+connectionFound(std::size_t i)
 {
     foundConnections_[i] = 1;
 }
 
-bool
-CheckDistributedWellConnections::checkAllConnectionsFound()
+template<class Scalar>
+bool CheckDistributedWellConnections<Scalar>::
+checkAllConnectionsFound()
 {
     // Ecl does not hold any information of remote connections.
     assert(pwinfo_.communication().max(foundConnections_.size()) == foundConnections_.size());
@@ -652,4 +709,30 @@ CheckDistributedWellConnections::checkAllConnectionsFound()
     }
     return !missingCells;
 }
+
+template<class Scalar> using dIter = typename std::vector<Scalar>::iterator;
+template<class Scalar> using cdIter = typename std::vector<Scalar>::const_iterator;
+
+#define INSTANCE(T) \
+    template class CheckDistributedWellConnections<T>; \
+    template class CommunicateAboveBelow<T>; \
+    template class GlobalPerfContainerFactory<T>; \
+    template class ParallelWellInfo<T>; \
+    template typename cdIter<T>::value_type \
+        ParallelWellInfo<T>::sumPerfValues<cdIter<T>>(cdIter<T>,cdIter<T>) const; \
+    template typename dIter<T>::value_type \
+        ParallelWellInfo<T>::sumPerfValues<dIter<T>>(dIter<T>,dIter<T>) const; \
+    template void CommunicateAboveBelow<T>::partialSumPerfValues<dIter<T>>(dIter<T>, dIter<T>) const; \
+    template bool operator<(const ParallelWellInfo<T>&, const ParallelWellInfo<T>&); \
+    template bool operator<(const ParallelWellInfo<T>&, const std::pair<std::string, bool>&); \
+    template bool operator<(const std::pair<std::string, bool>&, const ParallelWellInfo<T>&); \
+    template bool operator==(const ParallelWellInfo<T>&, const ParallelWellInfo<T>&); \
+    template bool operator==(const ParallelWellInfo<T>& well, const std::pair<std::string, bool>&); \
+    template bool operator==(const std::pair<std::string, bool>&, const ParallelWellInfo<T>&); \
+    template bool operator!=(const ParallelWellInfo<T>&, const ParallelWellInfo<T>&); \
+    template bool operator!=(const std::pair<std::string, bool>&, const ParallelWellInfo<T>&); \
+    template bool operator!=(const ParallelWellInfo<T>&, const std::pair<std::string, bool>&);
+
+INSTANCE(double)
+
 } // end namespace Opm

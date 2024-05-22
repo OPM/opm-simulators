@@ -71,7 +71,7 @@ template<class Scalar>
 void BlackoilWellModelRestart<Scalar>::
 loadRestartConnectionData(const std::vector<data::Rates::opt>& phs,
                           const data::Well&                    rst_well,
-                          const std::vector<PerforationData>&  old_perf_data,
+                          const std::vector<PerforationData<Scalar>>&  old_perf_data,
                           SingleWellState<Scalar>&             ws) const
 {
     auto& perf_data        = ws.perf_data;
@@ -130,7 +130,7 @@ loadRestartWellData(const std::string&                   well_name,
                     const bool                           handle_ms_well,
                     const std::vector<data::Rates::opt>& phs,
                     const data::Well&                    rst_well,
-                    const std::vector<PerforationData>&  old_perf_data,
+                    const std::vector<PerforationData<Scalar>>&  old_perf_data,
                     SingleWellState<Scalar>&             ws) const
 {
     const auto np = phs.size();

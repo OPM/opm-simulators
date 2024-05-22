@@ -36,14 +36,14 @@ namespace Opm
 template<class FluidSystem, class Indices>
 WellInterfaceIndices<FluidSystem,Indices>::
 WellInterfaceIndices(const Well& well,
-                     const ParallelWellInfo& parallel_well_info,
+                     const ParallelWellInfo<Scalar>& parallel_well_info,
                      const int time_step,
                      const typename WellInterfaceFluidSystem<FluidSystem>::RateConverterType& rate_converter,
                      const int pvtRegionIdx,
                      const int num_components,
                      const int num_phases,
                      const int index_of_well,
-                     const std::vector<PerforationData>& perf_data)
+                     const std::vector<PerforationData<Scalar>>& perf_data)
     : WellInterfaceFluidSystem<FluidSystem>(well,
                                             parallel_well_info,
                                             time_step,

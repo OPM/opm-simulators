@@ -97,7 +97,7 @@ std::ostream& operator<<(std::ostream& os, const std::pair<std::string, bool>& p
 }
 namespace Opm
 {
-std::ostream& operator<<(std::ostream& os, const Opm::ParallelWellInfo& w)
+std::ostream& operator<<(std::ostream& os, const Opm::ParallelWellInfo<double>& w)
 {
     return os << "{" << w.name() << " "<< w.hasLocalCells() << " "<<
         w.isOwner() << "}";
@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
     else
         pairs = {{"Test1", false},{"Test2", true}, {"Test1", true} };
 
-    std::vector<Opm::ParallelWellInfo> well_info;
+    std::vector<Opm::ParallelWellInfo<double>> well_info;
     
     for (const auto& wellinfo : pairs) {                   
         well_info.emplace_back(wellinfo, Opm::Parallel::Communication());
@@ -138,16 +138,16 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
 
     BOOST_CHECK(well_info[0] != well_info[1]);
 
-    Opm::ParallelWellInfo well0, well1;
+    Opm::ParallelWellInfo<double> well0, well1;
 
     BOOST_CHECK(well0 == well1);
 #if HAVE_MPI
     BOOST_CHECK(well0.communication()==helper.getLocalCommunicator());
 #endif
-    Opm::ParallelWellInfo well2("Test", false);
+    Opm::ParallelWellInfo<double> well2("Test", false);
     std::pair<std::string, bool> pwell={"Test", true};
     BOOST_CHECK(well2 < pwell);
-    Opm::ParallelWellInfo well3("Test", true);
+    Opm::ParallelWellInfo<double> well3("Test", true);
     BOOST_CHECK(! (well3 < pwell));
     pwell.second = false;
     BOOST_CHECK(! (well3 < pwell));
@@ -171,7 +171,7 @@ BOOST_AUTO_TEST_CASE(ParallelWellComparison)
 BOOST_AUTO_TEST_CASE(CommunicateAboveBelowSelf)
 {
     auto comm = Dune::MPIHelper::getLocalCommunicator();
-    Opm::CommunicateAboveBelow commAboveBelow{ comm };
+    Opm::CommunicateAboveBelow<double> commAboveBelow{ comm };
     for(std::size_t count=0; count < 2; ++count)
     {
         std::vector<int> eclIndex = {0, 1, 2, 3, 7 , 8, 10, 11};
@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveBelowSelf)
 BOOST_AUTO_TEST_CASE(CommunicateAboveBelowSelf1)
 {
     auto comm = Dune::MPIHelper::getLocalCommunicator();
-    Opm::CommunicateAboveBelow commAboveBelow{ comm };
+    Opm::CommunicateAboveBelow<double> commAboveBelow{ comm };
     for(std::size_t count=0; count < 2; ++count)
     {
         std::vector<int> eclIndex = {0};
@@ -291,7 +291,7 @@ BOOST_AUTO_TEST_CASE(CommunicateAboveBelowParallel)
 {
     auto comm = Opm::Parallel::Communication(Dune::MPIHelper::getCommunicator());
 
-    Opm::CommunicateAboveBelow commAboveBelow{ comm };
+    Opm::CommunicateAboveBelow<double> commAboveBelow{ comm };
     for(std::size_t count=0; count < 2; ++count)
     {
         auto globalEclIndex = createGlobalEclIndex(comm);
@@ -351,7 +351,7 @@ BOOST_AUTO_TEST_CASE(PartialSumself)
 {
     auto comm = Dune::MPIHelper::getLocalCommunicator();
 
-    Opm::CommunicateAboveBelow commAboveBelow{ comm };
+    Opm::CommunicateAboveBelow<double> commAboveBelow{ comm };
     std::vector<int> eclIndex = {0, 1, 2, 3, 7 , 8, 10, 11};
     std::vector<double> current(eclIndex.size());
     std::transform(eclIndex.begin(), eclIndex.end(), current.begin(),
@@ -383,7 +383,7 @@ BOOST_AUTO_TEST_CASE(PartialSumParallel)
 
     auto comm = Opm::Parallel::Communication(Dune::MPIHelper::getCommunicator());
 
-    Opm::CommunicateAboveBelow commAboveBelow{ comm };
+    Opm::CommunicateAboveBelow<double> commAboveBelow{ comm };
     auto globalEclIndex = createGlobalEclIndex(comm);
     std::vector<double> globalCurrent(globalEclIndex.size());
     initRandomNumbers(std::begin(globalCurrent), std::end(globalCurrent),
@@ -411,7 +411,7 @@ void testGlobalPerfFactoryParallel(int num_component, bool local_consecutive = f
 {
     auto comm = Opm::Parallel::Communication(Dune::MPIHelper::getCommunicator());
 
-    Opm::ParallelWellInfo wellInfo{ {"Test", true }, comm };
+    Opm::ParallelWellInfo<double> wellInfo{ {"Test", true }, comm };
     auto globalEclIndex = createGlobalEclIndex(comm);
     std::vector<double> globalCurrent(globalEclIndex.size() * num_component);
     std::vector<double> globalAdd(globalEclIndex.size() * num_component);
@@ -425,7 +425,7 @@ void testGlobalPerfFactoryParallel(int num_component, bool local_consecutive = f
                                           local_consecutive);
 
     // A hack to get local values to add.
-    Opm::ParallelWellInfo dummy{ {"Test", true }, comm };
+    Opm::ParallelWellInfo<double> dummy{ {"Test", true }, comm };
     auto localAdd = populateCommAbove(dummy, comm, globalEclIndex,
                                       globalAdd, num_component,
                                       local_consecutive);
@@ -476,7 +476,7 @@ BOOST_AUTO_TEST_CASE(GlobalPerfFactoryParallel1)
 
 BOOST_AUTO_TEST_CASE(EmptyWell) {
     auto comm = Opm::Parallel::Communication(Dune::MPIHelper::getCommunicator());
-    Opm::ParallelWellInfo pw({"WELL1", true}, comm);
+    Opm::ParallelWellInfo<double> pw({"WELL1", true}, comm);
     pw.communicateFirstPerforation(false);
     double local_p = 1;
     auto global_p = pw.broadcastFirstPerforationValue(local_p);

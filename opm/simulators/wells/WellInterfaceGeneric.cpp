@@ -54,13 +54,13 @@ namespace Opm {
 template<class Scalar>
 WellInterfaceGeneric<Scalar>::
 WellInterfaceGeneric(const Well& well,
-                     const ParallelWellInfo& pw_info,
+                     const ParallelWellInfo<Scalar>& pw_info,
                      const int time_step,
                      const int pvtRegionIdx,
                      const int num_components,
                      const int num_phases,
                      const int index_of_well,
-                     const std::vector<PerforationData>& perf_data)
+                     const std::vector<PerforationData<Scalar>>& perf_data)
       : well_ecl_(well)
       , parallel_well_info_(pw_info)
       , current_step_(time_step)
@@ -143,7 +143,7 @@ adaptRatesForVFP(std::vector<Scalar>& rates) const
 }
 
 template<class Scalar>
-const std::vector<PerforationData>&
+const std::vector<PerforationData<Scalar>>&
 WellInterfaceGeneric<Scalar>::perforationData() const
 {
     return *perf_data_;

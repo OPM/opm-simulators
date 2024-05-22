@@ -36,8 +36,8 @@ namespace Opm
 
 class DeferredLogger;
 class GuideRate;
-class ParallelWellInfo;
-struct PerforationData;
+template<class Scalar> class ParallelWellInfo;
+template<class Scalar> struct PerforationData;
 struct PhaseUsage;
 class SummaryState;
 template<class Scalar> class VFPProperties;
@@ -51,16 +51,16 @@ template<class Scalar>
 class WellInterfaceGeneric {
 public:
     WellInterfaceGeneric(const Well& well,
-                         const ParallelWellInfo& parallel_well_info,
+                         const ParallelWellInfo<Scalar>& parallel_well_info,
                          const int time_step,
                          const int pvtRegionIdx,
                          const int num_components,
                          const int num_phases,
                          const int index_of_well,
-                         const std::vector<PerforationData>& perf_data);
+                         const std::vector<PerforationData<Scalar>>& perf_data);
 
     /// \brief Get the perforations of the well
-    const std::vector<PerforationData>& perforationData() const;
+    const std::vector<PerforationData<Scalar>>& perforationData() const;
 
     /// Well name.
     const std::string& name() const;
@@ -131,7 +131,7 @@ public:
 
     const VFPProperties<Scalar>* vfpProperties() const { return vfp_properties_; }
 
-    const ParallelWellInfo& parallelWellInfo() const { return parallel_well_info_; }
+    const ParallelWellInfo<Scalar>& parallelWellInfo() const { return parallel_well_info_; }
 
     const std::vector<Scalar>& perfDepth() const { return perf_depth_; }
 
@@ -271,7 +271,7 @@ protected:
 
     Well well_ecl_;
 
-    const ParallelWellInfo& parallel_well_info_;
+    const ParallelWellInfo<Scalar>& parallel_well_info_;
     const int current_step_;
 
     // The pvt region of the well. We assume
@@ -286,7 +286,7 @@ protected:
     // the index of well in Wells struct
     int index_of_well_;
 
-    const std::vector<PerforationData>* perf_data_;
+    const std::vector<PerforationData<Scalar>>* perf_data_;
 
     // the vectors used to describe the inflow performance relationship (IPR)
     // Q = IPR_A - BHP * IPR_B

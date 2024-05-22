@@ -68,7 +68,7 @@ namespace Opm
         using typename Base::PressureMatrix;
 
         MultisegmentWell(const Well& well,
-                         const ParallelWellInfo& pw_info,
+                         const ParallelWellInfo<Scalar>& pw_info,
                          const int time_step,
                          const ModelParameters& param,
                          const RateConverterType& rate_converter,
@@ -76,7 +76,7 @@ namespace Opm
                          const int num_components,
                          const int num_phases,
                          const int index_of_well,
-                         const std::vector<PerforationData>& perf_data);
+                         const std::vector<PerforationData<Scalar>>& perf_data);
 
         void init(const PhaseUsage* phase_usage_arg,
                   const std::vector<double>& depth_arg,
@@ -197,7 +197,7 @@ namespace Opm
                              const bool& allow_cf,
                              std::vector<Value>& cq_s,
                              Value& perf_press,
-                             PerforationRates& perf_rates,
+                             PerforationRates<Scalar>& perf_rates,
                              DeferredLogger& deferred_logger) const;
 
         template<class Value>
@@ -214,7 +214,7 @@ namespace Opm
                         const std::vector<Value>& cmix_s,
                         std::vector<Value>& cq_s,
                         Value& perf_press,
-                        PerforationRates& perf_rates,
+                        PerforationRates<Scalar>& perf_rates,
                         DeferredLogger& deferred_logger) const;
 
         // compute the fluid properties, such as densities, viscosities, and so on, in the segments

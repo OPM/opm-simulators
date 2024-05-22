@@ -173,7 +173,7 @@ Opm::ParallelWBPCalculation::evalCellSource(Evaluator evalCellSrc)
 std::size_t
 Opm::ParallelWBPCalculation::
 createCalculator(const Well&             well,
-                 const ParallelWellInfo& parallelWellInfo,
+                 const ParallelWellInfo<double>& parallelWellInfo,
                  const std::vector<int>& localConnIdx,
                  EvaluatorFactory        makeWellSourceEvaluator)
 {

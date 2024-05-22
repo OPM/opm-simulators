@@ -35,7 +35,7 @@ WGState<Scalar>::WGState(const PhaseUsage& pu) :
 
 template<class Scalar>
 WGState<Scalar> WGState<Scalar>::
-serializationTestObject(const ParallelWellInfo& pinfo)
+serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 {
     WGState result(PhaseUsage{});
     result.well_state = WellState<Scalar>::serializationTestObject(pinfo);

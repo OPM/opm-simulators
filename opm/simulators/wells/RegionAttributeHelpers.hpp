@@ -28,7 +28,6 @@
 
 #include <dune/grid/common/gridenums.hh>
 #include <algorithm>
-#include <cmath>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -63,7 +62,7 @@ namespace Opm {
              * In a parallel run only cells owned contribute to the cell average.
              * \tparam is_parallel Whether this is a parallel run.
              */
-             template<bool is_parallel>
+            template<class Scalar, bool is_parallel>
             struct AverageIncrementCalculator
             {
                 /**
@@ -77,12 +76,12 @@ namespace Opm {
                  *                    by this process (value 1), or not (value 0).
                  * \param cell        The cell index.
                  */
-                std::tuple<double, double, double, double, int>
-                operator()(const std::vector<double>& pressure,
-                           const std::vector<double>& temperature,
-                           const std::vector<double>& rs,
-                           const std::vector<double>& rv,
-                           const std::vector<double>& ownership,
+                std::tuple<Scalar, Scalar, Scalar, Scalar, int>
+                operator()(const std::vector<Scalar>& pressure,
+                           const std::vector<Scalar>& temperature,
+                           const std::vector<Scalar>& rs,
+                           const std::vector<Scalar>& rv,
+                           const std::vector<Scalar>& ownership,
                            std::size_t cell){
                     if ( ownership[cell] )
                     {
@@ -98,15 +97,15 @@ namespace Opm {
                     }
                 }
             };
-            template<>
-            struct AverageIncrementCalculator<false>
+            template<class Scalar>
+            struct AverageIncrementCalculator<Scalar, false>
             {
-                std::tuple<double, double, double, double, int>
-                operator()(const std::vector<double>& pressure,
-                           const std::vector<double>& temperature,
-                           const std::vector<double>& rs,
-                           const std::vector<double>& rv,
-                           const std::vector<double>&,
+                std::tuple<Scalar, Scalar, Scalar, Scalar, int>
+                operator()(const std::vector<Scalar>& pressure,
+                           const std::vector<Scalar>& temperature,
+                           const std::vector<Scalar>& rs,
+                           const std::vector<Scalar>& rv,
+                           const std::vector<Scalar>&,
                            std::size_t cell){
                     return std::make_tuple(pressure[cell],
                                            temperature[cell],

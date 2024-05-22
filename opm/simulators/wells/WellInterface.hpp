@@ -60,7 +60,6 @@ namespace Opm {
 
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <cassert>
 #include <vector>
 
 namespace Opm
@@ -134,7 +133,7 @@ public:
                                           Indices::numPhases >;
     /// Constructor
     WellInterface(const Well& well,
-                  const ParallelWellInfo& pw_info,
+                  const ParallelWellInfo<Scalar>& pw_info,
                   const int time_step,
                   const ModelParameters& param,
                   const RateConverterType& rate_converter,
@@ -142,7 +141,7 @@ public:
                   const int num_components,
                   const int num_phases,
                   const int index_of_well,
-                  const std::vector<PerforationData>& perf_data);
+                  const std::vector<PerforationData<Scalar>>& perf_data);
 
     /// Virtual destructor
     virtual ~WellInterface() = default;

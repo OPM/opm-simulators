@@ -57,7 +57,7 @@ namespace Opm
     template <typename TypeTag>
     MultisegmentWell<TypeTag>::
     MultisegmentWell(const Well& well,
-                     const ParallelWellInfo& pw_info,
+                     const ParallelWellInfo<Scalar>& pw_info,
                      const int time_step,
                      const ModelParameters& param,
                      const RateConverterType& rate_converter,
@@ -65,7 +65,7 @@ namespace Opm
                      const int num_components,
                      const int num_phases,
                      const int index_of_well,
-                     const std::vector<PerforationData>& perf_data)
+                     const std::vector<PerforationData<Scalar>>& perf_data)
     : Base(well, pw_info, time_step, param, rate_converter, pvtRegionIdx, num_components, num_phases, index_of_well, perf_data)
     , MSWEval(static_cast<WellInterfaceIndices<FluidSystem,Indices>&>(*this))
     , regularize_(false)
@@ -371,7 +371,7 @@ namespace Opm
                 const Scalar seg_pressure = segment_pressure[seg];
                 std::vector<Scalar> cq_s(this->num_components_, 0.);
                 Scalar perf_press = 0.0;
-                PerforationRates perf_rates;
+                PerforationRates<Scalar> perf_rates;
                 computePerfRate(intQuants, mob, Tw, seg, perf, seg_pressure,
                                 allow_cf, cq_s, perf_press, perf_rates, deferred_logger);
 
@@ -870,7 +870,7 @@ namespace Opm
                     const std::vector<Value>& cmix_s,
                     std::vector<Value>& cq_s,
                     Value& perf_press,
-                    PerforationRates& perf_rates,
+                    PerforationRates<Scalar>& perf_rates,
                     DeferredLogger& deferred_logger) const
     {
         // pressure difference between the segment and the perforation
@@ -1006,7 +1006,7 @@ namespace Opm
                     const bool& allow_cf,
                     std::vector<Value>& cq_s,
                     Value& perf_press,
-                    PerforationRates& perf_rates,
+                    PerforationRates<Scalar>& perf_rates,
                     DeferredLogger& deferred_logger) const
 
     {
@@ -1874,7 +1874,7 @@ namespace Opm
                 const std::vector<Scalar> Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
                 std::vector<EvalWell> cq_s(this->num_components_, 0.0);
                 EvalWell perf_press;
-                PerforationRates perfRates;
+                PerforationRates<Scalar> perfRates;
                 computePerfRate(int_quants, mob, Tw, seg, perf, seg_pressure,
                                 allow_cf, cq_s, perf_press, perfRates, deferred_logger);
 
@@ -2190,7 +2190,7 @@ namespace Opm
                 const std::vector<Scalar> Tw = this->wellIndex(perf, int_quants, trans_mult, wellstate_nupcol);
                 std::vector<Scalar> cq_s(this->num_components_, 0.0);
                 Scalar perf_press = 0.0;
-                PerforationRates perf_rates;
+                PerforationRates<Scalar> perf_rates;
                 computePerfRate(int_quants, mob, Tw, seg, perf, seg_pressure,
                                 allow_cf, cq_s, perf_press, perf_rates, deferred_logger);
                 for (int comp = 0; comp < this->num_components_; ++comp) {
