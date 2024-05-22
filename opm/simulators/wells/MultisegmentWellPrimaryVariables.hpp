@@ -76,7 +76,7 @@ public:
     static constexpr int numWellEq = Indices::numPhases + 1;
 
     using Scalar = typename FluidSystem::Scalar;
-    using EvalWell = DenseAd::Evaluation<double, /*size=*/Indices::numEq + numWellEq>;
+    using EvalWell = DenseAd::Evaluation<Scalar, /*size=*/Indices::numEq + numWellEq>;
 
     using Equations = MultisegmentWellEquations<Scalar,numWellEq,Indices::numEq>;
     using BVectorWell = typename Equations::BVectorWell;
@@ -97,14 +97,14 @@ public:
 
     //! \brief Update values from newton update vector.
     void updateNewton(const BVectorWell& dwells,
-                      const double relaxation_factor,
-                      const double DFLimit,
+                      const Scalar relaxation_factor,
+                      const Scalar DFLimit,
                       const bool stop_or_zero_rate_target,
-                      const double max_pressure_change);
+                      const Scalar max_pressure_change);
 
     //! \brief Copy values to well state.
     void copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
-                         const double rho,
+                         const Scalar rho,
                          const bool stop_or_zero_rate_target,
                          WellState<Scalar>& well_state,
                          const SummaryState& summary_state,
@@ -166,7 +166,7 @@ private:
 
     //! \brief The values for the primary variables
     //! \details Based on different solution strategies, the wells can have different primary variables
-    std::vector<std::array<double, numWellEq>> value_;
+    std::vector<std::array<Scalar, numWellEq>> value_;
 
     //! \brief The Evaluation for the well primary variables.
     //! \details Contains derivatives and are used in AD calculation

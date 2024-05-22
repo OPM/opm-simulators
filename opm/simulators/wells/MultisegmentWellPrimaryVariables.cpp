@@ -91,7 +91,7 @@ update(const WellState<Scalar>& well_state,
 
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         // calculate the total rate for each segment
-        double total_seg_rate = 0.0;
+        Scalar total_seg_rate = 0.0;
         // the segment pressure
         value_[seg][SPres] = segment_pressure[seg];
         // TODO: under what kind of circustances, the following will be wrong?
@@ -102,9 +102,9 @@ update(const WellState<Scalar>& well_state,
 
         if (seg == 0) {
             if (well_.isInjector()) {
-                total_seg_rate = std::max(total_seg_rate, 0.);
+                total_seg_rate = std::max(total_seg_rate, Scalar{0.});
             } else {
-                total_seg_rate = std::min(total_seg_rate, 0.);
+                total_seg_rate = std::min(total_seg_rate, Scalar{0.});
             }
         }
         value_[seg][WQTotal] = total_seg_rate;
@@ -157,23 +157,23 @@ update(const WellState<Scalar>& well_state,
 template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 updateNewton(const BVectorWell& dwells,
-             const double relaxation_factor,
-             const double dFLimit,
+             const Scalar relaxation_factor,
+             const Scalar dFLimit,
              const bool stop_or_zero_rate_target,
-             const double max_pressure_change)
+             const Scalar max_pressure_change)
 {
-    const std::vector<std::array<double, numWellEq>> old_primary_variables = value_;
+    const std::vector<std::array<Scalar, numWellEq>> old_primary_variables = value_;
 
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
         if (has_wfrac_variable) {
             const int sign = dwells[seg][WFrac] > 0. ? 1 : -1;
-            const double dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]) * relaxation_factor, dFLimit);
+            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][WFrac]) * relaxation_factor, dFLimit);
             value_[seg][WFrac] = old_primary_variables[seg][WFrac] - dx_limited;
         }
 
         if (has_gfrac_variable) {
             const int sign = dwells[seg][GFrac] > 0. ? 1 : -1;
-            const double dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]) * relaxation_factor, dFLimit);
+            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][GFrac]) * relaxation_factor, dFLimit);
             value_[seg][GFrac] = old_primary_variables[seg][GFrac] - dx_limited;
         }
 
@@ -183,10 +183,10 @@ updateNewton(const BVectorWell& dwells,
         // update the segment pressure
         {
             const int sign = dwells[seg][SPres] > 0.? 1 : -1;
-            const double dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
+            const Scalar dx_limited = sign * std::min(std::abs(dwells[seg][SPres]) * relaxation_factor, max_pressure_change);
             // some cases might have defaulted bhp constraint of 1 bar, we use a slightly smaller value as the bhp lower limit for Newton update
             // so that bhp constaint can be an active control when needed.
-            const double lower_limit = (seg == 0) ? bhp_lower_limit : seg_pres_lower_limit;
+            const Scalar lower_limit = (seg == 0) ? bhp_lower_limit : seg_pres_lower_limit;
             value_[seg][SPres] = std::max(old_primary_variables[seg][SPres] - dx_limited, lower_limit);
         }
 
@@ -197,9 +197,9 @@ updateNewton(const BVectorWell& dwells,
             // make sure that no injector produce and no producer inject
             if (seg == 0) {
                 if (well_.isInjector()) {
-                    value_[seg][WQTotal] = std::max(value_[seg][WQTotal], 0.0);
+                    value_[seg][WQTotal] = std::max(value_[seg][WQTotal], Scalar{0.0});
                 } else {
-                    value_[seg][WQTotal] = std::min(value_[seg][WQTotal], 0.0);
+                    value_[seg][WQTotal] = std::min(value_[seg][WQTotal], Scalar{0.0});
                 }
             }
         }
@@ -213,7 +213,7 @@ updateNewton(const BVectorWell& dwells,
 template<class FluidSystem, class Indices>
 void MultisegmentWellPrimaryVariables<FluidSystem,Indices>::
 copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
-                const double rho,
+                const Scalar rho,
                 const bool stop_or_zero_rate_target,
                 WellState<Scalar>& well_state,
                 const SummaryState& summary_state,
@@ -236,7 +236,7 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
     auto& vapoil = segments.vaporized_oil_rate;
     auto& segment_pressure = segments.pressure;
     for (std::size_t seg = 0; seg < value_.size(); ++seg) {
-        std::vector<double> fractions(well_.numPhases(), 0.0);
+        std::vector<Scalar> fractions(well_.numPhases(), 0.0);
         fractions[oil_pos] = 1.0;
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
@@ -253,7 +253,7 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
 
         // convert the fractions to be Q_p / G_total to calculate the phase rates
         for (int p = 0; p < well_.numPhases(); ++p) {
-            const double scale = well_.scalingFactor(p);
+            const Scalar scale = well_.scalingFactor(p);
             // for injection wells, there should only one non-zero scaling factor
             if (scale > 0.) {
                 fractions[p] /= scale;
@@ -264,9 +264,9 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
         }
 
         // calculate the phase rates based on the primary variables
-        const double g_total = value_[seg][WQTotal];
+        const Scalar g_total = value_[seg][WQTotal];
         for (int p = 0; p < well_.numPhases(); ++p) {
-            const double phase_rate = g_total * fractions[p];
+            const Scalar phase_rate = g_total * fractions[p];
             segment_rates[seg * well_.numPhases() + p] = phase_rate;
             if (seg == 0) { // top segment
                 ws.surface_rates[p] = phase_rate;
@@ -282,12 +282,12 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
 
         // Calculate other per-phase dynamic quantities.
 
-        const auto temperature = 0.0; // Ignore thermal effects
-        const auto saltConc = 0.0;    // Ignore salt precipitation
-        const auto Rvw = 0.0;         // Ignore vaporised water.
+        const Scalar temperature = 0.0; // Ignore thermal effects
+        const Scalar saltConc = 0.0;    // Ignore salt precipitation
+        const Scalar Rvw = 0.0;         // Ignore vaporised water.
 
-        auto rsMax = 0.0;
-        auto rvMax = 0.0;
+        Scalar rsMax = 0.0;
+        Scalar rvMax = 0.0;
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             // Both oil and gas active.
             rsMax = FluidSystem::oilPvt()
@@ -322,10 +322,10 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
 
             well_.rateConverter().calcReservoirVoidageRates
                 (pvtReg, segment_pressure[seg],
-                 std::max(0.0, Rs),
-                 std::max(0.0, Rv),
-                 0.0, // Rsw
-                 0.0, // Rvw
+                 std::max(Scalar{0.0}, Rs),
+                 std::max(Scalar{0.0}, Rv),
+                 Scalar{0.0}, // Rsw
+                 Scalar{0.0}, // Rvw
                  temperature, saltConc, surf_rates, resv_rates);
         }
 
@@ -361,7 +361,9 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
 
         if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) {
             segments.phase_viscosity[seg * well_.numPhases() + pu.phase_pos[Water]] =
-                FluidSystem::waterPvt().viscosity(pvtReg, temperature, segment_pressure[seg],  0.0 /*Rsw*/, saltConc);
+                FluidSystem::waterPvt().viscosity(pvtReg, temperature,
+                                                  segment_pressure[seg],
+                                                  Scalar{0.0} /*Rsw*/, saltConc);
         }
 
         if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
@@ -421,7 +423,7 @@ processFractions(const int seg)
 
     const PhaseUsage& pu = well_.phaseUsage();
 
-    std::vector<double> fractions(well_.numPhases(), 0.0);
+    std::vector<Scalar> fractions(well_.numPhases(), 0.0);
 
     assert(FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx));
     const int oil_pos = pu.phase_pos[Oil];
@@ -524,7 +526,7 @@ volumeFractionScaled(const int seg,
     // For reservoir rate control, the distr in well control is used for the
     // rate conversion coefficients. For the injection well, only the distr of the injection
     // phase is not zero.
-    const double scale = well_.scalingFactor(well_.modelCompIdxToFlowCompIdx(comp_idx));
+    const Scalar scale = well_.scalingFactor(well_.modelCompIdxToFlowCompIdx(comp_idx));
     if (scale > 0.) {
         return this->volumeFraction(seg, comp_idx) / scale;
     }

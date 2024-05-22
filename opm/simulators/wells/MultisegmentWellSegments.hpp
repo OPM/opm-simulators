@@ -92,7 +92,7 @@ public:
 
     // pressure loss contribution due to acceleration
     EvalWell accelerationPressureLossContribution(const int seg,
-                                                  const double area, 
+                                                  const Scalar area,
                                                   const bool extra_reverse_flow_derivatives = false) const;
 
     const std::vector<std::vector<int>>& inlets() const
@@ -176,11 +176,11 @@ private:
 
     void copyPhaseDensities(const unsigned    phaseIdx,
                             const std::size_t stride,
-                            double*           dens) const;
+                            Scalar*           dens) const;
 
-    double mixtureDensity(const int seg) const;
-    double mixtureDensityWithExponents(const int seg) const;
-    double mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const;
+    Scalar mixtureDensity(const int seg) const;
+    Scalar mixtureDensityWithExponents(const int seg) const;
+    Scalar mixtureDensityWithExponents(const AutoICD& aicd, const int seg) const;
 };
 
 } // namespace Opm
