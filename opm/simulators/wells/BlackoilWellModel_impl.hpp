@@ -89,13 +89,15 @@ namespace Opm {
         this->alternative_well_rate_init_ =
             Parameters::get<TypeTag, Properties::AlternativeWellRateInit>();
 
+        using SourceDataSpan = 
+            typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
         this->wbpCalculationService_
             .localCellIndex([this](const std::size_t globalIndex)
             { return this->compressedIndexForInterior(globalIndex); })
-            .evalCellSource([this](const int                                     localCell,
-                                   PAvgDynamicSourceData::SourceDataSpan<Scalar> sourceTerms)
+            .evalCellSource([this](const int                                                               localCell,
+                                   SourceDataSpan                                                          sourceTerms)
             {
-                using Item = typename PAvgDynamicSourceData::SourceDataSpan<Scalar>::Item;
+                using Item = typename SourceDataSpan::Item;
 
                 const auto* intQuants = this->simulator_.model()
                     .cachedIntensiveQuantities(localCell, /*timeIndex = */0);
@@ -2033,7 +2035,7 @@ namespace Opm {
     {
         auto wbpResult = data::WellBlockAveragePressures{};
 
-        using Calculated = PAvgCalculator::Result::WBPMode;
+        using Calculated = typename PAvgCalculator<Scalar>::Result::WBPMode;
         using Output = data::WellBlockAvgPress::Quantity;
 
         this->wbpCalculationService_.collectDynamicValues();
@@ -2073,14 +2075,14 @@ namespace Opm {
 
 
     template <typename TypeTag>
-    ParallelWBPCalculation::EvaluatorFactory
+    typename ParallelWBPCalculation<typename BlackoilWellModel<TypeTag>::Scalar>::EvaluatorFactory
     BlackoilWellModel<TypeTag>::
     makeWellSourceEvaluatorFactory(const std::vector<Well>::size_type wellIdx) const
     {
-        using Span = PAvgDynamicSourceData::SourceDataSpan<Scalar>;
+        using Span = typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
         using Item = typename Span::Item;
 
-        return [wellIdx, this]() -> ParallelWBPCalculation::Evaluator
+        return [wellIdx, this]() -> typename ParallelWBPCalculation<Scalar>::Evaluator
         {
             if (! this->wbpCalcMap_[wellIdx].openWellIdx_.has_value()) {
                 // Well is stopped/shut.  Return evaluator for stopped wells.

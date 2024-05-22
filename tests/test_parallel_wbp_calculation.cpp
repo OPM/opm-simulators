@@ -214,9 +214,9 @@ namespace {
             }
 
             void cellSource(const int                                          cell,
-                            Opm::PAvgDynamicSourceData::SourceDataSpan<double> src)
+                            Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double> src)
             {
-                using Item = Opm::PAvgDynamicSourceData::SourceDataSpan<double>::Item;
+                using Item = Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>::Item;
 
                 src .set(Item::Pressure      , pressure(cell))
                     .set(Item::PoreVol       , porevol (cell))
@@ -233,16 +233,16 @@ namespace {
                 return localIdx;
             }
 
-            Opm::ParallelWBPCalculation::EvaluatorFactory connSource()
+            Opm::ParallelWBPCalculation<double>::EvaluatorFactory connSource()
             {
                 return []() {
                     auto rho = std::vector { 0.1, 0.12, 0.14, };
 
                     return [rho = std::move(rho)]
-                        (const int                                          connIx,
-                         Opm::PAvgDynamicSourceData::SourceDataSpan<double> src)
+                        (const int                                                  connIx,
+                         Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double> src)
                     {
-                        using Item = Opm::PAvgDynamicSourceData::SourceDataSpan<double>::Item;
+                        using Item = Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>::Item;
 
                         src .set(Item::Pressure      , 1222.0)
                             .set(Item::PoreVol       ,    1.25)
@@ -353,10 +353,10 @@ namespace {
                     });
             }
 
-            void cellSource(const int                                          cell,
-                            Opm::PAvgDynamicSourceData::SourceDataSpan<double> src)
+            void cellSource(const int                                                  cell,
+                            Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double> src)
             {
-                using Item = Opm::PAvgDynamicSourceData::SourceDataSpan<double>::Item;
+                using Item = Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>::Item;
 
                 src .set(Item::Pressure      , pressure(cell))
                     .set(Item::PoreVol       , porevol (cell))
@@ -373,16 +373,16 @@ namespace {
                 return localIdx;
             }
 
-            Opm::ParallelWBPCalculation::EvaluatorFactory connSource()
+            Opm::ParallelWBPCalculation<double>::EvaluatorFactory connSource()
             {
                 return []() {
                     auto rho = std::vector { 0.16, 0.18, 0.2, };
 
                     return [rho = std::move(rho)]
-                        (const int                                          connIx,
-                         Opm::PAvgDynamicSourceData::SourceDataSpan<double> src)
+                        (const int                                                  connIx,
+                         Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double> src)
                     {
-                        using Item = Opm::PAvgDynamicSourceData::SourceDataSpan<double>::Item;
+                        using Item = Opm::PAvgDynamicSourceData<double>::SourceDataSpan<double>::Item;
 
                         src .set(Item::Pressure      , 1222.0)
                             .set(Item::PoreVol       ,    1.25)
@@ -483,22 +483,22 @@ namespace {
         return pwi;
     }
 
-    void setCallbacksTop(Opm::ParallelWBPCalculation& wbpCalcService)
+    void setCallbacksTop(Opm::ParallelWBPCalculation<double>& wbpCalcService)
     {
         wbpCalcService
             .localCellIndex(&Rank::Top::globalToLocal)
             .evalCellSource(&Rank::Top::cellSource);
     }
 
-    void setCallbacksBottom(Opm::ParallelWBPCalculation& wbpCalcService)
+    void setCallbacksBottom(Opm::ParallelWBPCalculation<double>& wbpCalcService)
     {
         wbpCalcService
             .localCellIndex(&Rank::Bottom::globalToLocal)
             .evalCellSource(&Rank::Bottom::cellSource);
     }
 
-    void setCallbacks(const int                    rank,
-                      Opm::ParallelWBPCalculation& wbpCalcService)
+    void setCallbacks(const int                            rank,
+                      Opm::ParallelWBPCalculation<double>& wbpCalcService)
     {
         if (rank == 0) {
             setCallbacksTop(wbpCalcService);
@@ -508,7 +508,7 @@ namespace {
         }
     }
 
-    Opm::ParallelWBPCalculation::EvaluatorFactory connSource(const int rank)
+    Opm::ParallelWBPCalculation<double>::EvaluatorFactory connSource(const int rank)
     {
         if (rank == 0) {
             return Rank::Top::connSource();
@@ -551,7 +551,7 @@ namespace {
 
         Opm::Parallel::Communication comm;
         Opm::GridDims cellIndexMap;
-        Opm::ParallelWBPCalculation wbpCalcService;
+        Opm::ParallelWBPCalculation<double> wbpCalcService;
         Opm::ParallelWellInfo<double> pwi;
     };
 
@@ -566,7 +566,7 @@ BOOST_AUTO_TEST_CASE(Create)
     BOOST_REQUIRE_EQUAL(comm.size(), 2);
 
     const Opm::GridDims dims{5, 5, 10};
-    auto wbpCalcService = Opm::ParallelWBPCalculation {
+    auto wbpCalcService = Opm::ParallelWBPCalculation<double> {
         dims, comm
     };
 
@@ -599,7 +599,7 @@ BOOST_AUTO_TEST_CASE(TopOfFormation_Well_OpenConns)
     cse.wbpCalcService.inferBlockAveragePressures(calcIndex, controls, gravity, refDepth);
 
     const auto avgPress = cse.wbpCalcService.averagePressures(calcIndex);
-    using WBPMode = Opm::PAvgCalculator::Result::WBPMode;
+    using WBPMode = Opm::PAvgCalculator<double>::Result::WBPMode;
 
     BOOST_CHECK_CLOSE(avgPress.value(WBPMode::WBP) , 1254.806625666667, 1.0e-8);
     BOOST_CHECK_CLOSE(avgPress.value(WBPMode::WBP4), 1295.348292333333, 1.0e-8);

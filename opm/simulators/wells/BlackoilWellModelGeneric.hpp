@@ -550,7 +550,7 @@ protected:
     std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>> local_parallel_well_info_;
 
     std::vector<WellProdIndexCalculator> prod_index_calc_;
-    mutable ParallelWBPCalculation wbpCalculationService_;
+    mutable ParallelWBPCalculation<Scalar> wbpCalculationService_;
 
     std::vector<int> pvt_region_idx_;
 
