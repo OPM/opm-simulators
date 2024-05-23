@@ -38,6 +38,7 @@
 
 #include <memory>
 #include <mutex>
+#include <type_traits>
 #include <vector>
 
 namespace Opm
@@ -63,11 +64,14 @@ class amgclSolverBackend : public BdaSolver<block_size>
     using Base::tolerance;
     using Base::initialized;
 
-    typedef amgcl::static_matrix<double, block_size, block_size> dmat_type; // matrix value type in double precision
-    typedef amgcl::static_matrix<double, block_size, 1> dvec_type; // the corresponding vector value type
-    typedef amgcl::backend::builtin<dmat_type> CPU_Backend;
+    using dmat_type = amgcl::static_matrix<double, block_size, block_size>; // matrix value type in double precision
+    using dvec_type = amgcl::static_matrix<double, block_size, 1>; // the corresponding vector value type
+    using CPU_Backend = std::conditional_t<block_size == 1,
+                                           amgcl::backend::builtin<double>,
+                                           amgcl::backend::builtin<dmat_type>>;
 
-    typedef amgcl::make_solver<amgcl::runtime::preconditioner<CPU_Backend>, amgcl::runtime::solver::wrapper<CPU_Backend> > CPU_Solver;
+    using CPU_Solver = amgcl::make_solver<amgcl::runtime::preconditioner<CPU_Backend>,
+                                          amgcl::runtime::solver::wrapper<CPU_Backend>>;
 
 private:
 
