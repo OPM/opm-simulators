@@ -287,30 +287,59 @@ void amgclSolverBackend<block_size>::solve_system(double *b, BdaResult &res) {
         } else if (backend_type == Amgcl_backend_type::cpu) { // use builtin backend (CPU)
             // create matrix object
             auto Atmp = std::tie(N, A_rows, A_cols, A_vals);
-            auto A = amgcl::adapter::block_matrix<dmat_type>(Atmp);
+            auto print = [this](const auto& solve)
+            {
+                // print solver structure (once)
+                std::call_once(print_info, [&](){
+                    std::ostringstream out;
+                    out << solve << std::endl;
+                    OpmLog::info(out.str());
+                });
+            };
+            if constexpr (block_size == 1) {
+                // create solver and construct preconditioner
+                // don't reuse this unless the preconditioner can be reused
+                CPU_Solver solve(Atmp, prm);
 
-            // create solver and construct preconditioner
-            // don't reuse this unless the preconditioner can be reused
-            CPU_Solver solve(A, prm);
+                print(solve);
 
-            // print solver structure (once)
-            std::call_once(print_info, [&](){
-                std::ostringstream out;
-                out << solve << std::endl;
-                OpmLog::info(out.str());
-            });
+                // reset x vector
+                std::fill(x.begin(), x.end(), 0.0);
 
-            // reset x vector
-            std::fill(x.begin(), x.end(), 0.0);
+                std::vector<double> b_(b, b + N);
 
-            // create blocked vectors
-            auto b_ptr = reinterpret_cast<dvec_type*>(b);
-            auto x_ptr = reinterpret_cast<dvec_type*>(x.data());
-            auto B = amgcl::make_iterator_range(b_ptr, b_ptr + N / block_size);
-            auto X = amgcl::make_iterator_range(x_ptr, x_ptr + N / block_size);
+                // create numa vectors
+                typename CPU_Backend::params bprm;
+                auto B = CPU_Backend::copy_vector(b_, bprm);
+                auto X = CPU_Backend::copy_vector(x, bprm);
 
-            // actually solve
-            std::tie(iters, error) = solve(B, X);
+                // actually solve
+                std::tie(iters, error) = solve(*B, *X);
+
+                std::copy(&(*X)[0], &(*X)[0] + N, x.begin());
+            } else {
+                // create matrix object
+                auto A = amgcl::adapter::block_matrix<dmat_type>(Atmp);
+
+                // create solver and construct preconditioner
+                // don't reuse this unless the preconditioner can be reused
+                CPU_Solver solve(A, prm);
+
+                // print solver structure (once)
+                print(solve);
+
+                // reset x vector
+                std::fill(x.begin(), x.end(), 0.0);
+
+                // create blocked vectors
+                auto b_ptr = reinterpret_cast<dvec_type*>(b);
+                auto x_ptr = reinterpret_cast<dvec_type*>(x.data());
+                auto B = amgcl::make_iterator_range(b_ptr, b_ptr + N / block_size);
+                auto X = amgcl::make_iterator_range(x_ptr, x_ptr + N / block_size);
+
+                // actually solve
+                std::tie(iters, error) = solve(B, X);
+            }
         } else if (backend_type == Amgcl_backend_type::vexcl) {
 #if HAVE_VEXCL
             static std::vector<cl::CommandQueue> ctx; // using CommandQueue directly instead of vex::Context
@@ -391,28 +420,15 @@ SolverStatus amgclSolverBackend<block_size>::solve_system(std::shared_ptr<Blocke
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 
-template <>
-SolverStatus amgclSolverBackend<1>::solve_system([[maybe_unused]] std::shared_ptr<BlockedMatrix> matrix,
-                                                 [[maybe_unused]] double *b,
-                                                 [[maybe_unused]] std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                 [[maybe_unused]] WellContributions& wellContribs,
-                                                 [[maybe_unused]] BdaResult &res)
-{
-    OPM_THROW(std::logic_error, "amgclSolverBackend not implemented for sz 1");
-}
+#define INSTANTIATE_TYPE(T)               \
+    template class amgclSolverBackend<1>; \
+    template class amgclSolverBackend<2>; \
+    template class amgclSolverBackend<3>; \
+    template class amgclSolverBackend<4>; \
+    template class amgclSolverBackend<5>; \
+    template class amgclSolverBackend<6>;
 
-
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                \
-template amgclSolverBackend<n>::amgclSolverBackend(int, int, double, unsigned int, unsigned int);   \
-
-INSTANTIATE_BDA_FUNCTIONS(1);
-INSTANTIATE_BDA_FUNCTIONS(2);
-INSTANTIATE_BDA_FUNCTIONS(3);
-INSTANTIATE_BDA_FUNCTIONS(4);
-INSTANTIATE_BDA_FUNCTIONS(5);
-INSTANTIATE_BDA_FUNCTIONS(6);
-
-#undef INSTANTIATE_BDA_FUNCTIONS
+INSTANTIATE_TYPE(double)
 
 } // namespace Accelerator
 } // namespace Opm
