@@ -27,29 +27,33 @@
 namespace Opm {
 namespace EQUIL {
     
-using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<double,0,1,2>>;
-using FS = BlackOilFluidSystem<double>;
+template<class Scalar>
+using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<Scalar,0,1,2>>;
+template<class Scalar> using FS = BlackOilFluidSystem<Scalar>;
 
-template struct PcEq<FS,MatLaw>;
+#define INSTANTIATE_TYPE(T) \
+    template struct PcEq<FS<T>,MatLaw<T>>; \
+    template class EquilReg<T>; \
+    template T satFromPc<FS<T>,MatLaw<T>>(const MatLaw<T>&, \
+                                          const int,const int, \
+                                          const T,const bool); \
+    template T satFromSumOfPcs<FS<T>,MatLaw<T>>(const MatLaw<T>&,    \
+                                                const int,const int, \
+                                                const int,const T); \
+    template T satFromDepth<FS<T>,MatLaw<T>>(const MatLaw<T>&, \
+                                             const T,const T, \
+                                             const int,const int,const bool); \
+    template bool isConstPc<FS<T>,MatLaw<T>>(const MatLaw<T>&,const int,const int); \
+    template class Miscibility::PBVD<FS<T>>; \
+    template class Miscibility::PDVD<FS<T>>; \
+    template class Miscibility::RsVD<FS<T>>; \
+    template class Miscibility::RsSatAtContact<FS<T>>; \
+    template class Miscibility::RvSatAtContact<FS<T>>; \
+    template class Miscibility::RvwSatAtContact<FS<T>>; \
+    template class Miscibility::RvVD<FS<T>>; \
+    template class Miscibility::RvwVD<FS<T>>;
 
-template double satFromPc<FS,MatLaw>(const MatLaw&,const int,const int,
-                                     const double,const bool);
-template double satFromSumOfPcs<FS,MatLaw>(const MatLaw&,const int,const int,
-                                           const int,const double);
-template double satFromDepth<FS,MatLaw>(const MatLaw&,const double,const double,
-                                        const int,const int,const bool);
-template bool isConstPc<FS,MatLaw>(const MatLaw&,const int,const int);
-
-namespace Miscibility {
-    template class PBVD<FS>;
-    template class PDVD<FS>;
-    template class RsVD<FS>;
-    template class RsSatAtContact<FS>;
-    template class RvSatAtContact<FS>;
-    template class RvwSatAtContact<FS>;
-    template class RvVD<FS>;
-    template class RvwVD<FS>;
-}
+INSTANTIATE_TYPE(double)
 
 } // namespace Equil
 } // namespace Opm
