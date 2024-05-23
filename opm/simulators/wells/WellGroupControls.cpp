@@ -525,14 +525,17 @@ getGroupProductionTargetRate(const Group& group,
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
     Scalar target = orig_target;
+    std::cout << "target: " << target*86400 << " time: " << well_.currentStep() << std::endl;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
             // Apply local reductions only at the control level
             // (top) and for levels where we have a specified
             // group guide rate.
             target -= localReduction(chain[ii]);
+             std::cout << "ii: " << ii << " group: " << chain[ii] << " LocRed:" << localReduction(chain[ii])*86400 << " target: " << target*86400 << std::endl;
         }
         target *= localFraction(chain[ii+1]);
+                std::cout << "ii: " << ii << " group: " << chain[ii+1] << " LocFrac: " << localFraction(chain[ii+1]) << " target: " << target*86400 << std::endl;
     }
     // Avoid negative target rates coming from too large local reductions.
     const Scalar target_rate = std::max(Scalar(0.0), target / efficiencyFactor);
@@ -662,17 +665,18 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
     double target = orig_target;
+    std::cout << "target: " << target*86400 << std::endl;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || guideRate->has(chain[ii])) {
         // if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
-            // Apply local reductions only at the control level
-            // (top) and for levels where we have a specified
-            // group guide rate.
+        //     Apply local reductions only at the control level
+        //     (top) and for levels where we have a specified
+        //     group guide rate.
             target -= localReduction(chain[ii]);
-            std::cout << "ii: " << ii << " group: " << chain[ii] << " LocRed:" << localReduction(chain[ii]) << " target: " << target << std::endl;
+            std::cout << "ii: " << ii << " group: " << chain[ii] << " LocRed:" << localReduction(chain[ii])*86400 << " target: " << target*86400 << std::endl;
         }
         target *= localFraction(chain[ii+1]);
-        std::cout << "ii: " << ii << " group: " << chain[ii+1] << " LocFrac: " << localFraction(chain[ii+1]) << " target: " << target << std::endl;
+        std::cout << "ii: " << ii << " group: " << chain[ii+1] << " LocFrac: " << localFraction(chain[ii+1]) << " target: " << target*86400 << std::endl;
     }
     // Avoid negative target rates coming from too large local reductions.
     const double target_rate = std::max(0.0, target / efficiencyFactor);
