@@ -356,7 +356,7 @@ namespace Opm {
             }
 
             // -----------   Check if converged   -----------
-            std::vector<double> residual_norms;
+            std::vector<Scalar> residual_norms;
             perfTimer.reset();
             perfTimer.start();
             // the step is not considered converged until at least minIter iterations is done
@@ -527,7 +527,7 @@ namespace Opm {
         }
 
         // compute the "relative" change of the solution between time steps
-        double relativeChange() const
+        Scalar relativeChange() const
         {
             Scalar resultDelta = 0.0;
             Scalar resultDenom = 0.0;
@@ -714,17 +714,17 @@ namespace Opm {
             return terminal_output_;
         }
 
-        std::tuple<double,double> convergenceReduction(Parallel::Communication comm,
-                                                       const double pvSumLocal,
-                                                       const double numAquiferPvSumLocal,
+        std::tuple<Scalar,Scalar> convergenceReduction(Parallel::Communication comm,
+                                                       const Scalar pvSumLocal,
+                                                       const Scalar numAquiferPvSumLocal,
                                                        std::vector< Scalar >& R_sum,
                                                        std::vector< Scalar >& maxCoeff,
                                                        std::vector< Scalar >& B_avg)
         {
             OPM_TIMEBLOCK(convergenceReduction);
             // Compute total pore volume (use only owned entries)
-            double pvSum = pvSumLocal;
-            double numAquiferPvSum = numAquiferPvSumLocal;
+            Scalar pvSum = pvSumLocal;
+            Scalar numAquiferPvSum = numAquiferPvSumLocal;
 
             if( comm.size() > 1 )
             {
@@ -777,14 +777,14 @@ namespace Opm {
         /// \brief Get reservoir quantities on this process needed for convergence calculations.
         /// \return A pair of the local pore volume of interior cells and the pore volumes
         ///         of the cells associated with a numerical aquifer.
-        std::pair<double,double> localConvergenceData(std::vector<Scalar>& R_sum,
+        std::pair<Scalar,Scalar> localConvergenceData(std::vector<Scalar>& R_sum,
                                                       std::vector<Scalar>& maxCoeff,
                                                       std::vector<Scalar>& B_avg,
                                                       std::vector<int>& maxCoeffCell)
         {
             OPM_TIMEBLOCK(localConvergenceData);
-            double pvSumLocal = 0.0;
-            double numAquiferPvSumLocal = 0.0;
+            Scalar pvSumLocal = 0.0;
+            Scalar numAquiferPvSumLocal = 0.0;
             const auto& model = simulator_.model();
             const auto& problem = simulator_.problem();
 
@@ -830,10 +830,10 @@ namespace Opm {
 
         /// \brief Compute the total pore volume of cells violating CNV that are not part
         ///        of a numerical aquifer.
-        double computeCnvErrorPv(const std::vector<Scalar>& B_avg, double dt)
+        Scalar computeCnvErrorPv(const std::vector<Scalar>& B_avg, double dt)
         {
             OPM_TIMEBLOCK(computeCnvErrorPv);
-            double errorPV{};
+            Scalar errorPV{};
             const auto& model = simulator_.model();
             const auto& problem = simulator_.problem();
             const auto& residual = simulator_.model().linearizer().residual();
@@ -852,7 +852,7 @@ namespace Opm {
                 elemCtx.updatePrimaryStencil(elem);
                 // elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
                 const unsigned cell_idx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-                const double pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) * model.dofTotalVolume(cell_idx);
+                const Scalar pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) * model.dofTotalVolume(cell_idx);
                 const auto& cellResidual = residual[cell_idx];
                 bool cnvViolated = false;
 
@@ -939,8 +939,8 @@ namespace Opm {
                     OpmLog::debug(message);
                 }
             }
-            const double tol_cnv = use_relaxed_cnv ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
-            const double tol_mb  = use_relaxed_mb ? param_.tolerance_mb_relaxed_ : param_.tolerance_mb_;
+            const Scalar tol_cnv = use_relaxed_cnv ? param_.tolerance_cnv_relaxed_ :  param_.tolerance_cnv_;
+            const Scalar tol_mb  = use_relaxed_mb ? param_.tolerance_mb_relaxed_ : param_.tolerance_mb_;
 
             // Finish computation
             std::vector<Scalar> CNV(numComp);
@@ -958,10 +958,10 @@ namespace Opm {
 
             using CR = ConvergenceReport;
             for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-                const double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
+                const Scalar res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
                 const CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
                                                         CR::ReservoirFailure::Type::Cnv };
-                const double tol[2] = { tol_mb, tol_cnv };
+                const Scalar tol[2] = { tol_mb, tol_cnv };
 
                 for (int ii : {0, 1}) {
                     if (std::isnan(res[ii])) {
@@ -1031,7 +1031,7 @@ namespace Opm {
         ConvergenceReport getConvergence(const SimulatorTimerInterface& timer,
                                          const int iteration,
                                          const int maxIter,
-                                         std::vector<double>& residual_norms)
+                                         std::vector<Scalar>& residual_norms)
         {
             OPM_TIMEBLOCK(getConvergence);
             // Get convergence reports for reservoir and wells.
@@ -1055,20 +1055,20 @@ namespace Opm {
 
         /// Wrapper required due to not following generic API
         template<class T>
-        std::vector<std::vector<double> >
+        std::vector<std::vector<Scalar> >
         computeFluidInPlace(const T&, const std::vector<int>& fipnum) const
         {
             return computeFluidInPlace(fipnum);
         }
 
         /// Should not be called
-        std::vector<std::vector<double> >
+        std::vector<std::vector<Scalar> >
         computeFluidInPlace(const std::vector<int>& /*fipnum*/) const
         {
             OPM_TIMEBLOCK(computeFluidInPlace);
             //assert(true)
             //return an empty vector
-            std::vector<std::vector<double> > regionValues(0, std::vector<double>(0,0.0));
+            std::vector<std::vector<Scalar> > regionValues(0, std::vector<Scalar>(0,0.0));
             return regionValues;
         }
 
@@ -1148,8 +1148,8 @@ namespace Opm {
         /// \brief The number of cells of the global grid.
         long int global_nc_;
 
-        std::vector<std::vector<double>> residual_norms_history_;
-        double current_relaxation_;
+        std::vector<std::vector<Scalar>> residual_norms_history_;
+        Scalar current_relaxation_;
         BVector dx_old_;
 
         std::vector<StepReport> convergence_reports_;
@@ -1198,7 +1198,7 @@ namespace Opm {
                 const auto R2 = modelResid[cell_idx][compIdx];
 
                 R_sum[compIdx] += R2;
-                const double Rval = std::abs(R2) / pvValue;
+                const Scalar Rval = std::abs(R2) / pvValue;
                 if (Rval > maxCoeff[compIdx]) {
                     maxCoeff[compIdx] = Rval;
                     maxCoeffCell[compIdx] = cell_idx;
@@ -1304,10 +1304,10 @@ namespace Opm {
         }
 
     private:
-        double dpMaxRel() const { return param_.dp_max_rel_; }
-        double dsMax() const { return param_.ds_max_; }
-        double drMaxRel() const { return param_.dr_max_rel_; }
-        double maxResidualAllowed() const { return param_.max_residual_allowed_; }
+        Scalar dpMaxRel() const { return param_.dp_max_rel_; }
+        Scalar dsMax() const { return param_.ds_max_; }
+        Scalar drMaxRel() const { return param_.dr_max_rel_; }
+        Scalar maxResidualAllowed() const { return param_.max_residual_allowed_; }
         double linear_solve_setup_time_;
 
     public:

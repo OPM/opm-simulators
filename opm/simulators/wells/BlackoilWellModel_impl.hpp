@@ -2274,7 +2274,7 @@ namespace Opm {
         auto& ws = this->wellState().well(well->indexOfWell());
         for (int p = 0; p < np; ++p) {
             // make sure the potentials are positive
-            ws.well_potentials[p] = std::max(0.0, potentials[p]);
+            ws.well_potentials[p] = std::max(Scalar{0.0}, potentials[p]);
         }
     }
 

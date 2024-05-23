@@ -69,7 +69,7 @@ updateFiltrationParticleVolume(const WellInterfaceGeneric<Scalar>& well,
     const std::size_t np = well_state.numPhases();
     for (int perf = 0; perf < well.numPerfs(); ++perf) {
         // not considering the production water
-        const Scalar water_rates = std::max(0., connection_rates[perf * np + water_index]);
+        const Scalar water_rates = std::max(Scalar{0.}, connection_rates[perf * np + water_index]);
         const Scalar filtrate_rate = water_rates * conc;
         filtration_particle_volume_[perf] += filtrate_rate * dt;
         ws.perf_data.filtrate_data.rates[perf] = filtrate_rate;

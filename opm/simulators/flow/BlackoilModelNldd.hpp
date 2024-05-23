@@ -389,7 +389,7 @@ private:
         }
         detailTimer.reset();
         detailTimer.start();
-        std::vector<double> resnorms;
+        std::vector<Scalar> resnorms;
         auto convreport = this->getDomainConvergence(domain, timer, 0, logger, resnorms);
         if (convreport.converged()) {
             // TODO: set more info, timing etc.
@@ -532,7 +532,7 @@ private:
     }
 
     //! \brief Get reservoir quantities on this process needed for convergence calculations.
-    std::pair<double, double> localDomainConvergenceData(const Domain& domain,
+    std::pair<Scalar, Scalar> localDomainConvergenceData(const Domain& domain,
                                                          std::vector<Scalar>& R_sum,
                                                          std::vector<Scalar>& maxCoeff,
                                                          std::vector<Scalar>& B_avg,
@@ -540,8 +540,8 @@ private:
     {
         const auto& modelSimulator = model_.simulator();
 
-        double pvSumLocal = 0.0;
-        double numAquiferPvSumLocal = 0.0;
+        Scalar pvSumLocal = 0.0;
+        Scalar numAquiferPvSumLocal = 0.0;
         const auto& model = modelSimulator.model();
         const auto& problem = modelSimulator.problem();
 
@@ -617,12 +617,12 @@ private:
                                  iteration >= model_.param().min_strict_cnv_iter_;
         // Tighter bound for local convergence should increase the
         // likelyhood of: local convergence => global convergence
-        const double tol_cnv = model_.param().local_tolerance_scaling_cnv_
+        const Scalar tol_cnv = model_.param().local_tolerance_scaling_cnv_
             * (use_relaxed_cnv ? model_.param().tolerance_cnv_relaxed_
                            : model_.param().tolerance_cnv_);
 
         const bool use_relaxed_mb = iteration >= model_.param().min_strict_mb_iter_;
-        const double tol_mb  = model_.param().local_tolerance_scaling_mb_ 
+        const Scalar tol_mb  = model_.param().local_tolerance_scaling_mb_
             * (use_relaxed_mb ? model_.param().tolerance_mb_relaxed_ : model_.param().tolerance_mb_);
 
         // Finish computation
@@ -639,10 +639,10 @@ private:
         ConvergenceReport report{reportTime};
         using CR = ConvergenceReport;
         for (int compIdx = 0; compIdx < numComp; ++compIdx) {
-            double res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
+            Scalar res[2] = { mass_balance_residual[compIdx], CNV[compIdx] };
             CR::ReservoirFailure::Type types[2] = { CR::ReservoirFailure::Type::MassBalance,
                                                     CR::ReservoirFailure::Type::Cnv };
-            double tol[2] = { tol_mb, tol_cnv };
+            Scalar tol[2] = { tol_mb, tol_cnv };
             for (int ii : {0, 1}) {
                 if (std::isnan(res[ii])) {
                     report.setReservoirFailed({types[ii], CR::Severity::NotANumber, compIdx});
@@ -704,7 +704,7 @@ private:
                                            const SimulatorTimerInterface& timer,
                                            const int iteration,
                                            DeferredLogger& logger,
-                                           std::vector<double>& residual_norms)
+                                           std::vector<Scalar>& residual_norms)
     {
         std::vector<Scalar> B_avg(numEq, 0.0);
         auto report = this->getDomainReservoirConvergence(timer.simulationTimeElapsed(),
@@ -732,16 +732,16 @@ private:
             return domain_order;
         } else if (model_.param().local_solve_approach_ == DomainSolveApproach::GaussSeidel) {
             // Calculate the measure used to order the domains.
-            std::vector<double> measure_per_domain(domains_.size());
+            std::vector<Scalar> measure_per_domain(domains_.size());
             switch (model_.param().local_domain_ordering_) {
             case DomainOrderingMeasure::AveragePressure: {
                 // Use average pressures to order domains.
                 for (const auto& domain : domains_) {
-                    double press_sum = 0.0;
+                    Scalar press_sum = 0.0;
                     for (const int c : domain.cells) {
                         press_sum += solution[c][Indices::pressureSwitchIdx];
                     }
-                    const double avgpress = press_sum / domain.cells.size();
+                    const Scalar avgpress = press_sum / domain.cells.size();
                     measure_per_domain[domain.index] = avgpress;
                 }
                 break;
@@ -749,7 +749,7 @@ private:
             case DomainOrderingMeasure::MaxPressure: {
                 // Use max pressures to order domains.
                 for (const auto& domain : domains_) {
-                    double maxpress = 0.0;
+                    Scalar maxpress = 0.0;
                     for (const int c : domain.cells) {
                         maxpress = std::max(maxpress, solution[c][Indices::pressureSwitchIdx]);
                     }
@@ -762,7 +762,7 @@ private:
                 const auto& residual = modelSimulator.model().linearizer().residual();
                 const int num_vars = residual[0].size();
                 for (const auto& domain : domains_) {
-                    double maxres = 0.0;
+                    Scalar maxres = 0.0;
                     for (const int c : domain.cells) {
                         for (int ii = 0; ii < num_vars; ++ii) {
                             maxres = std::max(maxres, std::fabs(residual[c][ii]));
@@ -829,8 +829,8 @@ private:
             // We do not accept a solution if the wells are unconverged.
             if (!convrep.wellFailed()) {
                 // Calculare the sums of the mb and cnv failures.
-                double mb_sum = 0.0;
-                double cnv_sum = 0.0;
+                Scalar mb_sum = 0.0;
+                Scalar cnv_sum = 0.0;
                 for (const auto& rc : convrep.reservoirConvergence()) {
                     if (rc.type() == ConvergenceReport::ReservoirFailure::Type::MassBalance) {
                         mb_sum += rc.value();
@@ -839,8 +839,8 @@ private:
                     }
                 }
                 // If not too high, we overrule the convergence failure.
-                const double acceptable_local_mb_sum = 1e-3;
-                const double acceptable_local_cnv_sum = 1.0;
+                const Scalar acceptable_local_mb_sum = 1e-3;
+                const Scalar acceptable_local_cnv_sum = 1.0;
                 if (mb_sum < acceptable_local_mb_sum && cnv_sum < acceptable_local_cnv_sum) {
                     local_report.converged = true;
                     logger.debug(fmt::format("Accepting solution in unconverged domain {} on rank {}.", domain.index, rank_));
@@ -865,17 +865,17 @@ private:
         }
     }
 
-    double computeCnvErrorPvLocal(const Domain& domain,
+    Scalar computeCnvErrorPvLocal(const Domain& domain,
                                   const std::vector<Scalar>& B_avg, double dt) const
     {
-        double errorPV{};
+        Scalar errorPV{};
         const auto& simulator = model_.simulator();
         const auto& model = simulator.model();
         const auto& problem = simulator.problem();
         const auto& residual = simulator.model().linearizer().residual();
 
         for (const int cell_idx : domain.cells) {
-            const double pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) *
+            const Scalar pvValue = problem.referencePorosity(cell_idx, /*timeIdx=*/0) *
                                    model.dofTotalVolume(cell_idx);
             const auto& cellResidual = residual[cell_idx];
             bool cnvViolated = false;

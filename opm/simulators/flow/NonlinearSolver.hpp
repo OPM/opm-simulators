@@ -89,15 +89,16 @@ enum class NonlinearRelaxType {
 namespace detail {
 
 /// Detect oscillation or stagnation in a given residual history.
-void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
-                        const int it, const int numPhases, const double relaxRelTol,
+template<class Scalar>
+void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
+                        const int it, const int numPhases, const Scalar relaxRelTol,
                         bool& oscillate, bool& stagnate);
 
 /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
 /// Implemention for Dune block vectors.
-template <class BVector>
+template <class BVector, class Scalar>
 void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
-                              const double omega, NonlinearRelaxType relaxType);
+                              const Scalar omega, NonlinearRelaxType relaxType);
 
 }
 
@@ -113,9 +114,9 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         struct SolverParameters
         {
             NonlinearRelaxType relaxType_;
-            double relaxMax_;
-            double relaxIncrement_;
-            double relaxRelTol_;
+            Scalar relaxMax_;
+            Scalar relaxIncrement_;
+            Scalar relaxRelTol_;
             int maxIter_; // max nonlinear iterations
             int minIter_; // min nonlinear iterations
 
@@ -277,7 +278,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         int wellIterationsLastStep() const
         { return wellIterationsLast_; }
 
-        std::vector<std::vector<double> >
+        std::vector<std::vector<Scalar> >
         computeFluidInPlace(const std::vector<int>& fipnum) const
         { return model_->computeFluidInPlace(fipnum); }
 
@@ -290,7 +291,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         { return *model_; }
 
         /// Detect oscillation or stagnation in a given residual history.
-        void detectOscillations(const std::vector<std::vector<double>>& residualHistory,
+        void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
                                 const int it, bool& oscillate, bool& stagnate) const
         {
             detail::detectOscillations(residualHistory, it, model_->numPhases(),
@@ -301,17 +302,17 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
         /// Implemention for Dune block vectors.
         template <class BVector>
-        void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const double omega) const
+        void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld, const Scalar omega) const
         {
             detail::stabilizeNonlinearUpdate(dx, dxOld, omega, this->relaxType());
         }
 
         /// The greatest relaxation factor (i.e. smallest factor) allowed.
-        double relaxMax() const
+        Scalar relaxMax() const
         { return param_.relaxMax_; }
 
         /// The step-change size for the relaxation factor.
-        double relaxIncrement() const
+        Scalar relaxIncrement() const
         { return param_.relaxIncrement_; }
 
         /// The relaxation type (Dampen or SOR).
@@ -319,7 +320,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
         { return param_.relaxType_; }
 
         /// The relaxation relative tolerance.
-        double relaxRelTol() const
+        Scalar relaxRelTol() const
         { return param_.relaxRelTol_; }
 
         /// The maximum number of nonlinear iterations allowed.

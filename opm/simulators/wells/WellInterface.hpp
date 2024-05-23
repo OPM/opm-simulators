@@ -255,7 +255,7 @@ public:
                                              DeferredLogger& deferred_logger) = 0; // should be const?
 
     virtual void updateProductivityIndex(const Simulator& simulator,
-                                         const WellProdIndexCalculator& wellPICalc,
+                                         const WellProdIndexCalculator<Scalar>& wellPICalc,
                                          WellState<Scalar>& well_state,
                                          DeferredLogger& deferred_logger) const = 0;
 

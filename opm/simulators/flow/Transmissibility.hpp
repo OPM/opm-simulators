@@ -227,7 +227,7 @@ protected:
     void applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& globalToLocal,
                                         const std::string& keyword, const std::vector<NNCdata>& nncs,
                                         const std::function<KeywordLocation(const NNCdata&)>& getLocation,
-                                        const std::function<void(double&, const double&)>& apply);
+                                        const std::function<void(Scalar&, const Scalar&)>& apply);
 
     void extractPermeability_();
 
