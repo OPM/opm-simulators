@@ -87,6 +87,12 @@
 
 #include <cstddef>
 
+#if HAVE_OPENMP
+#include <thread>
+#include <omp.h>
+extern std::shared_ptr<std::thread> copyThread;
+#endif //HAVE_OPENMP
+
 namespace Opm
 {
 namespace Accelerator
@@ -431,21 +437,29 @@ void rocsparseSolverBackend<block_size>::copy_system_to_gpu(double *b) {
     HIP_CHECK(hipMemcpyAsync(d_Arows, mat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, stream));
     HIP_CHECK(hipMemcpyAsync(d_Acols, mat->colIndices, sizeof(rocsparse_int) * nnzb, hipMemcpyHostToDevice, stream));
     HIP_CHECK(hipMemcpyAsync(d_Avals, mat->nnzValues, sizeof(double) * nnz, hipMemcpyHostToDevice, stream));
+    HIP_CHECK(hipMemsetAsync(d_x, 0, sizeof(double) * N, stream));
+    HIP_CHECK(hipMemcpyAsync(d_b, b, sizeof(double) * N, hipMemcpyHostToDevice, stream));
+    
     if (useJacMatrix) {
+#if HAVE_OPENMP
+	if(omp_get_max_threads() > 1)
+	   copyThread->join();
+#endif
         HIP_CHECK(hipMemcpyAsync(d_Mrows, jacMat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, stream));
         HIP_CHECK(hipMemcpyAsync(d_Mcols, jacMat->colIndices, sizeof(rocsparse_int) * nnzbs_prec, hipMemcpyHostToDevice, stream));
         HIP_CHECK(hipMemcpyAsync(d_Mvals, jacMat->nnzValues, sizeof(double) * nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, stream));
     } else {
         HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(double) * nnz, hipMemcpyDeviceToDevice, stream));
     }
-    HIP_CHECK(hipMemsetAsync(d_x, 0, sizeof(double) * N, stream));
-    HIP_CHECK(hipMemcpyAsync(d_b, b, sizeof(double) * N, hipMemcpyHostToDevice, stream));
 
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(stream));
+        
+        c_copy += t.stop();
         std::ostringstream out;
-        out << "rocsparseSolver::copy_system_to_gpu(): " << t.stop() << " s";
-        OpmLog::info(out.str());
+        out << "-----rocsparseSolver::copy_system_to_gpu(): " << t.elapsed() << " s\n";
+        out << "---rocsparseSolver::cum copy: " << c_copy << " s";
+	OpmLog::info(out.str());
     }
 } // end copy_system_to_gpu()
 
@@ -455,18 +469,26 @@ void rocsparseSolverBackend<block_size>::update_system_on_gpu(double *b) {
     Timer t;
 
     HIP_CHECK(hipMemcpyAsync(d_Avals, mat->nnzValues, sizeof(double) * nnz, hipMemcpyHostToDevice, stream));
+    HIP_CHECK(hipMemsetAsync(d_x, 0, sizeof(double) * N, stream));
+    HIP_CHECK(hipMemcpyAsync(d_b, b, sizeof(double) * N, hipMemcpyHostToDevice, stream));
+    
     if (useJacMatrix) {
+#if HAVE_OPENMP
+	if (omp_get_max_threads() > 1)
+	    copyThread->join();
+#endif
         HIP_CHECK(hipMemcpyAsync(d_Mvals, jacMat->nnzValues, sizeof(double) * nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, stream));
     } else {
         HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(double) * nnz, hipMemcpyDeviceToDevice, stream));
     }
-    HIP_CHECK(hipMemsetAsync(d_x, 0, sizeof(double) * N, stream));
-    HIP_CHECK(hipMemcpyAsync(d_b, b, sizeof(double) * N, hipMemcpyHostToDevice, stream));
-
+    
     if (verbosity >= 3) {
         HIP_CHECK(hipStreamSynchronize(stream));
+
+        c_copy += t.stop();
         std::ostringstream out;
-        out << "rocsparseSolver::update_system_on_gpu(): " << t.stop() << " s";
+        out << "-----rocsparseSolver::update_system_on_gpu(): " << t.elapsed() << " s\n";
+        out << "---rocsparseSolver::cum copy: " << c_copy << " s";
         OpmLog::info(out.str());
     }
 } // end update_system_on_gpu()
