@@ -338,7 +338,9 @@ protected:
                         const bool log,
                         const bool isRestart,
                         const bool vapparsActive,
-                        const bool enableHysteresis,
+                        const bool enablePCHysteresis,
+                        const bool enableNonWettingHysteresis,
+                        const bool enableWettingHysteresis,
                         unsigned numTracers,
                         const std::vector<bool>& enableSolTracers,
                         unsigned numOutputNnc);
@@ -449,17 +451,17 @@ protected:
     ScalarBuffer mFracGas_;
     ScalarBuffer mFracCo2_;
     ScalarBuffer soMax_;
-    ScalarBuffer pcSwMdcOw_;
-    ScalarBuffer krnSwMdcOw_;
-    ScalarBuffer pcSwMdcGo_;
-    ScalarBuffer krnSwMdcGo_;
+    ScalarBuffer swMax_;
+    ScalarBuffer sgmax_;
+    ScalarBuffer shmax_;
+    ScalarBuffer somin_;
+    ScalarBuffer swmin_;
     ScalarBuffer ppcw_;
     ScalarBuffer gasDissolutionFactor_;
     ScalarBuffer oilVaporizationFactor_;
     ScalarBuffer bubblePointPressure_;
     ScalarBuffer dewPointPressure_;
     ScalarBuffer rockCompPorvMultiplier_;
-    ScalarBuffer swMax_;
     ScalarBuffer minimumOilPressure_;
     ScalarBuffer saturatedOilFormationVolumeFactor_;
     ScalarBuffer rockCompTransMultiplier_;
