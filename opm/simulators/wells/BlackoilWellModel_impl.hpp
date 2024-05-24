@@ -1258,7 +1258,7 @@ namespace Opm {
         const int reportStepIdx = this->simulator_.episodeIndex();
         const auto& network = this->schedule()[reportStepIdx].network();
         const auto& balance = this->schedule()[reportStepIdx].network_balance();
-        const double thp_tolerance = balance.thp_tolerance();
+        const Scalar thp_tolerance = balance.thp_tolerance();
 
         if (!network.active()) {
             return;
@@ -1276,19 +1276,19 @@ namespace Opm {
                 const auto cmode = ctrl.cmode;
                 const auto pu = this->phase_usage_;
                 //TODO: Auto choke combined with RESV control is not supported
-                std::vector<double> resv_coeff(pu.num_phases, 1.0);
-                double gratTargetFromSales = 0.0; 
+                std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
+                Scalar gratTargetFromSales = 0.0; 
                 if (group_state.has_grat_sales_target(group.name()))
                     gratTargetFromSales = group_state.grat_sales_target(group.name());
 
                 WGHelpers::TargetCalculator tcalc(cmode, pu, resv_coeff,
                                                          gratTargetFromSales, nodeName, group_state,
                                                          group.has_gpmaint_control(cmode));
-                const double orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
+                const Scalar orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
 
                 auto mismatch = [&] (auto well_group_thp) {
-                    double well_group_rate(0.0);
-                    double rate(0.0);
+                    Scalar well_group_rate(0.0);
+                    Scalar rate(0.0);
                     for (auto& well : this->well_container_) {
                         std::string well_name = well->name();
                         auto& ws = well_state.well(well_name);
@@ -1305,8 +1305,8 @@ namespace Opm {
                     return (well_group_rate - orig_target)/orig_target;
                 };
 
-                double min_thp, max_thp;
-                std::array<double, 2> range_initial;
+                Scalar min_thp, max_thp;
+                std::array<Scalar, 2> range_initial;
                 //Find an initial bracket
                 if (!this->well_group_thp_calc_.has_value()){
                     // Retrieve the terminal pressure of the associated root of the manifold group
@@ -1317,14 +1317,12 @@ namespace Opm {
                     }
 
                     min_thp = network.node(node_name).terminal_pressure().value();
-                    std::optional<double> approximate_solution0;
-                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
-
-                     // Narrow down the bracket
-                    double low1, high1;
-                    std::array<double, 2> range = {0.9*min_thp, 1.1*max_thp};
-                    std::optional<double> appr_sol;
-                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
+                    WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
+                    // Narrow down the bracket
+                    Scalar low1, high1;
+                    std::array<Scalar, 2> range = {0.9*min_thp, 1.1*max_thp};
+                    std::optional<Scalar> appr_sol;
+                    WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
                     min_thp = low1;
                     max_thp = high1;
                     range_initial = {min_thp, max_thp};
@@ -1332,27 +1330,27 @@ namespace Opm {
 
                 const auto upbranch = network.uptree_branch(nodeName);
                 const auto it = this->node_pressures_.find((*upbranch).uptree_node());
-                const double nodal_pressure = it->second;
-                double well_group_thp = nodal_pressure;
+                const Scalar nodal_pressure = it->second;
+                Scalar well_group_thp = nodal_pressure;
 
                 if (!this->well_group_thp_calc_.has_value() || this->well_group_thp_calc_ > nodal_pressure) {
                     // The bracket is based on the initial bracket or on a range based on a previous calculated common group thp
-                    std::array<double, 2> range;
+                    std::array<Scalar, 2> range;
                     this->well_group_thp_calc_.has_value() ? 
                         range =  {0.9 * this->well_group_thp_calc_.value(), 1.1 * this->well_group_thp_calc_.value()} : 
                         range = range_initial;
 
-                    double low, high;
-                    std::optional<double> approximate_solution;
-                    const double tolerance1 = thp_tolerance;
+                    Scalar low, high;
+                    std::optional<Scalar> approximate_solution;
+                    const Scalar tolerance1 = thp_tolerance;
                     local_deferredLogger.debug("Using brute force search to bracket the common THP");
-                    const bool finding_bracket = WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, range, low, high, approximate_solution, tolerance1, local_deferredLogger);
+                    const bool finding_bracket = WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, range, low, high, approximate_solution, tolerance1, local_deferredLogger);
 
                     if (approximate_solution.has_value()) {
                         this->well_group_thp_calc_ = *approximate_solution;
                         local_deferredLogger.debug("Approximate common THP value found: "  + std::to_string(this->well_group_thp_calc_.value()));
                     } else if (finding_bracket) {
-                        const double tolerance2 = thp_tolerance;
+                        const Scalar tolerance2 = thp_tolerance;
                         const int max_iteration_solve = 100;
                         int iteration = 0;
                         this->well_group_thp_calc_= RegulaFalsiBisection<ThrowOnError>::
