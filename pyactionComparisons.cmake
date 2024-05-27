@@ -25,6 +25,16 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_gconsump_insert_kw
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH)
 
+add_test_compareSeparateECLFiles(CASENAME pyaction_gruptree_insert_kw
+                                 DIR1 pyaction
+                                 FILENAME1 PYACTION_GRUPTREE_INSERT_KW
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_GRUPTREE
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH)
+
 add_test_compareSeparateECLFiles(CASENAME pyaction_mult+_insert_kw
                                  DIR1 pyaction
                                  FILENAME1 PYACTION_MULT+_INSERT_KW
