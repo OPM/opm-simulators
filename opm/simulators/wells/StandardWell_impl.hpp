@@ -462,6 +462,7 @@ namespace Opm
 
         const auto& summaryState = simulator.vanguard().summaryState();
         const Schedule& schedule = simulator.vanguard().schedule();
+        const bool stopped_or_zero_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
         StandardWellAssemble<FluidSystem,Indices>(*this).
             assembleControlEq(well_state, group_state,
                               schedule, summaryState,
@@ -469,6 +470,7 @@ namespace Opm
                               this->primary_variables_,
                               this->connections_.rho(),
                               this->linSys_,
+                              stopped_or_zero_target,
                               deferred_logger);
 
 
@@ -692,16 +694,17 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWellState(const SummaryState& summary_state,
+    updateWellState(const Simulator& simulator,
                     const BVectorWell& dwells,
                     WellState<Scalar>& well_state,
                     DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
         updatePrimaryVariablesNewton(dwells, stop_or_zero_rate_target, deferred_logger);
 
+        const auto& summary_state = simulator.vanguard().summaryState();
         updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, summary_state, deferred_logger);
         Base::calculateReservoirRates(well_state.well(this->index_of_well_));
     }
@@ -805,7 +808,10 @@ namespace Opm
             // the well index associated with the connection
             Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quantities, cell_idx);
             const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-            const std::vector<Scalar> tw_perf = this->wellIndex(perf, int_quantities, trans_mult, wellstate_nupcol);  
+            const std::vector<Scalar> tw_perf = this->wellIndex(perf,
+                                                                int_quantities,
+                                                                trans_mult,
+                                                                wellstate_nupcol);
             std::vector<Scalar> ipr_a_perf(this->ipr_a_.size());
             std::vector<Scalar> ipr_b_perf(this->ipr_b_.size());
             for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
@@ -849,11 +855,11 @@ namespace Opm
     updateIPRImplicit(const Simulator& simulator,
                       WellState<Scalar>& well_state,
                       DeferredLogger& deferred_logger)
-    {   
+    {
         // Compute IPR based on *converged* well-equation:
-        // For a component rate r the derivative dr/dbhp is obtained by 
+        // For a component rate r the derivative dr/dbhp is obtained by
         // dr/dbhp = - (partial r/partial x) * inv(partial Eq/partial x) * (partial Eq/partial bhp_target)
-        // where Eq(x)=0 is the well equation setup with bhp control and primary variables x 
+        // where Eq(x)=0 is the well equation setup with bhp control and primary variables x
 
         // We shouldn't have zero rates at this stage, but check
         bool zero_rates;
@@ -867,7 +873,7 @@ namespace Opm
             const auto msg = fmt::format("updateIPRImplicit: Well {} has zero rate, IPRs might be problematic", this->name());
             deferred_logger.debug(msg);
             /*
-            // could revert to standard approach here:    
+            // could revert to standard approach here:
             updateIPR(simulator, deferred_logger);
             for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx){
                 const int idx = this->modelCompIdxToFlowCompIdx(comp_idx);
@@ -876,12 +882,12 @@ namespace Opm
             }
             return;
             */
-        } 
+        }
         const auto& group_state  = simulator.problem().wellModel().groupState();
 
         std::fill(ws.implicit_ipr_a.begin(), ws.implicit_ipr_a.end(), 0.);
         std::fill(ws.implicit_ipr_b.begin(), ws.implicit_ipr_b.end(), 0.);
-   
+
         auto inj_controls = Well::InjectionControls(0);
         auto prod_controls = Well::ProductionControls(0);
         prod_controls.addControl(Well::ProducerCMode::BHP);
@@ -898,7 +904,7 @@ namespace Opm
         rhs[0].resize(nEq);
         // rhs = 0 except -1 for control eq
         for (size_t i=0; i < nEq; ++i){
-            rhs[0][i] = 0.0;            
+            rhs[0][i] = 0.0;
         }
         rhs[0][Bhp] = -1.0;
 
@@ -910,7 +916,7 @@ namespace Opm
             EvalWell comp_rate = this->primary_variables_.getQs(comp_idx);
             const int idx = this->modelCompIdxToFlowCompIdx(comp_idx);
             for (size_t pvIdx = 0; pvIdx < nEq; ++pvIdx) {
-                // well primary variable derivatives in EvalWell start at position Indices::numEq 
+                // well primary variable derivatives in EvalWell start at position Indices::numEq
                 ws.implicit_ipr_b[idx] -= x_well[0][pvIdx]*comp_rate.derivative(pvIdx+Indices::numEq);
             }
             ws.implicit_ipr_a[idx] = ws.implicit_ipr_b[idx]*ws.bhp - comp_rate.value();
@@ -1175,7 +1181,7 @@ namespace Opm
     template<typename TypeTag>
     ConvergenceReport
     StandardWell<TypeTag>::
-    getWellConvergence(const SummaryState& summary_state,
+    getWellConvergence(const Simulator& simulator,
                        const WellState<Scalar>& well_state,
                        const std::vector<Scalar>& B_avg,
                        DeferredLogger& deferred_logger,
@@ -1190,7 +1196,7 @@ namespace Opm
         constexpr Scalar stopped_factor = 1.e-4;
         // use stricter tolerance for dynamic thp to ameliorate network convergence
         constexpr Scalar dynamic_thp_factor = 1.e-1;
-        if (this->stopppedOrZeroRateTarget(summary_state, well_state)) {
+        if (this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger)) {
             tol_wells = tol_wells*stopped_factor;
         } else if (this->getDynamicThpLimit()) {
             tol_wells = tol_wells*dynamic_thp_factor;
@@ -1357,7 +1363,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    solveEqAndUpdateWellState(const SummaryState& summary_state,
+    solveEqAndUpdateWellState(const Simulator& simulator,
                               WellState<Scalar>& well_state,
                               DeferredLogger& deferred_logger)
     {
@@ -1369,7 +1375,7 @@ namespace Opm
         dx_well[0].resize(this->primary_variables_.numWellEq());
         this->linSys_.solve( dx_well);
 
-        updateWellState(summary_state, dx_well, well_state, deferred_logger);
+        updateWellState(simulator, dx_well, well_state, deferred_logger);
     }
 
 
@@ -1383,8 +1389,7 @@ namespace Opm
                                 const WellState<Scalar>& well_state,
                                 DeferredLogger& deferred_logger)
     {
-        const auto& summary_state = simulator.vanguard().summaryState();
-        updatePrimaryVariables(summary_state, well_state, deferred_logger);
+        updatePrimaryVariables(simulator, well_state, deferred_logger);
         initPrimaryVariablesEvaluation();
         computeWellConnectionPressures(simulator, well_state, deferred_logger);
         this->computeAccumWell();
@@ -1427,7 +1432,7 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    recoverWellSolutionAndUpdateWellState(const SummaryState& summary_state,
+    recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
                                           const BVector& x,
                                           WellState<Scalar>& well_state,
                                           DeferredLogger& deferred_logger)
@@ -1438,7 +1443,7 @@ namespace Opm
         xw[0].resize(this->primary_variables_.numWellEq());
 
         this->linSys_.recoverSolutionWell(x, xw);
-        updateWellState(summary_state, xw, well_state, deferred_logger);
+        updateWellState(simulator, xw, well_state, deferred_logger);
     }
 
 
@@ -1535,7 +1540,7 @@ namespace Opm
             well_state_copy.wellRates(this->index_of_well_)[phase]
                     = sign * ws.well_potentials[phase];
         }
-        well_copy.updatePrimaryVariables(summary_state, well_state_copy, deferred_logger);
+        well_copy.updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
         well_copy.initPrimaryVariablesEvaluation();
         well_copy.computeAccumWell();
 
@@ -1546,7 +1551,7 @@ namespace Opm
                                                         " potentials are computed based on unconverged solution";
             deferred_logger.debug(msg);
         }
-        well_copy.updatePrimaryVariables(summary_state, well_state_copy, deferred_logger);
+        well_copy.updatePrimaryVariables(simulator, well_state_copy, deferred_logger);
         well_copy.computeWellConnectionPressures(simulator, well_state_copy, deferred_logger);
         well_copy.initPrimaryVariablesEvaluation();
         well_copy.computeWellRatesWithBhp(simulator, bhp, well_flux, deferred_logger);
@@ -1598,7 +1603,7 @@ namespace Opm
                                   DeferredLogger& deferred_logger) const
     {
         // Create a copy of the well.
-        // TODO: check if we can avoid taking multiple copies. Call from updateWellPotentials 
+        // TODO: check if we can avoid taking multiple copies. Call from updateWellPotentials
         // is allready a copy, but not from other calls.
         StandardWell<TypeTag> well_copy(*this);
 
@@ -1618,7 +1623,7 @@ namespace Opm
 
         // prepare/modify well state and control
         well_copy.prepareForPotentialCalculations(summary_state, well_state_copy, inj_controls, prod_controls);
-        
+
         // initialize rates from previous potentials
         const int np = this->number_of_phases_;
         bool trivial = true;
@@ -1718,7 +1723,7 @@ namespace Opm
         if (this->param_.local_well_solver_control_switching_) {
             converged_implicit = computeWellPotentialsImplicit(simulator, well_potentials, deferred_logger);
         }
-        if (!converged_implicit) {        
+        if (!converged_implicit) {
             // does the well have a THP related constraint?
             const auto& summaryState = simulator.vanguard().summaryState();
             if (!Base::wellHasTHPConstraints(summaryState) || bhp_controlled_well) {
@@ -1774,13 +1779,13 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updatePrimaryVariables(const SummaryState& summary_state,
+    updatePrimaryVariables(const Simulator& simulator,
                            const WellState<Scalar>& well_state,
                            DeferredLogger& deferred_logger)
     {
         if (!this->isOperableAndSolvable() && !this->wellIsStopped()) return;
 
-        const bool stop_or_zero_rate_target = this->stopppedOrZeroRateTarget(summary_state, well_state);
+        const bool stop_or_zero_rate_target = this->stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
         this->primary_variables_.update(well_state, stop_or_zero_rate_target, deferred_logger);
 
         // other primary variables related to polymer injection
@@ -1841,7 +1846,7 @@ namespace Opm
             PerforationRates<Scalar> perf_rates;
             Scalar trans_mult = simulator.problem().template wellTransMultiplier<Scalar>(int_quant, cell_idx);
             const auto& wellstate_nupcol = simulator.problem().wellModel().nupcolWellState().well(this->index_of_well_);
-            const std::vector<Scalar> Tw = this->wellIndex(perf, int_quant, trans_mult, wellstate_nupcol);  
+            const std::vector<Scalar> Tw = this->wellIndex(perf, int_quant, trans_mult, wellstate_nupcol);
             computePerfRate(int_quant, mob, bhp, Tw, perf, allow_cf, cq_s,
                             perf_rates, deferred_logger);
             // TODO: make area a member
@@ -2300,7 +2305,6 @@ namespace Opm
         bool converged;
         bool relax_convergence = false;
         this->regularize_ = false;
-        const auto& summary_state = simulator.vanguard().summaryState();
         do {
             assembleWellEqWithoutIteration(simulator, dt, inj_controls, prod_controls, well_state, group_state, deferred_logger);
 
@@ -2309,7 +2313,7 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            auto report = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, relax_convergence);
+            auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
 
             converged = report.converged();
             if (converged) {
@@ -2317,7 +2321,7 @@ namespace Opm
             }
 
             ++it;
-            solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
+            solveEqAndUpdateWellState(simulator, well_state, deferred_logger);
 
             // TODO: when this function is used for well testing purposes, will need to check the controls, so that we will obtain convergence
             // under the most restrictive control. Based on this converged results, we can check whether to re-open the well. Either we refactor
@@ -2340,8 +2344,8 @@ namespace Opm
                                const Well::ProductionControls& prod_controls,
                                WellState<Scalar>& well_state,
                                const GroupState<Scalar>& group_state,
-                               DeferredLogger& deferred_logger, 
-                               const bool fixed_control /*false*/, 
+                               DeferredLogger& deferred_logger,
+                               const bool fixed_control /*false*/,
                                const bool fixed_status /*false*/)
     {
         const int max_iter = this->param_.max_inner_iter_wells_;
@@ -2352,8 +2356,8 @@ namespace Opm
         const auto& summary_state = simulator.vanguard().summaryState();
 
         // Always take a few (more than one) iterations after a switch before allowing a new switch
-        // The optimal number here is subject to further investigation, but it has been observerved 
-        // that unless this number is >1, we may get stuck in a cycle 
+        // The optimal number here is subject to further investigation, but it has been observerved
+        // that unless this number is >1, we may get stuck in a cycle
         constexpr int min_its_after_switch = 4;
         int its_since_last_switch = min_its_after_switch;
         int switch_count= 0;
@@ -2366,8 +2370,10 @@ namespace Opm
         const bool allow_open =  this->well_ecl_.getStatus() == WellStatus::OPEN &&
                                  well_state.well(this->index_of_well_).status == WellStatus::OPEN;
         // don't allow switcing for wells under zero rate target or requested fixed status and control
-        const bool allow_switching = !this->wellUnderZeroRateTarget(summary_state, well_state) &&
-                                     (!fixed_control || !fixed_status) && allow_open;
+        const bool allow_switching =
+            !this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) &&
+            (!fixed_control || !fixed_status) && allow_open;
+
         bool changed = false;
         bool final_check = false;
         // well needs to be set operable or else solving/updating of re-opened wells is skipped
@@ -2402,7 +2408,7 @@ namespace Opm
                 this->regularize_ = true;
             }
 
-            auto report = getWellConvergence(summary_state, well_state, Base::B_avg_, deferred_logger, relax_convergence);
+            auto report = getWellConvergence(simulator, well_state, Base::B_avg_, deferred_logger, relax_convergence);
 
             converged = report.converged();
             if (converged) {
@@ -2417,11 +2423,11 @@ namespace Opm
             }
 
             ++it;
-            solveEqAndUpdateWellState(summary_state, well_state, deferred_logger);
+            solveEqAndUpdateWellState(simulator, well_state, deferred_logger);
             initPrimaryVariablesEvaluation();
 
         } while (it < max_iter);
-        
+
         if (converged) {
             if (allow_switching){
                 // update operability if status change

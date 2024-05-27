@@ -140,7 +140,7 @@ namespace Opm
         void initPrimaryVariablesEvaluation() override;
 
         /// check whether the well equations get converged for this well
-        virtual ConvergenceReport getWellConvergence(const SummaryState& summary_state,
+        virtual ConvergenceReport getWellConvergence(const Simulator& simulator,
                                                      const WellState<Scalar>& well_state,
                                                      const std::vector<Scalar>& B_avg,
                                                      DeferredLogger& deferred_logger,
@@ -153,7 +153,7 @@ namespace Opm
 
         /// using the solution x to recover the solution xw for wells and applying
         /// xw to update Well State
-        void recoverWellSolutionAndUpdateWellState(const SummaryState& summary_state,
+        void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
                                                    const BVector& x,
                                                    WellState<Scalar>& well_state,
                                                    DeferredLogger& deferred_logger) override;
@@ -164,11 +164,11 @@ namespace Opm
                                    std::vector<Scalar>& well_potentials,
                                    DeferredLogger& deferred_logger) /* const */ override;
 
-        void updatePrimaryVariables(const SummaryState& summary_state,
+        void updatePrimaryVariables(const Simulator& simulator,
                                     const WellState<Scalar>& well_state,
                                     DeferredLogger& deferred_logger) override;
 
-        void solveEqAndUpdateWellState(const SummaryState& summary_state,
+        void solveEqAndUpdateWellState(const Simulator& simulator,
                                        WellState<Scalar>& well_state,
                                        DeferredLogger& deferred_logger) override;
 
@@ -262,7 +262,7 @@ namespace Opm
         bool regularize_;
 
         // updating the well_state based on well solution dwells
-        void updateWellState(const SummaryState& summary_state,
+        void updateWellState(const Simulator& simulator,
                              const BVectorWell& dwells,
                              WellState<Scalar>& well_state,
                              DeferredLogger& deferred_logger);

@@ -155,13 +155,13 @@ public:
 
     virtual void initPrimaryVariablesEvaluation() = 0;
 
-    virtual ConvergenceReport getWellConvergence(const SummaryState& summary_state,
+    virtual ConvergenceReport getWellConvergence(const Simulator& simulator,
                                                  const WellState<Scalar>& well_state,
                                                  const std::vector<Scalar>& B_avg,
                                                  DeferredLogger& deferred_logger,
                                                  const bool relax_tolerance) const = 0;
 
-    virtual void solveEqAndUpdateWellState(const SummaryState& summary_state,
+    virtual void solveEqAndUpdateWellState(const Simulator& simulator,
                                            WellState<Scalar>& well_state,
                                            DeferredLogger& deferred_logger) = 0;
 
@@ -198,7 +198,7 @@ public:
 
     /// using the solution x to recover the solution xw for wells and applying
     /// xw to update Well State
-    virtual void recoverWellSolutionAndUpdateWellState(const SummaryState& summary_state,
+    virtual void recoverWellSolutionAndUpdateWellState(const Simulator& simulator,
                                                        const BVector& x,
                                                        WellState<Scalar>& well_state,
                                                        DeferredLogger& deferred_logger) = 0;
@@ -225,6 +225,14 @@ public:
                                                    std::vector<Scalar>& well_flux,
                                                    DeferredLogger& deferred_logger) const = 0;
 
+    bool wellUnderZeroRateTarget(const Simulator& simulator,
+                                 const WellState<Scalar>& well_state,
+                                 DeferredLogger& deferred_logger) const;
+
+    bool stoppedOrZeroRateTarget(const Simulator& simulator,
+                                 const WellState<Scalar>& well_state,
+                                 DeferredLogger& deferred_logger) const;
+
     bool updateWellStateWithTHPTargetProd(const Simulator& simulator,
                                           WellState<Scalar>& well_state,
                                           DeferredLogger& deferred_logger) const;
@@ -246,7 +254,7 @@ public:
                                                   const bool fixed_control = false, 
                                                   const bool fixed_status = false);
 
-    virtual void updatePrimaryVariables(const SummaryState& summary_state,
+    virtual void updatePrimaryVariables(const Simulator& simulator,
                                         const WellState<Scalar>& well_state,
                                         DeferredLogger& deferred_logger) = 0;
 
