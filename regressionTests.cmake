@@ -717,7 +717,8 @@ if (opm-common_EMBEDDED_PYTHON)
                            SIMULATOR flow
                            ABS_TOL ${abs_tol}
                            REL_TOL ${rel_tol}
-                           DIR udq_actionx)
+                           DIR udq_actionx
+                           TEST_ARGS --solver-max-time-step-in-days=10)
 endif()
 
 add_test_compareECLFiles(CASENAME multxyz_model2
