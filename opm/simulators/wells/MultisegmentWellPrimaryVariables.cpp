@@ -338,7 +338,7 @@ copyToWellState(const MultisegmentWellGeneric<Scalar>& mswell,
         std::transform(segments.phase_resv_rates.begin() + (seg + 0) * well_.numPhases(),
                        segments.phase_resv_rates.begin() + (seg + 1) * well_.numPhases(),
                        segments.phase_holdup.begin()     + (seg + 0) * well_.numPhases(),
-                       [tot_resv](const auto qr) { return std::clamp(qr / tot_resv, 0.0, 1.0); });
+                       [tot_resv](const auto qr) -> Scalar { return std::clamp(qr / tot_resv, 0.0, 1.0); });
 
         // 4) Local condition flow velocities for segments other than top segment.
         if (seg > 0) {

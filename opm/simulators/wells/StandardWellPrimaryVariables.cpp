@@ -70,7 +70,7 @@ Scalar relaxationFactorFraction(const Scalar old_value,
         const std::string msg = fmt::format(" illegal fraction value {} {} is found for well {}", value_name, old_value, well_name);
         OPM_DEFLOG_PROBLEM(Opm::NumericalProblem, msg, deferred_logger);
     }
-    const Scalar& safe_old_value = std::clamp(old_value, Scalar{0.0}, Scalar{1.0});
+    const Scalar safe_old_value = std::clamp(old_value, Scalar{0.0}, Scalar{1.0});
 
     Scalar relaxation_factor = 1.;
 
