@@ -156,7 +156,7 @@ public:
                         const SummaryState& st);
 
     void initFromRestartFile(const RestartValue& restartValues,
-                             WellTestState wtestState,
+                             std::unique_ptr<WellTestState> wtestState,
                              const std::size_t numCells,
                              bool handle_ms_well);
 

@@ -24,6 +24,8 @@
 #include <opm/simulators/wells/GroupState.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
+#include <memory>
+
 namespace Opm {
 
 template<class Scalar> class ParallelWellInfo;
@@ -41,7 +43,7 @@ struct WGState
 
     static WGState serializationTestObject(const ParallelWellInfo<Scalar>& pinfo);
 
-    void wtest_state(WellTestState wtest_state);
+    void wtest_state(std::unique_ptr<WellTestState> wtest_state);
 
     WellState<Scalar> well_state;
     GroupState<Scalar> group_state;

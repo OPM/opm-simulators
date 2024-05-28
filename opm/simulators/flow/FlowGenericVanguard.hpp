@@ -174,8 +174,8 @@ public:
     const UDQState& udqState() const
     { return *udqState_; }
 
-    WellTestState transferWTestState() {
-        return *this->wtestState_.release();
+    std::unique_ptr<WellTestState> transferWTestState() {
+        return std::move(this->wtestState_);
     }
 
 
