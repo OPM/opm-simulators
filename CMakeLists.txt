@@ -793,7 +793,7 @@ if(USE_BDA_BRIDGE)
   endif()
 endif()
 
-if(Damaris_FOUND)
+if(USE_DAMARIS_LIB AND Damaris_FOUND)
   target_link_libraries(opmsimulators PUBLIC damaris)
 endif()
 
