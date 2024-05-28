@@ -109,7 +109,10 @@ public:
                const Scalar liquid,
                const Scalar vapour,
                const Scalar bhp,
-               const Scalar alq) const;
+               const Scalar alq,
+               const Scalar explicit_wrf,
+               const Scalar explicit_gfr,
+               const bool use_expvfp) const;
 
     /**
      * Returns the table associated with the ID, or throws an exception if
