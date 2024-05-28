@@ -46,10 +46,10 @@ serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 }
 
 template<class Scalar>
-void WGState<Scalar>::wtest_state(WellTestState wtest_state)
+void WGState<Scalar>::wtest_state(std::unique_ptr<WellTestState> wtest_state)
 {
-    wtest_state.filter_wells( this->well_state.wells() );
-    this->well_test_state = std::move(wtest_state);
+    wtest_state->filter_wells( this->well_state.wells() );
+    this->well_test_state = std::move(*wtest_state);
 }
 
 template<class Scalar>
