@@ -500,8 +500,8 @@ findTHP(const std::vector<Scalar>& bhp_array,
                 thp = thp_array[0];
             }
         }
-        return thp;
     }
+    return thp;
 }
 
 template<class Scalar>
