@@ -444,53 +444,55 @@ findTHP(const std::vector<Scalar>& bhp_array,
         const bool valid_high = (bhp > bhp_array[nthp-1] && last_slope_positive) || (bhp <= bhp_array[nthp-1] && !last_slope_positive);
 
         bool found = false;
-        int i = 0;
+        int array_ix = 0;
         if (find_largest){//find intersection corresponding to the largest thp
             // high extrap -> table interp -> low extrap
             if (valid_high) {
                 found = true;
-                i = nthp-2;
+                array_ix = nthp-2;
             } else {
                 //search backward within table
-                for (; i>=0; --i) {
+                for (int i = nthp-2; i>=0; --i) {
                     const Scalar& y0 = bhp_array[i  ];
                     const Scalar& y1 = bhp_array[i+1];
                     if (std::min(y0, y1) < bhp && bhp <= std::max(y0, y1)) {
                         found = true;
+                        array_ix = i;
                         break;
                     }
                 }
                 if (!found && valid_low) {
                     found = true;
-                    i = 0;
+                    array_ix = 0;
                 }
             }
         } else {//find intersection corresponding to the smallest thp
             //low extrap -> table interp -> high extrap
             if (valid_low) {
                 found = true;
-                i = 0;
+                array_ix = 0;
             } else {
                 //search forward within table
-                for (; i<nthp-1; ++i) {
+                for (int i = 0; i<nthp-1; ++i) {
                     const Scalar& y0 = bhp_array[i  ];
                     const Scalar& y1 = bhp_array[i+1];
                     if (std::min(y0, y1) < bhp && bhp <= std::max(y0, y1)) {
                         found = true;
+                        array_ix = i;
                         break;
                     }
                 }
                 if (!found && valid_high) {
                     found = true;
-                    i = nthp-2;
+                    array_ix = nthp-2;
                 }
             }
         }
         if (found) {
-            const Scalar& x0 = thp_array[i  ];
-            const Scalar& x1 = thp_array[i+1];
-            const Scalar& y0 = bhp_array[i  ];
-            const Scalar& y1 = bhp_array[i+1];
+            const Scalar& x0 = thp_array[array_ix  ];
+            const Scalar& x1 = thp_array[array_ix+1];
+            const Scalar& y0 = bhp_array[array_ix  ];
+            const Scalar& y1 = bhp_array[array_ix+1];
             thp = findX(x0, x1, y0, y1, bhp);
         } else {
             // no intersection, just return largest/smallest value in table
