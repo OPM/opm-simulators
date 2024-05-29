@@ -174,11 +174,16 @@ public:
 
     Scalar getALQ(const std::string& name) const
     {
+        if (!this->well(name).producer) {
+            return 0.;
+        }
         return this->alq_state.get(name);
     }
 
     void setALQ(const std::string& name, Scalar value)
     {
+        assert(this->well(name).producer);
+
         this->alq_state.set(name, value);
     }
 
