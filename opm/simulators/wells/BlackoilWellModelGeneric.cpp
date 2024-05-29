@@ -598,7 +598,7 @@ checkGroupHigherConstraints(const Group& group,
     if (!isField && group.isInjectionGroup()) {
         // Obtain rates for group.
         std::vector<Scalar> resv_coeff_inj(phase_usage_.num_phases, 0.0);
-        calcInjRates(fipnum, pvtreg, resv_coeff_inj);
+        calcInjResvCoeff(fipnum, pvtreg, resv_coeff_inj);
 
         for (int phasePos = 0; phasePos < phase_usage_.num_phases; ++phasePos) {
             const Scalar local_current_rate = WellGroupHelpers<Scalar>::sumWellSurfaceRates(group,
@@ -664,7 +664,7 @@ checkGroupHigherConstraints(const Group& group,
             rates[phasePos] = -comm_.sum(local_current_rate);
         }
         std::vector<Scalar> resv_coeff(phase_usage_.num_phases, 0.0);
-        calcRates(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
+        calcResvCoeff(fipnum, pvtreg, this->groupState().production_rates(group.name()), resv_coeff);
         // Check higher up only if under individual (not FLD) control.
         const Group::ProductionCMode& currentControl = this->groupState().production_control(group.name());
         if (currentControl != Group::ProductionCMode::FLD && group.productionGroupControlAvailable()) {

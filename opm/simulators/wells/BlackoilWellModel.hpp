@@ -547,14 +547,14 @@ class WellContributions;
 
             void wellTesting(const int timeStepIdx, const double simulationTime, DeferredLogger& deferred_logger);
 
-            void calcRates(const int fipnum,
-                           const int pvtreg,
-                           const std::vector<Scalar>& production_rates,
-                           std::vector<Scalar>& resv_coeff) override;
+            void calcResvCoeff(const int fipnum,
+                               const int pvtreg,
+                               const std::vector<Scalar>& production_rates,
+                               std::vector<Scalar>& resv_coeff) override;
 
-            void calcInjRates(const int fipnum,
-                           const int pvtreg,
-                           std::vector<Scalar>& resv_coeff) override;
+            void calcInjResvCoeff(const int fipnum,
+                                  const int pvtreg,
+                                  std::vector<Scalar>& resv_coeff) override;
 
             void computeWellTemperature();
 

@@ -2530,10 +2530,10 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    calcRates(const int fipnum,
-              const int pvtreg,
-              const std::vector<Scalar>& production_rates,
-              std::vector<Scalar>& resv_coeff)
+    calcResvCoeff(const int fipnum,
+                  const int pvtreg,
+                  const std::vector<Scalar>& production_rates,
+                  std::vector<Scalar>& resv_coeff)
     {
         rateConverter_->calcCoeff(fipnum, pvtreg, production_rates, resv_coeff);
     }
@@ -2541,9 +2541,9 @@ namespace Opm {
     template<typename TypeTag>
     void
     BlackoilWellModel<TypeTag>::
-    calcInjRates(const int fipnum,
-                 const int pvtreg,
-                 std::vector<Scalar>& resv_coeff)
+    calcInjResvCoeff(const int fipnum,
+                     const int pvtreg,
+                     std::vector<Scalar>& resv_coeff)
     {
         rateConverter_->calcInjCoeff(fipnum, pvtreg, resv_coeff);
     }
