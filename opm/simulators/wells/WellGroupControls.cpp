@@ -525,7 +525,7 @@ getGroupProductionTargetRate(const Group& group,
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
     Scalar target = orig_target;
-    std::cout << "target: " << target*86400 << " time: " << well_.currentStep() << std::endl;
+    std::cout << "target: " << target*86400 << " time: " << well_.currentStep() << " orig" << std::endl;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || well_.guideRate()->has(chain[ii])) {
             // Apply local reductions only at the control level
@@ -579,6 +579,8 @@ getGroupProductionTargetRate(const Group& group,
                                   __VA_ARGS__& control_eq,               \
                                   DeferredLogger& deferred_logger) const;
 double WellGroupControls::
+template<class Scalar>
+Scalar WellGroupControls<Scalar>::
 getAutoChokeGroupProductionTargetRate(const std::string& name,
                                       const Group& group,
                                       const WellState<double>& well_state,
@@ -659,13 +661,12 @@ getAutoChokeGroupProductionTargetRate(const std::string& name,
         ctrl = group.productionControls(summaryState);
 
     const double orig_target = tcalc.groupTarget(ctrl, deferred_logger);
-    const Group& parent = schedule.getGroup(group.parent(), reportStepIdx);//pjpe remove
     const auto chain = WellGroupHelpers<double>::groupChainTopBot(name, group.name(),
                                                                   schedule, reportStepIdx);
     // Because 'name' is the last of the elements, and not an ancestor, we subtract one below.
     const std::size_t num_ancestors = chain.size() - 1;
     double target = orig_target;
-    std::cout << "target: " << target*86400 << std::endl;
+    std::cout << "target: " << target*86400 << " time: " << reportStepIdx << " modified" << std::endl;
     for (std::size_t ii = 0; ii < num_ancestors; ++ii) {
         if ((ii == 0) || guideRate->has(chain[ii])) {
         // if ((ii == 0) || well_.guideRate()->has(chain[ii])) {

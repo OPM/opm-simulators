@@ -1336,7 +1336,7 @@ namespace Opm {
                 double efficiencyFactor = 1.0;
                 // const Group& parentGroup = this->schedule().getGroup(group.parent(), reportStepIdx);
                 const GuideRate* guideRate = &this->guideRate_;
-                target = WellGroupControls::getAutoChokeGroupProductionTargetRate(nodeName,
+                target = WellGroupControls<Scalar>::getAutoChokeGroupProductionTargetRate(nodeName,
                                                  group,
                                                  well_state,
                                                  group_state,
@@ -1382,7 +1382,7 @@ namespace Opm {
                 const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
                 const auto ctrl = group.productionControls(summary_state);
                 const auto cmode = Opm::Group::ProductionCMode::ORAT; //ctrl.cmode; Fix this
-                const double orig_target_test = computeWellGroupTarget(local_deferredLogger);
+                // const double orig_target_test = computeWellGroupTarget(local_deferredLogger);
                 
                 const auto pu = this->phase_usage_;
 
@@ -1429,17 +1429,22 @@ namespace Opm {
 
                     min_thp = network.node(node_name).terminal_pressure().value();
 <<<<<<< HEAD
+<<<<<<< HEAD
                     std::optional<double> approximate_solution0;
                     WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp, local_deferredLogger);
 =======
                     WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
 >>>>>>> 0f419efa8 (added temporary output)
+=======
+                    std::optional<double> approximate_solution0;
+                    WellBhpThpCalculator<double>::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
+>>>>>>> d158e07ef (mainly rebasing)
 
                      // Narrow down the bracket
                     double low1, high1;
                     std::array<double, 2> range = {0.9*min_thp, 1.1*max_thp};
                     std::optional<double> appr_sol;
-                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
+                    WellBhpThpCalculator<double>::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
                     min_thp = low1;
                     max_thp = high1;
                     range_initial = {min_thp, max_thp};
@@ -1455,6 +1460,7 @@ namespace Opm {
                     autochoke_thp = this->well_group_thp_calc_.at(nodeName);
                 }
 
+<<<<<<< HEAD
                 //Find an initial bracket
                 std::array<Scalar, 2> range_initial;
                 if (!autochoke_thp.has_value()){
@@ -1487,6 +1493,13 @@ namespace Opm {
                     const Scalar tolerance1 = thp_tolerance;
                     local_deferredLogger.debug("Using brute force search to bracket the group THP");
                     const bool finding_bracket = WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, range, low, high, approximate_solution, tolerance1, local_deferredLogger);
+=======
+                    double low, high;
+                    std::optional<double> approximate_solution;
+                    const double tolerance1 = thp_tolerance;
+                    local_deferredLogger.debug("Using brute force search to bracket the common THP");
+                    const bool finding_bracket = WellBhpThpCalculator<double>::bruteForceBracketCommonTHP(mismatch, range, low, high, approximate_solution, tolerance1, local_deferredLogger);
+>>>>>>> d158e07ef (mainly rebasing)
 
                     if (approximate_solution.has_value()) {
                         autochoke_thp = *approximate_solution;
