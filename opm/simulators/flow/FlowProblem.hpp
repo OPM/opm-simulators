@@ -707,22 +707,9 @@ public:
                         return vg.gridIdxToEquilGridIdx(i);
                     });
             });
-
-            // Rerun UDQ assignents following action processing to make sure
-            // that any UDQ ASSIGN operations triggered in action blocks
-            // take effect.  This is mainly to work around a shortcoming of
-            // the ScheduleState copy constructor which clears pending UDQ
-            // assignments under the assumption that all such assignments
-            // have been processed.  If an action block happens to trigger
-            // on the final time step of an episode and that action block
-            // runs a UDQ assignment, then that assignment would be dropped
-            // and the rest of the simulator will never see its effect
-            // without this hack.
-            this->actionHandler_
-                .evalUDQAssignments(episodeIdx, this->simulator().vanguard().udqState());
         }
 
-        // deal with "clogging" for the MICP model
+        // Deal with "clogging" for the MICP model
         if constexpr (enableMICP) {
             auto& model = this->model();
             const auto& residual = model.linearizer().residual();
@@ -740,21 +727,35 @@ public:
     void endEpisode()
     {
         OPM_TIMEBLOCK(endEpisode);
-        auto& simulator = this->simulator();
-        auto& schedule = simulator.vanguard().schedule();
 
-        wellModel_.endEpisode();
-        aquiferModel_.endEpisode();
+        const int episodeIdx = this->episodeIndex();
 
-        int episodeIdx = this->episodeIndex();
-        // check if we're finished ...
-        if (episodeIdx + 1 >= static_cast<int>(schedule.size() - 1)) {
-            simulator.setFinished(true);
+        // Rerun UDQ assignents following action processing on the final
+        // time step of this episode to make sure that any UDQ ASSIGN
+        // operations triggered in action blocks take effect.  This is
+        // mainly to work around a shortcoming of the ScheduleState copy
+        // constructor which clears pending UDQ assignments under the
+        // assumption that all such assignments have been processed.  If an
+        // action block happens to trigger on the final time step of an
+        // episode and that action block runs a UDQ assignment, then that
+        // assignment would be dropped and the rest of the simulator will
+        // never see its effect without this hack.
+        this->actionHandler_
+            .evalUDQAssignments(episodeIdx, this->simulator().vanguard().udqState());
+
+        this->wellModel_.endEpisode();
+        this->aquiferModel_.endEpisode();
+
+        const auto& schedule = this->simulator().vanguard().schedule();
+
+        // End simulation when completed.
+        if (episodeIdx + 1 >= static_cast<int>(schedule.size()) - 1) {
+            this->simulator().setFinished(true);
             return;
         }
 
-        // .. if we're not yet done, start the next episode (report step)
-        simulator.startNextEpisode(schedule.stepLength(episodeIdx + 1));
+        // Otherwise, start next episode (report step).
+        this->simulator().startNextEpisode(schedule.stepLength(episodeIdx + 1));
     }
 
     /*!
