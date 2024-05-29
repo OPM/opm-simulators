@@ -19,57 +19,63 @@
 
 #include <config.h>
 
-#include <opm/input/eclipse/Parser/Parser.hpp>
-#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/input/eclipse/Schedule/SummaryState.hpp>
-#include <opm/input/eclipse/Deck/Deck.hpp>
-#include <opm/input/eclipse/Python/Python.hpp>
-#include <opm/input/eclipse/Units/Units.hpp>
-#include <opm/simulators/wells/VFPProperties.hpp>
-#include <opm/simulators/wells/VFPInjProperties.hpp>
-#include <opm/simulators/wells/VFPProdProperties.hpp>
-#include <opm/simulators/wells/WellState.hpp>
 #include <opm/common/utility/TimeService.hpp>
 
+#include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+
+#include <opm/input/eclipse/Python/Python.hpp>
+
+#include <opm/input/eclipse/Schedule/Schedule.hpp>
+
 #include <opm/simulators/wells/VFPHelpers.hpp>
+#include <opm/simulators/wells/VFPInjProperties.hpp>
+#include <opm/simulators/wells/VFPProdProperties.hpp>
+#include <opm/simulators/wells/VFPProperties.hpp>
+#include <opm/simulators/wells/WellState.hpp>
+
+#include <opm/input/eclipse/Units/Units.hpp>
+
 #include <opm/core/props/phaseUsageFromDeck.hpp>
 
-#include <iostream>
+#include <opm/input/eclipse/Deck/Deck.hpp>
+
+#include <opm/input/eclipse/Parser/Parser.hpp>
+
+#include <cassert>
+#include <cstdlib>
 #include <iomanip>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
 using namespace Opm;
 
+namespace {
+
 struct Setup
 {
-    std::unique_ptr<const EclipseState> ecl_state;
-    std::shared_ptr<Python> python;
-    std::unique_ptr<const Schedule> schedule;
-    std::unique_ptr<SummaryState> summary_state;
-    std::unique_ptr<VFPProperties<double>> vfp_properties;
+    explicit Setup(const std::string& file)
+        : Setup { Parser{}.parseFile(file) }
+    {}
 
-    Setup(const std::string& file)
+    explicit Setup(const Deck& deck)
+        : ecl_state  { std::make_unique<EclipseState>(deck) }
+        , schedule   { std::make_unique<Schedule>(deck, *ecl_state, std::make_shared<Python>()) }
+        , well_state { std::make_unique<WellState<double>>(phaseUsage(ecl_state->runspec().phases())) }
     {
-        Parser parser;
-        auto deck = parser.parseFile(file);
-        ecl_state.reset(new EclipseState(deck) );
-
-        const TableManager table( deck );
-        const Runspec runspec(deck);
-        python = std::make_shared<Python>();
-        schedule.reset( new Schedule(deck, *ecl_state, python));
-        summary_state.reset( new SummaryState(TimeService::from_time_t(schedule->getStartTime())));
-
         const int step = 0;
-        const auto& sched_state = schedule->operator[](step);
-        WellState<double> well_state(phaseUsage(runspec.phases()));
-        vfp_properties = std::make_unique<VFPProperties<double>>(sched_state.vfpinj(),
-                                                                 sched_state.vfpprod(),
-                                                                 well_state);
-    };
+        const auto& sched_state = (*this->schedule)[step];
+
+        this->vfp_properties = std::make_unique<VFPProperties<double>>
+            (sched_state.vfpinj(), sched_state.vfpprod(), *well_state);
+    }
+
+    std::unique_ptr<EclipseState> ecl_state;
+    std::unique_ptr<Schedule> schedule;
+    std::unique_ptr<WellState<double>> well_state;
+    std::unique_ptr<VFPProperties<double>> vfp_properties;
 };
-
-
 
 
 double computeBhp(const VFPProdTable& table,
@@ -83,24 +89,25 @@ double computeBhp(const VFPProdTable& table,
     // First, find the values to interpolate between.
     // Assuming positive flo here!
     assert(flo > 0.0);
-    auto flo_i = VFPHelpers<double>::findInterpData(flo, table.getFloAxis());
-    auto thp_i = VFPHelpers<double>::findInterpData(thp, table.getTHPAxis()); // assume constant
-    auto wfr_i = VFPHelpers<double>::findInterpData(wfr, table.getWFRAxis());
-    auto gfr_i = VFPHelpers<double>::findInterpData(gfr, table.getGFRAxis());
-    auto alq_i = VFPHelpers<double>::findInterpData(alq, table.getALQAxis()); //assume constant
+
+    const auto flo_i = VFPHelpers<double>::findInterpData(flo, table.getFloAxis());
+    const auto thp_i = VFPHelpers<double>::findInterpData(thp, table.getTHPAxis()); // assume constant
+    const auto wfr_i = VFPHelpers<double>::findInterpData(wfr, table.getWFRAxis());
+    const auto gfr_i = VFPHelpers<double>::findInterpData(gfr, table.getGFRAxis());
+    const auto alq_i = VFPHelpers<double>::findInterpData(alq, table.getALQAxis()); // assume constant
 
     return VFPHelpers<double>::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
 }
 
-
-
+} // Anonymous namespace
 
 int main(int argc, char** argv)
 {
     if (argc < 2) {
         return EXIT_FAILURE;
     }
-    Setup setup(argv[1]);
+
+    const Setup setup(argv[1]);
 
 //     const int table_id = 1;
     const int table_id = 4;

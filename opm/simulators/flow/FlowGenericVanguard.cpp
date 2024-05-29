@@ -22,16 +22,22 @@
 */
 
 #include <config.h>
-#include <opm/simulators/flow//FlowGenericVanguard.hpp>
+#include <opm/simulators/flow/FlowGenericVanguard.hpp>
 
 #include <opm/common/utility/MemPacker.hpp>
 #include <opm/common/utility/Serializer.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
+
 #include <opm/common/utility/TimeService.hpp>
+
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/input/eclipse/Parser/InputErrorAction.hpp>
+#include <opm/input/eclipse/EclipseState/Runspec.hpp>
+#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
+
+#include <opm/input/eclipse/Python/Python.hpp>
+
 #include <opm/input/eclipse/Schedule/Action/Actions.hpp>
 #include <opm/input/eclipse/Schedule/Action/ASTNode.hpp>
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
@@ -51,6 +57,7 @@
 #include <opm/input/eclipse/Schedule/UDQ/UDQActive.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQASTNode.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
+#include <opm/input/eclipse/Schedule/UDQ/UDQParams.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/Schedule/Well/NameOrder.hpp>
 #include <opm/input/eclipse/Schedule/Well/WDFAC.hpp>
@@ -67,8 +74,9 @@
 #include <opm/input/eclipse/Schedule/Well/WListManager.hpp>
 #include <opm/input/eclipse/Schedule/Well/WVFPDP.hpp>
 #include <opm/input/eclipse/Schedule/Well/WVFPEXP.hpp>
-#include <opm/input/eclipse/EclipseState/SummaryConfig/SummaryConfig.hpp>
-#include <opm/input/eclipse/Python/Python.hpp>
+
+#include <opm/input/eclipse/Parser/InputErrorAction.hpp>
+
 #include <opm/simulators/utils/readDeck.hpp>
 
 #include <dune/common/version.hh>
@@ -239,8 +247,11 @@ void FlowGenericVanguard::init()
     }
 
     
-    if (!this->summaryState_)
-        this->summaryState_ = std::make_unique<SummaryState>( TimeService::from_time_t(this->eclSchedule_->getStartTime() ));
+    if (!this->summaryState_) {
+        this->summaryState_ = std::make_unique<SummaryState>
+            (TimeService::from_time_t(this->eclSchedule_->getStartTime()),
+             this->eclState_->runspec().udqParams().undefinedValue());
+    }
 
     // Initialize parallelWells with all local wells
     const auto& schedule_wells = schedule().getWellsatEnd();

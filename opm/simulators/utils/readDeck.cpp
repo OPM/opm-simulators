@@ -55,7 +55,6 @@
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/ArrayDimChecker.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
-#include <opm/input/eclipse/Schedule/SummaryState.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
@@ -405,7 +404,7 @@ void Opm::ensureOutputDirExists(const std::string& cmdline_output_dir)
 
 void Opm::prepareResultOutputDirectory(const std::string&           baseName,
                                        const std::filesystem::path& outputDir)  
-{   
+{
     //Loop over all files in the output directory and subdirectories and delete them if their name is baseName + a correct extension
     std::regex r(baseName + R"(\.(F?(DBG|E?GRID|INIT|PRT|RFT|SMSPEC|UNSMRY|UNRST)|([ABCFGHSTUXYZ]\d{4})|(INFOSTEP|INFOITER|OPMRST)))");
     for (auto& file : std::filesystem::recursive_directory_iterator(outputDir)) {
