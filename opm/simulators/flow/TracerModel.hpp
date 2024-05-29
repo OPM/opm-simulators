@@ -466,7 +466,7 @@ protected:
             this->wellSolTracerRate_[std::make_pair(eclWell.name(), this->wellsname(tr.idx_[tIdx]))] = 0.0;
         }
 
-        std::vector<double> wtracer(tr.numTracer());
+        std::vector<Scalar> wtracer(tr.numTracer());
         for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
             wtracer[tIdx] = this->currentConcentration_(eclWell, this->name(tr.idx_[tIdx]));
         }
