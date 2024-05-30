@@ -92,6 +92,7 @@ namespace detail {
 template<class Scalar>
 void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
                         const int it, const int numPhases, const Scalar relaxRelTol,
+                        const int minimumOscillatingPhases,
                         bool& oscillate, bool& stagnate);
 
 /// Apply a stabilization to dx, depending on dxOld and relaxation parameters.
@@ -295,7 +296,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
                                 const int it, bool& oscillate, bool& stagnate) const
         {
             detail::detectOscillations(residualHistory, it, model_->numPhases(),
-                                       this->relaxRelTol(), oscillate, stagnate);
+                                       this->relaxRelTol(), 2, oscillate, stagnate);
         }
 
 
