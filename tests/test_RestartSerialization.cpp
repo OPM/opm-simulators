@@ -321,10 +321,10 @@ public:
         closed_offending_wells_ = {{"test4", {"test5", "test6"}}};
     }
 
-    void calcRates(const int, const int, const std::vector<double>&, std::vector<double>&) override
+    void calcResvCoeff(const int, const int, const std::vector<double>&, std::vector<double>&) override
     {}
 
-    void calcInjRates(const int, const int, std::vector<double>&) override
+    void calcInjResvCoeff(const int, const int, std::vector<double>&) override
     {}
 
     void computePotentials(const std::size_t,

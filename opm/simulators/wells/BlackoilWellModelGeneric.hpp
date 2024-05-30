@@ -339,13 +339,13 @@ protected:
     void setWsolvent(const Group& group,
                      const int reportStepIdx,
                      Scalar wsolvent);
-    virtual void calcRates(const int fipnum,
-                           const int pvtreg,
-                           const std::vector<Scalar>& production_rates,
-                           std::vector<Scalar>& resv_coeff) = 0;
-    virtual void calcInjRates(const int fipnum,
-                              const int pvtreg,
-                              std::vector<Scalar>& resv_coeff) = 0;
+    virtual void calcResvCoeff(const int fipnum,
+                               const int pvtreg,
+                               const std::vector<Scalar>& production_rates,
+                               std::vector<Scalar>& resv_coeff) = 0;
+    virtual void calcInjResvCoeff(const int fipnum,
+                                  const int pvtreg,
+                                  std::vector<Scalar>& resv_coeff) = 0;
 
     void assignShutConnections(data::Wells& wsrpt,
                                const int reportStepIndex) const;
