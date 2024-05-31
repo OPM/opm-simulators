@@ -123,7 +123,9 @@ apply(Vector& rhs,
 	      //NOTE: copyThread can safely write to jacMat because in solve_system both matrix and *blockJacobiForGPUILU0_ diagonal entries
 	      //are checked and potentially overwritten in replaceZeroDiagonal() by mainThread. However, no matter the thread writing sequence,
 	      //the final entry in jacMat is correct.
+#if HAVE_OPENMP
               copyThread = std::make_shared<std::thread>([&](){this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);});
+#endif // HAVE_OPENMP
 	    }
 	    else {
 	      this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);
