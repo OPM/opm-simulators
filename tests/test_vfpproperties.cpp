@@ -528,7 +528,7 @@ BOOST_AUTO_TEST_CASE(THPToBHPAndBackPlane)
     double alq = 32.9;
 
     double bhp_val = properties->bhp(1, aqua, liquid, vapour, thp, alq, 0, 0 , false);
-    double thp_val = properties->thp(1, aqua, liquid, vapour, bhp_val, alq);
+    double thp_val = properties->thp(1, aqua, liquid, vapour, bhp_val, alq, 0, 0, false);
 
     BOOST_CHECK_CLOSE(thp_val, thp, max_d_tol);
 }
@@ -547,7 +547,7 @@ BOOST_AUTO_TEST_CASE(THPToBHPAndBackNonTrivial)
     double alq = 32.9;
 
     double bhp_val = properties->bhp(1, aqua, liquid, vapour, thp, alq, 0, 0, false);
-    double thp_val = properties->thp(1, aqua, liquid, vapour, bhp_val, alq);
+    double thp_val = properties->thp(1, aqua, liquid, vapour, bhp_val, alq, 0, 0, false);
 
     BOOST_CHECK_CLOSE(thp_val, thp, max_d_tol);
 }
@@ -633,7 +633,7 @@ VFPPROD \n\
 
                         double bhp_interp = properties.bhp(42, aqua, liquid, vapour, thp, alq, 0, 0, false);
                         double bhp_ref = thp;
-                        double thp_interp = properties.thp(42, aqua, liquid, vapour, bhp_ref, alq);
+                        double thp_interp = properties.thp(42, aqua, liquid, vapour, bhp_ref, alq, 0, 0, false);
                         double thp_ref = thp;
 
                         double bhp_diff = std::abs(bhp_interp - bhp_ref);
