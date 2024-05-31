@@ -80,8 +80,8 @@ CuView<T>::copyToHost(std::vector<T>& data) const
 template class CuView<double>;
 template class CuView<float>;
 template class CuView<int>;
-template class CuView<const double>;
-template class CuView<const float>;
-template class CuView<const int>;
+// template class CuView<const double>;
+// template class CuView<const float>;
+// template class CuView<const int>;
 
 } // namespace Opm::cuistl
