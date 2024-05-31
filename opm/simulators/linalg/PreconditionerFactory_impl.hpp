@@ -346,9 +346,10 @@ struct StandardPreconditioners {
         });
 
         F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            const bool split_matrix = prm.get<double>("split_matrix", true);
             using field_type = typename V::field_type;
             using CuDILU = typename cuistl::CuDILU<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
-            auto cuDILU = std::make_shared<CuDILU>(op.getmat());
+            auto cuDILU = std::make_shared<CuDILU>(op.getmat(), split_matrix);
 
             auto adapted = std::make_shared<cuistl::PreconditionerAdapter<V, V, CuDILU>>(cuDILU);
             auto wrapped = std::make_shared<cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
@@ -602,9 +603,10 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
         });
 
         F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+            const bool split_matrix = prm.get<bool>("split_matrix", true);
             using field_type = typename V::field_type;
             using CUDILU = typename cuistl::CuDILU<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
-            return std::make_shared<cuistl::PreconditionerAdapter<V, V, CUDILU>>(std::make_shared<CUDILU>(op.getmat()));
+            return std::make_shared<cuistl::PreconditionerAdapter<V, V, CUDILU>>(std::make_shared<CUDILU>(op.getmat(), split_matrix));
         });
 
         F::addCreator("CUDILUFloat", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {

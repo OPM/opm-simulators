@@ -27,6 +27,7 @@
 #include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_wrapper.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <type_traits>
 
 namespace Opm::cuistl
 {
@@ -97,7 +98,23 @@ CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix, bool copyNonZeroElements
 
     rowIndices.push_back(0);
 
-    const size_t blockSize = matrix[0][0].N();
+    // This line assumes that the index (0, 0) has a nonzero element, this is not true for lower
+    // triangular matrices for instance that I need in new DILU version
+    // const size_t blockSize = matrix[0][0].N();
+
+    // Iterate until we find an element, we can get the blocksize from the element
+    size_t blockSizeTmp;
+    T* nonZeroElementsTmp = nullptr;
+    for (auto rowIt = matrix.begin(); rowIt != matrix.end(); ++rowIt){
+        auto colIt = rowIt->begin();
+        if (colIt != rowIt->end()){
+            blockSizeTmp = colIt->N();
+            nonZeroElementsTmp = const_cast<T*>(&((*colIt)[0][0]));
+            break;
+        }
+    }
+
+    const size_t blockSize = blockSizeTmp;
     const size_t numberOfRows = matrix.N();
     const size_t numberOfNonzeroBlocks = matrix.nonzeroes();
 
@@ -119,7 +136,8 @@ CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix, bool copyNonZeroElements
 
 
     if (copyNonZeroElementsDirectly) {
-        const T* nonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
+        // const T* nonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
+        const T* nonZeroElements = static_cast<const T*>(nonZeroElementsTmp);
         return CuSparseMatrix<T>(
             nonZeroElements, rowIndices.data(), columnIndices.data(), numberOfNonzeroBlocks, blockSize, numberOfRows);
     } else {

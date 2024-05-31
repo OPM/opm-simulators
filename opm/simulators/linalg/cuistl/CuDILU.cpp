@@ -27,8 +27,13 @@
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
+#include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <vector>
+#include <chrono>
+#include <iostream>
+#include <string>
+#include <map>
 
 namespace
 {
@@ -62,11 +67,9 @@ createNaturalToReordered(Opm::SparseTable<size_t> levelSets)
     return res;
 }
 
-// TODO: When this function is called we already have the natural ordered matrix on the GPU
-// TODO: could it be possible to create the reordered one in a kernel to speed up the constructor?
-template <class M, class field_type>
-Opm::cuistl::CuSparseMatrix<field_type>
-createReorderedMatrix(const M& naturalMatrix, std::vector<int> reorderedToNatural)
+template <class M, class field_type, class GPUM>
+void
+createReorderedMatrix(const M& naturalMatrix, std::vector<int> reorderedToNatural, std::unique_ptr<GPUM>& reorderedGpuMat)
 {
     M reorderedMatrix(naturalMatrix.N(), naturalMatrix.N(), naturalMatrix.nonzeroes(), M::row_wise);
     for (auto dstRowIt = reorderedMatrix.createbegin(); dstRowIt != reorderedMatrix.createend(); ++dstRowIt) {
@@ -77,15 +80,35 @@ createReorderedMatrix(const M& naturalMatrix, std::vector<int> reorderedToNatura
         }
     }
 
-    // TODO: There is probably a faster way to copy by copying whole rows at a time
-    for (auto dstRowIt = reorderedMatrix.begin(); dstRowIt != reorderedMatrix.end(); ++dstRowIt) {
-        auto srcRow = naturalMatrix.begin() + reorderedToNatural[dstRowIt.index()];
-        for (auto elem = srcRow->begin(); elem != srcRow->end(); elem++) {
-            reorderedMatrix[dstRowIt.index()][elem.index()] = *elem;
+    reorderedGpuMat.reset(new auto(Opm::cuistl::CuSparseMatrix<field_type>::fromMatrix(reorderedMatrix, true)));
+}
+
+template <class M, class field_type, class GPUM>
+void
+extractLowerAndUpperMatrices(const M& naturalMatrix, std::vector<int> reorderedToNatural, std::unique_ptr<GPUM>& lower, std::unique_ptr<GPUM>& upper)
+{
+    const size_t new_nnz = (naturalMatrix.nonzeroes() - naturalMatrix.N())/2;
+
+    M reorderedLower(naturalMatrix.N(), naturalMatrix.N(), new_nnz, M::row_wise);
+    M reorderedUpper(naturalMatrix.N(), naturalMatrix.N(), new_nnz, M::row_wise);
+
+    for (auto lowerIt = reorderedLower.createbegin(), upperIt = reorderedUpper.createbegin(); lowerIt != reorderedLower.createend(); ++lowerIt, ++upperIt) {
+
+        auto srcRow = naturalMatrix.begin() + reorderedToNatural[lowerIt.index()];
+
+        for (auto elem = srcRow->begin(); elem != srcRow->end(); ++elem) {
+            if (elem.index() < srcRow.index()){ // add index to lower matrix if under the diagonal
+                lowerIt.insert(elem.index());
+            }
+            else if (elem.index() > srcRow.index()){ // add element to upper matrix if above the diagonal
+                upperIt.insert(elem.index());
+            }
         }
     }
 
-    return Opm::cuistl::CuSparseMatrix<field_type>::fromMatrix(reorderedMatrix, true);
+    lower.reset(new auto(Opm::cuistl::CuSparseMatrix<field_type>::fromMatrix(reorderedLower, true)));
+    upper.reset(new auto(Opm::cuistl::CuSparseMatrix<field_type>::fromMatrix(reorderedUpper, true)));
+    return;
 }
 
 } // NAMESPACE
@@ -94,16 +117,19 @@ namespace Opm::cuistl
 {
 
 template <class M, class X, class Y, int l>
-CuDILU<M, X, Y, l>::CuDILU(const M& A)
+CuDILU<M, X, Y, l>::CuDILU(const M& A, bool split_matrix)
     : m_cpuMatrix(A)
     , m_levelSets(Opm::getMatrixRowColoring(m_cpuMatrix, Opm::ColoringType::LOWER))
     , m_reorderedToNatural(createReorderedToNatural(m_levelSets))
     , m_naturalToReordered(createNaturalToReordered(m_levelSets))
     , m_gpuMatrix(CuSparseMatrix<field_type>::fromMatrix(m_cpuMatrix, true))
-    , m_gpuMatrixReordered(createReorderedMatrix<M, field_type>(m_cpuMatrix, m_reorderedToNatural))
+    , m_gpuMatrixReordered(nullptr)
+    , m_gpuMatrixReorderedLower(nullptr)
+    , m_gpuMatrixReorderedUpper(nullptr)
     , m_gpuNaturalToReorder(m_naturalToReordered)
     , m_gpuReorderToNatural(m_reorderedToNatural)
     , m_gpuDInv(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
+    , m_split_matrix(split_matrix)
 
 {
     // TODO: Should in some way verify that this matrix is symmetric, only do it debug mode?
@@ -122,7 +148,14 @@ CuDILU<M, X, Y, l>::CuDILU(const M& A)
                  fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
                              m_gpuMatrix.nonzeroes(),
                              A.nonzeroes()));
-    update();
+    if (m_split_matrix){
+        m_gpuMatrixReorderedDiag.emplace(CuVector<field_type>(blocksize_*blocksize_*m_cpuMatrix.N()));
+        extractLowerAndUpperMatrices<M, field_type, CuSparseMatrix<field_type>>(m_cpuMatrix, m_reorderedToNatural, m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper);
+    }
+    else{
+        createReorderedMatrix<M, field_type, CuSparseMatrix<field_type>>(m_cpuMatrix, m_reorderedToNatural, m_gpuMatrixReordered);
+    }
+    computeDiagAndMoveReorderedData();
 }
 
 template <class M, class X, class Y, int l>
@@ -136,34 +169,62 @@ void
 CuDILU<M, X, Y, l>::apply(X& v, const Y& d)
 {
     OPM_TIMEBLOCK(prec_apply);
-    int levelStartIdx = 0;
-    for (int level = 0; level < m_levelSets.size(); ++level) {
-        const int numOfRowsInLevel = m_levelSets[level].size();
-        detail::computeLowerSolveLevelSet<field_type, blocksize_>(m_gpuMatrixReordered.getNonZeroValues().data(),
-                                                                  m_gpuMatrixReordered.getRowIndices().data(),
-                                                                  m_gpuMatrixReordered.getColumnIndices().data(),
-                                                                  m_gpuReorderToNatural.data(),
-                                                                  levelStartIdx,
-                                                                  numOfRowsInLevel,
-                                                                  m_gpuDInv.data(),
-                                                                  d.data(),
-                                                                  v.data());
-        levelStartIdx += numOfRowsInLevel;
-    }
+    {
+        // ScopedTimer timer("apply", apply_time);
+        int levelStartIdx = 0;
+        for (int level = 0; level < m_levelSets.size(); ++level) {
+            const int numOfRowsInLevel = m_levelSets[level].size();
+            if (m_split_matrix){
+                detail::computeLowerSolveLevelSetSplit<field_type, blocksize_>(m_gpuMatrixReorderedLower->getNonZeroValues().data(),
+                                                                        m_gpuMatrixReorderedLower->getRowIndices().data(),
+                                                                        m_gpuMatrixReorderedLower->getColumnIndices().data(),
+                                                                        m_gpuReorderToNatural.data(),
+                                                                        levelStartIdx,
+                                                                        numOfRowsInLevel,
+                                                                        m_gpuDInv.data(),
+                                                                        d.data(),
+                                                                        v.data());
+            }
+            else{
+                detail::computeLowerSolveLevelSet<field_type, blocksize_>(m_gpuMatrixReordered->getNonZeroValues().data(),
+                                                                        m_gpuMatrixReordered->getRowIndices().data(),
+                                                                        m_gpuMatrixReordered->getColumnIndices().data(),
+                                                                        m_gpuReorderToNatural.data(),
+                                                                        levelStartIdx,
+                                                                        numOfRowsInLevel,
+                                                                        m_gpuDInv.data(),
+                                                                        d.data(),
+                                                                        v.data());
+            }
+            levelStartIdx += numOfRowsInLevel;
+        }
 
-    levelStartIdx = m_cpuMatrix.N();
-    //  upper triangular solve: (D + U_A) v = Dy
-    for (int level = m_levelSets.size() - 1; level >= 0; --level) {
-        const int numOfRowsInLevel = m_levelSets[level].size();
-        levelStartIdx -= numOfRowsInLevel;
-        detail::computeUpperSolveLevelSet<field_type, blocksize_>(m_gpuMatrixReordered.getNonZeroValues().data(),
-                                                                  m_gpuMatrixReordered.getRowIndices().data(),
-                                                                  m_gpuMatrixReordered.getColumnIndices().data(),
-                                                                  m_gpuReorderToNatural.data(),
-                                                                  levelStartIdx,
-                                                                  numOfRowsInLevel,
-                                                                  m_gpuDInv.data(),
-                                                                  v.data());
+        levelStartIdx = m_cpuMatrix.N();
+        //  upper triangular solve: (D + U_A) v = Dy
+        for (int level = m_levelSets.size() - 1; level >= 0; --level) {
+            const int numOfRowsInLevel = m_levelSets[level].size();
+            levelStartIdx -= numOfRowsInLevel;
+            if (m_split_matrix){
+                detail::computeUpperSolveLevelSetSplit<field_type, blocksize_>(m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
+                                                                        m_gpuMatrixReorderedUpper->getRowIndices().data(),
+                                                                        m_gpuMatrixReorderedUpper->getColumnIndices().data(),
+                                                                        m_gpuReorderToNatural.data(),
+                                                                        levelStartIdx,
+                                                                        numOfRowsInLevel,
+                                                                        m_gpuDInv.data(),
+                                                                        v.data());
+            }
+            else{
+                detail::computeUpperSolveLevelSet<field_type, blocksize_>(m_gpuMatrixReordered->getNonZeroValues().data(),
+                                                                        m_gpuMatrixReordered->getRowIndices().data(),
+                                                                        m_gpuMatrixReordered->getColumnIndices().data(),
+                                                                        m_gpuReorderToNatural.data(),
+                                                                        levelStartIdx,
+                                                                        numOfRowsInLevel,
+                                                                        m_gpuDInv.data(),
+                                                                        v.data());
+            }
+        }
     }
 }
 
@@ -185,29 +246,68 @@ void
 CuDILU<M, X, Y, l>::update()
 {
     OPM_TIMEBLOCK(prec_update);
+    {
+        m_gpuMatrix.updateNonzeroValues(m_cpuMatrix, true); // send updated matrix to the gpu
+        computeDiagAndMoveReorderedData();
+    }
+}
 
-    m_gpuMatrix.updateNonzeroValues(m_cpuMatrix, true); // send updated matrix to the gpu
+template <class M, class X, class Y, int l>
+void
+CuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData()
+{
+    OPM_TIMEBLOCK(prec_update);
+    {
+        if (m_split_matrix){
+            detail::copyMatDataToReorderedSplit<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
+                                                                m_gpuMatrix.getRowIndices().data(),
+                                                                m_gpuMatrix.getColumnIndices().data(),
+                                                                m_gpuMatrixReorderedLower->getNonZeroValues().data(),
+                                                                m_gpuMatrixReorderedLower->getRowIndices().data(),
+                                                                m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
+                                                                m_gpuMatrixReorderedUpper->getRowIndices().data(),
+                                                                m_gpuMatrixReorderedDiag.value().data(),
+                                                                m_gpuNaturalToReorder.data(),
+                                                                m_gpuMatrixReorderedLower->N());
+        }
+        else{
+            detail::copyMatDataToReordered<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
+                                                                m_gpuMatrix.getRowIndices().data(),
+                                                                m_gpuMatrixReordered->getNonZeroValues().data(),
+                                                                m_gpuMatrixReordered->getRowIndices().data(),
+                                                                m_gpuNaturalToReorder.data(),
+                                                                m_gpuMatrixReordered->N());
+        }
 
-    detail::copyMatDataToReordered<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
-                                                           m_gpuMatrix.getRowIndices().data(),
-                                                           m_gpuMatrixReordered.getNonZeroValues().data(),
-                                                           m_gpuMatrixReordered.getRowIndices().data(),
-                                                           m_gpuNaturalToReorder.data(),
-                                                           m_gpuMatrixReordered.N());
-
-    int levelStartIdx = 0;
-    for (int level = 0; level < m_levelSets.size(); ++level) {
-        const int numOfRowsInLevel = m_levelSets[level].size();
-
-        detail::computeDiluDiagonal<field_type, blocksize_>(m_gpuMatrixReordered.getNonZeroValues().data(),
-                                                            m_gpuMatrixReordered.getRowIndices().data(),
-                                                            m_gpuMatrixReordered.getColumnIndices().data(),
-                                                            m_gpuReorderToNatural.data(),
-                                                            m_gpuNaturalToReorder.data(),
-                                                            levelStartIdx,
-                                                            numOfRowsInLevel,
-                                                            m_gpuDInv.data());
-        levelStartIdx += numOfRowsInLevel;
+        int levelStartIdx = 0;
+        for (int level = 0; level < m_levelSets.size(); ++level) {
+            const int numOfRowsInLevel = m_levelSets[level].size();
+            if (m_split_matrix){
+                detail::computeDiluDiagonalSplit<field_type, blocksize_>(m_gpuMatrixReorderedLower->getNonZeroValues().data(),
+                                                        m_gpuMatrixReorderedLower->getRowIndices().data(),
+                                                        m_gpuMatrixReorderedLower->getColumnIndices().data(),
+                                                        m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
+                                                        m_gpuMatrixReorderedUpper->getRowIndices().data(),
+                                                        m_gpuMatrixReorderedUpper->getColumnIndices().data(),
+                                                        m_gpuMatrixReorderedDiag.value().data(),
+                                                        m_gpuReorderToNatural.data(),
+                                                        m_gpuNaturalToReorder.data(),
+                                                        levelStartIdx,
+                                                        numOfRowsInLevel,
+                                                        m_gpuDInv.data());
+            }
+            else{
+                detail::computeDiluDiagonal<field_type, blocksize_>(m_gpuMatrixReordered->getNonZeroValues().data(),
+                                                                    m_gpuMatrixReordered->getRowIndices().data(),
+                                                                    m_gpuMatrixReordered->getColumnIndices().data(),
+                                                                    m_gpuReorderToNatural.data(),
+                                                                    m_gpuNaturalToReorder.data(),
+                                                                    levelStartIdx,
+                                                                    numOfRowsInLevel,
+                                                                    m_gpuDInv.data());
+            }
+            levelStartIdx += numOfRowsInLevel;
+        }
     }
 }
 
