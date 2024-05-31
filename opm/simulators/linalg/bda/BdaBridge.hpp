@@ -27,7 +27,7 @@
 namespace Opm
 {
 
-class WellContributions;
+template<class Scalar> class WellContributions;
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
 
@@ -36,12 +36,13 @@ template <class BridgeMatrix, class BridgeVector, int block_size>
 class BdaBridge
 {
 private:
+    using Scalar = typename BridgeVector::field_type;
     int verbosity = 0;
     bool use_gpu = false;
     std::string accelerator_mode;
-    std::unique_ptr<Opm::Accelerator::BdaSolver<block_size> > backend;
-    std::shared_ptr<Opm::Accelerator::BlockedMatrix> matrix;  // 'stores' matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
-    std::shared_ptr<Opm::Accelerator::BlockedMatrix> jacMatrix;  // 'stores' preconditioner matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
+    std::unique_ptr<Accelerator::BdaSolver<Scalar,block_size>> backend;
+    std::shared_ptr<Accelerator::BlockedMatrix<Scalar>> matrix;  // 'stores' matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
+    std::shared_ptr<Accelerator::BlockedMatrix<Scalar>> jacMatrix;  // 'stores' preconditioner matrix, actually points to h_rows, h_cols and the received BridgeMatrix for the nonzeroes
     std::vector<int> h_rows, h_cols;  // store the sparsity pattern of the matrix
     std::vector<int> h_jacRows, h_jacCols;  // store the sparsity pattern of the jacMatrix
     std::vector<typename BridgeMatrix::size_type> diagIndices;   // contains offsets of the diagonal blocks wrt start of the row, used for replaceZeroDiagonal()
@@ -57,8 +58,14 @@ public:
     /// \param[in] deviceID                   the device ID to be used by the cusparse- and openclSolvers, too high values could cause runtime errors
     /// \param[in] opencl_ilu_parallel        whether to parallelize the ILU decomposition and application in OpenCL with level_scheduling
     /// \param[in] linsolver                  indicating the preconditioner, equal to the --linear-solver cmdline argument
-    BdaBridge(std::string accelerator_mode, int linear_solver_verbosity, int maxit, double tolerance,
-        unsigned int platformID, unsigned int deviceID, bool opencl_ilu_parallel, std::string linsolver);
+    BdaBridge(std::string accelerator_mode,
+              int linear_solver_verbosity,
+              int maxit,
+              Scalar tolerance,
+              unsigned int platformID,
+              unsigned int deviceID,
+              bool opencl_ilu_parallel,
+              std::string linsolver);
 
 
     /// Solve linear system, A*x = b
@@ -69,7 +76,12 @@ public:
     /// \param[in] b               vector b, should be of type Dune::BlockVector
     /// \param[in] wellContribs    contains all WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] result       summary of solver result
-    void solve_system(BridgeMatrix *bridgeMat, BridgeMatrix *jacMat, int numJacobiBlocks, BridgeVector &b, WellContributions& wellContribs, InverseOperatorResult &result);
+    void solve_system(BridgeMatrix* bridgeMat,
+                      BridgeMatrix* jacMat,
+                      int numJacobiBlocks,
+                      BridgeVector& b,
+                      WellContributions<Scalar>& wellContribs,
+                      InverseOperatorResult &result);
 
     /// Get the resulting x vector
     /// \param[inout] x    vector x, should be of type Dune::BlockVector
@@ -77,7 +89,8 @@ public:
 
     /// Return whether the BdaBridge will use the GPU or not
     /// return whether the BdaBridge will use the GPU or not
-    bool getUseGpu(){
+    bool getUseGpu()
+    {
         return use_gpu;
     }
 
@@ -85,19 +98,21 @@ public:
     /// \param[in] mat       input matrix, probably BCRSMatrix
     /// \param[out] h_rows   rowpointers
     /// \param[out] h_cols   columnindices
-    static void copySparsityPatternFromISTL(const BridgeMatrix& mat, std::vector<int>& h_rows, std::vector<int>& h_cols);
+    static void copySparsityPatternFromISTL(const BridgeMatrix& mat,
+                                            std::vector<int>& h_rows,
+                                            std::vector<int>& h_cols);
 
     /// Initialize the WellContributions object with opencl context and queue
     /// those must be set before calling BlackOilWellModel::getWellContributions() in ISTL
     /// \param[in] wellContribs   container to hold all WellContributions
     /// \param[in] N              number of rows in scalar vector that wellContribs will be applied on
-    void initWellContributions(WellContributions& wellContribs, unsigned N);
+    void initWellContributions(WellContributions<Scalar>& wellContribs, unsigned N);
 
     /// Return the selected accelerator mode, this is input via the command-line
-    std::string getAccleratorName(){
+    std::string getAccleratorName()
+    {
         return accelerator_mode;
     }
-
 }; // end class BdaBridge
 
 }

@@ -29,18 +29,15 @@
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
 
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
 /// This class implements a Blocked ILU0 preconditioner
 /// The decomposition is done on GPU, using exact decomposition, or ChowPatel decomposition
 /// The preconditioner is applied via two exact triangular solves
-template <unsigned int block_size>
-class BILU0 : public Preconditioner<block_size>
+template<class Scalar, unsigned int block_size>
+class BILU0 : public Preconditioner<Scalar,block_size>
 {
-    typedef Preconditioner<block_size> Base;
+    using Base = Preconditioner<Scalar,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -53,11 +50,11 @@ class BILU0 : public Preconditioner<block_size>
     using Base::err;
 
 private:
-    std::unique_ptr<BlockedMatrix> LUmat = nullptr;
+    std::unique_ptr<BlockedMatrix<Scalar>> LUmat{};
 #if CHOW_PATEL
-    std::unique_ptr<BlockedMatrix> Lmat = nullptr, Umat = nullptr;
+    std::unique_ptr<BlockedMatrix<Scalar>> Lmat{}, Umat{};
 #endif
-    std::vector<double> invDiagVals;
+    std::vector<Scalar> invDiagVals;
     std::vector<int> diagIndex;
     std::vector<int> rowsPerColor;  // color i contains rowsPerColor[i] rows, which are processed in parallel
     std::vector<int> rowsPerColorPrefix;  // the prefix sum of rowsPerColor
@@ -67,7 +64,7 @@ private:
 
     bool opencl_ilu_parallel;
 
-    typedef struct {
+    struct GPU_storage {
         cl::Buffer invDiagVals;    // nnz values of diagonal blocks of the matrix, inverted
         cl::Buffer diagIndex;      // index of diagonal block of each row, used to differentiate between lower and upper triangular part
         cl::Buffer rowsPerColor;   // number of rows for every color
@@ -80,7 +77,7 @@ private:
 #else
         cl::Buffer LUvals, LUcols, LUrows;
 #endif
-    } GPU_storage;
+    };
 
     GPU_storage s;
 
@@ -93,21 +90,25 @@ public:
     BILU0(bool opencl_ilu_parallel, int verbosity);
 
     // analysis, extract parallelism if specified
-    bool analyze_matrix(BlockedMatrix *mat) override;
-    bool analyze_matrix(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    bool analyze_matrix(BlockedMatrix<Scalar>* mat) override;
+    bool analyze_matrix(BlockedMatrix<Scalar>* mat,
+                        BlockedMatrix<Scalar>* jacMat) override;
 
     // ilu_decomposition
-    bool create_preconditioner(BlockedMatrix *mat) override;
-    bool create_preconditioner(BlockedMatrix *mat, BlockedMatrix *jacMat) override;
+    bool create_preconditioner(BlockedMatrix<Scalar>* mat) override;
+    bool create_preconditioner(BlockedMatrix<Scalar>* mat,
+                               BlockedMatrix<Scalar>* jacMat) override;
 
     // apply preconditioner, x = prec(y)
     // via Lz = y
     // and Ux = z
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
 
-    std::tuple<std::vector<int>, std::vector<int>, std::vector<int>> get_preconditioner_structure()
+    std::tuple<std::vector<int>, std::vector<int>, std::vector<int>>
+    get_preconditioner_structure()
     {
-        return {{LUmat->rowPointers, LUmat->rowPointers + (Nb + 1)}, {LUmat->colIndices, LUmat->colIndices + nnzb}, diagIndex};
+        return {{LUmat->rowPointers, LUmat->rowPointers + (Nb + 1)},
+                {LUmat->colIndices, LUmat->colIndices + nnzb}, diagIndex};
     }
 
     std::pair<cl::Buffer, cl::Buffer> get_preconditioner_data()
@@ -120,8 +121,6 @@ public:
     }
 };
 
-} // namespace Accelerator
-} // namespace Opm
+} // namespace Opm::Accelerator
 
 #endif
-

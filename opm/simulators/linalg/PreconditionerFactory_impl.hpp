@@ -50,11 +50,11 @@
 #include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
 
 
-namespace Opm
-{
+namespace Opm {
 
 template <class Smoother>
-struct AMGSmootherArgsHelper {
+struct AMGSmootherArgsHelper
+{
     static auto args(const PropertyTree& prm)
     {
         using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
@@ -69,10 +69,11 @@ struct AMGSmootherArgsHelper {
 };
 
 template <class M, class V, class C>
-struct AMGSmootherArgsHelper<Opm::ParallelOverlappingILU0<M, V, V, C>> {
+struct AMGSmootherArgsHelper<ParallelOverlappingILU0<M, V, V, C>>
+{
     static auto args(const PropertyTree& prm)
     {
-        using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
+        using Smoother = ParallelOverlappingILU0<M, V, V, C>;
         using SmootherArgs = typename Dune::Amg::SmootherTraits<Smoother>::Arguments;
         SmootherArgs smootherArgs;
         smootherArgs.iterations = prm.get<int>("iterations", 1);
@@ -87,7 +88,6 @@ struct AMGSmootherArgsHelper<Opm::ParallelOverlappingILU0<M, V, V, C>> {
         return smootherArgs;
     }
 };
-
 
 // trailing return type with decltype used for detecting existence of setUseFixedOrder member function by overloading the setUseFixedOrder function
 template <typename C>
@@ -209,7 +209,7 @@ struct StandardPreconditioners {
                 const std::string smoother = prm.get<std::string>("smoother", "ParOverILU0");
                 // TODO: merge this with ILUn, and possibly simplify the factory to only work with ILU?
                 if (smoother == "ILU0" || smoother == "ParOverILU0") {
-                    using Smoother = Opm::ParallelOverlappingILU0<M, V, V, C>;
+                    using Smoother = ParallelOverlappingILU0<M, V, V, C>;
                     auto crit = AMGHelper<O, C, M, V>::criterion(prm);
                     auto sargs = AMGSmootherArgsHelper<Smoother>::args(prm);
                     PrecPtr prec = std::make_shared<Dune::Amg::AMGCPR<O, V, Smoother, C>>(op, crit, sargs, comm);
@@ -279,7 +279,8 @@ struct StandardPreconditioners {
                               OPM_THROW(std::logic_error,
                                         "Pressure index out of bounds. It needs to specified for CPR");
                           }
-                          using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Comm, false>;
+                          using Scalar = typename V::field_type;
+                          using LevelTransferPolicy = PressureTransferPolicy<O, Comm, Scalar, false>;
                           return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(
                               op, prm, weightsCalculator, pressureIndex, comm);
                       });
@@ -294,7 +295,8 @@ struct StandardPreconditioners {
                               OPM_THROW(std::logic_error,
                                         "Pressure index out of bounds. It needs to specified for CPR");
                           }
-                          using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Comm, true>;
+                          using Scalar = typename V::field_type;
+                          using LevelTransferPolicy = PressureTransferPolicy<O, Comm, Scalar, true>;
                           return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(
                               op, prm, weightsCalculator, pressureIndex, comm);
                       });
@@ -311,7 +313,8 @@ struct StandardPreconditioners {
                                   OPM_THROW(std::logic_error,
                                             "Pressure index out of bounds. It needs to specified for CPR");
                               }
-                              using LevelTransferPolicy = Opm::PressureBhpTransferPolicy<O, Comm, false>;
+                              using Scalar = typename V::field_type;
+                              using LevelTransferPolicy = PressureBhpTransferPolicy<O, Comm, Scalar, false>;
                               return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy, Comm>>(
                                   op, prm, weightsCalculator, pressureIndex, comm);
                           });
@@ -321,12 +324,12 @@ struct StandardPreconditioners {
         F::addCreator("CUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
-            using CuILU0 = typename Opm::cuistl::
-                CuSeqILU0<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
+            using CuILU0 = typename cuistl::
+                CuSeqILU0<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
             auto cuILU0 = std::make_shared<CuILU0>(op.getmat(), w);
 
-            auto adapted = std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuILU0>>(cuILU0);
-            auto wrapped = std::make_shared<Opm::cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            auto adapted = std::make_shared<cuistl::PreconditionerAdapter<V, V, CuILU0>>(cuILU0);
+            auto wrapped = std::make_shared<cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
 
@@ -334,21 +337,21 @@ struct StandardPreconditioners {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
             using CuJac =
-                typename Opm::cuistl::CuJac<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
+                typename cuistl::CuJac<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
             auto cuJac = std::make_shared<CuJac>(op.getmat(), w);
 
-            auto adapted = std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuJac>>(cuJac);
-            auto wrapped = std::make_shared<Opm::cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            auto adapted = std::make_shared<cuistl::PreconditionerAdapter<V, V, CuJac>>(cuJac);
+            auto wrapped = std::make_shared<cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
 
         F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             using field_type = typename V::field_type;
-            using CuDILU = typename Opm::cuistl::CuDILU<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
+            using CuDILU = typename cuistl::CuDILU<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
             auto cuDILU = std::make_shared<CuDILU>(op.getmat());
 
-            auto adapted = std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuDILU>>(cuDILU);
-            auto wrapped = std::make_shared<Opm::cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            auto adapted = std::make_shared<cuistl::PreconditionerAdapter<V, V, CuDILU>>(cuDILU);
+            auto wrapped = std::make_shared<cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
 #endif
@@ -368,11 +371,11 @@ struct StandardPreconditioners {
         // Already a parallel preconditioner. Need to pass comm, but no need to wrap it in a BlockPreconditioner.
         if (ilulevel == 0) {
             const std::size_t num_interior = interiorIfGhostLast(comm);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, Comm>>(
-                op.getmat(), comm, w, Opm::MILU_VARIANT::ILU, num_interior, redblack, reorder_spheres);
+            return std::make_shared<ParallelOverlappingILU0<M, V, V, Comm>>(
+                op.getmat(), comm, w, MILU_VARIANT::ILU, num_interior, redblack, reorder_spheres);
         } else {
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, Comm>>(
-                op.getmat(), comm, ilulevel, w, Opm::MILU_VARIANT::ILU, redblack, reorder_spheres);
+            return std::make_shared<ParallelOverlappingILU0<M, V, V, Comm>>(
+                op.getmat(), comm, ilulevel, w, MILU_VARIANT::ILU, redblack, reorder_spheres);
         }
     }
 
@@ -412,8 +415,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
         using P = PropertyTree;
         F::addCreator("ILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
-                op.getmat(), 0, w, Opm::MILU_VARIANT::ILU);
+            return std::make_shared<ParallelOverlappingILU0<M, V, V, C>>(
+                op.getmat(), 0, w, MILU_VARIANT::ILU);
         });
         F::addCreator("DuneILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
@@ -424,14 +427,14 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
         F::addCreator("ParOverILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             const int n = prm.get<int>("ilulevel", 0);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
-                op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
+            return std::make_shared<ParallelOverlappingILU0<M, V, V, C>>(
+                op.getmat(), n, w, MILU_VARIANT::ILU);
         });
         F::addCreator("ILUn", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const int n = prm.get<int>("ilulevel", 0);
             const double w = prm.get<double>("relaxation", 1.0);
-            return std::make_shared<Opm::ParallelOverlappingILU0<M, V, V, C>>(
-                op.getmat(), n, w, Opm::MILU_VARIANT::ILU);
+            return std::make_shared<ParallelOverlappingILU0<M, V, V, C>>(
+                op.getmat(), n, w, MILU_VARIANT::ILU);
         });
         F::addCreator("DILU", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             DUNE_UNUSED_PARAMETER(prm);
@@ -513,11 +516,16 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 }
             });
             F::addCreator("famg", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
-                auto crit = AMGHelper<O, C, M, V>::criterion(prm);
-                Dune::Amg::Parameters parms;
-                parms.setNoPreSmoothSteps(1);
-                parms.setNoPostSmoothSteps(1);
-                return getRebuildOnUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
+                if  constexpr (std::is_same_v<typename V::field_type, float>) {
+                    OPM_THROW(std::logic_error, "famg requires UMFPack which is not available for floats");
+                    return nullptr;
+                } else {
+                    auto crit = AMGHelper<O, C, M, V>::criterion(prm);
+                    Dune::Amg::Parameters parms;
+                    parms.setNoPreSmoothSteps(1);
+                    parms.setNoPostSmoothSteps(1);
+                    return getRebuildOnUpdateWrapper<Dune::Amg::FastAMG<O, V>>(op, crit, parms);
+                }
             });
         }
         if constexpr (std::is_same_v<O, WellModelMatrixAdapter<M, V, V, false>>) {
@@ -527,8 +535,9 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                     if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                         OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                     }
+                    using Scalar = typename V::field_type;
                     using LevelTransferPolicy
-                        = Opm::PressureBhpTransferPolicy<O, Dune::Amg::SequentialInformation, false>;
+                        = PressureBhpTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, false>;
                     return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(
                         op, prm, weightsCalculator, pressureIndex);
                 });
@@ -540,7 +549,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                 }
-                using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Dune::Amg::SequentialInformation, false>;
+                using Scalar = typename V::field_type;
+                using LevelTransferPolicy = PressureTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, false>;
                 return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(
                     op, prm, weightsCalculator, pressureIndex);
             });
@@ -550,7 +560,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 if (pressureIndex == std::numeric_limits<std::size_t>::max()) {
                     OPM_THROW(std::logic_error, "Pressure index out of bounds. It needs to specified for CPR");
                 }
-                using LevelTransferPolicy = Opm::PressureTransferPolicy<O, Dune::Amg::SequentialInformation, true>;
+                using Scalar = typename V::field_type;
+                using LevelTransferPolicy = PressureTransferPolicy<O, Dune::Amg::SequentialInformation, Scalar, true>;
                 return std::make_shared<OwningTwoLevelPreconditioner<O, V, LevelTransferPolicy>>(
                     op, prm, weightsCalculator, pressureIndex);
             });
@@ -559,9 +570,9 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
         F::addCreator("CUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
-            using CuILU0 = typename Opm::cuistl::
-                CuSeqILU0<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
-            return std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CuILU0>>(
+            using CuILU0 = typename cuistl::
+                CuSeqILU0<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
+            return std::make_shared<cuistl::PreconditionerAdapter<V, V, CuILU0>>(
                 std::make_shared<CuILU0>(op.getmat(), w));
         });
 
@@ -571,10 +582,10 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             using VTo = Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
             using matrix_type_to =
                 typename Dune::BCRSMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
-            using CuILU0 = typename Opm::cuistl::
-                CuSeqILU0<matrix_type_to, Opm::cuistl::CuVector<float>, Opm::cuistl::CuVector<float>>;
-            using Adapter = typename Opm::cuistl::PreconditionerAdapter<VTo, VTo, CuILU0>;
-            using Converter = typename Opm::cuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
+            using CuILU0 = typename cuistl::
+                CuSeqILU0<matrix_type_to, cuistl::CuVector<float>, cuistl::CuVector<float>>;
+            using Adapter = typename cuistl::PreconditionerAdapter<VTo, VTo, CuILU0>;
+            using Converter = typename cuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
             auto converted = std::make_shared<Converter>(op.getmat());
             auto adapted = std::make_shared<Adapter>(std::make_shared<CuILU0>(converted->getConvertedMatrix(), w));
             converted->setUnderlyingPreconditioner(adapted);
@@ -585,24 +596,24 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
             using CUJac =
-                typename Opm::cuistl::CuJac<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
-            return std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CUJac>>(
+                typename cuistl::CuJac<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
+            return std::make_shared<cuistl::PreconditionerAdapter<V, V, CUJac>>(
                 std::make_shared<CUJac>(op.getmat(), w));
         });
 
         F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             using field_type = typename V::field_type;
-            using CUDILU = typename Opm::cuistl::CuDILU<M, Opm::cuistl::CuVector<field_type>, Opm::cuistl::CuVector<field_type>>;
-            return std::make_shared<Opm::cuistl::PreconditionerAdapter<V, V, CUDILU>>(std::make_shared<CUDILU>(op.getmat()));
+            using CUDILU = typename cuistl::CuDILU<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
+            return std::make_shared<cuistl::PreconditionerAdapter<V, V, CUDILU>>(std::make_shared<CUDILU>(op.getmat()));
         });
 
         F::addCreator("CUDILUFloat", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             using block_type = typename V::block_type;
             using VTo = Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
             using matrix_type_to = typename Dune::BCRSMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
-            using CuDILU = typename Opm::cuistl::CuDILU<matrix_type_to, Opm::cuistl::CuVector<float>, Opm::cuistl::CuVector<float>>;
-            using Adapter = typename Opm::cuistl::PreconditionerAdapter<VTo, VTo, CuDILU>;
-            using Converter = typename Opm::cuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
+            using CuDILU = typename cuistl::CuDILU<matrix_type_to, cuistl::CuVector<float>, cuistl::CuVector<float>>;
+            using Adapter = typename cuistl::PreconditionerAdapter<VTo, VTo, CuDILU>;
+            using Converter = typename cuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
             auto converted = std::make_shared<Converter>(op.getmat());
             auto adapted = std::make_shared<Adapter>(std::make_shared<CuDILU>(converted->getConvertedMatrix()));
             converted->setUnderlyingPreconditioner(adapted);
@@ -744,7 +755,7 @@ using OpFSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<Dune::FieldMatrix<double, Di
                                    Dune::BlockVector<Dune::FieldVector<double, Dim>>,
                                    Dune::BlockVector<Dune::FieldVector<double, Dim>>>;
 template <int Dim>
-using OpBSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<Opm::MatrixBlock<double, Dim, Dim>>,
+using OpBSeq = Dune::MatrixAdapter<Dune::BCRSMatrix<MatrixBlock<double, Dim, Dim>>,
                                    Dune::BlockVector<Dune::FieldVector<double, Dim>>,
                                    Dune::BlockVector<Dune::FieldVector<double, Dim>>>;
 

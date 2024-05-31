@@ -272,7 +272,7 @@ computeBhpAtThpLimitProd(const std::function<std::vector<Scalar>(const Scalar)>&
                                 "find bhp-point where production becomes non-zero for well " + well_.name());
         return std::nullopt;
     }
-    const std::array<Scalar, 2> range {controls.bhp_limit, *bhp_max};
+    const std::array<Scalar, 2> range {static_cast<Scalar>(controls.bhp_limit), *bhp_max};
     return this->computeBhpAtThpLimit(frates, fbhp, range, deferred_logger);
 }
 
@@ -518,9 +518,9 @@ computeBhpAtThpLimitInjImpl(const std::function<std::vector<Scalar>(const Scalar
 
     // Get the flo samples, add extra samples at low rates and bhp
     // limit point if necessary.
-    std::vector<Scalar> flo_samples = table.getFloAxis();
+    std::vector<double> flo_samples = table.getFloAxis();
     if (flo_samples[0] > 0.0) {
-        const Scalar f0 = flo_samples[0];
+        const double f0 = flo_samples[0];
         flo_samples.insert(flo_samples.begin(), { f0/20.0, f0/10.0, f0/5.0, f0/2.0 });
     }
     const Scalar flo_bhp_limit = flo(frates(controls.bhp_limit));

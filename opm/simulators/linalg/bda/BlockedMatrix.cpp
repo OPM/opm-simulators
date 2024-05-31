@@ -17,9 +17,6 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <cstring>
-#include <cmath>
-
 #include <config.h>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -29,16 +26,10 @@
 #include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/Matrix.hpp>
 
-namespace Opm
+namespace Opm::Accelerator {
+
+void sortRow(int *colIndices, int *data, int left, int right)
 {
-namespace Accelerator
-{
-
-using Opm::OpmLog;
-
-
-
-void sortRow(int *colIndices, int *data, int left, int right) {
     int l = left;
     int r = right;
     int middle = colIndices[(l + r) >> 1];
@@ -67,14 +58,14 @@ void sortRow(int *colIndices, int *data, int left, int right) {
         sortRow(colIndices, data, l, right);
 }
 
-
 // LUMat->nnzValues[ik] = LUMat->nnzValues[ik] - (pivot * LUMat->nnzValues[jk]) in ilu decomposition
 // a = a - (b * c)
-void blockMultSub(double *a, double *b, double *c, unsigned int block_size)
+template<class Scalar>
+void blockMultSub(Scalar* a, Scalar* b, Scalar* c, unsigned int block_size)
 {
     for (unsigned int row = 0; row < block_size; row++) {
         for (unsigned int col = 0; col < block_size; col++) {
-            double temp = 0.0;
+            Scalar temp = 0.0;
             for (unsigned int k = 0; k < block_size; k++) {
                 temp += b[block_size * row + k] * c[block_size * k + col];
             }
@@ -84,11 +75,12 @@ void blockMultSub(double *a, double *b, double *c, unsigned int block_size)
 }
 
 /*Perform a 3x3 matrix-matrix multiplicationj on two blocks*/
-
-void blockMult(double *mat1, double *mat2, double *resMat, unsigned int block_size) {
+template<class Scalar>
+void blockMult(Scalar* mat1, Scalar* mat2, Scalar* resMat, unsigned int block_size)
+{
     for (unsigned int row = 0; row < block_size; row++) {
         for (unsigned int col = 0; col < block_size; col++) {
-            double temp = 0;
+            Scalar temp = 0;
             for (unsigned int k = 0; k < block_size; k++) {
                 temp += mat1[block_size * row + k] * mat2[block_size * k + col];
             }
@@ -97,5 +89,10 @@ void blockMult(double *mat1, double *mat2, double *resMat, unsigned int block_si
     }
 }
 
-} // namespace Accelerator
-} // namespace Opm
+#define INSTANCE_TYPE(T) \
+    template void blockMultSub(double*, double*, double*, unsigned int); \
+    template void blockMult(double*, double*, double*, unsigned int);
+
+INSTANCE_TYPE(double)
+
+} // namespace Opm::Accelerator

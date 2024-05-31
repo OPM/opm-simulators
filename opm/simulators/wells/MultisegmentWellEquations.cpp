@@ -202,7 +202,7 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 #if COMPILE_BDA_BRIDGE
 template<class Scalar, int numWellEq, int numEq>
 void MultisegmentWellEquations<Scalar,numWellEq,numEq>::
-extract(WellContributions& wellContribs) const
+extract(WellContributions<Scalar>& wellContribs) const
 {
     unsigned int Mb = duneB_.N();       // number of blockrows in duneB_, duneC_ and duneD_
     unsigned int BnumBlocks = duneB_.nonzeroes();

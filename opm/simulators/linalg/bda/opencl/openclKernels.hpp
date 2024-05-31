@@ -26,10 +26,7 @@
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
 using spmv_blocked_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int,
                                          const cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg>;
@@ -54,21 +51,22 @@ using isaiL_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer
 using isaiU_kernel_type = cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&,
                                   cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int>;
 
+template<class Scalar>
 class OpenclKernels
 {
 private:
     static int verbosity;
     static cl::CommandQueue *queue;
-    static std::vector<double> tmp;     // used as tmp CPU buffer for dot() and norm()
+    static std::vector<Scalar> tmp;     // used as tmp CPU buffer for dot() and norm()
     static bool initialized;
     static std::size_t preferred_workgroup_size_multiple; // stores CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE
 
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > dot_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, cl::LocalSpaceArg> > norm_k;
-    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, cl::Buffer&, const unsigned int> > axpy_k;
-    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const double, const unsigned int> > scale_k;
-    static std::unique_ptr<cl::KernelFunctor<const double, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > vmul_k;
-    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const double, const double, const unsigned int> > custom_k;
+    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const Scalar, cl::Buffer&, const unsigned int> > axpy_k;
+    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, const Scalar, const unsigned int> > scale_k;
+    static std::unique_ptr<cl::KernelFunctor<const Scalar, cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > vmul_k;
+    static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, cl::Buffer&, const Scalar, const Scalar, const unsigned int> > custom_k;
     static std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, cl::Buffer&, const unsigned int> > full_to_pressure_restriction_k;
     static std::unique_ptr<cl::KernelFunctor<cl::Buffer&, cl::Buffer&, const unsigned int, const unsigned int> > add_coarse_pressure_correction_k;
     static std::unique_ptr<cl::KernelFunctor<const cl::Buffer&, cl::Buffer&, const cl::Buffer&, const unsigned int> > prolongate_vector_k;
@@ -117,12 +115,12 @@ public:
 
     static void init(cl::Context *context, cl::CommandQueue *queue, std::vector<cl::Device>& devices, int verbosity);
 
-    static double dot(cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N);
-    static double norm(cl::Buffer& in, cl::Buffer& out, int N);
-    static void axpy(cl::Buffer& in, const double a, cl::Buffer& out, int N);
-    static void scale(cl::Buffer& in, const double a, int N);
-    static void vmul(const double alpha, cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N);
-    static void custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const double omega, const double beta, int N);
+    static Scalar dot(cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N);
+    static Scalar norm(cl::Buffer& in, cl::Buffer& out, int N);
+    static void axpy(cl::Buffer& in, const Scalar a, cl::Buffer& out, int N);
+    static void scale(cl::Buffer& in, const Scalar a, int N);
+    static void vmul(const Scalar alpha, cl::Buffer& in1, cl::Buffer& in2, cl::Buffer& out, int N);
+    static void custom(cl::Buffer& p, cl::Buffer& v, cl::Buffer& r, const Scalar omega, const Scalar beta, int N);
     static void full_to_pressure_restriction(const cl::Buffer& fine_y, cl::Buffer& weights, cl::Buffer& coarse_y, int Nb);
     static void add_coarse_pressure_correction(cl::Buffer& coarse_x, cl::Buffer& fine_x, int pressure_idx, int Nb);
     static void prolongate_vector(const cl::Buffer& in, cl::Buffer& out, const cl::Buffer& cols, int N);
@@ -150,7 +148,40 @@ public:
             cl::Buffer& invDiagVals, cl::Buffer& invUvals, unsigned int Nb);
 };
 
-} // namespace Accelerator
-} // namespace Opm
+#if CHOW_PATEL
+#define DECLARE_ILU(T)                                             \
+    template<> const std::string OpenclKernels<T>::ILU_apply1_str; \
+    template<> const std::string OpenclKernels<T>::ILU_apply2_str;
+#else
+#define DECLARE_ILU(T)                                                \
+    template<> const std::string OpenclKernels<T>::ILU_apply1_fm_str; \
+    template<> const std::string OpenclKernels<T>::ILU_apply2_fm_str;
+#endif
+
+#define DECLARE_INSTANCE(T)                                                            \
+    DECLARE_ILU(T)                                                                     \
+    template<> const std::string OpenclKernels<T>::axpy_str;                           \
+    template<> const std::string OpenclKernels<T>::scale_str;                          \
+    template<> const std::string OpenclKernels<T>::vmul_str;                           \
+    template<> const std::string OpenclKernels<T>::dot_1_str;                          \
+    template<> const std::string OpenclKernels<T>::norm_str;                           \
+    template<> const std::string OpenclKernels<T>::custom_str;                         \
+    template<> const std::string OpenclKernels<T>::full_to_pressure_restriction_str;   \
+    template<> const std::string OpenclKernels<T>::add_coarse_pressure_correction_str; \
+    template<> const std::string OpenclKernels<T>::prolongate_vector_str;              \
+    template<> const std::string OpenclKernels<T>::spmv_blocked_str;                   \
+    template<> const std::string OpenclKernels<T>::spmv_blocked_add_str;               \
+    template<> const std::string OpenclKernels<T>::spmv_str;                           \
+    template<> const std::string OpenclKernels<T>::spmv_noreset_str;                   \
+    template<> const std::string OpenclKernels<T>::residual_blocked_str;               \
+    template<> const std::string OpenclKernels<T>::residual_str;                       \
+    template<> const std::string OpenclKernels<T>::stdwell_apply_str;                  \
+    template<> const std::string OpenclKernels<T>::ILU_decomp_str;                     \
+    template<> const std::string OpenclKernels<T>::isaiL_str;                          \
+    template<> const std::string OpenclKernels<T>::isaiU_str;
+
+DECLARE_INSTANCE(double)
+
+} // namespace Opm::Accelerator
 
 #endif

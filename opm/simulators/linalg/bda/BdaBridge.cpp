@@ -52,56 +52,70 @@
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;
 
-namespace Opm
-{
+namespace Opm {
 
-    using Opm::Accelerator::BdaResult;
-    using Opm::Accelerator::BdaSolver;
-    using Opm::Accelerator::SolverStatus;
+using Accelerator::BdaResult;
+using Accelerator::BdaSolver;
+using Accelerator::SolverStatus;
 
-template <class BridgeMatrix, class BridgeVector, int block_size>
-BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string accelerator_mode_,
-                                                             int linear_solver_verbosity,
-                                                             [[maybe_unused]] int maxit,
-                                                             [[maybe_unused]] double tolerance,
-                                                             [[maybe_unused]] unsigned int platformID,
-                                                             [[maybe_unused]] unsigned int deviceID,
-                                                             [[maybe_unused]] bool opencl_ilu_parallel,
-                                                             [[maybe_unused]] std::string linsolver)
-: verbosity(linear_solver_verbosity), accelerator_mode(accelerator_mode_)
+template<class BridgeMatrix, class BridgeVector, int block_size>
+BdaBridge<BridgeMatrix, BridgeVector, block_size>::
+BdaBridge(std::string accelerator_mode_,
+          int linear_solver_verbosity,
+          [[maybe_unused]] int maxit,
+          [[maybe_unused]] Scalar tolerance,
+          [[maybe_unused]] unsigned int platformID,
+          [[maybe_unused]] unsigned int deviceID,
+          [[maybe_unused]] bool opencl_ilu_parallel,
+          [[maybe_unused]] std::string linsolver)
+    : verbosity(linear_solver_verbosity)
+    , accelerator_mode(accelerator_mode_)
 {
     if (accelerator_mode.compare("cusparse") == 0) {
 #if HAVE_CUDA
         use_gpu = true;
-        backend.reset(new Opm::Accelerator::cusparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, deviceID));
+        using CU = Accelerator::cusparseSolverBackend<Scalar,block_size>;
+        backend = std::make_unique<CU>(linear_solver_verbosity, maxit, tolerance, deviceID);
 #else
         OPM_THROW(std::logic_error, "Error cusparseSolver was chosen, but CUDA was not found by CMake");
 #endif
     } else if (accelerator_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
         use_gpu = true;
-        backend.reset(new Opm::Accelerator::openclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID, opencl_ilu_parallel, linsolver));
+        using OCL = Accelerator::openclSolverBackend<Scalar,block_size>;
+        backend = std::make_unique<OCL>(linear_solver_verbosity,
+                                        maxit,
+                                        tolerance,
+                                        platformID,
+                                        deviceID,
+                                        opencl_ilu_parallel,
+                                        linsolver);
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
     } else if (accelerator_mode.compare("amgcl") == 0) {
 #if HAVE_AMGCL
         use_gpu = true; // should be replaced by a 'use_bridge' boolean
-        backend.reset(new Opm::Accelerator::amgclSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
+        using AMGCL = Accelerator::amgclSolverBackend<Scalar,block_size>;
+        backend = std::make_unique<AMGCL>(linear_solver_verbosity, maxit,
+                                          tolerance, platformID, deviceID);
 #else
         OPM_THROW(std::logic_error, "Error amgclSolver was chosen, but amgcl was not found by CMake");
 #endif
     } else if (accelerator_mode.compare("rocalution") == 0) {
 #if HAVE_ROCALUTION
         use_gpu = true; // should be replaced by a 'use_bridge' boolean
-        backend.reset(new Opm::Accelerator::rocalutionSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance));
+        using ROCA = Accelerator::rocalutionSolverBackend<Scalar,block_size>;
+        backend = std::make_unique<ROCA>(linear_solver_verbosity, maxit, tolerance);
 #else
         OPM_THROW(std::logic_error, "Error rocalutionSolver was chosen, but rocalution was not found by CMake");
 #endif
     } else if (accelerator_mode.compare("rocsparse") == 0) {
 #if HAVE_ROCSPARSE
         use_gpu = true; // should be replaced by a 'use_bridge' boolean
-        backend.reset(new Opm::Accelerator::rocsparseSolverBackend<block_size>(linear_solver_verbosity, maxit, tolerance, platformID, deviceID));
+        using ROCS = Accelerator::rocsparseSolverBackend<Scalar,block_size>;
+        backend = std::make_unique<ROCS>(linear_solver_verbosity, maxit,
+                                         tolerance, platformID, deviceID);
 #else
         OPM_THROW(std::logic_error, "Error rocsparseSolver was chosen, but rocsparse/rocblas was not found by CMake");
 #endif
@@ -112,13 +126,14 @@ BdaBridge<BridgeMatrix, BridgeVector, block_size>::BdaBridge(std::string acceler
     }
 }
 
-
-
 template <class BridgeMatrix>
-int replaceZeroDiagonal(BridgeMatrix& mat, std::vector<typename BridgeMatrix::size_type>& diag_indices) {
+int replaceZeroDiagonal(BridgeMatrix& mat,
+                    std::vector<typename BridgeMatrix::size_type>& diag_indices)
+{
+    using Scalar = typename BridgeMatrix::field_type;
     int numZeros = 0;
     const int dim = mat[0][0].N();                    // might be replaced with BridgeMatrix::block_type::size()
-    const double zero_replace = 1e-15;
+    const Scalar zero_replace = 1e-15;
     if (diag_indices.empty()) {
         int Nb = mat.N();
         diag_indices.reserve(Nb);
@@ -134,7 +149,7 @@ int replaceZeroDiagonal(BridgeMatrix& mat, std::vector<typename BridgeMatrix::si
             }
             diag_indices.emplace_back(diag.offset());
         }
-    }else{
+    } else {
         for (typename BridgeMatrix::iterator r = mat.begin(); r != mat.end(); ++r) {
             typename BridgeMatrix::size_type offset = diag_indices[r.index()];
             auto& diag_block = r->getptr()[offset]; // diag_block is a reference to MatrixBlock, located on column r of row r
@@ -151,13 +166,15 @@ int replaceZeroDiagonal(BridgeMatrix& mat, std::vector<typename BridgeMatrix::si
     return numZeros;
 }
 
-
 // iterate sparsity pattern from Matrix and put colIndices and rowPointers in arrays
 // sparsity pattern should stay the same
 // this could be removed if Dune::BCRSMatrix features an API call that returns colIndices and rowPointers
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::copySparsityPatternFromISTL(const BridgeMatrix& mat, std::vector<int> &h_rows, std::vector<int> &h_cols) {
-
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::
+copySparsityPatternFromISTL(const BridgeMatrix& mat,
+                            std::vector<int>& h_rows,
+                            std::vector<int>& h_cols)
+{
     h_rows.clear();
     h_cols.clear();
 
@@ -172,17 +189,19 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::copySparsityPatternFromI
 
     // h_rows and h_cols could be changed to 'unsigned int', but cusparse expects 'int'
     if (static_cast<unsigned int>(h_rows[mat.N()]) != mat.nonzeroes()) {
-        OPM_THROW(std::logic_error, "Error size of rows do not sum to number of nonzeroes in BdaBridge::copySparsityPatternFromISTL()");
+        OPM_THROW(std::logic_error,
+                  "Error size of rows do not sum to number of nonzeroes "
+                  "in BdaBridge::copySparsityPatternFromISTL()");
     }
 }
-
 
 // check if the nnz values of the matrix are in contiguous memory
 // this is done by checking if the distance between the last value of the last block of row 0 and
 // the first value of the first row of row 1 is equal to 1
 // if the matrix only has 1 row, it is always contiguous
 template <class BridgeMatrix>
-void checkMemoryContiguous(const BridgeMatrix& mat) {
+void checkMemoryContiguous(const BridgeMatrix& mat)
+{
     auto block_size = mat[0][0].N();
     auto row = mat.begin();
     auto last_of_row0 = row->begin();
@@ -199,14 +218,14 @@ void checkMemoryContiguous(const BridgeMatrix& mat) {
     }
 }
 
-
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatrix* bridgeMat,
-                                                                     BridgeMatrix* jacMat,
-                                                                     int numJacobiBlocks,
-                                                                     BridgeVector& b,
-                                                                     WellContributions& wellContribs,
-                                                                     InverseOperatorResult& res)
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::
+solve_system(BridgeMatrix* bridgeMat,
+             BridgeMatrix* jacMat,
+             int numJacobiBlocks,
+             BridgeVector& b,
+             WellContributions<Scalar>& wellContribs,
+             InverseOperatorResult& res)
 {
     if (use_gpu) {
         BdaResult result;
@@ -221,38 +240,48 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
             return;
         }
 
+        using Mat = Accelerator::BlockedMatrix<Scalar>;
         if (!matrix) {
             h_rows.reserve(Nb+1);
             h_cols.reserve(nnzb);
             copySparsityPatternFromISTL(*bridgeMat, h_rows, h_cols);
             checkMemoryContiguous(*bridgeMat);
-            matrix = std::make_unique<Opm::Accelerator::BlockedMatrix>(Nb, nnzb, block_size, static_cast<double*>(&(((*bridgeMat)[0][0][0][0]))), h_cols.data(), h_rows.data());
+            matrix = std::make_unique<Mat>(Nb, nnzb, block_size,
+                                           static_cast<Scalar*>(&(((*bridgeMat)[0][0][0][0]))),
+                                           h_cols.data(),
+                                           h_rows.data());
         }
 
         Dune::Timer t_zeros;
         int numZeros = replaceZeroDiagonal(*bridgeMat, diagIndices);
         if (verbosity >= 2) {
             std::ostringstream out;
-            out << "Checking zeros took: " << t_zeros.stop() << " s, found " << numZeros << " zeros";
+            out << "Checking zeros took: " << t_zeros.stop() << " s, found "
+                << numZeros << " zeros";
             OpmLog::info(out.str());
         }
 
         if (numJacobiBlocks >= 2) {
-            const int jacNnzb = (h_jacRows.empty()) ? jacMat->nonzeroes() : h_jacRows.back();
+            const int jacNnzb = (h_jacRows.empty()) ? jacMat->nonzeroes()
+                                                    : h_jacRows.back();
 
             if (!jacMatrix) {
                 h_jacRows.reserve(Nb+1);
                 h_jacCols.reserve(jacNnzb);
                 copySparsityPatternFromISTL(*jacMat, h_jacRows, h_jacCols);
                 checkMemoryContiguous(*jacMat);
-                jacMatrix = std::make_unique<Opm::Accelerator::BlockedMatrix>(Nb, jacNnzb, block_size, static_cast<double*>(&(((*jacMat)[0][0][0][0]))), h_jacCols.data(), h_jacRows.data());
+                jacMatrix = std::make_unique<Mat>(Nb, jacNnzb, block_size,
+                                                  static_cast<Scalar*>(&(((*jacMat)[0][0][0][0]))),
+                                                  h_jacCols.data(),
+                                                  h_jacRows.data());
             }
 
             Dune::Timer t_zeros2;
             int jacNumZeros = replaceZeroDiagonal(*jacMat, jacDiagIndices);
             if (verbosity >= 2) {
                 std::ostringstream out;
-                out << "Checking zeros for jacMat took: " << t_zeros2.stop() << " s, found " << jacNumZeros << " zeros";
+                out << "Checking zeros for jacMat took: " << t_zeros2.stop()
+                    << " s, found " << jacNumZeros << " zeros";
                 OpmLog::info(out.str());
             }
         }
@@ -260,17 +289,23 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
         /////////////////////////
         // actually solve
         // assume that underlying data (nonzeroes) from b (Dune::BlockVector) are contiguous, if this is not the case, the chosen BdaSolver is expected to perform undefined behaviour
-        SolverStatus status = backend->solve_system(matrix, static_cast<double*>(&(b[0][0])), jacMatrix, wellContribs, result);
+        SolverStatus status = backend->solve_system(matrix,
+                                                    static_cast<Scalar*>(&(b[0][0])),
+                                                    jacMatrix, wellContribs, result);
 
-        switch(status) {
+        switch (status) {
         case SolverStatus::BDA_SOLVER_SUCCESS:
             //OpmLog::info("BdaSolver converged");
             break;
         case SolverStatus::BDA_SOLVER_ANALYSIS_FAILED:
-            OpmLog::warning("BdaSolver could not analyse level information of matrix, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
+            OpmLog::warning("BdaSolver could not analyse level information of matrix, "
+                            "perhaps there is still a 0.0 on the diagonal of a "
+                            "block on the diagonal");
             break;
         case SolverStatus::BDA_SOLVER_CREATE_PRECONDITIONER_FAILED:
-            OpmLog::warning("BdaSolver could not create preconditioner, perhaps there is still a 0.0 on the diagonal of a block on the diagonal");
+            OpmLog::warning("BdaSolver could not create preconditioner, "
+                            "perhaps there is still a 0.0 on the diagonal "
+                            "of a block on the diagonal");
             break;
         default:
             OpmLog::warning("BdaSolver returned unknown status code");
@@ -286,21 +321,27 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::solve_system(BridgeMatri
     }
 }
 
-
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::get_result([[maybe_unused]] BridgeVector& x) {
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::
+get_result([[maybe_unused]] BridgeVector& x)
+{
     if (use_gpu) {
-        backend->get_result(static_cast<double*>(&(x[0][0])));
+        backend->get_result(static_cast<Scalar*>(&(x[0][0])));
     }
 }
 
 template <class BridgeMatrix, class BridgeVector, int block_size>
-void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[maybe_unused]] WellContributions& wellContribs,
-                                                                              [[maybe_unused]] unsigned N) {
-    if(accelerator_mode.compare("opencl") == 0){
+void BdaBridge<BridgeMatrix, BridgeVector, block_size>::
+initWellContributions([[maybe_unused]] WellContributions<Scalar>& wellContribs,
+                      [[maybe_unused]] unsigned N)
+{
+    if (accelerator_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
-        const auto openclBackend = static_cast<const Opm::Accelerator::openclSolverBackend<block_size>*>(backend.get());
-        static_cast<WellContributionsOCL&>(wellContribs).setOpenCLEnv(openclBackend->context.get(), openclBackend->queue.get());
+        using OCL = Accelerator::openclSolverBackend<Scalar,block_size>;
+        const auto openclBackend = static_cast<const OCL*>(backend.get());
+        using WCOCL = WellContributionsOCL<Scalar>;
+        static_cast<WCOCL&>(wellContribs).setOpenCLEnv(openclBackend->context.get(),
+                                                       openclBackend->queue.get());
 #else
         OPM_THROW(std::logic_error, "Error openclSolver was chosen, but OpenCL was not found by CMake");
 #endif
@@ -309,23 +350,20 @@ void BdaBridge<BridgeMatrix, BridgeVector, block_size>::initWellContributions([[
 }
 
 // the tests use Dune::FieldMatrix, Flow uses Opm::MatrixBlock
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                                                           \
-template class BdaBridge<Dune::BCRSMatrix<Opm::MatrixBlock<double, n, n>, std::allocator<Opm::MatrixBlock<double, n, n> > >,   \
-Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                               \
-n>;                                                                                                                            \
-                                                                                                                               \
-template class BdaBridge<Dune::BCRSMatrix<Dune::FieldMatrix<double, n, n>, std::allocator<Dune::FieldMatrix<double, n, n> > >, \
-Dune::BlockVector<Dune::FieldVector<double, n>, std::allocator<Dune::FieldVector<double, n> > >,                               \
-n>;
+#define INSTANTIATE_BDA_FUNCTIONS(T,n)                                     \
+    template class BdaBridge<Dune::BCRSMatrix<MatrixBlock<T,n,n>>,         \
+                   Dune::BlockVector<Dune::FieldVector<T,n>>,n>;           \
+    template class BdaBridge<Dune::BCRSMatrix<Dune::FieldMatrix<T,n,n>>,   \
+                             Dune::BlockVector<Dune::FieldVector<T,n>>,n>;
 
+#define INSTANTIATE_TYPE(T)        \
+    INSTANTIATE_BDA_FUNCTIONS(T,1) \
+    INSTANTIATE_BDA_FUNCTIONS(T,2) \
+    INSTANTIATE_BDA_FUNCTIONS(T,3) \
+    INSTANTIATE_BDA_FUNCTIONS(T,4) \
+    INSTANTIATE_BDA_FUNCTIONS(T,5) \
+    INSTANTIATE_BDA_FUNCTIONS(T,6)
 
-INSTANTIATE_BDA_FUNCTIONS(1);
-INSTANTIATE_BDA_FUNCTIONS(2);
-INSTANTIATE_BDA_FUNCTIONS(3);
-INSTANTIATE_BDA_FUNCTIONS(4);
-INSTANTIATE_BDA_FUNCTIONS(5);
-INSTANTIATE_BDA_FUNCTIONS(6);
-
-#undef INSTANTIATE_BDA_FUNCTIONS
+INSTANTIATE_TYPE(double)
 
 } // namespace Opm

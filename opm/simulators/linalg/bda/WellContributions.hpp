@@ -30,7 +30,7 @@
 
 namespace Opm {
 
-class MultisegmentWellContribution;
+template<class Scalar> class MultisegmentWellContribution;
 
 /// This class serves to eliminate the need to include the WellContributions into the matrix (with --matrix-add-well-contributions=true) for the cusparseSolver or openclSolver.
 /// If the --matrix-add-well-contributions commandline parameter is true, this class should still be used, but be empty.
@@ -48,6 +48,7 @@ class MultisegmentWellContribution;
 /// - get total size of all wellcontributions that must be stored here
 /// - allocate memory
 /// - copy data of wellcontributions
+template<class Scalar>
 class WellContributions
 {
 public:
@@ -74,7 +75,7 @@ protected:
     unsigned int num_std_wells_so_far = 0;   // keep track of where next data is written
     std::vector<unsigned int> val_pointers;    // val_pointers[wellID] == index of first block for this well in Ccols and Bcols
 
-    std::vector<std::unique_ptr<MultisegmentWellContribution>> multisegments;
+    std::vector<std::unique_ptr<MultisegmentWellContribution<Scalar>>> multisegments;
 
 public:
     unsigned int getNumWells(){
@@ -105,7 +106,7 @@ public:
     /// \param[in] colIndices  columnindices of blocks in C or B, ignored for D
     /// \param[in] values      array of nonzeroes
     /// \param[in] val_size    number of blocks in C or B, ignored for D
-    void addMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size);
+    void addMatrix(MatrixType type, int* colIndices, Scalar* values, unsigned int val_size);
 
     /// Add a MultisegmentWellContribution, actually creates an object on heap that is destroyed in the destructor
     /// Matrices C and B are passed in Blocked CSR, matrix D in CSC
@@ -120,19 +121,25 @@ public:
     /// \param[in] DcolPointers     columnpointers of matrix D
     /// \param[in] DrowIndices      rowindices of matrix D
     /// \param[in] Cvalues          nonzero values of matrix C
-    void addMultisegmentWellContribution(unsigned int dim, unsigned int dim_wells,
+    void addMultisegmentWellContribution(unsigned int dim,
+                                         unsigned int dim_wells,
                                          unsigned int Mb,
-                                         std::vector<double> &Bvalues, std::vector<unsigned int> &BcolIndices, std::vector<unsigned int> &BrowPointers,
-                                         unsigned int DnumBlocks, double *Dvalues,
-                                         UMFPackIndex *DcolPointers, UMFPackIndex *DrowIndices,
-                                         std::vector<double> &Cvalues);
+                                         std::vector<Scalar>& Bvalues,
+                                         std::vector<unsigned int>& BcolIndices,
+                                         std::vector<unsigned int>& BrowPointers,
+                                         unsigned int DnumBlocks,
+                                         Scalar* Dvalues,
+                                         UMFPackIndex* DcolPointers,
+                                         UMFPackIndex* DrowIndices,
+                                         std::vector<Scalar>& Cvalues);
 protected:
     //! \brief API specific allocation.
     virtual void APIalloc() {}
 
     /// Api specific upload of matrix.
-    virtual void APIaddMatrix(MatrixType, int*, double*, unsigned int) {}
+    virtual void APIaddMatrix(MatrixType, int*, Scalar*, unsigned int) {}
 };
+
 } //namespace Opm
 
 #endif

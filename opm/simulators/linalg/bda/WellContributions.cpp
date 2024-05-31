@@ -39,35 +39,36 @@
 
 namespace Opm {
 
-WellContributions::~WellContributions() = default;
+template<class Scalar>
+WellContributions<Scalar>::~WellContributions() = default;
 
-std::unique_ptr<WellContributions>
-WellContributions::create(const std::string& accelerator_mode, bool useWellConn)
+template<class Scalar>
+std::unique_ptr<WellContributions<Scalar>>
+WellContributions<Scalar>::create(const std::string& accelerator_mode, bool useWellConn)
 {
-    if(accelerator_mode.compare("cusparse") == 0){
+    if (accelerator_mode.compare("cusparse") == 0) {
 #if HAVE_CUDA
-    return std::make_unique<WellContributionsCuda>();
+        return std::make_unique<WellContributionsCuda<Scalar>>();
 #else
-    OPM_THROW(std::runtime_error, "Cannot initialize well contributions: CUDA is not enabled");
+        OPM_THROW(std::runtime_error, "Cannot initialize well contributions: CUDA is not enabled");
 #endif
     }
-    else if(accelerator_mode.compare("opencl") == 0){
+    else if (accelerator_mode.compare("opencl") == 0) {
 #if HAVE_OPENCL
-        return std::make_unique<WellContributionsOCL>();
+        return std::make_unique<WellContributionsOCL<Scalar>>();
 #else
         OPM_THROW(std::runtime_error, "Cannot initialize well contributions: OpenCL is not enabled");
 #endif
     }
-    else if(accelerator_mode.compare("rocsparse") == 0){
+    else if (accelerator_mode.compare("rocsparse") == 0) {
         if (!useWellConn) {
 #if HAVE_ROCSPARSE
-            return std::make_unique<WellContributionsRocsparse>();
+            return std::make_unique<WellContributionsRocsparse<Scalar>>();
 #else
         OPM_THROW(std::runtime_error, "Cannot initialize well contributions: rocsparse is not enabled");
 #endif
         }
         return std::make_unique<WellContributions>();
-
     }
     else if(accelerator_mode.compare("amgcl") == 0){
         if (!useWellConn) {
@@ -86,10 +87,12 @@ WellContributions::create(const std::string& accelerator_mode, bool useWellConn)
     }
 }
 
-void WellContributions::addMatrix([[maybe_unused]] MatrixType type,
-                                  [[maybe_unused]] int* colIndices,
-                                  [[maybe_unused]] double* values,
-                                  [[maybe_unused]] unsigned int val_size)
+template<class Scalar>
+void WellContributions<Scalar>::
+addMatrix([[maybe_unused]] MatrixType type,
+          [[maybe_unused]] int* colIndices,
+          [[maybe_unused]] Scalar* values,
+          [[maybe_unused]] unsigned int val_size)
 {
 #if !HAVE_CUDA && !HAVE_OPENCL
     OPM_THROW(std::logic_error, "Error cannot add StandardWell matrix on GPU because neither CUDA nor OpenCL were found by cmake");
@@ -107,7 +110,8 @@ void WellContributions::addMatrix([[maybe_unused]] MatrixType type,
     }
 }
 
-void WellContributions::setBlockSize(unsigned int dim_, unsigned int dim_wells_)
+template<class Scalar>
+void WellContributions<Scalar>::setBlockSize(unsigned int dim_, unsigned int dim_wells_)
 {
     dim = dim_;
     dim_wells = dim_wells_;
@@ -121,11 +125,14 @@ void WellContributions::setBlockSize(unsigned int dim_, unsigned int dim_wells_)
     }
 }
 
-void WellContributions::setVectorSize(unsigned N_) {
+template<class Scalar>
+void WellContributions<Scalar>::setVectorSize(unsigned N_)
+{
     N = N_;
 }
 
-void WellContributions::addNumBlocks(unsigned int numBlocks)
+template<class Scalar>
+void WellContributions<Scalar>::addNumBlocks(unsigned int numBlocks)
 {
     if (allocated) {
         OPM_THROW(std::logic_error, "Error cannot add more sizes after allocated in WellContributions");
@@ -134,7 +141,8 @@ void WellContributions::addNumBlocks(unsigned int numBlocks)
     num_std_wells++;
 }
 
-void WellContributions::alloc()
+template<class Scalar>
+void WellContributions<Scalar>::alloc()
 {
     if (num_std_wells > 0) {
         val_pointers.resize(num_std_wells+1);
@@ -144,31 +152,36 @@ void WellContributions::alloc()
     }
 }
 
-void WellContributions::addMultisegmentWellContribution(unsigned int dim_,
-                                                        unsigned int dim_wells_,
-                                                        unsigned int Mb,
-                                                        std::vector<double>& Bvalues,
-                                                        std::vector<unsigned int>& BcolIndices,
-                                                        std::vector<unsigned int>& BrowPointers,
-                                                        unsigned int DnumBlocks,
-                                                        double* Dvalues,
-                                                        UMFPackIndex* DcolPointers,
-                                                        UMFPackIndex* DrowIndices,
-                                                        std::vector<double>& Cvalues)
+template<class Scalar>
+void WellContributions<Scalar>::
+addMultisegmentWellContribution(unsigned int dim_,
+                                unsigned int dim_wells_,
+                                unsigned int Mb,
+                                std::vector<Scalar>& Bvalues,
+                                std::vector<unsigned int>& BcolIndices,
+                                std::vector<unsigned int>& BrowPointers,
+                                unsigned int DnumBlocks,
+                                Scalar* Dvalues,
+                                UMFPackIndex* DcolPointers,
+                                UMFPackIndex* DrowIndices,
+                                std::vector<Scalar>& Cvalues)
 {
     assert(dim==dim_);
-    multisegments.push_back(std::make_unique<MultisegmentWellContribution>(dim_,
-                                                                           dim_wells_,
-                                                                           Mb,
-                                                                           Bvalues,
-                                                                           BcolIndices,
-                                                                           BrowPointers,
-                                                                           DnumBlocks,
-                                                                           Dvalues,
-                                                                           DcolPointers,
-                                                                           DrowIndices,
-                                                                           Cvalues));
+    using MSW = MultisegmentWellContribution<Scalar>;
+    multisegments.push_back(std::make_unique<MSW>(dim_,
+                                                  dim_wells_,
+                                                  Mb,
+                                                  Bvalues,
+                                                  BcolIndices,
+                                                  BrowPointers,
+                                                  DnumBlocks,
+                                                  Dvalues,
+                                                  DcolPointers,
+                                                  DrowIndices,
+                                                  Cvalues));
     ++num_ms_wells;
 }
+
+template class WellContributions<double>;
 
 } //namespace Opm

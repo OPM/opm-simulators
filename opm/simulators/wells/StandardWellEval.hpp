@@ -38,7 +38,7 @@ class ConvergenceReport;
 class DeferredLogger;
 class Schedule;
 class SummaryState;
-class WellContributions;
+template<class Scalar> class WellContributions;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
 template<class Scalar> class WellState;
 

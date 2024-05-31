@@ -27,16 +27,13 @@
 
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
 /// This class implements a opencl-based ilu0-bicgstab solver on GPU
-template <unsigned int block_size>
-class openclSolverBackend : public BdaSolver<block_size>
+template<class Scalar, unsigned int block_size>
+class openclSolverBackend : public BdaSolver<Scalar,block_size>
 {
-    typedef BdaSolver<block_size> Base;
+    using Base = BdaSolver<Scalar,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -50,8 +47,8 @@ class openclSolverBackend : public BdaSolver<block_size>
     using Base::initialized;
 
 private:
-    double *h_b = nullptr;                // b vector, on host
-    std::vector<double> vals_contiguous;  // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
+    Scalar* h_b = nullptr;                // b vector, on host
+    std::vector<Scalar> vals_contiguous;  // only used if COPY_ROW_BY_ROW is true in openclSolverBackend.cpp
 
     // OpenCL variables must be reusable, they are initialized in initialize()
     cl::Buffer d_Avals, d_Acols, d_Arows;        // matrix in BSR format on GPU
@@ -63,12 +60,12 @@ private:
 
     bool useJacMatrix = false;
 
-    std::unique_ptr<Preconditioner<block_size> > prec;
+    std::unique_ptr<Preconditioner<Scalar,block_size>> prec;
                                                                   // can perform blocked ILU0 and AMG on pressure component
     bool is_root;                                                 // allow for nested solvers, the root solver is called by BdaBridge
     bool analysis_done = false;
-    std::shared_ptr<BlockedMatrix> mat = nullptr;                 // original matrix
-    std::shared_ptr<BlockedMatrix> jacMat = nullptr;              // matrix for preconditioner
+    std::shared_ptr<BlockedMatrix<Scalar>> mat{};                 // original matrix
+    std::shared_ptr<BlockedMatrix<Scalar>> jacMat{};              // matrix for preconditioner
     bool opencl_ilu_parallel;                                     // parallelize ILU operations (with level_scheduling)
     std::vector<cl::Event> events;
     cl_int err;
@@ -76,12 +73,13 @@ private:
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
-    void gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res);
+    void gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res);
 
     /// Initialize GPU and allocate memory
     /// \param[in] matrix     matrix A
     /// \param[in] jacMatrix  matrix for preconditioner
-    void initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix);
+    void initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+                    std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix);
 
     /// Copy linear system to GPU
     void copy_system_to_gpu();
@@ -89,7 +87,7 @@ private:
     /// Reassign pointers, in case the addresses of the Dune variables have changed
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] b              input vector b, contains N values
-    void update_system(double *vals, double *b);
+    void update_system(Scalar* vals, Scalar* b);
 
     /// Update linear system on GPU, don't copy rowpointers and colindices, they stay the same
     void update_system_on_gpu();
@@ -106,11 +104,11 @@ private:
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     ///                           could be empty
     /// \param[inout] res         summary of solver result
-    void solve_system(WellContributions &wellContribs, BdaResult &res);
+    void solve_system(WellContributions<Scalar>& wellContribs, BdaResult& res);
 
 public:
-    std::shared_ptr<cl::Context> context;
-    std::shared_ptr<cl::CommandQueue> queue;
+    std::shared_ptr<cl::Context> context{};
+    std::shared_ptr<cl::CommandQueue> queue{};
 
     /// Construct a openclSolver
     /// \param[in] linear_solver_verbosity    verbosity of openclSolver
@@ -121,11 +119,13 @@ public:
     /// \param[in] opencl_ilu_parallel        whether to parallelize the ILU decomposition and application in OpenCL with level_scheduling
     /// \param[in] linsolver                  indicating the preconditioner, equal to the --linear-solver cmdline argument
     ///                                       only ilu0, cpr_quasiimpes and isai are supported
-    openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, unsigned int platformID, unsigned int deviceID,
-        bool opencl_ilu_parallel, std::string linsolver);
+    openclSolverBackend(int linear_solver_verbosity, int maxit, Scalar tolerance,
+                        unsigned int platformID, unsigned int deviceID,
+                        bool opencl_ilu_parallel, std::string linsolver);
 
     /// For the CPR coarse solver
-    openclSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, bool opencl_ilu_parallel);
+    openclSolverBackend(int linear_solver_verbosity, int maxit,
+                        Scalar tolerance, bool opencl_ilu_parallel);
 
     /// Solve linear system, A*x = b, matrix A must be in blocked-CSR format
     /// \param[in] matrix         matrix A
@@ -134,8 +134,11 @@ public:
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
     /// \return                   status code
-    SolverStatus solve_system(std::shared_ptr<BlockedMatrix> matrix, double *b,
-        std::shared_ptr<BlockedMatrix> jacMatrix, WellContributions& wellContribs, BdaResult &res) override;
+    SolverStatus solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+                              Scalar* b,
+                              std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
+                              WellContributions<Scalar>& wellContribs,
+                              BdaResult& res) override;
 
     /// Solve scalar linear system, for example a coarse system of an AMG preconditioner
     /// Data is already on the GPU
@@ -143,19 +146,16 @@ public:
 
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x          resulting x vector, caller must guarantee that x points to a valid array
-    void get_result(double *x) override;
+    void get_result(Scalar* x) override;
 
     /// Set OpenCL objects
     /// This class either creates them based on platformID and deviceID or receives them through this function
     /// \param[in] context   the opencl context to be used
     /// \param[in] queue     the opencl queue to be used
-    void setOpencl(std::shared_ptr<cl::Context>& context, std::shared_ptr<cl::CommandQueue>& queue);
-    
+    void setOpencl(std::shared_ptr<cl::Context>& context,
+                   std::shared_ptr<cl::CommandQueue>& queue);
 }; // end class openclSolverBackend
 
-} // namespace Accelerator
-} // namespace Opm
+} // namespace Opm::Accelerator
 
 #endif
-
-

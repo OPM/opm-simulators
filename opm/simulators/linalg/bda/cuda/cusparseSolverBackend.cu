@@ -44,22 +44,20 @@
 extern std::shared_ptr<std::thread> copyThread;
 #endif // HAVE_OPENMP
 
-namespace Opm
-{
-namespace Accelerator
-{
+namespace Opm::Accelerator {
 
-using Opm::OpmLog;
 using Dune::Timer;
 
 const cusparseSolvePolicy_t policy = CUSPARSE_SOLVE_POLICY_USE_LEVEL;
 const cusparseOperation_t operation  = CUSPARSE_OPERATION_NON_TRANSPOSE;
 const cusparseDirection_t order = CUSPARSE_DIRECTION_ROW;
 
-
-template <unsigned int block_size>
-cusparseSolverBackend<block_size>::cusparseSolverBackend(int verbosity_, int maxit_, double tolerance_, unsigned int deviceID_) : BdaSolver<block_size>(verbosity_, maxit_, tolerance_, deviceID_) {
-
+template<class Scalar, unsigned int block_size>
+cusparseSolverBackend<Scalar, block_size>::
+cusparseSolverBackend(int verbosity_, int maxit_,
+                      Scalar tolerance_, unsigned int deviceID_)
+    : Base(verbosity_, maxit_, tolerance_, deviceID_)
+{
     // initialize CUDA device, stream and libraries
     cudaSetDevice(deviceID);
     cudaCheckLastError("Could not get device");
@@ -67,7 +65,8 @@ cusparseSolverBackend<block_size>::cusparseSolverBackend(int verbosity_, int max
     cudaGetDeviceProperties(&props, deviceID);
     cudaCheckLastError("Could not get device properties");
     std::ostringstream out;
-    out << "Name GPU: " << props.name << ", Compute Capability: " << props.major << "." << props.minor;
+    out << "Name GPU: " << props.name << ", Compute Capability: "
+        << props.major << "." << props.minor;
     OpmLog::info(out.str());
 
     cudaStreamCreate(&stream);
@@ -84,26 +83,29 @@ cusparseSolverBackend<block_size>::cusparseSolverBackend(int verbosity_, int max
     cudaCheckLastError("Could not set stream to cusparse");
 }
 
-template <unsigned int block_size>
-cusparseSolverBackend<block_size>::~cusparseSolverBackend() {
+template<class Scalar, unsigned int block_size>
+cusparseSolverBackend<Scalar,block_size>::~cusparseSolverBackend()
+{
     finalize();
 }
 
-template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellContribs, BdaResult& res) {
+template<class Scalar, unsigned int block_size>
+void cusparseSolverBackend<Scalar,block_size>::
+gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res)
+{
     Timer t_total, t_prec(false), t_spmv(false), t_well(false), t_rest(false);
     int n = N;
-    double rho = 1.0, rhop;
-    double alpha, nalpha, beta;
-    double omega, nomega, tmp1, tmp2;
-    double norm, norm_0;
-    double zero = 0.0;
-    double one  = 1.0;
-    double mone = -1.0;
+    Scalar rho = 1.0, rhop;
+    Scalar alpha, nalpha, beta;
+    Scalar omega, nomega, tmp1, tmp2;
+    Scalar norm, norm_0;
+    Scalar zero = 0.0;
+    Scalar one  = 1.0;
+    Scalar mone = -1.0;
     float it;
 
     if (wellContribs.getNumWells() > 0) {
-        static_cast<WellContributionsCuda&>(wellContribs).setCudaStream(stream);
+        static_cast<WellContributionsCuda<Scalar>&>(wellContribs).setCudaStream(stream);
     }
 
     cusparseDbsrmv(cusparseHandle, order, operation, Nb, Nb, nnzb, &one, descr_M, d_bVals, d_bRows, d_bCols, block_size, d_x, &zero, d_r);
@@ -147,7 +149,7 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
-            static_cast<WellContributionsCuda&>(wellContribs).apply(d_pw, d_v);
+            static_cast<WellContributionsCuda<Scalar>&>(wellContribs).apply(d_pw, d_v);
         }
 
         cublasDdot(cublasHandle, n, d_rw, 1, d_v, 1, &tmp1);
@@ -178,7 +180,7 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
 
         // apply wellContributions
         if (wellContribs.getNumWells() > 0) {
-            static_cast<WellContributionsCuda&>(wellContribs).apply(d_s, d_t);
+            static_cast<WellContributionsCuda<Scalar>&>(wellContribs).apply(d_s, d_t);
         }
 
         cublasDdot(cublasHandle, n, d_t, 1, d_r, 1, &tmp1);
@@ -189,7 +191,6 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
         cublasDaxpy(cublasHandle, n, &nomega, d_t, 1, d_r, 1);
 
         cublasDnrm2(cublasHandle, n, d_r, 1, &norm);
-
 
         if (norm < tolerance * norm_0) {
             break;
@@ -210,15 +211,18 @@ void cusparseSolverBackend<block_size>::gpu_pbicgstab(WellContributions& wellCon
 
     if (verbosity > 0) {
         std::ostringstream out;
-        out << "=== converged: " << res.converged << ", conv_rate: " << res.conv_rate << ", time: " << res.elapsed << \
-            ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
+        out << "=== converged: " << res.converged << ", conv_rate: "
+            << res.conv_rate << ", time: " << res.elapsed
+            << ", time per iteration: " << res.elapsed / it << ", iterations: " << it;
         OpmLog::info(out.str());
     }
 }
 
-
-template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix> matrix, std::shared_ptr<BlockedMatrix> jacMatrix) {
+template<class Scalar, unsigned int block_size>
+void cusparseSolverBackend<Scalar,block_size>::
+initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+           std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix)
+{
     this->Nb = matrix->Nb;
     this->N = Nb * block_size;
     this->nnzb = matrix->nnzbs;
@@ -232,46 +236,49 @@ void cusparseSolverBackend<block_size>::initialize(std::shared_ptr<BlockedMatrix
     }
 
     std::ostringstream out;
-    out << "Initializing GPU, matrix size: " << Nb << " blockrows, nnz: " << nnzb << " blocks\n";
+    out << "Initializing GPU, matrix size: " << Nb
+        << " blockrows, nnz: " << nnzb << " blocks\n";
     if (useJacMatrix) {
         out << "Blocks in ILU matrix: " << nnzbs_prec << "\n";
     }
-    out << "Maxit: " << maxit << std::scientific << ", tolerance: " << tolerance << "\n";
+    out << "Maxit: " << maxit << std::scientific
+        << ", tolerance: " << tolerance << "\n";
     OpmLog::info(out.str());
 
-    cudaMalloc((void**)&d_x, sizeof(double) * N);
-    cudaMalloc((void**)&d_b, sizeof(double) * N);
-    cudaMalloc((void**)&d_r, sizeof(double) * N);
-    cudaMalloc((void**)&d_rw, sizeof(double) * N);
-    cudaMalloc((void**)&d_p, sizeof(double) * N);
-    cudaMalloc((void**)&d_pw, sizeof(double) * N);
-    cudaMalloc((void**)&d_s, sizeof(double) * N);
-    cudaMalloc((void**)&d_t, sizeof(double) * N);
-    cudaMalloc((void**)&d_v, sizeof(double) * N);
-    cudaMalloc((void**)&d_bVals, sizeof(double) * nnz);
+    cudaMalloc((void**)&d_x, sizeof(Scalar) * N);
+    cudaMalloc((void**)&d_b, sizeof(Scalar) * N);
+    cudaMalloc((void**)&d_r, sizeof(Scalar) * N);
+    cudaMalloc((void**)&d_rw, sizeof(Scalar) * N);
+    cudaMalloc((void**)&d_p, sizeof(Scalar) * N);
+    cudaMalloc((void**)&d_pw, sizeof(Scalar) * N);
+    cudaMalloc((void**)&d_s, sizeof(Scalar) * N);
+    cudaMalloc((void**)&d_t, sizeof(Scalar) * N);
+    cudaMalloc((void**)&d_v, sizeof(Scalar) * N);
+    cudaMalloc((void**)&d_bVals, sizeof(Scalar) * nnz);
     cudaMalloc((void**)&d_bCols, sizeof(int) * nnzb);
     cudaMalloc((void**)&d_bRows, sizeof(int) * (Nb + 1));
     if (useJacMatrix) {
-        cudaMalloc((void**)&d_mVals, sizeof(double) * nnzbs_prec * block_size * block_size);
+        cudaMalloc((void**)&d_mVals, sizeof(Scalar) * nnzbs_prec * block_size * block_size);
         cudaMalloc((void**)&d_mCols, sizeof(int) * nnzbs_prec);
         cudaMalloc((void**)&d_mRows, sizeof(int) * (Nb + 1));
     } else {
-        cudaMalloc((void**)&d_mVals, sizeof(double) * nnz);
+        cudaMalloc((void**)&d_mVals, sizeof(Scalar) * nnz);
         d_mCols = d_bCols;
         d_mRows = d_bRows;
     }
     cudaCheckLastError("Could not allocate enough memory on GPU");
 
 #if COPY_ROW_BY_ROW
-    cudaMallocHost((void**)&vals_contiguous, sizeof(double) * nnz);
+    cudaMallocHost((void**)&vals_contiguous, sizeof(Scalar) * nnz);
     cudaCheckLastError("Could not allocate pinned memory");
 #endif
 
     initialized = true;
 } // end initialize()
 
-template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::finalize() {
+template<class Scalar, unsigned int block_size>
+void cusparseSolverBackend<Scalar,block_size>::finalize()
+{
     if (initialized) {
         cudaFree(d_x);
         cudaFree(d_b);
@@ -307,40 +314,54 @@ void cusparseSolverBackend<block_size>::finalize() {
     }
 } // end finalize()
 
-
-template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::copy_system_to_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix) {
+template<class Scalar, unsigned int block_size>
+void cusparseSolverBackend<Scalar,block_size>::
+copy_system_to_gpu(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+                   Scalar* b,
+                   std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix)
+{
     Timer t;
 
-    cudaMemcpyAsync(d_bCols, matrix->colIndices, nnzb * sizeof(int), cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_bRows, matrix->rowPointers, (Nb + 1) * sizeof(int), cudaMemcpyHostToDevice, stream);
-    cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
-    cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
+    cudaMemcpyAsync(d_bCols, matrix->colIndices, nnzb * sizeof(int),
+                    cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_bRows, matrix->rowPointers, (Nb + 1) * sizeof(int),
+                    cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_b, b, N * sizeof(Scalar), cudaMemcpyHostToDevice, stream);
+    cudaMemsetAsync(d_x, 0, N * sizeof(Scalar), stream);
 
 #if COPY_ROW_BY_ROW
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
         int size_row = matrix->rowPointers[i + 1] - matrix->rowPointers[i];
-        memcpy(vals_contiguous + sum, matrix->nnzValues + sum, size_row * sizeof(double) * block_size * block_size);
+        memcpy(vals_contiguous + sum, matrix->nnzValues + sum,
+               size_row * sizeof(Scalar) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
-    cudaMemcpyAsync(d_bVals, vals_contiguous, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_bVals, vals_contiguous,
+                    nnz * sizeof(Scalar), cudaMemcpyHostToDevice, stream);
 #else
-    cudaMemcpyAsync(d_bVals, matrix->nnzValues, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_bVals, matrix->nnzValues,
+                    nnz * sizeof(Scalar), cudaMemcpyHostToDevice, stream);
     if (useJacMatrix) {
 #if HAVE_OPENMP
 	if(omp_get_max_threads() > 1)
 	   copyThread->join();
 #endif
-        cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, nnzbs_prec * block_size * block_size * sizeof(double), cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues,
+                        nnzbs_prec * block_size * block_size * sizeof(Scalar),
+                        cudaMemcpyHostToDevice, stream);
     } else {
-        cudaMemcpyAsync(d_mVals, d_bVals, nnz  * sizeof(double), cudaMemcpyDeviceToDevice, stream);
+        cudaMemcpyAsync(d_mVals, d_bVals,
+                        nnz  * sizeof(Scalar),
+                        cudaMemcpyDeviceToDevice, stream);
     }
 #endif
 
     if (useJacMatrix) {
-        cudaMemcpyAsync(d_mCols, jacMatrix->colIndices, nnzbs_prec * sizeof(int), cudaMemcpyHostToDevice, stream);
-        cudaMemcpyAsync(d_mRows, jacMatrix->rowPointers, (Nb + 1) * sizeof(int), cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(d_mCols, jacMatrix->colIndices, nnzbs_prec * sizeof(int),
+                        cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(d_mRows, jacMatrix->rowPointers, (Nb + 1) * sizeof(int),
+                        cudaMemcpyHostToDevice, stream);
     }
 
     if (verbosity >= 3) {
@@ -353,33 +374,43 @@ void cusparseSolverBackend<block_size>::copy_system_to_gpu(std::shared_ptr<Block
     }
 } // end copy_system_to_gpu()
 
-
 // don't copy rowpointers and colindices, they stay the same
-template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::update_system_on_gpu(std::shared_ptr<BlockedMatrix> matrix, double *b, std::shared_ptr<BlockedMatrix> jacMatrix) {
+template<class Scalar, unsigned int block_size>
+void cusparseSolverBackend<Scalar,block_size>::
+update_system_on_gpu(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+                     Scalar* b,
+                     std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix)
+{
     Timer t;
 
-    cudaMemcpyAsync(d_b, b, N * sizeof(double), cudaMemcpyHostToDevice, stream);
-    cudaMemsetAsync(d_x, 0, sizeof(double) * N, stream);
+    cudaMemcpyAsync(d_b, b, N * sizeof(Scalar), cudaMemcpyHostToDevice, stream);
+    cudaMemsetAsync(d_x, 0, sizeof(Scalar) * N, stream);
     
 #if COPY_ROW_BY_ROW
     int sum = 0;
     for (int i = 0; i < Nb; ++i) {
         int size_row = matrix->rowPointers[i + 1] - matrix->rowPointers[i];
-        memcpy(vals_contiguous + sum, matrix->nnzValues + sum, size_row * sizeof(double) * block_size * block_size);
+        memcpy(vals_contiguous + sum, matrix->nnzValues + sum,
+               size_row * sizeof(Scalar) * block_size * block_size);
         sum += size_row * block_size * block_size;
     }
-    cudaMemcpyAsync(d_bVals, vals_contiguous, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_bVals, vals_contiguous,
+                    nnz * sizeof(Scalar), cudaMemcpyHostToDevice, stream);
 #else
-    cudaMemcpyAsync(d_bVals, matrix->nnzValues, nnz * sizeof(double), cudaMemcpyHostToDevice, stream);
+    cudaMemcpyAsync(d_bVals, matrix->nnzValues,
+                    nnz * sizeof(Scalar), cudaMemcpyHostToDevice, stream);
     if (useJacMatrix) {
 #if HAVE_OPENMP
-	if(omp_get_max_threads() > 1)
-	   copyThread->join();
+        if (omp_get_max_threads() > 1) {
+           copyThread->join();
+        }
 #endif
-        cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, nnzbs_prec * block_size * block_size * sizeof(double), cudaMemcpyHostToDevice, stream);
+        cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, 
+                        nnzbs_prec * block_size * block_size * sizeof(Scalar),
+                        cudaMemcpyHostToDevice, stream);
     } else {
-        cudaMemcpyAsync(d_mVals, d_bVals, nnz  * sizeof(double), cudaMemcpyDeviceToDevice, stream);
+        cudaMemcpyAsync(d_mVals, d_bVals, nnz  * sizeof(Scalar),
+                        cudaMemcpyDeviceToDevice, stream);
     }
 #endif
 
@@ -394,10 +425,9 @@ void cusparseSolverBackend<block_size>::update_system_on_gpu(std::shared_ptr<Blo
     }
 } // end update_system_on_gpu()
 
-
-template <unsigned int block_size>
-bool cusparseSolverBackend<block_size>::analyse_matrix() {
-
+template<class Scalar, unsigned int block_size>
+bool cusparseSolverBackend<Scalar,block_size>::analyse_matrix()
+{
     int d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
     Timer t;
 
@@ -472,8 +502,9 @@ bool cusparseSolverBackend<block_size>::analyse_matrix() {
     return true;
 } // end analyse_matrix()
 
-template <unsigned int block_size>
-bool cusparseSolverBackend<block_size>::create_preconditioner() {
+template<class Scalar, unsigned int block_size>
+bool cusparseSolverBackend<Scalar,block_size>::create_preconditioner()
+{
     Timer t;
 
     cusparseDbsrilu02(cusparseHandle, order, \
@@ -497,23 +528,24 @@ bool cusparseSolverBackend<block_size>::create_preconditioner() {
     return true;
 } // end create_preconditioner()
 
-
-template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::solve_system(WellContributions& wellContribs, BdaResult &res) {
+template<class Scalar, unsigned int block_size>
+void cusparseSolverBackend<Scalar,block_size>::
+solve_system(WellContributions<Scalar>& wellContribs, BdaResult& res)
+{
     // actually solve
     gpu_pbicgstab(wellContribs, res);
     cudaStreamSynchronize(stream);
     cudaCheckLastError("Something went wrong during the GPU solve");
 } // end solve_system()
 
-
 // copy result to host memory
 // caller must be sure that x is a valid array
-template <unsigned int block_size>
-void cusparseSolverBackend<block_size>::get_result(double *x) {
+template<class Scalar, unsigned int block_size>
+void cusparseSolverBackend<Scalar,block_size>::get_result(Scalar* x)
+{
     Timer t;
 
-    cudaMemcpyAsync(x, d_x, N * sizeof(double), cudaMemcpyDeviceToHost, stream);
+    cudaMemcpyAsync(x, d_x, N * sizeof(Scalar), cudaMemcpyDeviceToHost, stream);
     cudaStreamSynchronize(stream);
 
     if (verbosity > 2) {
@@ -523,14 +555,13 @@ void cusparseSolverBackend<block_size>::get_result(double *x) {
     }
 } // end get_result()
 
-
-
-template <unsigned int block_size>
-SolverStatus cusparseSolverBackend<block_size>::solve_system(std::shared_ptr<BlockedMatrix> matrix,
-                                                              double *b,
-                                                              std::shared_ptr<BlockedMatrix> jacMatrix,
-                                                              WellContributions& wellContribs,
-                                                              BdaResult &res)
+template<class Scalar, unsigned int block_size>
+SolverStatus cusparseSolverBackend<Scalar,block_size>::
+solve_system(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+             Scalar* b,
+             std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
+             WellContributions<Scalar>& wellContribs,
+             BdaResult& res)
 {
     if (initialized == false) {
         initialize(matrix, jacMatrix);
@@ -551,18 +582,14 @@ SolverStatus cusparseSolverBackend<block_size>::solve_system(std::shared_ptr<Blo
     return SolverStatus::BDA_SOLVER_SUCCESS;
 }
 
+#define INSTANTIATE_TYPE(T)                    \
+    template class cusparseSolverBackend<T,1>; \
+    template class cusparseSolverBackend<T,2>; \
+    template class cusparseSolverBackend<T,3>; \
+    template class cusparseSolverBackend<T,4>; \
+    template class cusparseSolverBackend<T,5>; \
+    template class cusparseSolverBackend<T,6>;
 
-#define INSTANTIATE_BDA_FUNCTIONS(n)                                                       \
-template cusparseSolverBackend<n>::cusparseSolverBackend(int, int, double, unsigned int);  \
+INSTANTIATE_TYPE(double)
 
-INSTANTIATE_BDA_FUNCTIONS(1);
-INSTANTIATE_BDA_FUNCTIONS(2);
-INSTANTIATE_BDA_FUNCTIONS(3);
-INSTANTIATE_BDA_FUNCTIONS(4);
-INSTANTIATE_BDA_FUNCTIONS(5);
-INSTANTIATE_BDA_FUNCTIONS(6);
-
-#undef INSTANTIATE_BDA_FUNCTIONS
-
-} // namespace Accelerator
-} // namespace Opm
+} // namespace Opm::Accelerator

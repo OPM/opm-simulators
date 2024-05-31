@@ -198,7 +198,7 @@ recoverSolutionWell(const BVector& x, BVectorWell& xw) const
 template<class Scalar, int numEq>
 void StandardWellEquations<Scalar,numEq>::
 extract(const int numStaticWellEq,
-        WellContributions& wellContribs) const
+        WellContributions<Scalar>& wellContribs) const
 {
     std::vector<int> colIndices;
     std::vector<Scalar> nnzValues;
@@ -216,7 +216,7 @@ extract(const int numStaticWellEq,
             }
         }
     }
-    wellContribs.addMatrix(WellContributions::MatrixType::C,
+    wellContribs.addMatrix(WellContributions<Scalar>::MatrixType::C,
                            colIndices.data(), nnzValues.data(), duneC_.nonzeroes());
 
     // invDuneD
@@ -229,7 +229,7 @@ extract(const int numStaticWellEq,
             nnzValues.emplace_back(invDuneD_[0][0][i][j]);
         }
     }
-    wellContribs.addMatrix(WellContributions::MatrixType::D,
+    wellContribs.addMatrix(WellContributions<Scalar>::MatrixType::D,
                            colIndices.data(), nnzValues.data(), 1);
 
     // duneB
@@ -245,7 +245,7 @@ extract(const int numStaticWellEq,
             }
         }
     }
-    wellContribs.addMatrix(WellContributions::MatrixType::B,
+    wellContribs.addMatrix(WellContributions<Scalar>::MatrixType::B,
                            colIndices.data(), nnzValues.data(), duneB_.nonzeroes());
 }
 #endif

@@ -31,7 +31,7 @@ endif()
 foreach(CL ${CL_LIST})
   get_filename_component(FNAME ${CL} NAME_WE)
 
-  file(APPEND ${CL_SRC_FILE} "const std::string OpenclKernels::${FNAME}_str = R\"\( \n")
+  file(APPEND ${CL_SRC_FILE} "template<> const std::string OpenclKernels<double>::${FNAME}_str = R\"\( \n")
   file(READ "${CL}" CL_CONTENT)
   file(APPEND ${CL_SRC_FILE} "${CL_CONTENT}")
   file(APPEND ${CL_SRC_FILE} "\)\"; \n\n")

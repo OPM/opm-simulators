@@ -29,17 +29,17 @@ namespace Accelerator
 
 /// This struct resembles a csr matrix, only doubles are supported
 /// The data is stored in contiguous memory, such that they can be copied to a device in one transfer.
-class Matrix {
-
+template<class Scalar>
+class Matrix
+{
 public:
-
     /// Allocate square Matrix and data arrays with given sizes
     /// \param[in] N               number of rows
     /// \param[in] nnzs            number of nonzeros
     Matrix(int N_, int nnzs_)
-    : N(N_),
-      M(N_),
-      nnzs(nnzs_)
+        : N(N_)
+        , M(N_)
+        , nnzs(nnzs_)
     {
         nnzValues.resize(nnzs);
         colIndices.resize(nnzs);
@@ -51,12 +51,12 @@ public:
     /// \param[in] M               number of columns
     /// \param[in] nnzs            number of nonzeros
     Matrix(int N_, int M_, int nnzs_)
-    : Matrix(N_, nnzs_)
+        : Matrix(N_, nnzs_)
     {
         M = M_;
     }
 
-    std::vector<double> nnzValues;
+    std::vector<Scalar> nnzValues;
     std::vector<int> colIndices;
     std::vector<int> rowPointers;
     int N, M;

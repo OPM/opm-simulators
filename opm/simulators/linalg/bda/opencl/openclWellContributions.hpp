@@ -29,10 +29,10 @@
 #include <vector>
 
 
-namespace Opm
-{
+namespace Opm {
 
-class WellContributionsOCL : public WellContributions
+template<class Scalar>
+class WellContributionsOCL : public WellContributions<Scalar>
 {
 public:
     void setOpenCLEnv(cl::Context *context_, cl::CommandQueue *queue_);
@@ -45,7 +45,10 @@ protected:
     /// Allocate memory for the StandardWells
     void APIalloc() override;
 
-    void APIaddMatrix(MatrixType type, int *colIndices, double *values, unsigned int val_size) override;
+    using MatrixType = typename WellContributions<Scalar>::MatrixType;
+
+    void APIaddMatrix(MatrixType type, int* colIndices,
+                      Scalar* values, unsigned int val_size) override;
 
     cl::Context* context;
     cl::CommandQueue* queue;
@@ -55,10 +58,10 @@ protected:
     std::unique_ptr<cl::Buffer> d_Ccols_ocl, d_Bcols_ocl;
     std::unique_ptr<cl::Buffer> d_val_pointers_ocl;
 
-    std::vector<double> h_x;
-    std::vector<double> h_y;
+    std::vector<Scalar> h_x;
+    std::vector<Scalar> h_y;
 };
 
-} //namespace Opm
+} // namespace Opm
 
 #endif

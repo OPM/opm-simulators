@@ -90,7 +90,7 @@ struct EnableTerminalOutput {
 namespace Opm {
 
 #if COMPILE_BDA_BRIDGE
-class WellContributions;
+template<class Scalar> class WellContributions;
 #endif
 
         /// Class for handling the blackoil well model.
@@ -287,7 +287,7 @@ class WellContributions;
 
 #if COMPILE_BDA_BRIDGE
             // accumulate the contributions of all Wells in the WellContributions object
-            void getWellContributions(WellContributions& x) const;
+            void getWellContributions(WellContributions<Scalar>& x) const;
 #endif
 
             // apply well model with scaling of alpha
