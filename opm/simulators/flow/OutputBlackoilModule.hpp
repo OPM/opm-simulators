@@ -972,7 +972,7 @@ public:
                         val.second = press - density*dz*grav;
                     }
                     else if ((key.first == "BFLOWI") ||
-                             (key.first == "BLFOWJ") ||
+                             (key.first == "BFLOWJ") ||
                              (key.first == "BFLOWK"))
                     {
                         auto dir = FaceDir::ToIntersectionIndex(Dir::XPlus);
