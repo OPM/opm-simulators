@@ -74,8 +74,8 @@ public:
      *
      * This is used for the restart capability.
      */
-    void setFromRestart(const std::vector<Scalar>& values)
-    { thpres_ = values; }
+    void setFromRestart(const std::vector<double>& values)
+    { thpres_.assign(values.begin(), values.end()); }
 
     //! \brief Returns a fully expanded vector for restart file writing.
     //! \details Returns the union of explicitly configured entries and defaulted values.
