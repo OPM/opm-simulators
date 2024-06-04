@@ -343,8 +343,39 @@ public:
     void finishInit()
     {
         ParentType::finishInit();
-
         auto& simulator = this->simulator();
+
+        bool transmissiblity_updated = false;
+        auto processTransmissibilities = [&simulator, &transmissiblity_updated, this]() {
+            // Re-ordering in case of ALUGrid
+            auto gridToEquilGrid = [&simulator](unsigned int i) -> unsigned int {
+                return simulator.vanguard().gridIdxToEquilGridIdx(i);
+            };
+
+            transmissibilities_.finishInit(gridToEquilGrid);
+            transmissiblity_updated = true;
+        };
+
+        // calculating the TRANX, TRANY, TRANZ and NNC for output purpose
+        // for parallel running, it is based on global trans_
+        // for serial running, it is based on the transmissibilities_
+        // we try to avoid for the parallel running, has both global trans_ and transmissibilities_ allocated at the same time
+        if (enableEclOutput_) {
+            if (simulator.vanguard().grid().comm().size() > 1) {
+                if (simulator.vanguard().grid().comm().rank() == 0)
+                    eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
+            } else {
+                processTransmissibilities();
+                eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
+            }
+
+            std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
+                return simulator.vanguard().gridEquilIdxToGridIdx(i);
+            };
+            eclWriter_->extractOutputTransAndNNC(equilGridToGrid);
+        }
+        simulator.vanguard().releaseGlobalTransmissibilities();
+
         const auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
 
@@ -401,11 +432,15 @@ public:
         readMaterialParameters_();
         readThermalParameters_();
 
-        // Re-ordering in case of ALUGrid
-        std::function<unsigned int(unsigned int)> gridToEquilGrid = [&simulator](unsigned int i) {
-            return simulator.vanguard().gridIdxToEquilGridIdx(i);
-        };
-        transmissibilities_.finishInit(gridToEquilGrid);
+        // write the static output files (EGRID, INIT)
+        if (enableEclOutput_) {
+            eclWriter_->writeInit();
+        }
+
+        if (!transmissiblity_updated) {
+            processTransmissibilities();
+        }
+
 
         const auto& initconfig = eclState.getInitConfig();
         tracerModel_.init(initconfig.restartRequested());
@@ -434,23 +469,6 @@ public:
             drift_.resize(this->model().numGridDof());
             drift_ = 0.0;
         }
-
-        // write the static output files (EGRID, INIT, SMSPEC, etc.)
-        if (enableEclOutput_) {
-            if (simulator.vanguard().grid().comm().size() > 1) {
-                if (simulator.vanguard().grid().comm().rank() == 0)
-                    eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
-            } else
-                eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
-
-            // Re-ordering in case of ALUGrid
-            std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
-                return simulator.vanguard().gridEquilIdxToGridIdx(i);
-            };
-            eclWriter_->writeInit(equilGridToGrid);
-        }
-
-        simulator.vanguard().releaseGlobalTransmissibilities();
 
         // after finishing the initialization and writing the initial solution, we move
         // to the first "real" episode/report step

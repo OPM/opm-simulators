@@ -241,7 +241,7 @@ eclIO() const
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-writeInit(const std::function<unsigned int(unsigned int)>& map)
+writeInit()
 {
     if (collectOnIORank_.isIORank()) {
         std::map<std::string, std::vector<int>> integerVectors;
@@ -249,11 +249,21 @@ writeInit(const std::function<unsigned int(unsigned int)>& map)
             integerVectors.emplace("MPI_RANK", collectOnIORank_.globalRanks());
         }
 
-        auto cartMap = cartesianToCompressed(equilGrid_->size(0), UgGridHelpers::globalCell(*equilGrid_));
-
-        eclIO_->writeInitial(computeTrans_(cartMap, map),
+        eclIO_->writeInitial(*this->outputTrans_,
                              integerVectors,
-                             exportNncStructure_(cartMap, map));
+                             this->outputNnc_);
+        this->outputTrans_.reset();
+    }
+}
+template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
+void
+EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
+extractOutputTransAndNNC(const std::function<unsigned int(unsigned int)>& map)
+{
+    if (collectOnIORank_.isIORank()) {
+        auto cartMap = cartesianToCompressed(equilGrid_->size(0), UgGridHelpers::globalCell(*equilGrid_));
+        this->outputTrans_ = std::make_unique<data::Solution>(computeTrans_(cartMap, map));
+        exportNncStructure_(cartMap, map);
     }
 
 #if HAVE_MPI
