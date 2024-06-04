@@ -36,7 +36,7 @@ namespace Opm::Accelerator {
 using Dune::Timer;
 
 template<class Scalar, unsigned int block_size>
-BILU0<Scalar,block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_)
+openclBILU0<Scalar,block_size>::openclBILU0(bool opencl_ilu_parallel_, int verbosity_)
     : Base(verbosity_)
     , opencl_ilu_parallel(opencl_ilu_parallel_)
 {
@@ -46,13 +46,13 @@ BILU0<Scalar,block_size>::BILU0(bool opencl_ilu_parallel_, int verbosity_)
 }
 
 template<class Scalar, unsigned int block_size>
-bool BILU0<Scalar,block_size>::analyze_matrix(BlockedMatrix<Scalar>* mat)
+bool openclBILU0<Scalar,block_size>::analyze_matrix(BlockedMatrix<Scalar>* mat)
 {
     return analyze_matrix(mat, nullptr);
 }
 
 template<class Scalar, unsigned int block_size>
-bool BILU0<Scalar,block_size>::
+bool openclBILU0<Scalar,block_size>::
 analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 {
     const unsigned int bs = block_size;
@@ -80,7 +80,7 @@ analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
                         CSCRowIndices.data(), CSCColPointers.data(), Nb);
         if(verbosity >= 3){
             std::ostringstream out;
-            out << "BILU0 convert CSR to CSC: " << t_convert.stop() << " s";
+            out << "openclBILU0 convert CSR to CSC: " << t_convert.stop() << " s";
             OpmLog::info(out.str());
         }
     } else {
@@ -105,11 +105,11 @@ analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
     }
 
     if (verbosity >= 1) {
-        out << "BILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors\n";
+        out << "openclBILU0 analysis took: " << t_analysis.stop() << " s, " << numColors << " colors\n";
     }
 
 #if CHOW_PATEL
-    out << "BILU0 CHOW_PATEL: " << CHOW_PATEL << ", CHOW_PATEL_GPU: " << CHOW_PATEL_GPU;
+    out << "openclBILU0 CHOW_PATEL: " << CHOW_PATEL << ", CHOW_PATEL_GPU: " << CHOW_PATEL_GPU;
 #endif
     OpmLog::info(out.str());
 
@@ -169,20 +169,20 @@ analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
     events.clear();
     if (err != CL_SUCCESS) {
         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-        OPM_THROW(std::logic_error, "BILU0 OpenCL enqueueWriteBuffer error");
+        OPM_THROW(std::logic_error, "openclBILU0 OpenCL enqueueWriteBuffer error");
     }
 
     return true;
 }
 
 template<class Scalar, unsigned int block_size>
-bool BILU0<Scalar,block_size>::create_preconditioner(BlockedMatrix<Scalar>* mat)
+bool openclBILU0<Scalar,block_size>::create_preconditioner(BlockedMatrix<Scalar>* mat)
 {
     return create_preconditioner(mat, nullptr);
 }
 
 template<class Scalar, unsigned int block_size>
-bool BILU0<Scalar,block_size>::
+bool openclBILU0<Scalar,block_size>::
 create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 {
     const unsigned int bs = block_size;
@@ -196,7 +196,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 
     if (verbosity >= 3){
         std::ostringstream out;
-        out << "BILU0 memcpy: " << t_copy.stop() << " s";
+        out << "openclBILU0 memcpy: " << t_copy.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -239,12 +239,12 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
     events.clear();
     if (err != CL_SUCCESS) {
         // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-        OPM_THROW(std::logic_error, "BILU0 OpenCL enqueueWriteBuffer error");
+        OPM_THROW(std::logic_error, "openclBILU0 OpenCL enqueueWriteBuffer error");
     }
 
     if (verbosity >= 3) {
         std::ostringstream out;
-        out << "BILU0 copy to GPU: " << t_copyToGpu.stop() << " s";
+        out << "openclBILU0 copy to GPU: " << t_copyToGpu.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -264,7 +264,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 
     if (verbosity >= 3) {
         queue->finish();
-        out << "BILU0 decomposition: " << t_decomposition.stop() << " s";
+        out << "openclBILU0 decomposition: " << t_decomposition.stop() << " s";
         OpmLog::info(out.str());
     }
 #endif // CHOW_PATEL
@@ -276,7 +276,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 // however, if individual kernel calls are timed, waiting for events is needed
 // behavior on other GPUs is untested
 template<class Scalar, unsigned int block_size>
-void BILU0<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
+void openclBILU0<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 {
     const Scalar relaxation = 0.9;
     cl::Event event;
@@ -311,18 +311,18 @@ void BILU0<Scalar,block_size>::apply(const cl::Buffer& y, cl::Buffer& x)
 
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "BILU0 apply: " << t_apply.stop() << " s";
+        out << "openclBILU0 apply: " << t_apply.stop() << " s";
         OpmLog::info(out.str());
     }
 }
 
 #define INSTANCE_TYPE(T)       \
-    template class BILU0<T,1>; \
-    template class BILU0<T,2>; \
-    template class BILU0<T,3>; \
-    template class BILU0<T,4>; \
-    template class BILU0<T,5>; \
-    template class BILU0<T,6>;
+    template class openclBILU0<T,1>; \
+    template class openclBILU0<T,2>; \
+    template class openclBILU0<T,3>; \
+    template class openclBILU0<T,4>; \
+    template class openclBILU0<T,5>; \
+    template class openclBILU0<T,6>;
 
 INSTANCE_TYPE(double)
 

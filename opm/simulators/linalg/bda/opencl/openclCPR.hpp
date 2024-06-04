@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_CPR_HPP
-#define OPM_CPR_HPP
+#ifndef OPM_OPENCLCPR_HPP
+#define OPM_OPENCLCPR_HPP
 
 #include <mutex>
 
@@ -29,7 +29,7 @@
 #include <opm/simulators/linalg/bda/opencl/openclBILU0.hpp>
 #include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp>
-#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclPreconditioner.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp>
 
@@ -39,9 +39,9 @@ template<class Scalar> class BlockedMatrix;
 
 /// This class implements a Constrained Pressure Residual (CPR) preconditioner
 template<class Scalar, unsigned int block_size>
-class CPR : public Preconditioner<Scalar,block_size>
+class openclCPR : public openclPreconditioner<Scalar,block_size>
 {
-    using Base = Preconditioner<Scalar,block_size>;
+    using Base = openclPreconditioner<Scalar,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -69,7 +69,7 @@ private:
     std::unique_ptr<cl::Buffer> d_coarse_y, d_coarse_x; // stores the scalar vectors
     std::once_flag opencl_buffers_allocated;  // only allocate OpenCL Buffers once
 
-    std::unique_ptr<BILU0<Scalar,block_size>> bilu0;                    // Blocked ILU0 preconditioner
+    std::unique_ptr<openclBILU0<Scalar,block_size>> bilu0;                    // Blocked ILU0 preconditioner
     BlockedMatrix<Scalar>* mat = nullptr;    // input matrix, blocked
 
     using DuneMat = Dune::BCRSMatrix<Dune::FieldMatrix<Scalar, 1, 1> >;
@@ -112,7 +112,7 @@ private:
     void create_preconditioner_amg(BlockedMatrix<Scalar>* mat);
 
 public:
-    CPR(bool opencl_ilu_parallel, int verbosity);
+    openclCPR(bool opencl_ilu_parallel, int verbosity);
 
     bool analyze_matrix(BlockedMatrix<Scalar>* mat) override;
     bool analyze_matrix(BlockedMatrix<Scalar>* mat,
@@ -125,6 +125,7 @@ public:
     // applies blocked ilu0
     // also applies amg for pressure component
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
+    void apply(double& y, double& x) {}
 
     bool create_preconditioner(BlockedMatrix<Scalar>* mat) override;
     bool create_preconditioner(BlockedMatrix<Scalar>* mat,

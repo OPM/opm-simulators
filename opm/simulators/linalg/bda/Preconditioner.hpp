@@ -1,5 +1,5 @@
 /*
-  Copyright 2021 Equinor ASA
+  Copyright 2024 Equinor ASA
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -20,11 +20,17 @@
 #ifndef OPM_PRECONDITIONER_HEADER_INCLUDED
 #define OPM_PRECONDITIONER_HEADER_INCLUDED
 
+#if HAVE_OPENCL
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-
-#include <memory>
+#endif
 
 namespace Opm::Accelerator {
+
+enum PreconditionerType {
+    BILU0,
+    CPR,
+    BISAI
+};
 
 template<class Scalar> class BlockedMatrix;
 
@@ -38,47 +44,38 @@ protected:
     int nnzb = 0;    // number of blocks of the matrix
     int verbosity = 0;
 
-    std::shared_ptr<cl::Context> context;
-    std::shared_ptr<cl::CommandQueue> queue;
-    std::vector<cl::Event> events;
-    cl_int err;
-
     Preconditioner(int verbosity_) :
     verbosity(verbosity_)
     {};
 
 public:
-    enum class Type {
-        BILU0,
-        CPR,
-        BISAI
-    };
 
-    static std::unique_ptr<Preconditioner> create(Type type,
+    virtual ~Preconditioner() = default;
+    
+    static std::unique_ptr<Preconditioner> create(PreconditionerType type,
                                                   bool opencl_ilu_parallel,
                                                   int verbosity);
 
-    virtual ~Preconditioner() = default;
-
-    // nested Preconditioners might need to override this
-    virtual void setOpencl(std::shared_ptr<cl::Context>& context,
-                           std::shared_ptr<cl::CommandQueue>& queue);
-
+#if HAVE_OPENCL
     // apply preconditioner, x = prec(y)
     virtual void apply(const cl::Buffer& y, cl::Buffer& x) = 0;
+#endif
+
+    // apply preconditioner, x = prec(y)
+    virtual void apply(double& y, double& x) = 0;
 
     // analyze matrix, e.g. the sparsity pattern
     // probably only called once
     // the version with two params can be overloaded, if not, it will default to using the one param version
     virtual bool analyze_matrix(BlockedMatrix<Scalar>* mat) = 0;
     virtual bool analyze_matrix(BlockedMatrix<Scalar>* mat,
-                                BlockedMatrix<Scalar>* jacMat);
+                                BlockedMatrix<Scalar>* jacMat) = 0;
 
     // create/update preconditioner, probably used every linear solve
     // the version with two params can be overloaded, if not, it will default to using the one param version
     virtual bool create_preconditioner(BlockedMatrix<Scalar>* mat) = 0;
     virtual bool create_preconditioner(BlockedMatrix<Scalar>* mat,
-                                       BlockedMatrix<Scalar>* jacMat);
+                                       BlockedMatrix<Scalar>* jacMat) = 0;
 };
 
 } // namespace Opm::Accelerator

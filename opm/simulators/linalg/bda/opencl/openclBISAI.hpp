@@ -17,14 +17,14 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef BISAI_HPP
-#define BISAI_HPP
+#ifndef OPM_OPENCLBISAI_HPP
+#define OPM_OPENCLBISAI_HPP
 
 #include <mutex>
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 #include <opm/simulators/linalg/bda/opencl/openclBILU0.hpp>
-#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclPreconditioner.hpp>
 
 namespace Opm::Accelerator {
 
@@ -33,9 +33,9 @@ template<class Scalar> class BlockedMatrix;
 /// This class implements a Blocked version of the Incomplete Sparse Approximate Inverse (ISAI) preconditioner.
 /// Inspired by the paper "Incomplete Sparse Approximate Inverses for Parallel Preconditioning" by Anzt et. al.
 template<class Scalar, unsigned int block_size>
-class BISAI : public Preconditioner<Scalar,block_size>
+class openclBISAI : public openclPreconditioner<Scalar,block_size>
 {
-    using Base = Preconditioner<Scalar,block_size>;
+    using Base = openclPreconditioner<Scalar,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -68,7 +68,7 @@ private:
     cl::Buffer d_invL_x;
 
     bool opencl_ilu_parallel;
-    std::unique_ptr<BILU0<Scalar,block_size>> bilu0;
+    std::unique_ptr<openclBILU0<Scalar,block_size>> bilu0;
 
     /// Struct that holds the structure of the small subsystems for each column
     struct subsystemStructure {
@@ -107,7 +107,7 @@ private:
     void buildUpperSubsystemsStructures();
 
 public:
-    BISAI(bool opencl_ilu_parallel, int verbosity);
+    openclBISAI(bool opencl_ilu_parallel, int verbosity);
 
     // set own Opencl variables, but also that of the bilu0 preconditioner
     void setOpencl(std::shared_ptr<cl::Context>& context,
@@ -125,6 +125,7 @@ public:
 
     // apply preconditioner, x = prec(y)
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
+    void apply(double& y, double& x) {}
 };
 
 /// Similar function to csrPatternToCsc. It gives an offset map from CSR to CSC instead of the full CSR to CSC conversion.

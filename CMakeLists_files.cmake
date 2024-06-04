@@ -256,7 +256,7 @@ if(USE_BDA_BRIDGE)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/opencl.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclKernels.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/OpenclMatrix.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/Preconditioner.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclPreconditioner.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclSolverBackend.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclWellContributions.cpp)
   endif()
@@ -650,6 +650,7 @@ if (USE_BDA_BRIDGE)
     opm/simulators/linalg/bda/BdaBridge.hpp
     opm/simulators/linalg/bda/BdaResult.hpp
     opm/simulators/linalg/bda/BdaSolver.hpp
+    opm/simulators/linalg/bda/Preconditioner.hpp
     opm/simulators/linalg/bda/opencl/openclBILU0.hpp
     opm/simulators/linalg/bda/BlockedMatrix.hpp
     opm/simulators/linalg/bda/opencl/openclCPR.hpp
@@ -661,7 +662,7 @@ if (USE_BDA_BRIDGE)
     opm/simulators/linalg/bda/opencl/opencl.hpp
     opm/simulators/linalg/bda/opencl/openclKernels.hpp
     opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp
-    opm/simulators/linalg/bda/opencl/Preconditioner.hpp
+    opm/simulators/linalg/bda/opencl/openclPreconditioner.hpp
     opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp
     opm/simulators/linalg/bda/opencl/openclWellContributions.hpp
     opm/simulators/linalg/bda/Matrix.hpp

@@ -17,15 +17,15 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef BILU0_HPP
-#define BILU0_HPP
+#ifndef OPM_OPENCLBILU0_HPP
+#define OPM_OPENCLBILU0_HPP
 
 #include <mutex>
 
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-#include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclPreconditioner.hpp>
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
 
 
@@ -35,9 +35,9 @@ namespace Opm::Accelerator {
 /// The decomposition is done on GPU, using exact decomposition, or ChowPatel decomposition
 /// The preconditioner is applied via two exact triangular solves
 template<class Scalar, unsigned int block_size>
-class BILU0 : public Preconditioner<Scalar,block_size>
+class openclBILU0 : public openclPreconditioner<Scalar,block_size>
 {
-    using Base = Preconditioner<Scalar,block_size>;
+    using Base = openclPreconditioner<Scalar,block_size>;
 
     using Base::N;
     using Base::Nb;
@@ -87,7 +87,7 @@ private:
 
 public:
 
-    BILU0(bool opencl_ilu_parallel, int verbosity);
+    openclBILU0(bool opencl_ilu_parallel, int verbosity);
 
     // analysis, extract parallelism if specified
     bool analyze_matrix(BlockedMatrix<Scalar>* mat) override;
@@ -103,6 +103,7 @@ public:
     // via Lz = y
     // and Ux = z
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
+    void apply(double& y, double& x) {}
 
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>>
     get_preconditioner_structure()

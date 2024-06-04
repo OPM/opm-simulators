@@ -40,17 +40,17 @@ using Opm::OpmLog;
 using Dune::Timer;
 
 template<class Scalar, unsigned int block_size>
-BISAI<Scalar,block_size>::BISAI(bool opencl_ilu_parallel_, int verbosity_)
+openclBISAI<Scalar,block_size>::openclBISAI(bool opencl_ilu_parallel_, int verbosity_)
     : Base(verbosity_)
 {
 #if CHOW_PATEL
     OPM_THROW(std::logic_error, "Error --linear-solver=isai cannot be used if ChowPatelIlu is used, probably defined by CMake\n");
 #endif
-    bilu0 = std::make_unique<BILU0<Scalar,block_size>>(opencl_ilu_parallel_, verbosity_);
+    bilu0 = std::make_unique<openclBILU0<Scalar,block_size>>(opencl_ilu_parallel_, verbosity_);
 }
 
 template<class Scalar, unsigned int block_size>
-void BISAI<Scalar,block_size>::
+void openclBISAI<Scalar,block_size>::
 setOpencl(std::shared_ptr<cl::Context>& context_,
           std::shared_ptr<cl::CommandQueue>& queue_)
 {
@@ -79,13 +79,13 @@ buildCsrToCscOffsetMap(std::vector<int> colPointers, std::vector<int> rowIndices
 }
 
 template<class Scalar, unsigned int block_size>
-bool BISAI<Scalar,block_size>::analyze_matrix(BlockedMatrix<Scalar>* mat)
+bool openclBISAI<Scalar,block_size>::analyze_matrix(BlockedMatrix<Scalar>* mat)
 {
     return analyze_matrix(mat, nullptr);
 }
 
 template<class Scalar, unsigned int block_size>
-bool BISAI<Scalar,block_size>::
+bool openclBISAI<Scalar,block_size>::
 analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 {
     const unsigned int bs = block_size;
@@ -108,7 +108,7 @@ analyze_matrix(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 }
 
 template<class Scalar, unsigned int block_size>
-void BISAI<Scalar,block_size>::buildLowerSubsystemsStructures()
+void openclBISAI<Scalar,block_size>::buildLowerSubsystemsStructures()
 {
     lower.subsystemPointers.assign(Nb + 1, 0);
 
@@ -138,14 +138,14 @@ void BISAI<Scalar,block_size>::buildLowerSubsystemsStructures()
 
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "BISAI buildLowerSubsystemsStructures time: "
+        out << "openclBISAI buildLowerSubsystemsStructures time: "
             << t_buildLowerSubsystemsStructures.stop() << " s";
         OpmLog::info(out.str());
     }
 }
 
 template<class Scalar, unsigned int block_size>
-void BISAI<Scalar,block_size>::buildUpperSubsystemsStructures()
+void openclBISAI<Scalar,block_size>::buildUpperSubsystemsStructures()
 {
     upper.subsystemPointers.assign(Nb + 1, 0);
 
@@ -175,14 +175,14 @@ void BISAI<Scalar,block_size>::buildUpperSubsystemsStructures()
 
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "BISAI buildUpperSubsystemsStructures time: "
+        out << "openclBISAI buildUpperSubsystemsStructures time: "
             << t_buildUpperSubsystemsStructures.stop() << " s";
         OpmLog::info(out.str());
     }
 }
 
 template<class Scalar, unsigned int block_size>
-bool BISAI<Scalar,block_size>::
+bool openclBISAI<Scalar,block_size>::
 create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 {
     const unsigned int bs = block_size;
@@ -300,7 +300,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 
         if (err != CL_SUCCESS) {
             // enqueueWriteBuffer is C and does not throw exceptions like C++ OpenCL
-            OPM_THROW(std::logic_error, "BISAI OpenCL enqueueWriteBuffer error");
+            OPM_THROW(std::logic_error, "openclBISAI OpenCL enqueueWriteBuffer error");
         }
     });
 
@@ -326,7 +326,7 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 
     if (verbosity >= 4) {
         std::ostringstream out;
-        out << "BISAI createPreconditioner time: " << t_preconditioner.stop() << " s";
+        out << "openclBISAI createPreconditioner time: " << t_preconditioner.stop() << " s";
         OpmLog::info(out.str());
     }
 
@@ -334,14 +334,14 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
 }
 
 template<class Scalar, unsigned int block_size>
-bool BISAI<Scalar,block_size>::
+bool openclBISAI<Scalar,block_size>::
 create_preconditioner(BlockedMatrix<Scalar>* mat)
 {
     return create_preconditioner(mat, nullptr);
 }
 
 template<class Scalar, unsigned int block_size>
-void BISAI<Scalar,block_size>::apply(const cl::Buffer& x, cl::Buffer& y)
+void openclBISAI<Scalar,block_size>::apply(const cl::Buffer& x, cl::Buffer& y)
 {
     const unsigned int bs = block_size;
 
@@ -354,12 +354,12 @@ void BISAI<Scalar,block_size>::apply(const cl::Buffer& x, cl::Buffer& y)
 }
 
 #define INSTANCE_TYPE(T)       \
-    template class BISAI<T,1>; \
-    template class BISAI<T,2>; \
-    template class BISAI<T,3>; \
-    template class BISAI<T,4>; \
-    template class BISAI<T,5>; \
-    template class BISAI<T,6>;
+    template class openclBISAI<T,1>; \
+    template class openclBISAI<T,2>; \
+    template class openclBISAI<T,3>; \
+    template class openclBISAI<T,4>; \
+    template class openclBISAI<T,5>; \
+    template class openclBISAI<T,6>;
 
 INSTANCE_TYPE(double)
 
