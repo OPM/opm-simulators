@@ -113,6 +113,7 @@ template void PropertyTree::put<std::string>(const std::string& key, const std::
 template void PropertyTree::put<float>(const std::string& key, const float& value);
 template void PropertyTree::put<double>(const std::string& key, const double& value);
 template void PropertyTree::put<int>(const std::string& key, const int& value);
+template void PropertyTree::put<bool>(const std::string& key, const bool& value);
 
 
 } // namespace Opm
