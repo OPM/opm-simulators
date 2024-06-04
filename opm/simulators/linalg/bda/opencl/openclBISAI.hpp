@@ -23,7 +23,7 @@
 #include <mutex>
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclBILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>
 
 namespace Opm::Accelerator {

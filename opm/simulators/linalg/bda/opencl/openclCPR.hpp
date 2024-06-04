@@ -26,7 +26,7 @@
 #include <dune/istl/umfpack.hh>
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclBILU0.hpp>
 #include <opm/simulators/linalg/bda/Matrix.hpp>
 #include <opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp>
 #include <opm/simulators/linalg/bda/opencl/Preconditioner.hpp>

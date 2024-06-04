@@ -23,9 +23,9 @@
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/ErrorMacros.hpp>
 
-#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
-#include <opm/simulators/linalg/bda/opencl/BISAI.hpp>
-#include <opm/simulators/linalg/bda/opencl/CPR.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclBILU0.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclBISAI.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclCPR.hpp>
 
 #include <memory>
 #include <string>

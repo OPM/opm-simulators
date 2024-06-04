@@ -24,7 +24,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <dune/common/timer.hh>
 
-#include <opm/simulators/linalg/bda/opencl/BILU0.hpp>
+#include <opm/simulators/linalg/bda/opencl/openclBILU0.hpp>
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
 #include <opm/simulators/linalg/bda/opencl/openclKernels.hpp>
 #include <opm/simulators/linalg/bda/Reorder.hpp>
