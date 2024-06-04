@@ -301,17 +301,4 @@ apply(double& y, double& x) {
     template class rocsparseBILU0<T,6>;
 
 INSTANCE_TYPE(double)
-// #define INSTANTIATE_BDA_FUNCTIONS(n) \
-// template class rocsparseBILU0<n>;
-// 
-// INSTANTIATE_BDA_FUNCTIONS(1);
-// INSTANTIATE_BDA_FUNCTIONS(2);
-// INSTANTIATE_BDA_FUNCTIONS(3);
-// INSTANTIATE_BDA_FUNCTIONS(4);
-// INSTANTIATE_BDA_FUNCTIONS(5);
-// INSTANTIATE_BDA_FUNCTIONS(6);
-// 
-// #undef INSTANTIATE_BDA_FUNCTIONS
-// 
-// } // namespace Accelerator
 } // namespace Opm
