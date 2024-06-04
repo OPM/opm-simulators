@@ -538,7 +538,7 @@ public:
             };
 
             // re-compute all quantities which may possibly be affected.
-            transmissibilities_.update(true, equilGridToGrid);
+            transmissibilities_.update(true, false, equilGridToGrid);
             this->referencePorosity_[1] = this->referencePorosity_[0];
             updateReferencePorosity_();
             updatePffDofData_();
@@ -701,7 +701,7 @@ public:
                               [this](const bool global)
             {
                 this->transmissibilities_
-                    .update(global, [&vg = this->simulator().vanguard()]
+                    .update(global, false, [&vg = this->simulator().vanguard()]
                             (const unsigned int i)
                     {
                         return vg.gridIdxToEquilGridIdx(i);
