@@ -280,8 +280,16 @@ namespace Opm
     {
         const auto& summary_state = simulator.vanguard().summaryState();
         const auto& schedule = simulator.vanguard().schedule();
+        auto& ws = well_state.well(this->index_of_well_);
+        std::string from;
+        if (this->isInjector()) {
+            from = WellInjectorCMode2String(ws.injection_cmode);
+        } else {
+            from = WellProducerCMode2String(ws.production_cmode);
+        }
+        const bool oscillating = std::count(this->well_control_log_.begin(), this->well_control_log_.end(), from) >= param_.max_number_of_well_switches_;
 
-        if (this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
+        if (oscillating || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger) || !(this->well_ecl_.getStatus() == WellStatus::OPEN)) {
            return false;
         }
 
@@ -293,7 +301,6 @@ namespace Opm
             } else {
                 bool changed = false;
                 if (!fixed_control) {
-                    auto& ws = well_state.well(this->index_of_well_);
                     const bool hasGroupControl = this->isInjector() ? inj_controls.hasControl(Well::InjectorCMode::GRUP) :
                                                                       prod_controls.hasControl(Well::ProducerCMode::GRUP);
 

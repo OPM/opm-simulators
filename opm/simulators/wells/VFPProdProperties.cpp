@@ -38,25 +38,19 @@ thp(const int    table_id,
     const Scalar liquid,
     const Scalar vapour,
     const Scalar bhp_arg,
-    const Scalar alq) const
+    const Scalar alq,
+    const Scalar explicit_wfr,
+    const Scalar explicit_gfr,
+    const bool   use_expvfp) const
 {
     const VFPProdTable& table = detail::getTable(m_tables, table_id);
 
-    // Find interpolation variables.
-    Scalar flo = 0.0;
-    Scalar wfr = 0.0;
-    Scalar gfr = 0.0;
-    if (aqua == 0.0 && liquid == 0.0 && vapour == 0.0) {
-        // All zero, likely at initial state.
-        // Set FLO variable to minimum to avoid extrapolation.
-        // The water and gas fractions are kept at 0.0.
-        flo = table.getFloAxis().front();
-    } else {
-        // The usual case.
-        // Recall that production rate is negative in Opm, so switch the sign.
-        flo = -detail::getFlo(table, aqua, liquid, vapour);
-        wfr = detail::getWFR(table, aqua, liquid, vapour);
-        gfr = detail::getGFR(table, aqua, liquid, vapour);
+    Scalar flo = detail::getFlo(table, aqua, liquid, vapour);
+    Scalar wfr = detail::getWFR(table, aqua, liquid, vapour);
+    Scalar gfr = detail::getGFR(table, aqua, liquid, vapour);
+    if (use_expvfp || -flo < table.getFloAxis().front()) {
+        wfr = explicit_wfr;
+        gfr = explicit_gfr;
     }
 
     const std::vector<double> thp_array = table.getTHPAxis();
@@ -67,7 +61,7 @@ thp(const int    table_id,
      * by interpolating for every value of thp. This might be somewhat
      * expensive, but let us assome that nthp is small.
      */
-    auto flo_i = VFPHelpers<Scalar>::findInterpData( flo, table.getFloAxis());
+    auto flo_i = VFPHelpers<Scalar>::findInterpData(-flo, table.getFloAxis());
     auto wfr_i = VFPHelpers<Scalar>::findInterpData( wfr, table.getWFRAxis());
     auto gfr_i = VFPHelpers<Scalar>::findInterpData( gfr, table.getGFRAxis());
     auto alq_i = VFPHelpers<Scalar>::findInterpData( alq, table.getALQAxis());
@@ -77,7 +71,7 @@ thp(const int    table_id,
         bhp_array[i] = VFPHelpers<Scalar>::interpolate(table, flo_i, thp_i, wfr_i, gfr_i, alq_i).value;
     }
 
-    return VFPHelpers<Scalar>::findTHP(bhp_array, thp_array, bhp_arg);
+    return VFPHelpers<Scalar>::findTHP(bhp_array, thp_array, bhp_arg, /*find_largest*/ true);
 }
 
 template<class Scalar>

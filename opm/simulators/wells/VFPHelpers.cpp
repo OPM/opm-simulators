@@ -363,7 +363,8 @@ template<class Scalar>
 Scalar VFPHelpers<Scalar>::
 findTHP(const std::vector<Scalar>& bhp_array,
         const std::vector<double>& thp_array,
-        Scalar bhp)
+        Scalar bhp, 
+        const bool find_largest)
 {
     int nthp = thp_array.size();
 
@@ -429,49 +430,79 @@ findTHP(const std::vector<Scalar>& bhp_array,
     }
     //bhp_array not sorted, raw search.
     else {
-        //Find i so that bhp_array[i-1] <= bhp <= bhp_array[i];
-        //Since the BHP values might not be sorted, first search within
-        //our interpolation values, and then try to extrapolate.
-        int i=0;
-        bool found = false;
-        for (; i<nthp-1; ++i) {
-            const Scalar& y0 = bhp_array[i  ];
-            const Scalar& y1 = bhp_array[i+1];
+        //Here we're into damage prevention territory, and there may be any number of  
+        //solutions (including zero). The well is currently not controlled by THP, and
+        //since we're doing severe extrapolaton we would also like, if possible, to prevent 
+        //it from switcing to THP. Accordingly, if there are multiple solutions, we return 
+        //the value for the intersection corresponding to the largest (smallest) THP-value 
+        //for producers (injectors). 
 
-            if (y0 < bhp && bhp <= y1) {
+        //first check which extrapolations are valid
+        const bool first_slope_positive = bhp_array[1] >= bhp_array[0];
+        const bool valid_low = (bhp < bhp_array[0] && first_slope_positive) || (bhp >= bhp_array[0] && !first_slope_positive);
+        const bool last_slope_positive = bhp_array[nthp-1] >= bhp_array[nthp-2];
+        const bool valid_high = (bhp > bhp_array[nthp-1] && last_slope_positive) || (bhp <= bhp_array[nthp-1] && !last_slope_positive);
+
+        bool found = false;
+        int array_ix = 0;
+        if (find_largest){//find intersection corresponding to the largest thp
+            // high extrap -> table interp -> low extrap
+            if (valid_high) {
                 found = true;
-                break;
+                array_ix = nthp-2;
+            } else {
+                //search backward within table
+                for (int i = nthp-2; i>=0; --i) {
+                    const Scalar& y0 = bhp_array[i  ];
+                    const Scalar& y1 = bhp_array[i+1];
+                    if (std::min(y0, y1) < bhp && bhp <= std::max(y0, y1)) {
+                        found = true;
+                        array_ix = i;
+                        break;
+                    }
+                }
+                if (!found && valid_low) {
+                    found = true;
+                    array_ix = 0;
+                }
+            }
+        } else {//find intersection corresponding to the smallest thp
+            //low extrap -> table interp -> high extrap
+            if (valid_low) {
+                found = true;
+                array_ix = 0;
+            } else {
+                //search forward within table
+                for (int i = 0; i<nthp-1; ++i) {
+                    const Scalar& y0 = bhp_array[i  ];
+                    const Scalar& y1 = bhp_array[i+1];
+                    if (std::min(y0, y1) < bhp && bhp <= std::max(y0, y1)) {
+                        found = true;
+                        array_ix = i;
+                        break;
+                    }
+                }
+                if (!found && valid_high) {
+                    found = true;
+                    array_ix = nthp-2;
+                }
             }
         }
         if (found) {
-            const Scalar& x0 = thp_array[i  ];
-            const Scalar& x1 = thp_array[i+1];
-            const Scalar& y0 = bhp_array[i  ];
-            const Scalar& y1 = bhp_array[i+1];
+            const Scalar& x0 = thp_array[array_ix  ];
+            const Scalar& x1 = thp_array[array_ix+1];
+            const Scalar& y0 = bhp_array[array_ix  ];
+            const Scalar& y1 = bhp_array[array_ix+1];
             thp = findX(x0, x1, y0, y1, bhp);
-        }
-        else if (bhp <= bhp_array[0]) {
-            //TODO: LOG extrapolation
-            const Scalar& x0 = thp_array[0];
-            const Scalar& x1 = thp_array[1];
-            const Scalar& y0 = bhp_array[0];
-            const Scalar& y1 = bhp_array[1];
-            thp = findX(x0, x1, y0, y1, bhp);
-        }
-        //Target bhp greater than all values in array, extrapolate
-        else if (bhp > bhp_array[nthp-1]) {
-            //TODO: LOG extrapolation
-            const Scalar& x0 = thp_array[nthp-2];
-            const Scalar& x1 = thp_array[nthp-1];
-            const Scalar& y0 = bhp_array[nthp-2];
-            const Scalar& y1 = bhp_array[nthp-1];
-            thp = findX(x0, x1, y0, y1, bhp);
-        }
-        else {
-            OPM_THROW(std::logic_error, "Programmer error: Unable to find THP in THP array");
+        } else {
+            // no intersection, just return largest/smallest value in table
+            if (find_largest) {
+                thp = thp_array[nthp-1];
+            } else {
+                thp = thp_array[0];
+            }
         }
     }
-
     return thp;
 }
 

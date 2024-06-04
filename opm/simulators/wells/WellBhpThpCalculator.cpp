@@ -143,11 +143,14 @@ calculateThpFromBhp(const std::vector<Scalar>& rates,
     else if (well_.isProducer()) {
         const Scalar vfp_ref_depth = well_.vfpProperties()->getProd()->getTable(table_id).getDatumDepth();
         const Scalar dp = wellhelpers::computeHydrostaticCorrection(well_.refDepth(), vfp_ref_depth, rho, well_.gravity());
+        const bool use_vfpexp = well_.useVfpExplicit();
+        const Scalar wfr = well_.vfpProperties()->getExplicitWFR(table_id, well_.indexOfWell());
+        const Scalar gfr = well_.vfpProperties()->getExplicitGFR(table_id, well_.indexOfWell());
         auto thp_func =
-            [this, table_id, aqua, liquid, vapour, dp, &alq]
+            [this, table_id, aqua, liquid, vapour, dp, &alq, wfr, gfr, use_vfpexp]
                 (const Scalar bhp_value, const Scalar pressure_loss) {
                     return this->well_.vfpProperties()->getProd()->thp(
-                       table_id, aqua, liquid, vapour, bhp_value + dp - pressure_loss, alq.value());
+                       table_id, aqua, liquid, vapour, bhp_value + dp - pressure_loss, alq.value(), wfr, gfr, use_vfpexp);
                 };
         thp = findThpFromBhpIteratively(thp_func, bhp, thp_limit, dp, deferred_logger);
     }

@@ -76,7 +76,7 @@ thp(const int    table_id,
         bhp_array[i] = VFPHelpers<Scalar>::interpolate(table, flo_i, thp_i).value;
     }
 
-    return VFPHelpers<Scalar>::findTHP(bhp_array, thp_array, bhp_arg);
+    return VFPHelpers<Scalar>::findTHP(bhp_array, thp_array, bhp_arg, /*find_largest*/ false);
 }
 
 template<class Scalar>
