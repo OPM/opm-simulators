@@ -264,11 +264,17 @@ template<class Scalar> class WellContributions;
                     return this->wasDynamicallyShutThisTimeStep(well_index);
                 });
 
-                const auto& tracerRates = simulator_.problem().tracerModel().getWellTracerRates();
-                this->assignWellTracerRates(wsrpt, tracerRates);
+                {
+                    const auto& tracerRates = this->simulator_.problem()
+                        .tracerModel().getWellTracerRates();
 
+                    this->assignWellTracerRates(wsrpt, tracerRates);
+                }
 
-                BlackoilWellModelGuideRates(*this).assignWellGuideRates(wsrpt, this->reportStepIndex());
+                BlackoilWellModelGuideRates(*this)
+                    .assignWellGuideRates(wsrpt, this->reportStepIndex());
+
+                this->assignWellTargets(wsrpt);
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
 
                 return wsrpt;

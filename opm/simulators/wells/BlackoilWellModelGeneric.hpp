@@ -349,6 +349,9 @@ protected:
 
     void assignShutConnections(data::Wells& wsrpt,
                                const int reportStepIndex) const;
+    void assignWellTargets(data::Wells& wsrpt) const;
+    void assignProductionWellTargets(const Well& well, data::WellControlLimits& limits) const;
+    void assignInjectionWellTargets(const Well& well, data::WellControlLimits& limits) const;
     void assignGroupControl(const Group& group,
                             data::GroupData& gdata) const;
     void assignGroupValues(const int reportStepIdx,
