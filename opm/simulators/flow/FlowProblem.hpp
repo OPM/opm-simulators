@@ -661,9 +661,6 @@ public:
         // Compute flux for output
         this->model().linearizer().updateFlowsInfo();
 
-        // deal with DRSDT and DRVDT
-        this->asImp_().updateCompositionChangeLimits_();
-
         if (this->enableDriftCompensation_) {
             OPM_TIMEBLOCK(driftCompansation);
 
@@ -1380,8 +1377,6 @@ public:
         // the initial solution.
         thresholdPressures_.finishInit();
 
-        updateCompositionChangeLimits_();
-
         aquiferModel_.initialSolutionApplied();
 
         if (this->simulator().episodeIndex() == 0) {
@@ -1864,9 +1859,13 @@ protected:
         const bool invalidateFromHyst = updateHysteresis_();
         const bool invalidateFromMaxOilSat = updateMaxOilSaturation_();
 
+
+        // deal with DRSDT and DRVDT
+        const bool invalidateDRDT = this->asImp_().updateCompositionChangeLimits_();
+
         // the derivatives may have change
         bool invalidateIntensiveQuantities
-            = invalidateFromMaxWaterSat || invalidateFromMinPressure || invalidateFromHyst || invalidateFromMaxOilSat;
+            = invalidateFromMaxWaterSat || invalidateFromMinPressure || invalidateFromHyst || invalidateFromMaxOilSat || invalidateDRDT;
         if (invalidateIntensiveQuantities) {
             OPM_TIMEBLOCK(beginTimeStepInvalidateIntensiveQuantities);
             this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
@@ -1899,7 +1898,7 @@ protected:
     }
 
     // update the parameters needed for DRSDT and DRVDT
-    void updateCompositionChangeLimits_()
+    bool updateCompositionChangeLimits_()
     {
         OPM_TIMEBLOCK(updateCompositionChangeLimits);
         // update the "last Rs" values for all elements, including the ones in the ghost
@@ -1909,7 +1908,7 @@ protected:
                                   this->mixControls_.drsdtActive(episodeIdx),
                                   this->mixControls_.drvdtActive(episodeIdx)};
         if (!active[0] && !active[1] && !active[2]) {
-            return;
+            return false;
         }
 
         this->updateProperty_("FlowProblem::updateCompositionChangeLimits_()) failed:",
@@ -1929,6 +1928,8 @@ protected:
                                                             active);
                               }
             );
+
+            return true;
     }
 
     bool updateMaxOilSaturation_()
