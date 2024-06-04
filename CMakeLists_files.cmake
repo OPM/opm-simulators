@@ -243,6 +243,8 @@ endif()
 
 if(USE_BDA_BRIDGE)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp
+                                 opm/simulators/linalg/bda/CprCreation.cpp
+                                 opm/simulators/linalg/bda/Misc.cpp
                                  opm/simulators/linalg/bda/WellContributions.cpp
                                  opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
                                  opm/simulators/linalg/ISTLSolverBda.cpp)
@@ -652,7 +654,9 @@ if (USE_BDA_BRIDGE)
     opm/simulators/linalg/bda/BdaBridge.hpp
     opm/simulators/linalg/bda/BdaResult.hpp
     opm/simulators/linalg/bda/BdaSolver.hpp
+    opm/simulators/linalg/bda/CprCreation.hpp
     opm/simulators/linalg/bda/Preconditioner.hpp
+    opm/simulators/linalg/bda/Misc.hpp
     opm/simulators/linalg/bda/opencl/openclBILU0.hpp
     opm/simulators/linalg/bda/BlockedMatrix.hpp
     opm/simulators/linalg/bda/opencl/openclCPR.hpp

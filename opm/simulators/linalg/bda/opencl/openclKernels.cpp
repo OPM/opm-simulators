@@ -26,6 +26,8 @@
 
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>  // defines CHOW_PATEL
 
+#include <opm/simulators/linalg/bda/Misc.hpp>
+
 #include <cmath>
 #include <sstream>
 
@@ -83,12 +85,6 @@ template<class Scalar>
 std::unique_ptr<isaiL_kernel_type> OpenclKernels<Scalar>::isaiL_k;
 template<class Scalar>
 std::unique_ptr<isaiU_kernel_type> OpenclKernels<Scalar>::isaiU_k;
-
-// divide A by B, and round up: return (int)ceil(A/B)
-unsigned int ceilDivision(const unsigned int A, const unsigned int B)
-{
-    return A / B + (A % B > 0);
-}
 
 template<class Scalar>
 void OpenclKernels<Scalar>::init(cl::Context *context,
