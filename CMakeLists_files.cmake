@@ -264,6 +264,8 @@ if(USE_BDA_BRIDGE)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.cpp)
   endif()
   if(rocsparse_FOUND AND rocblas_FOUND)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseBILU0.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseWellContributions.cpp)
   endif()
@@ -668,6 +670,8 @@ if (USE_BDA_BRIDGE)
     opm/simulators/linalg/bda/Matrix.hpp
     opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
     opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.hpp
+    opm/simulators/linalg/bda/rocm/rocsparseBILU0.hpp
+    opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.hpp
     opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.hpp
     opm/simulators/linalg/bda/rocm/rocsparseWellContributions.hpp
     opm/simulators/linalg/bda/WellContributions.hpp
