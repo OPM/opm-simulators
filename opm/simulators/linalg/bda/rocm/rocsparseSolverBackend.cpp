@@ -36,8 +36,8 @@
 
 #undef HAVE_CUDA
 
-#include <opm/simulators/linalg/bda/rocsparseSolverBackend.hpp>
-#include <opm/simulators/linalg/bda/rocsparseWellContributions.hpp>
+#include <opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/rocm/rocsparseWellContributions.hpp>
 
 #include <opm/simulators/linalg/bda/BdaResult.hpp>
 

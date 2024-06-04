@@ -47,7 +47,7 @@
 #endif
 
 #if HAVE_ROCSPARSE
-#include <opm/simulators/linalg/bda/rocsparseSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.hpp>
 #endif
 
 typedef Dune::InverseOperatorResult InverseOperatorResult;

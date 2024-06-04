@@ -29,7 +29,7 @@
 
 #undef HAVE_CUDA
 
-#include <opm/simulators/linalg/bda/rocsparseWellContributions.hpp>
+#include <opm/simulators/linalg/bda/rocm/rocsparseWellContributions.hpp>
 
 #ifdef HIP_HAVE_CUDA_DEFINED
 #define HAVE_CUDA HIP_HAVE_CUDA_DEFINED
