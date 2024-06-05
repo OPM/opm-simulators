@@ -62,7 +62,7 @@ public:
 #endif
 
     // apply preconditioner, x = prec(y)
-    virtual void apply(double& y, double& x) = 0;
+    virtual void apply(Scalar& y, Scalar& x) = 0;
 
     // analyze matrix, e.g. the sparsity pattern
     // probably only called once

@@ -1,5 +1,5 @@
 /*
-  Copyright 2021 Equinor ASA
+  Copyright 2024 Equinor ASA
 
   This file is part of the Open Porous Media project (OPM).
 
