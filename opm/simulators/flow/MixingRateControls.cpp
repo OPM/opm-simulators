@@ -138,21 +138,48 @@ drsdtConvective(int episodeIdx) const
 }
 
 template<class FluidSystem>
+bool MixingRateControls<FluidSystem>::
+drsdtActive(int episodeIdx, std::size_t pvtRegionIdx) const
+{
+    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
+    return (oilVaporizationControl.drsdtActive(pvtRegionIdx));
+}
+
+template<class FluidSystem>
+bool MixingRateControls<FluidSystem>::
+drvdtActive(int episodeIdx, std::size_t pvtRegionIdx) const
+{
+    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
+    return (oilVaporizationControl.drvdtActive(pvtRegionIdx));
+}
+
+template<class FluidSystem>
+bool MixingRateControls<FluidSystem>::
+drsdtConvective(int episodeIdx, std::size_t pvtRegionIdx) const
+{
+    const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
+    return (oilVaporizationControl.drsdtConvective(pvtRegionIdx));
+}
+
+
+template<class FluidSystem>
 void MixingRateControls<FluidSystem>::
 updateExplicitQuantities(const int episodeIdx,
                          const Scalar timeStepSize)
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    if (this->drsdtActive(episodeIdx)) {
-        // DRSDT is enabled
-        for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx)
+    // DRSDT is enabled
+    for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx) {
+        if (this->drsdtActive(episodeIdx, pvtRegionIdx)) {
             maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx) * timeStepSize;
+        }
     }
 
-    if (this->drvdtActive(episodeIdx)) {
-        // DRVDT is enabled
-        for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx)
+    // DRVDT is enabled
+    for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx) {
+        if (this->drvdtActive(episodeIdx, pvtRegionIdx)) {
             maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx) * timeStepSize;
+        }
     }
 }
 
@@ -177,16 +204,16 @@ updateMaxValues(const int episodeIdx,
                 const Scalar timeStepSize)
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    if (this->drsdtActive(episodeIdx)) {
-        // DRSDT is enabled
-        for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx) {
+    // DRSDT is enabled
+    for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx) {
+        if (this->drsdtActive(episodeIdx, pvtRegionIdx)) {
             maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx) * timeStepSize;
         }
     }
 
-    if (this->drvdtActive(episodeIdx)) {
-        // DRVDT is enabled
-        for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx) {
+       // DRVDT is enabled
+    for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx) {
+        if (this->drvdtActive(episodeIdx, pvtRegionIdx)) {
             maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx) * timeStepSize;
         }
     }
@@ -207,6 +234,10 @@ drsdtcon(const unsigned elemIdx,
     // Output drsdt value for index 0
     episodeIdx = std::max(episodeIdx, 0);
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
+
+    if (!oilVaporizationControl.drsdtConvective(pvtRegionIdx))
+        return 0;
+
     return oilVaporizationControl.getMaxDRSDT(pvtRegionIdx) * convectiveDrs_[elemIdx];
 }
 
@@ -218,12 +249,12 @@ maxGasDissolutionFactor(const unsigned timeIdx,
                         const int episodeIdx,
                         const int pvtRegionIdx) const
 {
-    if (!this->drsdtActive(episodeIdx) || maxDRs_[pvtRegionIdx] < 0.0) {
+    if (!this->drsdtActive(episodeIdx, pvtRegionIdx) || maxDRs_[pvtRegionIdx] < 0.0) {
         return std::numeric_limits<Scalar>::max() / 2.0;
     }
 
     Scalar scaling = 1.0;
-    if (this->drsdtConvective(episodeIdx)) {
+    if (this->drsdtConvective(episodeIdx, pvtRegionIdx)) {
        scaling = convectiveDrs_[globalDofIdx];
     }
 
@@ -244,7 +275,7 @@ maxOilVaporizationFactor(const unsigned timeIdx,
                          const int episodeIdx,
                          const int pvtRegionIdx) const
 {
-    if (!this->drvdtActive(episodeIdx) || maxDRv_[pvtRegionIdx] < 0.0) {
+    if (!this->drvdtActive(episodeIdx, pvtRegionIdx) || maxDRv_[pvtRegionIdx] < 0.0) {
         return std::numeric_limits<Scalar>::max() / 2.0;
     }
 
