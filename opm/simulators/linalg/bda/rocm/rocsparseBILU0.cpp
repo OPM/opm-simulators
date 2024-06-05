@@ -26,48 +26,11 @@
 
 #include <opm/simulators/linalg/bda/rocm/rocsparseBILU0.hpp> 
 #include <opm/simulators/linalg/bda/Reorder.hpp>
+#include <opm/simulators/linalg/bda/Misc.hpp>
 
 #include <sstream>
 
-#include <iostream> //Razvan
-#include <hip/hip_runtime_api.h>
-
-#define HIP_CHECK(STAT)                                  \
-    do {                                                 \
-        const hipError_t stat = (STAT);                  \
-        if(stat != hipSuccess)                           \
-        {                                                \
-            std::ostringstream oss;                      \
-            oss << "rocsparseBILU0::hip ";       \
-            oss << "error: " << hipGetErrorString(stat); \
-            OPM_THROW(std::logic_error, oss.str());      \
-        }                                                \
-    } while(0)
-
-#define ROCSPARSE_CHECK(STAT)                            \
-    do {                                                 \
-        const rocsparse_status stat = (STAT);            \
-        if(stat != rocsparse_status_success)             \
-        {                                                \
-            std::ostringstream oss;                      \
-            oss << "rocsparseBILU0::rocsparse "; \
-            oss << "error: " << stat;                    \
-            OPM_THROW(std::logic_error, oss.str());      \
-        }                                                \
-    } while(0)
-
-#define ROCBLAS_CHECK(STAT)                              \
-    do {                                                 \
-        const rocblas_status stat = (STAT);              \
-        if(stat != rocblas_status_success)               \
-        {                                                \
-            std::ostringstream oss;                      \
-            oss << "rocsparseBILU0::rocblas ";   \
-            oss << "error: " << stat;                    \
-            OPM_THROW(std::logic_error, oss.str());      \
-        }                                                \
-    } while(0)
-    
+   
 #if HAVE_OPENMP
 #include <thread>
 #include <omp.h>
@@ -88,7 +51,11 @@ rocsparseBILU0(int verbosity_) :
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseBILU0<Scalar, block_size>::
-initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix, std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix, rocsparse_int *d_Arows, rocsparse_int *d_Acols) { 
+initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+           std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
+           rocsparse_int *d_Arows,
+           rocsparse_int *d_Acols) 
+{ 
     this->Nb = matrix->Nb;
     this->N = Nb * block_size;
     this->nnzb = matrix->nnzbs;
@@ -101,14 +68,14 @@ initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix, std::shared_ptr<Blocke
         this->jacMat = jacMatrix;
     }
 
-     HIP_CHECK(hipMalloc((void**)&d_t, sizeof(double) * this->N));
+    HIP_CHECK(hipMalloc((void**)&d_t, sizeof(Scalar) * this->N));
 
     if (this->useJacMatrix) {
         HIP_CHECK(hipMalloc((void**)&d_Mrows, sizeof(rocsparse_int) * (Nb + 1)));
         HIP_CHECK(hipMalloc((void**)&d_Mcols, sizeof(rocsparse_int) * this->nnzbs_prec));
-        HIP_CHECK(hipMalloc((void**)&d_Mvals, sizeof(double) * this->nnzbs_prec * block_size * block_size));
+        HIP_CHECK(hipMalloc((void**)&d_Mvals, sizeof(Scalar) * this->nnzbs_prec * block_size * block_size));
     } else { // preconditioner matrix is same
-        HIP_CHECK(hipMalloc((void**)&d_Mvals, sizeof(double) * this->nnzbs_prec * block_size * block_size));
+        HIP_CHECK(hipMalloc((void**)&d_Mvals, sizeof(Scalar) * this->nnzbs_prec * block_size * block_size));
         d_Mcols = d_Acols;
         d_Mrows = d_Arows;
     }
@@ -125,10 +92,13 @@ analyze_matrix(BlockedMatrix<Scalar> *mat) {
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseBILU0<Scalar, block_size>::
-analyze_matrix(BlockedMatrix<Scalar> *mat, BlockedMatrix<Scalar> *jacMat) {
+analyze_matrix(BlockedMatrix<Scalar> *mat, 
+               BlockedMatrix<Scalar> *jacMat) 
+{
     std::size_t d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
     Timer t;
     
+    ROCSPARSE_CHECK(rocsparse_create_mat_info(&ilu_info));
 #if HIP_VERSION >= 50400000
     ROCSPARSE_CHECK(rocsparse_create_mat_info(&spmv_info));
 #endif
@@ -193,7 +163,9 @@ create_preconditioner(BlockedMatrix<Scalar> *mat) {
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseBILU0<Scalar, block_size>::
-create_preconditioner(BlockedMatrix<Scalar> *mat, BlockedMatrix<Scalar> *jacMat) {
+create_preconditioner(BlockedMatrix<Scalar> *mat, 
+                      BlockedMatrix<Scalar> *jacMat) 
+{
     Timer t;
     bool result = true;
     
@@ -219,7 +191,7 @@ create_preconditioner(BlockedMatrix<Scalar> *mat, BlockedMatrix<Scalar> *jacMat)
 
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
-copy_system_to_gpu(double *d_Avals) {
+copy_system_to_gpu(Scalar *d_Avals) {
     Timer t;
     
     if (this->useJacMatrix) {
@@ -230,9 +202,9 @@ copy_system_to_gpu(double *d_Avals) {
 #endif
         HIP_CHECK(hipMemcpyAsync(d_Mrows, this->jacMat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, this->stream));
         HIP_CHECK(hipMemcpyAsync(d_Mcols, this->jacMat->colIndices, sizeof(rocsparse_int) * this->nnzbs_prec, hipMemcpyHostToDevice, this->stream));
-        HIP_CHECK(hipMemcpyAsync(d_Mvals, this->jacMat->nnzValues, sizeof(double) * this->nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, this->stream));
+        HIP_CHECK(hipMemcpyAsync(d_Mvals, this->jacMat->nnzValues, sizeof(Scalar) * this->nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, this->stream));
     } else {
-        HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(double) * nnz, hipMemcpyDeviceToDevice, this->stream));
+        HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(Scalar) * nnz, hipMemcpyDeviceToDevice, this->stream));
     }
 
     if (verbosity >= 3) {
@@ -246,7 +218,7 @@ copy_system_to_gpu(double *d_Avals) {
 // don't copy rowpointers and colindices, they stay the same
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
-update_system_on_gpu(double *d_Avals) {
+update_system_on_gpu(Scalar *d_Avals) {
     Timer t;
 
     if (this->useJacMatrix) {
@@ -255,9 +227,9 @@ update_system_on_gpu(double *d_Avals) {
            copyThread->join();
         }
 #endif
-        HIP_CHECK(hipMemcpyAsync(d_Mvals, this->jacMat->nnzValues, sizeof(double) * this->nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, this->stream));
+        HIP_CHECK(hipMemcpyAsync(d_Mvals, this->jacMat->nnzValues, sizeof(Scalar) * this->nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, this->stream));
     } else {
-        HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(double) * nnz, hipMemcpyDeviceToDevice, this->stream));
+        HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(Scalar) * nnz, hipMemcpyDeviceToDevice, this->stream));
     }
 
     if (verbosity >= 3) {
@@ -270,9 +242,9 @@ update_system_on_gpu(double *d_Avals) {
 
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
-apply(double& y, double& x) {
-    double zero = 0.0;
-    double one  = 1.0;
+apply(Scalar& y, Scalar& x) {
+    Scalar zero = 0.0;
+    Scalar one  = 1.0;
 
     Timer t_apply;
 

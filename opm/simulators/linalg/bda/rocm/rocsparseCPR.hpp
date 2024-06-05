@@ -64,25 +64,69 @@ private:
     std::unique_ptr<rocsparseSolverBackend<Scalar, 1> > coarse_solver; // coarse solver is scalar
 
     // Initialize and allocate matrices and vectors
-    void init_rocm_buffers();//TODO: rename to rocm/c and update in code
+    void init_rocm_buffers();
 
     // Copy matrices and vectors to GPU
-    void rocm_upload();//TODO: rename to rocm/c and update in code
+    void rocm_upload();
 
     // apply pressure correction to vector
     void apply_amg(const Scalar& y, Scalar& x);
 
+    // Apply the AMG preconditioner
     void amg_cycle_gpu(const int level, Scalar &y, Scalar &x);
     
 public:
 
     rocsparseCPR(int verbosity);
 
-    bool initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix, std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix, rocsparse_int *d_Arows, rocsparse_int *d_Acols);
+    /// Initialize GPU and allocate memory
+    /// \param[in] matrix     matrix A
+    /// \param[in] jacMatrix  matrix for preconditioner
+    bool initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+                    std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
+                    rocsparse_int *d_Arows,
+                    rocsparse_int *d_Acols);
     
+
+    /// Analysis, extract parallelism if specified
+    /// \param[in] mat     matrix A
+    bool analyze_matrix(BlockedMatrix<Scalar> *mat);
+    
+    /// Analysis, extract parallelism if specified
+    /// \param[in] mat     matrix A
+    /// \param[in] jacMat  matrix for preconditioner, analyze this as well
+    bool analyze_matrix(BlockedMatrix<Scalar> *mat,
+                        BlockedMatrix<Scalar> *jacMat);
+
+    /// Create AMG preconditioner and perform ILU decomposition
+    /// \param[in] mat     matrix A
+    bool create_preconditioner(BlockedMatrix<Scalar> *mat);
+    
+    /// Create AMG preconditioner and perform ILU decomposition
+    /// \param[in] mat     matrix A
+    /// \param[in] jacMat  matrix for preconditioner, decompose this one if used
+    bool create_preconditioner(BlockedMatrix<Scalar> *mat,
+                               BlockedMatrix<Scalar> *jacMat);
+    
+    /// Apply preconditioner, x = prec(y)
+    /// applies blocked ilu0
+    /// also applies amg for pressure component
+    /// \param[in]  y  Input y vector
+    /// \param[out] x  Output x vector
+    void apply(Scalar& y,
+               Scalar& x) override;
+    
+#if HAVE_OPENCL
+    // apply preconditioner, x = prec(y)
+    void apply(const cl::Buffer& y,
+               cl::Buffer& x) {}
+#endif
+    
+    /// Copy matrix A values to GPU
+    /// \param[in]  mVals  Input values
     void copy_system_to_gpu(Scalar *b);
 
-    /// Reassign pointers, in case the addresses of the Dune variables have changed
+    /// Reassign pointers, in case the addresses of the Dune variables have changed --> TODO: check when/if we need this method
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
     /// \param[in] b              input vector b, contains N values
 //     void update_system(Scalar *vals, Scalar *b);
@@ -90,20 +134,6 @@ public:
     /// Update linear system to GPU
     /// \param[in] b              input vector, contains N values
     void update_system_on_gpu(Scalar *b);
-
-    bool analyze_matrix(BlockedMatrix<Scalar> *mat);
-    bool analyze_matrix(BlockedMatrix<Scalar> *mat, BlockedMatrix<Scalar> *jacMat);
-
-    bool create_preconditioner(BlockedMatrix<Scalar> *mat);
-    bool create_preconditioner(BlockedMatrix<Scalar> *mat, BlockedMatrix<Scalar> *jacMat);
-    
-#if HAVE_OPENCL
-    // apply preconditioner, x = prec(y)
-    void apply(const cl::Buffer& y, cl::Buffer& x) {}
-#endif
-    // applies blocked ilu0
-    // also applies amg for pressure component
-    void apply(Scalar& y, Scalar& x);
 };
 
 } // namespace Opm

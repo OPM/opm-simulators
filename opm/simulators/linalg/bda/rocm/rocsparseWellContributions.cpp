@@ -40,16 +40,8 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/bda/MultisegmentWellContribution.hpp>
-
+#include <opm/simulators/linalg/bda/Misc.hpp>
 #include <hip/hip_runtime.h>
-
-#define HIP_CHECK(stat)                               \
-    {                                                 \
-        if(stat != hipSuccess)                        \
-        {                                             \
-            OPM_THROW(std::logic_error, "HIP error"); \
-        }                                             \
-    }
 
 namespace Opm
 {

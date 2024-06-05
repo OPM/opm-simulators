@@ -28,43 +28,26 @@
 #include <opm/simulators/linalg/bda/rocm/hipKernels.hpp>
 
 #include <opm/simulators/linalg/bda/Misc.hpp>
-
 #include <hip/hip_runtime.h>
-#include <hip/hip_version.h>
 
-#define HIP_CHECK(STAT)                                  \
-    do {                                                 \
-        const hipError_t stat = (STAT);                  \
-        if(stat != hipSuccess)                           \
-        {                                                \
-            std::ostringstream oss;                      \
-            oss << "rocsparseSolverBackend::hip ";       \
-            oss << "error: " << hipGetErrorString(stat); \
-            OPM_THROW(std::logic_error, oss.str());      \
-        }                                                \
-    } while(0)
-
-namespace Opm
-{
+namespace Opm {
 
 using Opm::OpmLog;
 using Dune::Timer;
 
 // define static variables and kernels
-int HipKernels::verbosity;
-double* HipKernels::tmp;
-bool HipKernels::initialized = false;
-std::size_t HipKernels::preferred_workgroup_size_multiple = 0;
+template<class Scalar> int  HipKernels<Scalar>::verbosity = 0;
+template<class Scalar> bool HipKernels<Scalar>::initialized = false;
 
 #ifdef __HIP__
 /// HIP kernel to multiply vector with another vector and a scalar, element-wise
 // add result to a third vector
-__global__ void vmul_k(
-    const double alpha,
-    double const *in1,
-    double const *in2,
-    double *out,
-    const int N)
+template<class Scalar>
+__global__ void vmul_k(const Scalar alpha,
+                       Scalar const *in1,
+                       Scalar const *in2,
+                       Scalar *out,
+                       const int N)
 {
     unsigned int NUM_THREADS = gridDim.x;
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
@@ -77,18 +60,18 @@ __global__ void vmul_k(
 
 /// HIP kernel to transform blocked vector to scalar vector using pressure-weights
 // every workitem handles one blockrow
-__global__ void full_to_pressure_restriction_k(
-    const double *fine_y,
-    const double *weights,
-    double *coarse_y,
-    const unsigned int Nb)
+template<class Scalar>
+__global__ void full_to_pressure_restriction_k(const Scalar *fine_y,
+                                               const Scalar *weights,
+                                               Scalar *coarse_y,
+                                               const unsigned int Nb)
 {
     const unsigned int NUM_THREADS = gridDim.x;
     const unsigned int block_size = 3;
     unsigned int target_block_row = blockDim.x * blockIdx.x + threadIdx.x;
 
     while(target_block_row < Nb){
-        double sum = 0.0;
+        Scalar sum = 0.0;
         unsigned int idx = block_size * target_block_row;
         for (unsigned int i = 0; i < block_size; ++i) {
             sum += fine_y[idx + i] * weights[idx + i];
@@ -100,11 +83,11 @@ __global__ void full_to_pressure_restriction_k(
 
 /// HIP kernel to add the coarse pressure solution back to the finer, complete solution
 // every workitem handles one blockrow
-__global__ void add_coarse_pressure_correction_k(
-    const double *coarse_x,
-    double *fine_x,
-    const unsigned int pressure_idx,
-    const unsigned int Nb)
+template<class Scalar>
+__global__ void add_coarse_pressure_correction_k(const Scalar *coarse_x,
+                                                 Scalar *fine_x,
+                                                 const unsigned int pressure_idx,
+                                                 const unsigned int Nb)
 {
     const unsigned int NUM_THREADS = gridDim.x;
     const unsigned int block_size = 3;
@@ -118,11 +101,11 @@ __global__ void add_coarse_pressure_correction_k(
 
 /// HIP kernel to prolongate vector during amg cycle
 // every workitem handles one row
-__global__ void prolongate_vector_k(
-     const double *in,
-     double *out,
-     const int *cols,
-     const unsigned int N)
+template<class Scalar>
+__global__ void prolongate_vector_k(const Scalar *in,
+                                    Scalar *out,
+                                    const int *cols,
+                                    const unsigned int N)
 {
     const unsigned int NUM_THREADS = gridDim.x;
     unsigned int row = blockDim.x * blockIdx.x + threadIdx.x;
@@ -137,18 +120,17 @@ __global__ void prolongate_vector_k(
 // algorithm based on:
 // Optimization of Block Sparse Matrix-Vector Multiplication on Shared-MemoryParallel Architectures,
 // Ryan Eberhardt, Mark Hoemmen, 2016, https://doi.org/10.1109/IPDPSW.2016.42
-__global__ void residual_blocked_k(
-    const double *vals,
-    const int *cols,
-    const int *rows,
-    const int Nb,
-    const double *x,
-    const double *rhs,
-    double *out,
-    const unsigned int block_size
-    )
+template<class Scalar>
+__global__ void residual_blocked_k(const Scalar *vals,
+                                   const int *cols,
+                                   const int *rows,
+                                   const int Nb,
+                                   const Scalar *x,
+                                   const Scalar *rhs,
+                                   Scalar *out,
+                                   const unsigned int block_size)
 {
-    extern __shared__ double tmp[];
+    extern __shared__ Scalar tmp[];
     const unsigned int warpsize = warpSize;
     const unsigned int bsize = blockDim.x;
     const unsigned int gid = blockDim.x * blockIdx.x + threadIdx.x;
@@ -174,12 +156,12 @@ __global__ void residual_blocked_k(
         unsigned int first_block = rows[target_block_row];
         unsigned int last_block = rows[target_block_row+1];
         unsigned int block = first_block + lane / (bs*bs);
-        double local_out = 0.0;
+        Scalar local_out = 0.0;
 
         if(lane < num_active_threads){
             for(; block < last_block; block += num_blocks_per_warp){
-                double x_elem = x[cols[block]*bs + c];
-                double A_elem = vals[block*bs*bs + c + r*bs];
+                Scalar x_elem = x[cols[block]*bs + c];
+                Scalar A_elem = vals[block*bs*bs + c + r*bs];
                 local_out += x_elem * A_elem;
             }
         }
@@ -210,17 +192,16 @@ __global__ void residual_blocked_k(
 // Optimization of Block Sparse Matrix-Vector Multiplication on Shared-MemoryParallel Architectures,
 // Ryan Eberhardt, Mark Hoemmen, 2016, https://doi.org/10.1109/IPDPSW.2016.42
 // template <unsigned shared_mem_size>
-__global__ void residual_k(
-    const double *vals,
-    const int *cols,
-    const int *rows,
-    const int N,
-    const double *x,
-    const double *rhs,
-    double *out
-    )
+template<class Scalar>
+__global__ void residual_k(const Scalar *vals,
+                           const int *cols,
+                           const int *rows,
+                           const int N,
+                           const Scalar *x,
+                           const Scalar *rhs,
+                           Scalar *out)
 {
-    extern __shared__ double tmp[];
+    extern __shared__ Scalar tmp[];
     const unsigned int bsize = blockDim.x;
     const unsigned int gid = blockDim.x * blockIdx.x + threadIdx.x;
     const unsigned int idx_b = gid / bsize;
@@ -233,7 +214,7 @@ __global__ void residual_k(
         int rowStart = rows[row];
         int rowEnd = rows[row+1];
         int rowLength = rowEnd - rowStart;
-        double local_sum = 0.0;
+        Scalar local_sum = 0.0;
         for (int j = rowStart + idx_t; j < rowEnd; j += bsize) {
             int col = cols[j];
             local_sum += vals[j] * x[col];
@@ -259,16 +240,15 @@ __global__ void residual_k(
     }
 }
 
-__global__ void spmv_k(
-    const double *vals,
-    const int *cols,
-    const int *rows,
-    const int N,
-    const double *x,
-    double *out
-    )
+template<class Scalar>
+__global__ void spmv_k(const Scalar *vals,
+                       const int *cols,
+                       const int *rows,
+                       const int N,
+                       const Scalar *x,
+                       Scalar *out)
 {
-    extern __shared__ double tmp[];
+    extern __shared__ Scalar tmp[];
     const unsigned int bsize = blockDim.x;
     const unsigned int gid = blockDim.x * blockIdx.x + threadIdx.x;
     const unsigned int idx_b = gid / bsize; 
@@ -281,7 +261,7 @@ __global__ void spmv_k(
         int rowStart = rows[row];
         int rowEnd = rows[row+1];
         int rowLength = rowEnd - rowStart;
-        double local_sum = 0.0;
+        Scalar local_sum = 0.0;
         for (int j = rowStart + idx_t; j < rowEnd; j += bsize) {
             int col = cols[j];
             local_sum += vals[j] * x[col];
@@ -308,7 +288,9 @@ __global__ void spmv_k(
 }
 #endif
 
-void HipKernels::init(int verbosity_)
+template<class Scalar>
+void HipKernels<Scalar>::
+init(int verbosity_)
 {
     if (initialized) {
         OpmLog::debug("Warning HipKernels is already initialized");
@@ -320,7 +302,14 @@ void HipKernels::init(int verbosity_)
     initialized = true;
 }
 
-void HipKernels::vmul(const double alpha, double* in1, double* in2, double* out, int N, hipStream_t stream)
+template<class Scalar>
+void HipKernels<Scalar>::
+vmul(const Scalar alpha,
+     Scalar* in1,
+     Scalar* in2,
+     Scalar* out,
+     int N,
+     hipStream_t stream)
 {
     Timer t_vmul;
 #ifdef __HIP__
@@ -342,7 +331,13 @@ void HipKernels::vmul(const double alpha, double* in1, double* in2, double* out,
     }
 }
 
-void HipKernels::full_to_pressure_restriction(const double* fine_y, double* weights, double* coarse_y, int Nb, hipStream_t stream)
+template<class Scalar>
+void HipKernels<Scalar>::
+full_to_pressure_restriction(const Scalar* fine_y,
+                             Scalar* weights,
+                             Scalar* coarse_y,
+                             int Nb,
+                             hipStream_t stream)
 {
     Timer t;
 #ifdef __HIP__
@@ -364,7 +359,13 @@ void HipKernels::full_to_pressure_restriction(const double* fine_y, double* weig
     }
 }
 
-void HipKernels::add_coarse_pressure_correction(double* coarse_x, double* fine_x, int pressure_idx, int Nb, hipStream_t stream)
+template<class Scalar>
+void HipKernels<Scalar>::
+add_coarse_pressure_correction(Scalar* coarse_x,
+                               Scalar* fine_x,
+                               int pressure_idx,
+                               int Nb,
+                               hipStream_t stream)
 {
     Timer t;
 #ifdef __HIP__
@@ -386,7 +387,13 @@ void HipKernels::add_coarse_pressure_correction(double* coarse_x, double* fine_x
     }
 }
 
-void HipKernels::prolongate_vector(const double* in, double* out, const int* cols, int N, hipStream_t stream)
+template<class Scalar>
+void HipKernels<Scalar>::
+prolongate_vector(const Scalar* in,
+                  Scalar* out,
+                  const int* cols,
+                  int N,
+                  hipStream_t stream)
 {
     Timer t;
     
@@ -394,7 +401,7 @@ void HipKernels::prolongate_vector(const double* in, double* out, const int* col
     unsigned blockDim = 64;
     unsigned blocks = Accelerator::ceilDivision(N, blockDim);
     unsigned gridDim = blocks * blockDim;
-    unsigned shared_mem_size = blockDim * sizeof(double); 
+    unsigned shared_mem_size = blockDim * sizeof(Scalar); 
 
     // dim3(N) will create a vector {N, 1, 1}
     prolongate_vector_k<<<dim3(gridDim), dim3(blockDim), shared_mem_size, stream>>>(in, out, cols, N);
@@ -410,7 +417,17 @@ void HipKernels::prolongate_vector(const double* in, double* out, const int* col
     }
 }
 
-void HipKernels::residual(double* vals, int* cols, int* rows, double* x, const double* rhs, double* out, int Nb, unsigned int block_size, hipStream_t stream)
+template<class Scalar>
+void HipKernels<Scalar>::
+residual(Scalar* vals,
+         int* cols,
+         int* rows,
+         Scalar* x,
+         const Scalar* rhs,
+         Scalar* out,
+         int Nb,
+         unsigned int block_size,
+         hipStream_t stream)
 {
     Timer t_residual;
 
@@ -418,7 +435,7 @@ void HipKernels::residual(double* vals, int* cols, int* rows, double* x, const d
     unsigned blockDim = 64;
     const unsigned int num_work_groups = Accelerator::ceilDivision(Nb, blockDim);
     unsigned gridDim = num_work_groups * blockDim;
-    unsigned shared_mem_size = blockDim * sizeof(double); 
+    unsigned shared_mem_size = blockDim * sizeof(Scalar); 
 
     if (block_size > 1) {
         // dim3(N) will create a vector {N, 1, 1}
@@ -439,14 +456,23 @@ void HipKernels::residual(double* vals, int* cols, int* rows, double* x, const d
     }
 }
 
-void HipKernels::spmv(double* vals, int* cols, int* rows, double* x, double* y, int Nb, unsigned int block_size, hipStream_t stream)
+template<class Scalar>
+void HipKernels<Scalar>::
+spmv(Scalar* vals,
+     int* cols,
+     int* rows,
+     Scalar* x,
+     Scalar* y,
+     int Nb,
+     unsigned int block_size,
+     hipStream_t stream)
 {//NOTE: block_size not used since I use this kernel only for block sizes 1, other uses use rocsparse!
     Timer t_spmv;
 #ifdef __HIP__
     unsigned blockDim = 64;
     const unsigned int num_work_groups = Accelerator::ceilDivision(Nb, blockDim);
     unsigned gridDim = num_work_groups * blockDim;
-    unsigned shared_mem_size = blockDim * sizeof(double); 
+    unsigned shared_mem_size = blockDim * sizeof(Scalar); 
 
    spmv_k<<<dim3(gridDim), dim3(blockDim), shared_mem_size, stream>>>(vals, cols, rows, Nb, x, y);
     
@@ -462,5 +488,6 @@ void HipKernels::spmv(double* vals, int* cols, int* rows, double* x, double* y, 
     }
 }
 
+template class HipKernels<double>;
 
 } // namespace Opm

@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef HIPKERNELS_HPP
-#define HIPKERNELS_HPP
+#ifndef OPM_HIPKERNELS_HPP
+#define OPM_HIPKERNELS_HPP
 
 #include <string>
 #include <memory>
@@ -27,29 +27,110 @@
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_version.h>
 
-// #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
+namespace Opm {
 
-namespace Opm
-{
-
+template<class Scalar>
 class HipKernels
 {
 private:
-    static int verbosity;
-    static double* tmp;     // used as tmp CPU buffer for dot() and norm()
+    static int  verbosity;
     static bool initialized;
-    static std::size_t preferred_workgroup_size_multiple; // stores CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE
     
-    HipKernels(){}; // disable instantiation
+    HipKernels();
     
 public:
+    /// Initialize verbosity level for the HIP kernels
+    /// \param[in] verbosity   verbosity level
     static void init(int verbosity);
-    static void full_to_pressure_restriction(const double* fine_y, double* weights, double* coarse_y, int Nb, hipStream_t stream);
-    static void add_coarse_pressure_correction(double* coarse_x, double* fine_x, int pressure_idx, int Nb, hipStream_t stream);
-    static void vmul(const double alpha, double* in1, double* in2, double* out, int N, hipStream_t stream);
-    static void prolongate_vector(const double* in, double* out, const int* cols, int N, hipStream_t stream);
-    static void residual(double* vals, int* cols, int* rows, double* x, const double* rhs, double* out, int Nb, unsigned int block_size, hipStream_t stream);
-    static void spmv(double* vals, int* cols, int* rows, double* x, double* y, int Nb, unsigned int block_size, hipStream_t stream);
+    
+    /// Transform blocked vector to scalar vector using pressure-weights, where every workitem handles one blockrow
+    /// \param[in]  fine_y     Input y vector
+    /// \param[in]  weights    Weights used to combine cells
+    /// \param[out] course_y   Output y vector 
+    /// \param[in]  Nb         Number of blocks in the original matrix
+    /// \param[in]  stream     Hip stream to use for the computations
+    static void full_to_pressure_restriction(const Scalar* fine_y,
+                                             Scalar* weights,
+                                             Scalar* coarse_y,
+                                             int Nb,
+                                             hipStream_t stream);
+
+    /// Add the coarse pressure solution back to the finer, complete solution; every workitem handles one blockrow
+    /// \param[in]  coarse_x     Input scalar x vector
+    /// \param[out] fine_x       Output blocked x vector 
+    /// \param[in]  pressure_idx Pressure index
+    /// \param[in]  Nb           Number of blocks in the original matrix
+    /// \param[in]  stream       Hip stream to use for the computations
+    static void add_coarse_pressure_correction(Scalar* coarse_x,
+                                               Scalar* fine_x,
+                                               int pressure_idx,
+                                               int Nb,
+                                               hipStream_t stream);
+
+
+    /// Function to multiply vector with another vector and a scalar, element-wise and add the result to a third vector (out = alpha * in1 + in2) 
+    /// \param[in]  alpha   Input scalar 
+    /// \param[in]  in1     First input vector 
+    /// \param[in]  in2     Second input vector
+    /// \param[out] out     Output vector
+    /// \param[in]  N       Size of the vector
+    /// \param[in]  stream  Hip stream to use for the computations
+    static void vmul(const Scalar alpha,
+                     Scalar* in1,
+                     Scalar* in2,
+                     Scalar* out,
+                     int N,
+                     hipStream_t stream);
+    
+    /// Function to prolongate vector during amg cycle, every workitem handles one row
+    /// \param[in]  in      Input fine-grained vector
+    /// \param[out] out     Output course-graned vector 
+    /// \param[in]  cols    Column indexes
+    /// \param[in]  N       Size of the vector
+    /// \param[in]  stream  Hip stream to use for the computations
+    static void prolongate_vector(const Scalar* in,
+                                  Scalar* out,
+                                  const int* cols,
+                                  int N,
+                                  hipStream_t stream);
+
+    /// Function to perform res = rhs - mat * x
+    /// \param[in]  vals       Matrix values
+    /// \param[in]  cols       Column indexes
+    /// \param[in]  rows       Row pointers
+    /// \param[in]  x          X vector
+    /// \param[in]  rhs        Rhs vector
+    /// \param[out] out        Output res vector
+    /// \param[in]  Nb         Number of non-zero blocks in the original matrix
+    /// \param[in]  block_size Block size
+    /// \param[in]  stream     Hip stream to use for the computations
+    static void residual(Scalar* vals,
+                         int* cols,
+                         int* rows,
+                         Scalar* x,
+                         const Scalar* rhs,
+                         Scalar* out,
+                         int Nb,
+                         unsigned int block_size,
+                         hipStream_t stream);
+
+    /// Function to perform sparse matrix vector multipliation
+    /// \param[in]  vals       Matrix values
+    /// \param[in]  cols       Column indexes
+    /// \param[in]  rows       Row pointers
+    /// \param[in]  x          Input x vector
+    /// \param[out] y          Output y vector
+    /// \param[in]  Nb         Number of non-zero blocks in the original matrix
+    /// \param[in]  block_size Block size
+    /// \param[in]  stream     Hip stream to use for the computations
+    static void spmv(Scalar* vals,
+                     int* cols,
+                     int* rows,
+                     Scalar* x,
+                     Scalar* y,
+                     int Nb,
+                     unsigned int block_size,
+                     hipStream_t stream);
 };
 
 } // namespace Opm

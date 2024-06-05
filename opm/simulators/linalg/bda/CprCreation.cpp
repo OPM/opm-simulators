@@ -47,7 +47,8 @@ CprCreation<Scalar, block_size>::CprCreation()
 
 template <class Scalar, unsigned int block_size>
 void CprCreation<Scalar, block_size>::
-create_preconditioner_amg(BlockedMatrix<Scalar> *mat_) {
+create_preconditioner_amg(BlockedMatrix<Scalar> *mat_)
+{
     mat = mat_;
     cprNb = mat_->Nb;
     cprnnzb = mat_->nnzbs;
@@ -183,7 +184,9 @@ create_preconditioner_amg(BlockedMatrix<Scalar> *mat_) {
 }
 
 template <class Scalar, unsigned int block_size>
-void CprCreation<Scalar, block_size>::analyzeHierarchy() {
+void CprCreation<Scalar, block_size>::
+analyzeHierarchy()
+{
     const typename DuneAmg::ParallelMatrixHierarchy& matrixHierarchy = dune_amg->matrices();
 
     // store coarsest AMG level in umfpack format, also performs LU decomposition
@@ -237,8 +240,9 @@ void CprCreation<Scalar, block_size>::analyzeHierarchy() {
 
 
 template <class Scalar, unsigned int block_size>
-void CprCreation<Scalar, block_size>::analyzeAggregateMaps() {
-
+void CprCreation<Scalar, block_size>::
+analyzeAggregateMaps() 
+{
     PcolIndices.resize(num_levels - 1);
     Rmatrices.clear();
 

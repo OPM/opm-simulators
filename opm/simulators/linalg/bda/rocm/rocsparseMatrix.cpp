@@ -25,29 +25,19 @@
 #include <opm/simulators/linalg/bda/rocm/rocsparseMatrix.hpp>
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 #include <opm/simulators/linalg/bda/Matrix.hpp>
+#include <opm/simulators/linalg/bda/Misc.hpp>
 
 #include <sstream>
 #include <iostream>
-
-// #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
-
-#define HIP_CHECK(STAT)                                  \
-    do {                                                 \
-        const hipError_t stat = (STAT);                  \
-        if(stat != hipSuccess)                           \
-        {                                                \
-            std::ostringstream oss;                      \
-            oss << "rocsparseSolverBackend::hip ";       \
-            oss << "error: " << hipGetErrorString(stat); \
-            OPM_THROW(std::logic_error, oss.str());      \
-        }                                                \
-    } while(0)
 
 namespace Opm::Accelerator {
 
 template<class Scalar>
 RocmMatrix<Scalar>::
-RocmMatrix(int Nb_, int Mb_, int nnzbs_, unsigned int block_size_)
+RocmMatrix(int Nb_, 
+           int Mb_,
+           int nnzbs_,
+           unsigned int block_size_)
     : Nb(Nb_),
       Mb(Mb_),
       nnzbs(nnzbs_),
@@ -62,7 +52,11 @@ RocmMatrix(int Nb_, int Mb_, int nnzbs_, unsigned int block_size_)
 
 template <class Scalar>
 void RocmMatrix<Scalar>::
-upload(Scalar *vals, int *cols, int *rows, hipStream_t stream) {
+upload(Scalar *vals,
+       int *cols,
+       int *rows,
+       hipStream_t stream)
+{
     HIP_CHECK(hipMemcpyAsync(nnzValues, vals, sizeof(Scalar) * block_size * block_size * nnzbs, hipMemcpyHostToDevice, stream));
     
     HIP_CHECK(hipMemcpyAsync(colIndices, cols, sizeof(int) * nnzbs, hipMemcpyHostToDevice, stream));
@@ -72,7 +66,9 @@ upload(Scalar *vals, int *cols, int *rows, hipStream_t stream) {
 
 template <class Scalar>
 void RocmMatrix<Scalar>::
-upload(Matrix<Scalar> *matrix, hipStream_t stream) {
+upload(Matrix<Scalar> *matrix,
+       hipStream_t stream)
+{
     if (block_size != 1) {
         OPM_THROW(std::logic_error, "Error trying to upload a BlockedMatrix to RocmMatrix with different block_size");
     }
@@ -82,7 +78,9 @@ upload(Matrix<Scalar> *matrix, hipStream_t stream) {
 
 template <class Scalar>
 void RocmMatrix<Scalar>::
-upload(BlockedMatrix<Scalar> *matrix, hipStream_t stream) {
+upload(BlockedMatrix<Scalar> *matrix,
+       hipStream_t stream)
+{
     if (matrix->block_size != block_size) {
         OPM_THROW(std::logic_error, "Error trying to upload a BlockedMatrix to RocmMatrix with different block_size");
     }
@@ -99,7 +97,9 @@ RocmVector<Scalar>::RocmVector(int N)
 
 template <class Scalar>
 void RocmVector<Scalar>::
-upload(Scalar *vals, hipStream_t stream) {
+upload(Scalar *vals,
+       hipStream_t stream) 
+{
     HIP_CHECK(hipMemcpyAsync(nnzValues, vals, sizeof(Scalar) * size, hipMemcpyHostToDevice, stream));    
 }
 

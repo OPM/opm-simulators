@@ -43,49 +43,12 @@
 
 #include <opm/simulators/linalg/bda/Preconditioner.hpp>
 
-#include <hip/hip_runtime_api.h>
-#include <hip/hip_version.h>
+#include <opm/simulators/linalg/bda/Misc.hpp>
 
 #ifdef HIP_HAVE_CUDA_DEFINED
 #define HAVE_CUDA HIP_HAVE_CUDA_DEFINED
 #undef HIP_HAVE_CUDA_DEFINED
 #endif
-
-#define HIP_CHECK(STAT)                                  \
-    do {                                                 \
-        const hipError_t stat = (STAT);                  \
-        if(stat != hipSuccess)                           \
-        {                                                \
-            std::ostringstream oss;                      \
-            oss << "rocsparseSolverBackend::hip ";       \
-            oss << "error: " << hipGetErrorString(stat); \
-            OPM_THROW(std::logic_error, oss.str());      \
-        }                                                \
-    } while(0)
-
-#define ROCSPARSE_CHECK(STAT)                            \
-    do {                                                 \
-        const rocsparse_status stat = (STAT);            \
-        if(stat != rocsparse_status_success)             \
-        {                                                \
-            std::ostringstream oss;                      \
-            oss << "rocsparseSolverBackend::rocsparse "; \
-            oss << "error: " << stat;                    \
-            OPM_THROW(std::logic_error, oss.str());      \
-        }                                                \
-    } while(0)
-
-#define ROCBLAS_CHECK(STAT)                              \
-    do {                                                 \
-        const rocblas_status stat = (STAT);              \
-        if(stat != rocblas_status_success)               \
-        {                                                \
-            std::ostringstream oss;                      \
-            oss << "rocsparseSolverBackend::rocblas ";   \
-            oss << "error: " << stat;                    \
-            OPM_THROW(std::logic_error, oss.str());      \
-        }                                                \
-    } while(0)
 
 #include <cstddef>
 
@@ -462,7 +425,7 @@ copy_system_to_gpu(Scalar *b)
                              sizeof(Scalar) * nnz,
                              hipMemcpyHostToDevice, stream));
     HIP_CHECK(hipMemsetAsync(d_x, 0, N * sizeof(Scalar), stream));
-    HIP_CHECK(hipMemcpyAsync(d_b, b, N * sizeof(Scalar) * N,
+    HIP_CHECK(hipMemcpyAsync(d_b, b, N * sizeof(Scalar),
                              hipMemcpyHostToDevice, stream));
     
     prec->copy_system_to_gpu(d_Avals); 

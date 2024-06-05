@@ -21,24 +21,29 @@
 #define OPM_ROCMMATRIX_HEADER_INCLUDED
 
 #include <hip/hip_runtime_api.h>
-#include <hip/hip_version.h>
 
 namespace Opm::Accelerator {
 
 template<class Scalar> class Matrix;
 template<class Scalar> class BlockedMatrix;
 
-/// This struct resembles a csr matrix, only doubles are supported
-/// The matrix data is stored in OpenCL Buffers
+/// This struct resembles a csr matrix
 template<class Scalar>
 class RocmMatrix {
 public:
 
     RocmMatrix(int Nb_, int Mb_, int nnzbs_, unsigned int block_size_);
 
-    void upload(Scalar *vals, int *cols, int *rows, hipStream_t stream);
-    void upload(Matrix<Scalar> *matrix, hipStream_t stream);
-    void upload(BlockedMatrix<Scalar> *matrix, hipStream_t stream);
+    void upload(Scalar *vals,
+                int *cols,
+                int *rows,
+                hipStream_t stream);
+    
+    void upload(Matrix<Scalar> *matrix,
+                hipStream_t stream);
+    
+    void upload(BlockedMatrix<Scalar> *matrix,
+                hipStream_t stream);
 
     Scalar* nnzValues;
     int* colIndices;
@@ -54,8 +59,11 @@ public:
 
     RocmVector(int N);
 
-    void upload(Scalar *vals, hipStream_t stream);
-    void upload(Matrix<Scalar> *matrix, hipStream_t stream);
+    void upload(Scalar *vals,
+                hipStream_t stream);
+    
+    void upload(Matrix<Scalar> *matrix,
+                hipStream_t stream);
 
     Scalar* nnzValues;
     int size;

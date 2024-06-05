@@ -23,18 +23,20 @@
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/simulators/linalg/bda/rocm/rocsparseBILU0.hpp>
-// #include <opm/simulators/linalg/bda/rocm/rocsparseCPR.hpp>
+#include <opm/simulators/linalg/bda/rocm/rocsparseCPR.hpp>
 #include <opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.hpp>
 
 namespace Opm::Accelerator {
 
 template <class Scalar, unsigned int block_size>
 std::unique_ptr<rocsparsePreconditioner<Scalar,block_size> > rocsparsePreconditioner<Scalar,block_size>::
-create(PreconditionerType type, int verbosity) {
+create(PreconditionerType type,
+       int verbosity)
+{
     if (type == PreconditionerType::BILU0) {
         return std::make_unique<Opm::Accelerator::rocsparseBILU0<Scalar, block_size> >(verbosity);
-//     } else if (type == PreconditionerType::CPR) {
-//         return std::make_unique<Opm::Accelerator::rocsparseCPR<block_size> >(verbosity);
+    } else if (type == PreconditionerType::CPR) {
+        return std::make_unique<Opm::Accelerator::rocsparseCPR<Scalar, block_size> >(verbosity);
     } else {
         OPM_THROW(std::logic_error, "Invalid PreconditionerType");
     }
@@ -42,14 +44,20 @@ create(PreconditionerType type, int verbosity) {
 
 template <class Scalar, unsigned int block_size>
 void rocsparsePreconditioner<Scalar, block_size>::
-set_matrix_analysis(rocsparse_mat_descr descr_L, rocsparse_mat_descr descr_U) {
+set_matrix_analysis(rocsparse_mat_descr descr_L,
+                    rocsparse_mat_descr descr_U)
+{
     descr_L = descr_L;
     descr_U = descr_U;
 }
 
 template <class Scalar, unsigned int block_size>
 void rocsparsePreconditioner<Scalar, block_size>::
-set_context(rocsparse_handle handle, rocsparse_direction dir, rocsparse_operation operation, hipStream_t stream) {
+set_context(rocsparse_handle handle,
+            rocsparse_direction dir,
+            rocsparse_operation operation,
+            hipStream_t stream)
+{
     this->handle = handle;
     this->dir = dir;
     this->operation = operation;

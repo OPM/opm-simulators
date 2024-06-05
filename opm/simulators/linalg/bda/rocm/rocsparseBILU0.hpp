@@ -57,7 +57,7 @@ private:
 #endif
 
     rocsparse_int *d_Mrows, *d_Mcols; 
-    double *d_Mvals, *d_t;
+    Scalar *d_Mvals, *d_t;
     void *d_buffer; // buffer space, used by rocsparse ilu0 analysis
     
 public:
@@ -67,29 +67,57 @@ public:
     /// Initialize GPU and allocate memory
     /// \param[in] matrix     matrix A
     /// \param[in] jacMatrix  matrix for preconditioner
-    bool initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix, std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix, rocsparse_int *d_Arows, rocsparse_int *d_Acols);
+    bool initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
+                    std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
+                    rocsparse_int *d_Arows,
+                    rocsparse_int *d_Acols);
 
-    // analysis, extract parallelism if specified
+    /// Analysis, extract parallelism if specified
+    /// \param[in] mat     matrix A
     bool analyze_matrix(BlockedMatrix<Scalar> *mat);
-    bool analyze_matrix(BlockedMatrix<Scalar> *mat, BlockedMatrix<Scalar> *jacMat);
+    
+    /// Analysis, extract parallelism if specified
+    /// \param[in] mat     matrix A
+    /// \param[in] jacMat  matrix for preconditioner, analyze this as well
+    bool analyze_matrix(BlockedMatrix<Scalar> *mat,
+                        BlockedMatrix<Scalar> *jacMat);
 
-    // ilu_decomposition
+    /// ILU decomposition
+    /// \param[in] mat     matrix A to decompose
     bool create_preconditioner(BlockedMatrix<Scalar> *mat) override;
-    bool create_preconditioner(BlockedMatrix<Scalar> *mat, BlockedMatrix<Scalar> *jacMat) override;
+    
+    /// ILU decomposition
+    /// \param[in] mat     matrix A
+    /// \param[in] jacMat  matrix for preconditioner, decompose this one if used
+    bool create_preconditioner(BlockedMatrix<Scalar> *mat,
+                               BlockedMatrix<Scalar> *jacMat) override;
 
-    // apply preconditioner, x = prec(y)
-    // via Lz = y
-    // and Ux = z
-    void apply(double& y, double& x) override;
+    /// Apply preconditioner, x = prec(y)
+    /// via Lz = y
+    /// and Ux = z
+    /// \param[in]  y  Input y vector
+    /// \param[out] x  Output x vector
+    void apply(Scalar& y,
+               Scalar& x) override;
 
 #if HAVE_OPENCL
     // apply preconditioner, x = prec(y)
-    void apply(const cl::Buffer& y, cl::Buffer& x) {}
+    void apply(const cl::Buffer& y,
+               cl::Buffer& x) {}
 #endif
 
-    void copy_system_to_gpu(double *mVals);
-    void update_system(double *vals, double *b);
-    void update_system_on_gpu(double *b);
+    /// Copy matrix A values to GPU
+    /// \param[in]  mVals  Input values
+    void copy_system_to_gpu(Scalar *mVals);
+
+    /// Reassign pointers, in case the addresses of the Dune variables have changed --> TODO: check when/if we need this method
+//     /// \param[in]  vals  New values
+//     /// \param[in] b     New b vector
+//     void update_system(Scalar *vals, Scalar *b);
+    
+    /// Update GPU values after a new assembly is done
+    /// \param[in] b     New b vector
+    void update_system_on_gpu(Scalar *b);
 };
 } // namespace Opm
 
