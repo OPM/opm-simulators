@@ -489,7 +489,6 @@ protected:
             }
 
             Scalar rate_f = rate - rate_s;
-
             if (rate_f > 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
                     // Injection of free tracer only
@@ -498,6 +497,10 @@ protected:
                     // Store _injector_ tracer rate for reporting
                     this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
                     this->wellFreeTracerRate_.at(std::make_pair(eclWell.name(),this->wellfname(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
+                    if (eclWell.isMultiSegment()) {
+                        this->mSwTracerRate_[std::make_tuple(eclWell.name(), this->name(tr.idx_[tIdx]), eclWell.getConnections().get(i).segment())] = 
+                            rate_f*wtracer[tIdx];
+                    }
                 }
                 dfVol_[tr.phaseIdx_][I] -= rate_f * dt;
             }
@@ -511,6 +514,10 @@ protected:
                         rate_f * tr.concentration_[tIdx][I][0];
                     this->wellFreeTracerRate_.at(std::make_pair(eclWell.name(),this->wellfname(tr.idx_[tIdx]))) +=
                         rate_f * tr.concentration_[tIdx][I][0];
+                    if (eclWell.isMultiSegment()) {
+                        this->mSwTracerRate_[std::make_tuple(eclWell.name(), this->name(tr.idx_[tIdx]), eclWell.getConnections().get(i).segment())] = 
+                            rate_f * tr.concentration_[tIdx][I][0];
+                    }
                 }
                 dfVol_[tr.phaseIdx_][I] -= rate_f * dt;
                 
@@ -525,6 +532,10 @@ protected:
                         rate_s * tr.concentration_[tIdx][I][1];
                     this->wellSolTracerRate_.at(std::make_pair(eclWell.name(),this->wellsname(tr.idx_[tIdx]))) +=
                         rate_s * tr.concentration_[tIdx][I][1];
+                    if (eclWell.isMultiSegment()) {
+                        this->mSwTracerRate_[std::make_tuple(eclWell.name(), this->name(tr.idx_[tIdx]), eclWell.getConnections().get(i).segment())] = 
+                            rate_s * tr.concentration_[tIdx][I][1];
+                    }
                 }
                 dsVol_[tr.phaseIdx_][I] -= rate_s * dt;
 

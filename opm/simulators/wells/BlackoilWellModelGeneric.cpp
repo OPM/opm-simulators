@@ -1699,6 +1699,33 @@ assignWellTracerRates(data::Wells& wsrpt,
 }
 
 template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+assignMswTracerRates(data::Wells& wsrpt,
+                     const MswTracerRates& mswTracerRates) const
+{
+    if (mswTracerRates.empty())
+        return;
+    
+    for (const auto& mswTR : mswTracerRates) {
+        std::string wellName = std::get<0>(mswTR.first);
+        auto xwPos = wsrpt.find(wellName);
+        if (xwPos == wsrpt.end()) { // No well results.
+            continue;
+        }
+        std::string tracerName = std::get<1>(mswTR.first);
+        std::size_t segNumber = std::get<2>(mswTR.first);
+        Scalar rate = mswTR.second;
+
+        auto& wData = xwPos->second;
+        auto segPos = wData.segments.find(segNumber);
+        if (segPos != wData.segments.end()) {
+            auto& segment = segPos->second;
+            segment.rates.set(data::Rates::opt::tracer, rate, tracerName);
+        }
+    }
+}
+
+template<class Scalar>
 std::vector<std::vector<int>> BlackoilWellModelGeneric<Scalar>::
 getMaxWellConnections() const
 {

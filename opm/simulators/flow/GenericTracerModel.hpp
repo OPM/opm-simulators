@@ -89,6 +89,8 @@ public:
     getWellFreeTracerRates() const {return wellFreeTracerRate_;}
     const std::map<std::pair<std::string, std::string>, Scalar>&
     getWellSolTracerRates() const {return wellSolTracerRate_;}
+    const std::map<std::tuple<std::string, std::string, std::size_t>, Scalar>&
+    getMswTracerRates() const {return mSwTracerRate_;}
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -134,10 +136,14 @@ protected:
     std::vector<TracerVectorSingle> freeTracerConcentration_;
     std::vector<TracerVectorSingle> solTracerConcentration_;
 
-    // <wellName, tracerIdx> -> wellRate
+    // <wellName, tracerName> -> wellRate
     std::map<std::pair<std::string, std::string>, Scalar> wellTracerRate_;
     std::map<std::pair<std::string, std::string>, Scalar> wellFreeTracerRate_;
     std::map<std::pair<std::string, std::string>, Scalar> wellSolTracerRate_;
+
+    // <wellName, tracerName, segNum> -> wellRate
+    std::map<std::tuple<std::string, std::string, std::size_t>, Scalar> mSwTracerRate_;
+
     /// \brief Function returning the cell centers
     std::function<std::array<double,dimWorld>(int)> centroids_;
 };

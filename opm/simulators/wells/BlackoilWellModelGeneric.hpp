@@ -437,6 +437,9 @@ protected:
     using WellTracerRates = std::map<std::pair<std::string, std::string>, Scalar>;
     void assignWellTracerRates(data::Wells& wsrpt,
                                const WellTracerRates& wellTracerRates) const;
+    using MswTracerRates = std::map<std::tuple<std::string, std::string, std::size_t>, Scalar>;
+    void assignMswTracerRates(data::Wells& wsrpt,
+                              const MswTracerRates& mswTracerRates) const;
 
     Schedule& schedule_;
     const SummaryState& summaryState_;

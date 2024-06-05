@@ -271,10 +271,13 @@ template<class Scalar> class WellContributions;
                         .tracerModel().getWellFreeTracerRates();
                     const auto& solTracerRates = simulator_.problem()
                         .tracerModel().getWellSolTracerRates();
+                    const auto& mswTracerRates = simulator_.problem()
+                        .tracerModel().getMswTracerRates();
 
                     this->assignWellTracerRates(wsrpt, tracerRates);
                     this->assignWellTracerRates(wsrpt, freeTracerRates);
                     this->assignWellTracerRates(wsrpt, solTracerRates);
+                    this->assignMswTracerRates(wsrpt, mswTracerRates);
                 }
 
                 BlackoilWellModelGuideRates(*this)
