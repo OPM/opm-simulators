@@ -55,7 +55,7 @@ bool FileExists(const std::string& filename_in,
 {
     // From c++17  : std::filesystem::exists(filename_in);
     
-    int retint = 0;
+    int retint = 1;
     std::ifstream filestr;
     bool file_exists = false;
     
@@ -65,7 +65,6 @@ bool FileExists(const std::string& filename_in,
 
     if (comm.rank() == 0) {
         filestr.open(filename_in);
-        file_exists = true;
         if(filestr.fail()) {
             retint = 0;
         } else {
@@ -75,9 +74,10 @@ bool FileExists(const std::string& filename_in,
     }
 
     comm.broadcast(&retint, 1, 0);
-
     if (retint == 1) {
         file_exists = true;
+    } else {
+        file_exists = false;
     }
 
     return (file_exists);
@@ -86,7 +86,6 @@ bool FileExists(const std::string& filename_in,
 void DamarisSettings::SetRandString(void)
 {
     // rand_value_str_ =  damaris::Environment::GetMagicNumber(comm);  // requires Damaris >= v1.9.2
-    
     // We will create a random value.
     // Seed with a real random value, if available
     std::random_device r;
@@ -117,7 +116,7 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
     std::string disableParaviewXMLfin("--");
 
     std::string publishToPython_str("#"); // to be changed to the name of the PyScript XML element
-#ifdef HAVE_PYTHON_ENABLED
+
     // Test if input Python file exists and set the name of the script for <variable ...  script="" > )XML elements
     if (pythonFilename_ != ""){
         if (FileExists(pythonFilename_, comm)) {
@@ -130,13 +129,7 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
             disablePythonXMLfin = std::string("--");
         }
     }
-#else
-     OpmLog::info(fmt::format("INFO: Opm::DamarisOutput::DamarisKeywords() : Python is not enabled in the Damaris library. "
-                              "The commandline --damaris-python-script={} will be set to empty string", pythonFilename_));
-     pythonFilename_.clear();
-#endif
 
-#ifdef HAVE_PARAVIEW_ENABLED
      // Test if input Paraview Python file exists 
     if (paraviewPythonFilename_ != ""){
         if (FileExists(paraviewPythonFilename_, comm)) {
@@ -148,25 +141,20 @@ DamarisSettings::getKeywords([[maybe_unused]] const Parallel::Communication& com
             disableParaviewXMLfin = std::string("--");
         }
     }
-#else
-     OpmLog::info(fmt::format("Opm::DamarisOutput::DamarisKeywords() : Paraview is not enabled in the Damaris library. "
-                              "The commandline --damaris-python-paraview-script={} will be set to empty string", 
-                              paraviewPythonFilename_));
-     paraviewPythonFilename_.clear();
-#endif
 
     // Flag error if both scripts are enabled 
     if ((pythonFilename_.size() > 0) && (paraviewPythonFilename_.size() > 0) )
     {
         // A work around of this issue is to remove the Paraview mpi4py library (use print(inspect.getfile(mpi4py)))
         // and then possibly not use mpi4py in the Paraview script code. OR try to install paraview mpi4py with headers.
+        // The Python script will issue: ERROR: Initialiazation via BOOST_PYTHON_MODULE(server) failed at import_mpi4py()
         OPM_THROW(std::runtime_error, "ERROR: Both the Python (--damaris-python-script command line argument) and Paraview Python "
                                       "(--damaris-python-paraview-script command line argument) scripts are valid, however only one "
                                       "type of analysis is supported in a single simulation (due to Paraview installing mpi4py library "
                                       "locally and without header files). "
                                       "Please choose one or the other method of analysis for now. Exiting." );
     }
-    
+
     std::string saveMeshToHDF5_str("#");
     if (saveMeshToHDF5_ == true) {
         enableDamarisOutputCollective_ = false ;

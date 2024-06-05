@@ -125,7 +125,6 @@ getSetOfIncludedVariables(void)
     // Use while loop to check the getline() function condition.  
     while (std::getline(ss, tstr, ',')) {
         //remove whitespace
-        // tstr.erase(std::remove_if(tstr.begin(), tstr.end(), ::isspace), tstr.end());
         std::string::iterator end_pos = std::remove(tstr.begin(), tstr.end(), ' ');
         tstr.erase(end_pos, tstr.end());
         // place in set (no duplicates possible in set and no empty string)

@@ -291,10 +291,6 @@ public:
 
                   // It does not seem I can test for what type of data is present (double or int)
                   // in the std::variant within the data::CellData, so I will use a try catch block. 
-                  // Although, only MPI_RANK and GLOBAL_CELL_INDEX are set as integer types (in the 
-                  // XML file) so it is a moot point. 
-                  // We could use damaris_get_type() to check what the type is specified as
-                  // within the Damaris XML file
                   try {
                     if (dataCol.data<double>().size() >= this->numElements_) {
                         dam_err_ = DamarisOutput::write(name.c_str(), rank_,
@@ -304,7 +300,7 @@ public:
                     }
                   }
                   catch (std::bad_variant_access const& ex) {
-                    // Not a std::vector<double>
+                    // Not a std::vector<double>, must be a std::vector<int>
                     if (dataCol.data<int>().size() >= this->numElements_) {
                         dam_err_ = DamarisOutput::write(name.c_str(), rank_,
                                                       dataCol.data<int>().data()) ;
@@ -363,11 +359,13 @@ private:
     void setGlobalIndexForDamaris () 
     {
         // Use damaris_set_position to set the offset in the global size of the array.
-        // This is used so that output functionality (e.g. HDF5Store) knows global offsets of the data of the ranks
-        // setPosition("PRESSURE", comm.rank(), elements_rank_offsets_[comm.rank()]);
+        // This is used so that output functionality (e.g. HDF5Store) knows the global offsets of 
+        // the data of the ranks data.
         dam_err_ = DamarisOutput::setPosition("GLOBAL_CELL_INDEX", rank_, elements_rank_offsets_[rank_]);
 
-        // Set the size of the MPI variable
+        // This is an example of writing to the Damaris shared memory directly (i.e. we allocate the
+        // variable directly in the shared memory region and do not use damaris_write() to copy data there.
+        // The shared memory is given back to Damaris when the DamarisVarInt goes out of scope.
         // N.B. MPI_RANK is only saved to HDF5 if --damaris-save-mesh-to-hdf=true is specified
         DamarisVarInt mpi_rank_var(1, {"n_elements_local"}, "MPI_RANK", rank_);
         mpi_rank_var.setDamarisPosition({static_cast<int64_t>(elements_rank_offsets_[rank_])});
@@ -385,12 +383,6 @@ private:
             dam_err_ = DamarisOutput::write("GLOBAL_CELL_INDEX", rank_, local_to_global_filled.data());
         }
 
-        // This is an example of writing to the Damaris shared memory directly (i.e. not using 
-        // damaris_write() to copy data there)
-        // We will add the MPI rank value directly into shared memory using the DamarisVar 
-        // wrapper of the C based Damaris API.
-        // The shared memory is given back to Damaris when the DamarisVarInt goes out of scope.
-        // DamarisVarInt mpi_rank_var_test(1, {"n_elements_local"},  "MPI_RANK", rank_);
         mpi_rank_var.setDamarisParameterAndShmem( {this->numElements_ } ) ;
         // Fill the created memory area
         std::fill(mpi_rank_var.data(), mpi_rank_var.data() + numElements_, rank_);
