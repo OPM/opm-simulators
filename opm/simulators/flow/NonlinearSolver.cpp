@@ -34,6 +34,7 @@ namespace detail {
 template<class Scalar>
 void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
                         const int it, const int numPhases, const Scalar relaxRelTol,
+                        const int minimumOscillatingPhases,
                         bool& oscillate, bool& stagnate)
 {
     // The detection of oscillation in two primary variable results in the report of the detection
@@ -63,7 +64,7 @@ void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
         stagnate = (stagnate && !(std::abs((F1[p] - F2[p]) / F2[p]) > 1.0e-3));
     }
 
-    oscillate = (oscillatePhase > 1);
+    oscillate = (oscillatePhase >= minimumOscillatingPhases);
 }
 
 template <class BVector, class Scalar>
@@ -114,7 +115,7 @@ using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Size>>;
 
 #define INSTANCE_TYPE(T) \
     template void detectOscillations(const std::vector<std::vector<T>>&, \
-                                     const int, const int, const T, \
+                                     const int, const int, const T, const int, \
                                      bool&, bool&); \
     INSTANCE(T,1) \
     INSTANCE(T,2) \
