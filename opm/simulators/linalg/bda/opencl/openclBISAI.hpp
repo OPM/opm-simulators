@@ -125,7 +125,7 @@ public:
 
     // apply preconditioner, x = prec(y)
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
-    void apply(double& y, double& x) {}
+    void apply(Scalar& y, Scalar& x) {}
 };
 
 /// Similar function to csrPatternToCsc. It gives an offset map from CSR to CSC instead of the full CSR to CSC conversion.
