@@ -47,10 +47,10 @@ public:
 protected:
     
     int num_levels;
-    std::vector<double> weights, coarse_vals, coarse_x, coarse_y;
+    std::vector<Scalar> weights, coarse_vals, coarse_x, coarse_y;
     std::vector<Matrix<Scalar>> Amatrices, Rmatrices; // scalar matrices that represent the AMG hierarchy
     std::vector<std::vector<int> > PcolIndices; // prolongation does not need a full matrix, only store colIndices
-    std::vector<std::vector<double> > invDiags; // inverse of diagonal of Amatrices
+    std::vector<std::vector<Scalar> > invDiags; // inverse of diagonal of Amatrices
     
     BlockedMatrix<Scalar> *mat = nullptr;    // input matrix, blocked
 

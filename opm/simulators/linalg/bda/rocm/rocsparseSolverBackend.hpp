@@ -127,7 +127,7 @@ public:
                            std::string linsolver);
 
     /// For the CPR coarse solver
-    rocsparseSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, bool opencl_ilu_reorder);
+    rocsparseSolverBackend(int linear_solver_verbosity, int maxit, Scalar tolerance, bool opencl_ilu_reorder);
 
     /// Destroy a openclSolver, and free memory
     ~rocsparseSolverBackend();

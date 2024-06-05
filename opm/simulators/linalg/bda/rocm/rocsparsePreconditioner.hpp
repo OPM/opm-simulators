@@ -56,7 +56,7 @@ public:
                                                                                int verbosity);
 
     // apply preconditioner, x = prec(y)
-    virtual void apply(double& y, double& x) = 0;
+    virtual void apply(Scalar& y, Scalar& x) = 0;
  
     // create/update preconditioner, probably used every linear solve
     // the version with two params can be overloaded, if not, it will default to using the one param version
@@ -70,11 +70,11 @@ public:
                             rocsparse_int *d_Arows,
                             rocsparse_int *d_Acols) = 0;
     
-    virtual void copy_system_to_gpu(double *b)=0;
+    virtual void copy_system_to_gpu(Scalar *b)=0;
 
     /// Update linear system to GPU
     /// \param[in] b              input vector, contains N values
-    virtual void update_system_on_gpu(double *b)=0;
+    virtual void update_system_on_gpu(Scalar *b)=0;
     
     void set_matrix_analysis(rocsparse_mat_descr descr_L,
                              rocsparse_mat_descr descr_U);

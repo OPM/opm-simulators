@@ -43,7 +43,7 @@ RocmMatrix(int Nb_,
       nnzbs(nnzbs_),
       block_size(block_size_)
 {
-    HIP_CHECK(hipMalloc((void**)&nnzValues, sizeof(double) * block_size * block_size * nnzbs));
+    HIP_CHECK(hipMalloc((void**)&nnzValues, sizeof(Scalar) * block_size * block_size * nnzbs));
         
     HIP_CHECK(hipMalloc((void**)&colIndices, sizeof(int) * nnzbs));
 
