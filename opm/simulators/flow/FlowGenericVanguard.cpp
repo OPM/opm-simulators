@@ -109,10 +109,12 @@ FlowGenericVanguard::SimulationModelParams
 FlowGenericVanguard::serializationTestParams()
 {
     SimulationModelParams result;
+    result.setupTime_ = 1.234;
     result.actionState_ = std::make_unique<Action::State>(Action::State::serializationTestObject());
     result.eclSchedule_ = std::make_unique<Schedule>(Schedule::serializationTestObject());
     result.summaryState_ = std::make_unique<SummaryState>(SummaryState::serializationTestObject());
     result.udqState_ = std::make_unique<UDQState>(UDQState::serializationTestObject());
+    // Remaining members left as null pointers: wtestState_, eclState_ and eclSummaryConfig_.
 
     return result;
 }
