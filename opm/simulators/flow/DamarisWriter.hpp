@@ -292,7 +292,7 @@ public:
                   // It does not seem I can test for what type of data is present (double or int)
                   // in the std::variant within the data::CellData, so I will use a try catch block. 
                   try {
-                    if (dataCol.data<double>().size() >= this->numElements_) {
+                    if (dataCol.data<double>().size() >= static_cast<std::vector<double>::size_type>(this->numElements_)) {
                         dam_err_ = DamarisOutput::write(name.c_str(), rank_,
                                                         dataCol.data<double>().data()) ;
                     } else {
@@ -301,7 +301,7 @@ public:
                   }
                   catch (std::bad_variant_access const& ex) {
                     // Not a std::vector<double>, must be a std::vector<int>
-                    if (dataCol.data<int>().size() >= this->numElements_) {
+                    if (dataCol.data<int>().size() >= static_cast<std::vector<int>::size_type>(this->numElements_)) {
                         dam_err_ = DamarisOutput::write(name.c_str(), rank_,
                                                       dataCol.data<int>().data()) ;
                     } else {
