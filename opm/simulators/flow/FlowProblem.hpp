@@ -538,7 +538,8 @@ public:
             };
 
             // re-compute all quantities which may possibly be affected.
-            transmissibilities_.update(true, equilGridToGrid);
+            using TransUpdateQuantities = typename Vanguard::TransmissibilityType::TransUpdateQuantities;
+            transmissibilities_.update(true, TransUpdateQuantities::All, equilGridToGrid);
             this->referencePorosity_[1] = this->referencePorosity_[0];
             updateReferencePorosity_();
             updatePffDofData_();
@@ -700,8 +701,9 @@ public:
                 .applyActions(episodeIdx, simulator.time() + simulator.timeStepSize(),
                               [this](const bool global)
             {
+                using TransUpdateQuantities = typename Vanguard::TransmissibilityType::TransUpdateQuantities;
                 this->transmissibilities_
-                    .update(global, [&vg = this->simulator().vanguard()]
+                    .update(global,  TransUpdateQuantities::All, [&vg = this->simulator().vanguard()]
                             (const unsigned int i)
                     {
                         return vg.gridIdxToEquilGridIdx(i);

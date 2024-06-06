@@ -159,8 +159,11 @@ dispersivity(unsigned elemIdx1, unsigned elemIdx2) const
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-update(bool global, const std::function<unsigned int(unsigned int)>& map, const bool applyNncMultregT)
+update(bool global, const TransUpdateQuantities update_quantities,
+       const std::function<unsigned int(unsigned int)>& map, const bool applyNncMultregT)
 {
+    // whether only update the permeability related transmissibility
+    const bool onlyTrans = (update_quantities == TransUpdateQuantities::Trans);
     const auto& cartDims = cartMapper_.cartesianDimensions();
     const auto& transMult = eclState_.getTransMult();
     const auto& comm = gridView_.comm();
@@ -208,7 +211,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
     transBoundary_.clear();
 
     // if energy is enabled, let's do the same for the "thermal half transmissibilities"
-    if (enableEnergy_) {
+    if (enableEnergy_ && !onlyTrans) {
         thermalHalfTrans_.clear();
         thermalHalfTrans_.reserve(numElements*6*1.05);
 
@@ -216,14 +219,14 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
     }
 
     // if diffusion is enabled, let's do the same for the "diffusivity"
-    if (updateDiffusivity) {
+    if (updateDiffusivity && !onlyTrans) {
         diffusivity_.clear();
         diffusivity_.reserve(numElements*3*1.05);
         extractPorosity_();
     }
 
     // if dispersion is enabled, let's do the same for the "dispersivity"
-    if (updateDispersivity) {
+    if (updateDispersivity && !onlyTrans) {
         dispersivity_.clear();
         dispersivity_.reserve(numElements*3*1.05);
         extractDispersion_();
@@ -283,7 +286,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
 
                 // for boundary intersections we also need to compute the thermal
                 // half transmissibilities
-                if (enableEnergy_) {
+                if (enableEnergy_ && !onlyTrans) {
                     Scalar transBoundaryEnergyIs;
                     computeHalfDiffusivity_(transBoundaryEnergyIs,
                                             faceAreaNormal,
@@ -334,15 +337,15 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
                 // *added to* by applyNncToGridTrans_() later.
                 assert(outsideFaceIdx == -1);
                 trans_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
-                if (enableEnergy_){
+                if (enableEnergy_  && !onlyTrans){
                     thermalHalfTrans_[details::directionalIsId(elemIdx, outsideElemIdx)] = 0.0;
                     thermalHalfTrans_[details::directionalIsId(outsideElemIdx, elemIdx)] = 0.0;
                 }
 
-                if (updateDiffusivity) {
+                if (updateDiffusivity && !onlyTrans) {
                     diffusivity_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
                 }
-                if (updateDispersivity) {
+                if (updateDispersivity && !onlyTrans) {
                     dispersivity_[details::isId(elemIdx, outsideElemIdx)] = 0.0;
                 }
                 continue;
@@ -459,7 +462,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
             trans_[details::isId(elemIdx, outsideElemIdx)] = trans;
 
             // update the "thermal half transmissibility" for the intersection
-            if (enableEnergy_) {
+            if (enableEnergy_ && !onlyTrans) {
 
                 Scalar halfDiffusivity1;
                 Scalar halfDiffusivity2;
@@ -484,7 +487,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
            }
 
             // update the "diffusive half transmissibility" for the intersection
-            if (updateDiffusivity) {
+            if (updateDiffusivity && !onlyTrans) {
 
                 Scalar halfDiffusivity1;
                 Scalar halfDiffusivity2;
@@ -520,7 +523,7 @@ update(bool global, const std::function<unsigned int(unsigned int)>& map, const 
            }
 
            // update the "dispersivity half transmissibility" for the intersection
-            if (updateDispersivity) {
+            if (updateDispersivity && !onlyTrans) {
 
                 Scalar halfDispersivity1;
                 Scalar halfDispersivity2;

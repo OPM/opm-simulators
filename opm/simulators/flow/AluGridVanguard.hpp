@@ -190,7 +190,8 @@ public:
                                                                  getPropValue<TypeTag,
                                                                  Properties::EnableDispersion>());
             // Re-ordering  for ALUGrid
-            globalTrans_->update(false, [&](unsigned int i) { return gridEquilIdxToGridIdx(i);});
+            globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans,
+                                 [&](unsigned int i) { return gridEquilIdxToGridIdx(i);});
         }
         
     }
@@ -351,6 +352,10 @@ protected:
     std::unique_ptr<CartesianIndexMapper> cartesianIndexMapper_;
     std::unique_ptr<EquilCartesianIndexMapper> equilCartesianIndexMapper_;
     std::unique_ptr<Factory> factory_;
+    // \Note: this globalTrans_ is used for domain decomposition and INIT file output.
+    // It only contains trans_ due to permeability and does not contain thermalHalfTrans_,
+    // diffusivity_ abd dispersivity_. The main reason is to reduce the memory usage for rank 0
+    // during parallel running.
     std::unique_ptr<TransmissibilityType> globalTrans_;
     int mpiRank;
 };

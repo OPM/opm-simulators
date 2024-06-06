@@ -285,7 +285,7 @@ protected:
                                                     getPropValue<TypeTag, Properties::EnableEnergy>(),
                                                     getPropValue<TypeTag, Properties::EnableDiffusion>(),
                                                     getPropValue<TypeTag, Properties::EnableDispersion>()));
-        globalTrans_->update(false);
+        globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans);
     }
 
     double getTransmissibility(unsigned I, unsigned J) const override
@@ -306,6 +306,10 @@ protected:
         this->doFilterConnections_(this->schedule());
     }
 
+    // \Note: this globalTrans_ is used for domain decomposition and INIT file output.
+    // It only contains trans_ due to permeability and does not contain thermalHalfTrans_,
+    // diffusivity_ abd dispersivity_. The main reason is to reduce the memory usage for rank 0
+    // during parallel running.
     std::unique_ptr<TransmissibilityType> globalTrans_;
 };
 
