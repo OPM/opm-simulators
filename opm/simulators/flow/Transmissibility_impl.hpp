@@ -159,9 +159,11 @@ dispersivity(unsigned elemIdx1, unsigned elemIdx2) const
 
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 void Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-update(bool global, const bool onlyTrans,
+update(bool global, const TransUpdateQuantities update_quantities,
        const std::function<unsigned int(unsigned int)>& map, const bool applyNncMultregT)
 {
+    // whether only update the permeability related transmissibility
+    const bool onlyTrans = (update_quantities == TransUpdateQuantities::Trans);
     const auto& cartDims = cartMapper_.cartesianDimensions();
     const auto& transMult = eclState_.getTransMult();
     const auto& comm = gridView_.comm();

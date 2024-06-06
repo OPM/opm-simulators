@@ -128,7 +128,7 @@ public:
      */
     void finishInit(const std::function<unsigned int(unsigned int)>& map = {})
     {
-        this->update(true, false, map, /*applyNncMultRegT = */ true);
+        this->update(true, TransUpdateQuantities::All, map, /*applyNncMultRegT = */ true);
     }
 
     /*!
@@ -138,10 +138,12 @@ public:
      *   processes.  Also, this updates the "thermal half
      *   transmissibilities" if energy is enabled.
      *
-     * \param[in] onlyTrans Whether we only allocate and upate trans_ without considering
+     * \param[in] trans Indicating whether we only allocate and upate trans_ without considering
      *   thermalHalfTrans_, diffusivity_, dispersivity_. For many usage, we only need trans_,
      *   e.g. weights for domain decomposition, INIT file output. It might change following
      *   further development.
+     *     Trans  only update the trans_, which is related to permeability
+     *     All    upate rans_, thermalHalfTrans_, diffusivity_ and dispersivity_.
      *
      * \param[in] map Undocumented.
      *
@@ -152,7 +154,9 @@ public:
      *   numerical aquifers.  Default value: \c false, meaning do not apply
      *   regional multipliers to explicit NNCs.
      */
-    void update(bool global, bool onlyTrans = false, const std::function<unsigned int(unsigned int)>& map = {}, bool applyNncMultRegT = false);
+    enum class TransUpdateQuantities { Trans, All };
+    void update(bool global, TransUpdateQuantities update_quantities = TransUpdateQuantities::All,
+                const std::function<unsigned int(unsigned int)>& map = {}, bool applyNncMultRegT = false);
 
 protected:
     void updateFromEclState_(bool global);

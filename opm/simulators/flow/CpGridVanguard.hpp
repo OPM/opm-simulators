@@ -285,7 +285,7 @@ protected:
                                                     getPropValue<TypeTag, Properties::EnableEnergy>(),
                                                     getPropValue<TypeTag, Properties::EnableDiffusion>(),
                                                     getPropValue<TypeTag, Properties::EnableDispersion>()));
-        globalTrans_->update(false, true);
+        globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans);
     }
 
     double getTransmissibility(unsigned I, unsigned J) const override

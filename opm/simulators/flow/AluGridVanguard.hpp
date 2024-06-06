@@ -190,7 +190,8 @@ public:
                                                                  getPropValue<TypeTag,
                                                                  Properties::EnableDispersion>());
             // Re-ordering  for ALUGrid
-            globalTrans_->update(false, true, [&](unsigned int i) { return gridEquilIdxToGridIdx(i);});
+            globalTrans_->update(false, TransmissibilityType::TransUpdateQuantities::Trans,
+                                 [&](unsigned int i) { return gridEquilIdxToGridIdx(i);});
         }
         
     }
