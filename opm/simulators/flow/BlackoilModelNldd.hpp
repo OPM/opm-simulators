@@ -33,6 +33,7 @@
 #include <opm/simulators/flow/countGlobalCells.hpp>
 #include <opm/simulators/flow/partitionCells.hpp>
 #include <opm/simulators/flow/priVarsPacking.hpp>
+#include <opm/simulators/flow/NonlinearSolver.hpp>
 #include <opm/simulators/flow/SubDomain.hpp>
 
 #include <opm/simulators/linalg/extractMatrix.hpp>
@@ -353,6 +354,7 @@ public:
     }
 
 private:
+
     //! \brief Solve the equation system for a single domain.
     std::pair<SimulatorReportSingle, ConvergenceReport>
     solveDomain(const Domain& domain,
@@ -411,6 +413,10 @@ private:
         // Local Newton loop.
         const int max_iter = model_.param().max_local_solve_iterations_;
         const auto& grid = modelSimulator.vanguard().grid();
+        double damping_factor = 1.0;
+        std::vector<std::vector<Scalar>> convergence_history;
+        convergence_history.reserve(20);
+        convergence_history.push_back(resnorms);
         do {
             // Solve local linear system.
             // Note that x has full size, we expect it to be nonzero only for in-domain cells.
@@ -420,6 +426,9 @@ private:
             detailTimer.start();
             this->solveJacobianSystemDomain(domain, x);
             model_.wellModel().postSolveDomain(x, domain);
+            if (damping_factor != 1.0) {
+                x *= damping_factor;
+            }
             report.linear_solve_time += detailTimer.stop();
             report.linear_solve_setup_time += model_.linearSolveSetupTime();
             report.total_linear_iterations = model_.linearIterationsLastSolve();
@@ -447,7 +456,9 @@ private:
             // Check for local convergence.
             detailTimer.reset();
             detailTimer.start();
+            resnorms.clear();
             convreport = this->getDomainConvergence(domain, timer, iter, logger, resnorms);
+            convergence_history.push_back(resnorms);
 
             // apply the Schur complement of the well model to the
             // reservoir linearized equations
@@ -459,6 +470,18 @@ private:
             const double tt2 = detailTimer.stop();
             report.assemble_time += tt2;
             report.assemble_time_well += tt2;
+
+            // Check if we should dampen. Only do so if wells are converged.
+            if (!convreport.converged() && !convreport.wellFailed()) {
+                bool oscillate = false;
+                bool stagnate = false;
+                const int numPhases = convergence_history.front().size();
+                detail::detectOscillations(convergence_history, iter, numPhases, 0.2, 1, oscillate, stagnate);
+                if (oscillate) {
+                    damping_factor *= 0.85;
+                    logger.debug(fmt::format("| Damping factor is now {}", damping_factor));
+                }
+            }
         } while (!convreport.converged() && iter <= max_iter);
 
         modelSimulator.problem().endIteration();
