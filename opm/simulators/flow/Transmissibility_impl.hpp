@@ -853,8 +853,7 @@ createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
             unsigned c2 = elemMapper.index(intersection.outside());
             int gc1 = cartMapper_.cartesianIndex(c1);
             int gc2 = cartMapper_.cartesianIndex(c2);
-
-            if (c1 > c2)
+            if (std::tie(gc1, c1) > std::tie(gc2, c2))
                 continue; // we only need to handle each connection once, thank you.
 
             auto isID = details::isId(c1, c2);
@@ -917,7 +916,7 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
             unsigned c2 = elemMapper.index(intersection.outside());
             int gc1 = cartMapper_.cartesianIndex(c1);
             int gc2 = cartMapper_.cartesianIndex(c2);
-            if (c1 > c2)
+            if (std::tie(gc1, c1) > std::tie(gc2, c2))
                 continue; // we only need to handle each connection once, thank you.
 
             auto isID = details::isId(c1, c2);
