@@ -43,6 +43,7 @@
 #include <opm/input/eclipse/Schedule/Network/Balance.hpp>
 #include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+#include <opm/input/eclipse/Schedule/ScheduleTypes.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestConfig.hpp>
 
@@ -892,6 +893,74 @@ setWsolvent(const Group& group,
 
 template<class Scalar>
 void BlackoilWellModelGeneric<Scalar>::
+assignWellTargets(data::Wells& wsrpt) const
+{
+    auto pwInfo = this->local_parallel_well_info_.begin();
+
+    for (const auto& well : this->wells_ecl_) {
+        if (! pwInfo++->get().isOwner()) {
+            continue;
+        }
+
+        // data::Wells is a std::map<>
+        auto& limits = wsrpt[well.name()].limits;
+
+        if (well.isProducer()) {
+            this->assignProductionWellTargets(well, limits);
+        }
+        else {
+            this->assignInjectionWellTargets(well, limits);
+        }
+    }
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+assignProductionWellTargets(const Well& well, data::WellControlLimits& limits) const
+{
+    using Item = data::WellControlLimits::Item;
+
+    const auto ctrl = well.productionControls(this->summaryState());
+
+    limits
+        .set(Item::Bhp, ctrl.bhp_limit)
+        .set(Item::OilRate, ctrl.oil_rate)
+        .set(Item::WaterRate, ctrl.water_rate)
+        .set(Item::GasRate, ctrl.gas_rate)
+        .set(Item::ResVRate, ctrl.resv_rate)
+        .set(Item::LiquidRate, ctrl.liquid_rate);
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
+assignInjectionWellTargets(const Well& well, data::WellControlLimits& limits) const
+{
+    using Item = data::WellControlLimits::Item;
+
+    const auto ctrl = well.injectionControls(this->summaryState());
+
+    limits
+        .set(Item::Bhp, ctrl.bhp_limit)
+        .set(Item::ResVRate, ctrl.reservoir_rate);
+
+    if (ctrl.injector_type == InjectorType::MULTI) {
+        // Not supported
+        return;
+    }
+
+    auto rateItem = Item::WaterRate;
+    if (ctrl.injector_type == InjectorType::GAS) {
+        rateItem = Item::GasRate;
+    }
+    else if (ctrl.injector_type == InjectorType::OIL) {
+        rateItem = Item::OilRate;
+    }
+
+    limits.set(rateItem, ctrl.surface_rate);
+}
+
+template<class Scalar>
+void BlackoilWellModelGeneric<Scalar>::
 assignShutConnections(data::Wells& wsrpt,
                       const int reportStepIndex) const
 {
@@ -901,7 +970,7 @@ assignShutConnections(data::Wells& wsrpt,
         auto& xwel = wsrpt[well.name()]; // data::Wells is a std::map<>
 
         xwel.dynamicStatus = this->schedule()
-                             .getWell(well.name(), reportStepIndex).getStatus();
+            .getWell(well.name(), reportStepIndex).getStatus();
 
         const auto wellIsOpen = xwel.dynamicStatus == Well::Status::OPEN;
         auto skip = [wellIsOpen](const Connection& conn)
@@ -913,7 +982,7 @@ assignShutConnections(data::Wells& wsrpt,
             !this->wasDynamicallyShutThisTimeStep(wellID))
         {
             xwel.dynamicStatus = well.getAutomaticShutIn()
-                                 ? Well::Status::SHUT : Well::Status::STOP;
+                ? Well::Status::SHUT : Well::Status::STOP;
         }
 
         auto& xcon = xwel.connections;
