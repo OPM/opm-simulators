@@ -738,7 +738,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"WTADD", {true, std::nullopt}},
         {"WTEMPQ", {true, std::nullopt}},
         {"WTHPMAX", {true, std::nullopt}},
-        {"WTMULT", {true, std::nullopt}},
         {"ZIPPY2", {false, std::nullopt}},
         {"ZIPP2OFF", {false, std::nullopt}},
         {"ZMFVD", {false, std::nullopt}},        
