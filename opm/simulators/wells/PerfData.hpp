@@ -32,7 +32,7 @@ template<class Scalar>
 class PerfData
 {
 private:
-    bool injector;
+    bool injector{false};
 
 public:
     PerfData() = default;
@@ -50,6 +50,7 @@ public:
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
+        serializer(injector);
         serializer(pressure_first_connection);
         serializer(pressure);
         serializer(rates);

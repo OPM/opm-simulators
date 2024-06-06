@@ -62,6 +62,7 @@ template<class Scalar>
 PerfData<Scalar> PerfData<Scalar>::serializationTestObject()
 {
     PerfData result;
+    result.injector = true;
     result.pressure_first_connection = 1.0;
     result.pressure = {2.0, 3.0, 4.0};
     result.rates = {5.0, 6.0};
@@ -130,7 +131,8 @@ bool PerfData<Scalar>::try_assign(const PerfData& other)
 template<class Scalar>
 bool PerfData<Scalar>::operator==(const PerfData& rhs) const
 {
-    return (this->pressure_first_connection == rhs.pressure_first_connection)
+    return (this->injector == rhs.injector)
+        && (this->pressure_first_connection == rhs.pressure_first_connection)
         && (this->pressure == rhs.pressure)
         && (this->rates == rhs.rates)
         && (this->phase_rates == rhs.phase_rates)
