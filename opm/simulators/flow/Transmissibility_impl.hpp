@@ -846,18 +846,26 @@ createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
                 continue; // intersection is on the domain boundary
 
             // In the EclState TRANX[c1] is transmissibility in X+
-            // direction. Ordering of compressed (c1,c2) and cartesian index
-            // (gc1, gc2) is coherent (c1 < c2 <=> gc1 < gc2). This also
-            // holds for the global grid. While distributing changes the
-            // order of the local indices, the transmissibilities are still
-            // stored at the cell with the lower global cartesian index as
-            // the fieldprops are communicated by the grid.
+            // direction. we only store transmissibilities in the +
+            // direction. Same for Y and Z. Ordering of compressed (c1,c2) and cartesian index
+            // (gc1, gc2) is coherent (c1 < c2 <=> gc1 < gc2) only in a serial run.
+            // In a parallel run this only holds in the interior as elements in the
+            // ghost overlap region might be ordered after the others. Hence we need
+            // to use the cartesian index to select the compressed index where to store
+            // the transmissibility value.
+            // c1 < c2 <=> gc1 < gc2 is no longer true (even in serial) when the grid is a
+            // CpGrid with LGRs. When cells c1 and c2 have the same parent
+            // cell on level zero, then gc1 == gc2.
             unsigned c1 = elemMapper.index(intersection.inside());
             unsigned c2 = elemMapper.index(intersection.outside());
             int gc1 = cartMapper_.cartesianIndex(c1);
             int gc2 = cartMapper_.cartesianIndex(c2);
             if (std::tie(gc1, c1) > std::tie(gc2, c2))
-                continue; // we only need to handle each connection once, thank you.
+                // we only need to handle each connection once, thank you.
+                // We do this when gc1 is smaller than the other to find the
+                // correct place to store in parallel when ghost/overlap elements
+                // are ordered last
+                continue;
 
             auto isID = details::isId(c1, c2);
 
@@ -906,21 +914,26 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
                 continue; // intersection is on the domain boundary
 
             // In the EclState TRANX[c1] is transmissibility in X+
-            // direction. Ordering of compressed (c1,c2) and cartesian index
-            // (gc1, gc2) is coherent (c1 < c2 <=> gc1 < gc2). This also
-            // holds for the global grid. While distributing changes the
-            // order of the local indices, the transmissibilities are still
-            // stored at the cell with the lower global cartesian index as
-            // the fieldprops are communicated by the grid.
-            /** c1 < c2 <=> gc1 < gc2 is no longer true when the grid is a
-                CpGrid with LGRs. When cells c1 and c2 have the same parent
-                cell on level zero, then gc1 == gc2. */ 
+            // direction. we only store transmissibilities in the +
+            // direction. Same for Y and Z. Ordering of compressed (c1,c2) and cartesian index
+            // (gc1, gc2) is coherent (c1 < c2 <=> gc1 < gc2) only in a serial run.
+            // In a parallel run this only holds in the interior as elements in the
+            // ghost overlap region might be ordered after the others. Hence we need
+            // to use the cartesian index to select the compressed index where to store
+            // the transmissibility value.
+            // c1 < c2 <=> gc1 < gc2 is no longer true (even in serial) when the grid is a
+            // CpGrid with LGRs. When cells c1 and c2 have the same parent
+            // cell on level zero, then gc1 == gc2.
             unsigned c1 = elemMapper.index(intersection.inside());
             unsigned c2 = elemMapper.index(intersection.outside());
             int gc1 = cartMapper_.cartesianIndex(c1);
             int gc2 = cartMapper_.cartesianIndex(c2);
             if (std::tie(gc1, c1) > std::tie(gc2, c2))
-                continue; // we only need to handle each connection once, thank you.
+                // we only need to handle each connection once, thank you.
+                // We do this when gc1 is smaller than the other to find the
+                // correct place to read in parallel when ghost/overlap elements
+                // are ordered last
+                continue;
 
             auto isID = details::isId(c1, c2);
 
