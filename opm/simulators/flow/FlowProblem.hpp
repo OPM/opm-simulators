@@ -59,7 +59,9 @@
 #include <opm/models/common/directionalmobility.hh>
 #include <opm/models/utils/pffgridvector.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 
@@ -180,6 +182,8 @@ class FlowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using MICPModule = BlackOilMICPModule<TypeTag>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag>;
+    using ModuleParams = typename BlackOilLocalResidualTPFA<TypeTag>::ModuleParams;
 
     using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
 
@@ -520,6 +524,8 @@ public:
         const auto& schedule = simulator.vanguard().schedule();
         const auto& events = schedule[episodeIdx].events();
 
+
+
         if (episodeIdx >= 0 && events.hasEvent(ScheduleEvents::GEO_MODIFIER)) {
             // bring the contents of the keywords to the current state of the SCHEDULE
             // section.
@@ -575,6 +581,8 @@ public:
                 FluidSystem::setVapPars(0.0, 0.0);
             }
         }
+
+        ConvectiveMixingModule::beginEpisode(simulator.vanguard().eclState(), simulator.vanguard().schedule(), episodeIdx, moduleParams_.convectiveMixingModuleParam);
     }
 
     /*!
@@ -1841,6 +1849,10 @@ public:
         eclWriter_->mutableOutputModule().setCnvData(data);
     }
 
+    const ModuleParams& moduleParams() const {
+         return moduleParams_;
+    }
+
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
@@ -1932,6 +1944,7 @@ protected:
                               }
             );
     }
+
 
     bool updateMaxOilSaturation_()
     {
@@ -2577,7 +2590,6 @@ protected:
         return this->rockCompTransMultVal_[dofIdx];
     }
 
-
 private:
     struct PffDofData_
     {
@@ -2863,6 +2875,10 @@ private:
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
     bool explicitRockCompaction_ = false;
+
+    ModuleParams moduleParams_;
+    
+
 };
 
 } // namespace Opm
