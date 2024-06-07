@@ -25,6 +25,9 @@
 
 #include <map>
 #include <string>
+#include <sstream>
+#include <algorithm>
+#include <unordered_set>
 
 /*
     Below is the std::map with the keywords that are supported by Damaris.
@@ -59,6 +62,7 @@ struct DamarisSettings {
     std::string shmemName_;      // empty and needs to be unique if multiple simulations are running on the same server/node. Used to name the Damaris shared memory region.
     std::string damarisLogLevel_ = "info";
     std::string damarisDaskFile_ = "";
+    // std::string damarisLimitVars_ = "";
     int nDamarisCores_ = 1;  // this is the number of (Damaris server) cores per node
     int nDamarisNodes_ = 0;
     long shmemSizeBytes_ = 536870912;  // 512 MB
@@ -68,6 +72,8 @@ struct DamarisSettings {
     std::map<std::string, std::string>
     getKeywords(const Parallel::Communication& comm,
                 const std::string& OutputDir);
+
+    
                 
     void SetRandString(void);  // sets the value of rand_value_str_
 };
@@ -79,6 +85,8 @@ struct DamarisSettings {
  * Damaris and perform checks and logic so as to create a valid XML file.
  * N.B. The created XML file can be overridden using an environment variable
  * FLOW_DAMARIS_XML_FILE that points to a Damaris XML file.
+ *
+ * N.B. This needs to be called before damaris_init()
  */
 template<class TypeTag>
 std::map<std::string, std::string>
@@ -102,6 +110,29 @@ getDamarisKeywords(const Parallel::Communication& comm, const std::string& Outpu
     settings.damarisLogLevel_ = Parameters::get<TypeTag, Properties::DamarisLogLevel>();
     settings.damarisDaskFile_ = Parameters::get<TypeTag, Properties::DamarisDaskFile>();
     return settings.getKeywords(comm, OutputDir);
+}
+
+template<class TypeTag>
+std::unordered_set<std::string>
+getSetOfIncludedVariables(void) 
+{
+    std::unordered_set<std::string> resuset ;
+    std::string tstr;
+    // The --damaris-limit-variables command line option (defaults to empty string)
+    std::string damarisLimitVars = Parameters::get<TypeTag, Properties::DamarisLimitVariables>();
+    std::stringstream ss(damarisLimitVars); 
+
+    // Use while loop to check the getline() function condition.  
+    while (std::getline(ss, tstr, ',')) {
+        //remove whitespace
+        std::string::iterator end_pos = std::remove(tstr.begin(), tstr.end(), ' ');
+        tstr.erase(end_pos, tstr.end());
+        // place in set (no duplicates possible in set and no empty string)
+        if (tstr != "") {
+            resuset.insert(tstr) ;
+        }
+    }
+    return (resuset) ;
 }
 
 } // namespace Opm::DamarisOutput
