@@ -650,7 +650,7 @@ public:
             return;
         }
         const unsigned int numCells = model_().numTotalDof();
-
+        
 #ifdef _OPENMP
 #pragma omp parallel for
 #endif
@@ -671,7 +671,7 @@ public:
                 adres = 0.0;
                 darcyFlux = 0.0;
                 const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-                LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo);
+                LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo, problem_().moduleParams());
                 adres *= nbInfo.res_nbinfo.faceArea;
                 if (enableFlows) {
                     for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
@@ -757,7 +757,7 @@ private:
                 adres = 0.0;
                 darcyFlux = 0.0;
                 const IntensiveQuantities& intQuantsEx = model_().intensiveQuantities(globJ, /*timeIdx*/ 0);
-                LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo);
+                LocalResidual::computeFlux(adres,darcyFlux, globI, globJ, intQuantsIn, intQuantsEx, nbInfo.res_nbinfo,  problem_().moduleParams());
                 adres *= nbInfo.res_nbinfo.faceArea;
                 if (enableDispersion) {
                     for (unsigned phaseIdx = 0; phaseIdx < numEq; ++ phaseIdx) {
