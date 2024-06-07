@@ -286,10 +286,9 @@ namespace
                 // we binary search over
                 int left = rowIndices[col];
                 int right = rowIndices[col + 1] - 1;
-                int mid;
+                int mid = left + (right - left) / 2; // overflow-safe average;
 
                 while (left <= right) {
-                    mid = left + (right - left) / 2; // overflow-safe average
                     const int col = colIndices[mid];
 
                     if (col == naturalRowIdx) {
@@ -299,6 +298,7 @@ namespace
                     } else {
                         right = mid - 1;
                     }
+                    mid = left + (right - left) / 2; // overflow-safe average
                 }
 
                 const int symOpposite = mid;
