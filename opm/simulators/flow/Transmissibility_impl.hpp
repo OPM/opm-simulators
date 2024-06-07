@@ -849,8 +849,8 @@ createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
             // direction. we only store transmissibilities in the +
             // direction. Same for Y and Z. Ordering of compressed (c1,c2) and cartesian index
             // (gc1, gc2) is coherent (c1 < c2 <=> gc1 < gc2) only in a serial run.
-            // In a parallel runthis only holds in the interior as elements in the
-            // ghost overlao region might be ordered after the others. Hence we need
+            // In a parallel run this only holds in the interior as elements in the
+            // ghost overlap region might be ordered after the others. Hence we need
             // to use the cartesian index to select the compressed index where to store
             // the transmissibility value.
             // c1 < c2 <=> gc1 < gc2 is no longer true (even in serial) when the grid is a
@@ -863,7 +863,8 @@ createTransmissibilityArrays_(const std::array<bool,3>& is_tran)
             if (std::tie(gc1, c1) > std::tie(gc2, c2))
                 // we only need to handle each connection once, thank you.
                 // We do this when gc1 is smaller than the other to find the
-                // correct place to store in parallel when ghost/overlap elements are ordered last
+                // correct place to store in parallel when ghost/overlap elements
+                // are ordered last
                 continue;
 
             auto isID = details::isId(c1, c2);
@@ -916,8 +917,8 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
             // direction. we only store transmissibilities in the +
             // direction. Same for Y and Z. Ordering of compressed (c1,c2) and cartesian index
             // (gc1, gc2) is coherent (c1 < c2 <=> gc1 < gc2) only in a serial run.
-            // In a parallel runthis only holds in the interior as elements in the
-            // ghost overlao region might be ordered after the others. Hence we need
+            // In a parallel run this only holds in the interior as elements in the
+            // ghost overlap region might be ordered after the others. Hence we need
             // to use the cartesian index to select the compressed index where to store
             // the transmissibility value.
             // c1 < c2 <=> gc1 < gc2 is no longer true (even in serial) when the grid is a
@@ -930,7 +931,8 @@ resetTransmissibilityFromArrays_(const std::array<bool,3>& is_tran,
             if (std::tie(gc1, c1) > std::tie(gc2, c2))
                 // we only need to handle each connection once, thank you.
                 // We do this when gc1 is smaller than the other to find the
-                // correct place read in parallel when ghost/overlap elements are ordered last
+                // correct place to read in parallel when ghost/overlap elements
+                // are ordered last
                 continue;
 
             auto isID = details::isId(c1, c2);
