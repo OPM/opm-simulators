@@ -184,15 +184,7 @@ namespace Opm
             assert(std::isfinite(errors_[i]));
         }
 
-        if( errors_[2] > tol_ )
-        {
-            // adjust dt by given tolerance
-            const double newDt = dt * tol_ / error;
-            if ( verbose_ )
-                    OpmLog::info(fmt::format("Computed step size (tol): {} days", unit::convert::to( newDt, unit::day )));
-            return newDt;
-        }
-        else if (errors_[1] == 0 || errors_[2] == 0.)
+        if (errors_[0] == 0 || errors_[1] == 0 || errors_[2] == 0.)
         {
             if ( verbose_ )
                 OpmLog::info("The solution between time steps does not change, there is no time step constraint from the PID time step control ");
@@ -206,7 +198,7 @@ namespace Opm
             const double kD = 0.01 ;
             const double newDt = (dt * std::pow( errors_[ 1 ] / errors_[ 2 ], kP ) *
                                  std::pow( tol_         / errors_[ 2 ], kI ) *
-                                 std::pow( errors_[0]*errors_[0]/errors_[ 1 ]/errors_[ 2 ], kD ));
+                                 std::pow( errors_[1]*errors_[1]/errors_[ 0 ]/errors_[ 2 ], kD ));
             if( verbose_ )
                 OpmLog::info(fmt::format("Computed step size (pow): {} days", unit::convert::to( newDt, unit::day )));
             return newDt;
