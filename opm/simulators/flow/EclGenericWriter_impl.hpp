@@ -241,7 +241,7 @@ eclIO() const
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
-writeInit(const std::function<unsigned int(unsigned int)>& map)
+writeInit()
 {
     if (collectOnIORank_.isIORank()) {
         std::map<std::string, std::vector<int>> integerVectors;
@@ -249,11 +249,21 @@ writeInit(const std::function<unsigned int(unsigned int)>& map)
             integerVectors.emplace("MPI_RANK", collectOnIORank_.globalRanks());
         }
 
-        auto cartMap = cartesianToCompressed(equilGrid_->size(0), UgGridHelpers::globalCell(*equilGrid_));
-
-        eclIO_->writeInitial(computeTrans_(cartMap, map),
+        eclIO_->writeInitial(*this->outputTrans_,
                              integerVectors,
-                             exportNncStructure_(cartMap, map));
+                             this->outputNnc_);
+        this->outputTrans_.reset();
+    }
+}
+template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
+void
+EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
+extractOutputTransAndNNC(const std::function<unsigned int(unsigned int)>& map)
+{
+    if (collectOnIORank_.isIORank()) {
+        auto cartMap = cartesianToCompressed(equilGrid_->size(0), UgGridHelpers::globalCell(*equilGrid_));
+        computeTrans_(cartMap, map);
+        exportNncStructure_(cartMap, map);
     }
 
 #if HAVE_MPI
@@ -266,22 +276,34 @@ writeInit(const std::function<unsigned int(unsigned int)>& map)
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
-data::Solution
+void
 EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
               const std::function<unsigned int(unsigned int)>& map) const
 {
+    if (!outputTrans_) {
+        outputTrans_ = std::make_unique<data::Solution>();
+    }
+
     const auto& cartMapper = *equilCartMapper_;
     const auto& cartDims = cartMapper.cartesianDimensions();
 
-    auto tranx = data::CellData {
-        UnitSystem::measure::transmissibility,
-        std::vector<double>(cartDims[0] * cartDims[1] * cartDims[2], 0.0),
-        data::TargetType::INIT
+    auto createCellData = [&cartDims]() {
+        return data::CellData{
+                UnitSystem::measure::transmissibility,
+                std::vector<double>(cartDims[0] * cartDims[1] * cartDims[2], 0.0),
+                data::TargetType::INIT
+        };
     };
 
-    auto trany = tranx;
-    auto tranz = tranx;
+    outputTrans_->clear();
+    outputTrans_->emplace("TRANX", createCellData());
+    outputTrans_->emplace("TRANY", createCellData());
+    outputTrans_->emplace("TRANZ", createCellData());
+
+    auto& tranx = this->outputTrans_->at("TRANX");
+    auto& trany = this->outputTrans_->at("TRANY");
+    auto& tranz = this->outputTrans_->at("TRANZ");
 
     using GlobalGridView = typename EquilGrid::LeafGridView;
     using GlobElementMapper = Dune::MultipleCodimMultipleGeomTypeMapper<GlobalGridView>;
@@ -346,12 +368,6 @@ computeTrans_(const std::unordered_map<int,int>& cartesianToActive,
                 tranz.data<double>()[gc1] = globalTrans().transmissibility(c1, c2);
         }
     }
-
-    return {
-        {"TRANX", tranx},
-        {"TRANY", trany},
-        {"TRANZ", tranz},
-    };
 }
 
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
