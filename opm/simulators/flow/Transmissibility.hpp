@@ -287,6 +287,7 @@ protected:
     bool enableEnergy_;
     bool enableDiffusivity_;
     bool enableDispersivity_;
+    bool warnEditNNC_ = true;
     std::unordered_map<std::uint64_t, Scalar> thermalHalfTrans_; //NB this is based on direction map size is ca 2*trans_ (diffusivity_)
     std::unordered_map<std::uint64_t, Scalar> diffusivity_;
     std::unordered_map<std::uint64_t, Scalar> dispersivity_;

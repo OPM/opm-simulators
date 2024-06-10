@@ -574,12 +574,18 @@ update(bool global, const TransUpdateQuantities update_quantities,
     }
 
     if (!disableNNC) {
+        // For EDITNNC and EDITNNCR we warn only once
+        // If transmissibility is used for load balancing this will be done
+        // when computing the gobal transmissibilities and all warnings will
+        // be seen in a parallel. Unfortunately, when we do not use transmissibilities
+        // we will only see warnings for the partition of process 0 and also false positives.
         this->applyEditNncToGridTrans_(globalToLocal);
         this->applyNncToGridTrans_(globalToLocal);
         this->applyEditNncrToGridTrans_(globalToLocal);
         if (applyNncMultregT) {
             this->applyNncMultreg_(globalToLocal);
         }
+        warnEditNNC_ = false;
     }
 
     // If disableNNC == true, remove all non-neighbouring transmissibilities.
@@ -1190,9 +1196,12 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
         auto highIt = globalToLocal.find(c2);
 
         if (lowIt == globalToLocal.end() || highIt == globalToLocal.end()) {
-            print_warning(*nnc);
+            // Prevent warnings for NNCs stored on other processes in parallel (both cells inactive)
+            if ( lowIt != highIt && warnEditNNC_) {
+                print_warning(*nnc);
+                warning_count++;
+            }
             ++nnc;
-            warning_count++;
             continue;
         }
 
@@ -1202,7 +1211,7 @@ applyEditNncToGridTransHelper_(const std::unordered_map<std::size_t,int>& global
             std::swap(low, high);
 
         auto candidate = trans_.find(details::isId(low, high));
-        if (candidate == trans_.end()) {
+        if (candidate == trans_.end() && warnEditNNC_) {
             print_warning(*nnc);
             ++nnc;
             warning_count++;
