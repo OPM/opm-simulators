@@ -185,6 +185,35 @@ void convertToCRS(const M& A, CRS& lower, CRS& upper, InvVector& inv)
   assert(colcount == numUpper);
 }
 
+template <class PI>
+size_t set_interiorSize( [[maybe_unused]] size_t N, size_t interiorSize, [[maybe_unused]] const PI& comm)
+{
+    return interiorSize;
+}
+
+#if HAVE_MPI
+template<>
+size_t set_interiorSize(size_t N, size_t interiorSize, const Dune::OwnerOverlapCopyCommunication<int,int>& comm)
+{
+    if (interiorSize<N)
+        return interiorSize;
+    auto indexSet = comm.indexSet();
+
+    size_t new_is = 0;
+    for (auto idx = indexSet.begin(); idx!=indexSet.end(); ++idx)
+    {
+        if (idx->local().attribute()==1)
+        {
+            auto loc = idx->local().local();
+            if (loc > new_is) {
+                new_is = loc;
+            }
+        }
+    }
+    return new_is + 1;
+}
+#endif
+
 } // end namespace detail
 
 
@@ -411,6 +440,11 @@ update()
     {
         OPM_TIMEBLOCK(iluDecomposition);
         if (iluIteration_ == 0) {
+
+            if (comm_) {
+                interiorSize_ = detail::set_interiorSize(A_->N(), interiorSize_, *comm_);
+            }
+
             // create ILU-0 decomposition
             if (ordering_.empty())
             {
