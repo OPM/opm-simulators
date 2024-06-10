@@ -240,6 +240,7 @@ public:
                              problem.vapparsActive(std::max(simulator_.episodeIndex(), 0)),
                              problem.materialLawManager()->enableHysteresis(),
                              problem.tracerModel().numTracers(),
+                             problem.tracerModel().enableSolTracers(),
                              problem.eclWriter()->getOutputNnc().size());
     }
 

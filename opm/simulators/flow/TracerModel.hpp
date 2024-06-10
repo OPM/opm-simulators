@@ -63,12 +63,14 @@ class TracerModel : public GenericTracerModel<GetPropType<TypeTag, Properties::G
                                               GetPropType<TypeTag, Properties::GridView>,
                                               GetPropType<TypeTag, Properties::DofMapper>,
                                               GetPropType<TypeTag, Properties::Stencil>,
+                                              GetPropType<TypeTag, Properties::FluidSystem>,
                                               GetPropType<TypeTag, Properties::Scalar>>
 {
     using BaseType = GenericTracerModel<GetPropType<TypeTag, Properties::Grid>,
                                         GetPropType<TypeTag, Properties::GridView>,
                                         GetPropType<TypeTag, Properties::DofMapper>,
                                         GetPropType<TypeTag, Properties::Stencil>,
+                                        GetPropType<TypeTag, Properties::FluidSystem>,
                                         GetPropType<TypeTag, Properties::Scalar>>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
@@ -494,7 +496,7 @@ protected:
                     // Injection of free tracer only
                     tr.residual_[tIdx][I][0] -= rate_f*wtracer[tIdx];
 
-                    // Store _injector_ tracer rate for reporting
+                    // Store _injector_ tracer rate for reporting (can be done here since WTRACER is constant)
                     this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
                     this->wellFreeTracerRate_.at(std::make_pair(eclWell.name(),this->wellfname(tr.idx_[tIdx]))) += rate_f*wtracer[tIdx];
                     if (eclWell.isMultiSegment()) {
@@ -506,39 +508,23 @@ protected:
             }
             else if (rate_f < 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                    // Free and solution tracer production
+                    // Production of free tracer
                     tr.residual_[tIdx][I][0] -= rate_f * tr.concentration_[tIdx][I][0];
 
-                    // Store _producer_ tracer rate for reporting
-                    this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += 
-                        rate_f * tr.concentration_[tIdx][I][0];
-                    this->wellFreeTracerRate_.at(std::make_pair(eclWell.name(),this->wellfname(tr.idx_[tIdx]))) +=
-                        rate_f * tr.concentration_[tIdx][I][0];
-                    if (eclWell.isMultiSegment()) {
-                        this->mSwTracerRate_[std::make_tuple(eclWell.name(), this->name(tr.idx_[tIdx]), eclWell.getConnections().get(i).segment())] = 
-                            rate_f * tr.concentration_[tIdx][I][0];
-                    }
                 }
                 dfVol_[tr.phaseIdx_][I] -= rate_f * dt;
                 
-                // Derivative matrix for producer
+                // Derivative matrix for free tracer producer
                 (*tr.mat)[I][I][0][0] -= rate_f * variable<TracerEvaluation>(1.0, 0).derivative(0);
             }
             if (rate_s < 0) {
                 for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                    // Production of solution tracer
                     tr.residual_[tIdx][I][1] -= rate_s * tr.concentration_[tIdx][I][1];
-                    
-                    this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += 
-                        rate_s * tr.concentration_[tIdx][I][1];
-                    this->wellSolTracerRate_.at(std::make_pair(eclWell.name(),this->wellsname(tr.idx_[tIdx]))) +=
-                        rate_s * tr.concentration_[tIdx][I][1];
-                    if (eclWell.isMultiSegment()) {
-                        this->mSwTracerRate_[std::make_tuple(eclWell.name(), this->name(tr.idx_[tIdx]), eclWell.getConnections().get(i).segment())] = 
-                            rate_s * tr.concentration_[tIdx][I][1];
-                    }
                 }
                 dsVol_[tr.phaseIdx_][I] -= rate_s * dt;
 
+                // Derivative matrix for solution tracer producer
                 (*tr.mat)[I][I][1][1] -= rate_s * variable<TracerEvaluation>(1.0, 0).derivative(0);
             }
         }
@@ -551,6 +537,13 @@ protected:
     {
         if (tr.numTracer() == 0)
             return;
+        
+        // Skip if solution tracers do not exist
+        if (tr.phaseIdx_ ==  FluidSystem::waterPhaseIdx ||
+            (tr.phaseIdx_ ==  FluidSystem::gasPhaseIdx && !FluidSystem::enableDissolvedGas()) ||
+            (tr.phaseIdx_ ==  FluidSystem::oilPhaseIdx && !FluidSystem::enableVaporizedOil())) {
+            return;
+        }
         
         const Scalar& dsVol = dsVol_[tr.phaseIdx_][I];
         const Scalar& dfVol = dfVol_[tr.phaseIdx_][I];
@@ -753,16 +746,59 @@ protected:
             // Store _producer_ tracer rate for reporting
             const auto& wellPtrs = simulator_.problem().wellModel().localNonshutWells();
             for (const auto& wellPtr : wellPtrs) {
-                const auto& well = wellPtr->wellEcl();
+                const auto& eclWell = wellPtr->wellEcl();
 
-                if (!well.isProducer()) //Injection rates already reported during assembly
+                // Injection rates already reported during assembly
+                if (!eclWell.isProducer())
                     continue;
 
                 Scalar rateWellPos = 0.0;
                 Scalar rateWellNeg = 0.0;
-                for (auto& perfData : wellPtr->perforationData()) {
-                    const int I = perfData.cell_index;
+                std::size_t well_index = simulator_.problem().wellModel().wellState().index(eclWell.name()).value();
+                const auto& ws = simulator_.problem().wellModel().wellState().well(well_index);
+                for (std::size_t i = 0; i < ws.perf_data.size(); ++i) {
+                    const auto I = ws.perf_data.cell_index[i];
                     Scalar rate = wellPtr->volumetricSurfaceRateForConnection(I, tr.phaseIdx_);
+
+                    Scalar rate_s;
+                    if (tr.phaseIdx_ == FluidSystem::oilPhaseIdx && FluidSystem::enableVaporizedOil()) {
+                        rate_s = ws.perf_data.phase_mixing_rates[i][ws.vaporized_oil];
+                    }
+                    else if (tr.phaseIdx_ == FluidSystem::gasPhaseIdx && FluidSystem::enableDissolvedGas()) {
+                        rate_s = ws.perf_data.phase_mixing_rates[i][ws.dissolved_gas];
+                    }
+                    else {
+                        rate_s = 0.0;
+                    }
+
+                    Scalar rate_f = rate - rate_s;
+                    if (rate_f < 0) {
+                        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                            // Store _producer_ free tracer rate for reporting
+                            this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += 
+                                rate_f * tr.concentration_[tIdx][I][0];
+                            this->wellFreeTracerRate_.at(std::make_pair(eclWell.name(),this->wellfname(tr.idx_[tIdx]))) +=
+                                rate_f * tr.concentration_[tIdx][I][0];
+                            if (eclWell.isMultiSegment()) {
+                                this->mSwTracerRate_[std::make_tuple(eclWell.name(), this->name(tr.idx_[tIdx]), eclWell.getConnections().get(i).segment())] = 
+                                    rate_f * tr.concentration_[tIdx][I][0];
+                            }
+                        }
+                    }
+                    if (rate_s < 0) {
+                        for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
+                            // Store _producer_ solution tracer rate for reporting
+                            this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) += 
+                                rate_s * tr.concentration_[tIdx][I][1];
+                            this->wellSolTracerRate_.at(std::make_pair(eclWell.name(),this->wellsname(tr.idx_[tIdx]))) +=
+                                rate_s * tr.concentration_[tIdx][I][1];
+                            if (eclWell.isMultiSegment()) {
+                                this->mSwTracerRate_[std::make_tuple(eclWell.name(), this->name(tr.idx_[tIdx]), eclWell.getConnections().get(i).segment())] = 
+                                    rate_s * tr.concentration_[tIdx][I][1];
+                            }
+                        }
+                    }
+
                     if (rate < 0) {
                         rateWellNeg += rate;
                     }
@@ -776,7 +812,6 @@ protected:
                 // TODO: Some inconsistencies here that perhaps should be clarified. The "offical" rate as reported below is
                 //  occasionally significant different from the sum over connections (as calculated above). Only observed
                 //  for small values, neglible for the rate itself, but matters when used to calculate tracer concentrations.
-                std::size_t well_index = simulator_.problem().wellModel().wellState().index(well.name()).value();
                 Scalar official_well_rate_total = simulator_.problem().wellModel().wellState().well(well_index).surface_rates[tr.phaseIdx_];
 
                 rateWellTotal = official_well_rate_total;
@@ -785,7 +820,7 @@ protected:
                     const Scalar bucketPrDay = 10.0/(1000.*3600.*24.); // ... keeps (some) trouble away
                     const Scalar factor = (rateWellTotal < -bucketPrDay) ? rateWellTotal/rateWellNeg : 0.0;
                     for (int tIdx = 0; tIdx < tr.numTracer(); ++tIdx) {
-                        this->wellTracerRate_.at(std::make_pair(well.name(),this->name(tr.idx_[tIdx]))) *= factor;
+                        this->wellTracerRate_.at(std::make_pair(eclWell.name(),this->name(tr.idx_[tIdx]))) *= factor;
                     }
                 }
             }

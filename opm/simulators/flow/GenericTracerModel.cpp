@@ -24,6 +24,8 @@
 
 #include <opm/simulators/flow/GenericTracerModel_impl.hpp>
 
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
 #if HAVE_DUNE_FEM
 #include <dune/common/version.hh>
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
@@ -39,6 +41,7 @@ template class GenericTracerModel<Dune::CpGrid,
                                   Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,
                                   Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>,
                                   Opm::EcfvStencil<double,Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>,false,false>,
+                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
                                   double>;
 
 #if HAVE_DUNE_FEM
@@ -50,12 +53,14 @@ template class GenericTracerModel<Dune::CpGrid,
                                   GV,
                                   Dune::MultipleCodimMultipleGeomTypeMapper<GV>,
                                   EcfvStencil<double, GV, false, false>,
+                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
                                   double>;
 #else
 template class GenericTracerModel<Dune::CpGrid,
                                   Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
                                   Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>,
                                   EcfvStencil<double,Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,false,false>,
+                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
                                   double>;
 template class GenericTracerModel<Dune::CpGrid,
                                   Dune::Fem::GridPart2GridViewImpl<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, (Dune::PartitionIteratorType)4, false> >,
@@ -65,6 +70,7 @@ template class GenericTracerModel<Dune::CpGrid,
                                   EcfvStencil<double, Dune::Fem::GridPart2GridViewImpl<
                                                                Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false> >,
                                                    false, false>,
+                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
                                   double>;
 #endif
 #endif // HAVE_DUNE_FEM

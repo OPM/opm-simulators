@@ -340,6 +340,7 @@ protected:
                         const bool vapparsActive,
                         const bool enableHysteresis,
                         unsigned numTracers,
+                        const std::vector<bool>& enableSolTracers,
                         unsigned numOutputNnc);
 
     void makeRegionSum(Inplace& inplace,

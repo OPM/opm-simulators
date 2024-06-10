@@ -381,10 +381,10 @@ BOOST_AUTO_TEST_CASE(BlackoilWellModelGeneric)
     BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized BlackoilWellModelGeneric differ");
 }
 
-template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
-class GenericTracerModelTest : public Opm::GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>
+template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
+class GenericTracerModelTest : public Opm::GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>
 {
-    using Base = Opm::GenericTracerModel<Grid,GridView,DofMapper,Stencil,Scalar>;
+    using Base = Opm::GenericTracerModel<Grid,GridView,DofMapper,Stencil,FluidSystem,Scalar>;
 public:
     GenericTracerModelTest(const GridView& gridView,
                               const Opm::EclipseState& eclState,
@@ -438,6 +438,7 @@ BOOST_AUTO_TEST_CASE(FlowGenericTracerModel)
                                            GridView,
                                            Dune::MultipleCodimMultipleGeomTypeMapper<GridView>,
                                            Opm::EcfvStencil<double, GridView, false, false>,
+                                           Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>,
                                            double>
         ::serializationTestObject(gridView, eclState, mapper, dofMapper, centroids);
     Opm::Serialization::MemPacker packer;
@@ -474,6 +475,7 @@ BOOST_AUTO_TEST_CASE(FlowGenericTracerModelFem)
                                            GridView,
                                            Dune::MultipleCodimMultipleGeomTypeMapper<GridView>,
                                            Opm::EcfvStencil<double, GridView, false, false>,
+                                           Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>,
                                            double>
         ::serializationTestObject(gridView, eclState, mapper, dofMapper, centroids);
     Opm::Serialization::MemPacker packer;

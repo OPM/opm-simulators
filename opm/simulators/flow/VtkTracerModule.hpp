@@ -109,10 +109,12 @@ namespace Opm {
                 const auto& tracerModel = this->simulator_.problem().tracerModel();
                 eclFreeTracerConcentration_.resize(tracerModel.numTracers());
                 eclSolTracerConcentration_.resize(tracerModel.numTracers());
-                for (std::size_t tracerIdx = 0; tracerIdx < eclFreeTracerConcentration_.size(); ++tracerIdx) {
+                const auto& enableSolTracers = tracerModel.enableSolTracers();
 
+                for (std::size_t tracerIdx = 0; tracerIdx < eclFreeTracerConcentration_.size(); ++tracerIdx) {
                     this->resizeScalarBuffer_(eclFreeTracerConcentration_[tracerIdx]);
-                    this->resizeScalarBuffer_(eclSolTracerConcentration_[tracerIdx]);
+                    if (enableSolTracers[tracerIdx])
+                        this->resizeScalarBuffer_(eclSolTracerConcentration_[tracerIdx]);
                 }
             }
 
@@ -127,15 +129,22 @@ namespace Opm {
             if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
                 return;
 
-            const auto& tracerModel = elemCtx.problem().tracerModel();
+            if (eclTracerConcentrationOutput_()) {
+                const auto& tracerModel = elemCtx.problem().tracerModel();
+                const auto& enableSolTracers = tracerModel.enableSolTracers();
 
-            for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
-                unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
-
-                if (eclTracerConcentrationOutput_()){
-                    for (std::size_t tracerIdx  = 0; tracerIdx < eclFreeTracerConcentration_.size(); ++tracerIdx) {
+                for (std::size_t tracerIdx  = 0; tracerIdx < eclFreeTracerConcentration_.size(); ++tracerIdx) {
+                    // free tracer
+                    for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                        unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
                         eclFreeTracerConcentration_[tracerIdx][globalDofIdx] = tracerModel.freeTracerConcentration(tracerIdx, globalDofIdx);
-                        eclSolTracerConcentration_[tracerIdx][globalDofIdx] = tracerModel.solTracerConcentration(tracerIdx, globalDofIdx);
+                    }
+                    // solution tracer (only if it exist)
+                    if (enableSolTracers[tracerIdx]) {
+                        for (unsigned dofIdx = 0; dofIdx < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++dofIdx) {
+                            unsigned globalDofIdx = elemCtx.globalSpaceIndex(dofIdx, /*timeIdx=*/0);
+                            eclSolTracerConcentration_[tracerIdx][globalDofIdx] = tracerModel.solTracerConcentration(tracerIdx, globalDofIdx);
+                        }
                     }
                 }
             }
@@ -152,11 +161,15 @@ namespace Opm {
 
             if (eclTracerConcentrationOutput_()){
                 const auto& tracerModel = this->simulator_.problem().tracerModel();
+                const auto& enableSolTracers = tracerModel.enableSolTracers();
+
                 for (std::size_t tracerIdx = 0; tracerIdx < eclFreeTracerConcentration_.size(); ++tracerIdx) {
                     const std::string tmp = "freeTracerConcentration_" + tracerModel.name(tracerIdx);
-                    this->commitScalarBuffer_(baseWriter,tmp.c_str(), eclFreeTracerConcentration_[tracerIdx]);
-                    const std::string tmp2 = "solTracerConcentration_" + tracerModel.name(tracerIdx);
-                    this->commitScalarBuffer_(baseWriter,tmp2.c_str(), eclSolTracerConcentration_[tracerIdx]);
+                    this->commitScalarBuffer_(baseWriter, tmp.c_str(), eclFreeTracerConcentration_[tracerIdx]);
+                    if (enableSolTracers[tracerIdx]) {
+                        const std::string tmp2 = "solTracerConcentration_" + tracerModel.name(tracerIdx);
+                        this->commitScalarBuffer_(baseWriter, tmp2.c_str(), eclSolTracerConcentration_[tracerIdx]);
+                    }
                 }
             }
 

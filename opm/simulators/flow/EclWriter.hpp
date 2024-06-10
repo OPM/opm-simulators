@@ -501,8 +501,10 @@ public:
         {
             const auto& tracers = simulator_.vanguard().eclState().tracer();
             for (const auto& tracer : tracers) {
+                bool enableSolTracer = (tracer.phase == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
+                                       (tracer.phase == Phase::OIL && FluidSystem::enableVaporizedOil());
                 solutionKeys.emplace_back(tracer.fname(), UnitSystem::measure::identity, true);
-                solutionKeys.emplace_back(tracer.sname(), UnitSystem::measure::identity, true);
+                solutionKeys.emplace_back(tracer.sname(), UnitSystem::measure::identity, enableSolTracer);
             }
         }
 
@@ -529,14 +531,30 @@ public:
 
             auto& tracer_model = simulator_.problem().tracerModel();
             for (int tracer_index = 0; tracer_index < tracer_model.numTracers(); tracer_index++) {
+                // Free tracers
                 const auto& free_tracer_name = tracer_model.fname(tracer_index);
                 const auto& free_tracer_solution = restartValues.solution.template data<double>(free_tracer_name);
-                const auto& sol_tracer_name = tracer_model.sname(tracer_index);
-                const auto& sol_tracer_solution = restartValues.solution.template data<double>(sol_tracer_name);
                 for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
                     unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
                     tracer_model.setFreeTracerConcentration(tracer_index, globalIdx, free_tracer_solution[globalIdx]);
-                    tracer_model.setSolTracerConcentration(tracer_index, globalIdx, sol_tracer_solution[globalIdx]);
+                }
+                // Solution tracer (only if DISGAS/VAPOIL are active for gas/oil tracers)
+                if ((tracer_model.phase(tracer_index) == Phase::GAS && FluidSystem::enableDissolvedGas()) ||
+                    (tracer_model.phase(tracer_index) == Phase::OIL && FluidSystem::enableVaporizedOil())) {
+                        tracer_model.setEnableSolTracers(tracer_index, true);
+                        const auto& sol_tracer_name = tracer_model.sname(tracer_index);
+                        const auto& sol_tracer_solution = restartValues.solution.template data<double>(sol_tracer_name);
+                        for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
+                            unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
+                            tracer_model.setSolTracerConcentration(tracer_index, globalIdx, sol_tracer_solution[globalIdx]);
+                        }
+                }
+                else {
+                    tracer_model.setEnableSolTracers(tracer_index, false);
+                    for (unsigned elemIdx = 0; elemIdx < numElements; ++elemIdx) {
+                            unsigned globalIdx = this->collectOnIORank_.localIdxToGlobalIdx(elemIdx);
+                            tracer_model.setSolTracerConcentration(tracer_index, globalIdx, 0.0);
+                        }
                 }
             }
 

@@ -721,6 +721,9 @@ assignToSolution(data::Solution& sol)
         for (auto tracerIdx = 0*tracers.size();
              tracerIdx < tracers.size(); ++tracerIdx)
         {
+            if (solTracerConcentrations_[tracerIdx].empty())
+                continue;
+
             sol.insert(tracers[tracerIdx].sname(),
                        UnitSystem::measure::identity,
                        std::move(solTracerConcentrations_[tracerIdx]),
@@ -854,6 +857,7 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     vapparsActive,
                const bool     enableHysteresis,
                const unsigned numTracers,
+               const std::vector<bool>& enableSolTracers,
                const unsigned numOutputNnc)
 {
     // Output RESTART_OPM_EXTENDED only when explicitly requested by user.
@@ -1328,7 +1332,8 @@ doAllocBuffers(const unsigned bufferSize,
         solTracerConcentrations_.resize(numTracers);
         for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
         {
-            solTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
+            if (enableSolTracers[tracerIdx])
+                solTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
         }
     }
 

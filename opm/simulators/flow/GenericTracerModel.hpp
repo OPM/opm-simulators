@@ -36,6 +36,8 @@
 
 #include <opm/simulators/linalg/matrixblock.hh>
 
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
+
 #include <array>
 #include <cstddef>
 #include <functional>
@@ -49,7 +51,7 @@ namespace Opm {
 class EclipseState;
 class Well;
 
-template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
+template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
 class GenericTracerModel {
 public:
     using TracerVectorSingle = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
@@ -71,6 +73,8 @@ public:
     std::string wellfname(int tracerIdx) const;
     std::string wellsname(int tracerIdx) const;
 
+    Phase phase(int tracerIdx) const;
+    const std::vector<bool>& enableSolTracers() const;
 
     /*!
      * \brief Return the tracer concentration for tracer index and global DofIdx
@@ -79,6 +83,7 @@ public:
     Scalar solTracerConcentration(int tracerIdx, int globalDofIdx) const;
     void setFreeTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value);
     void setSolTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value);
+    void setEnableSolTracers(int tracerIdx, bool enableSolTracer);
 
     /*!
     * \brief Return well tracer rates
@@ -96,9 +101,12 @@ public:
     void serializeOp(Serializer& serializer)
     {
         serializer(tracerConcentration_);
+        serializer(freeTracerConcentration_);
+        serializer(solTracerConcentration_);
         serializer(wellTracerRate_);
         serializer(wellFreeTracerRate_);
         serializer(wellSolTracerRate_);
+        serializer(mSwTracerRate_);
     }
 
 protected:
@@ -131,6 +139,7 @@ protected:
     const DofMapper& dofMapper_;
 
     std::vector<int> tracerPhaseIdx_;
+    std::vector<bool> enableSolTracers_;
     std::vector<TracerVector> tracerConcentration_;
     std::unique_ptr<TracerMatrix> tracerMatrix_;
     std::vector<TracerVectorSingle> freeTracerConcentration_;
