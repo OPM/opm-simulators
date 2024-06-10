@@ -345,15 +345,13 @@ public:
         ParentType::finishInit();
         auto& simulator = this->simulator();
 
-        bool transmissiblity_updated = false;
-        auto processTransmissibilities = [&simulator, &transmissiblity_updated, this]() {
-            // Re-ordering in case of ALUGrid
-            auto gridToEquilGrid = [&simulator](unsigned int i) -> unsigned int {
-                return simulator.vanguard().gridIdxToEquilGridIdx(i);
-            };
-
-            transmissibilities_.finishInit(gridToEquilGrid);
-            transmissiblity_updated = true;
+        auto finishTransmissibilities = [updated = false, this]() mutable
+        {
+            if (updated) { return; }
+            this->transmissibilities_.finishInit([&vg = this->simulator().vanguard()](const unsigned int it) {
+                return vg.gridIdxToEquilGridIdx(it);
+            });
+            updated = true;
         };
 
         // calculating the TRANX, TRANY, TRANZ and NNC for output purpose
@@ -365,7 +363,7 @@ public:
                 if (simulator.vanguard().grid().comm().rank() == 0)
                     eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
             } else {
-                processTransmissibilities();
+                finishTransmissibilities();
                 eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
             }
 
@@ -437,10 +435,7 @@ public:
             eclWriter_->writeInit();
         }
 
-        if (!transmissiblity_updated) {
-            processTransmissibilities();
-        }
-
+        finishTransmissibilities();
 
         const auto& initconfig = eclState.getInitConfig();
         tracerModel_.init(initconfig.restartRequested());
