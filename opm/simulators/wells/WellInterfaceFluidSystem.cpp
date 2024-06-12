@@ -308,11 +308,11 @@ getGroupProductionTargetRate(const Group& group,
 template<typename FluidSystem>
 bool
 WellInterfaceFluidSystem<FluidSystem>::
-wellUnderZeroRateTargetGroup(const SummaryState& summary_state,
-                             const Schedule& schedule,
-                             const WellState<Scalar>& well_state,
-                             const GroupState<Scalar>& group_state,
-                             DeferredLogger& deferred_logger) const
+zeroGroupRateTarget(const SummaryState& summary_state,
+                    const Schedule& schedule,
+                    const WellState<Scalar>& well_state,
+                    const GroupState<Scalar>& group_state,
+                    DeferredLogger& deferred_logger) const
 {
     const auto& well = this->well_ecl_;
     const auto& group = schedule.getGroup(well.groupName(), this->currentStep());

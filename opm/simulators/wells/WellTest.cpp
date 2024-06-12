@@ -310,6 +310,7 @@ updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
                             const double simulation_time,
                             const bool write_message_to_opmlog,
                             WellTestState& well_test_state,
+                            const bool zero_group_target,
                             DeferredLogger& deferred_logger) const
 {
     if (well_.wellIsStopped())
@@ -346,9 +347,10 @@ updateWellTestStateEconomic(const SingleWellState<Scalar>& ws,
                                                                 deferred_logger);
         }
         else {
-            rate_limit_violated = this->checkRateEconLimits(econ_production_limits,
-                                                            ws.surface_rates,
-                                                            deferred_logger);
+            if (!zero_group_target) {
+                rate_limit_violated
+                    = this->checkRateEconLimits(econ_production_limits, ws.surface_rates, deferred_logger);
+            }
         }
     }
 

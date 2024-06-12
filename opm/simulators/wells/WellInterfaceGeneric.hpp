@@ -168,6 +168,7 @@ public:
     void updateWellTestState(const SingleWellState<Scalar>& ws,
                              const double& simulationTime,
                              const bool& writeMessageToOPMLog,
+                             const bool zero_group_target,
                              WellTestState& wellTestState,
                              DeferredLogger& deferred_logger) const;
 
@@ -199,6 +200,8 @@ protected:
 
     bool wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
                                            const WellState<Scalar>& well_state) const;
+
+    bool wellUnderGroupControl(const SingleWellState<Scalar>& ws) const;
 
     std::pair<bool,bool>
     computeWellPotentials(std::vector<Scalar>& well_potentials,
