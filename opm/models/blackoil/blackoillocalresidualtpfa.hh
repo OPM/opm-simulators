@@ -95,6 +95,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
+    static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
     static constexpr bool enableMICP = getPropValue<TypeTag, Properties::EnableMICP>();
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
@@ -104,7 +105,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
-    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag>;
+    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
     using ConvectiveMixingModuleParam = typename ConvectiveMixingModule::ConvectiveMixingModuleParam;
 
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
@@ -457,15 +458,17 @@ public:
         // BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
         // deal with convective mixing
-        ConvectiveMixingModule::addConvectiveMixingFlux(flux,
-                                                        intQuantsIn,
-                                                        intQuantsEx,
-                                                        globalIndexIn,
-                                                        globalIndexEx,
-                                                        nbInfo.dZg,
-                                                        nbInfo.trans,
-                                                        nbInfo.faceArea,
-                                                        moduleParams.convectiveMixingModuleParam);
+        if constexpr(enableConvectiveMixing){
+            ConvectiveMixingModule::addConvectiveMixingFlux(flux,
+                                                            intQuantsIn,
+                                                            intQuantsEx,
+                                                            globalIndexIn,
+                                                            globalIndexEx,
+                                                            nbInfo.dZg,
+                                                            nbInfo.trans,
+                                                            nbInfo.faceArea,
+                                                            moduleParams.convectiveMixingModuleParam);
+        }
 
 
         // deal with diffusion (if present). opm-models expects per area flux (added in the tmpdiffusivity).

@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \brief Classes required for molecular diffusion.
+ * \brief Classes required for dynamic convective mixing.
  */
 #ifndef EWOMS_CONVECTIVEMIXING_MODULE_HH
 #define EWOMS_CONVECTIVEMIXING_MODULE_HH
@@ -42,10 +42,70 @@ namespace Opm {
 
 /*!
  * \copydoc Opm::BlackOilConvectiveMixingModule
- * \brief Provides the requiered methods for dynamic convective mixing.
+ * \brief Provides the convective term in the transport flux for the brine
+ * when convective mixing (enhanced dissolution of CO2 in brine) occurs. 
+ * Controlled by the regimes for a controlvolume:
+ * i) initial phase (CO2 dissolves in brine due to diffusion)
+ * ii) linear phase (Convective fingers of CO2-rich brine propagate downwards)
+ * iii) steady-state-phase (fingers have passed through the bottom of a control
+ * -volume but the larger scale convective process is still active)
+ * iv) decline phase (Convection ceases at the large-scale when the CO2 
+ * has been completely dissolved)
  */
+
+template <class TypeTag, bool enableConvectiveMixing>
+class BlackOilConvectiveMixingModule;
+
+/*!
+ * \copydoc Opm::BlackOilConvectiveMixingModule
+ */
+
 template <class TypeTag>
-class BlackOilConvectiveMixingModule
+class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/false>
+{
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+    using RateVector = GetPropType<TypeTag, Properties::RateVector>;
+    using Evaluation = GetPropType<TypeTag, Properties::Evaluation>;
+    using Indices = GetPropType<TypeTag, Properties::Indices>;
+    using IntensiveQuantities = GetPropType<TypeTag, Properties::IntensiveQuantities>;
+    using GridView = GetPropType<TypeTag, Properties::GridView>;
+
+    enum { conti0EqIdx = Indices::conti0EqIdx };
+    enum { dimWorld = GridView::dimensionworld };
+
+public:
+    struct ConvectiveMixingModuleParam
+    {};
+
+    #if HAVE_ECL_INPUT
+    static void beginEpisode(const EclipseState& eclState, const Schedule& schedule, const int episodeIdx, ConvectiveMixingModuleParam& info)
+    {}
+    #endif
+
+    template <class Context>
+    static void addConvectiveMixingFlux(RateVector& flux, 
+                                        const Context& elemCtx,
+                                        unsigned scvfIdx, 
+                                        unsigned timeIdx)
+    {}
+    /*!
+     * \brief Adds the convective mixing mass flux flux to the flux vector over a flux
+     *        integration point.
+     */
+    static void addConvectiveMixingFlux(RateVector& flux,
+                            const IntensiveQuantities& intQuantsIn,
+                            const IntensiveQuantities& intQuantsEx,
+                            const unsigned globalIndexIn,
+                            const unsigned globalIndexEx,
+                            const Scalar distZg, 
+                            const Scalar trans,
+                            const Scalar faceArea,
+                            const ConvectiveMixingModuleParam& info)
+    {}
+};
+template <class TypeTag>
+class BlackOilConvectiveMixingModule<TypeTag, /*enableConvectiveMixing=*/true>
 {
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -73,6 +133,7 @@ public:
         // check that Xhi and Psi didn't change
         std::size_t numRegions = eclState.runspec().tabdims().getNumPVTTables();
         const auto& control = schedule[episodeIdx].oilvap();
+        info.active_ = control.drsdtConvective();
         if (!info.active_) {
             return;
         }
@@ -129,7 +190,7 @@ public:
 
 
     /*!
-     * \brief Adds the diffusive mass flux flux to the flux vector over a flux
+     * \brief Adds the convective mixing mass flux flux to the flux vector over a flux
      *        integration point.
       */
     static void addConvectiveMixingFlux(RateVector& flux,

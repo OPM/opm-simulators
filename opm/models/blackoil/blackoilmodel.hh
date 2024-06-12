@@ -181,6 +181,8 @@ struct EnableDiffusion<TypeTag, TTag::BlackOilModel> { static constexpr bool val
 //! disable disperison by default
 template<class TypeTag>
 struct EnableDispersion<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::BlackOilModel> { static constexpr bool value = false; };
 
 //! by default, scale the energy equation by the inverse of the energy required to heat
 //! up one kg of water by 30 Kelvin. If we conserve surface volumes, this must be divided
