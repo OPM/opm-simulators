@@ -407,7 +407,7 @@ void Opm::prepareResultOutputDirectory(const std::string&           baseName,
 {
     //Loop over all files in the output directory and subdirectories and delete them if their name is baseName + a correct extension
     std::regex r(baseName + R"(\.(F?(DBG|E?GRID|INIT|PRT|RFT|SMSPEC|UNSMRY|UNRST)|([ABCFGHSTUXYZ]\d{4})|(INFOSTEP|INFOITER|OPMRST)))");
-    for (auto& file : std::filesystem::recursive_directory_iterator(outputDir)) {
+    for (auto& file : std::filesystem::directory_iterator(outputDir)) {
         std::string fileName = file.path().filename();
         if (std::regex_match(fileName, r)) {
             std::filesystem::remove(file);
