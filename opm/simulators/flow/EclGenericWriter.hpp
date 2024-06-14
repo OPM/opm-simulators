@@ -116,6 +116,7 @@ protected:
     unsigned int gridEquilIdxToGridIdx(unsigned int elemIndex) const;
 
     void doWriteOutput(const int                          reportStepNum,
+                       const std::optional<int>           timeStepNum,
                        const bool                         isSubStep,
                        data::Solution&&                   localCellData,
                        data::Wells&&                      localWellData,

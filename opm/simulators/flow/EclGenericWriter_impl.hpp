@@ -142,6 +142,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
     Opm::UDQState udqState_;
     Opm::EclipseIO& eclIO_;
     int reportStepNum_;
+    std::optional<int> timeStepNum_;
     bool isSubStep_;
     double secondsElapsed_;
     Opm::RestartValue restartValue_;
@@ -153,6 +154,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
                              const Opm::UDQState& udqState,
                              Opm::EclipseIO& eclIO,
                              int reportStepNum,
+                             std::optional<int> timeStepNum,
                              bool isSubStep,
                              double secondsElapsed,
                              Opm::RestartValue restartValue,
@@ -163,6 +165,7 @@ struct EclWriteTasklet : public Opm::TaskletInterface
         , udqState_(udqState)
         , eclIO_(eclIO)
         , reportStepNum_(reportStepNum)
+        , timeStepNum_(timeStepNum)
         , isSubStep_(isSubStep)
         , secondsElapsed_(secondsElapsed)
         , restartValue_(std::move(restartValue))
@@ -180,7 +183,9 @@ struct EclWriteTasklet : public Opm::TaskletInterface
                                    this->isSubStep_,
                                    this->secondsElapsed_,
                                    std::move(this->restartValue_),
-                                   this->writeDoublePrecision_);
+                                   this->writeDoublePrecision_,
+                                   this->timeStepNum_
+);
     }
 };
 
@@ -508,6 +513,7 @@ exportNncStructure_(const std::unordered_map<int,int>& cartesianToActive,
 template<class Grid, class EquilGrid, class GridView, class ElementMapper, class Scalar>
 void EclGenericWriter<Grid,EquilGrid,GridView,ElementMapper,Scalar>::
 doWriteOutput(const int                          reportStepNum,
+              const std::optional<int>           timeStepNum,
               const bool                         isSubStep,
               data::Solution&&                   localCellData,
               data::Wells&&                      localWellData,
@@ -583,7 +589,7 @@ doWriteOutput(const int                          reportStepNum,
         actionState,
         isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
         summaryState, udqState, *this->eclIO_,
-        reportStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
+        reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
 
     // then, make sure that the previous I/O request has been completed
     // and the number of incomplete tasklets does not increase between

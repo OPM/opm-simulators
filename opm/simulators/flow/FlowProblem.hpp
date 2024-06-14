@@ -458,6 +458,7 @@ public:
         if (!initconfig.restartRequested()) {
             simulator.startNextEpisode(schedule.seconds(1));
             simulator.setEpisodeIndex(0);
+            simulator.setTimeStepIndex(0);
         }
     }
 
@@ -654,6 +655,7 @@ public:
 #endif // NDEBUG
 
         auto& simulator = this->simulator();
+        simulator.setTimeStepIndex(simulator.timeStepIndex()+1);
 
         this->wellModel_.endTimeStep();
         this->aquiferModel_.endTimeStep();
@@ -679,8 +681,7 @@ public:
             }
         }
 
-        const bool isSubStep = !Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>()
-            && !this->simulator().episodeWillBeOver();
+        const bool isSubStep = !this->simulator().episodeWillBeOver();
 
         // For CpGrid with LGRs, ecl/vtk output is not supported yet.
         const auto& grid = this->simulator().vanguard().gridView().grid();
@@ -774,8 +775,7 @@ public:
             ParentType::writeOutput(verbose);
         }
 
-        bool isSubStep = !Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() &&
-                         !this->simulator().episodeWillBeOver();
+        bool isSubStep = !this->simulator().episodeWillBeOver();
         
         data::Solution localCellData = {};
 #if HAVE_DAMARIS
