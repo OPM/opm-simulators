@@ -340,6 +340,7 @@ protected:
                         const bool vapparsActive,
                         const bool enableHysteresis,
                         unsigned numTracers,
+                        const std::vector<bool>& enableSolTracers,
                         unsigned numOutputNnc);
 
     void makeRegionSum(Inplace& inplace,
@@ -504,7 +505,8 @@ protected:
     std::array<ScalarBuffer, numPhases> viscosity_;
     std::array<ScalarBuffer, numPhases> relativePermeability_;
 
-    std::vector<ScalarBuffer> tracerConcentrations_;
+    std::vector<ScalarBuffer> freeTracerConcentrations_;
+    std::vector<ScalarBuffer> solTracerConcentrations_;
 
     std::array<ScalarBuffer, numPhases> residual_;
 

@@ -700,21 +700,40 @@ assignToSolution(data::Solution& sol)
     }
 
     // Tracers
-    if (! this->tracerConcentrations_.empty()) {
+    if (! this->freeTracerConcentrations_.empty()) {
         const auto& tracers = this->eclState_.tracer();
         for (auto tracerIdx = 0*tracers.size();
              tracerIdx < tracers.size(); ++tracerIdx)
         {
             sol.insert(tracers[tracerIdx].fname(),
                        UnitSystem::measure::identity,
-                       std::move(tracerConcentrations_[tracerIdx]),
+                       std::move(freeTracerConcentrations_[tracerIdx]),
                        data::TargetType::RESTART_TRACER_SOLUTION);
         }
 
-        // Put tracerConcentrations container into a valid state.  Otherwise
+        // Put freeTracerConcentrations container into a valid state.  Otherwise
         // we'll move from vectors that have already been moved from if we
         // get here and it's not a restart step.
-        this->tracerConcentrations_.clear();
+        this->freeTracerConcentrations_.clear();
+    }
+    if (! this->solTracerConcentrations_.empty()) {
+        const auto& tracers = this->eclState_.tracer();
+        for (auto tracerIdx = 0*tracers.size();
+             tracerIdx < tracers.size(); ++tracerIdx)
+        {
+            if (solTracerConcentrations_[tracerIdx].empty())
+                continue;
+
+            sol.insert(tracers[tracerIdx].sname(),
+                       UnitSystem::measure::identity,
+                       std::move(solTracerConcentrations_[tracerIdx]),
+                       data::TargetType::RESTART_TRACER_SOLUTION);
+        }
+
+        // Put solTracerConcentrations container into a valid state.  Otherwise
+        // we'll move from vectors that have already been moved from if we
+        // get here and it's not a restart step.
+        this->solTracerConcentrations_.clear();
     }
 }
 
@@ -838,6 +857,7 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     vapparsActive,
                const bool     enableHysteresis,
                const unsigned numTracers,
+               const std::vector<bool>& enableSolTracers,
                const unsigned numOutputNnc)
 {
     // Output RESTART_OPM_EXTENDED only when explicitly requested by user.
@@ -1304,10 +1324,16 @@ doAllocBuffers(const unsigned bufferSize,
 
     // tracers
     if (numTracers > 0) {
-        tracerConcentrations_.resize(numTracers);
+        freeTracerConcentrations_.resize(numTracers);
         for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
         {
-            tracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
+            freeTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
+        }
+        solTracerConcentrations_.resize(numTracers);
+        for (unsigned tracerIdx = 0; tracerIdx < numTracers; ++tracerIdx)
+        {
+            if (enableSolTracers[tracerIdx])
+                solTracerConcentrations_[tracerIdx].resize(bufferSize, 0.0);
         }
     }
 

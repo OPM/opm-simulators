@@ -240,6 +240,7 @@ public:
                              problem.vapparsActive(std::max(simulator_.episodeIndex(), 0)),
                              problem.materialLawManager()->enableHysteresis(),
                              problem.tracerModel().numTracers(),
+                             problem.tracerModel().enableSolTracers(),
                              problem.eclWriter()->getOutputNnc().size());
     }
 
@@ -661,14 +662,23 @@ public:
 
             // tracers
             const auto& tracerModel = simulator_.problem().tracerModel();
-            if (! this->tracerConcentrations_.empty()) {
+            if (! this->freeTracerConcentrations_.empty()) {
                 for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); ++tracerIdx) {
-                    if (this->tracerConcentrations_[tracerIdx].empty()) {
+                    if (this->freeTracerConcentrations_[tracerIdx].empty()) {
                         continue;
                     }
-
-                    this->tracerConcentrations_[tracerIdx][globalDofIdx] =
-                        tracerModel.tracerConcentration(tracerIdx, globalDofIdx);
+                    this->freeTracerConcentrations_[tracerIdx][globalDofIdx] =
+                        tracerModel.freeTracerConcentration(tracerIdx, globalDofIdx);
+                }
+            }
+            if (! this->solTracerConcentrations_.empty()) {
+                for (int tracerIdx = 0; tracerIdx < tracerModel.numTracers(); ++tracerIdx) {
+                    if (this->solTracerConcentrations_[tracerIdx].empty()) {
+                        continue;
+                    }
+                    this->solTracerConcentrations_[tracerIdx][globalDofIdx] =
+                        tracerModel.solTracerConcentration(tracerIdx, globalDofIdx);
+                    
                 }
             }
 

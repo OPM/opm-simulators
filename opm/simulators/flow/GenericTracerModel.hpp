@@ -36,6 +36,8 @@
 
 #include <opm/simulators/linalg/matrixblock.hh>
 
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
+
 #include <array>
 #include <cstddef>
 #include <functional>
@@ -49,11 +51,12 @@ namespace Opm {
 class EclipseState;
 class Well;
 
-template<class Grid, class GridView, class DofMapper, class Stencil, class Scalar>
+template<class Grid, class GridView, class DofMapper, class Stencil, class FluidSystem, class Scalar>
 class GenericTracerModel {
 public:
-    using TracerMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 1, 1>>;
-    using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar,1>>;
+    using TracerVectorSingle = Dune::BlockVector<Dune::FieldVector<Scalar, 1>>;
+    using TracerMatrix = Dune::BCRSMatrix<Opm::MatrixBlock<Scalar, 2, 2>>;
+    using TracerVector = Dune::BlockVector<Dune::FieldVector<Scalar, 2>>;
     using CartesianIndexMapper = Dune::CartesianIndexMapper<Grid>;
     static constexpr int dimWorld = Grid::dimensionworld;
     /*!
@@ -66,25 +69,44 @@ public:
      */
     const std::string& name(int tracerIdx) const;
     std::string fname(int tracerIdx) const;
+    std::string sname(int tracerIdx) const;
+    std::string wellfname(int tracerIdx) const;
+    std::string wellsname(int tracerIdx) const;
 
+    Phase phase(int tracerIdx) const;
+    const std::vector<bool>& enableSolTracers() const;
 
     /*!
      * \brief Return the tracer concentration for tracer index and global DofIdx
      */
-    Scalar tracerConcentration(int tracerIdx, int globalDofIdx) const;
-    void setTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value);
+    Scalar freeTracerConcentration(int tracerIdx, int globalDofIdx) const;
+    Scalar solTracerConcentration(int tracerIdx, int globalDofIdx) const;
+    void setFreeTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value);
+    void setSolTracerConcentration(int tracerIdx, int globalDofIdx, Scalar value);
+    void setEnableSolTracers(int tracerIdx, bool enableSolTracer);
 
     /*!
     * \brief Return well tracer rates
     */
     const std::map<std::pair<std::string, std::string>, Scalar>&
     getWellTracerRates() const {return wellTracerRate_;}
+    const std::map<std::pair<std::string, std::string>, Scalar>&
+    getWellFreeTracerRates() const {return wellFreeTracerRate_;}
+    const std::map<std::pair<std::string, std::string>, Scalar>&
+    getWellSolTracerRates() const {return wellSolTracerRate_;}
+    const std::map<std::tuple<std::string, std::string, std::size_t>, Scalar>&
+    getMswTracerRates() const {return mSwTracerRate_;}
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
         serializer(tracerConcentration_);
+        serializer(freeTracerConcentration_);
+        serializer(solTracerConcentration_);
         serializer(wellTracerRate_);
+        serializer(wellFreeTracerRate_);
+        serializer(wellSolTracerRate_);
+        serializer(mSwTracerRate_);
     }
 
 protected:
@@ -117,12 +139,20 @@ protected:
     const DofMapper& dofMapper_;
 
     std::vector<int> tracerPhaseIdx_;
-    std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> tracerConcentration_;
+    std::vector<bool> enableSolTracers_;
+    std::vector<TracerVector> tracerConcentration_;
     std::unique_ptr<TracerMatrix> tracerMatrix_;
-    std::vector<Dune::BlockVector<Dune::FieldVector<Scalar, 1>>> storageOfTimeIndex1_;
+    std::vector<TracerVectorSingle> freeTracerConcentration_;
+    std::vector<TracerVectorSingle> solTracerConcentration_;
 
-    // <wellName, tracerIdx> -> wellRate
+    // <wellName, tracerName> -> wellRate
     std::map<std::pair<std::string, std::string>, Scalar> wellTracerRate_;
+    std::map<std::pair<std::string, std::string>, Scalar> wellFreeTracerRate_;
+    std::map<std::pair<std::string, std::string>, Scalar> wellSolTracerRate_;
+
+    // <wellName, tracerName, segNum> -> wellRate
+    std::map<std::tuple<std::string, std::string, std::size_t>, Scalar> mSwTracerRate_;
+
     /// \brief Function returning the cell centers
     std::function<std::array<double,dimWorld>(int)> centroids_;
 };
