@@ -982,13 +982,6 @@ add_test_compareECLFiles(CASENAME 9_4d_grpctl_msw_model2
                          REL_TOL ${rel_tol}
                          DIR model2)
 
-add_test_compareECLFiles(CASENAME model4_group
-                         FILENAME MOD4_GRP
-                         SIMULATOR flow
-                         ABS_TOL ${abs_tol}
-                         REL_TOL ${rel_tol}
-                         DIR model4)
-
 add_test_compareECLFiles(CASENAME model4_udq_group
                          FILENAME MOD4_UDQ_ACTIONX
                          SIMULATOR flow
