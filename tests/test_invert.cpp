@@ -55,13 +55,17 @@ BOOST_AUTO_TEST_CASE(Invert4x4)
     matrix[3][0] = 5;
     matrix[0][3] = 14;
 
-    double det = Opm::detail::invertMatrix4<Opm::detail::FMat4>(matrix, inverse);
+    const double det = matrix.determinant();
     BOOST_CHECK_CLOSE(4, det, 1e-14);
 
+    inverse = matrix;
+    inverse.invert();
     // check matrix * inverse close to identiy
     checkIdentity(matrix.rightmultiply(inverse));
 
     // check singular matrix
-    BOOST_CHECK_THROW(Opm::detail::invertMatrix4<Opm::detail::FMat4>(matrix_sing, inverse),
-                      Opm::NumericalProblem);
+    // BOOST_CHECK_THROW(Opm::detail::invertMatrix4<Opm::detail::FMat4>(matrix_sing, inverse),
+    //                  Opm::NumericalProblem);
+    //
+    BOOST_CHECK_THROW(matrix_sing.invert(), Dune::FMatrixError);
 }
