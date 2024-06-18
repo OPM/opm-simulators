@@ -421,8 +421,12 @@ WCONINJE
 -- pressure in the PVT table=9014.7psia (default is 100 000psia)
 
 TSTEP
+--Advance the simulater once a day for TEN days:
+--Relatively small time steps are used to avoid regression failures
+--due to time stepping change
+10*1 /
 --Advance the simulater once a month for TEN years:
-31 28 31 30 31 30 31 31 30 31 30 31 /
+--31 28 31 30 31 30 31 31 30 31 30 31 /
 --31 28 31 30 31 30 31 31 30 31 30 31 
 --31 28 31 30 31 30 31 31 30 31 30 31 
 --31 28 31 30 31 30 31 31 30 31 30 31 

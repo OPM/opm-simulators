@@ -54,9 +54,11 @@ class TestBasic(unittest.TestCase):
             sim.step_init()
             sim.step()
             dt = sim.get_dt()
-            # NOTE: The timestep should be 1 month = 31 days
-            #  = 31 * 24 * 60 * 60 seconds = 2678400 seconds
-            self.assertAlmostEqual(dt, 2678400.0, places=7, msg='value of timestep')
+            # NOTE: the timestep size is reduced to 1 day to avoid regression failures
+            # due to changes in time stepping.
+            # NOTE: The timestep should be 1 day
+            #  = 24 * 60 * 60 seconds = 86400 seconds
+            self.assertAlmostEqual(dt, 86400., places=7, msg='value of timestep')
             vol = sim.get_cell_volumes()
             self.assertEqual(len(vol), 300, 'length of volume vector')
             # NOTE: The volume should be 1000 ft x 1000 ft x 20 ft * 0.3 (porosity) 
