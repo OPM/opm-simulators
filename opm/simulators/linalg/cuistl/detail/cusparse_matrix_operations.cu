@@ -19,6 +19,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
 #include <stdexcept>
+#include <config.h>
 
 namespace Opm::cuistl::detail
 {
@@ -505,25 +506,22 @@ namespace
         }
     }
 
-    constexpr inline size_t getThreads([[maybe_unused]] size_t numberOfRows)
-    {
-        return 1024;
-    }
-
-    inline size_t getBlocks(size_t numberOfRows)
-    {
-        const auto threads = getThreads(numberOfRows);
-        return (numberOfRows + threads - 1) / threads;
-    }
-
     // Kernel here is the function object of the cuda kernel
     template <class Kernel>
-    inline int getCudaRecomendedThreadBlockSize(Kernel k)
+    inline int getCudaRecomendedThreadBlockSize(Kernel k, int suggestedThrBlockSize=-1)
     {
-        int blockSize;
+        if (suggestedThrBlockSize != -1){
+            return suggestedThrBlockSize;
+        }
+// Use cuda API to maximize occupancy, otherwise we just pick a thread block size if it is not tuned
+#if USE_HIP
+    return 512;
+#else
+        int blockSize = 1024;
         int tmpGridSize;
-        cudaOccupancyMaxPotentialBlockSize(&tmpGridSize, &blockSize, k, 0, 0);
+        std::ignore = cudaOccupancyMaxPotentialBlockSize(&tmpGridSize, &blockSize, k, 0, 0);
         return blockSize;
+#endif
     }
 
     inline int getNumberOfBlocks(int wantedThreads, int threadBlockSize)
@@ -538,8 +536,10 @@ void
 invertDiagonalAndFlatten(T* mat, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec)
 {
     if (blocksize <= 3) {
+        int threadBlockSize = getCudaRecomendedThreadBlockSize(cuInvertDiagonalAndFlatten<T, blocksize>);
+        int nThreadBlocks = getNumberOfBlocks(numberOfRows, threadBlockSize);
         cuInvertDiagonalAndFlatten<T, blocksize>
-            <<<getBlocks(numberOfRows), getThreads(numberOfRows)>>>(mat, rowIndices, colIndices, numberOfRows, vec);
+            <<<nThreadBlocks, threadBlockSize>>>(mat, rowIndices, colIndices, numberOfRows, vec);
     } else {
         OPM_THROW(std::invalid_argument, "Inverting diagonal is not implemented for blocksizes > 3");
     }
@@ -556,9 +556,12 @@ computeLowerSolveLevelSet(T* reorderedMat,
                           int rowsInLevelSet,
                           const T* dInv,
                           const T* d,
-                          T* v)
+                          T* v,
+                          int thrBlockSize)
 {
-    cuComputeLowerSolveLevelSet<T, blocksize><<<getBlocks(rowsInLevelSet), getThreads(rowsInLevelSet)>>>(
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSet<T, blocksize>, thrBlockSize);
+    int nThreadBlocks = getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+    cuComputeLowerSolveLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
 }
 
@@ -573,9 +576,10 @@ computeLowerSolveLevelSetSplit(T* reorderedMat,
                                int rowsInLevelSet,
                                const T* dInv,
                                const T* d,
-                               T* v)
+                               T* v,
+                               int thrBlockSize)
 {
-    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSetSplit<T, blocksize>);
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSetSplit<T, blocksize>, thrBlockSize);
     int nThreadBlocks = getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuComputeLowerSolveLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
@@ -590,9 +594,12 @@ computeUpperSolveLevelSet(T* reorderedMat,
                           int startIdx,
                           int rowsInLevelSet,
                           const T* dInv,
-                          T* v)
+                          T* v,
+                          int thrBlockSize)
 {
-    cuComputeUpperSolveLevelSet<T, blocksize><<<getBlocks(rowsInLevelSet), getThreads(rowsInLevelSet)>>>(
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeUpperSolveLevelSet<T, blocksize>, thrBlockSize);
+    int nThreadBlocks = getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+    cuComputeUpperSolveLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
 
@@ -605,9 +612,10 @@ computeUpperSolveLevelSetSplit(T* reorderedMat,
                                int startIdx,
                                int rowsInLevelSet,
                                const T* dInv,
-                               T* v)
+                               T* v,
+                               int thrBlockSize)
 {
-    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSetSplit<T, blocksize>);
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeUpperSolveLevelSetSplit<T, blocksize>, thrBlockSize);
     int nThreadBlocks = getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuComputeUpperSolveLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
@@ -622,11 +630,14 @@ computeDiluDiagonal(T* reorderedMat,
                     int* naturalToReordered,
                     const int startIdx,
                     int rowsInLevelSet,
-                    T* dInv)
+                    T* dInv,
+                    int thrBlockSize)
 {
     if (blocksize <= 3) {
+        int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeDiluDiagonal<T, blocksize>, thrBlockSize);
+        int nThreadBlocks = getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
         cuComputeDiluDiagonal<T, blocksize>
-            <<<getBlocks(rowsInLevelSet), getThreads(rowsInLevelSet)>>>(reorderedMat,
+            <<<nThreadBlocks, threadBlockSize>>>(reorderedMat,
                                                                         rowIndices,
                                                                         colIndices,
                                                                         reorderedToNatural,
@@ -652,10 +663,11 @@ computeDiluDiagonalSplit(T* reorderedLowerMat,
                          int* naturalToReordered,
                          const int startIdx,
                          int rowsInLevelSet,
-                         T* dInv)
+                         T* dInv,
+                         int thrBlockSize)
 {
     if (blocksize <= 3) {
-        int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSetSplit<T, blocksize>);
+        int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeDiluDiagonalSplit<T, blocksize>, thrBlockSize);
         int nThreadBlocks = getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
         cuComputeDiluDiagonalSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(reorderedLowerMat,
                                                                                      lowerRowIndices,
@@ -677,9 +689,12 @@ computeDiluDiagonalSplit(T* reorderedLowerMat,
 template <class T, int blocksize>
 void
 copyMatDataToReordered(
-    T* srcMatrix, int* srcRowIndices, T* dstMatrix, int* dstRowIndices, int* naturalToReordered, size_t numberOfRows)
+    T* srcMatrix, int* srcRowIndices, T* dstMatrix, int* dstRowIndices, int* naturalToReordered, size_t numberOfRows,
+    int thrBlockSize)
 {
-    cuMoveDataToReordered<T, blocksize><<<getBlocks(numberOfRows), getThreads(numberOfRows)>>>(
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuMoveDataToReordered<T, blocksize>, thrBlockSize);
+    int nThreadBlocks = getNumberOfBlocks(numberOfRows, threadBlockSize);
+    cuMoveDataToReordered<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         srcMatrix, srcRowIndices, dstMatrix, dstRowIndices, naturalToReordered, numberOfRows);
 }
 
@@ -694,9 +709,10 @@ copyMatDataToReorderedSplit(T* srcMatrix,
                             int* dstUpperRowIndices,
                             T* dstDiag,
                             int* naturalToReordered,
-                            size_t numberOfRows)
+                            size_t numberOfRows,
+                            int thrBlockSize)
 {
-    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSetSplit<T, blocksize>);
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuMoveDataToReorderedSplit<T, blocksize>, thrBlockSize);
     int nThreadBlocks = getNumberOfBlocks(numberOfRows, threadBlockSize);
     cuMoveDataToReorderedSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(srcMatrix,
                                                                                  srcRowIndices,
@@ -712,15 +728,15 @@ copyMatDataToReorderedSplit(T* srcMatrix,
 
 #define INSTANTIATE_KERNEL_WRAPPERS(T, blocksize)                                                                      \
     template void invertDiagonalAndFlatten<T, blocksize>(T*, int*, int*, size_t, T*);                                  \
-    template void copyMatDataToReordered<T, blocksize>(T*, int*, T*, int*, int*, size_t);                              \
-    template void copyMatDataToReorderedSplit<T, blocksize>(T*, int*, int*, T*, int*, T*, int*, T*, int*, size_t);     \
-    template void computeDiluDiagonal<T, blocksize>(T*, int*, int*, int*, int*, const int, int, T*);                   \
+    template void copyMatDataToReordered<T, blocksize>(T*, int*, T*, int*, int*, size_t, int);                              \
+    template void copyMatDataToReorderedSplit<T, blocksize>(T*, int*, int*, T*, int*, T*, int*, T*, int*, size_t, int);     \
+    template void computeDiluDiagonal<T, blocksize>(T*, int*, int*, int*, int*, const int, int, T*, int);                   \
     template void computeDiluDiagonalSplit<T, blocksize>(                                                              \
-        T*, int*, int*, T*, int*, int*, T*, int*, int*, const int, int, T*);                                           \
-    template void computeUpperSolveLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*);               \
-    template void computeLowerSolveLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*);     \
-    template void computeUpperSolveLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*);          \
-    template void computeLowerSolveLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*);
+        T*, int*, int*, T*, int*, int*, T*, int*, int*, const int, int, T*, int);                                           \
+    template void computeUpperSolveLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);               \
+    template void computeLowerSolveLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);     \
+    template void computeUpperSolveLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);          \
+    template void computeLowerSolveLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);
 
 INSTANTIATE_KERNEL_WRAPPERS(float, 1);
 INSTANTIATE_KERNEL_WRAPPERS(float, 2);

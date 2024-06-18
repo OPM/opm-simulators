@@ -66,7 +66,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    explicit CuDILU(const M& A, bool split_matrix = true);
+    explicit CuDILU(const M& A, bool splitMatrix, bool tuneKernels);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -87,6 +87,9 @@ public:
 
     //! \brief Compute the diagonal of the DILU, and update the data of the reordered matrix
     void computeDiagAndMoveReorderedData();
+
+    //! \brief function that will experimentally tune the thread block sizes of the important cuda kernels
+    void tuneThreadBlockSizes();
 
 
     //! \returns false
@@ -130,6 +133,12 @@ private:
     CuVector<field_type> m_gpuDInv;
     //! \brief Bool storing whether or not we should store matrices in a split format
     bool m_splitMatrix;
+    //! \brief Bool storing whether or not we will tune the threadblock sizes. Only used for AMD cards
+    bool m_tuneThreadBlockSizes;
+    //! \brief variables storing the threadblocksizes to use if using the tuned sizes and AMD cards
+    //! The default value of -1 indicates that we have not calibrated and selected a value yet
+    int m_applyThreadBlockSize = -1;
+    int m_updateThreadBlockSize = -1;
 };
 } // end namespace Opm::cuistl
 
