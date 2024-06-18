@@ -24,12 +24,12 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <memory>
+#include <opm/simulators/linalg/DILU.hpp>
 #include <opm/simulators/linalg/cuistl/CuDILU.hpp>
 #include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
-#include <opm/simulators/linalg/DILU.hpp>
 #include <random>
 #include <vector>
 
@@ -44,47 +44,49 @@ using Sp2x2BlockMatrix = Dune::BCRSMatrix<FM2x2>;
 using CuMatrix = Opm::cuistl::CuSparseMatrix<T>;
 using CuIntVec = Opm::cuistl::CuVector<int>;
 using CuFloatingPointVec = Opm::cuistl::CuVector<T>;
-using CuDilu1x1 = Opm::cuistl::CuDILU<Sp1x1BlockMatrix,  CuFloatingPointVec, CuFloatingPointVec>;
-using CuDilu2x2 = Opm::cuistl::CuDILU<Sp2x2BlockMatrix,  CuFloatingPointVec, CuFloatingPointVec>;
+using CuDilu1x1 = Opm::cuistl::CuDILU<Sp1x1BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
+using CuDilu2x2 = Opm::cuistl::CuDILU<Sp2x2BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
 
-Sp1x1BlockMatrix get1x1BlockTestMatrix(){
-/*
-    matA:
-    1  2  0  3  0  0
-    4  5  0  6  0  7
-    0  0  8  0  0  0
-    9 10  0 11 12  0
-    0  0  0 13 14  0
-    0 15  0  0  0 16
+Sp1x1BlockMatrix
+get1x1BlockTestMatrix()
+{
+    /*
+        matA:
+        1  2  0  3  0  0
+        4  5  0  6  0  7
+        0  0  8  0  0  0
+        9 10  0 11 12  0
+        0  0  0 13 14  0
+        0 15  0  0  0 16
 
-    Expected reordering:
-    1  2  0  3  0  0
-    0  0  8  0  0  0
-    4  5  0  6  0  7
-    9 10  0 11 12  0
-    0 15  0  0  0 16
-    0  0  0 13 14  0
+        Expected reordering:
+        1  2  0  3  0  0
+        0  0  8  0  0  0
+        4  5  0  6  0  7
+        9 10  0 11 12  0
+        0 15  0  0  0 16
+        0  0  0 13 14  0
 
-    Expected lowerTriangularReorderedMatrix:
-    0  0  0  0  0  0
-    0  0  0  0  0  0
-    4  0  0  0  0  0
-    9 10  0  0  0  0
-    0 15  0  0  0  0
-    0  0  0 13  0  0
+        Expected lowerTriangularReorderedMatrix:
+        0  0  0  0  0  0
+        0  0  0  0  0  0
+        4  0  0  0  0  0
+        9 10  0  0  0  0
+        0 15  0  0  0  0
+        0  0  0 13  0  0
 
-    Expected lowerTriangularReorderedMatrix:
-    0  2  0  3  0  0
-    0  0  0  0  0  0
-    0  0  0  6  0  7
-    0  0  0  0  12 0
-    0  0  0  0  0  0
-*/
+        Expected lowerTriangularReorderedMatrix:
+        0  2  0  3  0  0
+        0  0  0  0  0  0
+        0  0  0  6  0  7
+        0  0  0  0  12 0
+        0  0  0  0  0  0
+    */
 
     const int N = 6;
     const int nonZeroes = 16;
 
-    //Create the Dune A matrix
+    // Create the Dune A matrix
     Sp1x1BlockMatrix matA(N, N, nonZeroes, Sp1x1BlockMatrix::row_wise);
     for (auto row = matA.createbegin(); row != matA.createend(); ++row) {
         row.insert(row.index());
@@ -132,7 +134,9 @@ Sp1x1BlockMatrix get1x1BlockTestMatrix(){
     return matA;
 }
 
-Sp2x2BlockMatrix get2x2BlockTestMatrix(){
+Sp2x2BlockMatrix
+get2x2BlockTestMatrix()
+{
     /*
     matA:
     1  2    0  3    0  0
@@ -148,7 +152,7 @@ Sp2x2BlockMatrix get2x2BlockTestMatrix(){
     const int N = 3;
     const int nonZeroes = 9;
 
-    //Create the Dune A matrix
+    // Create the Dune A matrix
     Sp2x2BlockMatrix matA(N, N, nonZeroes, Sp2x2BlockMatrix::row_wise);
     for (auto row = matA.createbegin(); row != matA.createend(); ++row) {
         row.insert(row.index());
@@ -215,13 +219,13 @@ BOOST_AUTO_TEST_CASE(TestDiluApply)
 
     // put results in std::vector
     std::vector<T> cpudilures;
-    for (auto e : h_output){
+    for (auto e : h_output) {
         cpudilures.push_back(e);
     }
     auto cudilures = d_output.asStdVector();
 
     // check that CuDilu results matches that of CPU dilu
-    for (size_t i = 0; i < cudilures.size(); ++i){
+    for (size_t i = 0; i < cudilures.size(); ++i) {
         BOOST_CHECK_CLOSE(cudilures[i], cpudilures[i], 1e-7);
     }
 }
@@ -255,14 +259,14 @@ BOOST_AUTO_TEST_CASE(TestDiluApplyBlocked)
 
     auto cudilures = d_output.asStdVector();
     std::vector<T> cpudilures;
-    for (auto v : h_output){
-        for (auto e : v){
+    for (auto v : h_output) {
+        for (auto e : v) {
             cpudilures.push_back(e);
         }
     }
 
     // check that the values are close
-    for (size_t i = 0; i < cudilures.size(); ++i){
+    for (size_t i = 0; i < cudilures.size(); ++i) {
         BOOST_CHECK_CLOSE(cudilures[i], cpudilures[i], 1e-7);
     }
 }
@@ -316,13 +320,13 @@ BOOST_AUTO_TEST_CASE(TestDiluInitAndUpdateLarge)
 
     // put results in std::vector
     std::vector<T> cpudilures;
-    for (auto e : h_output){
+    for (auto e : h_output) {
         cpudilures.push_back(e);
     }
     auto cudilures = d_output.asStdVector();
 
     // check that CuDilu results matches that of CPU dilu
-    for (size_t i = 0; i < cudilures.size(); ++i){
+    for (size_t i = 0; i < cudilures.size(); ++i) {
         BOOST_CHECK_CLOSE(cudilures[i], cpudilures[i], 1e-7);
     }
 }
