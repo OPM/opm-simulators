@@ -30,10 +30,6 @@
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <vector>
-#include <chrono>
-#include <iostream>
-#include <string>
-#include <map>
 
 namespace
 {

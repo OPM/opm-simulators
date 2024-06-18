@@ -19,6 +19,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
 #include <stdexcept>
+
 namespace Opm::cuistl::detail
 {
 namespace
@@ -507,6 +508,20 @@ namespace
         const auto threads = getThreads(numberOfRows);
         return (numberOfRows + threads - 1) / threads;
     }
+
+    // Kernel here is the function object of the cuda kernel
+    template <class Kernel>
+    inline int getCudaRecomendedThreadBlockSize(Kernel k){
+        int blockSize;
+        int tmpGridSize;
+        cudaOccupancyMaxPotentialBlockSize( &tmpGridSize, &blockSize, k, 0, 0);
+        return blockSize;
+    }
+
+    inline int getNumberOfBlocks(int wantedThreads, int threadBlockSize){
+        return (wantedThreads + threadBlockSize - 1) / threadBlockSize;
+    }
+
 } // namespace
 
 template <class T, int blocksize>
@@ -551,7 +566,9 @@ computeLowerSolveLevelSetSplit(T* reorderedMat,
                           const T* d,
                           T* v)
 {
-    cuComputeLowerSolveLevelSetSplit<T, blocksize><<<getBlocks(rowsInLevelSet), getThreads(rowsInLevelSet)>>>(
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSetSplit<T, blocksize>);
+    int nThreadBlocks = getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+    cuComputeLowerSolveLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
 }
 // perform the upper solve for all rows in the same level set
@@ -581,7 +598,9 @@ computeUpperSolveLevelSetSplit(T* reorderedMat,
                           const T* dInv,
                           T* v)
 {
-    cuComputeUpperSolveLevelSetSplit<T, blocksize><<<getBlocks(rowsInLevelSet), getThreads(rowsInLevelSet)>>>(
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSetSplit<T, blocksize>);
+    int nThreadBlocks = getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
+    cuComputeUpperSolveLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
 
@@ -627,8 +646,10 @@ computeDiluDiagonalSplit(T* reorderedLowerMat,
                     T* dInv)
 {
     if (blocksize <= 3) {
+        int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSetSplit<T, blocksize>);
+        int nThreadBlocks = getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
         cuComputeDiluDiagonalSplit<T, blocksize>
-            <<<getBlocks(rowsInLevelSet), getThreads(rowsInLevelSet)>>>(reorderedLowerMat,
+            <<<nThreadBlocks, threadBlockSize>>>(reorderedLowerMat,
                     lowerRowIndices,
                     lowerColIndices,
                     reorderedUpperMat,
@@ -659,7 +680,9 @@ void
 copyMatDataToReorderedSplit(
     T* srcMatrix, int* srcRowIndices, int* srcColumnIndices, T* dstLowerMatrix, int* dstLowerRowIndices, T* dstUpperMatrix, int* dstUpperRowIndices, T* dstDiag, int* naturalToReordered, size_t numberOfRows)
 {
-    cuMoveDataToReorderedSplit<T, blocksize><<<getBlocks(numberOfRows), getThreads(numberOfRows)>>>(
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSetSplit<T, blocksize>);
+    int nThreadBlocks = getNumberOfBlocks(numberOfRows, threadBlockSize);
+    cuMoveDataToReorderedSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         srcMatrix, srcRowIndices, srcColumnIndices, dstLowerMatrix, dstLowerRowIndices, dstUpperMatrix, dstUpperRowIndices, dstDiag, naturalToReordered, numberOfRows);
 }
 
