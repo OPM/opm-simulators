@@ -22,6 +22,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
+#include <opm/simulators/linalg/cuistl/detail/autotuner.hpp>
 #include <opm/simulators/linalg/cuistl/detail/coloringAndReorderingUtils.hpp>
 #include <opm/simulators/linalg/cuistl/CuILU0_OPM_Impl.hpp>
 #include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
@@ -81,6 +82,9 @@ CuILU0_OPM_Impl<M, X, Y, l>::CuILU0_OPM_Impl(const M& A, bool splitMatrix, bool 
     }
     computeDiagAndMoveReorderedData();
 
+    if (m_tuneThreadBlockSizes){
+        tuneThreadBlockSizes();
+    }
 #ifdef USE_HIP
     if (m_tuneThreadBlockSizes){
         tuneThreadBlockSizes();
@@ -98,8 +102,12 @@ template <class M, class X, class Y, int l>
 void
 CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
 {
+    // ScopeTimer timer("Apply");
     OPM_TIMEBLOCK(prec_apply);
     {
+        // cudaDeviceSynchronize();
+        // auto start = std::chrono::high_resolution_clock::now();
+
         int levelStartIdx = 0;
         for (int level = 0; level < m_levelSets.size(); ++level) {
             const int numOfRowsInLevel = m_levelSets[level].size();
@@ -114,7 +122,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
                     m_gpuMatrixReorderedDiag.value().data(),
                     d.data(),
                     v.data(),
-                    m_applyThreadBlockSize);
+                    m_lowerSolveThreadBlockSize);
             } else {
                 detail::ILU0::solveLowerLevelSet<field_type, blocksize_>(
                     m_gpuReorderedLU->getNonZeroValues().data(),
@@ -125,7 +133,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
                     numOfRowsInLevel,
                     d.data(),
                     v.data(),
-                    m_applyThreadBlockSize);
+                    m_lowerSolveThreadBlockSize);
             }
             levelStartIdx += numOfRowsInLevel;
         }
@@ -145,7 +153,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
                     numOfRowsInLevel,
                     m_gpuMatrixReorderedDiag.value().data(),
                     v.data(),
-                    m_applyThreadBlockSize);
+                    m_upperSolveThreadBlockSize);
             } else {
                 detail::ILU0::solveUpperLevelSet<field_type, blocksize_>(
                     m_gpuReorderedLU->getNonZeroValues().data(),
@@ -155,9 +163,13 @@ CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
                     levelStartIdx,
                     numOfRowsInLevel,
                     v.data(),
-                    m_applyThreadBlockSize);
+                    m_upperSolveThreadBlockSize);
             }
         }
+        // cudaDeviceSynchronize();
+        // auto end = std::chrono::high_resolution_clock::now();
+        // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        // printf("Apply duration %ldus\n", duration);
     }
 }
 
@@ -180,8 +192,16 @@ CuILU0_OPM_Impl<M, X, Y, l>::update()
 {
     OPM_TIMEBLOCK(prec_update);
     {
+        // cudaDeviceSynchronize();
+        // auto start = std::chrono::high_resolution_clock::now();
+
         m_gpuMatrix.updateNonzeroValues(m_cpuMatrix, true); // send updated matrix to the gpu
         computeDiagAndMoveReorderedData();
+
+        // cudaDeviceSynchronize();
+        // auto end = std::chrono::high_resolution_clock::now();
+        // auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+        // printf("Update duration %ldus\n", duration);
     }
 }
 
@@ -203,7 +223,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::computeDiagAndMoveReorderedData()
                 m_gpuMatrixReorderedDiag.value().data(),
                 m_gpuNaturalToReorder.data(),
                 m_gpuMatrixReorderedLower->N(),
-                m_updateThreadBlockSize);
+                m_moveThreadBlockSize);
         } else {
             detail::copyMatDataToReordered<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
                                                                     m_gpuMatrix.getRowIndices().data(),
@@ -211,7 +231,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::computeDiagAndMoveReorderedData()
                                                                     m_gpuReorderedLU->getRowIndices().data(),
                                                                     m_gpuNaturalToReorder.data(),
                                                                     m_gpuReorderedLU->N(),
-                                                                    m_updateThreadBlockSize);
+                                                                    m_moveThreadBlockSize);
         }
         int levelStartIdx = 0;
         for (int level = 0; level < m_levelSets.size(); ++level) {
@@ -230,7 +250,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::computeDiagAndMoveReorderedData()
                     m_gpuNaturalToReorder.data(),
                     levelStartIdx,
                     numOfRowsInLevel,
-                    m_updateThreadBlockSize);
+                    m_LUThreadBlockSize);
 
             } else {
                 detail::ILU0::LUFactorization<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
@@ -240,7 +260,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::computeDiagAndMoveReorderedData()
                                                                         m_gpuReorderToNatural.data(),
                                                                         numOfRowsInLevel,
                                                                         levelStartIdx,
-                                                                        m_updateThreadBlockSize);
+                                                                        m_LUThreadBlockSize);
             }
             levelStartIdx += numOfRowsInLevel;
         }
@@ -251,52 +271,20 @@ template <class M, class X, class Y, int l>
 void
 CuILU0_OPM_Impl<M, X, Y, l>::tuneThreadBlockSizes()
 {
-    //TODO generalize this tuning process in a function separate of the class
-    long long bestApplyTime = __LONG_LONG_MAX__;
-    long long bestUpdateTime = __LONG_LONG_MAX__;
-    int bestApplyBlockSize = -1;
-    int bestUpdateBlockSize = -1;
-    int interval = 64;
 
-    //temporary buffers for the apply
+    using CuDILUType = std::remove_reference_t<decltype(*this)>;
+    auto updateFunc = std::bind(&CuDILUType::update, this);
+    auto applyFunc = std::bind(&CuDILUType::apply, this, std::placeholders::_1, std::placeholders::_1);
+
+    detail::tuneThreadBlockSize(updateFunc, m_moveThreadBlockSize);
+    detail::tuneThreadBlockSize(updateFunc, m_LUThreadBlockSize);
+
     CuVector<field_type> tmpV(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
     CuVector<field_type> tmpD(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
     tmpD = 1;
 
-    for (int thrBlockSize = interval; thrBlockSize <= 1024; thrBlockSize += interval){
-        // sometimes the first kernel launch kan be slower, so take the time twice
-        for (int i = 0; i < 2; ++i){
-
-            auto beforeUpdate = std::chrono::high_resolution_clock::now();
-            m_updateThreadBlockSize = thrBlockSize;
-            update();
-            std::ignore = cudaDeviceSynchronize();
-            auto afterUpdate = std::chrono::high_resolution_clock::now();
-            if (cudaSuccess == cudaGetLastError()){ // kernel launch was valid
-                long long durationInMicroSec = std::chrono::duration_cast<std::chrono::microseconds>(afterUpdate - beforeUpdate).count();
-                if (durationInMicroSec < bestUpdateTime){
-                    bestUpdateTime = durationInMicroSec;
-                    bestUpdateBlockSize = thrBlockSize;
-                }
-            }
-
-            auto beforeApply = std::chrono::high_resolution_clock::now();
-            m_applyThreadBlockSize = thrBlockSize;
-            apply(tmpV, tmpD);
-            std::ignore = cudaDeviceSynchronize();
-            auto afterApply = std::chrono::high_resolution_clock::now();
-            if (cudaSuccess == cudaGetLastError()){ // kernel launch was valid
-                long long durationInMicroSec = std::chrono::duration_cast<std::chrono::microseconds>(afterApply - beforeApply).count();
-                if (durationInMicroSec < bestApplyTime){
-                    bestApplyTime = durationInMicroSec;
-                    bestApplyBlockSize = thrBlockSize;
-                }
-            }
-        }
-    }
-
-    m_applyThreadBlockSize = bestApplyBlockSize;
-    m_updateThreadBlockSize = bestUpdateBlockSize;
+    detail::tuneThreadBlockSize(applyFunc, m_lowerSolveThreadBlockSize, tmpV, tmpD);
+    detail::tuneThreadBlockSize(applyFunc, m_upperSolveThreadBlockSize, tmpV, tmpD);
 }
 
 } // namespace Opm::cuistl

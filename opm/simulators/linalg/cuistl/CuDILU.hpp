@@ -137,8 +137,10 @@ private:
     bool m_tuneThreadBlockSizes;
     //! \brief variables storing the threadblocksizes to use if using the tuned sizes and AMD cards
     //! The default value of -1 indicates that we have not calibrated and selected a value yet
-    int m_applyThreadBlockSize = -1;
-    int m_updateThreadBlockSize = -1;
+    int m_upperSolveThreadBlockSize = -1;
+    int m_lowerSolveThreadBlockSize = -1;
+    int m_moveThreadBlockSize = -1;
+    int m_DILUFactorizationThreadBlockSize = -1;
 };
 } // end namespace Opm::cuistl
 

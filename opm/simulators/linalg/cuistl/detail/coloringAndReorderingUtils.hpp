@@ -41,7 +41,7 @@ extracting sparsity structures from dune matrices and creating cusparsematrix in
 namespace Opm::cuistl::detail
 {
     inline std::vector<int>
-    createReorderedToNatural(Opm::SparseTable<size_t> levelSets)
+    createReorderedToNatural(Opm::SparseTable<size_t>& levelSets)
     {
         auto res = std::vector<int>(Opm::cuistl::detail::to_size_t(levelSets.dataSize()));
         int globCnt = 0;
@@ -56,7 +56,7 @@ namespace Opm::cuistl::detail
     }
 
     inline std::vector<int>
-    createNaturalToReordered(Opm::SparseTable<size_t> levelSets)
+    createNaturalToReordered(Opm::SparseTable<size_t>& levelSets)
     {
         auto res = std::vector<int>(Opm::cuistl::detail::to_size_t(levelSets.dataSize()));
         int globCnt = 0;
@@ -73,7 +73,7 @@ namespace Opm::cuistl::detail
     template <class M, class field_type, class GPUM>
     inline void
     createReorderedMatrix(const M& naturalMatrix,
-                        std::vector<int> reorderedToNatural,
+                        std::vector<int>& reorderedToNatural,
                         std::unique_ptr<GPUM>& reorderedGpuMat)
     {
         M reorderedMatrix(naturalMatrix.N(), naturalMatrix.N(), naturalMatrix.nonzeroes(), M::row_wise);
@@ -91,7 +91,7 @@ namespace Opm::cuistl::detail
     template <class M, class field_type, class GPUM>
     inline void
     extractLowerAndUpperMatrices(const M& naturalMatrix,
-                                std::vector<int> reorderedToNatural,
+                                std::vector<int>& reorderedToNatural,
                                 std::unique_ptr<GPUM>& lower,
                                 std::unique_ptr<GPUM>& upper)
     {
