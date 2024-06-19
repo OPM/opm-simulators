@@ -38,50 +38,27 @@
 
 namespace Opm::DamarisOutput {
 
-int setPosition(const char* field, int rank, int64_t pos)
+int setPosition(const char* field, int64_t pos)
 {
     int dam_err = damaris_set_position(field, &pos);
-    if (dam_err != DAMARIS_OK) {
-        OpmLog::warning(fmt::format("damariswriter::setPosition()       : ( rank:{}) "
-                                  "damaris_set_position({}, ...), Damaris Error: {}  ",
-                                  rank, field, damaris_error_string(dam_err)));
-    }
-
     return dam_err;
 }
 
-int setParameter(const char* field, int rank, int value)
+int setParameter(const char* field, int value)
 {
     int dam_err = damaris_parameter_set(field, &value, sizeof(int));
-    if (dam_err != DAMARIS_OK) {
-        OpmLog::warning(fmt::format("damariswriter::setParameter()       (rank:{}) "
-                                  "damaris_parameter_set(\"{}\",...)", rank, field));
-    }
-
     return dam_err;
 }
 
-int write(const char* field, int rank, const void* data)
+int write(const char* field, const void* data)
 {
     int dam_err = damaris_write(field, data);
-    if (dam_err != DAMARIS_OK) {
-        OpmLog::warning(fmt::format("damariswriter::write()       : ( rank:{}) "
-                                  "damaris_write({}, ...), Damaris Error: {}  ",
-                                  rank, field, damaris_error_string(dam_err)));
-    }
-
     return dam_err;
 }
 
-int endIteration(int rank)
+int endIteration()
 {
     int dam_err =  damaris_end_iteration();
-    if (dam_err != DAMARIS_OK) {
-        OpmLog::warning(fmt::format("damariswriter::endIteration()       : ( rank:{}) "
-                                  "damaris_end_iteration(), Damaris Error: {}  ",
-                                  rank, damaris_error_string(dam_err)));
-    }
-
     return dam_err;
 }
 
@@ -117,22 +94,48 @@ int setupWritingPars(Parallel::Communication comm,
     // Set the paramater so that the Damaris servers can allocate the correct amount of memory for the variabe
     // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
     // ToDo: Do we need to check that local ranks are 0 based ?
-    int dam_err = setParameter("n_elements_local", comm.rank(), elements_rank_sizes[comm.rank()]);
+    int dam_err = setParameter("n_elements_local", elements_rank_sizes[comm.rank()]);
     // Damaris parameters only support int data types. This will limit models to be under size of 2^32-1 elements
     // ToDo: Do we need to check that n_elements_global_max will fit in a C int type (INT_MAX)
-    if( n_elements_global_max <= std::numeric_limits<int>::max() ) {
-        setParameter("n_elements_total", comm.rank(), n_elements_global_max);
+    if ( n_elements_global_max <= std::numeric_limits<int>::max() ) {
+        setParameter("n_elements_total", n_elements_global_max);
     } else {
-        OpmLog::error(fmt::format("( rank:{} ) The size of the global array ({}) is"
-                                  "greater than what a Damaris paramater type supports ({}).  ",
-                                  comm.rank(), n_elements_global_max, std::numeric_limits<int>::max() ));
-        // assert( n_elements_global_max <= std::numeric_limits<int>::max() ) ;
+        if (comm.rank() == 0) {
+            OpmLog::error(fmt::format("The size of the global array ({}) is"
+                                      "greater than what a Damaris paramater type supports ({}).  ",
+                                      n_elements_global_max, std::numeric_limits<int>::max() ));
+        }
         OPM_THROW(std::runtime_error, "setupDamarisWritingPars() n_elements_global_max "
                                       "> std::numeric_limits<int>::max() " + std::to_string(dam_err));
     }
-    
+
     return dam_err;
 }
 
 
+void
+handleError(const int dam_err, Parallel::Communication comm, const std::string& message)
+{
+    // Find if some rank has encountered an error.
+    const int isOk = (dam_err == DAMARIS_OK);
+    const bool error = (comm.sum(isOk) != comm.size());
+
+    if (error) {
+        // Form error message on ranks that had error, and put it into a DeferredLogger.
+        DeferredLogger logger;
+        if (dam_err != DAMARIS_OK) {
+            // Since the simulator will continue, this is a warning not an error
+            // from the OPM Flow point of view.
+            logger.warning("OPM_DAMARIS_ERROR",
+                           fmt::format("Damaris error in {}, on rank {}, error string: {}",
+                                       message,
+                                       comm.rank(),
+                                       damaris_error_string(dam_err)));
+        }
+        DeferredLogger global = gatherDeferredLogger(logger, comm);
+        if (comm.rank() == 0) {
+            global.logMessages();
+        }
+    }
+}
 }
