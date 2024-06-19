@@ -50,6 +50,15 @@
 #include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
 
 
+
+#include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
+#include <opm/simulators/linalg/hipistl/CuSparseMatrix.hpp>
+#include <opm/simulators/linalg/hipistl/detail/CuMatrixDescription.hpp>
+#include <opm/simulators/linalg/hipistl/detail/CuSparseHandle.hpp>
+#include <opm/simulators/linalg/hipistl/detail/CuSparseResource.hpp>
+#include <dune/istl/ilu.hh>
+
+
 namespace Opm {
 
 template <class Smoother>
