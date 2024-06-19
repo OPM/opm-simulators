@@ -64,6 +64,12 @@ template<class TypeTag, class MyTypeTag>
 struct EclOutputDoublePrecision {
     using type = UndefinedProperty;
 };
+// Write all solutions for visualization, not just the ones for the
+// report steps...
+template<class TypeTag, class MyTypeTag>
+struct EnableWriteAllSolutions {
+    using type = UndefinedProperty;
+};
 template<class TypeTag, class MyTypeTag>
 struct EnableEsmry {
     using type = UndefinedProperty;
@@ -398,7 +404,7 @@ public:
         auto floresn = this->outputModule_->getFloresn();
 
         // data::Solution localCellData = {};
-        if (! isSubStep) {
+        if (! isSubStep || Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>()) {
             
             auto rstep = timer.reportStepNum();
             
@@ -453,8 +459,11 @@ public:
         if (this->collectOnIORank_.isIORank()) {
             const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
             const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
-
-            this->doWriteOutput(reportStepNum, isSubStep,
+            std::optional<int> timeStepIdx; 
+            if (Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>()) {
+                timeStepIdx = simulator_.timeStepIndex();
+            }
+            this->doWriteOutput(reportStepNum, timeStepIdx, isSubStep,
                                 std::move(localCellData),
                                 std::move(localWellData),
                                 std::move(localGroupAndNetworkData),
@@ -627,7 +636,7 @@ private:
             countLocalInteriorCellsGridView(gridView);
         this->outputModule_->
             allocBuffers(num_interior, reportStepNum,
-                         isSubStep, log, /*isRestart*/ false);
+                         isSubStep && !Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>(), log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
 

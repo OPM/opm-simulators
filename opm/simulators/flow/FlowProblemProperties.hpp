@@ -71,13 +71,6 @@ struct WellModel {
     using type = UndefinedProperty;
 };
 
-// Write all solutions for visualization, not just the ones for the
-// report steps...
-template<class TypeTag, class MyTypeTag>
-struct EnableWriteAllSolutions {
-    using type = UndefinedProperty;
-};
-
 // The number of time steps skipped between writing two consequtive restart files
 template<class TypeTag, class MyTypeTag>
 struct RestartWritingInterval {
