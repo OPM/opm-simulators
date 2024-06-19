@@ -24,6 +24,7 @@
 #if USE_HIP
 #include <opm/simulators/linalg/hipistl/CuBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/hipistl/CuDILU.hpp>
+#include <opm/simulators/linalg/hipistl/CuILU0_OPM_Impl.hpp>
 #include <opm/simulators/linalg/hipistl/CuJac.hpp>
 #include <opm/simulators/linalg/hipistl/CuSeqILU0.hpp>
 #include <opm/simulators/linalg/hipistl/PreconditionerAdapter.hpp>
@@ -32,6 +33,7 @@
 #else
 #include <opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/cuistl/CuDILU.hpp>
+#include <opm/simulators/linalg/cuistl/CuILU0_OPM_Impl.hpp>
 #include <opm/simulators/linalg/cuistl/CuJac.hpp>
 #include <opm/simulators/linalg/cuistl/CuSeqILU0.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
