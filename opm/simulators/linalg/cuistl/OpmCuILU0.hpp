@@ -16,20 +16,22 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUDILU_HPP
-#define OPM_CUDILU_HPP
+#ifndef OPM_CUILU0_OPM_Impl_HPP
+#define OPM_CUILU0_OPM_Impl_HPP
 
 #include <memory>
 #include <opm/grid/utility/SparseTable.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
+#include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <optional>
+#include <type_traits>
 #include <vector>
-
 
 
 namespace Opm::cuistl
 {
-//! \brief DILU preconditioner on the GPU.
+//! \brief ILU0 preconditioner on the GPU.
 //!
 //! \tparam M The matrix type to operate on
 //! \tparam X Type of the update
@@ -40,7 +42,7 @@ namespace Opm::cuistl
 //! \note We assume X and Y are both CuVector<real_type>, but we leave them as template
 //! arguments in case of future additions.
 template <class M, class X, class Y, int l = 1>
-class CuDILU : public Dune::PreconditionerWithUpdate<X, Y>
+class OpmCuILU0 : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
     //! \brief The matrix type the preconditioner is for.
@@ -60,7 +62,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    explicit CuDILU(const M& A, bool splitMatrix, bool tuneKernels);
+    explicit OpmCuILU0(const M& A, bool splitMatrix, bool tuneKernels);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -79,12 +81,11 @@ public:
     //! \brief Updates the matrix data.
     void update() final;
 
-    //! \brief Compute the diagonal of the DILU, and update the data of the reordered matrix
-    void computeDiagAndMoveReorderedData();
+    //! \brief Compute LU factorization, and update the data of the reordered matrix
+    void LUFactorizeAndMoveData();
 
     //! \brief function that will experimentally tune the thread block sizes of the important cuda kernels
     void tuneThreadBlockSizes();
-
 
     //! \returns false
     static constexpr bool shouldCallPre()
@@ -112,18 +113,17 @@ private:
     std::vector<int> m_naturalToReordered;
     //! \brief The A matrix stored on the gpu, and its reordred version
     CuMat m_gpuMatrix;
-    //! \brief Stores the matrix in its entirety reordered. Optional in case splitting is used
-    std::unique_ptr<CuMat> m_gpuMatrixReordered;
+    std::unique_ptr<CuMat> m_gpuReorderedLU;
     //! \brief If matrix splitting is enabled, then we store the lower and upper part separately
     std::unique_ptr<CuMat> m_gpuMatrixReorderedLower;
     std::unique_ptr<CuMat> m_gpuMatrixReorderedUpper;
     //! \brief If matrix splitting is enabled, we also store the diagonal separately
-    std::unique_ptr<CuVector<field_type>> m_gpuMatrixReorderedDiag;
+    std::optional<CuVector<field_type>> m_gpuMatrixReorderedDiag;
     //! row conversion from natural to reordered matrix indices stored on the GPU
     CuVector<int> m_gpuNaturalToReorder;
     //! row conversion from reordered to natural matrix indices stored on the GPU
     CuVector<int> m_gpuReorderToNatural;
-    //! \brief Stores the inverted diagonal that we use in DILU
+    //! \brief Stores the inverted diagonal that we use in ILU0
     CuVector<field_type> m_gpuDInv;
     //! \brief Bool storing whether or not we should store matrices in a split format
     bool m_splitMatrix;

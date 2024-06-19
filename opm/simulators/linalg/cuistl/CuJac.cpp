@@ -16,27 +16,13 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <cusparse.h>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/bvector.hh>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/CuJac.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
-#include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
-#include <opm/simulators/linalg/cuistl/detail/CuBlasHandle.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cublas_wrapper.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cusparse_constants.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cusparse_wrapper.hpp>
-#include <opm/simulators/linalg/cuistl/detail/fix_zero_diagonal.hpp>
-#include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
+#include <opm/simulators/linalg/cuistl/detail/preconditionerKernels/JacKernels.hpp>
 #include <opm/simulators/linalg/cuistl/detail/vector_operations.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 
@@ -67,11 +53,7 @@ CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
                              A.nonzeroes()));
 
     // Compute the inverted diagonal of A and store it in a vector format in m_diagInvFlattened
-    detail::invertDiagonalAndFlatten<field_type, matrix_type::block_type::cols>(m_gpuMatrix.getNonZeroValues().data(),
-                                                                                m_gpuMatrix.getRowIndices().data(),
-                                                                                m_gpuMatrix.getColumnIndices().data(),
-                                                                                m_gpuMatrix.N(),
-                                                                                m_diagInvFlattened.data());
+    invertDiagonalAndFlatten();
 }
 
 template <class M, class X, class Y, int l>
@@ -111,11 +93,19 @@ void
 CuJac<M, X, Y, l>::update()
 {
     m_gpuMatrix.updateNonzeroValues(m_cpuMatrix);
-    detail::invertDiagonalAndFlatten<field_type, matrix_type::block_type::cols>(m_gpuMatrix.getNonZeroValues().data(),
-                                                                                m_gpuMatrix.getRowIndices().data(),
-                                                                                m_gpuMatrix.getColumnIndices().data(),
-                                                                                m_gpuMatrix.N(),
-                                                                                m_diagInvFlattened.data());
+    invertDiagonalAndFlatten();
+}
+
+template <class M, class X, class Y, int l>
+void
+CuJac<M, X, Y, l>::invertDiagonalAndFlatten()
+{
+    detail::JAC::invertDiagonalAndFlatten<field_type, matrix_type::block_type::cols>(
+        m_gpuMatrix.getNonZeroValues().data(),
+        m_gpuMatrix.getRowIndices().data(),
+        m_gpuMatrix.getColumnIndices().data(),
+        m_gpuMatrix.N(),
+        m_diagInvFlattened.data());
 }
 
 } // namespace Opm::cuistl
