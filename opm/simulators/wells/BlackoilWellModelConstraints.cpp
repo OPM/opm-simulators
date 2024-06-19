@@ -483,7 +483,7 @@ actionOnBrokenConstraints(const Group& group,
     std::string ss;
     switch (group_limit_action.allRates) {
     case Group::ExceedAction::NONE: {
-        if (oldControl != newControl && oldControl != Group::ProductionCMode::NONE) {
+        if (oldControl != newControl) {
             if ((group_limit_action.water == Group::ExceedAction::RATE &&
                  newControl == Group::ProductionCMode::WRAT) ||
                 (group_limit_action.gas == Group::ExceedAction::RATE &&
