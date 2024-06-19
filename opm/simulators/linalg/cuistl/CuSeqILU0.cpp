@@ -78,7 +78,6 @@ template <class M, class X, class Y, int l>
 void
 CuSeqILU0<M, X, Y, l>::apply(X& v, const Y& d)
 {
-
     // We need to pass the solve routine a scalar to multiply.
     // In our case this scalar is 1.0
     const field_type one = 1.0;

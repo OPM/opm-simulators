@@ -21,6 +21,7 @@
 #include <opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cublas_wrapper.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/cuistl/detail/gpuThreadUtils.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <stdexcept>
 #include <config.h>
@@ -83,17 +84,6 @@ namespace
         }
     }
 
-    constexpr inline size_t getThreads([[maybe_unused]] size_t numberOfElements)
-    {
-        return 1024;
-    }
-
-    inline size_t getBlocks(size_t numberOfElements)
-    {
-        const auto threads = getThreads(numberOfElements);
-        return (numberOfElements + threads - 1) / threads;
-    }
-
     template <class T>
     __global__ void
     prepareSendBufKernel(const T* a, T* buffer, size_t numberOfElements, const int* indices)
@@ -116,32 +106,13 @@ namespace
     }
 } // namespace
 
-// Kernel here is the function object of the cuda kernel
-template <class Kernel>
-inline int getCudaRecomendedThreadBlockSize(Kernel k)
-{
-#if USE_HIP
-    return 512;
-#else
-    int blockSize;
-    int tmpGridSize;
-    std::ignore = cudaOccupancyMaxPotentialBlockSize(&tmpGridSize, &blockSize, k, 0, 0);
-    return blockSize;
-#endif
-}
-
-inline int getNumberOfBlocks(int wantedThreads, int threadBlockSize)
-{
-    return (wantedThreads + threadBlockSize - 1) / threadBlockSize;
-}
-
 template <class T>
 void
 setVectorValue(T* deviceData, size_t numberOfElements, const T& value)
 {
-    int threadBlockSize = getCudaRecomendedThreadBlockSize(setVectorValueKernel<T>);
-    int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
-    setVectorValueKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(setVectorValueKernel<T>);
+    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+    setVectorValueKernel<<<nThreadBlocks, threadBlockSize>>>(
         deviceData, numberOfElements, value);
 }
 
@@ -153,9 +124,9 @@ template <class T>
 void
 setZeroAtIndexSet(T* deviceData, size_t numberOfElements, const int* indices)
 {
-    int threadBlockSize = getCudaRecomendedThreadBlockSize(setZeroAtIndexSetKernel<T>);
-    int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
-    setZeroAtIndexSetKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(setZeroAtIndexSetKernel<T>);
+    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+    setZeroAtIndexSetKernel<<<nThreadBlocks, threadBlockSize>>>(
         deviceData, numberOfElements, indices);
 }
 template void setZeroAtIndexSet(double*, size_t, const int*);
@@ -166,9 +137,9 @@ template <class T>
 T
 innerProductAtIndices(cublasHandle_t cublasHandle, const T* deviceA, const T* deviceB, T* buffer, size_t numberOfElements, const int* indices)
 {
-    int threadBlockSize = getCudaRecomendedThreadBlockSize(elementWiseMultiplyKernel<T>);
-    int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
-    elementWiseMultiplyKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(elementWiseMultiplyKernel<T>);
+    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+    elementWiseMultiplyKernel<<<nThreadBlocks, threadBlockSize>>>(
         deviceA, deviceB, buffer, numberOfElements, indices);
 
     // TODO: [perf] Get rid of the allocation here.
@@ -186,9 +157,9 @@ template int innerProductAtIndices(cublasHandle_t, const int*, const int*, int* 
 template <class T>
 void prepareSendBuf(const T* deviceA, T* buffer, size_t numberOfElements, const int* indices)
 {
-    int threadBlockSize = getCudaRecomendedThreadBlockSize(prepareSendBufKernel<T>);
-    int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
-    prepareSendBufKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(deviceA, buffer, numberOfElements, indices);
+    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(prepareSendBufKernel<T>);
+    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+    prepareSendBufKernel<<<nThreadBlocks, threadBlockSize>>>(deviceA, buffer, numberOfElements, indices);
     OPM_CUDA_SAFE_CALL(cudaDeviceSynchronize()); // The buffers are prepared for MPI. Wait for them to finish.
 }
 template void prepareSendBuf(const double* deviceA, double* buffer, size_t numberOfElements, const int* indices);
@@ -198,9 +169,9 @@ template void prepareSendBuf(const int* deviceA, int* buffer, size_t numberOfEle
 template <class T>
 void syncFromRecvBuf(T* deviceA, T* buffer, size_t numberOfElements, const int* indices)
 {
-    int threadBlockSize = getCudaRecomendedThreadBlockSize(syncFromRecvBufKernel<T>);
-    int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
-    syncFromRecvBufKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(deviceA, buffer, numberOfElements, indices);
+    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(syncFromRecvBufKernel<T>);
+    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+    syncFromRecvBufKernel<<<nThreadBlocks, threadBlockSize>>>(deviceA, buffer, numberOfElements, indices);
     //cudaDeviceSynchronize(); // Not needed, I guess...
 }
 template void syncFromRecvBuf(double* deviceA, double* buffer, size_t numberOfElements, const int* indices);
@@ -219,25 +190,25 @@ weightedDiagMV(const T* squareBlockVector,
     switch (blocksize) {
     case 1:
         {
-            int threadBlockSize = getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 1>);
-            int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
-            weightedDiagMV<T, 1><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+            int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 1>);
+            int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+            weightedDiagMV<T, 1><<<nThreadBlocks, threadBlockSize>>>(
                 squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
         }
         break;
     case 2:
         {
-            int threadBlockSize = getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 2>);
-            int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
-            weightedDiagMV<T, 2><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+            int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 2>);
+            int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+            weightedDiagMV<T, 2><<<nThreadBlocks, threadBlockSize>>>(
                 squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
         }
         break;
     case 3:
         {
-            int threadBlockSize = getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 3>);
-            int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
-            weightedDiagMV<T, 3><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+            int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 3>);
+            int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
+            weightedDiagMV<T, 3><<<nThreadBlocks, threadBlockSize>>>(
                 squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
         }
         break;
