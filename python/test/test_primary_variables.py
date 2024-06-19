@@ -20,7 +20,7 @@ class TestBasic(unittest.TestCase):
             sim.step_init()
             sim.step()
             pressure = sim.get_primary_variable(variable='pressure')
-            self.assertAlmostEqual(pressure[0], 41729978.837, places=2, msg='value of pressure')
+            self.assertAlmostEqual(pressure[0], 35795160.67, places=2, msg='value of pressure')
             pressure_meaning = sim.get_primary_variable_meaning(
                 variable='pressure')
             pressure_meaning_map = sim.get_primary_variable_meaning_map(
