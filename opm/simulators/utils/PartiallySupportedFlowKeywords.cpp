@@ -230,6 +230,13 @@ partiallySupported()
             },
          },
          {
+            "SLAVES",
+            {
+                {1,{true, [](const std::string& val){ return val.size()<=8;}, "SLAVES(SLAVE_RESERVOIR): Only names of slave reservoirs of up to 8 characters are supported."}},
+                {3,{true, allow_values<std::string> {}, "SLAVES(HOST_NAME): should be defaulted. A specific host name is not implemented yet"}}, // HOST_NAME
+            },
+         },
+         {
             "TABDIMS",
             {
                {20,{false, allow_values<std::string> {}, "TABDIMS(NOTUSED): should be defaulted (1*) - ignored as not used"}}, // ITEM20_NOT_USED
@@ -453,6 +460,12 @@ partiallySupported()
                {6,{false, allow_values<int> {1}, "REGDIMS(NTCREG): COAL regions not supported - value ignored"}}, // NTCREG
                {8,{false, allow_values<int> {0}, "REGDIMS(NWKDREG): should be equal to 0 - value ignored"}}, // MAX_OPERATE_DWORK
                {9,{false, allow_values<int> {0}, "REGDIMS(NWKIREG): should be equal to 0 - value ignored"}}, // MAX_OPERATE_IWORK
+            },
+         },
+         {
+            "SLAVES",
+            {
+               {5,{true, [](int x) { return x >= 1; }, "SLAVES(NUM_PE): only values greater than or equal to 1 are supported"}}, // NUM_PE
             },
          },
          {
