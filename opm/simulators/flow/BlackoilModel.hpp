@@ -368,7 +368,7 @@ namespace Opm {
 
                 // Throw if any NaN or too large residual found.
                 if (severity == ConvergenceReport::Severity::NotANumber) {
-                    OPM_THROW(NumericalProblem, "NaN residual found!");
+                    OPM_THROW_PROBLEM(NumericalProblem, "NaN residual found!");
                 } else if (severity == ConvergenceReport::Severity::TooLarge) {
                     OPM_THROW_NOLOG(NumericalProblem, "Too large residual found!");
                 }
