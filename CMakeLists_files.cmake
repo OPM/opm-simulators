@@ -183,6 +183,11 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/wells/WGState.cpp
   )
 
+if (HAVE_ECL_INPUT)
+  list (APPEND MAIN_SOURCE_FILES
+    opm/simulators/utils/satfunc/SatfuncConsistencyChecks.cpp
+  )
+endif()
 
 if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
   list (APPEND MAIN_SOURCE_FILES
@@ -333,7 +338,10 @@ list (APPEND TEST_SOURCE_FILES
   )
 
 if (HAVE_ECL_INPUT)
-  list(APPEND TEST_SOURCE_FILES tests/test_nonnc.cpp)
+  list(APPEND TEST_SOURCE_FILES
+    tests/test_nonnc.cpp
+    tests/test_SatfuncConsistencyChecks.cpp
+  )
 endif()
 
 if(MPI_FOUND)
@@ -672,6 +680,12 @@ if (USE_BDA_BRIDGE)
     opm/simulators/linalg/bda/rocsparseWellContributions.hpp
     opm/simulators/linalg/bda/WellContributions.hpp
     opm/simulators/linalg/ISTLSolverBda.hpp
+  )
+endif()
+
+if (HAVE_ECL_INPUT)
+  list (APPEND PUBLIC_HEADER_FILES
+    opm/simulators/utils/satfunc/SatfuncConsistencyChecks.hpp
   )
 endif()
 
