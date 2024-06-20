@@ -1542,9 +1542,9 @@ updateWellPotentials(const int reportStepIdx,
         }
         ++widx;
     }
-    logAndCheckForExceptionsAndThrow(deferred_logger, exc_type,
-                                     "computeWellPotentials() failed: " + exc_msg,
-                                     terminal_output_, comm_);
+    logAndCheckForProblemsAndThrow(deferred_logger, exc_type,
+                                   "updateWellPotentials() failed: " + exc_msg,
+                                   terminal_output_, comm_);
 }
 
 template<class Scalar>
