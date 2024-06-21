@@ -189,7 +189,6 @@ public:
 
     void resetWellOperability();
 
-
     virtual std::vector<Scalar> getPrimaryVars() const
     {
         return {};
@@ -203,6 +202,7 @@ public:
     virtual Scalar connectionDensity(const int globalConnIdx,
                                      const int openConnIdx) const = 0;
 
+    void addPerforations(const std::vector<std::tuple<int,double,double>>& perfs);
 protected:
     bool getAllowCrossFlow() const;
 

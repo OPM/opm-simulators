@@ -1676,9 +1676,9 @@ protected:
 
         return this->rockCompTransMultWc_[tableIdx].eval(effectivePressure, SwDeltaMax, /*extrapolation=*/true);
     }
-
+protected:
     typename Vanguard::TransmissibilityType transmissibilities_;
-
+private:
     std::shared_ptr<EclMaterialLawManager> materialLawManager_;
     std::shared_ptr<EclThermalLawManager> thermalLawManager_;
 
@@ -1694,6 +1694,11 @@ protected:
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
 
+
+
+protected:
+    ActionHandler<Scalar> actionHandler_;
+private:
     template<class T>
     struct BCData
     {
