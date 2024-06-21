@@ -109,6 +109,8 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/partitionCells.cpp
   opm/simulators/flow/RSTConv.cpp
   opm/simulators/flow/RegionPhasePVAverage.cpp
+  opm/simulators/flow/ReservoirCouplingMaster.cpp
+  opm/simulators/flow/ReservoirCouplingSlave.cpp
   opm/simulators/flow/SimulatorReportBanners.cpp
   opm/simulators/flow/SimulatorSerializer.cpp
   opm/simulators/flow/SolutionContainers.cpp
