@@ -408,6 +408,7 @@ protected:
                            keepKeywords,
                            getNumThreads(),
                            Parameters::Get<Parameters::EclOutputInterval>(),
+                           Parameters::Get<Parameters::Slave>(),
                            cmdline_params,
                            Opm::moduleVersion(),
                            Opm::compileTimestamp());
@@ -688,6 +689,7 @@ private:
                   const bool keepKeywords,
                   const std::size_t numThreads,
                   const int output_param,
+                  const bool slaveMode,
                   const std::string& parameters,
                   std::string_view moduleVersion,
                   std::string_view compileTimestamp);

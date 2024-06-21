@@ -54,7 +54,11 @@
 
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/ArrayDimChecker.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+
 #include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
@@ -151,7 +155,7 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext, errorGuard,
-                 std::move(python), lowActionParsingStrictness,
+                 std::move(python), lowActionParsingStrictness,  /*slaveMode=*/false,
                  keepKeywords, outputInterval, init_state);
         }
 
@@ -180,14 +184,14 @@ namespace {
                                         std::unique_ptr<Opm::UDQState>&      udqState,
                                         std::unique_ptr<Opm::Action::State>& actionState,
                                         std::unique_ptr<Opm::WellTestState>& wtestState,
-                                        Opm::ErrorGuard&                     errorGuard)
+                                        Opm::ErrorGuard&                     errorGuard,
+                                        const bool                           slaveMode)
     {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext,
-                 errorGuard, std::move(python), lowActionParsingStrictness, keepKeywords);
+                 errorGuard, std::move(python), lowActionParsingStrictness, slaveMode, keepKeywords);
         }
-
         udqState = std::make_unique<Opm::UDQState>
             ((*schedule)[0].udq().params().undefinedValue());
 
@@ -233,6 +237,24 @@ namespace {
 #endif
     }
 
+    void inconsistentScheduleError(const std::string& message)
+    {
+        OPM_THROW(std::logic_error,
+                  fmt::format("Inconsistent SCHEDULE section: {}", message));
+    }
+
+    void checkScheduleKeywordConsistency(const Opm::Schedule& schedule)
+    {
+        const auto& final_state = schedule.back();
+        const auto& rescoup = final_state.rescoup();
+        if (rescoup.slaveCount() > 0 && rescoup.masterGroupCount() == 0) {
+            inconsistentScheduleError("SLAVES keyword without GRUPMAST keyword");
+        }
+        if (rescoup.slaveCount() == 0 && rescoup.masterGroupCount() > 0) {
+            inconsistentScheduleError("GRUPMAST keyword without SLAVES keyword");
+        }
+    }
+
     void readOnIORank(Opm::Parallel::Communication         comm,
                       const std::string&                   deckFilename,
                       const Opm::ParseContext*             parseContext,
@@ -249,7 +271,8 @@ namespace {
                       const bool                           lowActionParsingStrictness,
                       const bool                           keepKeywords,
                       const std::optional<int>&            outputInterval,
-                      Opm::ErrorGuard&                     errorGuard)
+                      Opm::ErrorGuard&                     errorGuard,
+                      const bool                           slaveMode)
     {
         OPM_TIMEBLOCK(readDeck);
         if (((schedule == nullptr) || (summaryConfig == nullptr)) &&
@@ -282,9 +305,10 @@ namespace {
                                            lowActionParsingStrictness, keepKeywords,
                                            std::move(python),
                                            schedule, udqState, actionState, wtestState,
-                                           errorGuard);
+                                           errorGuard, slaveMode);
         }
 
+        checkScheduleKeywordConsistency(*schedule);
         eclipseState->appendAqufluxSchedule(schedule->getAquiferFluxSchedule());
 
         if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) {
@@ -539,7 +563,8 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    const bool                      initFromRestart,
                    const bool                      checkDeck,
                    const bool                      keepKeywords,
-                   const std::optional<int>&       outputInterval)
+                   const std::optional<int>&       outputInterval,
+                   const bool                      slaveMode)
 {
     auto errorGuard = std::make_unique<ErrorGuard>();
 
@@ -573,7 +598,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
                          checkDeck, treatCriticalAsNonCritical, lowActionParsingStrictness,
-                         keepKeywords, outputInterval, *errorGuard);
+                         keepKeywords, outputInterval, *errorGuard, slaveMode);
 
             // Update schedule so that re-parsing after actions use same strictness
             assert(schedule);

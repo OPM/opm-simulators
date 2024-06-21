@@ -149,7 +149,7 @@ void FlowGenericVanguard::readDeck(const std::string& filename)
                   modelParams_.actionState_,
                   modelParams_.wtestState_,
                   modelParams_.eclSummaryConfig_,
-                  nullptr, "normal", "normal", "100", false, false, false, {});
+                  nullptr, "normal", "normal", "100", false, false, false, {}, /*slaveMode=*/false);
     modelParams_.setupTime_ = setupTimer.stop();
 }
 
