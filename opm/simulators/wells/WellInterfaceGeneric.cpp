@@ -670,6 +670,36 @@ void WellInterfaceGeneric<Scalar>::resetWellOperability()
 }
 
 template<class Scalar>
+void WellInterfaceGeneric<Scalar>::addPerforations(const std::vector<std::tuple<int,double,double>>& perfs){
+        int newperf = perfs.size();
+        
+        for(auto& perf : perfs){
+            const auto [cell, WI, depth] = perf;
+            auto it = std::find(well_cells_.begin(), well_cells_.end(), cell);
+            if(it != well_cells_.end()){
+                // if perforation to cell already exist just add
+                size_t ind = it- well_cells_.begin();
+                well_index_[ind] += WI;
+            }else{
+                well_cells_.push_back(cell);
+                well_index_.push_back(WI);
+                perf_depth_.push_back(depth);
+                // not needed
+                double nan = std::nan("1");
+                perf_rep_radius_.push_back(nan);
+                perf_length_.push_back(nan);
+                bore_diameters_.push_back(nan);
+                saturation_table_number_.push_back(saturation_table_number_[0]);// for now used the saturation table for the first cell
+                number_of_perforations_ += 1;
+            }
+            // completions_;
+            // inj_multiplier_;
+            // prev_inj_multiplier_;
+            // inj_fc_multiplier_;
+        }
+}
+
+template<class Scalar>
 Scalar WellInterfaceGeneric<Scalar>::wmicrobes_() const
 {
     auto injectorType = this->well_ecl_.injectorType();
