@@ -174,7 +174,6 @@ public:
                     const auto& h = FluidSystem::enthalpy(fluidState, phaseIdx, regionIdx);
                     fluidState.setEnthalpy(phaseIdx, h);
                 }
-
             }
 
             // set the salt concentration
