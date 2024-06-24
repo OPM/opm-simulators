@@ -3,6 +3,7 @@
 
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_version.h>
+#include <sstream>
 
 #define HIP_CHECK(STAT)                                  \
     do {                                                 \

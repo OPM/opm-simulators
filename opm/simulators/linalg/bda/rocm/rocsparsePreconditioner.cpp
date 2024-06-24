@@ -33,13 +33,15 @@ std::unique_ptr<rocsparsePreconditioner<Scalar,block_size> > rocsparsePreconditi
 create(PreconditionerType type,
        int verbosity)
 {
-    if (type == PreconditionerType::BILU0) {
+    switch (type ) {
+    case PreconditionerType::BILU0:
         return std::make_unique<Opm::Accelerator::rocsparseBILU0<Scalar, block_size> >(verbosity);
-    } else if (type == PreconditionerType::CPR) {
+    case PreconditionerType::CPR:
         return std::make_unique<Opm::Accelerator::rocsparseCPR<Scalar, block_size> >(verbosity);
-    } else {
-        OPM_THROW(std::logic_error, "Invalid PreconditionerType");
     }
+
+    OPM_THROW(std::logic_error,
+              "Invalid preconditioner type " + std::to_string(static_cast<int>(type)));   
 }
 
 template <class Scalar, unsigned int block_size>

@@ -34,7 +34,10 @@ namespace Opm::Accelerator {
 
 template<class Scalar, unsigned int block_size>
 std::unique_ptr<openclPreconditioner<Scalar,block_size>>
-openclPreconditioner<Scalar,block_size>::create(PreconditionerType type, int verbosity, bool opencl_ilu_parallel)
+openclPreconditioner<Scalar,block_size>::
+create(PreconditionerType type,
+       int verbosity,
+       bool opencl_ilu_parallel)
 {
     switch (type ) {
     case PreconditionerType::BILU0:
@@ -51,28 +54,12 @@ openclPreconditioner<Scalar,block_size>::create(PreconditionerType type, int ver
 
 template<class Scalar, unsigned int block_size>
 void openclPreconditioner<Scalar,block_size>::
- setOpencl(std::shared_ptr<cl::Context>& context_,
-           std::shared_ptr<cl::CommandQueue>& queue_)
+setOpencl(std::shared_ptr<cl::Context>& context_,
+          std::shared_ptr<cl::CommandQueue>& queue_)
 {
     context = context_;
     queue = queue_;
 }
-
-// template<class Scalar, unsigned int block_size>
-// bool Preconditioner<Scalar,block_size>::
-// analyze_matrix(BlockedMatrix<Scalar>* mat,
-//                [[maybe_unused]] BlockedMatrix<Scalar>* jacMat)
-// {
-//     return analyze_matrix(mat);
-// }
-
-// template<class Scalar, unsigned int block_size>
-// bool Preconditioner<Scalar,block_size>::
-// create_preconditioner(BlockedMatrix<Scalar>* mat,
-//                       [[maybe_unused]] BlockedMatrix<Scalar>* jacMat)
-// {
-//     return create_preconditioner(mat);
-// }
 
 #define INSTANCE_TYPE(T)                \
     template class openclPreconditioner<T,1>; \
