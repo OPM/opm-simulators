@@ -73,14 +73,11 @@ openclSolverBackend(int verbosity_,
 
     using PreconditionerType = typename Opm::Accelerator::PreconditionerType;
     if (use_cpr) {
-        prec = openclPreconditioner<Scalar,block_size>::create(PreconditionerType::CPR,
-                                          opencl_ilu_parallel, verbosity);
+        prec = openclPreconditioner<Scalar,block_size>::create(PreconditionerType::CPR,verbosity,opencl_ilu_parallel);
     } else if (use_isai) {
-        prec = openclPreconditioner<Scalar,block_size>::create(PreconditionerType::BISAI,
-                                          opencl_ilu_parallel, verbosity);
+        prec = openclPreconditioner<Scalar,block_size>::create(PreconditionerType::BISAI,verbosity,opencl_ilu_parallel);
     } else {
-        prec = openclPreconditioner<Scalar,block_size>::create(PreconditionerType::BILU0,
-                                          opencl_ilu_parallel, verbosity);
+        prec = openclPreconditioner<Scalar,block_size>::create(PreconditionerType::BILU0,verbosity,opencl_ilu_parallel);
     }
 
     std::ostringstream out;
