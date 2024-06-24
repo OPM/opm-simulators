@@ -38,6 +38,7 @@
 #include "blackoildiffusionmodule.hh"
 #include "blackoildispersionmodule.hh"
 #include "blackoilmicpmodules.hh"
+#include "blackoilconvectivemixingmodule.hh"
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -132,6 +133,7 @@ class BlackOilIntensiveQuantities
 
     using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
+    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
 
 
 public:
@@ -304,8 +306,7 @@ public:
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
             SoMax = max(fluidState_.saturation(oilPhaseIdx),
                         problem.maxOilSaturation(globalSpaceIdx));
-        
-        
+        }
         // take the meaning of the switching primary variable into account for the gas
         // and oil phase compositions
         if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
@@ -315,14 +316,13 @@ public:
             if (FluidSystem::enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
                 const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
                 FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                    oilPhaseIdx,
-                                                    pvtRegionIdx,
-                                                    SoMax);
+                                                        oilPhaseIdx,
+                                                        pvtRegionIdx,
+                                                        SoMax);
                 fluidState_.setRs(min(RsMax, RsSat));
             }
             else if constexpr (compositionSwitchEnabled)
                 fluidState_.setRs(0.0);
-        }
         }
         if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
             const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
@@ -406,7 +406,8 @@ public:
             rho = fluidState_.invB(waterPhaseIdx);
             rho *= FluidSystem::referenceDensity(waterPhaseIdx, pvtRegionIdx);
             if (FluidSystem::enableDissolvedGasInWater()) {
-				if(!enableConvectiveMixing) {
+                bool ConvectiveMixingActive = ConvectiveMixingModule::active(elemCtx);
+				if(!ConvectiveMixingActive) {
                     rho +=
                         fluidState_.invB(waterPhaseIdx) *
                         fluidState_.Rsw() *
@@ -437,8 +438,9 @@ public:
         if (FluidSystem::phaseIsActive(oilPhaseIdx)) {
             rho = fluidState_.invB(oilPhaseIdx);
             rho *= FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);
-            if (FluidSystem::enableDissolvedGas()) {                
-				if(!enableConvectiveMixing) {
+            if (FluidSystem::enableDissolvedGas()) {
+                bool ConvectiveMixingActive = ConvectiveMixingModule::active(elemCtx);
+				if(!ConvectiveMixingActive) {
                     rho +=
                         fluidState_.invB(oilPhaseIdx) *
                         fluidState_.Rs() *

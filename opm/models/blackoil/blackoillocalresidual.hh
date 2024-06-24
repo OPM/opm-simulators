@@ -94,7 +94,6 @@ class BlackOilLocalResidual : public GetPropType<TypeTag, Properties::DiscLocalR
     using MICPModule = BlackOilMICPModule<TypeTag>;
     using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
 
-
 public:
     /*!
      * \copydoc FvBaseLocalResidual::computeStorage
@@ -214,7 +213,6 @@ public:
             else
                 evalPhaseFluxes_<Scalar>(flux, phaseIdx, pvtRegionIdx, extQuants, up.fluidState());
         }
-		
         // deal with solvents (if present)
         SolventModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
@@ -238,7 +236,7 @@ public:
 
         DiffusionModule::addDiffusiveFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with convective mixing (if present)
+        // deal with convective mixing (if enabled)
         ConvectiveMixingModule::addConvectiveMixingFlux(flux,elemCtx, scvfIdx, timeIdx);
     }
 

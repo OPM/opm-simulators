@@ -409,7 +409,7 @@ public:
                 }
             }
 
-        }      
+        }
 
         // deal with solvents (if present)
         static_assert(!enableSolvent, "Relevant computeFlux() method must be implemented for this module before enabling.");
@@ -469,7 +469,6 @@ public:
                                                             nbInfo.faceArea,
                                                             moduleParams.convectiveMixingModuleParam);
         }
-
 
         // deal with diffusion (if present). opm-models expects per area flux (added in the tmpdiffusivity).
         if constexpr(enableDiffusion){
@@ -645,7 +644,7 @@ public:
                                        RateVector& bdyFlux,
                                        const BoundaryConditionData& bdyInfo,
                                        const IntensiveQuantities& insideIntQuants,
-                                       unsigned globalSpaceIdx)
+                                       [[maybe_unused]] unsigned globalSpaceIdx)
     {
         OPM_TIMEBLOCK_LOCAL(computeBoundaryThermal);
         // only heat is allowed to flow through this boundary
