@@ -476,7 +476,8 @@ private:
                 bool oscillate = false;
                 bool stagnate = false;
                 const int numPhases = convergence_history.front().size();
-                detail::detectOscillations(convergence_history, iter, numPhases, 0.2, 1, oscillate, stagnate);
+                detail::detectOscillations(convergence_history, iter, numPhases,
+                                           Scalar{0.2}, 1, oscillate, stagnate);
                 if (oscillate) {
                     damping_factor *= 0.85;
                     logger.debug(fmt::format("| Damping factor is now {}", damping_factor));
