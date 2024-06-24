@@ -229,6 +229,11 @@ public:
                                  const WellState<Scalar>& well_state,
                                  DeferredLogger& deferred_logger) const;
 
+    bool wellUnderZeroGroupRateTarget(const Simulator& simulator,
+                                      const WellState<Scalar>& well_state,
+                                      DeferredLogger& deferred_logger,
+                                      std::optional<bool> group_control = std::nullopt) const;
+
     bool stoppedOrZeroRateTarget(const Simulator& simulator,
                                  const WellState<Scalar>& well_state,
                                  DeferredLogger& deferred_logger) const;

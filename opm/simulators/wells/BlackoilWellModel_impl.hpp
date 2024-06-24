@@ -2211,7 +2211,8 @@ namespace Opm {
             const auto& wname = well->name();
             const auto wasClosed = wellTestState.well_is_closed(wname);
             well->checkWellOperability(simulator_, this->wellState(), local_deferredLogger);
-            well->updateWellTestState(this->wellState().well(wname), simulationTime, /*writeMessageToOPMLog=*/ true, wellTestState, local_deferredLogger);
+            const bool under_zero_target = well->wellUnderZeroGroupRateTarget(this->simulator_, this->wellState(), local_deferredLogger);
+            well->updateWellTestState(this->wellState().well(wname), simulationTime, /*writeMessageToOPMLog=*/ true, under_zero_target, wellTestState, local_deferredLogger);
 
             if (!wasClosed && wellTestState.well_is_closed(wname)) {
                 this->closed_this_step_.insert(wname);

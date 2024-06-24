@@ -298,12 +298,14 @@ void WellInterfaceGeneric<Scalar>::
 updateWellTestState(const SingleWellState<Scalar>& ws,
                     const double& simulationTime,
                     const bool& writeMessageToOPMLog,
+                    const bool zero_group_target,
                     WellTestState& wellTestState,
                     DeferredLogger& deferred_logger) const
 {
     // updating well test state based on Economic limits for operable wells
     if (this->isOperableAndSolvable()) {
-        WellTest(*this).updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
+        WellTest(*this).updateWellTestStateEconomic(ws, simulationTime, writeMessageToOPMLog, wellTestState,
+                                                    zero_group_target, deferred_logger);
     } else {
         // updating well test state based on physical (THP/BHP) limits.
         WellTest(*this).updateWellTestStatePhysical(simulationTime, writeMessageToOPMLog, wellTestState, deferred_logger);
@@ -618,6 +620,16 @@ wellUnderZeroRateTargetIndividual(const SummaryState& summary_state,
         const auto inj_mode = well_state.well(this->indexOfWell()).injection_cmode;
         return wellhelpers::rateControlWithZeroInjTarget(inj_controls, inj_mode);
     }
+}
+
+template<class Scalar>
+bool WellInterfaceGeneric<Scalar>::
+wellUnderGroupControl(const SingleWellState<Scalar>& ws) const
+{
+    // Check if well is under group control
+    const bool isGroupControlled = (this->isInjector() && ws.injection_cmode == Well::InjectorCMode::GRUP) ||
+        (this->isProducer() && ws.production_cmode == Well::ProducerCMode::GRUP);
+    return isGroupControlled;
 }
 
 template<class Scalar>
