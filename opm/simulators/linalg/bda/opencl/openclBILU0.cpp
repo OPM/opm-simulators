@@ -31,6 +31,12 @@
 
 #include <sstream>
 
+#if HAVE_OPENMP
+#include <thread>
+#include <omp.h>
+extern std::shared_ptr<std::thread> copyThread;
+#endif //HAVE_OPENMP
+
 namespace Opm::Accelerator {
 
 using Dune::Timer;
@@ -188,6 +194,14 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
     const unsigned int bs = block_size;
 
     auto *matToDecompose = jacMat ? jacMat : mat;
+
+    if (jacMat) {
+#if HAVE_OPENMP
+        if (omp_get_max_threads() > 1) {
+           copyThread->join();
+        }
+#endif
+    }
 
     // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp
     Timer t_copy;
