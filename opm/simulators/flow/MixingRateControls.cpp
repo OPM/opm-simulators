@@ -108,7 +108,6 @@ init(std::size_t numDof, int episodeIdx, const unsigned ntpvt)
         dRsDtOnlyFreeGas_.resize(ntpvt, false);
         lastRs_.resize(numDof, 0.0);
         maxDRv_.resize(ntpvt, 1e30);
-        lastRv_.resize(numDof, 0.0);
         if (this->drsdtConvective(episodeIdx)) {
             convectiveDrs_.resize(numDof, 1.0);
         }
@@ -119,8 +118,6 @@ bool MixingRateControls<FluidSystem>::
 drsdtActive(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                                  FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
     return (oilVaporizationControl.drsdtActive());
 }
 
@@ -129,8 +126,6 @@ bool MixingRateControls<FluidSystem>::
 drvdtActive(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                                  FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
     return (oilVaporizationControl.drvdtActive());
 }
 
@@ -139,8 +134,6 @@ bool MixingRateControls<FluidSystem>::
 drsdtConvective(int episodeIdx) const
 {
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-    const bool bothOilGasActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
-                                  FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
     return (oilVaporizationControl.drsdtConvective());
 }
 
@@ -269,8 +262,8 @@ void MixingRateControls<FluidSystem>::
 updateConvectiveDRsDt_(const unsigned compressedDofIdx,
                        const Scalar t,
                        const Scalar p,
+                       const Scalar pg,
                        const Scalar rs,
-                       const Scalar so,
                        const Scalar sg,
                        const Scalar poro,
                        const Scalar permz,
@@ -283,7 +276,7 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
                        const int pvtRegionIndex)
 {
     const Scalar rssat = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
-        FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIndex, t, p, salt) : 
+        FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIndex, t, p, salt) :
         FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIndex, t, p);
     const Scalar saturatedInvB = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
         FluidSystem::waterPvt().saturatedInverseFormationVolumeFactor(pvtRegionIndex, t, p, salt) :
@@ -305,7 +298,7 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
         FluidSystem::waterPvt().viscosity(pvtRegionIndex, t, p, rs, salt) :
         FluidSystem::oilPvt().viscosity(pvtRegionIndex, t, p, rs);
 
-    // Note that for so = 0 this gives no limits (inf) for the dissolution rate
+    // Note that for sLiquid = 0 this gives no limits (inf) for the dissolution rate
     // Also we restrict the effect of convective mixing to positive density differences
     // i.e. we only allow for fingers moving downward
 
@@ -314,18 +307,19 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
 	Scalar factor = 1.0;
 	Scalar X = (rs - rssat * sg) / (rssat * ( 1.0 - sg));
     Scalar omega = 0.0;
-	if ((rs >= (rssat * sg))){
+    const Scalar pCap = Opm::abs(pg - p);
+	if ((rs >= (rssat * sg)) || (pCap < 1e-12)){
 	    if(X > Psi){
 		    factor = 0.0;
             omega = omegainn;
         }
 	} else {
-	        factor /= Xhi;
-	        deltaDensity = (saturatedDensity - co2Density);
-	    }
+	    factor /= Xhi;
+	    deltaDensity = (saturatedDensity - co2Density);
+	}
     
     convectiveDrs_[compressedDofIdx]
-        = factor * permz * rssat * max(0.0, deltaDensity) * gravity / ( std::max(sg_max - sg, 0.0) * visc * distZ * poro) + (omega/Xhi); 
+        = factor * permz * rssat * max(0.0, deltaDensity) * gravity / ( std::max(sg_max - sg, 0.0) * visc * distZ * poro) + (omega/Xhi);
 }
 
 template class MixingRateControls<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;

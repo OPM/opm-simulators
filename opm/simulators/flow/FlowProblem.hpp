@@ -145,6 +145,7 @@ class FlowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
+    enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableThermalFluxBoundaries = getPropValue<TypeTag, Properties::EnableThermalFluxBoundaries>() };
     enum { enableApiTracking = getPropValue<TypeTag, Properties::EnableApiTracking>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
@@ -182,7 +183,7 @@ class FlowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using MICPModule = BlackOilMICPModule<TypeTag>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
-    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag>;
+    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
     using ModuleParams = typename BlackOilLocalResidualTPFA<TypeTag>::ModuleParams;
 
     using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
@@ -537,8 +538,6 @@ public:
         auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
         const auto& events = schedule[episodeIdx].events();
-
-
 
         if (episodeIdx >= 0 && events.hasEvent(ScheduleEvents::GEO_MODIFIER)) {
             // bring the contents of the keywords to the current state of the SCHEDULE
