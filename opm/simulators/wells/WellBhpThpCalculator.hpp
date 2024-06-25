@@ -120,12 +120,6 @@ public:
             const SummaryState& summary_state) const;
 
   //! \brief Find limits using brute-force solver.
-  static bool bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
-                                const std::array<Scalar, 2>& range,
-                                Scalar& low, Scalar& high,
-                                DeferredLogger& deferred_logger);
-
-  //! \brief Find limits using brute-force solver.
   static bool bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
                                 const std::array<Scalar, 2>& range,
                                 Scalar& low, Scalar& high,
@@ -172,6 +166,13 @@ private:
                        Scalar& low, Scalar& high,
                        std::optional<Scalar>& approximate_solution,
                        DeferredLogger& deferred_logger) const;
+
+ //! \brief Find limits using brute-force solver.
+  static bool bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
+                                const std::array<Scalar, 2>& range,
+                                Scalar& low, Scalar& high,
+                                DeferredLogger& deferred_logger);
+
 
     Scalar findThpFromBhpIteratively(const std::function<Scalar(const Scalar, const Scalar)>& thp_func,
                                      const Scalar bhp,
