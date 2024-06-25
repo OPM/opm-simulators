@@ -20,6 +20,8 @@
 #ifndef OPM_SATFUNC_CONSISTENCY_CHECK_MODULE_HPP
 #define OPM_SATFUNC_CONSISTENCY_CHECK_MODULE_HPP
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
 #include <cstddef>
 #include <functional>
 #include <memory>
@@ -198,6 +200,19 @@ namespace Opm {
         void checkEndpoints(const std::size_t                      pointID,
                             const EclEpsScalingPointsInfo<Scalar>& endPoints);
 
+        /// Collect consistency violations from all ranks in MPI communicator.
+        ///
+        /// Incorporates violation counts and sampled failure points into
+        /// the internal structures on each rank.  Aggregate results useful
+        /// for subsequent call to reportFailures() on root process.
+        ///
+        /// \param[in] root MPI root process.  This is the process onto
+        ///    which the counts and samples will be collected.  Typically
+        ///    the index of the IO rank.
+        ///
+        /// \param[in] comm MPI communication object.
+        void collectFailures(int root, const Parallel::Communication& comm);
+
         /// Whether or not any checks failed at the \c Standard level.
         bool anyFailedChecks() const;
 
@@ -209,6 +224,10 @@ namespace Opm {
         ///
         /// Reports only those conditions/checks for which there is at least
         /// one violation.
+        ///
+        /// In a parallel run it is only safe to call this function on the
+        /// MPI process to which the consistency check violations were
+        /// collected in a previous call to collectFailures().
         ///
         /// \param[in] level Report's severity level.
         ///
@@ -299,12 +318,70 @@ namespace Opm {
         /// is a common case in production runs.
         std::unique_ptr<RandomBitGenerator> urbg_{};
 
+        /// Collect violations of single severity level from all ranks in
+        /// MPI communicator.
+        ///
+        /// Incorporates violation counts and sampled failure points into
+        /// the internal structures on each rank.  Aggregate results useful
+        /// for subsequent call to reportFailures().
+        ///
+        /// \param[in] root MPI root process.  This is the process/rank onto
+        ///    which the counts and samples will be collected.  Typically
+        ///    the index of the IO rank.
+        ///
+        /// \param[in] comm MPI communication object.
+        ///
+        /// \param[in, out] violation Current rank's violation structure for
+        ///    a single severity level.  Holds aggregate values across all
+        ///    ranks, including updated sample points, on return.
+        void collectFailures(int                            root,
+                             const Parallel::Communication& comm,
+                             ViolationSample&               violation);
+
         /// Allocate and initialise backing storage for a single set of
         /// sampled consistency check violations.
         ///
         /// \param[out] violation On return, zeroed or otherwise initialised
         ///    violation sample of proper size.
         void buildStructure(ViolationSample& violation);
+
+        /// Internalise a single violation into internal data structures.
+        ///
+        /// Counts the violation and uses "reservoir sampling"
+        /// (https://en.wikipedia.org/wiki/Reservoir_sampling) to determine
+        /// whether or not to include the specific point into the reporting
+        /// sample.
+        ///
+        /// \tparam PopulateCheckValues Call-back function type
+        /// encapsulating block of code populate sequence of check values
+        /// for a single, failed consistency check.  Expected to be a
+        /// callable type with a function call operator of the form
+        /// \code
+        ///    void operator()(Scalar* checkValues) const
+        /// \endcode
+        /// in which the \c checkValues points the start of a sequence of
+        /// values associated to particular check.  The call-back function
+        /// is expected to know how many values are in a valid sequence and
+        /// to fill in exactly this many values.
+        ///
+        /// \param[in, out] violation Current rank's violation sample at
+        ///    particular severity level.
+        ///
+        /// \param[in] checkIx Numerical check index in the range
+        ///    [0..battery_.size()).
+        ///
+        /// \param[in] pointID Numeric identifier for this particular set of
+        ///    end-points.  Typically a saturation region or a cell ID.
+        ///
+        /// \param[in] populateCheckValues Call-back function to populate a
+        ///    sequence of values pertaining to specified check.  Typically
+        ///    \code Check::exportCheckValues() \endcode or a copy routine
+        ///    to incorporate samples from multiple MPI ranks.
+        template <typename PopulateCheckValues>
+        void processViolation(ViolationSample&      violation,
+                              const std::size_t     checkIx,
+                              const std::size_t     pointID,
+                              PopulateCheckValues&& populateCheckValues);
 
         /// Internalise a single violation into internal data structures.
         ///
@@ -324,6 +401,24 @@ namespace Opm {
                               const std::size_t    checkIx,
                               const std::size_t    pointID);
 
+        /// Incorporate single severity level's set of violations from
+        /// single MPI rank into current rank's internal data structures.
+        ///
+        /// \param[in] count Start of sequence of failure counts for all
+        ///    checks from single MPI rank.
+        ///
+        /// \param[in] pointID Start of sequence of sampled point IDs for
+        ///    all checks from a single MPI rank.
+        ///
+        /// \param[in] checkValues Start of sequence of sampled check values
+        ///    for all checks from a single MPI rank.
+        ///
+        /// \param[in, out] violation
+        void incorporateRankViolations(const std::size_t* count,
+                                       const std::size_t* pointID,
+                                       const Scalar*      checkValues,
+                                       ViolationSample&   violation);
+
         /// Generate random index in the sample size.
         ///
         /// \param[in] sampleSize Total number of violations of a particular
@@ -336,6 +431,16 @@ namespace Opm {
         /// Ensure that random bit generator exists and is properly
         /// initialised.
         void ensureRandomBitGeneratorIsInitialised();
+
+        /// Compute start offset into ViolationSample::pointID for
+        /// particular check.
+        ///
+        /// \param[in] checkIx Numerical check index in the range
+        ///    [0..battery_.size()).
+        ///
+        /// \return Start offset into ViolationSample::pointID.
+        std::vector<std::size_t>::size_type
+        violationPointIDStart(const std::size_t checkIx) const;
 
         /// Compute start offset into ViolationSample::checkValues for
         /// particular check and sample index.
@@ -441,6 +546,17 @@ namespace Opm {
         /// \return Number of active sample points.
         std::size_t numPoints(const ViolationSample& violation,
                               const std::size_t      checkIx) const;
+
+        /// Compute number of sample points for a single check's violations.
+        ///
+        /// Effectively the minimum of the number of violations of that
+        /// check and the maximum number of sample points (\code
+        /// this->numSamplePoints_ \endcode).
+        ///
+        /// \param[in] violationCount Total number of check violations.
+        ///
+        /// \return Number of active sample points.
+        std::size_t numPoints(const std::size_t violationCount) const;
 
         /// Whether or not any checks failed at specified severity level.
         ///

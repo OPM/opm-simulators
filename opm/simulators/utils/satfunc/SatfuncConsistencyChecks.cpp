@@ -21,6 +21,10 @@
 
 #include <opm/simulators/utils/satfunc/SatfuncConsistencyChecks.hpp>
 
+#include <opm/simulators/utils/ParallelCommunication.hpp>
+
+#include <opm/grid/common/CommunicationUtils.hpp>
+
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
 
 #include <algorithm>
@@ -142,6 +146,22 @@ checkEndpoints(const std::size_t                      pointID,
 }
 
 template <typename Scalar>
+void Opm::SatfuncConsistencyChecks<Scalar>::
+collectFailures(const int                      root,
+                const Parallel::Communication& comm)
+{
+    if (comm.size() == 1) {
+        // Not a parallel run.  Violation structure complete without
+        // exchanging additional information, so nothing to do.
+        return;
+    }
+
+    for (auto& violation : this->violations_) {
+        this->collectFailures(root, comm, violation);
+    }
+}
+
+template <typename Scalar>
 bool Opm::SatfuncConsistencyChecks<Scalar>::anyFailedChecks() const
 {
     return this->anyFailedChecks(ViolationLevel::Standard);
@@ -194,9 +214,77 @@ void Opm::SatfuncConsistencyChecks<Scalar>::ViolationSample::clear()
 
 // ---------------------------------------------------------------------------
 
+namespace {
+    bool anyFailedChecks(const std::vector<std::size_t>& count)
+    {
+        return std::any_of(count.begin(), count.end(),
+                           [](const std::size_t n) { return n > 0; });
+    }
+}
+
 template <typename Scalar>
-void
-Opm::SatfuncConsistencyChecks<Scalar>::
+void Opm::SatfuncConsistencyChecks<Scalar>::
+collectFailures(const int                      root,
+                const Parallel::Communication& comm,
+                ViolationSample&               violation)
+{
+    // Count total number of violations of each check across all ranks.
+    // This should be the final number emitted in reportFailures() on the
+    // root process.
+    auto totalCount = violation.count;
+    comm.sum(totalCount.data(), violation.count.size());
+
+    if (! ::anyFailedChecks(totalCount)) {
+        // No failed checks on any rank for this severity level.
+        //
+        // No additional work needed, since every rank will have zero
+        // failure counts for all checks.
+        return;
+    }
+
+    // CSR-like structures for the failure counts, sampled point IDs, and
+    // sampled check values from all ranks.  One set of all-to-one messages
+    // for each quantity.  If this stage becomes a bottleneck we must devise
+    // a better communication structure that reduces the number of messages.
+    const auto& [rankCount, startRankCount] =
+        gatherv(violation.count, comm, root);
+
+    const auto& [rankPointID, startRankPointID] =
+        gatherv(violation.pointID, comm, root);
+
+    const auto& [rankCheckValues, startRankCheckValues] =
+        gatherv(violation.checkValues, comm, root);
+
+    if (comm.rank() == root) {
+        // Re-initialise this violation sample to prepare for incorporating
+        // contributions from all MPI ranks--including the current rank.
+        violation.clear();
+        this->buildStructure(violation);
+
+        const auto numRanks = comm.size();
+        for (auto rank = 0*numRanks; rank < numRanks; ++rank) {
+            this->incorporateRankViolations
+                (rankCount.data() + startRankCount[rank],
+                 rankPointID.data() + startRankPointID[rank],
+                 rankCheckValues.data() + startRankCheckValues[rank],
+                 violation);
+        }
+    }
+
+    // The final violation counts for reporting purposes should be the sum
+    // of the per-rank counts.  This ensures that all ranks give the same
+    // answer to the anyFailedChecks() predicate, although the particular
+    // sample points will differ across the ranks.
+    violation.count.swap(totalCount);
+
+    // Ensure that all ranks are synchronised here before proceeding.  We
+    // don't want to end up in a situation where the ranks have a different
+    // notion of what to send/receive.
+    comm.barrier();
+}
+
+template <typename Scalar>
+void Opm::SatfuncConsistencyChecks<Scalar>::
 buildStructure(ViolationSample& violation)
 {
     violation.count.assign(this->battery_.size(), 0);
@@ -212,13 +300,13 @@ buildStructure(ViolationSample& violation)
 }
 
 template <typename Scalar>
+template <typename PopulateCheckValues>
 void Opm::SatfuncConsistencyChecks<Scalar>::
-processViolation(const ViolationLevel level,
-                 const std::size_t    checkIx,
-                 const std::size_t    pointID)
+processViolation(ViolationSample&      violation,
+                 const std::size_t     checkIx,
+                 const std::size_t     pointID,
+                 PopulateCheckValues&& populateCheckValues)
 {
-    auto& violation = this->violations_[this->index(level)];
-
     const auto nViol = ++violation.count[checkIx];
 
     // Special case handling for number of violations not exceeding number
@@ -240,12 +328,59 @@ processViolation(const ViolationLevel level,
     // reported violations.  Record the pointID and the corresponding check
     // values in their appropriate locations.
 
-    violation.pointID[checkIx*this->numSamplePoints_ + sampleIx] = pointID;
+    violation.pointID[this->violationPointIDStart(checkIx) + sampleIx] = pointID;
 
-    auto* exportedCheckValues = violation.checkValues.data()
+    auto* const checkValues = violation.checkValues.data()
         + this->violationValueStart(checkIx, sampleIx);
 
-    this->battery_[checkIx]->exportCheckValues(exportedCheckValues);
+    populateCheckValues(checkValues);
+}
+
+template <typename Scalar>
+void Opm::SatfuncConsistencyChecks<Scalar>::
+processViolation(const ViolationLevel level,
+                 const std::size_t    checkIx,
+                 const std::size_t    pointID)
+{
+    this->processViolation(this->violations_[this->index(level)], checkIx, pointID,
+        [this, checkIx](Scalar* const exportedCheckValues)
+    {
+        this->battery_[checkIx]->exportCheckValues(exportedCheckValues);
+    });
+}
+
+template <typename Scalar>
+void Opm::SatfuncConsistencyChecks<Scalar>::
+incorporateRankViolations(const std::size_t* const count,
+                          const std::size_t* const pointID,
+                          const Scalar*      const checkValues,
+                          ViolationSample&         violation)
+{
+    this->checkLoop([this, count, pointID, checkValues, &violation]
+                    (const Check*      currentCheck,
+                     const std::size_t checkIx)
+    {
+        if (count[checkIx] == 0) {
+            // No violations of this check on this rank.  Nothing to do.
+            return;
+        }
+
+        const auto* const srcPointID = pointID
+            + this->violationPointIDStart(checkIx);
+
+        const auto numCheckValues = currentCheck->numExportedCheckValues();
+        const auto numSrcSamples = this->numPoints(count[checkIx]);
+
+        for (auto srcSampleIx = 0*numSrcSamples; srcSampleIx < numSrcSamples; ++srcSampleIx) {
+            this->processViolation(violation, checkIx, srcPointID[srcSampleIx],
+                [numCheckValues,
+                 srcCheckValues = checkValues + this->violationValueStart(checkIx, srcSampleIx)]
+                (Scalar* const destCheckValues)
+            {
+                std::copy_n(srcCheckValues, numCheckValues, destCheckValues);
+            });
+        }
+    });
 }
 
 namespace {
@@ -471,8 +606,15 @@ Opm::SatfuncConsistencyChecks<Scalar>::
 numPoints(const ViolationSample& violation,
           const std::size_t      checkIx) const
 {
-    return std::min(this->numSamplePoints_,
-                    violation.count[checkIx]);
+    return this->numPoints(violation.count[checkIx]);
+}
+
+template <typename Scalar>
+std::size_t
+Opm::SatfuncConsistencyChecks<Scalar>::
+numPoints(const std::size_t violationCount) const
+{
+    return std::min(this->numSamplePoints_, violationCount);
 }
 
 template <typename Scalar>
@@ -508,6 +650,14 @@ void Opm::SatfuncConsistencyChecks<Scalar>::ensureRandomBitGeneratorIsInitialise
 }
 
 template <typename Scalar>
+std::vector<std::size_t>::size_type
+Opm::SatfuncConsistencyChecks<Scalar>::
+violationPointIDStart(const std::size_t checkIx) const
+{
+    return checkIx * this->numSamplePoints_;
+}
+
+template <typename Scalar>
 typename std::vector<Scalar>::size_type
 Opm::SatfuncConsistencyChecks<Scalar>::
 violationValueStart(const std::size_t checkIx,
@@ -522,10 +672,7 @@ bool
 Opm::SatfuncConsistencyChecks<Scalar>::
 anyFailedChecks(const ViolationLevel level) const
 {
-    const auto& violation = this->violations_[this->index(level)];
-
-    return std::any_of(violation.count.begin(), violation.count.end(),
-                       [](const std::size_t n) { return n > 0; });
+    return ::anyFailedChecks(this->violations_[this->index(level)].count);
 }
 
 template <typename Scalar>

@@ -259,6 +259,9 @@ BOOST_AUTO_TEST_CASE(Critical_Violation)
 
     checker.checkEndpoints(42, makePoints());
 
+    BOOST_CHECK_MESSAGE(! checker.anyFailedChecks(),
+                        "There must be no failed standard level checks");
+
     BOOST_CHECK_MESSAGE(checker.anyFailedCriticalChecks(),
                         "There must be at least one failed Critical check");
 

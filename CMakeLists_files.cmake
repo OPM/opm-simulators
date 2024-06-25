@@ -340,6 +340,7 @@ if (HAVE_ECL_INPUT)
   list(APPEND TEST_SOURCE_FILES
     tests/test_nonnc.cpp
     tests/test_SatfuncConsistencyChecks.cpp
+    tests/test_SatfuncConsistencyChecks_parallel.cpp
   )
 endif()
 
