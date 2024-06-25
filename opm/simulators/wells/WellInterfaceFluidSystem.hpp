@@ -25,9 +25,12 @@
 #define OPM_WELLINTERFACE_FLUID_SYSTEM_HEADER_INCLUDED
 
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 #include <limits>
+#include <optional>
+#include <vector>
 
 namespace Opm
 {

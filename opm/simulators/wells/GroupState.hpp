@@ -20,14 +20,17 @@
 #ifndef OPM_GROUPSTATE_HEADER_INCLUDED
 #define OPM_GROUPSTATE_HEADER_INCLUDED
 
+#include <opm/input/eclipse/EclipseState/Phase.hpp>
+
+#include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
+#include <opm/input/eclipse/Schedule/Group/Group.hpp>
+
+#include <opm/simulators/wells/WellContainer.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+
 #include <map>
 #include <vector>
-
-#include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/input/eclipse/Schedule/Group/Group.hpp>
-#include <opm/input/eclipse/EclipseState/Phase.hpp>
-#include <opm/input/eclipse/Schedule/Group/GPMaint.hpp>
-#include <opm/simulators/wells/WellContainer.hpp>
 
 namespace Opm {
 

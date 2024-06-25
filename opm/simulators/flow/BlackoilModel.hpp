@@ -30,8 +30,6 @@
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/core/props/phaseUsageFromDeck.hpp>
-
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/EclipseState/Tables/TableManager.hpp>
 
@@ -47,10 +45,13 @@
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
+
+#include <opm/simulators/wells/BlackoilWellModel.hpp>
+
 #include <opm/simulators/utils/ComponentName.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
-#include <opm/simulators/wells/BlackoilWellModel.hpp>
+#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
 #include <dune/common/timer.hh>
 

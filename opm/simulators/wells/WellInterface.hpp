@@ -37,8 +37,6 @@ namespace Opm {
 
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
-
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
@@ -52,6 +50,7 @@ namespace Opm {
 
 #include <opm/simulators/timestepping/ConvergenceReport.hpp>
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
 #include <dune/common/fmatrix.hh>

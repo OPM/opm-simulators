@@ -20,15 +20,16 @@
 */
 
 #include <config.h>
-#include <opm/simulators/wells/WellGroupConstraints.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/simulators/wells/WellGroupConstraints.hpp>
 
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 
 #include <opm/simulators/wells/WellGroupHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm
 {

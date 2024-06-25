@@ -36,8 +36,6 @@
 
 #include <opm/common/utility/TimeService.hpp>
 
-#include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
-
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 #include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
@@ -80,8 +78,10 @@
 #include <opm/simulators/flow/VtkTracerModule.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
 #include <opm/simulators/timestepping/SimulatorReport.hpp>
+
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
+#include <opm/simulators/utils/satfunc/RelpermDiagnostics.hpp>
 
 #include <opm/utility/CopyablePtr.hpp>
 

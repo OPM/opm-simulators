@@ -14,8 +14,6 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
-#include <opm/core/props/phaseUsageFromDeck.hpp>
-
 #include <opm/grid/utility/StopWatch.hpp>
 
 #include <opm/input/eclipse/Units/Units.hpp>
@@ -33,6 +31,8 @@
 #include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/simulators/timestepping/TimeStepControl.hpp>
 #include <opm/simulators/timestepping/TimeStepControlInterface.hpp>
+
+#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
 #include <fmt/format.h>
 

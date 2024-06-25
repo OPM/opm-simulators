@@ -21,10 +21,10 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+
 #include <algorithm>
 #include <vector>
-
-#include <opm/core/props/BlackoilPhases.hpp>
 
 Opm::PhaseUsage::PhaseUsage(std::vector<BlackoilPhases::PhaseIndex> phases)
 {

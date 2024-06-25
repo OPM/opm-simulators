@@ -22,7 +22,7 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/props/phaseUsageFromDeck.hpp>
+#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 

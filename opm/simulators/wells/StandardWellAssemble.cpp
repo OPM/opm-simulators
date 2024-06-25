@@ -22,8 +22,6 @@
 #include <config.h>
 #include <opm/simulators/wells/StandardWellAssemble.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
-
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
@@ -37,6 +35,8 @@
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm {
 

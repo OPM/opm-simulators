@@ -20,11 +20,10 @@
 */
 
 #include <config.h>
+
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 
 #include <opm/common/utility/numeric/RootFinders.hpp>
-
-#include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/input/eclipse/Schedule/VFPInjTable.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
@@ -33,6 +32,7 @@
 
 #include <opm/material/densead/Evaluation.hpp>
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/VFPProperties.hpp>

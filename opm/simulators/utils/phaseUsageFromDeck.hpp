@@ -21,7 +21,7 @@
 #ifndef OPM_PHASEUSAGEFROMDECK_HEADER_INCLUDED
 #define OPM_PHASEUSAGEFROMDECK_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm
 {

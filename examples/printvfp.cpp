@@ -33,9 +33,9 @@
 #include <opm/simulators/wells/VFPProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
-#include <opm/input/eclipse/Units/Units.hpp>
+#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
-#include <opm/core/props/phaseUsageFromDeck.hpp>
+#include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
 
