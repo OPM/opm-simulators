@@ -69,9 +69,6 @@ class EclGenericWriter
     using TransmissibilityType = Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>;
 
 public:
-    // The Simulator object should preferably have been const - the
-    // only reason that is not the case is due to the SummaryState
-    // object owned deep down by the vanguard.
     EclGenericWriter(const Schedule& schedule,
                      const EclipseState& eclState,
                      const SummaryConfig& summaryConfig,

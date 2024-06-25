@@ -85,11 +85,11 @@ class UDQState;
 /*!
  * \ingroup EclBlackOilSimulator
  *
- * \brief Collects necessary output values and pass it to opm-output.
+ * \brief Collects necessary output values and pass it to opm-common's ECL output.
  *
  * Caveats:
  * - For this class to do do anything meaningful, you will have to
- *   have the OPM module opm-output.
+ *   have the OPM module opm-common with ECL writing enabled.
  * - The only DUNE grid which is currently supported is Dune::CpGrid
  *   from the OPM module "opm-grid". Using another grid won't
  *   fail at compile time but you will provoke a fatal exception as
