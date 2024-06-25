@@ -152,7 +152,7 @@ namespace {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext, errorGuard,
-                 std::move(python), lowActionParsingStrictness, outputInterval, init_state);
+                 std::move(python), lowActionParsingStrictness, /*slaveMode=*/false, outputInterval, init_state);
         }
 
         // Read network pressures from restart
@@ -179,14 +179,14 @@ namespace {
                                         std::unique_ptr<Opm::UDQState>&      udqState,
                                         std::unique_ptr<Opm::Action::State>& actionState,
                                         std::unique_ptr<Opm::WellTestState>& wtestState,
-                                        Opm::ErrorGuard&                     errorGuard)
+                                        Opm::ErrorGuard&                     errorGuard,
+                                        const bool                           slaveMode)
     {
         if (schedule == nullptr) {
             schedule = std::make_shared<Opm::Schedule>
                 (deck, eclipseState, parseContext,
-                 errorGuard, std::move(python), lowActionParsingStrictness);
+                 errorGuard, std::move(python), lowActionParsingStrictness, slaveMode);
         }
-
         udqState = std::make_unique<Opm::UDQState>
             ((*schedule)[0].udq().params().undefinedValue());
 
@@ -247,7 +247,8 @@ namespace {
                       const bool                           treatCriticalAsNonCritical,
                       const bool                           lowActionParsingStrictness,
                       const std::optional<int>&            outputInterval,
-                      Opm::ErrorGuard&                     errorGuard)
+                      Opm::ErrorGuard&                     errorGuard,
+                      const bool                           slaveMode)
     {
         OPM_TIMEBLOCK(readDeck);
         if (((schedule == nullptr) || (summaryConfig == nullptr)) &&
@@ -279,7 +280,7 @@ namespace {
             createNonRestartDynamicObjects(deck, *eclipseState, *parseContext,
                                            lowActionParsingStrictness, std::move(python),
                                            schedule, udqState, actionState, wtestState,
-                                           errorGuard);
+                                           errorGuard, slaveMode);
         }
 
         eclipseState->appendAqufluxSchedule(schedule->getAquiferFluxSchedule());
@@ -543,7 +544,8 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                    const std::string&              inputSkipMode,
                    const bool                      initFromRestart,
                    const bool                      checkDeck,
-                   const std::optional<int>&       outputInterval)
+                   const std::optional<int>&       outputInterval,
+                   const bool                      slaveMode)
 {
     auto errorGuard = std::make_unique<ErrorGuard>();
 
@@ -577,7 +579,7 @@ void Opm::readDeck(Opm::Parallel::Communication    comm,
                          eclipseState, schedule, udqState, actionState, wtestState,
                          summaryConfig, std::move(python), initFromRestart,
                          checkDeck, treatCriticalAsNonCritical, lowActionParsingStrictness,
-                         outputInterval, *errorGuard);
+                         outputInterval, *errorGuard, slaveMode);
 
             // Update schedule so that re-parsing after actions use same strictness
             assert(schedule);
