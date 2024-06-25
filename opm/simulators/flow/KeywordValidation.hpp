@@ -20,6 +20,7 @@
 #ifndef OPM_KEYWORDVALIDATION_HEADER_INCLUDED
 #define OPM_KEYWORDVALIDATION_HEADER_INCLUDED
 
+#include <opm/input/eclipse/Deck/DeckItem.hpp>
 #include <opm/common/OpmLog/KeywordLocation.hpp>
 
 #include <algorithm>
@@ -48,10 +49,10 @@ namespace KeywordValidation
         std::optional<std::string> message; // An optional message to show if the keyword is present
     };
 
-    // Describe a partially supported keyword item, by listing legal values:
+    // Describe a partially or fully supported keyword item, by listing legal values:
     template <typename T>
-    struct PartiallySupportedKeywordProperties {
-        bool critical; // Set to true if the unsupported item value should be an error
+    struct SupportedKeywordProperties {
+        bool critical; // Set to true if an unsupported or invalid item value should be an error
         std::function<bool(T)> validator; // Predicate function to test values
         std::optional<std::string> message; // An optional message to show if an illegal item is encountered
     };
@@ -61,11 +62,11 @@ namespace KeywordValidation
 
     // This is used to list the partially supported items of a keyword:
     template <typename T>
-    using PartiallySupportedKeywordItems = std::map<std::size_t, PartiallySupportedKeywordProperties<T>>;
+    using SupportedKeywordItems = std::map<std::size_t, SupportedKeywordProperties<T>>;
 
-    // This is used to list the keywords that have partially supported items:
+    // This is used to list the keywords that have partially supported items or items that benefit from early validation:
     template <typename T>
-    using PartiallySupportedKeywords = std::map<std::string, PartiallySupportedKeywordItems<T>>;
+    using SupportedKeywords = std::map<std::string, SupportedKeywordItems<T>>;
 
     // This contains the information needed to report a single error occurence.
     // The validator will construct a vector of these, copying the relevant
@@ -97,15 +98,21 @@ namespace KeywordValidation
     class KeywordValidator
     {
     public:
-        KeywordValidator(const UnsupportedKeywords& keywords,
-                         const PartiallySupportedKeywords<std::string>& string_items,
-                         const PartiallySupportedKeywords<int>& int_items,
-                         const PartiallySupportedKeywords<double>& double_items,
+        KeywordValidator(const UnsupportedKeywords& unsupported_keywords,
+                         const SupportedKeywords<std::string>& partially_supported_string_items,
+                         const SupportedKeywords<int>& partially_supported_int_items,
+                         const SupportedKeywords<double>& partially_supported_double_items,
+                         const SupportedKeywords<std::string>& fully_supported_string_items,
+                         const SupportedKeywords<int>& fully_supported_int_items,
+                         const SupportedKeywords<double>& fully_supported_double_items,
                          const std::unordered_map<std::string, std::function<void(const DeckKeyword& keyword, std::vector<ValidationError>& errors)>>& special_validation)
-            : m_keywords(keywords)
-            , m_string_items(string_items)
-            , m_int_items(int_items)
-            , m_double_items(double_items)
+            : m_unsupported_keywords(unsupported_keywords)
+            , m_partially_supported_string_items(partially_supported_string_items)
+            , m_partially_supported_int_items(partially_supported_int_items)
+            , m_partially_supported_double_items(partially_supported_double_items)
+            , m_fully_supported_string_items(fully_supported_string_items)
+            , m_fully_supported_int_items(fully_supported_int_items)
+            , m_fully_supported_double_items(fully_supported_double_items)
             , m_special_validation(special_validation)
         {
         }
@@ -127,7 +134,7 @@ namespace KeywordValidation
     private:
         template <typename T>
         void validateKeywordItem(const DeckKeyword& keyword,
-                                 const PartiallySupportedKeywordProperties<T>& properties,
+                                 const SupportedKeywordProperties<T>& properties,
                                  const bool multiple_records,
                                  const std::size_t record_number,
                                  const std::size_t item_number,
@@ -137,13 +144,16 @@ namespace KeywordValidation
 
         template <typename T>
         void validateKeywordItems(const DeckKeyword& keyword,
-                                  const PartiallySupportedKeywords<T>& partially_supported_options,
+                                  const SupportedKeywords<T>& supported_options,
                                   std::vector<ValidationError>& errors) const;
 
-        const UnsupportedKeywords m_keywords;
-        const PartiallySupportedKeywords<std::string> m_string_items;
-        const PartiallySupportedKeywords<int> m_int_items;
-        const PartiallySupportedKeywords<double> m_double_items;
+        const UnsupportedKeywords m_unsupported_keywords;
+        const SupportedKeywords<std::string> m_partially_supported_string_items;
+        const SupportedKeywords<int> m_partially_supported_int_items;
+        const SupportedKeywords<double> m_partially_supported_double_items;
+        const SupportedKeywords<std::string> m_fully_supported_string_items;
+        const SupportedKeywords<int> m_fully_supported_int_items;
+        const SupportedKeywords<double> m_fully_supported_double_items;
         const std::unordered_map<std::string, std::function<void(const DeckKeyword& keyword, std::vector<ValidationError>& errors)>> m_special_validation;
     };
 
@@ -169,6 +179,17 @@ namespace KeywordValidation
         std::vector<T> m_allowed_values;
     };
 
+    // Helper to test if given string value is convertible to bool (see DeckItem::to_bool)
+    struct is_bool_convertible {
+        is_bool_convertible() {}
+        bool operator()(const std::string& value) const {
+            try {
+                return DeckItem::to_bool(value) || true;
+            } catch (const std::invalid_argument& e) {
+                return false;
+            }
+        }
+    };
 
 } // namespace KeywordValidation
 

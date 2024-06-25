@@ -81,14 +81,15 @@ namespace {
                              const Opm::WellState<Scalar>& wellState,
                              const int reportStepIdx,
                              const int phasePos,
-                             const bool injector)
+                             const bool injector,
+                             const bool network = false)
     {
 
         Scalar rate = 0.0;
         for (const std::string& groupName : group.groups()) {
             const auto& groupTmp = schedule.getGroup(groupName, reportStepIdx);
-            const auto& gefac = groupTmp.getGroupEfficiencyFactor();
-            rate += gefac * sumWellPhaseRates(res_rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector);
+            const auto& gefac = groupTmp.getGroupEfficiencyFactor(network);
+            rate += gefac * sumWellPhaseRates(res_rates, groupTmp, schedule, wellState, reportStepIdx, phasePos, injector, network);
         }
 
         for (const std::string& wellName : group.wells()) {
@@ -109,7 +110,7 @@ namespace {
             if (wellEcl.getStatus() == Opm::Well::Status::SHUT)
                 continue;
 
-            Scalar factor = wellEcl.getEfficiencyFactor();
+            Scalar factor = wellEcl.getEfficiencyFactor(network);
             const auto& ws = wellState.well(well_index.value());
             if (res_rates) {
                 const auto& well_rates = ws.reservoir_rates;
@@ -673,6 +674,17 @@ updateGroupProductionRates(const Group& group,
         rates[phase] = sumWellPhaseRates(false, group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false);
     }
     group_state.update_production_rates(group.name(), rates);
+
+    const auto& network = schedule[reportStepIdx].network();
+    if (network.active()) {
+        std::vector<Scalar> network_rates = rates;
+        if (network.needs_instantaneous_rates(schedule, reportStepIdx)) {
+            for (int phase = 0; phase < np; ++phase) {
+                network_rates[phase] = sumWellPhaseRates(false, group, schedule, wellState, reportStepIdx, phase, /*isInjector*/ false, /*network*/ true);
+            }
+        }
+        group_state.update_network_production_rates(group.name(), network_rates);
+    }
 }
 
 template<class Scalar>
@@ -852,22 +864,14 @@ computeNetworkPressures(const Network::ExtNetwork& network,
         // from the corresponding groups.
         std::map<std::string, std::vector<Scalar>> node_inflows;
         for (const auto& node : leaf_nodes) {
-            node_inflows[node] = group_state.production_rates(node);
+            node_inflows[node] = group_state.network_production_rates(node);
             // Add the ALQ amounts to the gas rates if requested.
             if (network.node(node).add_gas_lift_gas()) {
                 const auto& group = schedule.getGroup(node, report_time_step);
                 for (const std::string& wellname : group.wells()) {
                     const Well& well = schedule.getWell(wellname, report_time_step);
                     if (well.isInjector()) continue;
-                    // Here we use the efficiency unconditionally, but if WEFAC item 3
-                    // for the well is false (it defaults to true) then we should NOT use
-                    // the efficiency factor. Fixing this requires not only changing the
-                    // code here, but also:
-                    //    - Adding a member to the well for this flag, and setting it in Schedule::handleWEFAC().
-                    //    - Making the wells' maximum flows (i.e. not time-averaged by using a efficiency factor)
-                    //      available and using those (for wells with WEFAC(3) true only) when accumulating group
-                    //      rates, but ONLY for network calculations.
-                    const Scalar efficiency = well.getEfficiencyFactor();
+                    const Scalar efficiency = well.getEfficiencyFactor(/*network*/ true);
                     node_inflows[node][BlackoilPhases::Vapour] += well_state.getALQ(wellname) * efficiency;
                 }
             }
@@ -885,13 +889,17 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                 // Add downbranch rates to upbranch.
                 std::vector<Scalar>& up = node_inflows[(*upbranch).uptree_node()];
                 const std::vector<Scalar>& down = node_inflows[node];
+                // @TODO@ Also support NEFAC (for nodes that do not correspond to groups)
+                double efficiency = 1.0;
+                if (schedule.hasGroup(node, report_time_step)) {
+                    efficiency = schedule.getGroup(node, report_time_step).getGroupEfficiencyFactor(/*network*/ true);
+                }
                 if (up.empty()) {
-                    up = down;
-                } else {
-                    assert (up.size() == down.size());
-                    for (std::size_t ii = 0; ii < up.size(); ++ii) {
-                        up[ii] += down[ii];
-                    }
+                    up = std::vector<Scalar>(down.size(), 0.0);
+                }
+                assert (up.size() == down.size());
+                for (std::size_t ii = 0; ii < up.size(); ++ii) {
+                    up[ii] += (efficiency*down[ii]);
                 }
             }
         }

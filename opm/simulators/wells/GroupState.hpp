@@ -42,9 +42,13 @@ public:
     bool operator==(const GroupState& other) const;
 
     bool has_production_rates(const std::string& gname) const;
+    bool has_network_production_rates(const std::string& gname) const;
     void update_production_rates(const std::string& gname,
                                  const std::vector<Scalar>& rates);
+    void update_network_production_rates(const std::string& gname,
+                                 const std::vector<Scalar>& rates);
     const std::vector<Scalar>& production_rates(const std::string& gname) const;
+    const std::vector<Scalar>& network_production_rates(const std::string& gname) const;
 
     bool has_production_reduction_rates(const std::string& gname) const;
     void update_production_reduction_rates(const std::string& gname,
@@ -114,6 +118,7 @@ public:
 
         auto forAllGroupData = [&](auto& func) {
             iterateContainer(m_production_rates, func);
+            iterateContainer(m_network_production_rates, func);
             iterateContainer(prod_red_rates, func);
             iterateContainer(inj_red_rates, func);
             iterateContainer(inj_resv_rates, func);
@@ -171,6 +176,7 @@ public:
     {
         serializer(num_phases);
         serializer(m_production_rates);
+        serializer(m_network_production_rates);
         serializer(production_controls);
         serializer(prod_red_rates);
         serializer(inj_red_rates);
@@ -187,6 +193,7 @@ public:
 private:
     std::size_t num_phases{};
     std::map<std::string, std::vector<Scalar>> m_production_rates;
+    std::map<std::string, std::vector<Scalar>> m_network_production_rates;
     std::map<std::string, Group::ProductionCMode> production_controls;
     std::map<std::string, std::vector<Scalar>> prod_red_rates;
     std::map<std::string, std::vector<Scalar>> inj_red_rates;

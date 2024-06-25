@@ -63,6 +63,7 @@
 
 #include <opm/simulators/flow/KeywordValidation.hpp>
 #include <opm/simulators/flow/ValidationFunctions.hpp>
+#include <opm/simulators/utils/FullySupportedFlowKeywords.hpp>
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 #include <opm/simulators/utils/PartiallySupportedFlowKeywords.hpp>
@@ -207,6 +208,9 @@ namespace {
             Opm::FlowKeywordValidation::partiallySupported<std::string>(),
             Opm::FlowKeywordValidation::partiallySupported<int>(),
             Opm::FlowKeywordValidation::partiallySupported<double>(),
+            Opm::FlowKeywordValidation::fullySupported<std::string>(),
+            Opm::FlowKeywordValidation::fullySupported<int>(),
+            Opm::FlowKeywordValidation::fullySupported<double>(),
             Opm::KeywordValidation::specialValidation()
         };
 
