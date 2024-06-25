@@ -1624,6 +1624,11 @@ namespace Opm
         // prepare/modify well state and control
         well_copy.prepareForPotentialCalculations(summary_state, well_state_copy, inj_controls, prod_controls);
 
+       // update connection pressures relative to updated bhp to get better estimate of connection dp
+        const int num_perf = ws.perf_data.size();
+        for (int perf = 0; perf < num_perf; ++perf) {
+            ws.perf_data.pressure[perf] = ws.bhp + well_copy.connections_.pressure_diff(perf);
+        }
         // initialize rates from previous potentials
         const int np = this->number_of_phases_;
         bool trivial = true;
@@ -1650,9 +1655,19 @@ namespace Opm
         // fetch potentials (sign is updated on the outside).
         well_potentials.clear();
         well_potentials.resize(np, 0.0);
-        for (int compIdx = 0; compIdx < this->num_components_; ++compIdx) {
-            const EvalWell rate = well_copy.primary_variables_.getQs(compIdx);
-            well_potentials[this->modelCompIdxToFlowCompIdx(compIdx)] = rate.value();
+        for (int comp_idx = 0; comp_idx < this->num_components_; ++comp_idx) {
+            if (has_solvent && comp_idx == Indices::contiSolventEqIdx) continue; // we do not store the solvent in the well_potentials
+            const EvalWell rate = well_copy.primary_variables_.getQs(comp_idx);
+            well_potentials[this->modelCompIdxToFlowCompIdx(comp_idx)] = rate.value();
+        }
+
+        // the solvent contribution is added to the gas potentials
+        if constexpr (has_solvent) {
+            const auto& pu = this->phaseUsage();
+            assert(pu.phase_used[Gas]);
+            const int gas_pos = pu.phase_pos[Gas];
+            const EvalWell rate = well_copy.primary_variables_.getQs(Indices::contiSolventEqIdx);
+            well_potentials[gas_pos] += rate.value();
         }
         return converged;
     }
