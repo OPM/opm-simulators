@@ -22,11 +22,12 @@
 #ifndef OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 #define OPM_RATECONVERTER_HPP_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/grid/utility/RegionMapping.hpp>
-#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
+
 #include <opm/simulators/wells/RegionAttributeHelpers.hpp>
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+#include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <dune/grid/common/gridenums.hh>

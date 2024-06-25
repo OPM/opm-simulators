@@ -39,6 +39,7 @@
 #include <opm/input/eclipse/Schedule/UDQ/UDQParams.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
+
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
@@ -48,13 +49,13 @@
 #include <opm/simulators/wells/WellContainer.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
+
 #include <opm/input/eclipse/Units/Units.hpp>
 
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/grid/GridManager.hpp>
-
-#include <opm/core/props/BlackoilPhases.hpp>
-#include <opm/core/props/phaseUsageFromDeck.hpp>
 
 #include <opm/input/eclipse/Deck/Deck.hpp>
 

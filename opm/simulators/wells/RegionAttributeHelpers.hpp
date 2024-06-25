@@ -23,10 +23,12 @@
 #ifndef OPM_REGIONATTRIBUTEHELPERS_HPP_HEADER_INCLUDED
 #define OPM_REGIONATTRIBUTEHELPERS_HPP_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+
 #include <opm/grid/utility/RegionMapping.hpp>
 
 #include <dune/grid/common/gridenums.hh>
+
 #include <algorithm>
 #include <memory>
 #include <stdexcept>

@@ -20,15 +20,16 @@
 */
 
 #include <config.h>
-#include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 
-#include <opm/core/props/BlackoilPhases.hpp>
+#include <opm/simulators/wells/MultisegmentWellAssemble.hpp>
 
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/models/blackoil/blackoilindices.hh>
 #include <opm/models/blackoil/blackoilonephaseindices.hh>
 #include <opm/models/blackoil/blackoiltwophaseindices.hh>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 #include <opm/simulators/wells/MultisegmentWellEquations.hpp>
 #include <opm/simulators/wells/MultisegmentWellPrimaryVariables.hpp>

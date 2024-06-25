@@ -24,21 +24,21 @@
 #include <dune/common/version.hh>
 #include <dune/common/parallel/mpihelper.hh>
 
-#include <opm/core/props/BlackoilPhases.hpp>
-
 #include <opm/common/ErrorMacros.hpp>
 
 #include <opm/input/eclipse/Schedule/Events.hpp>
 
 #include <opm/output/data/Wells.hpp>
 
-#include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/simulators/wells/ALQState.hpp>
 #include <opm/simulators/wells/GlobalWellInfo.hpp>
 #include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/SegmentState.hpp>
 #include <opm/simulators/wells/SingleWellState.hpp>
 #include <opm/simulators/wells/WellContainer.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
+#include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <functional>
 #include <map>

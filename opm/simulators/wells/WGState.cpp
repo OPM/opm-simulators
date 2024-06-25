@@ -21,8 +21,9 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/props/BlackoilPhases.hpp>
 #include <opm/simulators/wells/WGState.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 namespace Opm {
 

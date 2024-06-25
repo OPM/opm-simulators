@@ -20,11 +20,12 @@
 #ifndef OPM_GASLIFT_SINGLE_WELL_GENERIC_HEADER_INCLUDED
 #define OPM_GASLIFT_SINGLE_WELL_GENERIC_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
-
 #include <opm/input/eclipse/Schedule/Well/WellProductionControls.hpp>
+
 #include <opm/simulators/wells/GasLiftGroupInfo.hpp>
 #include <opm/simulators/wells/GasLiftCommon.hpp>
+
+#include <opm/simulators/utils/BlackoilPhases.hpp>
 
 #include <optional>
 #include <set>

@@ -56,10 +56,6 @@ endmacro()
 # originally generated with the command:
 # find opm -name '*.c*' -printf '\t%p\n' | sort
 list (APPEND MAIN_SOURCE_FILES
-  opm/core/props/BlackoilPhases.cpp
-  opm/core/props/phaseUsageFromDeck.cpp
-  opm/core/props/satfunc/RelpermDiagnostics.cpp
-  opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/flow/ActionHandler.cpp
   opm/simulators/flow/Banners.cpp
   opm/simulators/flow/CollectDataOnIORank.cpp
@@ -111,21 +107,25 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeStepping.cpp
   opm/simulators/timestepping/ConvergenceReport.cpp
-  opm/simulators/timestepping/TimeStepControl.cpp
+  opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimerInterface.cpp
+  opm/simulators/timestepping/TimeStepControl.cpp
   opm/simulators/timestepping/gatherConvergenceReport.cpp
+  opm/simulators/utils/BlackoilPhases.cpp
   opm/simulators/utils/ComponentName.cpp
-  opm/simulators/utils/compressPartition.cpp
   opm/simulators/utils/DeferredLogger.cpp
-  opm/simulators/utils/gatherDeferredLogger.cpp
   opm/simulators/utils/ParallelFileMerger.cpp
   opm/simulators/utils/ParallelRestart.cpp
   opm/simulators/utils/PartiallySupportedFlowKeywords.cpp
   opm/simulators/utils/PressureAverage.cpp
-  opm/simulators/utils/readDeck.cpp
   opm/simulators/utils/SerializationPackers.cpp
   opm/simulators/utils/UnsupportedFlowKeywords.cpp
+  opm/simulators/utils/compressPartition.cpp
+  opm/simulators/utils/gatherDeferredLogger.cpp
+  opm/simulators/utils/phaseUsageFromDeck.cpp
+  opm/simulators/utils/readDeck.cpp
+  opm/simulators/utils/satfunc/RelpermDiagnostics.cpp
   opm/simulators/wells/ALQState.cpp
   opm/simulators/wells/BlackoilWellModelConstraints.cpp
   opm/simulators/wells/BlackoilWellModelGeneric.cpp
@@ -509,10 +509,6 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/equil/EquilibrationHelpers_impl.hpp
   opm/simulators/flow/equil/InitStateEquil.hpp
   opm/simulators/flow/equil/InitStateEquil_impl.hpp
-  opm/core/props/BlackoilPhases.hpp
-  opm/core/props/phaseUsageFromDeck.hpp
-  opm/core/props/satfunc/RelpermDiagnostics.hpp
-  opm/simulators/timestepping/SimulatorReport.hpp
   opm/simulators/wells/SegmentState.hpp
   opm/simulators/wells/WellContainer.hpp
   opm/simulators/aquifers/AquiferAnalytical.hpp
@@ -560,23 +556,27 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/timestepping/TimeStepControl.hpp
   opm/simulators/timestepping/TimeStepControlInterface.hpp
   opm/simulators/timestepping/SimulatorTimer.hpp
+  opm/simulators/timestepping/SimulatorReport.hpp
   opm/simulators/timestepping/SimulatorTimerInterface.hpp
   opm/simulators/timestepping/gatherConvergenceReport.hpp
+  opm/simulators/utils/BlackoilPhases.hpp
   opm/simulators/utils/ComponentName.hpp
-  opm/simulators/utils/compressPartition.hpp
-  opm/simulators/utils/ParallelFileMerger.hpp
-  opm/simulators/utils/DeferredLoggingErrorHelpers.hpp
   opm/simulators/utils/DeferredLogger.hpp
-  opm/simulators/utils/gatherDeferredLogger.hpp
-  opm/simulators/utils/moduleVersion.hpp
+  opm/simulators/utils/DeferredLoggingErrorHelpers.hpp
   opm/simulators/utils/ParallelEclipseState.hpp
+  opm/simulators/utils/ParallelFileMerger.hpp
   opm/simulators/utils/ParallelNLDDPartitioningZoltan.hpp
   opm/simulators/utils/ParallelRestart.hpp
+  opm/simulators/utils/PressureAverage.hpp
   opm/simulators/utils/PropsDataHandle.hpp
   opm/simulators/utils/SerializationPackers.hpp
   opm/simulators/utils/VectorVectorDataHandle.hpp
-  opm/simulators/utils/PressureAverage.hpp
+  opm/simulators/utils/compressPartition.hpp
+  opm/simulators/utils/gatherDeferredLogger.hpp
+  opm/simulators/utils/moduleVersion.hpp
+  opm/simulators/utils/phaseUsageFromDeck.hpp
   opm/simulators/utils/readDeck.hpp
+  opm/simulators/utils/satfunc/RelpermDiagnostics.hpp
   opm/simulators/wells/ALQState.hpp
   opm/simulators/wells/BlackoilWellModel.hpp
   opm/simulators/wells/BlackoilWellModel_impl.hpp

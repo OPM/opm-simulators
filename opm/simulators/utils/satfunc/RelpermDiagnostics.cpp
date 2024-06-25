@@ -21,8 +21,8 @@
 #include "config.h"
 #endif // HAVE_CONFIG_H
 
-#include <opm/core/props/satfunc/RelpermDiagnostics.hpp>
-#include <opm/core/props/phaseUsageFromDeck.hpp>
+#include <opm/simulators/utils/satfunc/RelpermDiagnostics.hpp>
+#include <opm/simulators/utils/phaseUsageFromDeck.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclEpsGridProperties.hpp>
 #include <opm/material/fluidmatrixinteractions/EclEpsScalingPoints.hpp>
@@ -45,10 +45,12 @@
 
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
+
 #ifdef HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
 #include <dune/alugrid/3d/gridview.hh>
 #endif // HAVE_DUNE_ALUGRID
+
 namespace Opm {
 
     bool RelpermDiagnostics::phaseCheck_(const EclipseState& es)
