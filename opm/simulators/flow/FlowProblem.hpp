@@ -1402,6 +1402,12 @@ public:
         if (this->simulator().episodeIndex() == 0) {
             eclWriter_->writeInitialFIPReport();
         }
+
+        const bool invalidateFromHyst = updateHysteresis_();
+        if (invalidateFromHyst) {
+            OPM_TIMEBLOCK(beginTimeStepInvalidateIntensiveQuantities);
+            this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
+        }
     }
 
     /*!
