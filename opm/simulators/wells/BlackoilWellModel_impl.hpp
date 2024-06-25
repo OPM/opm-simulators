@@ -1282,40 +1282,49 @@ namespace Opm {
                     gratTargetFromSales = group_state.grat_sales_target(group.name());
 
                 WGHelpers::TargetCalculator tcalc(cmode, pu, resv_coeff,
-                                                         gratTargetFromSales, nodeName, group_state,
-                                                         group.has_gpmaint_control(cmode));
+                                                  gratTargetFromSales, nodeName, group_state,
+                                                  group.has_gpmaint_control(cmode));
                 const Scalar orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
 
-                auto mismatch = [&] (auto well_group_thp) {
-                    Scalar well_group_rate(0.0);
+                auto mismatch = [&] (auto group_thp) {
+                    Scalar group_rate(0.0);
                     Scalar rate(0.0);
                     for (auto& well : this->well_container_) {
                         std::string well_name = well->name();
                         auto& ws = well_state.well(well_name);
                         if (group.hasWell(well_name)) {
-                            well->setDynamicThpLimit(well_group_thp);
+                            well->setDynamicThpLimit(group_thp);
                             const Well& well_ecl = this->wells_ecl_[well->indexOfWell()];
                             const auto inj_controls = Well::InjectionControls(0);
                             const auto prod_controls = well_ecl.productionControls(summary_state);
                             well->iterateWellEqWithSwitching(this->simulator_, dt, inj_controls, prod_controls, well_state, group_state, local_deferredLogger,  false, false);
                             rate = -tcalc.calcModeRateFromRates(ws.surface_rates);
-                            well_group_rate += rate;
+                            group_rate += rate;
                         }
                     }
-                    return (well_group_rate - orig_target)/orig_target;
+                    return (group_rate - orig_target)/orig_target;
                 };
 
-                Scalar min_thp, max_thp;
-                std::array<Scalar, 2> range_initial;
+                const auto upbranch = network.uptree_branch(nodeName);
+                const auto it = this->node_pressures_.find((*upbranch).uptree_node());
+                const Scalar nodal_pressure = it->second;
+                Scalar well_group_thp = nodal_pressure;
+
+                std::optional<Scalar> autochoke_thp;
+                if (auto iter = this->well_group_thp_calc_.find(nodeName); iter != this->well_group_thp_calc_.end()) {
+                    autochoke_thp = this->well_group_thp_calc_.at(nodeName);
+                }
+
                 //Find an initial bracket
-                if (!this->well_group_thp_calc_.has_value()){
+                std::array<Scalar, 2> range_initial;
+                if (!autochoke_thp.has_value()){
+                    Scalar min_thp, max_thp;
                     // Retrieve the terminal pressure of the associated root of the manifold group
                     std::string node_name =  nodeName;
                     while (!network.node(node_name).terminal_pressure().has_value()) {
                         auto branch = network.uptree_branch(node_name).value();
                         node_name = branch.uptree_node();
                     }
-
                     min_thp = network.node(node_name).terminal_pressure().value();
                     WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
                     // Narrow down the bracket
@@ -1328,56 +1337,48 @@ namespace Opm {
                     range_initial = {min_thp, max_thp};
                 }
 
-                const auto upbranch = network.uptree_branch(nodeName);
-                const auto it = this->node_pressures_.find((*upbranch).uptree_node());
-                const Scalar nodal_pressure = it->second;
-                Scalar well_group_thp = nodal_pressure;
-
-                if (!this->well_group_thp_calc_.has_value() || this->well_group_thp_calc_ > nodal_pressure) {
-                    // The bracket is based on the initial bracket or on a range based on a previous calculated common group thp
-                    std::array<Scalar, 2> range;
-                    this->well_group_thp_calc_.has_value() ? 
-                        range =  {0.9 * this->well_group_thp_calc_.value(), 1.1 * this->well_group_thp_calc_.value()} : 
-                        range = range_initial;
-
+                if (!autochoke_thp.has_value() || autochoke_thp.value() > nodal_pressure) {
+                    // The bracket is based on the initial bracket or on a range based on a previous calculated group thp
+                    std::array<Scalar, 2> range = autochoke_thp.has_value() ?
+                        std::array<Scalar, 2>{0.9 * autochoke_thp.value(), 1.1 * autochoke_thp.value()} : range_initial;
                     Scalar low, high;
                     std::optional<Scalar> approximate_solution;
                     const Scalar tolerance1 = thp_tolerance;
-                    local_deferredLogger.debug("Using brute force search to bracket the common THP");
+                    local_deferredLogger.debug("Using brute force search to bracket the group THP");
                     const bool finding_bracket = WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, range, low, high, approximate_solution, tolerance1, local_deferredLogger);
 
                     if (approximate_solution.has_value()) {
-                        this->well_group_thp_calc_ = *approximate_solution;
-                        local_deferredLogger.debug("Approximate common THP value found: "  + std::to_string(this->well_group_thp_calc_.value()));
+                        autochoke_thp = *approximate_solution;
+                        local_deferredLogger.debug("Approximate group THP value found: "  + std::to_string(autochoke_thp.value()));
                     } else if (finding_bracket) {
                         const Scalar tolerance2 = thp_tolerance;
                         const int max_iteration_solve = 100;
                         int iteration = 0;
-                        this->well_group_thp_calc_= RegulaFalsiBisection<ThrowOnError>::
+                        autochoke_thp = RegulaFalsiBisection<ThrowOnError>::
                                          solve(mismatch, low, high, max_iteration_solve, tolerance2, iteration);
                         local_deferredLogger.debug(" bracket = [" + std::to_string(low) + ", " + std::to_string(high) + "], " +
                                                    "iteration = " + std::to_string(iteration));
-                        local_deferredLogger.debug("Common THP value = " + std::to_string(this->well_group_thp_calc_.value()));
+                        local_deferredLogger.debug("Group THP value = " + std::to_string(autochoke_thp.value()));
                     } else {
-                        this->well_group_thp_calc_ = {};
-                        local_deferredLogger.debug("Common THP solve failed due to bracketing failure");
+                        autochoke_thp.reset();
+                        local_deferredLogger.debug("Group THP solve failed due to bracketing failure");
                     }
                 }
-                this->well_group_thp_calc_.has_value() ?
-                well_group_thp = std::max(this->well_group_thp_calc_.value(), nodal_pressure) : well_group_thp = nodal_pressure;
+                 if (autochoke_thp.has_value()) {
+                    well_group_thp_calc_[nodeName] = autochoke_thp.value();
+                    // Note: The node pressure of the auto-choke node is set to well_group_thp in computeNetworkPressures()
+                    // and must be larger or equal to the pressure of the uptree node of its branch.
+                    well_group_thp = std::max(autochoke_thp.value(), nodal_pressure);
+                }
 
                 for (auto& well : this->well_container_) {
                     std::string well_name = well->name();
                     if (group.hasWell(well_name)) {
-                        auto& ws = well_state.well(well_name);
-                        if (ws.production_cmode == Opm::WellProducerCMode::THP) {
-                            well->setDynamicThpLimit(well_group_thp);
-                            ws.thp = well_group_thp;
-                        }
+                        well->setDynamicThpLimit(well_group_thp);
                     }
                 }
 
-                // Use the common group THP in computeNetworkPressures
+                // Use the group THP in computeNetworkPressures().
                 group_state.update_well_group_thp(nodeName, well_group_thp);
             }
         }

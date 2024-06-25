@@ -1052,8 +1052,8 @@ bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
                   Scalar& min_thp, Scalar& max_thp)
 {
     bool bracket_found = false;
-    const int sample_number = 1000;
-    const Scalar interval = 1E5;
+    constexpr int sample_number = 1000; 
+    constexpr Scalar interval = 1E5; 
     Scalar eq_low = eq(min_thp);
     Scalar eq_high = 0.0;
     for (int i = 0; i < sample_number + 1; ++i) {

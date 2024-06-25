@@ -110,7 +110,7 @@ GroupState::update_well_group_thp(const std::string& gname, const double& thp)
 }
 
 template<class Scalar>
-double GroupState<Scalar>::
+Scalar GroupState<Scalar>::
 GroupState::well_group_thp(const std::string& gname) const 
 {
     auto group_iter = this->group_thp.find(gname);

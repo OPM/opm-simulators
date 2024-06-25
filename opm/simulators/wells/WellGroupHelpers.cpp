@@ -937,11 +937,8 @@ computeNetworkPressures(const Network::ExtNetwork& network,
                 } else {
                     // Table number specified as 9999 in the deck, no pressure loss.
                     if (network.node(node).as_choke()){
-                        // Node pressure is set to the common THP of the wells.
-                        // The choke pressure must be non-negative therefore the node pressure of 
-                        // the auto-choke node must be larger or equal to the pressure of the uptree node of its branch 
-                        const auto group_thp = group_state.well_group_thp(node);
-                        node_pressures[node] = group_thp >= up_press ? group_thp : up_press;
+                        // Node pressure is set to the group THP.
+                        node_pressures[node] = group_state.well_group_thp(node);
                     } else {
                             node_pressures[node] = up_press;
                     }
