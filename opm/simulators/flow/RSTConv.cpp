@@ -113,19 +113,26 @@ void RSTConv::gatherAndAccumulate(const std::vector<int>& lIdx,
     }
 }
 
-template<std::size_t Size>
-using BFV = Dune::BlockVector<Dune::FieldVector<double,Size>>;
+template<class Scalar, std::size_t Size>
+using BFV = Dune::BlockVector<Dune::FieldVector<Scalar,Size>>;
 
-#define INSTANCE(SIZE) \
-    template void RSTConv::update<BFV<SIZE>>(const BFV<SIZE>&); \
-    template void RSTConv::gatherAndAccumulate<BFV<SIZE>>(const std::vector<int>&, \
-                                                          const BFV<SIZE>&, int);
+#define INSTANTIATE(T,SIZE)                                              \
+    template void RSTConv::update(const BFV<T,SIZE>&);                   \
+    template void RSTConv::gatherAndAccumulate(const std::vector<int>&,  \
+                                               const BFV<T,SIZE>&, int);
 
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
+#define INSTANTIATE_TYPE(T) \
+    INSTANTIATE(T,1)        \
+    INSTANTIATE(T,2)        \
+    INSTANTIATE(T,3)        \
+    INSTANTIATE(T,4)        \
+    INSTANTIATE(T,5)        \
+    INSTANTIATE(T,6)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm

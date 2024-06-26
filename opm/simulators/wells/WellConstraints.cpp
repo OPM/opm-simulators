@@ -295,4 +295,8 @@ activeProductionConstraint(const SingleWellState<Scalar>& ws,
 
 template class WellConstraints<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class WellConstraints<float>;
+#endif
+
 } // namespace Opm

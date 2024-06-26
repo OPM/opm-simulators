@@ -341,6 +341,13 @@ zeroGroupRateTarget(const SummaryState& summary_state,
     }
 }
 
-template class WellInterfaceFluidSystem<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
+template<class Scalar>
+using FS = BlackOilFluidSystem<Scalar,BlackOilDefaultIndexTraits>;
+
+template class WellInterfaceFluidSystem<FS<double>>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class WellInterfaceFluidSystem<FS<float>>;
+#endif
 
 } // namespace Opm

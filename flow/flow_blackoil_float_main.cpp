@@ -1,5 +1,5 @@
 /*
-  Copyright 2019, 2020 SINTEF Digital, Mathematics and Cybernetics.
+  Copyright 2020, NORCE AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -16,13 +16,23 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <config.h>
 
-#include "config.h"
+#include <opm/simulators/flow/Main.hpp>
+#include <flow/flow_blackoil.hpp>
 
-#include <opm/simulators/linalg/FlexibleSolver_impl.hpp>
+namespace Opm::Properties {
 
-INSTANTIATE_FLEXIBLESOLVER(double,2);
+template<class TypeTag>
+struct Scalar<TypeTag, TTag::FlowProblemTPFA> {
+    using type = float;
+};
 
-#if FLOW_INSTANTIATE_FLOAT
-INSTANTIATE_FLEXIBLESOLVER(float,2);
-#endif
+}
+
+int main(int argc, char** argv)
+{
+    using TypeTag = Opm::Properties::TTag::FlowProblemTPFA;
+    auto mainObject = Opm::Main(argc, argv);
+    return mainObject.runStatic<TypeTag>();
+}

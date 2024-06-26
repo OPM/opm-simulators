@@ -604,4 +604,8 @@ guideRateUpdateIsNeeded(const int reportStepIdx) const
 
 template class BlackoilWellModelGuideRates<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class BlackoilWellModelGuideRates<float>;
+#endif
+
 } // namespace Opm

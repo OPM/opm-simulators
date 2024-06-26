@@ -1788,7 +1788,7 @@ private:
                 this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumTrapped][globalDofIdx] = imMobileMassGas;
             }
             if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped].empty()) {
-                const Scalar mobileMassGas = massGas * std::max(0.0, sg - trappedGasSaturation);
+                const Scalar mobileMassGas = massGas * std::max(Scalar{0.0}, sg - trappedGasSaturation);
                 this->fip_[Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped][globalDofIdx] = mobileMassGas;
             }
         }
@@ -1806,7 +1806,7 @@ private:
                 this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveTrapped][globalDofIdx] = imMobileMassGas;
             }
             if (!this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped].empty()) {
-                const Scalar mobileMassGas = massGas * std::max(0.0, sg - trappedGasSaturation);
+                const Scalar mobileMassGas = massGas * std::max(Scalar{0.0}, sg - trappedGasSaturation);
                 this->fip_[Inplace::Phase::CO2MassInGasPhaseEffectiveUnTrapped][globalDofIdx] = mobileMassGas;
             }
         }

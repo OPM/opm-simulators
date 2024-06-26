@@ -142,4 +142,8 @@ updateInjFCMult(const WellInterfaceGeneric<Scalar>& well,
 
 template class WellFilterCake<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class WellFilterCake<float>;
+#endif
+
 } // namespace Opm
