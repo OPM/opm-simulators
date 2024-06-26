@@ -1,6 +1,6 @@
 # Configuration file for the Sphinx documentation builder.
 
-project = "opm.simulators"
+project = "OPM Python Documentation"
 copyright = "2024 Equinor ASA"
 author = "Håkon Hægland"
 
@@ -36,7 +36,8 @@ sys.path.insert(0, os.path.abspath("../src"))
 # Our sphinx extension that will use the docstrings.json file to generate documentation
 extensions = ["opm_simulators_docs.sphinx_ext_docstrings"]
 # Path to docstrings.json
-opm_simulators_docstrings_path = os.path.abspath('../../docstrings.json')
+opm_simulators_docstrings_path = os.path.abspath('../../docstrings_simulators.json')
+opm_common_docstrings_path = os.path.abspath('../../docstrings_common.json')
 
 templates_path = ["_templates"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
