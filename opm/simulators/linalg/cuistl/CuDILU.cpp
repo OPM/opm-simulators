@@ -128,7 +128,7 @@ CuDILU<M, X, Y, l>::CuDILU(const M& A, bool split_matrix)
     , m_gpuNaturalToReorder(m_naturalToReordered)
     , m_gpuReorderToNatural(m_reorderedToNatural)
     , m_gpuDInv(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
-    , m_split_matrix(split_matrix)
+    , m_splitMatrix(split_matrix)
 
 {
     // TODO: Should in some way verify that this matrix is symmetric, only do it debug mode?
@@ -147,7 +147,7 @@ CuDILU<M, X, Y, l>::CuDILU(const M& A, bool split_matrix)
                  fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
                              m_gpuMatrix.nonzeroes(),
                              A.nonzeroes()));
-    if (m_split_matrix) {
+    if (m_splitMatrix) {
         m_gpuMatrixReorderedDiag.reset(new auto(CuVector<field_type>(blocksize_ * blocksize_ * m_cpuMatrix.N())));
         extractLowerAndUpperMatrices<M, field_type, CuSparseMatrix<field_type>>(
             m_cpuMatrix, m_reorderedToNatural, m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper);
@@ -170,11 +170,10 @@ CuDILU<M, X, Y, l>::apply(X& v, const Y& d)
 {
     OPM_TIMEBLOCK(prec_apply);
     {
-        // ScopedTimer timer("apply", apply_time);
         int levelStartIdx = 0;
         for (int level = 0; level < m_levelSets.size(); ++level) {
             const int numOfRowsInLevel = m_levelSets[level].size();
-            if (m_split_matrix) {
+            if (m_splitMatrix) {
                 detail::computeLowerSolveLevelSetSplit<field_type, blocksize_>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
                     m_gpuMatrixReorderedLower->getRowIndices().data(),
@@ -205,7 +204,7 @@ CuDILU<M, X, Y, l>::apply(X& v, const Y& d)
         for (int level = m_levelSets.size() - 1; level >= 0; --level) {
             const int numOfRowsInLevel = m_levelSets[level].size();
             levelStartIdx -= numOfRowsInLevel;
-            if (m_split_matrix) {
+            if (m_splitMatrix) {
                 detail::computeUpperSolveLevelSetSplit<field_type, blocksize_>(
                     m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
                     m_gpuMatrixReorderedUpper->getRowIndices().data(),
@@ -260,7 +259,7 @@ CuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData()
 {
     OPM_TIMEBLOCK(prec_update);
     {
-        if (m_split_matrix) {
+        if (m_splitMatrix) {
             detail::copyMatDataToReorderedSplit<field_type, blocksize_>(
                 m_gpuMatrix.getNonZeroValues().data(),
                 m_gpuMatrix.getRowIndices().data(),
@@ -284,7 +283,7 @@ CuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData()
         int levelStartIdx = 0;
         for (int level = 0; level < m_levelSets.size(); ++level) {
             const int numOfRowsInLevel = m_levelSets[level].size();
-            if (m_split_matrix) {
+            if (m_splitMatrix) {
                 detail::computeDiluDiagonalSplit<field_type, blocksize_>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
                     m_gpuMatrixReorderedLower->getRowIndices().data(),

@@ -129,7 +129,7 @@ private:
     //! \brief Stores the inverted diagonal that we use in DILU
     CuVector<field_type> m_gpuDInv;
     //! \brief Bool storing whether or not we should store matrices in a split format
-    bool m_split_matrix;
+    bool m_splitMatrix;
 };
 } // end namespace Opm::cuistl
 
