@@ -482,24 +482,30 @@ public:
 
     void beginRestart()
     {
-        bool enableHysteresis = simulator_.problem().materialLawManager()->enableHysteresis();
+        bool enablePCHysteresis = simulator_.problem().materialLawManager()->enablePCHysteresis();
+        bool enableNonWettingHysteresis = simulator_.problem().materialLawManager()->enableNonWettingHysteresis();
+        bool enableWettingHysteresis = simulator_.problem().materialLawManager()->enableWettingHysteresis();
+        bool oilActive = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+        bool gasActive = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+        bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
         bool enableSwatinit = simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT");
         bool opm_rst_file = Parameters::get<TypeTag, Properties::EnableOpmRstFile>();
         bool read_temp = enableEnergy || (opm_rst_file && enableTemperature);
         std::vector<RestartKey> solutionKeys{
             {"PRESSURE", UnitSystem::measure::pressure},
-            {"SWAT", UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))},
-            {"SGAS", UnitSystem::measure::identity, static_cast<bool>(FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx))},
+            {"SWAT", UnitSystem::measure::identity, static_cast<bool>(waterActive)},
+            {"SGAS", UnitSystem::measure::identity, static_cast<bool>(gasActive)},
             {"TEMP" , UnitSystem::measure::temperature, read_temp},
             {"SSOLVENT" , UnitSystem::measure::identity, enableSolvent},
             {"RS", UnitSystem::measure::gas_oil_ratio, FluidSystem::enableDissolvedGas()},
             {"RV", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedOil()},
             {"RVW", UnitSystem::measure::oil_gas_ratio, FluidSystem::enableVaporizedWater()},
-            {"SOMAX", UnitSystem::measure::identity, simulator_.problem().vapparsActive(simulator_.episodeIndex())},
-            {"PCSWM_OW", UnitSystem::measure::identity, enableHysteresis},
-            {"KRNSW_OW", UnitSystem::measure::identity, enableHysteresis},
-            {"PCSWM_GO", UnitSystem::measure::identity, enableHysteresis},
-            {"KRNSW_GO", UnitSystem::measure::identity, enableHysteresis},
+            {"SGMAX", UnitSystem::measure::identity, (enableNonWettingHysteresis && oilActive && gasActive)},
+            {"SHMAX", UnitSystem::measure::identity, (enableWettingHysteresis && oilActive && gasActive)},
+            {"SOMAX", UnitSystem::measure::identity, (enableNonWettingHysteresis && oilActive && waterActive) || simulator_.problem().vapparsActive(simulator_.episodeIndex())},
+            {"SOMIN", UnitSystem::measure::identity, (enablePCHysteresis && oilActive && gasActive)},
+            {"SWHY1", UnitSystem::measure::identity, (enablePCHysteresis && oilActive && waterActive)},
+            {"SWMAX", UnitSystem::measure::identity, (enableWettingHysteresis && oilActive && waterActive)},
             {"PPCW", UnitSystem::measure::pressure, enableSwatinit}
         };
 

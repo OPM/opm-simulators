@@ -492,8 +492,12 @@ assignToSolution(data::Solution& sol)
         DataEntry{"RV",       UnitSystem::measure::oil_gas_ratio,                         rv_},
         DataEntry{"RVSAT",    UnitSystem::measure::oil_gas_ratio,                         oilVaporizationFactor_},
         DataEntry{"SALT",     UnitSystem::measure::salinity,                              cSalt_},
-        DataEntry{"SOMAX",    UnitSystem::measure::identity,                              soMax_},
+        DataEntry{"SGMAX",    UnitSystem::measure::identity,                              sgmax_},
+        DataEntry{"SHMAX",    UnitSystem::measure::identity,                              shmax_},
+        DataEntry{"SOMAX",    UnitSystem::measure::identity,                              soMax_},                    
+        DataEntry{"SOMIN",    UnitSystem::measure::identity,                              somin_},
         DataEntry{"SSOLVENT", UnitSystem::measure::identity,                              sSol_},
+        DataEntry{"SWHY1",    UnitSystem::measure::identity,                              swmin_},
         DataEntry{"SWMAX",    UnitSystem::measure::identity,                              swMax_},
         DataEntry{"WATKR",    UnitSystem::measure::identity,                              relativePermeability_[waterPhaseIdx]},
         DataEntry{"WAT_DEN",  UnitSystem::measure::density,                               density_[waterPhaseIdx]},
@@ -544,13 +548,9 @@ assignToSolution(data::Solution& sol)
         DataEntry{"DISPY",    UnitSystem::measure::length,             dispY_},
         DataEntry{"DISPZ",    UnitSystem::measure::length,             dispZ_},
         DataEntry{"DRSDTCON", UnitSystem::measure::gas_oil_ratio_rate, drsdtcon_},
-        DataEntry{"KRNSW_GO", UnitSystem::measure::identity,           krnSwMdcGo_},
-        DataEntry{"KRNSW_OW", UnitSystem::measure::identity,           krnSwMdcOw_},
         DataEntry{"MECHPOTF", UnitSystem::measure::pressure,           mechPotentialForce_},
         DataEntry{"MICROBES", UnitSystem::measure::density,            cMicrobes_},
         DataEntry{"OXYGEN",   UnitSystem::measure::density,            cOxygen_},
-        DataEntry{"PCSWM_GO", UnitSystem::measure::identity,           pcSwMdcGo_},
-        DataEntry{"PCSWM_OW", UnitSystem::measure::identity,           pcSwMdcOw_},
         DataEntry{"PERMFACT", UnitSystem::measure::identity,           permFact_},
         DataEntry{"PORV_RC",  UnitSystem::measure::identity,           rockCompPorvMultiplier_},
         DataEntry{"PRESPOTF", UnitSystem::measure::pressure,           mechPotentialPressForce_},
@@ -786,12 +786,8 @@ setRestart(const data::Solution& sol,
         std::pair{"BIOFILM",  &cBiofilm_},
         std::pair{"CALCITE",  &cCalcite_},
         std::pair{"FOAM",     &cFoam_},
-        std::pair{"KRNSW_GO", &krnSwMdcGo_},
-        std::pair{"KRNSW_OW", &krnSwMdcOw_},
         std::pair{"MICROBES", &cMicrobes_},
         std::pair{"OXYGEN",   &cOxygen_},
-        std::pair{"PCSWM_GO", &pcSwMdcGo_},
-        std::pair{"PCSWM_OW", &pcSwMdcOw_},
         std::pair{"PERMFACT", &permFact_},
         std::pair{"POLYMER",  &cPolymer_},
         std::pair{"PPCW",     &ppcw_},
@@ -802,7 +798,12 @@ setRestart(const data::Solution& sol,
         std::pair{"RVW",      &rvw_},
         std::pair{"SALT",     &cSalt_},
         std::pair{"SALTP",    &pSalt_},
+        std::pair{"SGMAX",    &sgmax_},
+        std::pair{"SHMAX",    &shmax_},
         std::pair{"SOMAX",    &soMax_},
+        std::pair{"SOMIN",    &somin_},
+        std::pair{"SWHY1",    &swmin_},
+        std::pair{"SWMAX",    &swMax_},
         std::pair{"TEMP",     &temperature_},
         std::pair{"UREA",     &cUrea_},
     };
@@ -855,7 +856,9 @@ doAllocBuffers(const unsigned bufferSize,
                const bool     log,
                const bool     isRestart,
                const bool     vapparsActive,
-               const bool     enableHysteresis,
+               const bool     enablePCHysteresis,
+               const bool     enableNonWettingHysteresis,
+               const bool     enableWettingHysteresis,
                const unsigned numTracers,
                const std::vector<bool>& enableSolTracers,
                const unsigned numOutputNnc)
@@ -1133,11 +1136,41 @@ doAllocBuffers(const unsigned bufferSize,
         soMax_.resize(bufferSize, 0.0);
     }
 
-    if (enableHysteresis) {
-        pcSwMdcOw_.resize(bufferSize, 0.0);
-        krnSwMdcOw_.resize(bufferSize, 0.0);
-        pcSwMdcGo_.resize(bufferSize, 0.0);
-        krnSwMdcGo_.resize(bufferSize, 0.0);
+    if (enableNonWettingHysteresis) {
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)){
+            if (FluidSystem::phaseIsActive(waterPhaseIdx)){
+                soMax_.resize(bufferSize, 0.0);
+            }
+            if (FluidSystem::phaseIsActive(gasPhaseIdx)){
+                sgmax_.resize(bufferSize, 0.0);
+            }
+        } else {
+            //TODO add support for gas-water 
+        }
+    }
+    if (enableWettingHysteresis) {
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)){
+            if (FluidSystem::phaseIsActive(waterPhaseIdx)){
+                swMax_.resize(bufferSize, 0.0);
+            }
+            if (FluidSystem::phaseIsActive(gasPhaseIdx)){
+                shmax_.resize(bufferSize, 0.0);
+            }
+        } else {
+            //TODO add support for gas-water 
+        }
+    }
+    if (enablePCHysteresis) {
+        if (FluidSystem::phaseIsActive(oilPhaseIdx)){
+            if (FluidSystem::phaseIsActive(waterPhaseIdx)){
+                swmin_.resize(bufferSize, 0.0);
+            }
+            if (FluidSystem::phaseIsActive(gasPhaseIdx)){
+                somin_.resize(bufferSize, 0.0);
+            }
+        } else {
+            //TODO add support for gas-water 
+        }
     }
 
     if (eclState_.fieldProps().has_double("SWATINIT")) {
