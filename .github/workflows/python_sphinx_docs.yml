@@ -11,6 +11,8 @@ on:
         paths:
           - 'python/**'
           - '.github/workflows/python_sphinx_docs.yml'
+    repository_dispatch:
+      types: [docstrings_common_updated]
 permissions:
     contents: write
 jobs:
@@ -21,6 +23,9 @@ jobs:
           uses: actions/checkout@v4
           with:
             fetch-depth: 0   # Fetch all history for all tags and branches
+        - name: Get docstrings_common.json from opm-common
+          run: |
+            curl -L -o python/docstrings_common.json https://raw.githubusercontent.com/${{ github.repository_owner }}/opm-common/master/python/docstrings_common.json
         - name: Set up Python
           uses: actions/setup-python@v5
           with:
@@ -46,7 +51,6 @@ jobs:
           run: |
             cp -r python/sphinx_docs/docs/_build/* python/gh-pages/
         - name: Deploy documentation
-          if: ${{ github.event_name == 'push' }}
           uses: JamesIves/github-pages-deploy-action@v4
           with:
             branch: gh-pages

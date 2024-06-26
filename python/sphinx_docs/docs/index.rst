@@ -1,13 +1,15 @@
-Welcome to the Python documentation for opm-simulators!
-=======================================================
+Welcome to the Python documentation for OPM Flow!
+=================================================
 
 .. toctree::
     :maxdepth: 1
     :caption: Contents:
 
     introduction
-    python
-
+    common
+    simulators
+    embedded
+    
 Indices and tables
 ==================
 
