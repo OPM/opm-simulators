@@ -115,12 +115,13 @@ private:
     std::vector<int> m_naturalToReordered;
     //! \brief The A matrix stored on the gpu, and its reordred version
     CuMat m_gpuMatrix;
+    //! \brief Stores the matrix in its entirety reordered. Optional in case splitting is used
     std::unique_ptr<CuMat> m_gpuMatrixReordered;
     //! \brief If matrix splitting is enabled, then we store the lower and upper part separately
     std::unique_ptr<CuMat> m_gpuMatrixReorderedLower;
     std::unique_ptr<CuMat> m_gpuMatrixReorderedUpper;
     //! \brief If matrix splitting is enabled, we also store the diagonal separately
-    std::optional<CuVector<field_type>> m_gpuMatrixReorderedDiag;
+    std::unique_ptr<CuVector<field_type>> m_gpuMatrixReorderedDiag;
     //! row conversion from natural to reordered matrix indices stored on the GPU
     CuVector<int> m_gpuNaturalToReorder;
     //! row conversion from reordered to natural matrix indices stored on the GPU

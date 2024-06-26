@@ -78,7 +78,7 @@ createReorderedMatrix(const M& naturalMatrix,
         }
     }
 
-    reorderedGpuMat.reset(new auto(Opm::cuistl::CuSparseMatrix<field_type>::fromMatrix(reorderedMatrix, true)));
+    reorderedGpuMat.reset(new auto (GPUM::fromMatrix(reorderedMatrix, true)));
 }
 
 template <class M, class field_type, class GPUM>
@@ -108,8 +108,8 @@ extractLowerAndUpperMatrices(const M& naturalMatrix,
         }
     }
 
-    lower.reset(new auto(Opm::cuistl::CuSparseMatrix<field_type>::fromMatrix(reorderedLower, true)));
-    upper.reset(new auto(Opm::cuistl::CuSparseMatrix<field_type>::fromMatrix(reorderedUpper, true)));
+    lower.reset(new auto (GPUM::fromMatrix(reorderedLower, true)));
+    upper.reset(new auto (GPUM::fromMatrix(reorderedUpper, true)));
     return;
 }
 
@@ -125,9 +125,6 @@ CuDILU<M, X, Y, l>::CuDILU(const M& A, bool split_matrix)
     , m_reorderedToNatural(createReorderedToNatural(m_levelSets))
     , m_naturalToReordered(createNaturalToReordered(m_levelSets))
     , m_gpuMatrix(CuSparseMatrix<field_type>::fromMatrix(m_cpuMatrix, true))
-    , m_gpuMatrixReordered(nullptr)
-    , m_gpuMatrixReorderedLower(nullptr)
-    , m_gpuMatrixReorderedUpper(nullptr)
     , m_gpuNaturalToReorder(m_naturalToReordered)
     , m_gpuReorderToNatural(m_reorderedToNatural)
     , m_gpuDInv(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
@@ -151,7 +148,7 @@ CuDILU<M, X, Y, l>::CuDILU(const M& A, bool split_matrix)
                              m_gpuMatrix.nonzeroes(),
                              A.nonzeroes()));
     if (m_split_matrix) {
-        m_gpuMatrixReorderedDiag.emplace(CuVector<field_type>(blocksize_ * blocksize_ * m_cpuMatrix.N()));
+        m_gpuMatrixReorderedDiag.reset(new auto(CuVector<field_type>(blocksize_ * blocksize_ * m_cpuMatrix.N())));
         extractLowerAndUpperMatrices<M, field_type, CuSparseMatrix<field_type>>(
             m_cpuMatrix, m_reorderedToNatural, m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper);
     } else {
@@ -272,7 +269,7 @@ CuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData()
                 m_gpuMatrixReorderedLower->getRowIndices().data(),
                 m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
                 m_gpuMatrixReorderedUpper->getRowIndices().data(),
-                m_gpuMatrixReorderedDiag.value().data(),
+                m_gpuMatrixReorderedDiag->data(),
                 m_gpuNaturalToReorder.data(),
                 m_gpuMatrixReorderedLower->N());
         } else {
@@ -295,7 +292,7 @@ CuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData()
                     m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
                     m_gpuMatrixReorderedUpper->getRowIndices().data(),
                     m_gpuMatrixReorderedUpper->getColumnIndices().data(),
-                    m_gpuMatrixReorderedDiag.value().data(),
+                    m_gpuMatrixReorderedDiag->data(),
                     m_gpuReorderToNatural.data(),
                     m_gpuNaturalToReorder.data(),
                     levelStartIdx,
