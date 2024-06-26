@@ -92,7 +92,7 @@ namespace Opm {
         this->alternative_well_rate_init_ =
             Parameters::get<TypeTag, Properties::AlternativeWellRateInit>();
 
-        using SourceDataSpan = 
+        using SourceDataSpan =
             typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
         this->wbpCalculationService_
             .localCellIndex([this](const std::size_t globalIndex)
@@ -2191,7 +2191,7 @@ namespace Opm {
                                              this->groupState(),
                                              this->wellState(),
                                              deferred_logger);
-        
+
         if (changed_individual) {
             changed = true;
             updateAndCommunicate(reportStepIdx, iterationIdx, deferred_logger);
@@ -2229,7 +2229,7 @@ namespace Opm {
             if (!this->wasDynamicallyShutThisTimeStep(to.second)) {
                 wellTestState.close_well(to.second, WellTestConfig::Reason::GROUP, simulationTime);
                 this->updateClosedWellsThisStep(to.second);
-                const std::string msg = 
+                const std::string msg =
                     fmt::format("Procedure on exceeding {} limit is WELL for group {}. Well {} is {}.",
                                 to.first,
                                 group_name,
@@ -2569,14 +2569,18 @@ namespace Opm {
         const int nw = this->numLocalWells();
         for (auto wellID = 0*nw; wellID < nw; ++wellID) {
             const Well& well = this->wells_ecl_[wellID];
-            if (well.isInjector())
-                continue;
+            auto& ws = this->wellState().well(wellID);
+            if (well.isInjector()){
+                if( !(ws.status == WellStatus::STOP)){
+                    this->wellState().well(wellID).temperature = well.temperature();
+                    continue;
+                }
+            }
 
             std::array<Scalar,2> weighted{0.0,0.0};
             auto& [weighted_temperature, total_weight] = weighted;
 
             auto& well_info = this->local_parallel_well_info_[wellID].get();
-            auto& ws = this->wellState().well(wellID);
             auto& perf_data = ws.perf_data;
             auto& perf_phase_rate = perf_data.phase_rates;
 
@@ -2601,6 +2605,8 @@ namespace Opm {
                     perfPhaseRate = perf_phase_rate[ perf*np + phaseIdx ];
                     weight_factor += cellDensity  * perfPhaseRate/cellBinv * cellInternalEnergy/cellTemperatures;
                 }
+                //NB hack better method in progress
+                weight_factor = std::abs(weightfactor)+1e-13;
                 total_weight += weight_factor;
                 weighted_temperature += weight_factor * cellTemperatures;
             }
