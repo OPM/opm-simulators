@@ -129,7 +129,7 @@ namespace Opm {
 
 template<class Scalar>
 WellState<Scalar>::WellState(const ParallelWellInfo<Scalar>& pinfo)
-    : phase_usage_{}
+    : phase_usage_{{BlackoilPhases::Aqua, BlackoilPhases::Liquid}}
 {
     wells_.add("test4",
                SingleWellState<Scalar>{"dummy", pinfo, false, 0.0, {}, phase_usage_, 0.0});
