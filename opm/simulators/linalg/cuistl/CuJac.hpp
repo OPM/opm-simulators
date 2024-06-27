@@ -93,6 +93,10 @@ public:
         return false;
     }
 
+    virtual bool hasPerfectUpdate() const override {
+        return true;
+    }
+
 
 private:
     //! \brief Reference to the underlying matrix

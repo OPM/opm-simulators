@@ -162,6 +162,10 @@ public:
         return SolverCategory::sequential;
     }
 
+    virtual bool hasPerfectUpdate() const override {
+        return true;
+    }
+
 private:
     //! \brief The matrix we operate on.
     const M& A_;

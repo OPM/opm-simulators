@@ -495,6 +495,13 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if (!flexibleSolver_[activeSolverNum_].solver_) {
                 return true;
             }
+
+            if (flexibleSolver_[activeSolverNum_].pre_->hasPerfectUpdate()) {
+                return false;
+            }
+
+            // For AMG based preconditioners, the hierarchy depends on the matrix values
+            // so it is recreated at certain intervals
             if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 0) {
                 // Always recreate solver.
                 return true;
@@ -509,7 +516,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 return this->iterations() > 10;
             }
             if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 3) {
-                // Recreate solver if the last solve used more than 10 iterations.
+                // Never recreate the solver
                 return false;
             }
             if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 4) {
@@ -518,7 +525,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 const bool create = ((solveCount_ % step) == 0);
                 return create;
             }
-
             // If here, we have an invalid parameter.
             const bool on_io_rank = (simulator_.gridView().comm().rank() == 0);
             std::string msg = "Invalid value: " + std::to_string(this->parameters_[activeSolverNum_].cpr_reuse_setup_)
@@ -528,7 +534,6 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             }
             throw std::runtime_error(msg);
 
-            // Never reached.
             return false;
         }
 

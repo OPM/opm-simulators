@@ -110,6 +110,10 @@ public:
         return false;
     }
 
+    virtual bool hasPerfectUpdate() const override {
+        return false;
+    }
+
 
 private:
     const SpMatrixFloat& m_matrix;

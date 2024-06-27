@@ -189,6 +189,10 @@ public:
         m_underlyingPreconditioner = conditioner;
     }
 
+    virtual bool hasPerfectUpdate() const override {
+        return m_underlyingPreconditioner->hasPerfectUpdate();
+    }
+
 
 private:
     void updateMatrix()
