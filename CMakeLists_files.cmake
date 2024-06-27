@@ -38,9 +38,8 @@ macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
     string(REPLACE ".cu" ".hip" HIP_SOURCE_FILE ${FILE})
     set (hip_file_path "${PROJECT_BINARY_DIR}/${DIR}/hipistl/${HIP_SOURCE_FILE}")
     file(RELATIVE_PATH relpath ${PROJECT_SOURCE_DIR} ${hip_file_path})
-    execute_process(COMMAND bash "${PROJECT_SOURCE_DIR}/bin/hipify_file.sh" ${cuda_file_path} ${hip_file_path})
 
-    # add a custom command that will hipify again if the cuda code it depends on changes
+    # add a custom command that will hipify
     add_custom_command(
         OUTPUT ${hip_file_path}
         COMMAND bash "${PROJECT_SOURCE_DIR}/bin/hipify_file.sh" ${cuda_file_path} ${hip_file_path}
