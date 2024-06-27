@@ -28,6 +28,7 @@
 #include <opm/simulators/linalg/hipistl/CuSeqILU0.hpp>
 #include <opm/simulators/linalg/hipistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/hipistl/PreconditionerConvertFieldTypeAdapter.hpp>
+#include <opm/simulators/linalg/hipistl/detail/cuda_safe_call.hpp>
 #else
 #include <opm/simulators/linalg/cuistl/CuBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/cuistl/CuDILU.hpp>
@@ -35,5 +36,6 @@
 #include <opm/simulators/linalg/cuistl/CuSeqILU0.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerConvertFieldTypeAdapter.hpp>
+#include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #endif
 #endif

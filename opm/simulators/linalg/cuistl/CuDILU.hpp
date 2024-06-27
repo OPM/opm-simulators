@@ -27,7 +27,9 @@
 #include <opm/simulators/linalg/cuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuSparseResource.hpp>
+#include <optional>
 #include <vector>
+#include <memory>
 
 
 
@@ -55,6 +57,8 @@ public:
     using range_type = Y;
     //! \brief The field type of the preconditioner.
     using field_type = typename X::field_type;
+    //! \brief The GPU matrix type
+    using CuMat = CuSparseMatrix<field_type>;
 
     //! \brief Constructor.
     //!
@@ -62,7 +66,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    explicit CuDILU(const M& A);
+    explicit CuDILU(const M& A, bool split_matrix = true);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -80,6 +84,9 @@ public:
 
     //! \brief Updates the matrix data.
     void update() final;
+
+    //! \brief Compute the diagonal of the DILU, and update the data of the reordered matrix
+    void computeDiagAndMoveReorderedData();
 
 
     //! \returns false
@@ -107,14 +114,22 @@ private:
     //! \brief converts from index in natural ordered structure to index reordered strucutre
     std::vector<int> m_naturalToReordered;
     //! \brief The A matrix stored on the gpu, and its reordred version
-    CuSparseMatrix<field_type> m_gpuMatrix;
-    CuSparseMatrix<field_type> m_gpuMatrixReordered;
+    CuMat m_gpuMatrix;
+    //! \brief Stores the matrix in its entirety reordered. Optional in case splitting is used
+    std::unique_ptr<CuMat> m_gpuMatrixReordered;
+    //! \brief If matrix splitting is enabled, then we store the lower and upper part separately
+    std::unique_ptr<CuMat> m_gpuMatrixReorderedLower;
+    std::unique_ptr<CuMat> m_gpuMatrixReorderedUpper;
+    //! \brief If matrix splitting is enabled, we also store the diagonal separately
+    std::unique_ptr<CuVector<field_type>> m_gpuMatrixReorderedDiag;
     //! row conversion from natural to reordered matrix indices stored on the GPU
     CuVector<int> m_gpuNaturalToReorder;
     //! row conversion from reordered to natural matrix indices stored on the GPU
     CuVector<int> m_gpuReorderToNatural;
     //! \brief Stores the inverted diagonal that we use in DILU
     CuVector<field_type> m_gpuDInv;
+    //! \brief Bool storing whether or not we should store matrices in a split format
+    bool m_splitMatrix;
 };
 } // end namespace Opm::cuistl
 

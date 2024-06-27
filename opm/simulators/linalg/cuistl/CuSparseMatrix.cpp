@@ -27,6 +27,7 @@
 #include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_wrapper.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
+#include <type_traits>
 
 namespace Opm::cuistl
 {
@@ -97,7 +98,22 @@ CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix, bool copyNonZeroElements
 
     rowIndices.push_back(0);
 
-    const size_t blockSize = matrix[0][0].N();
+    // We must find the pointer to the first element in the matrix
+    // Iterate until we find an element, we can get the blocksize from the element
+    // TODO: Can this be done more cleanly in the DUNE api to access the raw data more directly?
+    constexpr size_t blockSizeTmp = MatrixType::block_type::rows;
+    T* nonZeroElementsTmp = nullptr;
+    for (auto rowIt = matrix.begin(); rowIt != matrix.end(); ++rowIt){
+        auto colIt = rowIt->begin();
+        if (colIt != rowIt->end()){
+            nonZeroElementsTmp = const_cast<T*>(&((*colIt)[0][0]));
+            break;
+        }
+    }
+
+    OPM_ERROR_IF(nonZeroElementsTmp == nullptr, "error converting DUNE matrix to CuSparse matrix");
+
+    const size_t blockSize = blockSizeTmp;
     const size_t numberOfRows = matrix.N();
     const size_t numberOfNonzeroBlocks = matrix.nonzeroes();
 
@@ -119,7 +135,7 @@ CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix, bool copyNonZeroElements
 
 
     if (copyNonZeroElementsDirectly) {
-        const T* nonZeroElements = static_cast<const T*>(&((matrix[0][0][0][0])));
+        const T* nonZeroElements = nonZeroElementsTmp;
         return CuSparseMatrix<T>(
             nonZeroElements, rowIndices.data(), columnIndices.data(), numberOfNonzeroBlocks, blockSize, numberOfRows);
     } else {
