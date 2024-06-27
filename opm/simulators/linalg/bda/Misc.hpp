@@ -1,6 +1,7 @@
 #ifndef OPM_MISC_HPP
 #define OPM_MISC_HPP
 
+#ifdef HAVE_ROCSPARSE
 #include <hip/hip_runtime_api.h>
 #include <hip/hip_version.h>
 #include <sstream>
@@ -40,6 +41,7 @@
             OPM_THROW(std::logic_error, oss.str());      \
         }                                                \
     } while(0)
+#endif
 
 namespace Opm::Accelerator {
 

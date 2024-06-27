@@ -30,11 +30,11 @@
 
 #include <sstream>
 
+#include <thread>
+extern std::shared_ptr<std::thread> copyThread;
    
 #if HAVE_OPENMP
-#include <thread>
 #include <omp.h>
-extern std::shared_ptr<std::thread> copyThread;
 #endif //HAVE_OPENMP
 
 namespace Opm::Accelerator {
@@ -193,13 +193,18 @@ template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
 copy_system_to_gpu(Scalar *d_Avals) {
     Timer t;
-    
-    if (this->useJacMatrix) {
+    bool use_multithreading = true;
+
 #if HAVE_OPENMP
-        if (omp_get_max_threads() > 1) {
-           copyThread->join();
-        }
+    if (omp_get_max_threads() == 1)
+        use_multithreading = false;
 #endif
+
+    if (this->useJacMatrix) {
+        if (use_multithreading) {
+            copyThread->join();
+        }
+
         HIP_CHECK(hipMemcpyAsync(d_Mrows, this->jacMat->rowPointers, sizeof(rocsparse_int) * (Nb + 1), hipMemcpyHostToDevice, this->stream));
         HIP_CHECK(hipMemcpyAsync(d_Mcols, this->jacMat->colIndices, sizeof(rocsparse_int) * this->nnzbs_prec, hipMemcpyHostToDevice, this->stream));
         HIP_CHECK(hipMemcpyAsync(d_Mvals, this->jacMat->nnzValues, sizeof(Scalar) * this->nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, this->stream));
@@ -220,13 +225,18 @@ template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
 update_system_on_gpu(Scalar *d_Avals) {
     Timer t;
+    bool use_multithreading = true;
+
+#if HAVE_OPENMP
+    if (omp_get_max_threads() == 1)
+        use_multithreading = false;
+#endif
 
     if (this->useJacMatrix) {
-#if HAVE_OPENMP
-        if (omp_get_max_threads() > 1) {
+        if (use_multithreading) {
            copyThread->join();
         }
-#endif
+
         HIP_CHECK(hipMemcpyAsync(d_Mvals, this->jacMat->nnzValues, sizeof(Scalar) * this->nnzbs_prec * block_size * block_size, hipMemcpyHostToDevice, this->stream));
     } else {
         HIP_CHECK(hipMemcpyAsync(d_Mvals, d_Avals, sizeof(Scalar) * nnz, hipMemcpyDeviceToDevice, this->stream));

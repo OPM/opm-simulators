@@ -31,10 +31,11 @@
 
 #include <sstream>
 
-#if HAVE_OPENMP
 #include <thread>
-#include <omp.h>
 extern std::shared_ptr<std::thread> copyThread;
+
+#if HAVE_OPENMP
+#include <omp.h>
 #endif //HAVE_OPENMP
 
 namespace Opm::Accelerator {
@@ -194,13 +195,15 @@ create_preconditioner(BlockedMatrix<Scalar>* mat, BlockedMatrix<Scalar>* jacMat)
     const unsigned int bs = block_size;
 
     auto *matToDecompose = jacMat ? jacMat : mat;
+    bool use_multithreading = true;
 
-    if (jacMat) {
 #if HAVE_OPENMP
-        if (omp_get_max_threads() > 1) {
-           copyThread->join();
-        }
+    if (omp_get_max_threads() == 1)
+        use_multithreading = false;
 #endif
+
+    if (jacMat && use_multithreading) {
+        copyThread->join();
     }
 
     // TODO: remove this copy by replacing inplace ilu decomp by out-of-place ilu decomp

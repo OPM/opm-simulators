@@ -38,10 +38,11 @@
 // otherwise, the nonzeroes of the matrix are assumed to be in a contiguous array, and a single GPU memcpy is enough
 #define COPY_ROW_BY_ROW 0
 
-#if HAVE_OPENMP
 #include <thread>
-#include <omp.h>
 extern std::shared_ptr<std::thread> copyThread;
+
+#if HAVE_OPENMP
+#include <omp.h>
 #endif // HAVE_OPENMP
 
 namespace Opm::Accelerator {
@@ -342,11 +343,17 @@ copy_system_to_gpu(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
 #else
     cudaMemcpyAsync(d_bVals, matrix->nnzValues,
                     nnz * sizeof(Scalar), cudaMemcpyHostToDevice, stream);
-    if (useJacMatrix) {
+
+    bool use_multithreading = true;
 #if HAVE_OPENMP
-	if(omp_get_max_threads() > 1)
-	   copyThread->join();
+    if(omp_get_max_threads() == 1)
+        use_multithreading = false;
 #endif
+
+    if (useJacMatrix) {
+        if(use_multithreading)
+            copyThread->join();
+
         cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues,
                         nnzbs_prec * block_size * block_size * sizeof(Scalar),
                         cudaMemcpyHostToDevice, stream);
@@ -399,12 +406,17 @@ update_system_on_gpu(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
 #else
     cudaMemcpyAsync(d_bVals, matrix->nnzValues,
                     nnz * sizeof(Scalar), cudaMemcpyHostToDevice, stream);
-    if (useJacMatrix) {
+
+    bool use_multithreading = true;
 #if HAVE_OPENMP
-        if (omp_get_max_threads() > 1) {
-           copyThread->join();
-        }
+    if (omp_get_max_threads() == 1)
+        use_multithreading = false;
 #endif
+
+    if (useJacMatrix) {
+        if (use_multithreading)
+            copyThread->join();
+
         cudaMemcpyAsync(d_mVals, jacMatrix->nnzValues, 
                         nnzbs_prec * block_size * block_size * sizeof(Scalar),
                         cudaMemcpyHostToDevice, stream);

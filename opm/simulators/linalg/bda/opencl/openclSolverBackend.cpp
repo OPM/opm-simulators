@@ -73,11 +73,11 @@ openclSolverBackend(int verbosity_,
 
     using PreconditionerType = typename Opm::Accelerator::PreconditionerType;
     if (use_cpr) {
-        prec = openclPreconditioner<Scalar,block_size>::create(PreconditionerType::CPR,verbosity,opencl_ilu_parallel);
+        prec = openclPreconditioner<Scalar, block_size>::create(PreconditionerType::CPR, verbosity, opencl_ilu_parallel);
     } else if (use_isai) {
-        prec = openclPreconditioner<Scalar,block_size>::create(PreconditionerType::BISAI,verbosity,opencl_ilu_parallel);
+        prec = openclPreconditioner<Scalar, block_size>::create(PreconditionerType::BISAI, verbosity, opencl_ilu_parallel);
     } else {
-        prec = openclPreconditioner<Scalar,block_size>::create(PreconditionerType::BILU0,verbosity,opencl_ilu_parallel);
+        prec = openclPreconditioner<Scalar, block_size>::create(PreconditionerType::BILU0, verbosity, opencl_ilu_parallel);
     }
 
     std::ostringstream out;
@@ -225,8 +225,10 @@ openclSolverBackend(int verbosity_,
 
 template<class Scalar, unsigned int block_size>
 openclSolverBackend<Scalar,block_size>::
-openclSolverBackend(int verbosity_, int maxit_,
-                    Scalar tolerance_, bool opencl_ilu_parallel_)
+openclSolverBackend(int verbosity_,
+                    int maxit_,
+                    Scalar tolerance_,
+                    bool opencl_ilu_parallel_)
     : Base(verbosity_, maxit_, tolerance_)
     , opencl_ilu_parallel(opencl_ilu_parallel_)
 {
@@ -245,7 +247,8 @@ setOpencl(std::shared_ptr<cl::Context>& context_,
 
 template<class Scalar, unsigned int block_size>
 void openclSolverBackend<Scalar,block_size>::
-gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res)
+gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
+              BdaResult& res)
 {
     float it;
     Scalar rho, rhop, beta, alpha, omega, tmp1, tmp2;
