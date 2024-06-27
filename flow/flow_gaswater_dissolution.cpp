@@ -58,6 +58,13 @@ struct EnableVapwat<TypeTag, TTag::FlowGasWaterDissolutionProblem> {
     static constexpr bool value = true;
 };
 
+// Enable Convective Mixing
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::FlowGasWaterDissolutionProblem> {
+    static constexpr bool value = true;
+};
+
+
 //! The indices required by the model
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlowGasWaterDissolutionProblem>

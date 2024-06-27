@@ -295,6 +295,7 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
                        const Scalar pg,
                        const Scalar rs,
                        const Scalar sg,
+                       const Scalar rssat,
                        const Scalar poro,
                        const Scalar permz,
                        const Scalar distZ,
@@ -305,9 +306,6 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
                        const Scalar omegainn,
                        const int pvtRegionIndex)
 {
-    const Scalar rssat = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
-        FluidSystem::waterPvt().saturatedGasDissolutionFactor(pvtRegionIndex, t, p, salt) :
-        FluidSystem::oilPvt().saturatedGasDissolutionFactor(pvtRegionIndex, t, p);
     const Scalar saturatedInvB = (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
         FluidSystem::waterPvt().inverseFormationVolumeFactor(pvtRegionIndex, t, p, rssat, salt) :
         FluidSystem::oilPvt().inverseFormationVolumeFactor(pvtRegionIndex, t, p, rssat);

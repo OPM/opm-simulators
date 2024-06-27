@@ -114,6 +114,7 @@ class BlackOilIntensiveQuantitiesGlobalIndex
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { dimWorld = GridView::dimensionworld };
     enum { compositionSwitchIdx = Indices::compositionSwitchIdx };
+    enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
 
     static constexpr bool compositionSwitchEnabled = Indices::compositionSwitchIdx >= 0;
     static constexpr bool waterEnabled = Indices::waterEnabled;
@@ -137,6 +138,7 @@ public:
                                           enableBrine,
                                           enableSaltPrecipitation,
                                           false,
+                                          enableConvectiveMixing,
                                           Indices::numPhases>;
     using Problem = GetPropType<TypeTag, Properties::Problem>;
 

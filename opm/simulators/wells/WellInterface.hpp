@@ -117,6 +117,8 @@ public:
     static constexpr bool has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>();
     static constexpr bool has_saltPrecip = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>();
     static constexpr bool has_micp = getPropValue<TypeTag, Properties::EnableMICP>();
+    static constexpr bool convective_mixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
+
 
     // For the conversion between the surface volume rate and reservoir voidage rate
     using FluidState = BlackOilFluidState<Eval,
@@ -128,6 +130,7 @@ public:
                                           has_brine,
                                           has_saltPrecip,
                                           has_disgas_in_water,
+                                          convective_mixing,
                                           Indices::numPhases >;
     /// Constructor
     WellInterface(const Well& well,

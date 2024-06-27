@@ -81,6 +81,7 @@ class EquilInitializer
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
     enum { has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
+    enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
 
 
 public:
@@ -95,6 +96,7 @@ public:
                                                 enableBrine,
                                                 enableSaltPrecipitation,
                                                 has_disgas_in_water,
+                                                enableConvectiveMixing,
                                                 Indices::numPhases>;
 
 

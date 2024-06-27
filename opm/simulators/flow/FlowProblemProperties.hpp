@@ -259,7 +259,7 @@ struct EnableDispersion<TypeTag, TTag::FlowBaseProblem> {
 // Enable Convective Mixing
 template<class TypeTag>
 struct EnableConvectiveMixing<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr bool value = true;
+    static constexpr bool value = false;
 };
 
 // only write the solutions for the report steps to disk

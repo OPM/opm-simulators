@@ -69,6 +69,8 @@ public:
     enum { enableBrine = getPropValue<TypeTag, Properties::EnableBrine>() };
     enum { enableVapwat = getPropValue<TypeTag, Properties::EnableVapwat>() };
     enum { has_disgas_in_water = getPropValue<TypeTag, Properties::EnableDisgasInWater>() };
+    enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
+
 
     enum { enableSaltPrecipitation = getPropValue<TypeTag, Properties::EnableSaltPrecipitation>() };
 
@@ -85,6 +87,7 @@ public:
                                           enableBrine,
                                           enableSaltPrecipitation,
                                           has_disgas_in_water,
+                                          enableConvectiveMixing,
                                           BlackoilIndices::numPhases>;
 
     // Constructor

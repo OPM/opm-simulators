@@ -159,22 +159,6 @@ protected:
     using WellModel = GetPropType<TypeTag, Properties::WellModel>;
     using AquiferModel = GetPropType<TypeTag, Properties::AquiferModel>;
 
-<<<<<<< HEAD
-=======
-    using SolventModule = BlackOilSolventModule<TypeTag>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag>;
-    using FoamModule = BlackOilFoamModule<TypeTag>;
-    using BrineModule = BlackOilBrineModule<TypeTag>;
-    using ExtboModule = BlackOilExtboModule<TypeTag>;
-    using MICPModule = BlackOilMICPModule<TypeTag>;
-    using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
-    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
-    using ModuleParams = typename BlackOilLocalResidualTPFA<TypeTag>::ModuleParams;
-
-    using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
-
->>>>>>> d3b290c70 (adressed minor comments by reviewer, added enableConvectiveMixing flag to drsdtcon, fixed indentation and bug in lastRs for gas/water)
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
