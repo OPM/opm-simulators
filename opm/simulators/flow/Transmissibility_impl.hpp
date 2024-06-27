@@ -1293,12 +1293,7 @@ computeHalfTrans_(Scalar& halfTrans,
     unsigned dimIdx = faceIdx/2;
     assert(dimIdx < dimWorld);
     halfTrans = perm[dimIdx][dimIdx];
-
-    Scalar val = 0;
-    for (unsigned i = 0; i < areaNormal.size(); ++i)
-        val += areaNormal[i]*distance[i];
-
-    halfTrans *= std::abs(val);
+    halfTrans *= std::abs(Dune::dot(areaNormal, distance));
     halfTrans /= distance.two_norm2();
 }
 
@@ -1310,11 +1305,7 @@ computeHalfDiffusivity_(Scalar& halfDiff,
                         const Scalar& poro) const
 {
     halfDiff = poro;
-    Scalar val = 0;
-    for (unsigned i = 0; i < areaNormal.size(); ++i)
-        val += areaNormal[i]*distance[i];
-
-    halfDiff *= std::abs(val);
+    halfDiff *= std::abs(Dune::dot(areaNormal, distance));
     halfDiff /= distance.two_norm2();
 }
 
