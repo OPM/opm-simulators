@@ -1612,6 +1612,7 @@ public:
                         throw std::logic_error("you need to specify a valid component (OIL, WATER or GAS) when DIRICHLET type is set in BC");
                         break;
                 }
+                fluidState.setTotalSaturation(1.0);
                 double pressure = initialFluidStates_[globalDofIdx].pressure(refPressurePhaseIdx_());
                 const auto pressure_input = bc.pressure;
                 if (pressure_input) {
@@ -1623,10 +1624,10 @@ public:
                 MaterialLaw::capillaryPressures(pc, matParams, fluidState);
                 Valgrind::CheckDefined(pressure);
                 Valgrind::CheckDefined(pc);
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    if (!FluidSystem::phaseIsActive(phaseIdx))
-                        continue;
+                for (unsigned activePhaseIdx = 0; activePhaseIdx < FluidSystem::numActivePhases(); ++activePhaseIdx) {
+                    const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
 
+                    fluidState.setPc(phaseIdx, pc[phaseIdx]);
                     if (Indices::oilEnabled)
                         fluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
                     else if (Indices::gasEnabled)
@@ -1652,9 +1653,8 @@ public:
                 if (FluidSystem::enableVaporizedWater())
                     fluidState.setRvw(0.0);
 
-                for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-                    if (!FluidSystem::phaseIsActive(phaseIdx))
-                        continue;
+                for (unsigned activePhaseIdx = 0; activePhaseIdx < FluidSystem::numActivePhases(); ++activePhaseIdx) {
+                    const auto phaseIdx = FluidSystem::activeToCanonicalPhaseIdx(activePhaseIdx);
 
                     const auto& b = FluidSystem::inverseFormationVolumeFactor(fluidState, phaseIdx, pvtRegionIdx);
                     fluidState.setInvB(phaseIdx, b);
