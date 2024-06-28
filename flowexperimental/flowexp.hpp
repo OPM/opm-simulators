@@ -130,36 +130,6 @@ struct LinearSolverBackend<TTag::FlowExpTypeTag, TTag::FlowIstlSolverParams> {
     using type = ISTLSolver<TTag::FlowExpTypeTag>;
 };
 
-// set fraction of the pore volume where the volumetric residual may be violated during
-// strict Newton iterations
-template<class TypeTag>
-struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::FlowExpTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.05;
-};
-
-// the tolerated amount of "incorrect" amount of oil per time step for the complete
-// reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
-// will tolerate larger residuals.
-template<class TypeTag>
-struct EclNewtonSumTolerance<TypeTag, TTag::FlowExpTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-5;
-};
-
-template<class TypeTag>
-struct EclNewtonSumToleranceExponent<TypeTag, TTag::FlowExpTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1./3.;
-};
-// make all Newton iterations strict, i.e., the volumetric Newton tolerance must be
-// always be upheld in the majority of the spatial domain. In this context, "majority"
-// means 1 - EclNewtonRelaxedVolumeFraction.
-template<class TypeTag>
-struct EclNewtonStrictIterations<TypeTag, TTag::FlowExpTypeTag> {
-    static constexpr int value = 100;
-};
-
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowExpTypeTag> {
     using type = ISTLSolver<TypeTag>;
@@ -199,13 +169,16 @@ struct NewtonMaxIterations<TypeTag, Properties::TTag::FlowExpTypeTag>
 
 } // namespace Opm::Parameters
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
 // the maximum volumetric error of a cell in the relaxed region
 template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::FlowExpTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e6*Parameters::NewtonTolerance<TypeTag, TTag::FlowExpTypeTag>::value;
+struct EclNewtonRelaxedTolerance<TypeTag, Properties::TTag::FlowExpTypeTag> {
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr auto baseValue =
+        Parameters::NewtonTolerance<TypeTag,
+                                    Properties::TTag::FlowExpTypeTag>::value;
+    static constexpr type value = 1e6 * baseValue;
 };
 
 }

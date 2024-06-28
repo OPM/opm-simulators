@@ -56,22 +56,6 @@ struct Problem<TypeTag, TTag::FlowExpProblemBlackOil>
 };
 
 template<class TypeTag>
-struct EclNewtonSumTolerance<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-5;
-};
-
-// set fraction of the pore volume where the volumetric residual may be violated during
-// strict Newton iterations
-template<class TypeTag>
-struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.0;
-};
-
-template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlowExpProblemBlackOil>
 {
     static constexpr bool value = false;
@@ -94,12 +78,40 @@ struct Simulator<TypeTag, TTag::FlowExpProblemBlackOil>
 namespace Opm::Parameters {
 
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
-{ static constexpr int value = 1; };
-
-template<class TypeTag>
 struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
 { static constexpr bool value = false; };
+
+template<class TypeTag>
+struct EclNewtonRelaxedTolerance<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr auto baseValue =
+        Parameters::NewtonTolerance<TypeTag, Properties::TTag::FlowExpProblemBlackOil>::value;
+    static constexpr type value = 10 * baseValue;
+};
+
+// set fraction of the pore volume where the volumetric residual may be violated during
+// strict Newton iterations
+template<class TypeTag>
+struct EclNewtonRelaxedVolumeFraction<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.0;
+};
+
+template<class TypeTag>
+struct EclNewtonSumTolerance<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-5;
+};
+
+template<class TypeTag>
+struct EclNewtonSumToleranceExponent<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0 / 3.0;;
+};
 
 // the default for the allowed volumetric error for oil per second
 template<class TypeTag>
@@ -109,18 +121,15 @@ struct NewtonTolerance<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
     static constexpr type value = 1e-2;
 };
 
-} // namespace Opm::Parameters
-
-namespace Opm::Properties {
+template<class TypeTag>
+struct ThreadsPerProcess<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
+{ static constexpr int value = 1; };
 
 template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 10 * Parameters::NewtonTolerance<TypeTag,TTag::FlowExpProblemBlackOil>::value;
-};
+struct EclNewtonStrictIterations<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
+{ static constexpr int value = 100; };
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 int main(int argc, char** argv)
 {

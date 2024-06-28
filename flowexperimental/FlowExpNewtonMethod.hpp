@@ -34,37 +34,22 @@
 #include <opm/models/blackoil/blackoilnewtonmethod.hh>
 #include <opm/models/utils/signum.hh>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
 template<class TypeTag, class MyTypeTag>
-struct EclNewtonSumTolerance
-{
-    using type = UndefinedProperty;
-};
+struct EclNewtonSumTolerance { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag, class MyTypeTag>
-struct EclNewtonStrictIterations
-{
-    using type = UndefinedProperty;
-};
+struct EclNewtonStrictIterations { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag, class MyTypeTag>
-struct EclNewtonRelaxedVolumeFraction
-{
-    using type = UndefinedProperty;
-};
+struct EclNewtonRelaxedVolumeFraction { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag, class MyTypeTag>
-struct EclNewtonSumToleranceExponent
-{
-    using type = UndefinedProperty;
-};
+struct EclNewtonSumToleranceExponent { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag, class MyTypeTag>
-struct EclNewtonRelaxedTolerance
-{
-    using type = UndefinedProperty;
-};
+struct EclNewtonRelaxedTolerance { using type = Properties::UndefinedProperty; };
 
 } // namespace Opm::Properties
 
@@ -104,12 +89,12 @@ public:
     explicit FlowExpNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {
         errorPvFraction_ = 1.0;
-        relaxedMaxPvFraction_ = Parameters::get<TypeTag, Properties::EclNewtonRelaxedVolumeFraction>();
+        relaxedMaxPvFraction_ = Parameters::get<TypeTag, Parameters::EclNewtonRelaxedVolumeFraction>();
 
         sumTolerance_ = 0.0; // this gets determined in the error calculation proceedure
-        relaxedTolerance_ = Parameters::get<TypeTag, Properties::EclNewtonRelaxedTolerance>();
+        relaxedTolerance_ = Parameters::get<TypeTag, Parameters::EclNewtonRelaxedTolerance>();
 
-        numStrictIterations_ = Parameters::get<TypeTag, Properties::EclNewtonStrictIterations>();
+        numStrictIterations_ = Parameters::get<TypeTag, Parameters::EclNewtonStrictIterations>();
     }
 
     /*!
@@ -119,19 +104,19 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::EclNewtonSumTolerance>
+        Parameters::registerParam<TypeTag, Parameters::EclNewtonSumTolerance>
                 ("The maximum error tolerated by the Newton "
                  "method for considering a solution to be converged");
-        Parameters::registerParam<TypeTag, Properties::EclNewtonStrictIterations>
+        Parameters::registerParam<TypeTag, Parameters::EclNewtonStrictIterations>
                  ("The number of Newton iterations where the "
                   "volumetric error is considered.");
-        Parameters::registerParam<TypeTag, Properties::EclNewtonRelaxedVolumeFraction>
+        Parameters::registerParam<TypeTag, Parameters::EclNewtonRelaxedVolumeFraction>
                   ("The fraction of the pore volume of the reservoir "
                    "where the volumetric error may be violated during strict Newton iterations.");
-        Parameters::registerParam<TypeTag, Properties::EclNewtonSumToleranceExponent>
+        Parameters::registerParam<TypeTag, Parameters::EclNewtonSumToleranceExponent>
                   ("The the exponent used to scale the sum tolerance by "
                    "the total pore volume of the reservoir.");
-        Parameters::registerParam<TypeTag, Properties::EclNewtonRelaxedTolerance>
+        Parameters::registerParam<TypeTag, Parameters::EclNewtonRelaxedTolerance>
                    ("The maximum error which the volumetric residual "
                      "may exhibit if it is in a 'relaxed' region during a strict iteration.");
     }
@@ -234,8 +219,8 @@ public:
 
         // scale the tolerance for the total error with the pore volume. by default, the
         // exponent is 1/3, i.e., cubic root.
-        Scalar x = Parameters::get<TypeTag, Properties::EclNewtonSumTolerance>();
-        Scalar y = Parameters::get<TypeTag, Properties::EclNewtonSumToleranceExponent>();
+        Scalar x = Parameters::get<TypeTag, Parameters::EclNewtonSumTolerance>();
+        Scalar y = Parameters::get<TypeTag, Parameters::EclNewtonSumToleranceExponent>();
         sumTolerance_ = x*std::pow(sumPv, y);
 
         this->endIterMsg() << " (max: " << this->tolerance_
