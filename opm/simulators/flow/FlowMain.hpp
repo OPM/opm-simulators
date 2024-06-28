@@ -183,7 +183,7 @@ namespace Opm {
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteGasFormationVolumeFactor>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteGasSaturationPressure>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteIntrinsicPermeabilities>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteTracerConcentration>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteTracerConcentration>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteExtrusionFactor>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteFilterVelocities>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteDensities>();
