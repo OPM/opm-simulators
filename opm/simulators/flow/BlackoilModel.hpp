@@ -80,10 +80,6 @@ struct FlowProblem {
 };
 }
 template<class TypeTag>
-struct OutputDir<TypeTag, TTag::FlowProblem> {
-    static constexpr auto value = "";
-};
-template<class TypeTag>
 struct EnableDebuggingChecks<TypeTag, TTag::FlowProblem> {
     static constexpr bool value = false;
 };
@@ -151,6 +147,14 @@ struct LinearSolverSplice<TypeTag, TTag::FlowProblem> {
 };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+template<class TypeTag>
+struct OutputDir<TypeTag, Properties::TTag::FlowProblem>
+{ static constexpr auto value = ""; };
+
+}
 
 namespace Opm {
 

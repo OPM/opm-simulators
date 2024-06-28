@@ -404,12 +404,6 @@ struct EclOutputDoublePrecision<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
-// The default location for the ECL output files
-template<class TypeTag>
-struct OutputDir<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr auto value = ".";
-};
-
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
 template<class TypeTag>
@@ -522,5 +516,14 @@ struct ExplicitRockCompaction<TypeTag, TTag::FlowBaseProblem> {
 };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// The default location for the ECL output files
+template<class TypeTag>
+struct OutputDir<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr auto value = "."; };
+
+} // namespace Opm::Parameters
 
 #endif // OPM_FLOW_PROBLEM_PROPERTIES_HPP

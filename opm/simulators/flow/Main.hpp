@@ -336,7 +336,7 @@ private:
         }
         else {
             deckFilename = Parameters::get<PreTypeTag, Properties::EclDeckFileName>();
-            outputDir = Parameters::get<PreTypeTag, Properties::OutputDir>();
+            outputDir = Parameters::get<PreTypeTag, Parameters::OutputDir>();
         }
 
 #if HAVE_DAMARIS
