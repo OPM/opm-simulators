@@ -418,44 +418,20 @@ opm_add_test(test_parallelwellinfo_mpi
     4
     )
 
-opm_add_test(test_parallel_wbp_sourcevalues_np2
-  EXE_NAME
-    test_parallel_wbp_sourcevalues
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 2
-    -b ${PROJECT_BINARY_DIR}
-  NO_COMPILE
-  PROCESSORS
-    2
-)
-
-opm_add_test(test_parallel_wbp_sourcevalues_np3
-  EXE_NAME
-    test_parallel_wbp_sourcevalues
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 3
-    -b ${PROJECT_BINARY_DIR}
-  NO_COMPILE
-  PROCESSORS
-    3
-)
-
-opm_add_test(test_parallel_wbp_sourcevalues_np4
-  EXE_NAME
-    test_parallel_wbp_sourcevalues
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  NO_COMPILE
-  PROCESSORS
-    4
-)
+foreach(NPROC 2 3 4)
+  opm_add_test(test_parallel_wbp_sourcevalues_np${NPROC}
+    EXE_NAME
+      test_parallel_wbp_sourcevalues
+    CONDITION
+      MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+    DRIVER_ARGS
+      -n ${NPROC}
+      -b ${PROJECT_BINARY_DIR}
+    NO_COMPILE
+    PROCESSORS
+      ${NPROC}
+  )
+endforeach()
 
 opm_add_test(test_parallel_wbp_calculation
   SOURCES
@@ -497,89 +473,37 @@ opm_add_test(test_parallel_wbp_calculation_well_openconns
     2
 )
 
-opm_add_test(test_parallel_region_phase_pvaverage_np2
-  EXE_NAME
-    test_region_phase_pvaverage
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 2
-    -b ${PROJECT_BINARY_DIR}
-  TEST_ARGS
-    --run_test=Parallel/*
-  NO_COMPILE
-  PROCESSORS
-    2
-)
+foreach(NPROC 2 3 4)
+  opm_add_test(test_parallel_region_phase_pvaverage_np${NPROC}
+    EXE_NAME
+      test_region_phase_pvaverage
+    CONDITION
+      MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+    DRIVER_ARGS
+      -n ${NPROC}
+      -b ${PROJECT_BINARY_DIR}
+    TEST_ARGS
+      --run_test=Parallel/*
+    NO_COMPILE
+    PROCESSORS
+      ${NPROC}
+  )
+endforeach()
 
-opm_add_test(test_parallel_region_phase_pvaverage_np3
-  EXE_NAME
-    test_region_phase_pvaverage
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 3
-    -b ${PROJECT_BINARY_DIR}
-  TEST_ARGS
-    --run_test=Parallel/*
-  NO_COMPILE
-  PROCESSORS
-    3
-)
-
-opm_add_test(test_parallel_region_phase_pvaverage_np4
-  EXE_NAME
-    test_region_phase_pvaverage
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  TEST_ARGS
-    --run_test=Parallel/*
-  NO_COMPILE
-  PROCESSORS
-    4
-)
-
-opm_add_test(test_parallel_satfunc_consistency_checks_np2
-  EXE_NAME
-    test_SatfuncConsistencyChecks_parallel
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 2
-    -b ${PROJECT_BINARY_DIR}
-  NO_COMPILE
-  PROCESSORS
-    2
-)
-
-opm_add_test(test_parallel_satfunc_consistency_checks_np3
-  EXE_NAME
-    test_SatfuncConsistencyChecks_parallel
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 3
-    -b ${PROJECT_BINARY_DIR}
-  NO_COMPILE
-  PROCESSORS
-    3
-)
-
-opm_add_test(test_parallel_satfunc_consistency_checks_np4
-  EXE_NAME
-    test_SatfuncConsistencyChecks_parallel
-  CONDITION
-    MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
-  DRIVER_ARGS
-    -n 4
-    -b ${PROJECT_BINARY_DIR}
-  NO_COMPILE
-  PROCESSORS
-    4
-)
+foreach(NPROC 2 3 4)
+  opm_add_test(test_parallel_satfunc_consistency_checks_np${NPROC}
+    EXE_NAME
+      test_SatfuncConsistencyChecks_parallel
+    CONDITION
+      MPI_FOUND AND Boost_UNIT_TEST_FRAMEWORK_FOUND
+    DRIVER_ARGS
+      -n ${NPROC}
+      -b ${PROJECT_BINARY_DIR}
+    NO_COMPILE
+    PROCESSORS
+      ${NPROC}
+  )
+endforeach()
 
 opm_add_test(test_broadcast
   DEPENDS "opmsimulators"
