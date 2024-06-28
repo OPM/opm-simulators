@@ -112,13 +112,6 @@ struct LinearSolverBackend<TTag::TestTypeTag, TTag::FlowIstlSolverParams> {
     using type = ISTLSolver<TTag::TestTypeTag>;
 };
 
-// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
-// relatively often)
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::TestTypeTag> {
-    static constexpr int value = 8;
-};
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -144,6 +137,12 @@ struct NewtonTolerance<TypeTag, Properties::TTag::TestTypeTag>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e-1;
 };
+
+// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
+// relatively often)
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, Properties::TTag::TestTypeTag>
+{ static constexpr int value = 8; };
 
 } // namespace Opm::Parameters
 

@@ -160,13 +160,6 @@ struct EclNewtonStrictIterations<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr int value = 100;
 };
 
-// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
-// relatively often)
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::FlowExpTypeTag> {
-    static constexpr int value = 8;
-};
-
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowExpTypeTag> {
     using type = ISTLSolver<TypeTag>;
@@ -197,6 +190,12 @@ struct NewtonTolerance<TypeTag, Properties::TTag::FlowExpTypeTag>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e-1;
 };
+
+// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
+// relatively often)
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, Properties::TTag::FlowExpTypeTag>
+{ static constexpr int value = 8; };
 
 } // namespace Opm::Parameters
 
