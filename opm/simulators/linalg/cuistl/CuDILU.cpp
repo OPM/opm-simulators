@@ -338,7 +338,6 @@ void
 CuDILU<M, X, Y, l>::tuneThreadBlockSizes()
 {
     // TODO: generalize this code and put it somewhere outside of this class
-    auto start = std::chrono::high_resolution_clock::now();
     long long bestApplyTime = __LONG_LONG_MAX__;
     long long bestUpdateTime = __LONG_LONG_MAX__;
     int bestApplyBlockSize = -1;
@@ -384,8 +383,6 @@ CuDILU<M, X, Y, l>::tuneThreadBlockSizes()
 
     m_applyThreadBlockSize = bestApplyBlockSize;
     m_updateThreadBlockSize = bestUpdateBlockSize;
-    auto end = std::chrono::high_resolution_clock::now();
-    long long durationInMicroSec = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 }
 
 } // namespace Opm::cuistl
