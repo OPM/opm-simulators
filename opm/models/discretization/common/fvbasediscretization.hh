@@ -221,14 +221,6 @@ struct UseLinearizationLock<TypeTag, TTag::FvBaseDiscretization> { static conste
 template<class TypeTag>
 struct Linearizer<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseLinearizer<TypeTag>; };
 
-//! By default, accept any time step larger than zero
-template<class TypeTag>
-struct MinTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.0;
-};
-
 //! Set the format of the VTK output to ASCII by default
 template<class TypeTag>
 struct VtkOutputFormat<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = Dune::VTK::ascii; };
@@ -343,6 +335,14 @@ struct MaxTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = std::numeric_limits<type>::infinity();
+};
+
+//! By default, accept any time step larger than zero
+template<class TypeTag>
+struct MinTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.0;
 };
 
 } // namespace Opm::Parameters

@@ -216,14 +216,6 @@ template<class TypeTag, class MyTypeTag>
 struct EnableConstraints { using type = UndefinedProperty; };
 
 /*!
- * \brief Specify the minimal size of a time integration [s].
- *
- * The default is to not limit the step size.
- */
-template<class TypeTag, class MyTypeTag>
-struct MinTimeStepSize { using type = UndefinedProperty; };
-
-/*!
  * \brief The maximum allowed number of timestep divisions for the
  *        Newton solver.
  */
