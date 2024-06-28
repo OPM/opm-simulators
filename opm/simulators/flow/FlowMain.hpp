@@ -199,9 +199,9 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Properties::VtkWriteTotalMassFractions>();
             Parameters::hideParam<TypeTag, Properties::VtkWriteTotalMoleFractions>();
 
-            Parameters::hideParam<TypeTag, Properties::VtkWriteTortuosities>();
-            Parameters::hideParam<TypeTag, Properties::VtkWriteDiffusionCoefficients>();
-            Parameters::hideParam<TypeTag, Properties::VtkWriteEffectiveDiffusionCoefficients>();
+            Parameters::hideParam<TypeTag, Parameters::VtkWriteTortuosities>();
+            Parameters::hideParam<TypeTag, Parameters::VtkWriteDiffusionCoefficients>();
+            Parameters::hideParam<TypeTag, Parameters::VtkWriteEffectiveDiffusionCoefficients>();
             
             // hide average density option
             Parameters::hideParam<TypeTag, Properties::UseAverageDensityMsWells>();
