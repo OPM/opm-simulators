@@ -39,44 +39,42 @@
 
 #include <memory>
 
-namespace Opm::Properties {
+namespace Opm::Properties::TTag {
 
-namespace TTag {
 struct FlowNonLinearSolver {};
+
 }
 
+namespace Opm::Parameters {
+
 template<class TypeTag, class MyTypeTag>
-struct NewtonMaxRelax {
-    using type = UndefinedProperty;
-};
+struct NewtonMaxRelax { using type = Properties::UndefinedProperty; };
 
 // we are reusing NewtonMaxIterations from opm-models
 // See opm/models/nonlinear/newtonmethodproperties.hh
 
 template<class TypeTag, class MyTypeTag>
-struct NewtonMinIterations{
-    using type = UndefinedProperty;
-};
+struct NewtonMinIterations { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct NewtonRelaxationType{
-    using type = UndefinedProperty;
-};
+struct NewtonRelaxationType {  using type = Properties::UndefinedProperty; };
 
 template<class TypeTag>
-struct NewtonMaxRelax<TypeTag, TTag::FlowNonLinearSolver> {
-    using type = GetPropType<TypeTag, Scalar>;
+struct NewtonMaxRelax<TypeTag, Properties::TTag::FlowNonLinearSolver>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 0.5;
 };
-template<class TypeTag>
-struct NewtonMinIterations<TypeTag, TTag::FlowNonLinearSolver> {
-    static constexpr int value = 2;
-};
-template<class TypeTag>
-struct NewtonRelaxationType<TypeTag, TTag::FlowNonLinearSolver> {
-    static constexpr auto value = "dampen";
-};
 
-} // namespace Opm::Properties
+template<class TypeTag>
+struct NewtonMinIterations<TypeTag, Properties::TTag::FlowNonLinearSolver>
+{ static constexpr int value = 2; };
+
+template<class TypeTag>
+struct NewtonRelaxationType<TypeTag, Properties::TTag::FlowNonLinearSolver>
+{ static constexpr auto value = "dampen"; };
+
+} // namespace Opm::Parameters
 
 namespace Opm::Parameters {
 
@@ -135,11 +133,11 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
                 reset();
 
                 // overload with given parameters
-                relaxMax_ = Parameters::get<TypeTag, Properties::NewtonMaxRelax>();
+                relaxMax_ = Parameters::get<TypeTag, Parameters::NewtonMaxRelax>();
                 maxIter_ = Parameters::get<TypeTag, Parameters::NewtonMaxIterations>();
-                minIter_ = Parameters::get<TypeTag, Properties::NewtonMinIterations>();
+                minIter_ = Parameters::get<TypeTag, Parameters::NewtonMinIterations>();
 
-                const auto& relaxationTypeString = Parameters::get<TypeTag, Properties::NewtonRelaxationType>();
+                const auto& relaxationTypeString = Parameters::get<TypeTag, Parameters::NewtonRelaxationType>();
                 if (relaxationTypeString == "dampen") {
                     relaxType_ = NonlinearRelaxType::Dampen;
                 } else if (relaxationTypeString == "sor") {
@@ -152,13 +150,13 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
 
             static void registerParameters()
             {
-                Parameters::registerParam<TypeTag, Properties::NewtonMaxRelax>
+                Parameters::registerParam<TypeTag, Parameters::NewtonMaxRelax>
                     ("The maximum relaxation factor of a Newton iteration");
                 Parameters::registerParam<TypeTag, Parameters::NewtonMaxIterations>
                     ("The maximum number of Newton iterations per time step");
-                Parameters::registerParam<TypeTag, Properties::NewtonMinIterations>
+                Parameters::registerParam<TypeTag, Parameters::NewtonMinIterations>
                     ("The minimum number of Newton iterations per time step");
-                Parameters::registerParam<TypeTag, Properties::NewtonRelaxationType>
+                Parameters::registerParam<TypeTag, Parameters::NewtonRelaxationType>
                     ("The type of relaxation used by Newton method");
             }
 
