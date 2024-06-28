@@ -282,7 +282,7 @@ public:
 
         // adaptive time stepping
         bool enableAdaptive = Parameters::get<TypeTag, Properties::EnableAdaptiveTimeStepping>();
-        bool enableTUNING = Parameters::get<TypeTag, Properties::EnableTuning>();
+        bool enableTUNING = Parameters::get<TypeTag, Parameters::EnableTuning>();
         if (enableAdaptive) {
             const UnitSystem& unitSystem = this->simulator_.vanguard().eclState().getUnits();
             const auto& sched_state = schedule()[timer.currentStepNum()];
@@ -372,7 +372,7 @@ public:
 
         this->solver_->model().beginReportStep();
 
-        const bool enableTUNING = Parameters::get<TypeTag, Properties::EnableTuning>();
+        const bool enableTUNING = Parameters::get<TypeTag, Parameters::EnableTuning>();
 
         // If sub stepping is enabled allow the solver to sub cycle
         // in case the report steps are too large for the solver to converge

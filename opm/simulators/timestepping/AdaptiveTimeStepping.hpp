@@ -254,18 +254,18 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                              const double max_next_tstep = -1.0,
                              const bool terminalOutput = true)
             : timeStepControl_()
-            , restartFactor_(Parameters::get<TypeTag, Properties::SolverRestartFactor>()) // 0.33
-            , growthFactor_(Parameters::get<TypeTag, Properties::SolverGrowthFactor>()) // 2.0
-            , maxGrowth_(Parameters::get<TypeTag, Properties::SolverMaxGrowth>()) // 3.0
-            , maxTimeStep_(Parameters::get<TypeTag, Properties::SolverMaxTimeStepInDays>() * 24 * 60 * 60) // 365.25
-            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, Parameters::get<TypeTag, Properties::SolverMinTimeStep>())) // 1e-12;
+            , restartFactor_(Parameters::get<TypeTag, Parameters::SolverRestartFactor>()) // 0.33
+            , growthFactor_(Parameters::get<TypeTag, Parameters::SolverGrowthFactor>()) // 2.0
+            , maxGrowth_(Parameters::get<TypeTag, Parameters::SolverMaxGrowth>()) // 3.0
+            , maxTimeStep_(Parameters::get<TypeTag, Parameters::SolverMaxTimeStepInDays>() * 24 * 60 * 60) // 365.25
+            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, Parameters::get<TypeTag, Parameters::SolverMinTimeStep>())) // 1e-12;
             , ignoreConvergenceFailure_(Parameters::get<TypeTag, Properties::SolverContinueOnConvergenceFailure>()) // false;
             , solverRestartMax_(Parameters::get<TypeTag, Properties::SolverMaxRestarts>()) // 10
             , solverVerbose_(Parameters::get<TypeTag, Properties::SolverVerbosity>() > 0 && terminalOutput) // 2
             , timestepVerbose_(Parameters::get<TypeTag, Properties::TimeStepVerbosity>() > 0 && terminalOutput) // 2
             , suggestedNextTimestep_((max_next_tstep <= 0 ? Parameters::get<TypeTag, Properties::InitialTimeStepInDays>() : max_next_tstep) * 24 * 60 * 60) // 1.0
             , fullTimestepInitially_(Parameters::get<TypeTag, Properties::FullTimeStepInitially>()) // false
-            , timestepAfterEvent_(Parameters::get<TypeTag, Properties::TimeStepAfterEventInDays>() * 24 * 60 * 60) // 1e30
+            , timestepAfterEvent_(Parameters::get<TypeTag, Parameters::TimeStepAfterEventInDays>() * 24 * 60 * 60) // 1e30
             , useNewtonIteration_(false)
             , minTimeStepBeforeShuttingProblematicWells_(Parameters::get<TypeTag, Properties::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day)
 
