@@ -46,6 +46,10 @@ ReservoirCouplingMaster::ReservoirCouplingMaster(
     schedule_{schedule}
 { }
 
+// ------------------
+// Public methods
+// ------------------
+
 // NOTE: This functions is executed for all ranks, but only rank 0 will spawn
 //   the slave processes
 void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char **argv) {
@@ -61,11 +65,7 @@ void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char
         std::filesystem::path dir_path(directory_path);
         std::filesystem::path data_file(data_file_name);
         std::filesystem::path full_path = dir_path / data_file;
-        std::vector<char*> slave_argv(3);
-        char enable_slave_arg[] = "--slave=true";
-        slave_argv[0] = enable_slave_arg;
-        slave_argv[1] = const_cast<char*>(full_path.c_str());
-        slave_argv[2] = nullptr;
+        std::vector<char *> slave_argv = getSlaveArgv(argc, argv, full_path);
         auto num_procs = slave.numprocs();
         std::vector<int> errcodes(num_procs);
         // TODO: We need to decide how to handle the output from the slave processes..
@@ -87,7 +87,7 @@ void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char
                     char error_string[MPI_MAX_ERROR_STRING];
                     int length_of_error_string;
                     MPI_Error_string(errcodes[i], error_string, &length_of_error_string);
-                    std::cerr << "Error spawning process " << i << ": " << error_string << std::endl;
+                    OpmLog::info(fmt::format("Error spawning process {}: {}", i, error_string));
                 }
             }
             OPM_THROW(std::runtime_error, "Failed to spawn slave process");
@@ -95,6 +95,36 @@ void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char
         this->master_slave_comm_.push_back(std::move(master_slave_comm));
         this->slave_names_.push_back(slave_name);
     }
+}
+
+// ------------------
+// Private methods
+// ------------------
+
+std::vector<char *> ReservoirCouplingMaster::getSlaveArgv(
+    int argc, char **argv, const std::filesystem::path &data_file
+) {
+    // Calculate the size of the slave_argv vector like this:
+    // - We will not use the first argument, as it is the program name
+    // - We will replace the data file name in argv with the data_file path
+    // - We will also add the argument "--slave=true" to the argv
+    // - And we will add a nullptr at the end of the argv
+    // So the size of the slave_argv vector will be argc + 1
+    //
+    // Assume: All parameters will be on the form --parameter=value (as a string without spaces)
+    std::vector<char *> slave_argv(argc + 1);
+    for (int i = 1; i < argc; i++) {
+        // Check if the argument starts with "--", if not it will be a positional argument
+        //   and we will replace it with the data file path
+        if (std::string(argv[i]).substr(0, 2) == "--") {
+            slave_argv[i-1] = argv[i];
+        } else {
+            slave_argv[i-1] = const_cast<char*>(data_file.c_str());
+        }
+    }
+    slave_argv[argc-1] = const_cast<char*>("--slave=true");
+    slave_argv[argc] = nullptr;
+    return slave_argv;
 }
 
 } // namespace Opm

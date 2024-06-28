@@ -26,6 +26,7 @@
 
 #include <mpi.h>
 
+#include <filesystem>
 #include <vector>
 
 namespace Opm {
@@ -50,6 +51,9 @@ public:
 
 
 private:
+    std::vector<char *> getSlaveArgv(
+        int argc, char **argv, const std::filesystem::path &data_file);
+
     const Parallel::Communication &comm_;
     const Schedule& schedule_;
     // MPI communicators for the slave processes
