@@ -168,9 +168,9 @@ namespace Opm {
                 Parameters::hideParam<TypeTag, Parameters::VtkWritePorosity>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWritePotentialGradients>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWritePressures>();
-                Parameters::hideParam<TypeTag, Properties::VtkWritePrimaryVars>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWritePrimaryVars>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWritePrimaryVarsMeaning>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteProcessRank>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteProcessRank>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteRelativePermeabilities>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteSaturatedGasOilVaporizationFactor>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteSaturatedOilGasDissolutionFactor>();
@@ -187,7 +187,7 @@ namespace Opm {
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteExtrusionFactor>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteFilterVelocities>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteDensities>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteDofIndex>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteDofIndex>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteMobilities>();
                 //}
             Parameters::hideParam<TypeTag, Parameters::VtkWriteAverageMolarMasses>();
