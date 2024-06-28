@@ -61,10 +61,9 @@ void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char
         std::filesystem::path dir_path(directory_path);
         std::filesystem::path data_file(data_file_name);
         std::filesystem::path full_path = dir_path / data_file;
-        std::vector<char*> slave_argv(3);
-        slave_argv[0] = flow_program_name;
-        slave_argv[1] = const_cast<char*>(full_path.c_str());
-        slave_argv[2] = nullptr;
+        std::vector<char*> slave_argv(2);
+        slave_argv[0] = const_cast<char*>(full_path.c_str());
+        slave_argv[1] = nullptr;
         auto num_procs = slave.numprocs();
         std::vector<int> errcodes(num_procs);
         MPI_Info info;
@@ -75,7 +74,7 @@ void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char
         MPI_Info_set(info, "output", log_file.c_str());
         MPI_Info_set(info, "error", log_file.c_str());
         int spawn_result = MPI_Comm_spawn(
-            slave_argv[0],
+            flow_program_name,
             slave_argv.data(),
             /*maxprocs=*/num_procs,
             /*info=*/info,
