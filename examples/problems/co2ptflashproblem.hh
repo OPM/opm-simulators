@@ -337,7 +337,6 @@ class CO2PTProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
-    enum { enableGravity = getPropValue<TypeTag, Properties::EnableGravity>() };
 
     using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
