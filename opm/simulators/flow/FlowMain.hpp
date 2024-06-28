@@ -162,26 +162,26 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Properties::RestartWritingInterval>();
             // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
             //if(not(Parameters::get<TypeTag,Properties::EnableVtkOutput>())){
-                Parameters::hideParam<TypeTag, Properties::VtkWriteOilFormationVolumeFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteOilSaturationPressure>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteOilVaporizationFactor>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteOilFormationVolumeFactor>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteOilSaturationPressure>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteOilVaporizationFactor>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWritePorosity>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWritePotentialGradients>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWritePressures>();
                 Parameters::hideParam<TypeTag, Properties::VtkWritePrimaryVars>();
-                Parameters::hideParam<TypeTag, Properties::VtkWritePrimaryVarsMeaning>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWritePrimaryVarsMeaning>();
                 Parameters::hideParam<TypeTag, Properties::VtkWriteProcessRank>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteRelativePermeabilities>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteSaturatedGasOilVaporizationFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteSaturatedOilGasDissolutionFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteSaturationRatios>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteSaturatedGasOilVaporizationFactor>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteSaturatedOilGasDissolutionFactor>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteSaturationRatios>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteSaturations>();
                 Parameters::hideParam<TypeTag, Properties::VtkWriteTemperature>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteViscosities>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteWaterFormationVolumeFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteGasDissolutionFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteGasFormationVolumeFactor>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteGasSaturationPressure>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteWaterFormationVolumeFactor>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteGasDissolutionFactor>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteGasFormationVolumeFactor>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteGasSaturationPressure>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteIntrinsicPermeabilities>();
                 Parameters::hideParam<TypeTag, Properties::VtkWriteTracerConcentration>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteExtrusionFactor>();
