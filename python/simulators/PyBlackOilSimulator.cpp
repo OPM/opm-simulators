@@ -174,7 +174,7 @@ setPrimaryVariable(
 void PyBlackOilSimulator::setupMpi(bool mpi_init, bool mpi_finalize)
 {
     if (this->has_run_init_) {
-        throw std::logic_error("mpi_init() called after step_init()");
+        throw std::logic_error("setup_mpi() called after step_init()");
     }
     this->mpi_init_ = mpi_init;
     this->mpi_finalize_ = mpi_finalize;
