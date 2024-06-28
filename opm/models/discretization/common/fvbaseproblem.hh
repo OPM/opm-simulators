@@ -142,7 +142,7 @@ public:
         if (enableVtkOutput_()) {
             bool asyncVtkOutput =
                 simulator_.gridView().comm().size() == 1 &&
-                Parameters::get<TypeTag, Properties::EnableAsyncVtkOutput>();
+                Parameters::get<TypeTag, Parameters::EnableAsyncVtkOutput>();
 
             // asynchonous VTK output currently does not work in conjunction with grid
             // adaptivity because the async-IO code assumes that the grid stays
@@ -176,7 +176,7 @@ public:
         Parameters::registerParam<TypeTag, Properties::MaxTimeStepDivisions>
             ("The maximum number of divisions by two of the timestep size "
              "before the simulation bails out");
-        Parameters::registerParam<TypeTag, Properties::EnableAsyncVtkOutput>
+        Parameters::registerParam<TypeTag, Parameters::EnableAsyncVtkOutput>
             ("Dispatch a separate thread to write the VTK output");
         Parameters::registerParam<TypeTag, Properties::ContinueOnConvergenceError>
             ("Continue with a non-converged solution instead of giving up "

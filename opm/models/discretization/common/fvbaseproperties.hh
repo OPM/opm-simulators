@@ -200,18 +200,6 @@ struct UseLinearizationLock { using type = UndefinedProperty; };
 // high-level simulation control
 
 /*!
- * \brief Determines if the VTK output is written to disk asynchronously
- *
- * I.e. written to disk using a separate thread. This has only an effect if
- * EnableVtkOutput is true and if the simulation is run sequentially. The reasons for
- * this not being used for MPI-parallel simulations are that Dune's VTK output code does
- * not support multi-threaded multi-process VTK output and even if it would, the result
- * would be slower than when using synchronous output.
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableAsyncVtkOutput { using type = UndefinedProperty; };
-
-/*!
  * \brief Specify the format the VTK output is written to disk
  *
  * Possible values are:

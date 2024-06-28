@@ -237,12 +237,6 @@ struct MinTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
     static constexpr type value = 0.0;
 };
 
-//! By default, write the VTK output to asynchronously to disk
-//!
-//! This has only an effect if EnableVtkOutput is true
-template<class TypeTag>
-struct EnableAsyncVtkOutput<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
-
 //! Set the format of the VTK output to ASCII by default
 template<class TypeTag>
 struct VtkOutputFormat<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = Dune::VTK::ascii; };
@@ -342,6 +336,13 @@ struct OutputDir<TypeTag, Properties::TTag::FvBaseDiscretization>
 //! Enable the VTK output by default
 template<class TypeTag>
 struct EnableVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = true; };
+
+//! By default, write the VTK output to asynchronously to disk
+//!
+//! This has only an effect if EnableVtkOutput is true
+template<class TypeTag>
+struct EnableAsyncVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
