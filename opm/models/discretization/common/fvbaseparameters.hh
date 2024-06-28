@@ -125,6 +125,17 @@ struct EnableIntensiveQuantityCache { using type = Properties::UndefinedProperty
 template<class TypeTag, class MyTypeTag>
 struct EnableStorageCache { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief Specify whether to use the already calculated solutions as
+ *        starting values of the intensive quantities.
+ *
+ * This only makes sense if the calculation of the intensive quantities is
+ * very expensive (e.g. for non-linear fugacity functions where the
+ * solver converges faster).
+ */
+template<class TypeTag, class MyTypeTag>
+struct EnableThermodynamicHints { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm::Parameters
 
 #endif

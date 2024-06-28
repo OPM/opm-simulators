@@ -127,12 +127,6 @@ struct ExtensiveQuantities<TypeTag, TTag::FlashModel> { using type = Opm::FlashE
 template<class TypeTag>
 struct Indices<TypeTag, TTag::FlashModel> { using type = Opm::FlashIndices<TypeTag, /*PVIdx=*/0>; };
 
-// since thermodynamic hints are basically free if the cache for intensive quantities is
-// enabled, and this model usually shows quite a performance improvment if they are
-// enabled, let's enable them by default.
-template<class TypeTag>
-struct EnableThermodynamicHints<TypeTag, TTag::FlashModel> { static constexpr bool value = true; };
-
 // disable molecular diffusion by default
 template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlashModel> { static constexpr bool value = false; };
@@ -149,6 +143,13 @@ namespace Opm::Parameters {
 // model, so let's try to minimize the number of required ones
 template<class TypeTag>
 struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlashModel>
+{ static constexpr bool value = true; };
+
+// since thermodynamic hints are basically free if the cache for intensive quantities is
+// enabled, and this model usually shows quite a performance improvment if they are
+// enabled, let's enable them by default.
+template<class TypeTag>
+struct EnableThermodynamicHints<TypeTag, Properties::TTag::FlashModel>
 { static constexpr bool value = true; };
 
 } // namespace Opm::Parameters

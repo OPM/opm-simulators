@@ -217,11 +217,6 @@ struct VtkOutputFormat<TypeTag, TTag::FvBaseDiscretization> { static constexpr i
 template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
-// do not use thermodynamic hints by default. If you enable this, make sure to also
-// enable the intensive quantity cache above to avoid getting an exception...
-template<class TypeTag>
-struct EnableThermodynamicHints<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
 // if the deflection of the newton method is large, we do not need to solve the linear
 // approximation accurately. Assuming that the value for the current solution is quite
 // close to the final value, a reduction of 3 orders of magnitude in the defect should be
@@ -348,6 +343,12 @@ template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
 
+// do not use thermodynamic hints by default. If you enable this, make sure to also
+// enable the intensive quantity cache above to avoid getting an exception...
+template<class TypeTag>
+struct EnableThermodynamicHints<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
+
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -469,7 +470,7 @@ public:
         , enableGridAdaptation_(Parameters::get<TypeTag, Parameters::EnableGridAdaptation>() )
         , enableIntensiveQuantityCache_(Parameters::get<TypeTag, Parameters::EnableIntensiveQuantityCache>())
         , enableStorageCache_(Parameters::get<TypeTag, Parameters::EnableStorageCache>())
-        , enableThermodynamicHints_(Parameters::get<TypeTag, Properties::EnableThermodynamicHints>())
+        , enableThermodynamicHints_(Parameters::get<TypeTag, Parameters::EnableThermodynamicHints>())
     {
         bool isEcfv = std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value;
         if (enableGridAdaptation_ && !isEcfv)
@@ -527,7 +528,7 @@ public:
             ("Enable adaptive grid refinement/coarsening");
         Parameters::registerParam<TypeTag, Parameters::EnableVtkOutput>
             ("Global switch for turning on writing VTK files");
-        Parameters::registerParam<TypeTag, Properties::EnableThermodynamicHints>
+        Parameters::registerParam<TypeTag, Parameters::EnableThermodynamicHints>
             ("Enable thermodynamic hints");
         Parameters::registerParam<TypeTag, Parameters::EnableIntensiveQuantityCache>
             ("Turn on caching of intensive quantities");

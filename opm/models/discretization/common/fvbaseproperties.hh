@@ -215,17 +215,6 @@ struct VtkOutputFormat { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EnableConstraints { using type = UndefinedProperty; };
 
-/*!
- * \brief Specify whether to use the already calculated solutions as
- *        starting values of the intensive quantities.
- *
- * This only makes sense if the calculation of the intensive quantities is
- * very expensive (e.g. for non-linear fugacity functions where the
- * solver converges faster).
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableThermodynamicHints { using type = UndefinedProperty; };
-
 // mappers from local to global DOF indices
 
 /*!
