@@ -77,7 +77,7 @@ namespace Opm {
         , simulator_(simulator)
     {
         this->terminal_output_ = ((simulator.gridView().comm().rank() == 0) &&
-                                   Parameters::get<TypeTag, Properties::EnableTerminalOutput>());
+                                   Parameters::get<TypeTag, Parameters::EnableTerminalOutput>());
 
         local_num_cells_ = simulator_.gridView().size(0);
 

@@ -505,7 +505,7 @@ namespace Opm {
             printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report, simulator_->model().localAccumulatedReports());
 
             detail::handleExtraConvergenceOutput(report,
-                                                 Parameters::get<TypeTag, Properties::OutputExtraConvergenceInfo>(),
+                                                 Parameters::get<TypeTag, Parameters::OutputExtraConvergenceInfo>(),
                                                  R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
                                                  eclState().getIOConfig().getOutputDir(),
                                                  eclState().getIOConfig().getBaseName());

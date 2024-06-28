@@ -96,11 +96,6 @@ struct MatrixAddWellContributions<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr bool value = true;
 };
 
-template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, TTag::FlowExpTypeTag> {
-    static constexpr bool value = false;
-};
-
 // flow's well model only works with surface volumes
 template<class TypeTag>
 struct BlackoilConserveSurfaceVolume<TypeTag, TTag::FlowExpTypeTag> {
@@ -153,6 +148,10 @@ template<class TypeTag>
 struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FlowExpTypeTag>
 { static constexpr bool value = true; };
 
+template<class TypeTag>
+struct EnableTerminalOutput<TypeTag, Properties::TTag::FlowExpTypeTag>
+{ static constexpr bool value = false; };
+
 // the default for the allowed volumetric error for oil per second
 template<class TypeTag>
 struct NewtonTolerance<TypeTag, Properties::TTag::FlowExpTypeTag>
@@ -167,13 +166,10 @@ template<class TypeTag>
 struct NewtonMaxIterations<TypeTag, Properties::TTag::FlowExpTypeTag>
 { static constexpr int value = 8; };
 
-} // namespace Opm::Parameters
-
-namespace Opm::Parameters {
-
 // the maximum volumetric error of a cell in the relaxed region
 template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, Properties::TTag::FlowExpTypeTag> {
+struct EclNewtonRelaxedTolerance<TypeTag, Properties::TTag::FlowExpTypeTag>
+{
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr auto baseValue =
         Parameters::NewtonTolerance<TypeTag,
@@ -181,7 +177,7 @@ struct EclNewtonRelaxedTolerance<TypeTag, Properties::TTag::FlowExpTypeTag> {
     static constexpr type value = 1e6 * baseValue;
 };
 
-}
+} // namespace Opm::Parameters
 
 namespace Opm {
 template <class TypeTag>
@@ -207,7 +203,7 @@ public:
         ParentType::registerParameters();
 
         BlackoilModelParameters<TypeTag>::registerParameters();
-        Parameters::registerParam<TypeTag, Properties::EnableTerminalOutput>("Do *NOT* use!");
+        Parameters::registerParam<TypeTag, Parameters::EnableTerminalOutput>("Do *NOT* use!");
         Parameters::hideParam<TypeTag, Properties::DbhpMaxRel>();
         Parameters::hideParam<TypeTag, Properties::DwellFractionMax>();
         Parameters::hideParam<TypeTag, Properties::MaxResidualAllowed>();
@@ -231,7 +227,7 @@ public:
         Parameters::hideParam<TypeTag, Properties::UpdateEquationsScaling>();
         Parameters::hideParam<TypeTag, Properties::UseUpdateStabilization>();
         Parameters::hideParam<TypeTag, Properties::MatrixAddWellContributions>();
-        Parameters::hideParam<TypeTag, Properties::EnableTerminalOutput>();
+        Parameters::hideParam<TypeTag, Parameters::EnableTerminalOutput>();
     }
 
     // inherit the constructors

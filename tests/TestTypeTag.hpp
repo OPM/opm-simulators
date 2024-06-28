@@ -78,11 +78,6 @@ struct MatrixAddWellContributions<TypeTag, TTag::TestTypeTag> {
     static constexpr bool value = true;
 };
 
-template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, TTag::TestTypeTag> {
-    static constexpr bool value = false;
-};
-
 // flow's well model only works with surface volumes
 template<class TypeTag>
 struct BlackoilConserveSurfaceVolume<TypeTag, TTag::TestTypeTag> {
@@ -115,6 +110,10 @@ struct LinearSolverBackend<TTag::TestTypeTag, TTag::FlowIstlSolverParams> {
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template<class TypeTag>
+struct EnableTerminalOutput<TypeTag, Properties::TTag::TestTypeTag>
+{ static constexpr bool value = false; };
 
 // if openMP is available, set the default the number of threads per process for the main
 // simulation to 2 (instead of grabbing everything that is available).
