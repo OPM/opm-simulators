@@ -28,7 +28,8 @@
 #ifndef EWOMS_FV_BASE_PROBLEM_HH
 #define EWOMS_FV_BASE_PROBLEM_HH
 
-#include "fvbaseproperties.hh"
+#include <opm/models/discretization/common/fvbaseparameters.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/models/io/vtkmultiwriter.hh>
 #include <opm/models/io/restart.hh>
@@ -146,7 +147,7 @@ public:
             // asynchonous VTK output currently does not work in conjunction with grid
             // adaptivity because the async-IO code assumes that the grid stays
             // constant. complain about that case.
-            bool enableGridAdaptation = Parameters::get<TypeTag, Properties::EnableGridAdaptation>();
+            bool enableGridAdaptation = Parameters::get<TypeTag, Parameters::EnableGridAdaptation>();
             if (asyncVtkOutput && enableGridAdaptation)
                 throw std::runtime_error("Asynchronous VTK output currently cannot be used "
                                          "at the same time as grid adaptivity");

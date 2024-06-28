@@ -200,15 +200,6 @@ struct UseLinearizationLock { using type = UndefinedProperty; };
 // high-level simulation control
 
 /*!
- * \brief Switch to enable or disable grid adaptation
- *
- * Currently grid adaptation requires the presence of the dune-FEM module. If it is not
- * available and grid adaptation is enabled, an exception is thrown.
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableGridAdaptation { using type = UndefinedProperty; };
-
-/*!
  * \brief The directory to which simulation output ought to be written to.
  */
 template<class TypeTag, class MyTypeTag>

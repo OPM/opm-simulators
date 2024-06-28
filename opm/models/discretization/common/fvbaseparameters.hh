@@ -37,6 +37,15 @@ namespace Opm::Parameters {
 template<class TypeTag, class MyTypeTag>
 struct ThreadsPerProcess { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief Switch to enable or disable grid adaptation
+ *
+ * Currently grid adaptation requires the presence of the dune-FEM module. If it is not
+ * available and grid adaptation is enabled, an exception is thrown.
+ */
+template<class TypeTag, class MyTypeTag>
+struct EnableGridAdaptation { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm::Parameters
 
 #endif

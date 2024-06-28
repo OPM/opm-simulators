@@ -237,10 +237,6 @@ struct MinTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
     static constexpr type value = 0.0;
 };
 
-//! Disable grid adaptation by default
-template<class TypeTag>
-struct EnableGridAdaptation<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
 //! By default, write the simulation output to the current working directory
 template<class TypeTag>
 struct OutputDir<TypeTag, TTag::FvBaseDiscretization> { static constexpr auto value = "."; };
@@ -340,6 +336,11 @@ namespace Opm::Parameters {
 template<class TypeTag>
 struct ThreadsPerProcess<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr int value = 1; };
+
+//! Disable grid adaptation by default
+template<class TypeTag>
+struct EnableGridAdaptation<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
@@ -459,7 +460,7 @@ public:
         , newtonMethod_(simulator)
         , localLinearizer_(ThreadManager::maxThreads())
         , linearizer_(new Linearizer())
-        , enableGridAdaptation_(Parameters::get<TypeTag, Properties::EnableGridAdaptation>() )
+        , enableGridAdaptation_(Parameters::get<TypeTag, Parameters::EnableGridAdaptation>() )
         , enableIntensiveQuantityCache_(Parameters::get<TypeTag, Properties::EnableIntensiveQuantityCache>())
         , enableStorageCache_(Parameters::get<TypeTag, Properties::EnableStorageCache>())
         , enableThermodynamicHints_(Parameters::get<TypeTag, Properties::EnableThermodynamicHints>())
@@ -516,7 +517,7 @@ public:
         // register runtime parameters of the output modules
         VtkPrimaryVarsModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::EnableGridAdaptation>
+        Parameters::registerParam<TypeTag, Parameters::EnableGridAdaptation>
             ("Enable adaptive grid refinement/coarsening");
         Parameters::registerParam<TypeTag, Properties::EnableVtkOutput>
             ("Global switch for turning on writing VTK files");
