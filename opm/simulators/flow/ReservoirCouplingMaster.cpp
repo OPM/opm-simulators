@@ -52,20 +52,21 @@ ReservoirCouplingMaster::ReservoirCouplingMaster(
 
 // NOTE: This functions is executed for all ranks, but only rank 0 will spawn
 //   the slave processes
-void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char **argv) {
+void ReservoirCouplingMaster::spawnSlaveProcesses(int argc, char **argv) {
     const auto& rescoup = this->schedule_[0].rescoup();
     char *flow_program_name = argv[0];
     for (const auto& [slave_name, slave] : rescoup.slaves()) {
         auto master_slave_comm = MPI_Comm_Ptr(new MPI_Comm(MPI_COMM_NULL));
-        // TODO: Here we should extract the relevant options from the master argv
-        // and forward them to the slave process, for now we just pass the deck file name
         const auto& data_file_name = slave.dataFilename();
         const auto& directory_path = slave.directoryPath();
         // Concatenate the directory path and the data file name to get the full path
         std::filesystem::path dir_path(directory_path);
         std::filesystem::path data_file(data_file_name);
         std::filesystem::path full_path = dir_path / data_file;
-        std::vector<char *> slave_argv = getSlaveArgv(argc, argv, full_path);
+        std::string log_filename; // the getSlaveArgv() function will set this
+        std::vector<char *> slave_argv = getSlaveArgv(
+            argc, argv, full_path, slave_name, log_filename
+        );
         auto num_procs = slave.numprocs();
         std::vector<int> errcodes(num_procs);
         // TODO: We need to decide how to handle the output from the slave processes..
@@ -92,6 +93,12 @@ void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char
             }
             OPM_THROW(std::runtime_error, "Failed to spawn slave process");
         }
+        OpmLog::info(
+            fmt::format(
+                "Spawned reservoir coupling slave simulation for slave with name: "
+                "{}. Standard output logfile name: {}.log", slave_name, slave_name
+            )
+        );
         this->master_slave_comm_.push_back(std::move(master_slave_comm));
         this->slave_names_.push_back(slave_name);
     }
@@ -102,28 +109,40 @@ void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char
 // ------------------
 
 std::vector<char *> ReservoirCouplingMaster::getSlaveArgv(
-    int argc, char **argv, const std::filesystem::path &data_file
+    int argc,
+    char **argv,
+    const std::filesystem::path &data_file,
+    const std::string &slave_name,
+    std::string &log_filename
 ) {
     // Calculate the size of the slave_argv vector like this:
     // - We will not use the first argument, as it is the program name
     // - We will replace the data file name in argv with the data_file path
+    // - We insert as first argument --slave-log-file=<slave_name>.log
     // - We will also add the argument "--slave=true" to the argv
     // - And we will add a nullptr at the end of the argv
-    // So the size of the slave_argv vector will be argc + 1
+    // So the size of the slave_argv vector will be argc + 2
     //
     // Assume: All parameters will be on the form --parameter=value (as a string without spaces)
-    std::vector<char *> slave_argv(argc + 1);
+    //
+    // Important: The returned vector will have pointers to argv pointers,
+    //   data_file string buffer, and slave_name string buffer. So the caller
+    //   must ensure that these buffers are not deallocated before the slave_argv has
+    //   been used.
+    std::vector<char *> slave_argv(argc + 2);
+    log_filename = "--slave-log-file=" + slave_name + ".log";
+    slave_argv[0] = const_cast<char*>(log_filename.c_str());
     for (int i = 1; i < argc; i++) {
         // Check if the argument starts with "--", if not it will be a positional argument
         //   and we will replace it with the data file path
         if (std::string(argv[i]).substr(0, 2) == "--") {
-            slave_argv[i-1] = argv[i];
+            slave_argv[i] = argv[i];
         } else {
-            slave_argv[i-1] = const_cast<char*>(data_file.c_str());
+            slave_argv[i] = const_cast<char*>(data_file.c_str());
         }
     }
-    slave_argv[argc-1] = const_cast<char*>("--slave=true");
-    slave_argv[argc] = nullptr;
+    slave_argv[argc] = const_cast<char*>("--slave=true");
+    slave_argv[argc+1] = nullptr;
     return slave_argv;
 }
 

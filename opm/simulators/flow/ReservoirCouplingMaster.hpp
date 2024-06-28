@@ -52,7 +52,12 @@ public:
 
 private:
     std::vector<char *> getSlaveArgv(
-        int argc, char **argv, const std::filesystem::path &data_file);
+        int argc,
+        char **argv,
+        const std::filesystem::path &data_file,
+        const std::string &slave_name,
+        std::string &log_filename
+    );
 
     const Parallel::Communication &comm_;
     const Schedule& schedule_;
