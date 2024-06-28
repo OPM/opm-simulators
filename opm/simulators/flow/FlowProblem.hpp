@@ -392,7 +392,7 @@ public:
         // disables gravity, else the standard value of the gravity constant at sea level
         // on earth is used
         this->gravity_ = 0.0;
-        if (Parameters::get<TypeTag, Properties::EnableGravity>())
+        if (Parameters::get<TypeTag, Parameters::EnableGravity>())
             this->gravity_[dim - 1] = 9.80665;
         if (!eclState.getInitConfig().hasGravity())
             this->gravity_[dim - 1] = 0.0;
