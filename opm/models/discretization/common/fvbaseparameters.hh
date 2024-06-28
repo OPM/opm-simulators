@@ -46,6 +46,12 @@ struct ThreadsPerProcess { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EnableGridAdaptation { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief The directory to which simulation output ought to be written to.
+ */
+template<class TypeTag, class MyTypeTag>
+struct OutputDir { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm::Parameters
 
 #endif

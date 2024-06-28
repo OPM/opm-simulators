@@ -237,10 +237,6 @@ struct MinTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
     static constexpr type value = 0.0;
 };
 
-//! By default, write the simulation output to the current working directory
-template<class TypeTag>
-struct OutputDir<TypeTag, TTag::FvBaseDiscretization> { static constexpr auto value = "."; };
-
 //! Enable the VTK output by default
 template<class TypeTag>
 struct EnableVtkOutput<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
@@ -341,6 +337,11 @@ struct ThreadsPerProcess<TypeTag, Properties::TTag::FvBaseDiscretization>
 template<class TypeTag>
 struct EnableGridAdaptation<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
+
+//! By default, write the simulation output to the current working directory
+template<class TypeTag>
+struct OutputDir<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr auto value = "."; };
 
 } // namespace Opm::Parameters
 
@@ -527,7 +528,7 @@ public:
             ("Turn on caching of intensive quantities");
         Parameters::registerParam<TypeTag, Properties::EnableStorageCache>
             ("Store previous storage terms and avoid re-calculating them.");
-        Parameters::registerParam<TypeTag, Properties::OutputDir>
+        Parameters::registerParam<TypeTag, Parameters::OutputDir>
             ("The directory to which result files are written");
     }
 

@@ -200,12 +200,6 @@ struct UseLinearizationLock { using type = UndefinedProperty; };
 // high-level simulation control
 
 /*!
- * \brief The directory to which simulation output ought to be written to.
- */
-template<class TypeTag, class MyTypeTag>
-struct OutputDir { using type = UndefinedProperty; };
-
-/*!
  * \brief Global switch to enable or disable the writing of VTK output files
  *
  * If writing VTK files is disabled, then the WriteVtk$FOO options do
