@@ -28,8 +28,11 @@
 #define EWOMS_STRUCTURED_GRID_VANGUARD_HH
 
 #include <opm/models/io/basevanguard.hh>
-#include <opm/models/utils/propertysystem.hh>
+
+#include <opm/models/utils/basicparameters.hh>
+#include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
@@ -42,7 +45,6 @@
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
 
-#include <vector>
 #include <memory>
 
 namespace Opm {
@@ -106,7 +108,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::GridGlobalRefinements>
+        Parameters::registerParam<TypeTag, Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
         Parameters::registerParam<TypeTag, Properties::DomainSizeX>
@@ -165,7 +167,7 @@ public:
         // use DGF parser to create a grid from interval block
         gridPtr_.reset( Dune::GridPtr< Grid >( dgffile ).release() );
 
-        unsigned numRefinements = Parameters::get<TypeTag, Properties::GridGlobalRefinements>();
+        unsigned numRefinements = Parameters::get<TypeTag, Parameters::GridGlobalRefinements>();
         gridPtr_->globalRefine(static_cast<int>(numRefinements));
 
         this->finalizeInit_();

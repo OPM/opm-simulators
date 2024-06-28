@@ -28,6 +28,7 @@
 #define EWOMS_CUBE_GRID_VANGUARD_HH
 
 #include <opm/models/io/basevanguard.hh>
+#include <opm/models/utils/basicparameters.hh>
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
@@ -66,7 +67,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::GridGlobalRefinements>
+        Parameters::registerParam<TypeTag, Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
         Parameters::registerParam<TypeTag, Properties::DomainSizeX>
@@ -111,7 +112,7 @@ public:
             cellRes[2] = Parameters::get<TypeTag, Properties::CellsZ>();
         }
 
-        unsigned numRefinements = Parameters::get<TypeTag, Properties::GridGlobalRefinements>();
+        unsigned numRefinements = Parameters::get<TypeTag, Parameters::GridGlobalRefinements>();
         cubeGrid_ = Dune::StructuredGridFactory<Grid>::createCubeGrid(lowerLeft, upperRight, cellRes);
         cubeGrid_->globalRefine(static_cast<int>(numRefinements));
 

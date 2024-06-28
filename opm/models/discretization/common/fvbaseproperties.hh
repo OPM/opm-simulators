@@ -253,7 +253,6 @@ struct ExtensiveStorageTerm { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct UseVolumetricResidual { using type = UndefinedProperty; };
 
-
 //! Specify if experimental features should be enabled or not.
 template<class TypeTag, class MyTypeTag>
 struct EnableExperiments { using type = UndefinedProperty; };

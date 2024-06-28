@@ -30,14 +30,13 @@
 
 #include <dune/common/parametertree.hh>
 
-#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/basicparameters.hh>
 #include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 #if HAVE_DUNE_FEM
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
 #endif
-
-#include <string>
 
 namespace Opm::Properties {
 
@@ -99,11 +98,6 @@ struct GridView { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct GridPart { using type = UndefinedProperty; };
 #endif
-
-//! Property which tells the Vanguard how often the grid should be refined
-//! after creation.
-template<class TypeTag, class MyTypeTag>
-struct GridGlobalRefinements { using type = UndefinedProperty; };
 
 //! Property provides the name of the file from which the additional runtime
 //! parameters should to be loaded from
@@ -233,11 +227,6 @@ struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType
 template<class TypeTag>
 struct ParameterFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
 
-//! Set the number of refinement levels of the grid to 0. This does not belong
-//! here, strictly speaking.
-template<class TypeTag>
-struct GridGlobalRefinements<TypeTag, TTag::NumericModel> { static constexpr unsigned value = 0; };
-
 //! By default, print the properties on startup
 template<class TypeTag>
 struct PrintProperties<TypeTag, TTag::NumericModel> { static constexpr int value = 2; };
@@ -276,5 +265,15 @@ struct PredeterminedTimeStepsFile<TypeTag, TTag::NumericModel> { static constexp
 
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+//! Set the number of refinement levels of the grid to 0. This does not belong
+//! here, strictly speaking.
+template<class TypeTag>
+struct GridGlobalRefinements<TypeTag, Properties::TTag::NumericModel>
+{ static constexpr unsigned value = 0; };
+
+}
 
 #endif
