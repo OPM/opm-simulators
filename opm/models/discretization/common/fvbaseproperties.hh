@@ -189,8 +189,6 @@ struct GridCommHandleFactory { using type = UndefinedProperty; };
  */
 template<class TypeTag, class MyTypeTag>
 struct ThreadManager { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct ThreadsPerProcess { using type = UndefinedProperty; };
 
 //! use locking to prevent race conditions when linearizing the global system of
 //! equations in multi-threaded mode. (setting this property to true is always save, but

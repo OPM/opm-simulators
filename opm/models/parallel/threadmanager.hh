@@ -31,7 +31,7 @@
 #include <omp.h>
 #endif
 
-#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseparameters.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
@@ -60,7 +60,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::ThreadsPerProcess>
+        Parameters::registerParam<TypeTag, Parameters::ThreadsPerProcess>
             ("The maximum number of threads to be instantiated per process "
              "('-1' means 'automatic')");
     }
@@ -78,7 +78,7 @@ public:
     {
         if (queryCommandLineParameter)
         {
-            numThreads_ = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
+            numThreads_ = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
 
             // some safety checks. This is pretty ugly macro-magic, but so what?
 #if !defined(_OPENMP)

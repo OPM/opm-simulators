@@ -213,8 +213,6 @@ struct ConstraintsContext<TypeTag, TTag::FvBaseDiscretization> { using type = Fv
 template<class TypeTag>
 struct ThreadManager<TypeTag, TTag::FvBaseDiscretization> { using type = ::Opm::ThreadManager<TypeTag>; };
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = 1; };
-template<class TypeTag>
 struct UseLinearizationLock<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
 
 /*!
@@ -336,6 +334,14 @@ struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization> {
 #endif
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+template<class TypeTag>
+struct ThreadsPerProcess<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr int value = 1; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
