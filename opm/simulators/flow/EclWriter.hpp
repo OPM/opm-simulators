@@ -50,31 +50,26 @@
 #include <stdexcept>
 #include <string>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
 template<class TypeTag, class MyTypeTag>
-struct EnableEclOutput {
-    using type = UndefinedProperty;
-};
+struct EnableEclOutput { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct EnableAsyncEclOutput {
-    using type = UndefinedProperty;
-};
+struct EnableAsyncEclOutput { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct EclOutputDoublePrecision {
-    using type = UndefinedProperty;
-};
+struct EclOutputDoublePrecision { using type = Properties::UndefinedProperty; };
+
 // Write all solutions for visualization, not just the ones for the
 // report steps...
 template<class TypeTag, class MyTypeTag>
-struct EnableWriteAllSolutions {
-    using type = UndefinedProperty;
-};
+struct EnableWriteAllSolutions { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct EnableEsmry {
-    using type = UndefinedProperty;
-};
-} // namespace Opm::Properties
+struct EnableEsmry { using type = Properties::UndefinedProperty; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -130,10 +125,10 @@ public:
     {
         OutputBlackOilModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::EnableAsyncEclOutput>
+        Parameters::registerParam<TypeTag, Parameters::EnableAsyncEclOutput>
             ("Write the ECL-formated results in a non-blocking way "
              "(i.e., using a separate thread).");
-        Parameters::registerParam<TypeTag, Properties::EnableEsmry>
+        Parameters::registerParam<TypeTag, Parameters::EnableEsmry>
             ("Write ESMRY file for fast loading of summary data.");
     }
 
@@ -153,8 +148,8 @@ public:
                    ((simulator.vanguard().grid().comm().rank() == 0)
                     ? &simulator.vanguard().equilCartesianIndexMapper()
                     : nullptr),
-                   Parameters::get<TypeTag, Properties::EnableAsyncEclOutput>(),
-                   Parameters::get<TypeTag, Properties::EnableEsmry>())
+                   Parameters::get<TypeTag, Parameters::EnableAsyncEclOutput>(),
+                   Parameters::get<TypeTag, Parameters::EnableEsmry>())
         , simulator_(simulator)
     {
 #if HAVE_MPI
@@ -404,7 +399,7 @@ public:
         auto floresn = this->outputModule_->getFloresn();
 
         // data::Solution localCellData = {};
-        if (! isSubStep || Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>()) {
+        if (! isSubStep || Parameters::get<TypeTag, Parameters::EnableWriteAllSolutions>()) {
             
             auto rstep = timer.reportStepNum();
             
@@ -460,7 +455,7 @@ public:
             const Scalar curTime = simulator_.time() + simulator_.timeStepSize();
             const Scalar nextStepSize = simulator_.problem().nextTimeStepSize();
             std::optional<int> timeStepIdx; 
-            if (Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>()) {
+            if (Parameters::get<TypeTag, Parameters::EnableWriteAllSolutions>()) {
                 timeStepIdx = simulator_.timeStepIndex();
             }
             this->doWriteOutput(reportStepNum, timeStepIdx, isSubStep,
@@ -474,7 +469,7 @@ public:
                                 this->summaryState(),
                                 this->simulator_.problem().thresholdPressure().getRestartVector(),
                                 curTime, nextStepSize,
-                                Parameters::get<TypeTag, Properties::EclOutputDoublePrecision>(),
+                                Parameters::get<TypeTag, Parameters::EclOutputDoublePrecision>(),
                                 isFlowsn, std::move(flowsn),
                                 isFloresn, std::move(floresn));
         }
@@ -609,7 +604,7 @@ public:
 
 private:
     static bool enableEclOutput_()
-    { return Parameters::get<TypeTag, Properties::EnableEclOutput>(); }
+    { return Parameters::get<TypeTag, Parameters::EnableEclOutput>(); }
 
     const EclipseState& eclState() const
     { return simulator_.vanguard().eclState(); }
@@ -642,7 +637,7 @@ private:
             countLocalInteriorCellsGridView(gridView);
         this->outputModule_->
             allocBuffers(num_interior, reportStepNum,
-                         isSubStep && !Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>(), log, /*isRestart*/ false);
+                         isSubStep && !Parameters::get<TypeTag, Parameters::EnableWriteAllSolutions>(), log, /*isRestart*/ false);
 
         ElementContext elemCtx(simulator_);
 

@@ -191,7 +191,9 @@ public:
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
-        if (Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() || this->simulator().episodeWillBeOver()) {
+        if (Parameters::get<TypeTag, Parameters::EnableWriteAllSolutions>() ||
+            this->simulator().episodeWillBeOver())
+        {
             // \Note: the SimulatorTimer does not carry any useful information, so PRT file (if it gets output) will contain wrong
             // timing information.
             BaseType::writeOutput(SimulatorTimer{}, verbose);

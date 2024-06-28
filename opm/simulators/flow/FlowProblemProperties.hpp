@@ -198,34 +198,9 @@ template<class TypeTag>
 struct EnableDispersion<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
-// only write the solutions for the report steps to disk
-template<class TypeTag>
-struct EnableWriteAllSolutions<TypeTag, TTag::FlowBaseProblem>
-{ static constexpr bool value = false; };
-
 // disable API tracking
 template<class TypeTag>
 struct EnableApiTracking<TypeTag, TTag::FlowBaseProblem>
-{ static constexpr bool value = false; };
-
-// ... but enable the ECL output by default
-template<class TypeTag>
-struct EnableEclOutput<TypeTag,TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
-
-// If available, write the ECL output in a non-blocking manner
-template<class TypeTag>
-struct EnableAsyncEclOutput<TypeTag, TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
-
-// Write ESMRY file for fast loading of summary data
-template<class TypeTag>
-struct EnableEsmry<TypeTag, TTag::FlowBaseProblem>
-{ static constexpr bool value = false; };
-
-// By default, use single precision for the ECL formated results
-template<class TypeTag>
-struct EclOutputDoublePrecision<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
@@ -371,6 +346,16 @@ struct DamarisLimitVariables<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr auto value = ""; };
 #endif
 
+// By default, use single precision for the ECL formated results
+template<class TypeTag>
+struct EclOutputDoublePrecision<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = false; };
+
+// If available, write the ECL output in a non-blocking manner
+template<class TypeTag>
+struct EnableAsyncEclOutput<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = true; };
+
 // By default, we enable the debugging checks if we're compiled in debug mode
 template<class TypeTag>
 struct EnableDebuggingChecks<TypeTag, Properties::TTag::FlowBaseProblem>
@@ -382,6 +367,16 @@ struct EnableDebuggingChecks<TypeTag, Properties::TTag::FlowBaseProblem>
 template<class TypeTag>
 struct EnableDriftCompensation<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
+
+// enable the ECL output by default
+template<class TypeTag>
+struct EnableEclOutput<TypeTag,Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = true; };
+
+// Write ESMRY file for fast loading of summary data
+template<class TypeTag>
+struct EnableEsmry<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = false; };
 
 // Enable gravity
 template<class TypeTag>
@@ -402,6 +397,11 @@ struct EnableStorageCache<TypeTag, Properties::TTag::FlowBaseProblem>
 // Disable the VTK output by default for this problem ...
 template<class TypeTag>
 struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = false; };
+
+// only write the solutions for the report steps to disk
+template<class TypeTag>
+struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
 // The default for the end time of the simulation [s]

@@ -216,17 +216,17 @@ public:
 
         VtkTracerModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::EnableWriteAllSolutions>
+        Parameters::registerParam<TypeTag, Parameters::EnableWriteAllSolutions>
            ("Write all solutions to disk instead of only the ones for the "
             "report steps");
-        Parameters::registerParam<TypeTag, Properties::EnableEclOutput>
+        Parameters::registerParam<TypeTag, Parameters::EnableEclOutput>
             ("Write binary output which is compatible with the commercial "
              "Eclipse simulator");
 #if HAVE_DAMARIS
         Parameters::registerParam<TypeTag, Parameters::EnableDamarisOutput>
             ("Write a specific variable using Damaris in a separate core");
 #endif
-        Parameters::registerParam<TypeTag, Properties::EclOutputDoublePrecision>
+        Parameters::registerParam<TypeTag, Parameters::EclOutputDoublePrecision>
             ("Tell the output writer to use double precision. Useful for 'perfect' restarts");
         Parameters::registerParam<TypeTag, Parameters::RestartWritingInterval>
             ("The frequencies of which time steps are serialized to disk");
@@ -313,7 +313,7 @@ public:
 #endif
         enableDriftCompensation_ = Parameters::get<TypeTag, Parameters::EnableDriftCompensation>();
 
-        enableEclOutput_ = Parameters::get<TypeTag, Properties::EnableEclOutput>();
+        enableEclOutput_ = Parameters::get<TypeTag, Parameters::EnableEclOutput>();
 
         this->enableTuning_ = Parameters::get<TypeTag, Parameters::EnableTuning>();
         this->initialTimeStepSize_ = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
@@ -780,7 +780,7 @@ public:
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
-        if (Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() ||
+        if (Parameters::get<TypeTag, Parameters::EnableWriteAllSolutions>() ||
             this->simulator().episodeWillBeOver()) {
             ParentType::writeOutput(verbose);
         }
