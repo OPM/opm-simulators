@@ -173,7 +173,7 @@ public:
             ("The maximum size to which all time steps are limited to [s]");
         Parameters::registerParam<TypeTag, Parameters::MinTimeStepSize>
             ("The minimum size to which all time steps are limited to [s]");
-        Parameters::registerParam<TypeTag, Properties::MaxTimeStepDivisions>
+        Parameters::registerParam<TypeTag, Parameters::MaxTimeStepDivisions>
             ("The maximum number of divisions by two of the timestep size "
              "before the simulation bails out");
         Parameters::registerParam<TypeTag, Parameters::EnableAsyncVtkOutput>
@@ -567,7 +567,7 @@ public:
      *        before giving up.
      */
     unsigned maxTimeIntegrationFailures() const
-    { return Parameters::get<TypeTag, Properties::MaxTimeStepDivisions>(); }
+    { return Parameters::get<TypeTag, Parameters::MaxTimeStepDivisions>(); }
 
     /*!
      * \brief Returns if we should continue with a non-converged solution instead of

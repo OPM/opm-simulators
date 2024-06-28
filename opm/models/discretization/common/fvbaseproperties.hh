@@ -216,13 +216,6 @@ template<class TypeTag, class MyTypeTag>
 struct EnableConstraints { using type = UndefinedProperty; };
 
 /*!
- * \brief The maximum allowed number of timestep divisions for the
- *        Newton solver.
- */
-template<class TypeTag, class MyTypeTag>
-struct MaxTimeStepDivisions { using type = UndefinedProperty; };
-
-/*!
  * \brief Continue with a non-converged solution instead of giving up
  *        if we encounter a time step size smaller than the minimum time
  *        step size.

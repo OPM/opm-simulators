@@ -120,12 +120,6 @@ struct DiscExtensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type
 template<class TypeTag>
 struct GradientCalculator<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseGradientCalculator<TypeTag>; };
 
-//! The maximum allowed number of timestep divisions for the
-//! Newton solver
-template<class TypeTag>
-struct MaxTimeStepDivisions<TypeTag, TTag::FvBaseDiscretization> { static constexpr unsigned value = 10; };
-
-
 //! By default, do not continue with a non-converged solution instead of giving up
 //! if we encounter a time step size smaller than the minimum time
 //! step size.
@@ -344,6 +338,12 @@ struct MinTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 0.0;
 };
+
+//! The maximum allowed number of timestep divisions for the
+//! Newton solver
+template<class TypeTag>
+struct MaxTimeStepDivisions<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr unsigned value = 10; };
 
 } // namespace Opm::Parameters
 

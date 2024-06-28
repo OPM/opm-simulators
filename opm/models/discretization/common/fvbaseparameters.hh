@@ -89,6 +89,13 @@ struct MaxTimeStepSize { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct MinTimeStepSize { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief The maximum allowed number of timestep divisions for the
+ *        Newton solver.
+ */
+template<class TypeTag, class MyTypeTag>
+struct MaxTimeStepDivisions { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm::Parameters
 
 #endif
