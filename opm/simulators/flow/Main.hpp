@@ -417,7 +417,7 @@ private:
                            outputDir,
                            Parameters::get<PreTypeTag, Properties::OutputMode>(),
                            !Parameters::get<PreTypeTag, Parameters::SchedRestart>(),
-                           Parameters::get<PreTypeTag, Properties::EnableLoggingFalloutWarning>(),
+                           Parameters::get<PreTypeTag, Parameters::EnableLoggingFalloutWarning>(),
                            Parameters::get<PreTypeTag, Parameters::ParsingStrictness>(),
                            Parameters::get<PreTypeTag, Parameters::InputSkipMode>(),
                            getNumThreads<PreTypeTag>(),

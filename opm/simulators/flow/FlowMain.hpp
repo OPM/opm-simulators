@@ -41,37 +41,32 @@
 #include <cstddef>
 #include <memory>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
 template<class TypeTag, class MyTypeTag>
-struct EnableDryRun {
-    using type = UndefinedProperty;
-};
+struct EnableDryRun { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct OutputInterval {
-    using type = UndefinedProperty;
-};
+struct OutputInterval { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct EnableLoggingFalloutWarning {
-    using type = UndefinedProperty;
-};
+struct EnableLoggingFalloutWarning { using type = Properties::UndefinedProperty; };
 
 // TODO: enumeration parameters. we use strings for now.
 template<class TypeTag>
-struct EnableDryRun<TypeTag, TTag::FlowProblem> {
-    static constexpr auto value = "auto";
-};
+struct EnableDryRun<TypeTag, Properties::TTag::FlowProblem>
+{ static constexpr auto value = "auto"; };
+
 // Do not merge parallel output files or warn about them
 template<class TypeTag>
-struct EnableLoggingFalloutWarning<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct OutputInterval<TypeTag, TTag::FlowProblem> {
-    static constexpr int value = 1;
-};
+struct EnableLoggingFalloutWarning<TypeTag, Properties::TTag::FlowProblem>
+{ static constexpr bool value = false; };
 
-} // namespace Opm::Properties
+template<class TypeTag>
+struct OutputInterval<TypeTag, Properties::TTag::FlowProblem>
+{ static constexpr int value = 1; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -114,11 +109,11 @@ namespace Opm {
                 return EXIT_SUCCESS;
             }
             // register the flow specific parameters
-            Parameters::registerParam<TypeTag, Properties::EnableDryRun>
+            Parameters::registerParam<TypeTag, Parameters::EnableDryRun>
                 ("Specify if the simulation ought to be actually run, or just pretended to be");
-            Parameters::registerParam<TypeTag, Properties::OutputInterval>
+            Parameters::registerParam<TypeTag, Parameters::OutputInterval>
                 ("Specify the number of report steps between two consecutive writes of restart data");
-            Parameters::registerParam<TypeTag, Properties::EnableLoggingFalloutWarning>
+            Parameters::registerParam<TypeTag, Parameters::EnableLoggingFalloutWarning>
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
 
@@ -421,7 +416,7 @@ namespace Opm {
 
             detail::mergeParallelLogFiles(eclState().getIOConfig().getOutputDir(),
                                           Parameters::get<TypeTag, Properties::EclDeckFileName>(),
-                                          Parameters::get<TypeTag, Properties::EnableLoggingFalloutWarning>());
+                                          Parameters::get<TypeTag, Parameters::EnableLoggingFalloutWarning>());
         }
 
         void setupModelSimulator()
@@ -432,7 +427,7 @@ namespace Opm {
 
             try {
                 // Possible to force initialization only behavior (NOSIM).
-                const std::string& dryRunString = Parameters::get<TypeTag, Properties::EnableDryRun>();
+                const std::string& dryRunString = Parameters::get<TypeTag, Parameters::EnableDryRun>();
                 if (dryRunString != "" && dryRunString != "auto") {
                     bool yesno;
                     if (dryRunString == "true"
