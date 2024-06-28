@@ -398,12 +398,6 @@ struct EclOutputDoublePrecision<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
-// the cache for the storage term can also be used and also yields a decent speedup
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr bool value = true;
-};
-
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::FlowBaseProblem> {
@@ -520,6 +514,11 @@ struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblem>
 // decent speedup...
 template<class TypeTag>
 struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = true; };
+
+// the cache for the storage term can also be used and also yields a decent speedup
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
