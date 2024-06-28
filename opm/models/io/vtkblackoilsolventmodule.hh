@@ -27,18 +27,18 @@
 #ifndef EWOMS_VTK_BLACK_OIL_SOLVENT_MODULE_HH
 #define EWOMS_VTK_BLACK_OIL_SOLVENT_MODULE_HH
 
-#include <opm/material/densead/Math.hpp>
-
 #include "vtkmultiwriter.hh"
 #include "baseoutputmodule.hh"
+
+#include <dune/common/fvector.hh>
+
+#include <opm/material/densead/Math.hpp>
+
+#include <opm/models/discretization/common/fvbaseparameters.hh>
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
-
-#include <dune/common/fvector.hh>
-
-#include <cstdio>
 
 namespace Opm::Properties {
 
@@ -136,7 +136,7 @@ public:
      */
     void allocBuffers()
     {
-        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
+        if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
             return;
 
         if (!enableSolvent)
@@ -160,7 +160,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
+        if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
             return;
 
         if (!enableSolvent)

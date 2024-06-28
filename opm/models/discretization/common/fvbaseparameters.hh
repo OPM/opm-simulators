@@ -52,6 +52,15 @@ struct EnableGridAdaptation { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct OutputDir { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief Global switch to enable or disable the writing of VTK output files
+ *
+ * If writing VTK files is disabled, then the WriteVtk$FOO options do
+ * not have any effect...
+ */
+template<class TypeTag, class MyTypeTag>
+struct EnableVtkOutput { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm::Parameters
 
 #endif

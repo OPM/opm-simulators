@@ -200,15 +200,6 @@ struct UseLinearizationLock { using type = UndefinedProperty; };
 // high-level simulation control
 
 /*!
- * \brief Global switch to enable or disable the writing of VTK output files
- *
- * If writing VTK files is disabled, then the WriteVtk$FOO options do
- * not have any effect...
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableVtkOutput { using type = UndefinedProperty; };
-
-/*!
  * \brief Determines if the VTK output is written to disk asynchronously
  *
  * I.e. written to disk using a separate thread. This has only an effect if

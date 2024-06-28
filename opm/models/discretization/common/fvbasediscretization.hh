@@ -237,10 +237,6 @@ struct MinTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
     static constexpr type value = 0.0;
 };
 
-//! Enable the VTK output by default
-template<class TypeTag>
-struct EnableVtkOutput<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
-
 //! By default, write the VTK output to asynchronously to disk
 //!
 //! This has only an effect if EnableVtkOutput is true
@@ -342,6 +338,11 @@ struct EnableGridAdaptation<TypeTag, Properties::TTag::FvBaseDiscretization>
 template<class TypeTag>
 struct OutputDir<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr auto value = "."; };
+
+//! Enable the VTK output by default
+template<class TypeTag>
+struct EnableVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 
@@ -520,7 +521,7 @@ public:
 
         Parameters::registerParam<TypeTag, Parameters::EnableGridAdaptation>
             ("Enable adaptive grid refinement/coarsening");
-        Parameters::registerParam<TypeTag, Properties::EnableVtkOutput>
+        Parameters::registerParam<TypeTag, Parameters::EnableVtkOutput>
             ("Global switch for turning on writing VTK files");
         Parameters::registerParam<TypeTag, Properties::EnableThermodynamicHints>
             ("Enable thermodynamic hints");

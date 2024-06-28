@@ -30,15 +30,16 @@
 #include "vtkmultiwriter.hh"
 #include "baseoutputmodule.hh"
 
+#include <dune/common/fvector.hh>
+
+#include <opm/models/discretization/common/fvbaseparameters.hh>
+
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 
 #include <opm/material/common/Valgrind.hpp>
 
-#include <dune/common/fvector.hh>
-
 #include <cstdio>
-#include <string_view>
 
 namespace Opm::Properties {
 
@@ -190,7 +191,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
+        if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
             return;
 
         const auto& fractureMapper = elemCtx.simulator().vanguard().fractureMapper();
