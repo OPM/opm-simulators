@@ -28,69 +28,55 @@
  *
  * \copydoc Opm::DamarisWriter
  */
-#ifndef OPM_DAMARIS_PROPERTIES_HPP
-#define OPM_DAMARIS_PROPERTIES_HPP
+#ifndef OPM_DAMARIS_PARAMETERS_HPP
+#define OPM_DAMARIS_PARAMETERS_HPP
 
-#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
 template<class TypeTag, class MyTypeTag>
-struct EnableDamarisOutput {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisOutputHdfCollective {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisSaveMeshToHdf {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisSaveToHdf {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisPythonScript {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisPythonParaviewScript {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisSimName {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisDedicatedCores {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisDedicatedNodes {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisSharedMemoryName {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisSharedMemorySizeBytes {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisLogLevel {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisDaskFile {
-    using type = UndefinedProperty;
-};
-template<class TypeTag, class MyTypeTag>
-struct DamarisLimitVariables {
-    using type = UndefinedProperty;
-};
-} // namespace Opm::Properties
+struct EnableDamarisOutput { using type = Properties::UndefinedProperty; };
 
-#endif // OPM_DAMARIS_PROPERTIES_HPP
+template<class TypeTag, class MyTypeTag>
+struct DamarisOutputHdfCollective { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisSaveMeshToHdf { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisSaveToHdf { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisPythonScript { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisPythonParaviewScript { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisSimName { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisDedicatedCores { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisDedicatedNodes { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisSharedMemoryName { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisSharedMemorySizeBytes { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisLogLevel { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisDaskFile { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DamarisLimitVariables { using type = Properties::UndefinedProperty; };
+
+} // namespace Opm::Parameters
+
+#endif // OPM_DAMARIS_PARAMETERS_HPP

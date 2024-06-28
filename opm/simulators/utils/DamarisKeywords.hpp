@@ -20,7 +20,9 @@
 #ifndef OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 #define OPM_DAMARISKEYWORDS_HEADER_INCLUDED
 
-#include <opm/simulators/flow/DamarisProperties.hpp>
+#include <opm/models/utils/parametersystem.hh>
+
+#include <opm/simulators/flow/DamarisParameters.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 
 #include <map>
@@ -36,8 +38,7 @@
     be changed. We only allow changing FileMode together with output directory
 */
 
-namespace Opm::DamarisOutput
-{
+namespace Opm::DamarisOutput {
     
 /** 
  * Returns true if the file exists. 
@@ -49,7 +50,8 @@ namespace Opm::DamarisOutput
 bool FileExists(const std::string& filename_in,
                 const Parallel::Communication& comm);
 
-struct DamarisSettings {
+struct DamarisSettings
+{
     bool enableDamarisOutputCollective_ = true;
     bool saveToDamarisHDF5_ = true;
     // if saveMeshToDamarisHDF5 is true, requires enableDamarisOutputCollective to be false 
@@ -72,8 +74,6 @@ struct DamarisSettings {
     std::map<std::string, std::string>
     getKeywords(const Parallel::Communication& comm,
                 const std::string& OutputDir);
-
-    
                 
     void SetRandString(void);  // sets the value of rand_value_str_
 };
@@ -97,18 +97,19 @@ getDamarisKeywords(const Parallel::Communication& comm, const std::string& Outpu
     // which is used in simulators/flow/Main.hpp)
     // These command line arguments are defined in opm/simulators/flow/DamarisWriter.hpp and
     // defaults are set in opm/simulators/flow/FlowProblemProperties.hpp
-    settings.enableDamarisOutputCollective_ = Parameters::get<TypeTag, Properties::DamarisOutputHdfCollective>();
-    settings.saveMeshToHDF5_ = Parameters::get<TypeTag, Properties::DamarisSaveMeshToHdf>();
-    settings.saveToDamarisHDF5_ = Parameters::get<TypeTag, Properties::DamarisSaveToHdf>();
-    settings.pythonFilename_ = Parameters::get<TypeTag, Properties::DamarisPythonScript>();
-    settings.paraviewPythonFilename_ = Parameters::get<TypeTag, Properties::DamarisPythonParaviewScript>();
-    settings.damarisSimName_ = Parameters::get<TypeTag, Properties::DamarisSimName>();
-    settings.nDamarisCores_ = Parameters::get<TypeTag, Properties::DamarisDedicatedCores>();
-    settings.nDamarisNodes_ = Parameters::get<TypeTag, Properties::DamarisDedicatedNodes>();
-    settings.shmemSizeBytes_ = Parameters::get<TypeTag, Properties::DamarisSharedMemorySizeBytes>();
-    settings.shmemName_ = Parameters::get<TypeTag, Properties::DamarisSharedMemoryName>();
-    settings.damarisLogLevel_ = Parameters::get<TypeTag, Properties::DamarisLogLevel>();
-    settings.damarisDaskFile_ = Parameters::get<TypeTag, Properties::DamarisDaskFile>();
+    settings.enableDamarisOutputCollective_ = Parameters::get<TypeTag, Parameters::DamarisOutputHdfCollective>();
+    settings.saveMeshToHDF5_ = Parameters::get<TypeTag, Parameters::DamarisSaveMeshToHdf>();
+    settings.saveToDamarisHDF5_ = Parameters::get<TypeTag, Parameters::DamarisSaveToHdf>();
+    settings.pythonFilename_ = Parameters::get<TypeTag, Parameters::DamarisPythonScript>();
+    settings.paraviewPythonFilename_ = Parameters::get<TypeTag, Parameters::DamarisPythonParaviewScript>();
+    settings.damarisSimName_ = Parameters::get<TypeTag, Parameters::DamarisSimName>();
+    settings.nDamarisCores_ = Parameters::get<TypeTag, Parameters::DamarisDedicatedCores>();
+    settings.nDamarisNodes_ = Parameters::get<TypeTag, Parameters::DamarisDedicatedNodes>();
+    settings.shmemSizeBytes_ = Parameters::get<TypeTag, Parameters::DamarisSharedMemorySizeBytes>();
+    settings.shmemName_ = Parameters::get<TypeTag, Parameters::DamarisSharedMemoryName>();
+    settings.damarisLogLevel_ = Parameters::get<TypeTag, Parameters::DamarisLogLevel>();
+    settings.damarisDaskFile_ = Parameters::get<TypeTag, Parameters::DamarisDaskFile>();
+
     return settings.getKeywords(comm, OutputDir);
 }
 
@@ -119,7 +120,7 @@ getSetOfIncludedVariables(void)
     std::unordered_set<std::string> resuset ;
     std::string tstr;
     // The --damaris-limit-variables command line option (defaults to empty string)
-    std::string damarisLimitVars = Parameters::get<TypeTag, Properties::DamarisLimitVariables>();
+    std::string damarisLimitVars = Parameters::get<TypeTag, Parameters::DamarisLimitVariables>();
     std::stringstream ss(damarisLimitVars); 
 
     // Use while loop to check the getline() function condition.  
@@ -132,7 +133,7 @@ getSetOfIncludedVariables(void)
             resuset.insert(tstr) ;
         }
     }
-    return (resuset) ;
+    return resuset;
 }
 
 } // namespace Opm::DamarisOutput
