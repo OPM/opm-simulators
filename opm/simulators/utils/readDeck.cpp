@@ -54,7 +54,11 @@
 
 #include <opm/input/eclipse/Schedule/Action/State.hpp>
 #include <opm/input/eclipse/Schedule/ArrayDimChecker.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/MasterGroup.hpp>
+#include <opm/input/eclipse/Schedule/ResCoup/Slaves.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
+
 #include <opm/input/eclipse/Schedule/UDQ/UDQConfig.hpp>
 #include <opm/input/eclipse/Schedule/UDQ/UDQState.hpp>
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
@@ -233,6 +237,24 @@ namespace {
 #endif
     }
 
+    void inconsistentScheduleError(const std::string& message)
+    {
+        OPM_THROW(std::logic_error,
+                  fmt::format("Inconsistent SCHEDULE section: {}", message));
+    }
+
+    void checkScheduleKeywordConsistency(const Opm::Schedule& schedule)
+    {
+        const auto& final_state = schedule.back();
+        const auto& rescoup = final_state.rescoup();
+        if (rescoup.slaveCount() > 0 && rescoup.masterGroupCount() == 0) {
+            inconsistentScheduleError("SLAVES keyword without GRUPMAST keyword");
+        }
+        if (rescoup.slaveCount() == 0 && rescoup.masterGroupCount() > 0) {
+            inconsistentScheduleError("GRUPMAST keyword without SLAVES keyword");
+        }
+    }
+
     void readOnIORank(Opm::Parallel::Communication         comm,
                       const std::string&                   deckFilename,
                       const Opm::ParseContext*             parseContext,
@@ -282,6 +304,7 @@ namespace {
                                            errorGuard, slaveMode);
         }
 
+        checkScheduleKeywordConsistency(*schedule);
         eclipseState->appendAqufluxSchedule(schedule->getAquiferFluxSchedule());
 
         if (Opm::OpmLog::hasBackend("STDOUT_LOGGER")) {
