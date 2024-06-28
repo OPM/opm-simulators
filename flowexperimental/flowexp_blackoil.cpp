@@ -55,12 +55,6 @@ struct Problem<TypeTag, TTag::FlowExpProblemBlackOil>
 };
 
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    static constexpr int value = 1;
-};
-
-template<class TypeTag>
 struct ContinueOnConvergenceError<TypeTag, TTag::FlowExpProblemBlackOil>
 {
     static constexpr bool value = false;
@@ -116,6 +110,14 @@ struct Simulator<TypeTag, TTag::FlowExpProblemBlackOil>
 };
 
 }
+
+namespace Opm::Parameters {
+
+template<class TypeTag>
+struct ThreadsPerProcess<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
+{ static constexpr int value = 1; };
+
+} // namespace Opm::Parameters
 
 int main(int argc, char** argv)
 {

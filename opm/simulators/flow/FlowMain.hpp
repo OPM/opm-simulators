@@ -388,7 +388,7 @@ namespace Opm {
             if (!getenv("OMP_NUM_THREADS"))
             {
                 int threads = 2;
-                const int requested_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
+                const int requested_threads = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
                 if (requested_threads > 0)
                     threads = requested_threads;
 
