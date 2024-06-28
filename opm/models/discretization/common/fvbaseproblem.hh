@@ -178,7 +178,7 @@ public:
              "before the simulation bails out");
         Parameters::registerParam<TypeTag, Parameters::EnableAsyncVtkOutput>
             ("Dispatch a separate thread to write the VTK output");
-        Parameters::registerParam<TypeTag, Properties::ContinueOnConvergenceError>
+        Parameters::registerParam<TypeTag, Parameters::ContinueOnConvergenceError>
             ("Continue with a non-converged solution instead of giving up "
              "if we encounter a time step size smaller than the minimum time "
              "step size.");
@@ -575,7 +575,7 @@ public:
      *        step size.
      */
     bool continueOnConvergenceError() const
-    { return Parameters::get<TypeTag, Properties::ContinueOnConvergenceError>(); }
+    { return Parameters::get<TypeTag, Parameters::ContinueOnConvergenceError>(); }
 
     /*!
      * \brief Impose the next time step size to be used externally.

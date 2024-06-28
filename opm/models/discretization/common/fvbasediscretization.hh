@@ -120,12 +120,6 @@ struct DiscExtensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type
 template<class TypeTag>
 struct GradientCalculator<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseGradientCalculator<TypeTag>; };
 
-//! By default, do not continue with a non-converged solution instead of giving up
-//! if we encounter a time step size smaller than the minimum time
-//! step size.
-template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
 /*!
  * \brief A vector of quanties, each for one equation.
  */
@@ -344,6 +338,13 @@ struct MinTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
 template<class TypeTag>
 struct MaxTimeStepDivisions<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr unsigned value = 10; };
+
+//! By default, do not continue with a non-converged solution instead of giving up
+//! if we encounter a time step size smaller than the minimum time
+//! step size.
+template<class TypeTag>
+struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 

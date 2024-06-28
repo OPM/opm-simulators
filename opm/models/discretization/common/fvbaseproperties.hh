@@ -216,14 +216,6 @@ template<class TypeTag, class MyTypeTag>
 struct EnableConstraints { using type = UndefinedProperty; };
 
 /*!
- * \brief Continue with a non-converged solution instead of giving up
- *        if we encounter a time step size smaller than the minimum time
- *        step size.
- */
-template<class TypeTag, class MyTypeTag>
-struct ContinueOnConvergenceError { using type = UndefinedProperty; };
-
-/*!
  * \brief Specify whether all intensive quantities for the grid should be
  *        cached in the discretization.
  *

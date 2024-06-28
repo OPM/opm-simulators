@@ -96,6 +96,14 @@ struct MinTimeStepSize { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct MaxTimeStepDivisions { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief Continue with a non-converged solution instead of giving up
+ *        if we encounter a time step size smaller than the minimum time
+ *        step size.
+ */
+template<class TypeTag, class MyTypeTag>
+struct ContinueOnConvergenceError { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm::Parameters
 
 #endif
