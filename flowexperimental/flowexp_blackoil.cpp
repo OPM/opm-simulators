@@ -55,12 +55,6 @@ struct Problem<TypeTag, TTag::FlowExpProblemBlackOil>
 };
 
 template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    static constexpr bool value = false;
-};
-
-template<class TypeTag>
 struct EclNewtonSumTolerance<TypeTag, TTag::FlowExpProblemBlackOil>
 {
     using type = GetPropType<TypeTag, Scalar>;
@@ -116,6 +110,10 @@ namespace Opm::Parameters {
 template<class TypeTag>
 struct ThreadsPerProcess<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
 { static constexpr int value = 1; };
+
+template<class TypeTag>
+struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 

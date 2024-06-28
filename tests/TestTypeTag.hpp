@@ -126,13 +126,6 @@ struct NewtonMaxIterations<TypeTag, TTag::TestTypeTag> {
     static constexpr int value = 8;
 };
 
-// By default, ebos accepts the result of the time integration unconditionally if the
-// smallest time step size is reached.
-template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, TTag::TestTypeTag> {
-    static constexpr bool value = true;
-};
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -144,6 +137,12 @@ template<class TypeTag>
 struct ThreadsPerProcess<TypeTag, Properties::TTag::TestTypeTag>
 { static constexpr int value = 2; };
 #endif
+
+// By default, ebos accepts the result of the time integration unconditionally if the
+// smallest time step size is reached.
+template<class TypeTag>
+struct ContinueOnConvergenceError<TypeTag, Properties::TTag::TestTypeTag>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 

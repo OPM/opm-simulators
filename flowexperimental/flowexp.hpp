@@ -176,12 +176,6 @@ struct NewtonMaxIterations<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr int value = 8;
 };
 
-// By default, flowexp accepts the result of the time integration unconditionally if the
-// smallest time step size is reached.
-template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, TTag::FlowExpTypeTag> {
-    static constexpr bool value = true;
-};
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::FlowExpTypeTag> {
     using type = ISTLSolver<TypeTag>;
@@ -198,6 +192,12 @@ template<class TypeTag>
 struct ThreadsPerProcess<TypeTag, Properties::TTag::FlowExpTypeTag>
 { static constexpr int value = 2; };
 #endif
+
+// By default, flowexp accepts the result of the time integration unconditionally if the
+// smallest time step size is reached.
+template<class TypeTag>
+struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FlowExpTypeTag>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 
