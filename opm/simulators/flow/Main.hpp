@@ -149,6 +149,7 @@ public:
     ~Main();
 
     void setArgvArgc_(const std::string& filename);
+    void handleReservoirCouplingSlaveStdoutStderr_();
 
     void initMPI();
 
