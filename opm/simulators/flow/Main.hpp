@@ -335,7 +335,7 @@ private:
             outputDir = eclipseState_->getIOConfig().getOutputDir();
         }
         else {
-            deckFilename = Parameters::get<PreTypeTag, Properties::EclDeckFileName>();
+            deckFilename = Parameters::get<PreTypeTag, Parameters::EclDeckFileName>();
             outputDir = Parameters::get<PreTypeTag, Parameters::OutputDir>();
         }
 

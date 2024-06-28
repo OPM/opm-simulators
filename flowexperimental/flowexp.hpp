@@ -28,6 +28,8 @@
 #ifndef FLOW_EXP_HPP
 #define FLOW_EXP_HPP
 
+#include <flowexperimental/FlowExpNewtonMethod.hpp>
+
 #include <opm/models/discretization/common/fvbaseproblem.hh>
 
 #include <opm/models/utils/propertysystem.hh>
@@ -80,20 +82,6 @@ struct WellModel<TypeTag, TTag::FlowExpTypeTag> {
 template<class TypeTag>
 struct NewtonMethod<TypeTag, TTag::FlowExpTypeTag> {
     using type = FlowExpNewtonMethod<TypeTag>;
-};
-
-// currently, flowexp uses the non-multisegment well model by default to avoid
-// regressions. the --use-multisegment-well=true|false command line parameter is still
-// available in flowexp, but hidden from view.
-template<class TypeTag>
-struct UseMultisegmentWell<TypeTag, TTag::FlowExpTypeTag> {
-    static constexpr bool value = false;
-};
-
-// set some properties that are only required by the well model
-template<class TypeTag>
-struct MatrixAddWellContributions<TypeTag, TTag::FlowExpTypeTag> {
-    static constexpr bool value = true;
 };
 
 // flow's well model only works with surface volumes
@@ -177,6 +165,18 @@ struct EclNewtonRelaxedTolerance<TypeTag, Properties::TTag::FlowExpTypeTag>
     static constexpr type value = 1e6 * baseValue;
 };
 
+// currently, flowexp uses the non-multisegment well model by default to avoid
+// regressions. the --use-multisegment-well=true|false command line parameter is still
+// available in flowexp, but hidden from view.
+template<class TypeTag>
+struct UseMultisegmentWell<TypeTag, Properties::TTag::FlowExpTypeTag>
+{ static constexpr bool value = false; };
+
+// set some properties that are only required by the well model
+template<class TypeTag>
+struct MatrixAddWellContributions<TypeTag, Properties::TTag::FlowExpTypeTag>
+{ static constexpr bool value = true; };
+
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -206,29 +206,29 @@ public:
 
         BlackoilModelParameters<TypeTag>::registerParameters();
         Parameters::registerParam<TypeTag, Parameters::EnableTerminalOutput>("Do *NOT* use!");
-        Parameters::hideParam<TypeTag, Properties::DbhpMaxRel>();
-        Parameters::hideParam<TypeTag, Properties::DwellFractionMax>();
-        Parameters::hideParam<TypeTag, Properties::MaxResidualAllowed>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceMb>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceMbRelaxed>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceCnv>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceCnvRelaxed>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceWells>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceWellControl>();
-        Parameters::hideParam<TypeTag, Properties::MaxWelleqIter>();
-        Parameters::hideParam<TypeTag, Properties::UseMultisegmentWell>();
-        Parameters::hideParam<TypeTag, Properties::TolerancePressureMsWells>();
-        Parameters::hideParam<TypeTag, Properties::MaxPressureChangeMsWells>();
-        Parameters::hideParam<TypeTag, Properties::MaxInnerIterMsWells>();
-        Parameters::hideParam<TypeTag, Properties::MaxNewtonIterationsWithInnerWellIterations>();
-        Parameters::hideParam<TypeTag, Properties::MaxInnerIterWells>();
-        Parameters::hideParam<TypeTag, Properties::MaxSinglePrecisionDays>();
-        Parameters::hideParam<TypeTag, Properties::MinStrictCnvIter>();
-        Parameters::hideParam<TypeTag, Properties::MinStrictMbIter>();
-        Parameters::hideParam<TypeTag, Properties::SolveWelleqInitially>();
-        Parameters::hideParam<TypeTag, Properties::UpdateEquationsScaling>();
-        Parameters::hideParam<TypeTag, Properties::UseUpdateStabilization>();
-        Parameters::hideParam<TypeTag, Properties::MatrixAddWellContributions>();
+        Parameters::hideParam<TypeTag, Parameters::DbhpMaxRel>();
+        Parameters::hideParam<TypeTag, Parameters::DwellFractionMax>();
+        Parameters::hideParam<TypeTag, Parameters::MaxResidualAllowed>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceMb>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceMbRelaxed>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceCnv>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceCnvRelaxed>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceWells>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceWellControl>();
+        Parameters::hideParam<TypeTag, Parameters::MaxWelleqIter>();
+        Parameters::hideParam<TypeTag, Parameters::UseMultisegmentWell>();
+        Parameters::hideParam<TypeTag, Parameters::TolerancePressureMsWells>();
+        Parameters::hideParam<TypeTag, Parameters::MaxPressureChangeMsWells>();
+        Parameters::hideParam<TypeTag, Parameters::MaxInnerIterMsWells>();
+        Parameters::hideParam<TypeTag, Parameters::MaxNewtonIterationsWithInnerWellIterations>();
+        Parameters::hideParam<TypeTag, Parameters::MaxInnerIterWells>();
+        Parameters::hideParam<TypeTag, Parameters::MaxSinglePrecisionDays>();
+        Parameters::hideParam<TypeTag, Parameters::MinStrictCnvIter>();
+        Parameters::hideParam<TypeTag, Parameters::MinStrictMbIter>();
+        Parameters::hideParam<TypeTag, Parameters::SolveWelleqInitially>();
+        Parameters::hideParam<TypeTag, Parameters::UpdateEquationsScaling>();
+        Parameters::hideParam<TypeTag, Parameters::UseUpdateStabilization>();
+        Parameters::hideParam<TypeTag, Parameters::MatrixAddWellContributions>();
         Parameters::hideParam<TypeTag, Parameters::EnableTerminalOutput>();
     }
 

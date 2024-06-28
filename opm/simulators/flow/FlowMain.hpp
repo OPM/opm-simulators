@@ -199,7 +199,7 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Parameters::VtkWriteEffectiveDiffusionCoefficients>();
             
             // hide average density option
-            Parameters::hideParam<TypeTag, Properties::UseAverageDensityMsWells>();
+            Parameters::hideParam<TypeTag, Parameters::UseAverageDensityMsWells>();
 
             Parameters::endParamRegistration<TypeTag>();
 
@@ -415,7 +415,7 @@ namespace Opm {
             }
 
             detail::mergeParallelLogFiles(eclState().getIOConfig().getOutputDir(),
-                                          Parameters::get<TypeTag, Properties::EclDeckFileName>(),
+                                          Parameters::get<TypeTag, Parameters::EclDeckFileName>(),
                                           Parameters::get<TypeTag, Parameters::EnableLoggingFalloutWarning>());
         }
 
