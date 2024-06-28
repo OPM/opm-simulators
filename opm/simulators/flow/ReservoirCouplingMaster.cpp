@@ -61,12 +61,13 @@ void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char
         std::filesystem::path dir_path(directory_path);
         std::filesystem::path data_file(data_file_name);
         std::filesystem::path full_path = dir_path / data_file;
-        std::vector<char*> slave_argv(2);
-        slave_argv[0] = const_cast<char*>(full_path.c_str());
-        slave_argv[1] = nullptr;
+        std::vector<char*> slave_argv(3);
+        char enable_slave_arg[] = "--slave=true";
+        slave_argv[0] = enable_slave_arg;
+        slave_argv[1] = const_cast<char*>(full_path.c_str());
+        slave_argv[2] = nullptr;
         auto num_procs = slave.numprocs();
         std::vector<int> errcodes(num_procs);
-        const std::string log_file = fmt::format("{}.log", slave_name);
         // TODO: We need to decide how to handle the output from the slave processes..
         //    As far as I can tell, open MPI does not support redirecting the output
         //    to a file, so we might need to implement a custom solution for this
@@ -81,6 +82,14 @@ void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char
             /*array_of_errcodes=*/errcodes.data()
         );
         if (spawn_result != MPI_SUCCESS || (*master_slave_comm == MPI_COMM_NULL)) {
+            for (unsigned int i = 0; i < num_procs; i++) {
+                if (errcodes[i] != MPI_SUCCESS) {
+                    char error_string[MPI_MAX_ERROR_STRING];
+                    int length_of_error_string;
+                    MPI_Error_string(errcodes[i], error_string, &length_of_error_string);
+                    std::cerr << "Error spawning process " << i << ": " << error_string << std::endl;
+                }
+            }
             OPM_THROW(std::runtime_error, "Failed to spawn slave process");
         }
         this->master_slave_comm_.push_back(std::move(master_slave_comm));
