@@ -268,17 +268,6 @@ struct EnableApiTracking<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
-// The default for the initial time step size of the simulation [s].
-//
-// The chosen value means that the size of the first time step is the
-// one of the initial episode (if the length of the initial episode is
-// not millions of trillions of years, that is...)
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::FlowBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 3600*24;
-};
-
 // ... but enable the ECL output by default
 template<class TypeTag>
 struct EnableEclOutput<TypeTag,TTag::FlowBaseProblem> {
@@ -508,6 +497,18 @@ struct EndTime<TypeTag, Properties::TTag::FlowBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e100;
+};
+
+// The default for the initial time step size of the simulation [s].
+//
+// The chosen value means that the size of the first time step is the
+// one of the initial episode (if the length of the initial episode is
+// not millions of trillions of years, that is...)
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::FlowBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 3600*24;
 };
 
 // the default for the allowed volumetric error for oil per second
