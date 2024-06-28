@@ -216,15 +216,6 @@ template<class TypeTag, class MyTypeTag>
 struct EnableConstraints { using type = UndefinedProperty; };
 
 /*!
- * \brief Specify whether the storage terms for previous solutions should be cached.
- *
- * This potentially reduces the CPU time, but comes at the cost of higher memory
- * consumption.
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableStorageCache { using type = UndefinedProperty; };
-
-/*!
  * \brief Specify whether to use the already calculated solutions as
  *        starting values of the intensive quantities.
  *

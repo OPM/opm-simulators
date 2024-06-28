@@ -116,6 +116,15 @@ struct ContinueOnConvergenceError { using type = Properties::UndefinedProperty; 
 template<class TypeTag, class MyTypeTag>
 struct EnableIntensiveQuantityCache { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief Specify whether the storage terms for previous solutions should be cached.
+ *
+ * This potentially reduces the CPU time, but comes at the cost of higher memory
+ * consumption.
+ */
+template<class TypeTag, class MyTypeTag>
+struct EnableStorageCache { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm::Parameters
 
 #endif

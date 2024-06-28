@@ -46,11 +46,6 @@ struct ReservoirNcpVcfvProblem { using InheritsFrom = std::tuple<ReservoirBasePr
 template<class TypeTag>
 struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirNcpVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
-// enable the storage cache for this problem so that the storage cache receives wider
-// testing
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, TTag::ReservoirNcpVcfvProblem> { static constexpr bool value = true; };
-
 // reduce the base epsilon for the finite difference method to 10^-11. for some reason
 // the simulator converges better with this. (TODO: use automatic differentiation?)
 template<class TypeTag>
@@ -60,8 +55,17 @@ struct BaseEpsilon<TypeTag, TTag::ReservoirNcpVcfvProblem>
     static constexpr type value = 1e-11;
 };
 
-
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// enable the storage cache for this problem so that the storage cache receives wider
+// testing
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, Properties::TTag::ReservoirNcpVcfvProblem>
+{ static constexpr bool value = true; };
+
+} // namespace Opm::Parameters
 
 int main(int argc, char **argv)
 {

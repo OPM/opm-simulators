@@ -225,10 +225,6 @@ struct InitialTimeStepSize<TypeTag, TTag::LensBaseProblem>
 template<class TypeTag>
 struct VtkWriteIntrinsicPermeabilities<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
 
-// enable the storage cache by default for this problem
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -236,6 +232,11 @@ namespace Opm::Parameters {
 // enable the cache for intensive quantities by default for this problem
 template<class TypeTag>
 struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::LensBaseProblem>
+{ static constexpr bool value = true; };
+
+// enable the storage cache by default for this problem
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, Properties::TTag::LensBaseProblem>
 { static constexpr bool value = true; };
 
 } // namespace Opm::Parameters

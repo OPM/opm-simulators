@@ -213,10 +213,6 @@ struct Linearizer<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseLine
 template<class TypeTag>
 struct VtkOutputFormat<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = Dune::VTK::ascii; };
 
-// disable caching the storage term by default
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
 // disable constraints by default
 template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
@@ -347,6 +343,11 @@ template<class TypeTag>
 struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
 
+// disable caching the storage term by default
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
+
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -467,7 +468,7 @@ public:
         , linearizer_(new Linearizer())
         , enableGridAdaptation_(Parameters::get<TypeTag, Parameters::EnableGridAdaptation>() )
         , enableIntensiveQuantityCache_(Parameters::get<TypeTag, Parameters::EnableIntensiveQuantityCache>())
-        , enableStorageCache_(Parameters::get<TypeTag, Properties::EnableStorageCache>())
+        , enableStorageCache_(Parameters::get<TypeTag, Parameters::EnableStorageCache>())
         , enableThermodynamicHints_(Parameters::get<TypeTag, Properties::EnableThermodynamicHints>())
     {
         bool isEcfv = std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value;
@@ -476,7 +477,7 @@ public:
                                         "element-centered finite volume discretization (is: "
                                         +Dune::className<Discretization>()+")");
 
-        enableStorageCache_ = Parameters::get<TypeTag, Properties::EnableStorageCache>();
+        enableStorageCache_ = Parameters::get<TypeTag, Parameters::EnableStorageCache>();
 
         PrimaryVariables::init();
         size_t numDof = asImp_().numGridDof();
@@ -530,7 +531,7 @@ public:
             ("Enable thermodynamic hints");
         Parameters::registerParam<TypeTag, Parameters::EnableIntensiveQuantityCache>
             ("Turn on caching of intensive quantities");
-        Parameters::registerParam<TypeTag, Properties::EnableStorageCache>
+        Parameters::registerParam<TypeTag, Parameters::EnableStorageCache>
             ("Store previous storage terms and avoid re-calculating them.");
         Parameters::registerParam<TypeTag, Parameters::OutputDir>
             ("The directory to which result files are written");
