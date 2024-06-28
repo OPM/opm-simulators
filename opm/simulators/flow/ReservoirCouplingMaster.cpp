@@ -66,24 +66,20 @@ void ReservoirCouplingMaster::spawnSlaveProcesses([[maybe_unused]]int argc, char
         slave_argv[1] = nullptr;
         auto num_procs = slave.numprocs();
         std::vector<int> errcodes(num_procs);
-        MPI_Info info;
-        MPI_Info_create(&info);
         const std::string log_file = fmt::format("{}.log", slave_name);
-        // TODO: We need to decide how to handle the output from the slave processes
-        //    For now we just redirect the output to a log file with the name of the slave
-        MPI_Info_set(info, "output", log_file.c_str());
-        MPI_Info_set(info, "error", log_file.c_str());
+        // TODO: We need to decide how to handle the output from the slave processes..
+        //    As far as I can tell, open MPI does not support redirecting the output
+        //    to a file, so we might need to implement a custom solution for this
         int spawn_result = MPI_Comm_spawn(
             flow_program_name,
             slave_argv.data(),
             /*maxprocs=*/num_procs,
-            /*info=*/info,
+            /*info=*/MPI_INFO_NULL,
             /*root=*/0,  // Rank 0 spawns the slave processes
             /*comm=*/this->comm_,
             /*intercomm=*/master_slave_comm.get(),
             /*array_of_errcodes=*/errcodes.data()
         );
-        MPI_Info_free(&info);
         if (spawn_result != MPI_SUCCESS || (*master_slave_comm == MPI_COMM_NULL)) {
             OPM_THROW(std::runtime_error, "Failed to spawn slave process");
         }
