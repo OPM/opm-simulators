@@ -228,20 +228,20 @@ public:
 #endif
         Parameters::registerParam<TypeTag, Properties::EclOutputDoublePrecision>
             ("Tell the output writer to use double precision. Useful for 'perfect' restarts");
-        Parameters::registerParam<TypeTag, Properties::RestartWritingInterval>
+        Parameters::registerParam<TypeTag, Parameters::RestartWritingInterval>
             ("The frequencies of which time steps are serialized to disk");
-        Parameters::registerParam<TypeTag, Properties::EnableDriftCompensation>
+        Parameters::registerParam<TypeTag, Parameters::EnableDriftCompensation>
             ("Enable partial compensation of systematic mass losses via "
              "the source term of the next time step");
-        Parameters::registerParam<TypeTag, Properties::OutputMode>
+        Parameters::registerParam<TypeTag, Parameters::OutputMode>
             ("Specify which messages are going to be printed. "
              "Valid values are: none, log, all (default)");
-        Parameters::registerParam<TypeTag, Properties::NumPressurePointsEquil>
+        Parameters::registerParam<TypeTag, Parameters::NumPressurePointsEquil>
             ("Number of pressure points (in each direction) in tables used for equilibration");
-        Parameters::hideParam<TypeTag, Properties::NumPressurePointsEquil>(); // Users will typically not need to modify this parameter..
-        Parameters::registerParam<TypeTag, Properties::ExplicitRockCompaction>
+        Parameters::hideParam<TypeTag, Parameters::NumPressurePointsEquil>(); // Users will typically not need to modify this parameter..
+        Parameters::registerParam<TypeTag, Parameters::ExplicitRockCompaction>
             ("Use pressure from end of the last time step when evaluating rock compaction");
-        Parameters::hideParam<TypeTag, Properties::ExplicitRockCompaction>(); // Users will typically not need to modify this parameter..
+        Parameters::hideParam<TypeTag, Parameters::ExplicitRockCompaction>(); // Users will typically not need to modify this parameter..
     }
 
 
@@ -311,7 +311,7 @@ public:
         damarisWriter_ = std::make_unique<DamarisWriterType>(simulator);
         enableDamarisOutput_ = Parameters::get<TypeTag, Parameters::EnableDamarisOutput>();
 #endif
-        enableDriftCompensation_ = Parameters::get<TypeTag, Properties::EnableDriftCompensation>();
+        enableDriftCompensation_ = Parameters::get<TypeTag, Parameters::EnableDriftCompensation>();
 
         enableEclOutput_ = Parameters::get<TypeTag, Properties::EnableEclOutput>();
 
@@ -323,14 +323,14 @@ public:
         // 1. Command line value (--num-pressure-points-equil=N)
         // 2. EQLDIMS item 2
         // Default value is defined in opm-common/src/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
-        if (Parameters::isSet<TypeTag, Properties::NumPressurePointsEquil>())
+        if (Parameters::isSet<TypeTag, Parameters::NumPressurePointsEquil>())
         {
-            this->numPressurePointsEquil_ = Parameters::get<TypeTag, Properties::NumPressurePointsEquil>();
+            this->numPressurePointsEquil_ = Parameters::get<TypeTag, Parameters::NumPressurePointsEquil>();
         } else {
             this->numPressurePointsEquil_ = simulator.vanguard().eclState().getTableManager().getEqldims().getNumDepthNodesP();
         }
 
-        explicitRockCompaction_ = Parameters::get<TypeTag, Properties::ExplicitRockCompaction>();
+        explicitRockCompaction_ = Parameters::get<TypeTag, Parameters::ExplicitRockCompaction>();
 
 
         RelpermDiagnostics relpermDiagnostics;
@@ -649,7 +649,7 @@ public:
         OPM_TIMEBLOCK(endTimeStep);
 
 #ifndef NDEBUG
-        if constexpr (getPropValue<TypeTag, Properties::EnableDebuggingChecks>()) {
+        if constexpr (getPropValue<TypeTag, Parameters::EnableDebuggingChecks>()) {
             // in debug mode, we don't care about performance, so we check
             // if the model does the right thing (i.e., the mass change
             // inside the whole reservoir must be equivalent to the fluxes

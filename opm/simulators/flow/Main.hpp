@@ -415,7 +415,7 @@ private:
         try {
             this->readDeck(deckFilename,
                            outputDir,
-                           Parameters::get<PreTypeTag, Properties::OutputMode>(),
+                           Parameters::get<PreTypeTag, Parameters::OutputMode>(),
                            !Parameters::get<PreTypeTag, Parameters::SchedRestart>(),
                            Parameters::get<PreTypeTag, Parameters::EnableLoggingFalloutWarning>(),
                            Parameters::get<PreTypeTag, Parameters::ParsingStrictness>(),

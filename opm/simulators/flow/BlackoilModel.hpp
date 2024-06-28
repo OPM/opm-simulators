@@ -79,76 +79,72 @@ struct FlowProblem {
                                     FlowNonLinearSolver, FlowBaseProblem, BlackOilModel>;
 };
 }
-template<class TypeTag>
-struct EnableDebuggingChecks<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
 // default in flow is to formulate the equations in surface volumes
 template<class TypeTag>
-struct BlackoilConserveSurfaceVolume<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = true;
-};
-template<class TypeTag>
-struct UseVolumetricResidual<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
+struct BlackoilConserveSurfaceVolume<TypeTag, TTag::FlowProblem>
+{ static constexpr bool value = true; };
 
 template<class TypeTag>
-struct AquiferModel<TypeTag, TTag::FlowProblem> {
-    using type = BlackoilAquiferModel<TypeTag>;
-};
+struct UseVolumetricResidual<TypeTag, TTag::FlowProblem>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct AquiferModel<TypeTag, TTag::FlowProblem>
+{ using type = BlackoilAquiferModel<TypeTag>; };
 
 // disable all extensions supported by black oil model. this should not really be
 // necessary but it makes things a bit more explicit
 template<class TypeTag>
-struct EnablePolymer<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableSolvent<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableTemperature<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = true;
-};
-template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableFoam<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableBrine<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableSaltPrecipitation<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableMICP<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct EnableDispersion<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
+struct EnablePolymer<TypeTag, TTag::FlowProblem>
+{ static constexpr bool value = false; };
 
 template<class TypeTag>
-struct WellModel<TypeTag, TTag::FlowProblem> {
-    using type = BlackoilWellModel<TypeTag>;
-};
+struct EnableSolvent<TypeTag, TTag::FlowProblem>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct LinearSolverSplice<TypeTag, TTag::FlowProblem> {
-    using type = TTag::FlowIstlSolver;
-};
+struct EnableTemperature<TypeTag, TTag::FlowProblem>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::FlowProblem>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct EnableFoam<TypeTag, TTag::FlowProblem>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct EnableBrine<TypeTag, TTag::FlowProblem>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct EnableSaltPrecipitation<TypeTag, TTag::FlowProblem>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct EnableMICP<TypeTag, TTag::FlowProblem>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct EnableDispersion<TypeTag, TTag::FlowProblem>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct WellModel<TypeTag, TTag::FlowProblem>
+{ using type = BlackoilWellModel<TypeTag>; };
+
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::FlowProblem>
+{ using type = TTag::FlowIstlSolver; };
 
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template<class TypeTag>
+struct EnableDebuggingChecks<TypeTag, Properties::TTag::FlowProblem>
+{ static constexpr bool value = false; };
 
 template<class TypeTag>
 struct OutputDir<TypeTag, Properties::TTag::FlowProblem>
