@@ -37,6 +37,11 @@ namespace Opm::Parameters {
 template<class TypeTag, class MyTypeTag>
 struct GridGlobalRefinements { using type = Properties::UndefinedProperty; };
 
+//! Property provides the name of the file from which the additional runtime
+//! parameters should to be loaded from
+template<class TypeTag, class MyTypeTag>
+struct ParameterFile { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm:Parameters
 
 #endif
