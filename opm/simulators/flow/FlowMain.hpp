@@ -176,7 +176,7 @@ namespace Opm {
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteSaturatedOilGasDissolutionFactor>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteSaturationRatios>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteSaturations>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteTemperature>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteTemperature>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteViscosities>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteWaterFormationVolumeFactor>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteGasDissolutionFactor>();
