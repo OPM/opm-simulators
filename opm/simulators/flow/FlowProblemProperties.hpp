@@ -398,13 +398,6 @@ struct EclOutputDoublePrecision<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
-// the cache for intensive quantities can be used for ECL problems and also yields a
-// decent speedup...
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr bool value = true;
-};
-
 // the cache for the storage term can also be used and also yields a decent speedup
 template<class TypeTag>
 struct EnableStorageCache<TypeTag, TTag::FlowBaseProblem> {
@@ -522,6 +515,12 @@ struct OutputDir<TypeTag, Properties::TTag::FlowBaseProblem>
 template<class TypeTag>
 struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
+
+// the cache for intensive quantities can be used for ECL problems and also yields a
+// decent speedup...
+template<class TypeTag>
+struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 
