@@ -224,8 +224,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                     para.linsolver_ = "cprw";
                     parameters_.push_back(para);
                     prm_.push_back(setupPropertyTree(parameters_[0],
-                                                     Parameters::isSet<TypeTag,Properties::LinearSolverMaxIter>(),
-                                                     Parameters::isSet<TypeTag,Properties::LinearSolverReduction>()));
+                                                     Parameters::isSet<TypeTag, Parameters::LinearSolverMaxIter>(),
+                                                     Parameters::isSet<TypeTag, Parameters::LinearSolverReduction>()));
                 }
                 {
                     FlowLinearSolverParameters para;
@@ -233,8 +233,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                     para.linsolver_ = "ilu0";
                     parameters_.push_back(para);
                     prm_.push_back(setupPropertyTree(parameters_[1],
-                                                     Parameters::isSet<TypeTag,Properties::LinearSolverMaxIter>(),
-                                                     Parameters::isSet<TypeTag,Properties::LinearSolverReduction>()));
+                                                     Parameters::isSet<TypeTag, Parameters::LinearSolverMaxIter>(),
+                                                     Parameters::isSet<TypeTag, Parameters::LinearSolverReduction>()));
                 }
                 // ------------
             } else {
@@ -242,8 +242,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 assert(parameters_.size() == 1);
                 assert(prm_.empty());
                 prm_.push_back(setupPropertyTree(parameters_[0],
-                                                 Parameters::isSet<TypeTag,Properties::LinearSolverMaxIter>(),
-                                                 Parameters::isSet<TypeTag,Properties::LinearSolverReduction>()));
+                                                 Parameters::isSet<TypeTag, Parameters::LinearSolverMaxIter>(),
+                                                 Parameters::isSet<TypeTag, Parameters::LinearSolverReduction>()));
             }
             flexibleSolver_.resize(prm_.size());
 
