@@ -30,6 +30,7 @@
 #include <opm/simulators/flow/MixingRateControls.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
+#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -299,5 +300,9 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
 }
 
 template class MixingRateControls<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
+
+// TODO: investigating whether and why we need the following
+// The current MixingRateControls is based on Blackoil, the following one may not make sense anyway
+template class MixingRateControls<GenericOilGasFluidSystem<double, 3>>;
 
 } // namespace Opm
