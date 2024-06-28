@@ -65,38 +65,30 @@
 #include <utility>
 #include <vector>
 
-namespace Opm::Properties
-{
+namespace Opm::Properties::TTag {
 
 // create new type tag for the Ecl-output
-namespace TTag
-{
-    struct OutputBlackOil {
-    };
-} // namespace TTag
+struct OutputBlackOil {};
+
+} // namespace Opm::Properties::TTag
+
+namespace Opm::Parameters {
 
 template <class TypeTag, class MyTypeTag>
-struct ForceDisableFluidInPlaceOutput {
-    using type = UndefinedProperty;
-};
-
-template <class TypeTag>
-struct ForceDisableFluidInPlaceOutput<TypeTag, TTag::OutputBlackOil> {
-    static constexpr bool value = false;
-};
-
+struct ForceDisableFluidInPlaceOutput { using type = Properties::UndefinedProperty; };
 
 template <class TypeTag, class MyTypeTag>
-struct ForceDisableResvFluidInPlaceOutput {
-    using type = UndefinedProperty;
-};
+struct ForceDisableResvFluidInPlaceOutput { using type = Properties::UndefinedProperty; };
 
 template <class TypeTag>
-struct ForceDisableResvFluidInPlaceOutput<TypeTag, TTag::OutputBlackOil> {
-    static constexpr bool value = false;
-};
+struct ForceDisableFluidInPlaceOutput<TypeTag, Properties::TTag::OutputBlackOil>
+{ static constexpr bool value = false; };
 
-} // namespace Opm::Properties
+template <class TypeTag>
+struct ForceDisableResvFluidInPlaceOutput<TypeTag, Properties::TTag::OutputBlackOil>
+{ static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm
 {
@@ -173,10 +165,10 @@ public:
         this->setupBlockData(isCartIdxOnThisRank);
 
         this->forceDisableFipOutput_ =
-            Parameters::get<TypeTag, Properties::ForceDisableFluidInPlaceOutput>();
+            Parameters::get<TypeTag, Parameters::ForceDisableFluidInPlaceOutput>();
 
         this->forceDisableFipresvOutput_ =
-            Parameters::get<TypeTag, Properties::ForceDisableResvFluidInPlaceOutput>();
+            Parameters::get<TypeTag, Parameters::ForceDisableResvFluidInPlaceOutput>();
 
         if (! Parameters::get<TypeTag, Properties::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
@@ -207,10 +199,10 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::ForceDisableFluidInPlaceOutput>
+        Parameters::registerParam<TypeTag, Parameters::ForceDisableFluidInPlaceOutput>
             ("Do not print fluid-in-place values after each report step "
              "even if requested by the deck.");
-        Parameters::registerParam<TypeTag, Properties::ForceDisableResvFluidInPlaceOutput>
+        Parameters::registerParam<TypeTag, Parameters::ForceDisableResvFluidInPlaceOutput>
             ("Do not print reservoir volumes values after each report step "
              "even if requested by the deck.");
     }
