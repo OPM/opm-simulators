@@ -204,7 +204,7 @@ public:
             // to the original one with a deleter that does nothing.
             // Outch! We need to be able to scale the linear system! Hence const_cast
             // setup sparsity pattern for jacobi matrix for preconditioner (only used for openclSolver)
-            bdaBridge_->numJacobiBlocks_ = Parameters::get<TypeTag, Properties::NumJacobiBlocks>();
+            bdaBridge_->numJacobiBlocks_ = Parameters::get<TypeTag, Parameters::NumJacobiBlocks>();
             bdaBridge_->prepare(this->simulator_.vanguard().grid(),
                                this->simulator_.vanguard().cartesianIndexMapper(),
                                this->simulator_.vanguard().schedule().getWellsatEnd(),

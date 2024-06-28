@@ -489,7 +489,7 @@ public:
         bool gasActive = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
         bool waterActive = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
         bool enableSwatinit = simulator_.vanguard().eclState().fieldProps().has_double("SWATINIT");
-        bool opm_rst_file = Parameters::get<TypeTag, Properties::EnableOpmRstFile>();
+        bool opm_rst_file = Parameters::get<TypeTag, Parameters::EnableOpmRstFile>();
         bool read_temp = enableEnergy || (opm_rst_file && enableTemperature);
         std::vector<RestartKey> solutionKeys{
             {"PRESSURE", UnitSystem::measure::pressure},
