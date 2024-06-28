@@ -147,7 +147,7 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Properties::InitialTimeStepSize>();
             Parameters::hideParam<TypeTag, Properties::MaxTimeStepDivisions>();
             Parameters::hideParam<TypeTag, Parameters::MaxTimeStepSize>();
-            Parameters::hideParam<TypeTag, Properties::MinTimeStepSize>();
+            Parameters::hideParam<TypeTag, Parameters::MinTimeStepSize>();
             Parameters::hideParam<TypeTag, Properties::PredeterminedTimeStepsFile>();
 
             // flow also does not use the eWoms Newton method
