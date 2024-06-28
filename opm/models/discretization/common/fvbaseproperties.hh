@@ -216,18 +216,6 @@ template<class TypeTag, class MyTypeTag>
 struct EnableConstraints { using type = UndefinedProperty; };
 
 /*!
- * \brief Specify whether all intensive quantities for the grid should be
- *        cached in the discretization.
- *
- * This potentially reduces the CPU time, but comes at the cost of
- * higher memory consumption. In turn, the higher memory requirements
- * may cause the simulation to exhibit worse cache coherence behavior
- * which eats some of the computational benefits again.
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableIntensiveQuantityCache { using type = UndefinedProperty; };
-
-/*!
  * \brief Specify whether the storage terms for previous solutions should be cached.
  *
  * This potentially reduces the CPU time, but comes at the cost of higher memory

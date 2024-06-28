@@ -221,13 +221,6 @@ struct EnableStorageCache<TypeTag, TTag::FvBaseDiscretization> { static constexp
 template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
-// by default, disable the intensive quantity cache. If the intensive quantities are
-// relatively cheap to calculate, the cache basically does not yield any performance
-// impact because of the intensive quantity cache will cause additional pressure on the
-// CPU caches...
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
 // do not use thermodynamic hints by default. If you enable this, make sure to also
 // enable the intensive quantity cache above to avoid getting an exception...
 template<class TypeTag>
@@ -344,6 +337,14 @@ struct MaxTimeStepDivisions<TypeTag, Properties::TTag::FvBaseDiscretization>
 //! step size.
 template<class TypeTag>
 struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
+
+//! by default, disable the intensive quantity cache. If the intensive quantities are
+//! relatively cheap to calculate, the cache basically does not yield any performance
+//! impact because of the intensive quantity cache will cause additional pressure on the
+//! CPU caches...
+template<class TypeTag>
+struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
@@ -465,7 +466,7 @@ public:
         , localLinearizer_(ThreadManager::maxThreads())
         , linearizer_(new Linearizer())
         , enableGridAdaptation_(Parameters::get<TypeTag, Parameters::EnableGridAdaptation>() )
-        , enableIntensiveQuantityCache_(Parameters::get<TypeTag, Properties::EnableIntensiveQuantityCache>())
+        , enableIntensiveQuantityCache_(Parameters::get<TypeTag, Parameters::EnableIntensiveQuantityCache>())
         , enableStorageCache_(Parameters::get<TypeTag, Properties::EnableStorageCache>())
         , enableThermodynamicHints_(Parameters::get<TypeTag, Properties::EnableThermodynamicHints>())
     {
@@ -527,7 +528,7 @@ public:
             ("Global switch for turning on writing VTK files");
         Parameters::registerParam<TypeTag, Properties::EnableThermodynamicHints>
             ("Enable thermodynamic hints");
-        Parameters::registerParam<TypeTag, Properties::EnableIntensiveQuantityCache>
+        Parameters::registerParam<TypeTag, Parameters::EnableIntensiveQuantityCache>
             ("Turn on caching of intensive quantities");
         Parameters::registerParam<TypeTag, Properties::EnableStorageCache>
             ("Store previous storage terms and avoid re-calculating them.");
