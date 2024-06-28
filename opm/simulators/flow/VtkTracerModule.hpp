@@ -30,6 +30,7 @@
 #include <dune/common/fvector.hh>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/discretization/common/fvbaseparameters.hh>
 #include <opm/models/io/baseoutputmodule.hh>
 #include <opm/models/io/vtkmultiwriter.hh>
 #include <opm/models/utils/parametersystem.hh>
@@ -126,7 +127,7 @@ namespace Opm {
      */
         void processElement(const ElementContext& elemCtx)
         {
-            if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
+            if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
                 return;
 
             if (eclTracerConcentrationOutput_()) {
@@ -172,9 +173,6 @@ namespace Opm {
                     }
                 }
             }
-
-
-
         }
 
     private:
@@ -184,10 +182,10 @@ namespace Opm {
             return val;
         }
 
-
         std::vector<ScalarBuffer> eclFreeTracerConcentration_;
         std::vector<ScalarBuffer> eclSolTracerConcentration_;
     };
+
 } // namespace Opm
 
 #endif // OPM_VTK_TRACER_MODULE_HPP

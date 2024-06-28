@@ -297,12 +297,6 @@ struct NewtonTolerance<TypeTag, TTag::FlowBaseProblem> {
     static constexpr type value = 1e-2;
 };
 
-// Disable the VTK output by default for this problem ...
-template<class TypeTag>
-struct EnableVtkOutput<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr bool value = false;
-};
-
 // ... but enable the ECL output by default
 template<class TypeTag>
 struct EnableEclOutput<TypeTag,TTag::FlowBaseProblem> {
@@ -523,6 +517,11 @@ namespace Opm::Parameters {
 template<class TypeTag>
 struct OutputDir<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr auto value = "."; };
+
+// Disable the VTK output by default for this problem ...
+template<class TypeTag>
+struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
