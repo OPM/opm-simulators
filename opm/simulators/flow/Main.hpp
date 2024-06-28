@@ -713,21 +713,24 @@ private:
         // This function is called before the parallel OpenMP stuff gets initialized.
         // That initialization happends after the deck is read and we want this message.
         // Hence we duplicate the code of setupParallelism to get the number of threads.
-        if (std::getenv("OMP_NUM_THREADS")) {
-            threads =  omp_get_max_threads();
+        static bool first_time = true;        
+        const int default_threads = 2;
+        const int requested_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
+        const char* env_var = getenv("OMP_NUM_THREADS");
+        int omp_num_threads = -1;
+        try {
+            omp_num_threads = std::stoi(env_var ? env_var : "");
+            if (first_time && requested_threads > 0 && FlowGenericVanguard::comm().rank()==0) {
+                std::cout << "Warning: Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument." << std::endl;
+            }
+        } catch (const std::invalid_argument& e) {
+            omp_num_threads = requested_threads > 0 ? requested_threads : default_threads;
         }
-        else {
-            threads = 2;
-
-            const int input_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
-
-            if (input_threads > 0)
-                threads = input_threads;
-        }
+        threads = omp_num_threads;
+        first_time = false;        
 #else
         threads = 1;
 #endif
-
         return threads;
     }
 

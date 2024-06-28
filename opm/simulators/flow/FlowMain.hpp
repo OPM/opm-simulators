@@ -383,20 +383,27 @@ namespace Opm {
             mpi_size_ = comm.size();
 
 #if _OPENMP
-            // if openMP is available, default to 2 threads per process unless
-            // OMP_NUM_THREADS is set or command line --threads-per-process used
-            if (!getenv("OMP_NUM_THREADS"))
-            {
-                int threads = 2;
-                const int requested_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
-                if (requested_threads > 0)
-                    threads = requested_threads;
-
-                // We are not limiting this to the number of processes
-                // reported by OpenMP as on some hardware (and some OpenMPI
-                // versions) this will be 1 when run with mpirun
-                omp_set_num_threads(threads);
+            // If openMP is available, default to 2 threads per process unless
+            // OMP_NUM_THREADS is set or command line --threads-per-process used.
+            // Issue a warning if both OMP_NUM_THREADS and --threads-per-process are set,
+            // but let the environment variable take precedence.
+            const int default_threads = 2;
+            const int requested_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
+            const char* env_var = getenv("OMP_NUM_THREADS");
+            int omp_num_threads = -1;
+            try {
+                omp_num_threads = std::stoi(env_var ? env_var : "");
+                // Warning in 'Main.hpp', where this code is duplicated
+                // if (requested_threads > 0) {
+                //    OpmLog::warning("Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument.");
+                // }
+            } catch (const std::invalid_argument& e) {
+                omp_num_threads = requested_threads > 0 ? requested_threads : default_threads;
             }
+            // We are not limiting this to the number of processes
+            // reported by OpenMP as on some hardware (and some OpenMPI
+            // versions) this will be 1 when run with mpirun
+            omp_set_num_threads(omp_num_threads);
 #endif
 
             using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
