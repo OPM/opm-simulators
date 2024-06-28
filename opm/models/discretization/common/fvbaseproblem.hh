@@ -169,7 +169,7 @@ public:
     static void registerParameters()
     {
         Model::registerParameters();
-        Parameters::registerParam<TypeTag, Properties::MaxTimeStepSize>
+        Parameters::registerParam<TypeTag, Parameters::MaxTimeStepSize>
             ("The maximum size to which all time steps are limited to [s]");
         Parameters::registerParam<TypeTag, Properties::MinTimeStepSize>
             ("The minimum size to which all time steps are limited to [s]");
@@ -593,7 +593,7 @@ public:
         if (nextTimeStepSize_ > 0.0)
             return nextTimeStepSize_;
 
-        Scalar dtNext = std::min(Parameters::get<TypeTag, Properties::MaxTimeStepSize>(),
+        Scalar dtNext = std::min(Parameters::get<TypeTag, Parameters::MaxTimeStepSize>(),
                                  newtonMethod().suggestTimeStepSize(simulator().timeStepSize()));
 
         if (dtNext < simulator().maxTimeStepSize()

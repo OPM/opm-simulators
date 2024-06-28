@@ -221,14 +221,6 @@ struct UseLinearizationLock<TypeTag, TTag::FvBaseDiscretization> { static conste
 template<class TypeTag>
 struct Linearizer<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseLinearizer<TypeTag>; };
 
-//! use an unlimited time step size by default
-template<class TypeTag>
-struct MaxTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = std::numeric_limits<type>::infinity();
-};
-
 //! By default, accept any time step larger than zero
 template<class TypeTag>
 struct MinTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
@@ -344,6 +336,14 @@ struct EnableVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
 template<class TypeTag>
 struct EnableAsyncVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = true; };
+
+//! use an unlimited time step size by default
+template<class TypeTag>
+struct MaxTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = std::numeric_limits<type>::infinity();
+};
 
 } // namespace Opm::Parameters
 

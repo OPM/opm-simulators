@@ -73,6 +73,14 @@ struct EnableVtkOutput { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EnableAsyncVtkOutput { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief Specify the maximum size of a time integration [s].
+ *
+ * The default is to not limit the step size.
+ */
+template<class TypeTag, class MyTypeTag>
+struct MaxTimeStepSize { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm::Parameters
 
 #endif
