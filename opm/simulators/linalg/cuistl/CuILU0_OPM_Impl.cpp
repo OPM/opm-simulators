@@ -98,7 +98,6 @@ template <class M, class X, class Y, int l>
 void
 CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
 {
-    // ScopeTimer timer("Apply");
     OPM_TIMEBLOCK(prec_apply);
     {
         int levelStartIdx = 0;
@@ -252,7 +251,7 @@ template <class M, class X, class Y, int l>
 void
 CuILU0_OPM_Impl<M, X, Y, l>::tuneThreadBlockSizes()
 {
-    auto start = std::chrono::high_resolution_clock::now();
+    //TODO generalize this tuning process in a function separate of the class
     long long bestApplyTime = __LONG_LONG_MAX__;
     long long bestUpdateTime = __LONG_LONG_MAX__;
     int bestApplyBlockSize = -1;
@@ -298,9 +297,6 @@ CuILU0_OPM_Impl<M, X, Y, l>::tuneThreadBlockSizes()
 
     m_applyThreadBlockSize = bestApplyBlockSize;
     m_updateThreadBlockSize = bestUpdateBlockSize;
-    auto end = std::chrono::high_resolution_clock::now();
-    long long durationInMicroSec = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-    printf("calibration time %lld, results: {apply: %d, update: %d}\n", durationInMicroSec, m_applyThreadBlockSize, m_updateThreadBlockSize);
 }
 
 } // namespace Opm::cuistl

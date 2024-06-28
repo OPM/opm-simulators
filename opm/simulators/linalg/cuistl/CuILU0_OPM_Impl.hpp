@@ -32,7 +32,6 @@
 #include <memory>
 
 
-
 namespace Opm::cuistl
 {
 //! \brief DILU preconditioner on the GPU.
