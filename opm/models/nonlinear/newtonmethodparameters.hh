@@ -61,6 +61,10 @@ struct NewtonMaxError { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct NewtonTargetIterations { using type = Properties::UndefinedProperty; };
 
+//! Number of maximum iterations for the Newton method.
+template<class TypeTag, class MyTypeTag>
+struct NewtonMaxIterations { using type = Properties::UndefinedProperty; };
+
 } // end namespace Opm::Parameters
 
 #endif

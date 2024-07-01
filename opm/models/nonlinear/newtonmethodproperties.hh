@@ -44,10 +44,6 @@ struct NewtonConvergenceWriter { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct ConvergenceWriter { using type = UndefinedProperty; };
 
-//! Number of maximum iterations for the Newton method.
-template<class TypeTag, class MyTypeTag>
-struct NewtonMaxIterations { using type = UndefinedProperty; };
-
 } // end namespace Opm::Properties
 
 #endif

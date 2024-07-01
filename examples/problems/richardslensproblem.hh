@@ -107,10 +107,6 @@ struct EnableGravity<TypeTag, TTag::RichardsLensProblem> { static constexpr bool
 template<class TypeTag>
 struct NumericDifferenceMethod<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 0; };
 
-// Set the maximum number of newton iterations of a time step
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 28; };
-
 // The default for the end time of the simulation
 template<class TypeTag>
 struct EndTime<TypeTag, TTag::RichardsLensProblem>
@@ -144,6 +140,11 @@ struct NewtonWriteConvergence<TypeTag, Properties::TTag::RichardsLensProblem>
 template<class TypeTag>
 struct NewtonTargetIterations<TypeTag, Properties::TTag::RichardsLensProblem>
 { static constexpr int value = 18; };
+
+// Set the maximum number of newton iterations of a time step
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, Properties::TTag::RichardsLensProblem>
+{ static constexpr int value = 28; };
 
 } // namespace Opm::Parameters
 
