@@ -27,34 +27,35 @@
 #ifndef EWOMS_VTK_TEMPERATURE_MODULE_HH
 #define EWOMS_VTK_TEMPERATURE_MODULE_HH
 
-#include "vtkmultiwriter.hh"
-#include "baseoutputmodule.hh"
+#include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
+
+#include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-#include <opm/material/common/MathToolbox.hpp>
-
-namespace Opm::Properties {
-
-namespace TTag {
+namespace Opm::Properties::TTag {
 
 // create new type tag for the VTK temperature output
 struct VtkTemperature {};
 
-} // namespace TTag
+} // namespace Opm::Properties::TTag
+
+namespace Opm::Parameters {
 
 // create the property tags needed for the temperature module
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteTemperature { using type = UndefinedProperty; };
+struct VtkWriteTemperature { using type = Properties::UndefinedProperty; };
 
 // set default values for what quantities to output
 template<class TypeTag>
-struct VtkWriteTemperature<TypeTag, TTag::VtkTemperature> { static constexpr bool value = true; };
+struct VtkWriteTemperature<TypeTag, Properties::TTag::VtkTemperature>
+{ static constexpr bool value = true; };
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -90,7 +91,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::VtkWriteTemperature>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteTemperature>
             ("Include the temperature in the VTK output files");
     }
 
@@ -141,7 +142,7 @@ public:
 private:
     static bool temperatureOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteTemperature>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteTemperature>();
         return val;
     }
 
