@@ -316,7 +316,7 @@ public:
         enableEclOutput_ = Parameters::get<TypeTag, Properties::EnableEclOutput>();
 
         this->enableTuning_ = Parameters::get<TypeTag, Properties::EnableTuning>();
-        this->initialTimeStepSize_ = Parameters::get<TypeTag, Properties::InitialTimeStepSize>();
+        this->initialTimeStepSize_ = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
         this->maxTimeStepAfterWellEvent_ = Parameters::get<TypeTag, Properties::TimeStepAfterEventInDays>() * 24 * 60 * 60;
 
         // The value N for this parameter is defined in the following order of presedence:

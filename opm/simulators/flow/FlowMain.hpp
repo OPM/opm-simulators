@@ -141,14 +141,14 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Parameters::EnableThermodynamicHints>();
 
             // in flow only the deck file determines the end time of the simulation
-            Parameters::hideParam<TypeTag, Properties::EndTime>();
+            Parameters::hideParam<TypeTag, Parameters::EndTime>();
 
             // time stepping is not done by the eWoms code in flow
-            Parameters::hideParam<TypeTag, Properties::InitialTimeStepSize>();
+            Parameters::hideParam<TypeTag, Parameters::InitialTimeStepSize>();
             Parameters::hideParam<TypeTag, Parameters::MaxTimeStepDivisions>();
             Parameters::hideParam<TypeTag, Parameters::MaxTimeStepSize>();
             Parameters::hideParam<TypeTag, Parameters::MinTimeStepSize>();
-            Parameters::hideParam<TypeTag, Properties::PredeterminedTimeStepsFile>();
+            Parameters::hideParam<TypeTag, Parameters::PredeterminedTimeStepsFile>();
 
             // flow also does not use the eWoms Newton method
             Parameters::hideParam<TypeTag, Parameters::NewtonMaxError>();
@@ -158,7 +158,7 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Parameters::NewtonWriteConvergence>();
 
             // the default eWoms checkpoint/restart mechanism does not work with flow
-            Parameters::hideParam<TypeTag, Properties::RestartTime>();
+            Parameters::hideParam<TypeTag, Parameters::RestartTime>();
             Parameters::hideParam<TypeTag, Properties::RestartWritingInterval>();
             // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
             //if(not(Parameters::get<TypeTag,Properties::EnableVtkOutput>())){
@@ -244,13 +244,13 @@ namespace Opm {
 
                 bool doExit = false;
 
-                if (Parameters::get<TypeTag, Properties::PrintProperties>() == 1) {
+                if (Parameters::get<TypeTag, Parameters::PrintProperties>() == 1) {
                     doExit = true;
                     if (mpiRank == 0)
                         Properties::printValues<TypeTag>(std::cout);
                 }
 
-                if (Parameters::get<TypeTag, Properties::PrintParameters>() == 1) {
+                if (Parameters::get<TypeTag, Parameters::PrintParameters>() == 1) {
                     doExit = true;
                     if (mpiRank == 0)
                         Parameters::printValues<TypeTag>();
