@@ -72,18 +72,18 @@ public:
              "executed after it was loaded");
         Parameters::registerParam<TypeTag, Parameters::DomainSizeX>
             ("The size of the domain in x direction");
-        Parameters::registerParam<TypeTag, Properties::CellsX>
+        Parameters::registerParam<TypeTag, Parameters::CellsX>
             ("The number of intervalls in x direction");
         if (dimWorld > 1) {
             Parameters::registerParam<TypeTag, Parameters::DomainSizeY>
                 ("The size of the domain in y direction");
-            Parameters::registerParam<TypeTag, Properties::CellsY>
+            Parameters::registerParam<TypeTag, Parameters::CellsY>
                 ("The number of intervalls in y direction");
         }
         if (dimWorld > 2) {
             Parameters::registerParam<TypeTag, Parameters::DomainSizeZ>
                 ("The size of the domain in z direction");
-            Parameters::registerParam<TypeTag, Properties::CellsZ>
+            Parameters::registerParam<TypeTag, Parameters::CellsZ>
                 ("The number of intervalls in z direction");
         }
     }
@@ -102,14 +102,14 @@ public:
             cellRes[i] = 0;
 
         upperRight[0] = Parameters::get<TypeTag, Parameters::DomainSizeX>();
-        cellRes[0] = Parameters::get<TypeTag, Properties::CellsX>();
+        cellRes[0] = Parameters::get<TypeTag, Parameters::CellsX>();
         if (dimWorld > 1) {
             upperRight[1] = Parameters::get<TypeTag, Parameters::DomainSizeY>();
-            cellRes[1] = Parameters::get<TypeTag, Properties::CellsY>();
+            cellRes[1] = Parameters::get<TypeTag, Parameters::CellsY>();
         }
         if (dimWorld > 2) {
             upperRight[2] = Parameters::get<TypeTag, Parameters::DomainSizeZ>();
-            cellRes[2] = Parameters::get<TypeTag, Properties::CellsZ>();
+            cellRes[2] = Parameters::get<TypeTag, Parameters::CellsZ>();
         }
 
         unsigned numRefinements = Parameters::get<TypeTag, Parameters::GridGlobalRefinements>();

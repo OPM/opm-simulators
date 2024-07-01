@@ -110,16 +110,21 @@ struct EnableDiffusion<TypeTag, TTag::DiffusionBaseProblem> { static constexpr b
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::DiffusionBaseProblem> { static constexpr bool value = false; };
 
-template<class TypeTag>
-struct CellsX<TypeTag, TTag::DiffusionBaseProblem> { static constexpr unsigned value = 250; };
-template<class TypeTag>
-struct CellsY<TypeTag, TTag::DiffusionBaseProblem> { static constexpr unsigned value = 1; };
-template<class TypeTag>
-struct CellsZ<TypeTag, TTag::DiffusionBaseProblem> { static constexpr unsigned value = 1; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template<class TypeTag>
+struct CellsX<TypeTag, Properties::TTag::DiffusionBaseProblem>
+{ static constexpr unsigned value = 250; };
+
+template<class TypeTag>
+struct CellsY<TypeTag, Properties::TTag::DiffusionBaseProblem>
+{ static constexpr unsigned value = 1; };
+
+template<class TypeTag>
+struct CellsZ<TypeTag, Properties::TTag::DiffusionBaseProblem>
+{ static constexpr unsigned value = 1; };
 
 // define the properties specific for the diffusion problem
 template<class TypeTag>

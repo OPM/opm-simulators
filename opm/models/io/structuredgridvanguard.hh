@@ -113,18 +113,18 @@ public:
              "executed after it was loaded");
         Parameters::registerParam<TypeTag, Parameters::DomainSizeX>
             ("The size of the domain in x direction");
-        Parameters::registerParam<TypeTag, Properties::CellsX>
+        Parameters::registerParam<TypeTag, Parameters::CellsX>
             ("The number of intervalls in x direction");
         if (dim > 1) {
             Parameters::registerParam<TypeTag, Parameters::DomainSizeY>
                 ("The size of the domain in y direction");
-            Parameters::registerParam<TypeTag, Properties::CellsY>
+            Parameters::registerParam<TypeTag, Parameters::CellsY>
                 ("The number of intervalls in y direction");
         }
         if (dim > 2) {
             Parameters::registerParam<TypeTag, Parameters::DomainSizeZ>
                 ("The size of the domain in z direction");
-            Parameters::registerParam<TypeTag, Properties::CellsZ>
+            Parameters::registerParam<TypeTag, Parameters::CellsZ>
                 ("The number of intervalls in z direction");
         }
     }
@@ -144,11 +144,11 @@ public:
         upperRight[0] = Parameters::get<TypeTag, Parameters::DomainSizeX>();
         upperRight[1] = Parameters::get<TypeTag, Parameters::DomainSizeY>();
 
-        cellRes[0] = Parameters::get<TypeTag, Properties::CellsX>();
-        cellRes[1] = Parameters::get<TypeTag, Properties::CellsY>();
+        cellRes[0] = Parameters::get<TypeTag, Parameters::CellsX>();
+        cellRes[1] = Parameters::get<TypeTag, Parameters::CellsY>();
         if (dim == 3) {
             upperRight[2] = Parameters::get<TypeTag, Parameters::DomainSizeZ>();
-            cellRes[2] = Parameters::get<TypeTag, Properties::CellsZ>();
+            cellRes[2] = Parameters::get<TypeTag, Parameters::CellsZ>();
         }
 
         std::stringstream dgffile;

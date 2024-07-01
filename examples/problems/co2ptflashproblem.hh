@@ -223,14 +223,6 @@ struct Vanguard<TypeTag, TTag::CO2PTBaseProblem> {
     using type = Opm::StructuredGridVanguard<TypeTag>;
 };
 
-template<class TypeTag>
-struct CellsX<TypeTag, TTag::CO2PTBaseProblem> { static constexpr unsigned value = 30; };
-template<class TypeTag>
-struct CellsY<TypeTag, TTag::CO2PTBaseProblem> { static constexpr unsigned value = 1; };
-// CellsZ is not needed, while to keep structuredgridvanguard.hh compile
-template<class TypeTag>
-struct CellsZ<TypeTag, TTag::CO2PTBaseProblem> { static constexpr unsigned value = 1; };
-
 template <class TypeTag>
 struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr bool value = false;
@@ -239,6 +231,19 @@ struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template<class TypeTag>
+struct CellsX<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr unsigned value = 30; };
+
+template<class TypeTag>
+struct CellsY<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr unsigned value = 1; };
+
+// CellsZ is not needed, while to keep structuredgridvanguard.hh compile
+template<class TypeTag>
+struct CellsZ<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr unsigned value = 1; };
 
 //\Note: from the Julia code, the problem is a 1D problem with 3X1 cell.
 //\Note: DomainSizeX is 3.0 meters
@@ -512,7 +517,7 @@ public:
     {
         int spatialIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         int inj = 0;
-        int prod = Parameters::get<TypeTag, Properties::CellsX>() - 1;
+        int prod = Parameters::get<TypeTag, Parameters::CellsX>() - 1;
         if (spatialIdx == inj || spatialIdx == prod) {
             return 1.0;
         } else {
@@ -520,7 +525,7 @@ public:
         }
     }
 
-        /*!
+    /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
@@ -563,7 +568,7 @@ private:
         // p0 = 75e5
         // T0 = 423.25
         int inj = 0;
-        int prod = Parameters::get<TypeTag, Properties::CellsX>() - 1;
+        int prod = Parameters::get<TypeTag, Parameters::CellsX>() - 1;
         int spatialIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         ComponentVector comp;
         comp[0] = Evaluation::createVariable(0.5, 1);

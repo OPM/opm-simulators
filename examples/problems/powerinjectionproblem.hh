@@ -127,16 +127,21 @@ struct VtkWriteFilterVelocities<TypeTag, TTag::PowerInjectionBaseProblem> { stat
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr bool value = false; };
 
-template<class TypeTag>
-struct CellsX<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr unsigned value = 250; };
-template<class TypeTag>
-struct CellsY<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr unsigned value = 1; };
-template<class TypeTag>
-struct CellsZ<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr unsigned value = 1; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template<class TypeTag>
+struct CellsX<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
+{ static constexpr unsigned value = 250; };
+
+template<class TypeTag>
+struct CellsY<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
+{ static constexpr unsigned value = 1; };
+
+template<class TypeTag>
+struct CellsZ<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
+{ static constexpr unsigned value = 1; };
 
 // define the properties specific for the power injection problem
 template<class TypeTag>

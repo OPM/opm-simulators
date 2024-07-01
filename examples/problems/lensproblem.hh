@@ -175,13 +175,6 @@ struct LensUpperRightZ<TypeTag, TTag::LensBaseProblem>
     static constexpr type value = 1.0;
 };
 
-template<class TypeTag>
-struct CellsX<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 48; };
-template<class TypeTag>
-struct CellsY<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 32; };
-template<class TypeTag>
-struct CellsZ<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 16; };
-
 // By default, include the intrinsic permeability tensor to the VTK output files
 template<class TypeTag>
 struct VtkWriteIntrinsicPermeabilities<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
@@ -189,6 +182,18 @@ struct VtkWriteIntrinsicPermeabilities<TypeTag, TTag::LensBaseProblem> { static 
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template<class TypeTag>
+struct CellsX<TypeTag, Properties::TTag::LensBaseProblem>
+{ static constexpr unsigned value = 48; };
+
+template<class TypeTag>
+struct CellsY<TypeTag, Properties::TTag::LensBaseProblem>
+{ static constexpr unsigned value = 32; };
+
+template<class TypeTag>
+struct CellsZ<TypeTag, Properties::TTag::LensBaseProblem>
+{ static constexpr unsigned value = 16; };
 
 template<class TypeTag>
 struct DomainSizeX<TypeTag, Properties::TTag::LensBaseProblem>

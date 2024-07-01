@@ -143,16 +143,21 @@ struct InitialWaterSaturation<TypeTag, TTag::FingerBaseProblem>
     static constexpr type value = 0.01;
 };
 
-template<class TypeTag>
-struct CellsX<TypeTag, TTag::FingerBaseProblem> { static constexpr unsigned value = 20; };
-template<class TypeTag>
-struct CellsY<TypeTag, TTag::FingerBaseProblem> { static constexpr unsigned value = 70; };
-template<class TypeTag>
-struct CellsZ<TypeTag, TTag::FingerBaseProblem> { static constexpr unsigned value = 1; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template<class TypeTag>
+struct CellsX<TypeTag, Properties::TTag::FingerBaseProblem>
+{ static constexpr unsigned value = 20; };
+
+template<class TypeTag>
+struct CellsY<TypeTag, Properties::TTag::FingerBaseProblem>
+{ static constexpr unsigned value = 70; };
+
+template<class TypeTag>
+struct CellsZ<TypeTag, Properties::TTag::FingerBaseProblem>
+{ static constexpr unsigned value = 1; };
 
 // define the properties specific for the finger problem
 template<class TypeTag>
