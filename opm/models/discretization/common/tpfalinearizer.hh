@@ -28,8 +28,9 @@
 #ifndef TPFA_LINEARIZER_HH
 #define TPFA_LINEARIZER_HH
 
-#include "fvbaseproperties.hh"
-#include "linearizationtype.hh"
+#include <dune/common/version.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/fmatrix.hh>
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/TimingMacros.hpp>
@@ -40,27 +41,24 @@
 #include <opm/input/eclipse/Schedule/BCProp.hpp>
 
 #include <opm/models/discretization/common/baseauxiliarymodule.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/linearizationtype.hh>
 
-#include <dune/common/version.hh>
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
-
-#include <type_traits>
-#include <iostream>
-#include <vector>
-#include <thread>
-#include <set>
 #include <exception>   // current_exception, rethrow_exception
-#include <mutex>
+#include <iostream>
 #include <numeric>
+#include <set>
+#include <type_traits>
+#include <vector>
 
-namespace Opm::Properties {
-    template<class TypeTag, class MyTypeTag>
-    struct SeparateSparseSourceTerms {
-        using type = bool;
-        static constexpr type value = false;
-    };
-}
+namespace Opm::Parameters {
+
+template<class TypeTag, class MyTypeTag>
+struct SeparateSparseSourceTerms {
+    static constexpr bool value = false;
+};
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -122,7 +120,7 @@ public:
         : jacobian_()
     {
         simulatorPtr_ = 0;
-        separateSparseSourceTerms_ = Parameters::get<TypeTag, Properties::SeparateSparseSourceTerms>();
+        separateSparseSourceTerms_ = Parameters::get<TypeTag, Parameters::SeparateSparseSourceTerms>();
     }
 
     ~TpfaLinearizer()
@@ -134,7 +132,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::SeparateSparseSourceTerms>
+        Parameters::registerParam<TypeTag, Parameters::SeparateSparseSourceTerms>
             ("Treat well source terms all in one go, instead of on a cell by cell basis.");
     }
 
