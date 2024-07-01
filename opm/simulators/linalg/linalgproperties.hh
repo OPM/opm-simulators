@@ -45,10 +45,6 @@ struct PreconditionerWrapper { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverScalar { using type = UndefinedProperty; };
 
-//! Maximum number of iterations eyecuted by the linear solver
-template<class TypeTag, class MyTypeTag>
-struct LinearSolverMaxIterations { using type = UndefinedProperty; };
-
 //! The order of the sequential preconditioner
 template<class TypeTag, class MyTypeTag>
 struct PreconditionerOrder { using type = UndefinedProperty; };

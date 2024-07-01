@@ -210,7 +210,7 @@ protected:
         if (parOperator.overlap().myRank() == 0)
             verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
         bicgstabSolver->setVerbosity(verbosity);
-        bicgstabSolver->setMaxIterations(Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>());
+        bicgstabSolver->setMaxIterations(Parameters::get<TypeTag, Parameters::LinearSolverMaxIterations>());
         bicgstabSolver->setLinearOperator(&parOperator);
         bicgstabSolver->setRhs(this->overlappingb_);
 

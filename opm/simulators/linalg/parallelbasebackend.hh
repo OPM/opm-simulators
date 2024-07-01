@@ -158,7 +158,7 @@ public:
             ("The maximum accepted error of the norm of the residual");
         Parameters::registerParam<TypeTag, Parameters::LinearSolverOverlapSize>
             ("The size of the algebraic overlap for the linear solver");
-        Parameters::registerParam<TypeTag, Properties::LinearSolverMaxIterations>
+        Parameters::registerParam<TypeTag, Parameters::LinearSolverMaxIterations>
             ("The maximum number of iterations of the linear solver");
         Parameters::registerParam<TypeTag, Parameters::LinearSolverVerbosity>
             ("The verbosity level of the linear solver");
@@ -454,13 +454,14 @@ template<class TypeTag>
 struct PreconditionerWrapper<TypeTag, TTag::ParallelBaseLinearSolver>
 { using type = Opm::Linear::PreconditionerWrapperILU<TypeTag>; };
 
-//! set the default number of maximum iterations for the linear solver
-template<class TypeTag>
-struct LinearSolverMaxIterations<TypeTag, TTag::ParallelBaseLinearSolver> { static constexpr int value = 1000; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+//! set the default number of maximum iterations for the linear solver
+template<class TypeTag>
+struct LinearSolverMaxIterations<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
+{ static constexpr int value = 1000; };
 
 //! set the default overlap size to 2
 template<class TypeTag>
