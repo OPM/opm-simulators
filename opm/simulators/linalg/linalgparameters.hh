@@ -33,6 +33,9 @@
 
 namespace Opm::Parameters {
 
+template<class TypeTag, class MyTypeTag>
+struct AmgCoarsenTarget { using type = Properties::UndefinedProperty; };
+
 //! number of iterations between solver restarts for the GMRES solver
 template<class TypeTag, class MyTypeTag>
 struct GMResRestart { using type = Properties::UndefinedProperty; };

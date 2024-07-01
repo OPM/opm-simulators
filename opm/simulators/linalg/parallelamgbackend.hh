@@ -59,12 +59,6 @@ struct ParallelAmgLinearSolver
 
 } // end namespace TTag
 
-//! The target number of DOFs per processor for the parallel algebraic
-//! multi-grid solver
-template<class TypeTag>
-struct AmgCoarsenTarget<TypeTag, TTag::ParallelAmgLinearSolver>
-{ static constexpr int value = 5000; };
-
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::ParallelAmgLinearSolver>
 { using type = Opm::Linear::ParallelAmgBackend<TypeTag>; };
@@ -72,6 +66,12 @@ struct LinearSolverBackend<TypeTag, TTag::ParallelAmgLinearSolver>
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+//! The target number of DOFs per processor for the parallel algebraic
+//! multi-grid solver
+template<class TypeTag>
+struct AmgCoarsenTarget<TypeTag, Properties::TTag::ParallelAmgLinearSolver>
+{ static constexpr int value = 5000; };
 
 template<class TypeTag>
 struct LinearSolverMaxError<TypeTag, Properties::TTag::ParallelAmgLinearSolver>
@@ -163,7 +163,7 @@ public:
         Parameters::registerParam<TypeTag, Parameters::LinearSolverMaxError>
             ("The maximum residual error which the linear solver tolerates "
              "without giving up");
-        Parameters::registerParam<TypeTag, Properties::AmgCoarsenTarget>
+        Parameters::registerParam<TypeTag, Parameters::AmgCoarsenTarget>
             ("The coarsening target for the agglomerations of "
              "the AMG preconditioner");
     }
@@ -299,7 +299,7 @@ protected:
         //                             Dune::Amg::FirstDiagonal>>
         using CoarsenCriterion = Dune::Amg::
             CoarsenCriterion<Dune::Amg::SymmetricCriterion<IstlMatrix, Dune::Amg::FrobeniusNorm> >;
-        int coarsenTarget = Parameters::get<TypeTag, Properties::AmgCoarsenTarget>();
+        int coarsenTarget = Parameters::get<TypeTag, Parameters::AmgCoarsenTarget>();
         CoarsenCriterion coarsenCriterion(/*maxLevel=*/15, coarsenTarget);
         coarsenCriterion.setDefaultValuesAnisotropic(GridView::dimension,
                                                      /*aggregateSizePerDim=*/3);

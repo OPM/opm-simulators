@@ -54,9 +54,6 @@ template<class TypeTag, class MyTypeTag>
 struct GlobalEqVector { using type = UndefinedProperty; };
 
 template<class TypeTag, class MyTypeTag>
-struct AmgCoarsenTarget { using type = UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
 struct LinearSolverWrapper { using type = UndefinedProperty; };
 
 template<class TypeTag, class MyTypeTag>
