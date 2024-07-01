@@ -27,6 +27,8 @@
 #ifndef EWOMS_VTK_PRIMARY_VARS_MODULE_HH
 #define EWOMS_VTK_PRIMARY_VARS_MODULE_HH
 
+#include <opm/models/discretization/common/fvbaseparameters.hh>
+
 #include <opm/models/io/baseoutputmodule.hh>
 #include <opm/models/io/vtkmultiwriter.hh>
 
@@ -122,7 +124,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
+        if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
             return;
 
         const auto& elementMapper = elemCtx.model().elementMapper();

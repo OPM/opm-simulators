@@ -31,11 +31,13 @@
 #include "vtkmultiwriter.hh"
 #include "baseoutputmodule.hh"
 
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
-
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/densead/Math.hpp>
+
+#include <opm/models/discretization/common/fvbaseparameters.hh>
+
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/parametersystem.hh>
 
 namespace Opm::Properties {
 
@@ -138,7 +140,7 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!Parameters::get<TypeTag, Properties::EnableVtkOutput>())
+        if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
             return;
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {

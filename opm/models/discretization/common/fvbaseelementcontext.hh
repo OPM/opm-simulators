@@ -30,10 +30,12 @@
 
 #include "fvbaseproperties.hh"
 
-#include <opm/models/discretization/common/linearizationtype.hh>
-#include <opm/models/utils/alignedallocator.hh>
-
 #include <dune/common/fvector.hh>
+
+#include <opm/models/discretization/common/fvbaseparameters.hh>
+#include <opm/models/discretization/common/linearizationtype.hh>
+
+#include <opm/models/utils/alignedallocator.hh>
 
 #include <vector>
 
@@ -95,7 +97,7 @@ public:
     {
         // remember the simulator object
         simulatorPtr_ = &simulator;
-        enableStorageCache_ = Parameters::get<TypeTag, Properties::EnableStorageCache>();
+        enableStorageCache_ = Parameters::get<TypeTag, Parameters::EnableStorageCache>();
         stashedDofIdx_ = -1;
         focusDofIdx_ = -1;
     }

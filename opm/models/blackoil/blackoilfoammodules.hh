@@ -30,9 +30,9 @@
 
 #include "blackoilproperties.hh"
 
-#include <opm/common/OpmLog/OpmLog.hpp>
+#include <dune/common/fvector.hh>
 
-#include <opm/models/blackoil/blackoilfoamparams.hh>
+#include <opm/common/OpmLog/OpmLog.hpp>
 
 #if HAVE_ECL_INPUT
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
@@ -40,10 +40,12 @@
 #include <opm/input/eclipse/EclipseState/Tables/FoammobTable.hpp>
 #endif
 
-#include <dune/common/fvector.hh>
+#include <opm/models/blackoil/blackoilfoamparams.hh>
+
+#include <opm/models/discretization/common/fvbaseparameters.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <string>
-#include <math.h>
 
 namespace Opm {
 
@@ -187,7 +189,7 @@ public:
                                       Simulator&)
     {
         if constexpr (enableFoam) {
-            if (Parameters::get<TypeTag, Properties::EnableVtkOutput>()) {
+            if (Parameters::get<TypeTag, Parameters::EnableVtkOutput>()) {
                 OpmLog::warning("VTK output requested, currently unsupported by the foam module.");
             }
         }

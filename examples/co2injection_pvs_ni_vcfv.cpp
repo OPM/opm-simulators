@@ -28,6 +28,7 @@
  */
 #include "config.h"
 
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
 #include <opm/models/pvs/pvsmodel.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
@@ -37,13 +38,19 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct Co2InjectionPvsNiVcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, PvsModel>; };
+
+struct Co2InjectionPvsNiVcfvProblem
+{ using InheritsFrom = std::tuple<Co2InjectionBaseProblem, PvsModel>; };
+
 } // end namespace TTag
-template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionPvsNiVcfvProblem> { using type = TTag::VcfvDiscretization; };
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::Co2InjectionPvsNiVcfvProblem> { static constexpr bool value = true; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionPvsNiVcfvProblem>
+{ using type = TTag::VcfvDiscretization; };
+
+template<class TypeTag>
+struct EnableEnergy<TypeTag, TTag::Co2InjectionPvsNiVcfvProblem>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Properties
 

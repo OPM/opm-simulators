@@ -23,30 +23,25 @@
 /*!
  * \file
  *
- * \brief test for the 3p3cni VCVF discretization
+ * \brief Defines some fundamental parameters for all models.
  */
-#include "config.h"
+#ifndef EWOMS_BASIC_PARAMETERS_HH
+#define EWOMS_BASIC_PARAMETERS_HH
 
-#include <opm/models/io/dgfvanguard.hh>
-#include <opm/models/utils/start.hh>
-#include <opm/models/pvs/pvsmodel.hh>
-#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
+#include <opm/models/utils/propertysystem.hh>
 
-#include "problems/cuvetteproblem.hh"
+namespace Opm::Parameters {
 
-namespace Opm::Properties {
+//! Property which tells the Vanguard how often the grid should be refined
+//! after creation.
+template<class TypeTag, class MyTypeTag>
+struct GridGlobalRefinements { using type = Properties::UndefinedProperty; };
 
-// Create new type tags
-namespace TTag {
-struct CuvetteProblem
-{ using InheritsFrom = std::tuple<CuvetteBaseProblem, PvsModel>; };
+//! Property provides the name of the file from which the additional runtime
+//! parameters should to be loaded from
+template<class TypeTag, class MyTypeTag>
+struct ParameterFile { using type = Properties::UndefinedProperty; };
 
-} // end namespace TTag
+} // namespace Opm:Parameters
 
-} // namespace Opm::Properties
-
-int main(int argc, char **argv)
-{
-    using ProblemTypeTag = Opm::Properties::TTag::CuvetteProblem;
-    return Opm::start<ProblemTypeTag>(argc, argv);
-}
+#endif

@@ -27,6 +27,7 @@
  */
 #include "config.h"
 
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
@@ -37,14 +38,19 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct RichardsLensEcfvProblem { using InheritsFrom = std::tuple<RichardsLensProblem>; };
+struct RichardsLensEcfvProblem
+{ using InheritsFrom = std::tuple<RichardsLensProblem>; };
+
 } // end namespace TTag
+
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::RichardsLensEcfvProblem> { using type = TTag::EcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::RichardsLensEcfvProblem>
+{ using type = TTag::EcfvDiscretization; };
 
 //! Use automatic differentiation to linearize the system of PDEs
 template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::RichardsLensEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
+struct LocalLinearizerSplice<TypeTag, TTag::RichardsLensEcfvProblem>
+{ using type = TTag::AutoDiffLocalLinearizer; };
 
 } // namespace Opm::Properties
 

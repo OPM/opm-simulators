@@ -28,20 +28,22 @@
 #ifndef EWOMS_MULTI_PHASE_BASE_PROBLEM_HH
 #define EWOMS_MULTI_PHASE_BASE_PROBLEM_HH
 
-#include "multiphasebaseproperties.hh"
+#include <dune/common/fvector.hh>
+#include <dune/common/fmatrix.hh>
 
-#include <opm/models/common/directionalmobility.hh>
-#include <opm/models/discretization/common/fvbaseproblem.hh>
-#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <dune/grid/common/partitionset.hh>
 
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/common/Means.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 
-#include <opm/utility/CopyablePtr.hpp>
+#include <opm/models/common/directionalmobility.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/models/discretization/common/fvbaseproblem.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <opm/utility/CopyablePtr.hpp>
 
 namespace Opm {
 /*!

@@ -29,6 +29,7 @@
  */
 #include "config.h"
 
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
 #include <opm/models/pvs/pvsmodel.hh>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
@@ -39,12 +40,16 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct ObstacleProblem { using InheritsFrom = std::tuple<ObstacleBaseProblem, PvsModel>; };
+
+struct ObstacleProblem
+{ using InheritsFrom = std::tuple<ObstacleBaseProblem, PvsModel>; };
+
 } // end namespace TTag
 
 // Verbosity of the PVS model (0=silent, 1=medium, 2=chatty)
 template<class TypeTag>
-struct PvsVerbosity<TypeTag, TTag::ObstacleProblem> { static constexpr int value = 1; };
+struct PvsVerbosity<TypeTag, TTag::ObstacleProblem>
+{ static constexpr int value = 1; };
 
 } // namespace Opm::Properties
 

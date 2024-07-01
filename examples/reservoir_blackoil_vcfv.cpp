@@ -27,6 +27,7 @@
  */
 #include "config.h"
 
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
@@ -38,12 +39,16 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct ReservoirBlackOilVcfvProblem { using InheritsFrom = std::tuple<ReservoirBaseProblem, BlackOilModel>; };
+
+struct ReservoirBlackOilVcfvProblem
+{ using InheritsFrom = std::tuple<ReservoirBaseProblem, BlackOilModel>; };
+
 } // end namespace TTag
 
 // Select the vertex centered finite volume method as spatial discretization
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilVcfvProblem> { using type = TTag::VcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilVcfvProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 } // namespace Opm::Properties
 

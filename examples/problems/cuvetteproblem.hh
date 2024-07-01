@@ -80,14 +80,6 @@ struct FluidSystem<TypeTag, TTag::CuvetteBaseProblem>
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::CuvetteBaseProblem> { static constexpr bool value = true; };
 
-// Set the maximum time step
-template<class TypeTag>
-struct MaxTimeStepSize<TypeTag, TTag::CuvetteBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 600.;
-};
-
 // Set the material Law
 template<class TypeTag>
 struct MaterialLaw<TypeTag, TTag::CuvetteBaseProblem>
@@ -145,6 +137,18 @@ template<class TypeTag>
 struct GridFile<TypeTag, TTag::CuvetteBaseProblem> { static constexpr auto value = "./data/cuvette_11x4.dgf"; };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// Set the maximum time step
+template<class TypeTag>
+struct MaxTimeStepSize<TypeTag, Properties::TTag::CuvetteBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 600.;
+};
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!

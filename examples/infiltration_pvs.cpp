@@ -27,6 +27,7 @@
  */
 #include "config.h"
 
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
 #include <opm/models/pvs/pvsmodel.hh>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
@@ -36,7 +37,8 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct InfiltrationProblem { using InheritsFrom = std::tuple<InfiltrationBaseProblem, PvsModel>; };
+struct InfiltrationProblem
+{ using InheritsFrom = std::tuple<InfiltrationBaseProblem, PvsModel>; };
 } // end namespace TTag
 
 } // namespace Opm::Properties

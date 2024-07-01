@@ -120,18 +120,6 @@ struct DiscExtensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type
 template<class TypeTag>
 struct GradientCalculator<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseGradientCalculator<TypeTag>; };
 
-//! The maximum allowed number of timestep divisions for the
-//! Newton solver
-template<class TypeTag>
-struct MaxTimeStepDivisions<TypeTag, TTag::FvBaseDiscretization> { static constexpr unsigned value = 10; };
-
-
-//! By default, do not continue with a non-converged solution instead of giving up
-//! if we encounter a time step size smaller than the minimum time
-//! step size.
-template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
 /*!
  * \brief A vector of quanties, each for one equation.
  */
@@ -213,8 +201,6 @@ struct ConstraintsContext<TypeTag, TTag::FvBaseDiscretization> { using type = Fv
 template<class TypeTag>
 struct ThreadManager<TypeTag, TTag::FvBaseDiscretization> { using type = ::Opm::ThreadManager<TypeTag>; };
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = 1; };
-template<class TypeTag>
 struct UseLinearizationLock<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
 
 /*!
@@ -223,63 +209,13 @@ struct UseLinearizationLock<TypeTag, TTag::FvBaseDiscretization> { static conste
 template<class TypeTag>
 struct Linearizer<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseLinearizer<TypeTag>; };
 
-//! use an unlimited time step size by default
-template<class TypeTag>
-struct MaxTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = std::numeric_limits<type>::infinity();
-};
-
-//! By default, accept any time step larger than zero
-template<class TypeTag>
-struct MinTimeStepSize<TypeTag, TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.0;
-};
-
-//! Disable grid adaptation by default
-template<class TypeTag>
-struct EnableGridAdaptation<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
-//! By default, write the simulation output to the current working directory
-template<class TypeTag>
-struct OutputDir<TypeTag, TTag::FvBaseDiscretization> { static constexpr auto value = "."; };
-
-//! Enable the VTK output by default
-template<class TypeTag>
-struct EnableVtkOutput<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
-
-//! By default, write the VTK output to asynchronously to disk
-//!
-//! This has only an effect if EnableVtkOutput is true
-template<class TypeTag>
-struct EnableAsyncVtkOutput<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
-
 //! Set the format of the VTK output to ASCII by default
 template<class TypeTag>
 struct VtkOutputFormat<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = Dune::VTK::ascii; };
 
-// disable caching the storage term by default
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
 // disable constraints by default
 template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
-// by default, disable the intensive quantity cache. If the intensive quantities are
-// relatively cheap to calculate, the cache basically does not yield any performance
-// impact because of the intensive quantity cache will cause additional pressure on the
-// CPU caches...
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
-// do not use thermodynamic hints by default. If you enable this, make sure to also
-// enable the intensive quantity cache above to avoid getting an exception...
-template<class TypeTag>
-struct EnableThermodynamicHints<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
 
 // if the deflection of the newton method is large, we do not need to solve the linear
 // approximation accurately. Assuming that the value for the current solution is quite
@@ -336,6 +272,84 @@ struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization> {
 #endif
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+template<class TypeTag>
+struct ThreadsPerProcess<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr int value = 1; };
+
+//! Disable grid adaptation by default
+template<class TypeTag>
+struct EnableGridAdaptation<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
+
+//! By default, write the simulation output to the current working directory
+template<class TypeTag>
+struct OutputDir<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr auto value = "."; };
+
+//! Enable the VTK output by default
+template<class TypeTag>
+struct EnableVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = true; };
+
+//! By default, write the VTK output to asynchronously to disk
+//!
+//! This has only an effect if EnableVtkOutput is true
+template<class TypeTag>
+struct EnableAsyncVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = true; };
+
+//! use an unlimited time step size by default
+template<class TypeTag>
+struct MaxTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = std::numeric_limits<type>::infinity();
+};
+
+//! By default, accept any time step larger than zero
+template<class TypeTag>
+struct MinTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.0;
+};
+
+//! The maximum allowed number of timestep divisions for the
+//! Newton solver
+template<class TypeTag>
+struct MaxTimeStepDivisions<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr unsigned value = 10; };
+
+//! By default, do not continue with a non-converged solution instead of giving up
+//! if we encounter a time step size smaller than the minimum time
+//! step size.
+template<class TypeTag>
+struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
+
+//! by default, disable the intensive quantity cache. If the intensive quantities are
+//! relatively cheap to calculate, the cache basically does not yield any performance
+//! impact because of the intensive quantity cache will cause additional pressure on the
+//! CPU caches...
+template<class TypeTag>
+struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
+
+// disable caching the storage term by default
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
+
+// do not use thermodynamic hints by default. If you enable this, make sure to also
+// enable the intensive quantity cache above to avoid getting an exception...
+template<class TypeTag>
+struct EnableThermodynamicHints<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -453,10 +467,10 @@ public:
         , newtonMethod_(simulator)
         , localLinearizer_(ThreadManager::maxThreads())
         , linearizer_(new Linearizer())
-        , enableGridAdaptation_(Parameters::get<TypeTag, Properties::EnableGridAdaptation>() )
-        , enableIntensiveQuantityCache_(Parameters::get<TypeTag, Properties::EnableIntensiveQuantityCache>())
-        , enableStorageCache_(Parameters::get<TypeTag, Properties::EnableStorageCache>())
-        , enableThermodynamicHints_(Parameters::get<TypeTag, Properties::EnableThermodynamicHints>())
+        , enableGridAdaptation_(Parameters::get<TypeTag, Parameters::EnableGridAdaptation>() )
+        , enableIntensiveQuantityCache_(Parameters::get<TypeTag, Parameters::EnableIntensiveQuantityCache>())
+        , enableStorageCache_(Parameters::get<TypeTag, Parameters::EnableStorageCache>())
+        , enableThermodynamicHints_(Parameters::get<TypeTag, Parameters::EnableThermodynamicHints>())
     {
         bool isEcfv = std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value;
         if (enableGridAdaptation_ && !isEcfv)
@@ -464,7 +478,7 @@ public:
                                         "element-centered finite volume discretization (is: "
                                         +Dune::className<Discretization>()+")");
 
-        enableStorageCache_ = Parameters::get<TypeTag, Properties::EnableStorageCache>();
+        enableStorageCache_ = Parameters::get<TypeTag, Parameters::EnableStorageCache>();
 
         PrimaryVariables::init();
         size_t numDof = asImp_().numGridDof();
@@ -510,17 +524,17 @@ public:
         // register runtime parameters of the output modules
         VtkPrimaryVarsModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::EnableGridAdaptation>
+        Parameters::registerParam<TypeTag, Parameters::EnableGridAdaptation>
             ("Enable adaptive grid refinement/coarsening");
-        Parameters::registerParam<TypeTag, Properties::EnableVtkOutput>
+        Parameters::registerParam<TypeTag, Parameters::EnableVtkOutput>
             ("Global switch for turning on writing VTK files");
-        Parameters::registerParam<TypeTag, Properties::EnableThermodynamicHints>
+        Parameters::registerParam<TypeTag, Parameters::EnableThermodynamicHints>
             ("Enable thermodynamic hints");
-        Parameters::registerParam<TypeTag, Properties::EnableIntensiveQuantityCache>
+        Parameters::registerParam<TypeTag, Parameters::EnableIntensiveQuantityCache>
             ("Turn on caching of intensive quantities");
-        Parameters::registerParam<TypeTag, Properties::EnableStorageCache>
+        Parameters::registerParam<TypeTag, Parameters::EnableStorageCache>
             ("Store previous storage terms and avoid re-calculating them.");
-        Parameters::registerParam<TypeTag, Properties::OutputDir>
+        Parameters::registerParam<TypeTag, Parameters::OutputDir>
             ("The directory to which result files are written");
     }
 

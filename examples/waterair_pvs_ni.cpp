@@ -27,6 +27,7 @@
  */
 #include "config.h"
 
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
 #include <opm/models/pvs/pvsmodel.hh>
 #include "problems/waterairproblem.hh"
@@ -35,11 +36,13 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct WaterAirProblem { using InheritsFrom = std::tuple<WaterAirBaseProblem, PvsModel>; };
+struct WaterAirProblem
+{ using InheritsFrom = std::tuple<WaterAirBaseProblem, PvsModel>; };
 } // end namespace TTag
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::WaterAirProblem> { static constexpr bool value = true; };
+struct EnableEnergy<TypeTag, TTag::WaterAirProblem>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Properties
 

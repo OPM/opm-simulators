@@ -27,6 +27,7 @@
  */
 #include "config.h"
 
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
 #include <opm/models/ncp/ncpmodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
@@ -38,16 +39,21 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct ReservoirNcpEcfvProblem { using InheritsFrom = std::tuple<ReservoirBaseProblem, NcpModel>; };
+
+struct ReservoirNcpEcfvProblem
+{ using InheritsFrom = std::tuple<ReservoirBaseProblem, NcpModel>; };
+
 } // end namespace TTag
 
 // Select the element centered finite volume method as spatial discretization
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirNcpEcfvProblem> { using type = TTag::EcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirNcpEcfvProblem>
+{ using type = TTag::EcfvDiscretization; };
 
 //! use automatic differentiation to linearize the system of PDEs
 template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::ReservoirNcpEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
+struct LocalLinearizerSplice<TypeTag, TTag::ReservoirNcpEcfvProblem>
+{ using type = TTag::AutoDiffLocalLinearizer; };
 
 } // namespace Opm::Properties
 

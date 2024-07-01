@@ -31,7 +31,6 @@
 #define EWOMS_FV_BASE_PROPERTIES_HH
 
 #include <opm/models/utils/basicproperties.hh>
-#include <opm/models/io/dgfvanguard.hh>
 
 namespace Opm::Properties {
 
@@ -51,25 +50,10 @@ struct FvBaseDiscretization
 } // namespace TTag
 
 
-//! set the splices for the finite volume discretizations
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverSplice { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LocalLinearizerSplice { using type = UndefinedProperty; };
-template<class TypeTag>
-struct Splices<TypeTag, TTag::FvBaseDiscretization>
-{
-    using type = std::tuple<GetSplicePropType<TypeTag, TTag::FvBaseDiscretization, Properties::LinearSolverSplice>,
-                            GetSplicePropType<TypeTag, TTag::FvBaseDiscretization, Properties::LocalLinearizerSplice>>;
-};
-
-//! use a parallel BiCGStab linear solver by default
-template<class TypeTag>
-struct LinearSolverSplice<TypeTag, TTag::FvBaseDiscretization> { using type = TTag::ParallelBiCGStabLinearSolver; };
-
-//! by default, use finite differences to linearize the system of PDEs
-template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::FvBaseDiscretization> { using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 /*!
  * \brief Representation of a function evaluation and all necessary derivatives with
@@ -189,8 +173,6 @@ struct GridCommHandleFactory { using type = UndefinedProperty; };
  */
 template<class TypeTag, class MyTypeTag>
 struct ThreadManager { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct ThreadsPerProcess { using type = UndefinedProperty; };
 
 //! use locking to prevent race conditions when linearizing the global system of
 //! equations in multi-threaded mode. (setting this property to true is always save, but
@@ -200,42 +182,6 @@ template<class TypeTag, class MyTypeTag>
 struct UseLinearizationLock { using type = UndefinedProperty; };
 
 // high-level simulation control
-
-/*!
- * \brief Switch to enable or disable grid adaptation
- *
- * Currently grid adaptation requires the presence of the dune-FEM module. If it is not
- * available and grid adaptation is enabled, an exception is thrown.
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableGridAdaptation { using type = UndefinedProperty; };
-
-/*!
- * \brief The directory to which simulation output ought to be written to.
- */
-template<class TypeTag, class MyTypeTag>
-struct OutputDir { using type = UndefinedProperty; };
-
-/*!
- * \brief Global switch to enable or disable the writing of VTK output files
- *
- * If writing VTK files is disabled, then the WriteVtk$FOO options do
- * not have any effect...
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableVtkOutput { using type = UndefinedProperty; };
-
-/*!
- * \brief Determines if the VTK output is written to disk asynchronously
- *
- * I.e. written to disk using a separate thread. This has only an effect if
- * EnableVtkOutput is true and if the simulation is run sequentially. The reasons for
- * this not being used for MPI-parallel simulations are that Dune's VTK output code does
- * not support multi-threaded multi-process VTK output and even if it would, the result
- * would be slower than when using synchronous output.
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableAsyncVtkOutput { using type = UndefinedProperty; };
 
 /*!
  * \brief Specify the format the VTK output is written to disk
@@ -252,69 +198,6 @@ struct VtkOutputFormat { using type = UndefinedProperty; };
 //! Specify whether the some degrees of fredom can be constraint
 template<class TypeTag, class MyTypeTag>
 struct EnableConstraints { using type = UndefinedProperty; };
-
-/*!
- * \brief Specify the maximum size of a time integration [s].
- *
- * The default is to not limit the step size.
- */
-template<class TypeTag, class MyTypeTag>
-struct MaxTimeStepSize { using type = UndefinedProperty; };
-
-/*!
- * \brief Specify the minimal size of a time integration [s].
- *
- * The default is to not limit the step size.
- */
-template<class TypeTag, class MyTypeTag>
-struct MinTimeStepSize { using type = UndefinedProperty; };
-
-/*!
- * \brief The maximum allowed number of timestep divisions for the
- *        Newton solver.
- */
-template<class TypeTag, class MyTypeTag>
-struct MaxTimeStepDivisions { using type = UndefinedProperty; };
-
-/*!
- * \brief Continue with a non-converged solution instead of giving up
- *        if we encounter a time step size smaller than the minimum time
- *        step size.
- */
-template<class TypeTag, class MyTypeTag>
-struct ContinueOnConvergenceError { using type = UndefinedProperty; };
-
-/*!
- * \brief Specify whether all intensive quantities for the grid should be
- *        cached in the discretization.
- *
- * This potentially reduces the CPU time, but comes at the cost of
- * higher memory consumption. In turn, the higher memory requirements
- * may cause the simulation to exhibit worse cache coherence behavior
- * which eats some of the computational benefits again.
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableIntensiveQuantityCache { using type = UndefinedProperty; };
-
-/*!
- * \brief Specify whether the storage terms for previous solutions should be cached.
- *
- * This potentially reduces the CPU time, but comes at the cost of higher memory
- * consumption.
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableStorageCache { using type = UndefinedProperty; };
-
-/*!
- * \brief Specify whether to use the already calculated solutions as
- *        starting values of the intensive quantities.
- *
- * This only makes sense if the calculation of the intensive quantities is
- * very expensive (e.g. for non-linear fugacity functions where the
- * solver converges faster).
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableThermodynamicHints { using type = UndefinedProperty; };
 
 // mappers from local to global DOF indices
 
@@ -354,13 +237,29 @@ struct ExtensiveStorageTerm { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct UseVolumetricResidual { using type = UndefinedProperty; };
 
-
 //! Specify if experimental features should be enabled or not.
 template<class TypeTag, class MyTypeTag>
 struct EnableExperiments { using type = UndefinedProperty; };
 
+// Set defaults
+
+//! set the splices for the finite volume discretizations
 template<class TypeTag>
-struct Vanguard<TypeTag, TTag::NumericModel> { using type = Opm::DgfVanguard<TypeTag>; };
+struct Splices<TypeTag, TTag::FvBaseDiscretization>
+{
+    using type = std::tuple<GetSplicePropType<TypeTag, TTag::FvBaseDiscretization, Properties::LinearSolverSplice>,
+                            GetSplicePropType<TypeTag, TTag::FvBaseDiscretization, Properties::LocalLinearizerSplice>>;
+};
+
+//! use a parallel BiCGStab linear solver by default
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::FvBaseDiscretization>
+{ using type = TTag::ParallelBiCGStabLinearSolver; };
+
+//! by default, use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::FvBaseDiscretization>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 

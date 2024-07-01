@@ -28,6 +28,7 @@
  */
 #include "config.h"
 
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
@@ -43,10 +44,12 @@ struct Co2InjectionImmiscibleNiVcfvProblem
 } // namespace TTag
 
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem> { using type = TTag::VcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem> { static constexpr bool value = true; };
+struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Properties
 

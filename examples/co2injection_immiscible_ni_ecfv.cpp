@@ -28,6 +28,7 @@
  */
 #include "config.h"
 
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
 #include <opm/models/immiscible/immisciblemodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
@@ -37,7 +38,9 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct Co2InjectionImmiscibleNiEcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, ImmiscibleModel>; };
+struct Co2InjectionImmiscibleNiEcfvProblem
+{ using InheritsFrom = std::tuple<Co2InjectionBaseProblem, ImmiscibleModel>; };
+
 } // end namespace TTag
 
 template<class TypeTag>
@@ -45,11 +48,13 @@ struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionImmiscibleNiEcfvPr
 { using type = TTag::EcfvDiscretization; };
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiEcfvProblem> { static constexpr bool value = true; };
+struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiEcfvProblem>
+{ static constexpr bool value = true; };
 
 //! Use automatic differentiation to linearize the system of PDEs
 template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionImmiscibleNiEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionImmiscibleNiEcfvProblem>
+{ using type = TTag::AutoDiffLocalLinearizer; };
 
 } // namespace Opm::Properties
 
