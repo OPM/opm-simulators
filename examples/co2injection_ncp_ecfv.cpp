@@ -37,10 +37,15 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct Co2InjectionNcpEcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, NcpModel>; };
+
+struct Co2InjectionNcpEcfvProblem
+{ using InheritsFrom = std::tuple<Co2InjectionBaseProblem, NcpModel>; };
+
 } // end namespace TTag
+
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionNcpEcfvProblem> { using type = TTag::EcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionNcpEcfvProblem>
+{ using type = TTag::EcfvDiscretization; };
 
 } // namespace Opm::Properties
 

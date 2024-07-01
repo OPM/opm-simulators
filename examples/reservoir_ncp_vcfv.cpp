@@ -39,12 +39,16 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct ReservoirNcpVcfvProblem { using InheritsFrom = std::tuple<ReservoirBaseProblem, NcpModel>; };
+
+struct ReservoirNcpVcfvProblem
+{ using InheritsFrom = std::tuple<ReservoirBaseProblem, NcpModel>; };
+
 } // end namespace TTag
 
 // Select the vertex centered finite volume method as spatial discretization
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirNcpVcfvProblem> { using type = TTag::VcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirNcpVcfvProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 // reduce the base epsilon for the finite difference method to 10^-11. for some reason
 // the simulator converges better with this. (TODO: use automatic differentiation?)

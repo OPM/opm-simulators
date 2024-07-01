@@ -39,16 +39,21 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct ReservoirBlackOilEcfvProblem { using InheritsFrom = std::tuple<ReservoirBaseProblem, BlackOilModel>; };
+
+struct ReservoirBlackOilEcfvProblem
+{ using InheritsFrom = std::tuple<ReservoirBaseProblem, BlackOilModel>; };
+
 } // end namespace TTag
 
 // Select the element centered finite volume method as spatial discretization
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilEcfvProblem> { using type = TTag::EcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilEcfvProblem>
+{ using type = TTag::EcfvDiscretization; };
 
 // Use automatic differentiation to linearize the system of PDEs
 template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::ReservoirBlackOilEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
+struct LocalLinearizerSplice<TypeTag, TTag::ReservoirBlackOilEcfvProblem>
+{ using type = TTag::AutoDiffLocalLinearizer; };
 
 } // namespace Opm::Properties
 

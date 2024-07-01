@@ -37,7 +37,10 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct ObstacleProblem { using InheritsFrom = std::tuple<ObstacleBaseProblem, NcpModel>; };
+
+struct ObstacleProblem
+{ using InheritsFrom = std::tuple<ObstacleBaseProblem, NcpModel>; };
+
 } // end namespace TTag
 
 } // namespace Opm::Properties

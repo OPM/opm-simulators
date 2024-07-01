@@ -38,12 +38,16 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct ReservoirBlackOilVcfvProblem { using InheritsFrom = std::tuple<ReservoirBaseProblem, BlackOilModel>; };
+
+struct ReservoirBlackOilVcfvProblem
+{ using InheritsFrom = std::tuple<ReservoirBaseProblem, BlackOilModel>; };
+
 } // end namespace TTag
 
 // Select the vertex centered finite volume method as spatial discretization
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilVcfvProblem> { using type = TTag::VcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::ReservoirBlackOilVcfvProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 } // namespace Opm::Properties
 

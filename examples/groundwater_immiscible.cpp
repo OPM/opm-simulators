@@ -35,7 +35,10 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct GroundWaterProblem { using InheritsFrom = std::tuple<GroundWaterBaseProblem, ImmiscibleSinglePhaseModel>; };
+
+struct GroundWaterProblem
+{ using InheritsFrom = std::tuple<GroundWaterBaseProblem, ImmiscibleSinglePhaseModel>; };
+
 } // end namespace TTag
 
 } // namespace Opm::Properties

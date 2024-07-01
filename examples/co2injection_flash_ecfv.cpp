@@ -42,14 +42,20 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct Co2InjectionFlashEcfvProblem { using InheritsFrom = std::tuple<Co2InjectionBaseProblem, FlashModel>; };
+
+struct Co2InjectionFlashEcfvProblem
+{ using InheritsFrom = std::tuple<Co2InjectionBaseProblem, FlashModel>; };
+
 } // end namespace TTag
+
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionFlashEcfvProblem> { using type = TTag::EcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionFlashEcfvProblem>
+{ using type = TTag::EcfvDiscretization; };
 
 // use automatic differentiation for this simulator
 template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionFlashEcfvProblem> { using type = TTag::AutoDiffLocalLinearizer; };
+struct LocalLinearizerSplice<TypeTag, TTag::Co2InjectionFlashEcfvProblem>
+{ using type = TTag::AutoDiffLocalLinearizer; };
 
 // use the flash solver adapted to the CO2 injection problem
 template<class TypeTag>
@@ -62,7 +68,8 @@ struct FlashSolver<TypeTag, TTag::Co2InjectionFlashEcfvProblem>
 // else we increase the tolerance of the Newton solver
 #if HAVE_QUAD
 template<class TypeTag>
-struct Scalar<TypeTag, TTag::Co2InjectionFlashEcfvProblem> { using type = quad; };
+struct Scalar<TypeTag, TTag::Co2InjectionFlashEcfvProblem>
+{ using type = quad; };
 #else
 template<class TypeTag>
 struct NewtonTolerance<TypeTag, TTag::Co2InjectionFlashEcfvProblem>

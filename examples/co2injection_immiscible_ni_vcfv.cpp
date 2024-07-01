@@ -43,10 +43,12 @@ struct Co2InjectionImmiscibleNiVcfvProblem
 } // namespace TTag
 
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem> { using type = TTag::VcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem> { static constexpr bool value = true; };
+struct EnableEnergy<TypeTag, TTag::Co2InjectionImmiscibleNiVcfvProblem>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Properties
 

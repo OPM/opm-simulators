@@ -37,7 +37,9 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct CuvetteProblem { using InheritsFrom = std::tuple<CuvetteBaseProblem, PvsModel>; };
+struct CuvetteProblem
+{ using InheritsFrom = std::tuple<CuvetteBaseProblem, PvsModel>; };
+
 } // end namespace TTag
 
 } // namespace Opm::Properties

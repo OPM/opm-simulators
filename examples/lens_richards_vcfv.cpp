@@ -37,10 +37,15 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct RichardsLensVcfvProblem { using InheritsFrom = std::tuple<RichardsLensProblem>; };
+
+struct RichardsLensVcfvProblem
+{ using InheritsFrom = std::tuple<RichardsLensProblem>; };
+
 } // end namespace TTag
+
 template<class TypeTag>
-struct SpatialDiscretizationSplice<TypeTag, TTag::RichardsLensVcfvProblem> { using type = TTag::VcfvDiscretization; };
+struct SpatialDiscretizationSplice<TypeTag, TTag::RichardsLensVcfvProblem>
+{ using type = TTag::VcfvDiscretization; };
 
 } // namespace Opm::Properties
 
