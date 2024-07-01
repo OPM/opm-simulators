@@ -152,10 +152,6 @@ template<class TypeTag>
 struct SolidEnergyLaw<TypeTag, TTag::FractureProblem>
 { using type = Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
-// Disable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::FractureProblem> { static constexpr bool value = false; };
-
 // For this problem, we use constraints to specify the left boundary
 template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::FractureProblem> { static constexpr bool value = true; };
@@ -163,6 +159,11 @@ struct EnableConstraints<TypeTag, TTag::FractureProblem> { static constexpr bool
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// Disable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::FractureProblem>
+{ static constexpr bool value = false; };
 
 // Set the default value for the end time
 template<class TypeTag>

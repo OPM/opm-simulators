@@ -115,10 +115,6 @@ template<class TypeTag>
 struct FluidSystem<TypeTag, TTag::WaterAirBaseProblem>
 { using type = Opm::H2OAirFluidSystem<GetPropType<TypeTag, Properties::Scalar>>; };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::WaterAirBaseProblem> { static constexpr bool value = true; };
-
 // Use the restarted GMRES linear solver with the ILU-2 preconditioner from dune-istl
 template<class TypeTag>
 struct LinearSolverSplice<TypeTag, TTag::WaterAirBaseProblem>
@@ -137,6 +133,11 @@ struct PreconditionerOrder<TypeTag, TTag::WaterAirBaseProblem> { static constexp
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// Enable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::WaterAirBaseProblem>
+{ static constexpr bool value = true; };
 
 // The default for the end time of the simulation (1 year)
 template<class TypeTag>

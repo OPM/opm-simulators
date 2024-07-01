@@ -76,10 +76,6 @@ template<class TypeTag>
 struct FluidSystem<TypeTag, TTag::CuvetteBaseProblem>
 { using type = Opm::H2OAirMesityleneFluidSystem<GetPropType<TypeTag, Properties::Scalar>>; };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::CuvetteBaseProblem> { static constexpr bool value = true; };
-
 // Set the material Law
 template<class TypeTag>
 struct MaterialLaw<TypeTag, TTag::CuvetteBaseProblem>
@@ -119,6 +115,11 @@ public:
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// Enable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::CuvetteBaseProblem>
+{ static constexpr bool value = true; };
 
 // The default for the end time of the simulation
 template<class TypeTag>

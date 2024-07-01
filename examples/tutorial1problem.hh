@@ -120,10 +120,6 @@ public:
     using type = Opm::EffToAbsLaw<RawMaterialLaw>; /*@\label{tutorial1:eff2abs}@*/
 };
 
-// Disable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::Tutorial1Problem> { static constexpr bool value = false; }; /*@\label{tutorial1:gravity}@*/
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -162,6 +158,11 @@ struct DomainSizeZ<TypeTag, Properties::TTag::Tutorial1Problem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 0.0;
 };
+
+// Disable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::Tutorial1Problem>
+{ static constexpr bool value = false; }; /*@\label{tutorial1:gravity}@*/
 
 // define how long the simulation should run [s]
 template<class TypeTag>

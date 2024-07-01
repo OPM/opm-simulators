@@ -72,13 +72,14 @@ public:
     using type = Opm::H2ON2LiquidPhaseFluidSystem<Scalar>;
 };
 
-// Disable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::OutflowBaseProblem> { static constexpr bool value = false; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// Disable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::OutflowBaseProblem>
+{ static constexpr bool value = false; };
 
 // The default for the end time of the simulation
 template<class TypeTag>

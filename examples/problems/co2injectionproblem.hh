@@ -157,10 +157,6 @@ struct SolidEnergyLaw<TypeTag, TTag::Co2InjectionBaseProblem>
 template<class TypeTag>
 struct LinearSolverSplice<TypeTag, TTag::Co2InjectionBaseProblem> { using type = TTag::ParallelAmgLinearSolver; };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr bool value = true; };
-
 // set the defaults for the problem specific properties
 template<class TypeTag>
 struct FluidSystemPressureLow<TypeTag, TTag::Co2InjectionBaseProblem>
@@ -209,6 +205,11 @@ struct SimulationName<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// Enable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::Co2InjectionBaseProblem>
+{ static constexpr bool value = true; };
 
 // The default for the end time of the simulation
 template<class TypeTag>

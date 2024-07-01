@@ -30,7 +30,7 @@
 #ifndef EWOMS_MULTI_PHASE_BASE_PROPERTIES_HH
 #define EWOMS_MULTI_PHASE_BASE_PROPERTIES_HH
 
-#include <opm/models/utils/basicproperties.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 namespace Opm::Properties {
 
@@ -74,9 +74,6 @@ struct FluxModule { using type = UndefinedProperty; };
 //! Specify whether energy should be considered as a conservation quantity or not
 template<class TypeTag, class MyTypeTag>
 struct EnableEnergy { using type = UndefinedProperty; };
-//! Returns whether gravity is considered in the problem
-template<class TypeTag, class MyTypeTag>
-struct EnableGravity { using type = UndefinedProperty; };
 //! Enable diffusive fluxes?
 template<class TypeTag, class MyTypeTag>
 struct EnableDiffusion { using type = UndefinedProperty; };

@@ -139,11 +139,6 @@ public:
      using type = EffMaterialLaw;
 };
 
-// Enable gravity false
-template <class TypeTag>
-struct EnableGravity<TypeTag, TTag::CO2PTBaseProblem> { static constexpr bool value = false;
-};
-
 // set the defaults for the problem specific properties
  template <class TypeTag>
  struct Temperature<TypeTag, TTag::CO2PTBaseProblem> {
@@ -233,6 +228,11 @@ struct DomainSizeZ<TypeTag, Properties::TTag::CO2PTBaseProblem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1.0;
 };
+
+// Enable gravity false
+template <class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = false; };
 
 // The default for the end time of the simulation
 template <class TypeTag>

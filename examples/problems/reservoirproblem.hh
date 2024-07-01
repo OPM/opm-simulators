@@ -101,10 +101,6 @@ public:
     using type = Opm::LinearMaterial<Traits>;
 };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::ReservoirBaseProblem> { static constexpr bool value = true; };
-
 // Enable constraint DOFs?
 template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::ReservoirBaseProblem> { static constexpr bool value = true; };
@@ -152,6 +148,11 @@ public:
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// Enable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::ReservoirBaseProblem>
+{ static constexpr bool value = true; };
 
 //! The default for the end time of the simulation [s].
 //!
