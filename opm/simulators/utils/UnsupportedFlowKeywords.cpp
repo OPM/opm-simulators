@@ -570,7 +570,6 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"SKRORW", {true, std::nullopt}},
         {"SKRW", {true, std::nullopt}},
         {"SKRWR", {true, std::nullopt}},
-        {"SLAVES", {true, std::nullopt}},
         {"SMULTX", {true, std::nullopt}},
         {"SMULTY", {true, std::nullopt}},
         {"SMULTZ", {true, std::nullopt}},
