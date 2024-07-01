@@ -20,11 +20,11 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef EWOMS_NEWTON_METHOD_POPERTIES_HH
-#define EWOMS_NEWTON_METHOD_POPERTIES_HH
+#ifndef EWOMS_NEWTON_METHOD_PROPERTIES_HH
+#define EWOMS_NEWTON_METHOD_PROPERTIES_HH
 
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
+
 namespace Opm::Properties {
 
 //! Specifies the type of the actual Newton method
@@ -34,10 +34,6 @@ struct NewtonMethod { using type = UndefinedProperty; };
 //! The class which linearizes the non-linear system of equations
 template<class TypeTag, class MyTypeTag>
 struct Linearizer { using type = UndefinedProperty; };
-
-//! Specifies whether the Newton method should print messages or not
-template<class TypeTag, class MyTypeTag>
-struct NewtonVerbose { using type = UndefinedProperty; };
 
 //! Specifies the type of the class which writes out the Newton convergence
 template<class TypeTag, class MyTypeTag>
@@ -82,6 +78,6 @@ struct NewtonTargetIterations { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct NewtonMaxIterations { using type = UndefinedProperty; };
 
-} // end namespace  Opm::Properties
+} // end namespace Opm::Properties
 
 #endif

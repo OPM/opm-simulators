@@ -27,23 +27,24 @@
 #ifndef EWOMS_NEWTON_METHOD_HH
 #define EWOMS_NEWTON_METHOD_HH
 
-#include "nullconvergencewriter.hh"
-
-#include "newtonmethodproperties.hh"
+#include <dune/istl/istlexception.hh>
+#include <dune/common/classname.hh>
+#include <dune/common/parallel/mpihelper.hh>
 
 #include <opm/common/Exceptions.hpp>
 
 #include <opm/material/densead/Math.hpp>
 
 #include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <opm/models/nonlinear/newtonmethodparameters.hh>
+#include <opm/models/nonlinear/newtonmethodproperties.hh>
+#include <opm/models/nonlinear/nullconvergencewriter.hh>
+
 #include <opm/models/utils/timer.hh>
 #include <opm/models/utils/timerguard.hh>
 
 #include <opm/simulators/linalg/linalgproperties.hh>
-
-#include <dune/istl/istlexception.hh>
-#include <dune/common/classname.hh>
-#include <dune/common/parallel/mpihelper.hh>
 
 #include <iostream>
 #include <sstream>
@@ -78,8 +79,6 @@ struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = NullC
 template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, TTag::NewtonMethod> { static constexpr bool value = false; };
 template<class TypeTag>
-struct NewtonVerbose<TypeTag, TTag::NewtonMethod> { static constexpr bool value = true; };
-template<class TypeTag>
 struct NewtonTolerance<TypeTag, TTag::NewtonMethod>
 {
     using type = GetPropType<TypeTag, Scalar>;
@@ -99,6 +98,14 @@ template<class TypeTag>
 struct NewtonMaxIterations<TypeTag, TTag::NewtonMethod> { static constexpr int value = 20; };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+template<class TypeTag>
+struct NewtonVerbose<TypeTag, Properties::TTag::NewtonMethod>
+{ static constexpr bool value = true; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
@@ -151,7 +158,7 @@ public:
     {
         LinearSolverBackend::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::NewtonVerbose>
+        Parameters::registerParam<TypeTag, Parameters::NewtonVerbose>
             ("Specify whether the Newton method should inform "
              "the user about its progress or not");
         Parameters::registerParam<TypeTag, Properties::NewtonWriteConvergence>
@@ -529,7 +536,7 @@ protected:
      */
     bool verbose_() const
     {
-        return Parameters::get<TypeTag, Properties::NewtonVerbose>() && (comm_.rank() == 0);
+        return Parameters::get<TypeTag, Parameters::NewtonVerbose>() && (comm_.rank() == 0);
     }
 
     /*!
