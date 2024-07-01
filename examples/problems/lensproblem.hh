@@ -129,10 +129,6 @@ public:
     using type = Opm::EffToAbsLaw<EffectiveLaw>;
 };
 
-// Write the solutions of individual newton iterations?
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = false; };
-
 // Use forward differences instead of central differences
 template<class TypeTag>
 struct NumericDifferenceMethod<TypeTag, TTag::LensBaseProblem> { static constexpr int value = +1; };
@@ -238,6 +234,11 @@ struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::LensBaseProblem>
 template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::LensBaseProblem>
 { static constexpr bool value = true; };
+
+// Write the solutions of individual newton iterations?
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, Properties::TTag::LensBaseProblem>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 

@@ -157,10 +157,6 @@ struct SolidEnergyLaw<TypeTag, TTag::Co2InjectionBaseProblem>
 template<class TypeTag>
 struct LinearSolverSplice<TypeTag, TTag::Co2InjectionBaseProblem> { using type = TTag::ParallelAmgLinearSolver; };
 
-// Write the Newton convergence behavior to disk?
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr bool value = false; };
-
 // Enable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr bool value = true; };
@@ -231,6 +227,15 @@ template<class TypeTag>
 struct GridFile<TypeTag, TTag::Co2InjectionBaseProblem> { static constexpr auto value = "data/co2injection.dgf"; };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// Write the Newton convergence behavior to disk?
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, Properties::TTag::Co2InjectionBaseProblem>
+{ static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!

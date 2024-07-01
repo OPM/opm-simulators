@@ -123,10 +123,6 @@ struct EnableGravity<TypeTag, TTag::WaterAirBaseProblem> { static constexpr bool
 template<class TypeTag>
 struct NumericDifferenceMethod<TypeTag, TTag::WaterAirBaseProblem> { static constexpr int value = +1; };
 
-// Write newton convergence
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, TTag::WaterAirBaseProblem> { static constexpr bool value = false; };
-
 // The default for the end time of the simulation (1 year)
 template<class TypeTag>
 struct EndTime<TypeTag, TTag::WaterAirBaseProblem>
@@ -163,6 +159,15 @@ template<class TypeTag>
 struct PreconditionerOrder<TypeTag, TTag::WaterAirBaseProblem> { static constexpr int value = 2; };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// Write newton convergence
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, Properties::TTag::WaterAirBaseProblem>
+{ static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!

@@ -117,10 +117,10 @@ protected:
 
         // make sure that the error never grows beyond the maximum
         // allowed one
-        if (this->error_ > Parameters::get<TypeTag, Properties::NewtonMaxError>())
+        if (this->error_ > Parameters::get<TypeTag, Parameters::NewtonMaxError>())
             throw Opm::NumericalProblem("Newton: Error "+std::to_string(double(this->error_))+
                                         + " is larger than maximum allowed error of "
-                                        + std::to_string(Parameters::get<TypeTag, Properties::NewtonMaxError>()));
+                                        + std::to_string(Parameters::get<TypeTag, Parameters::NewtonMaxError>()));
     }
 
     /*!

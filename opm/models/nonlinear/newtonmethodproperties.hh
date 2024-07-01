@@ -20,11 +20,11 @@
   module for the precise wording of the license and the list of
   copyright holders.
 */
-#ifndef EWOMS_NEWTON_METHOD_POPERTIES_HH
-#define EWOMS_NEWTON_METHOD_POPERTIES_HH
+#ifndef EWOMS_NEWTON_METHOD_PROPERTIES_HH
+#define EWOMS_NEWTON_METHOD_PROPERTIES_HH
 
 #include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
+
 namespace Opm::Properties {
 
 //! Specifies the type of the actual Newton method
@@ -35,10 +35,6 @@ struct NewtonMethod { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct Linearizer { using type = UndefinedProperty; };
 
-//! Specifies whether the Newton method should print messages or not
-template<class TypeTag, class MyTypeTag>
-struct NewtonVerbose { using type = UndefinedProperty; };
-
 //! Specifies the type of the class which writes out the Newton convergence
 template<class TypeTag, class MyTypeTag>
 struct NewtonConvergenceWriter { using type = UndefinedProperty; };
@@ -46,42 +42,8 @@ struct NewtonConvergenceWriter { using type = UndefinedProperty; };
 //! Specifies whether the convergence rate and the global residual
 //! gets written out to disk for every Newton iteration
 template<class TypeTag, class MyTypeTag>
-struct NewtonWriteConvergence { using type = UndefinedProperty; };
-
-//! Specifies whether the convergence rate and the global residual
-//! gets written out to disk for every Newton iteration
-template<class TypeTag, class MyTypeTag>
 struct ConvergenceWriter { using type = UndefinedProperty; };
 
-/*!
- * \brief The value for the error below which convergence is declared
- *
- * This value can (and for the porous media models will) be changed to account for grid
- * scaling and other effects.
- */
-template<class TypeTag, class MyTypeTag>
-struct NewtonTolerance { using type = UndefinedProperty; };
-
-//! The maximum error which may occur in a simulation before the
-//! Newton method for the time step is aborted
-template<class TypeTag, class MyTypeTag>
-struct NewtonMaxError { using type = UndefinedProperty; };
-
-/*!
- * \brief The number of iterations at which the Newton method
- *        should aim at.
- *
- * This is used to control the time-step size. The heuristic used
- * is to scale the last time-step size by the deviation of the
- * number of iterations used from the target steps.
- */
-template<class TypeTag, class MyTypeTag>
-struct NewtonTargetIterations { using type = UndefinedProperty; };
-
-//! Number of maximum iterations for the Newton method.
-template<class TypeTag, class MyTypeTag>
-struct NewtonMaxIterations { using type = UndefinedProperty; };
-
-} // end namespace  Opm::Properties
+} // end namespace Opm::Properties
 
 #endif

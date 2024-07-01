@@ -140,11 +140,6 @@ public:
      using type = EffMaterialLaw;
 };
 
-// Write the Newton convergence behavior to disk?
-template <class TypeTag>
-struct NewtonWriteConvergence<TypeTag, TTag::CO2PTBaseProblem> {
-static constexpr bool value = false; };
-
 // Enable gravity false
 template <class TypeTag>
 struct EnableGravity<TypeTag, TTag::CO2PTBaseProblem> { static constexpr bool value = false;
@@ -192,23 +187,6 @@ template <class TypeTag>
 struct LinearSolverAbsTolerance<TypeTag, TTag::CO2PTBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.;
-};
-
-template <class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-3;
-};
-
-template <class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr int value = 30;
-};
-
-template <class TypeTag>
-struct NewtonTargetIterations<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 6;
 };
 
 // output
@@ -297,8 +275,32 @@ struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
 
 } // namespace Opm::Properties
 
+namespace Opm::Parameters {
 
+// Write the Newton convergence behavior to disk?
+template <class TypeTag>
+struct NewtonWriteConvergence<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = false; };
 
+template <class TypeTag>
+struct NewtonTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-3;
+};
+
+template <class TypeTag>
+struct NewtonTargetIterations<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 6;
+};
+
+template <class TypeTag>
+struct NewtonMaxIterations<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr int value = 30; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
