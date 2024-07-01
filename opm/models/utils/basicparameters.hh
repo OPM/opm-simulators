@@ -68,6 +68,10 @@ struct PrintParameters { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct PrintProperties { using type = Properties::UndefinedProperty; };
 
+//! The default value for the simulation's restart time
+template<class TypeTag, class MyTypeTag>
+struct RestartTime { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm:Parameters
 
 #endif

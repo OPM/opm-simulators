@@ -258,7 +258,7 @@ public:
             ("The simulation time at which the simulation is finished [s]");
         Parameters::registerParam<TypeTag, Parameters::InitialTimeStepSize>
             ("The size of the initial time step [s]");
-        Parameters::registerParam<TypeTag, Properties::RestartTime>
+        Parameters::registerParam<TypeTag, Parameters::RestartTime>
             ("The simulation time at which a restart should be attempted [s]");
         Parameters::registerParam<TypeTag, Properties::PredeterminedTimeStepsFile>
             ("A file with a list of predetermined time step sizes (one "
@@ -649,7 +649,7 @@ public:
         TimerGuard writeTimerGuard(writeTimer_);
 
         setupTimer_.start();
-        Scalar restartTime = Parameters::get<TypeTag, Properties::RestartTime>();
+        Scalar restartTime = Parameters::get<TypeTag, Parameters::RestartTime>();
         if (restartTime > -1e30) {
             // try to restart a previous simulation
             time_ = restartTime;

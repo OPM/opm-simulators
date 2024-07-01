@@ -105,10 +105,6 @@ template<class TypeTag, class MyTypeTag>
 struct GridPart { using type = UndefinedProperty; };
 #endif
 
-//! The default value for the simulation's restart time
-template<class TypeTag, class MyTypeTag>
-struct RestartTime { using type = UndefinedProperty; };
-
 //! The name of the file with a number of forced time step lengths
 template<class TypeTag, class MyTypeTag>
 struct PredeterminedTimeStepsFile { using type = UndefinedProperty; };
@@ -198,14 +194,6 @@ template<class TypeTag>
 struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView; };
 #endif
 
-//! The default value for the simulation's restart time
-template<class TypeTag>
-struct RestartTime<TypeTag, TTag::NumericModel>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1e35;
-};
-
 //! By default, do not force any time steps
 template<class TypeTag>
 struct PredeterminedTimeStepsFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
@@ -253,6 +241,14 @@ struct PrintParameters<TypeTag, Properties::TTag::NumericModel>
 template<class TypeTag>
 struct PrintProperties<TypeTag, Properties::TTag::NumericModel>
 { static constexpr int value = 2; };
+
+//! The default value for the simulation's restart time
+template<class TypeTag>
+struct RestartTime<TypeTag, Properties::TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = -1e35;
+};
 
 } // namespace Opm::Parameters
 
