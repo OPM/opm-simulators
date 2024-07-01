@@ -318,7 +318,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
 #endif
 
         // read the initial time step and the end time
-        Scalar endTime = Parameters::get<TypeTag, Properties::EndTime>();
+        Scalar endTime = Parameters::get<TypeTag, Parameters::EndTime>();
         if (endTime < -1e50) {
             if (myRank == 0)
                 Parameters::printUsage<TypeTag>(argv[0],

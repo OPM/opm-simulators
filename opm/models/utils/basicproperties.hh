@@ -105,10 +105,6 @@ template<class TypeTag, class MyTypeTag>
 struct GridPart { using type = UndefinedProperty; };
 #endif
 
-//! The default value for the simulation's end time
-template<class TypeTag, class MyTypeTag>
-struct EndTime { using type = UndefinedProperty; };
-
 //! The default value for the simulation's initial time step size
 template<class TypeTag, class MyTypeTag>
 struct InitialTimeStepSize { using type = UndefinedProperty; };
@@ -206,14 +202,6 @@ template<class TypeTag>
 struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView; };
 #endif
 
-//! The default value for the simulation's end time
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::NumericModel>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1e35;
-};
-
 //! The default value for the simulation's initial time step size
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, TTag::NumericModel>
@@ -240,6 +228,14 @@ struct Vanguard<TypeTag, TTag::NumericModel> { using type = Opm::DgfVanguard<Typ
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+//! The default value for the simulation's end time
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = -1e35;
+};
 
 //! Set the number of refinement levels of the grid to 0. This does not belong
 //! here, strictly speaking.

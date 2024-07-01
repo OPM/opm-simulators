@@ -137,14 +137,6 @@ struct CellsY<TypeTag, TTag::DiffusionBaseProblem> { static constexpr unsigned v
 template<class TypeTag>
 struct CellsZ<TypeTag, TTag::DiffusionBaseProblem> { static constexpr unsigned value = 1; };
 
-// The default for the end time of the simulation
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::DiffusionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e6;
-};
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, TTag::DiffusionBaseProblem>
@@ -154,6 +146,18 @@ struct InitialTimeStepSize<TypeTag, TTag::DiffusionBaseProblem>
 };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// The default for the end time of the simulation
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::DiffusionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e6;
+};
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!

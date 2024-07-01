@@ -164,14 +164,6 @@ struct EnableConstraints<TypeTag, TTag::FractureProblem> { static constexpr bool
 template<class TypeTag>
 struct GridFile<TypeTag, TTag::FractureProblem> { static constexpr auto value = "data/fracture.art.dgf"; };
 
-// Set the default value for the end time
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::FractureProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 3e3;
-};
-
 // Set the default value for the initial time step size
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, TTag::FractureProblem>
@@ -181,6 +173,18 @@ struct InitialTimeStepSize<TypeTag, TTag::FractureProblem>
 };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// Set the default value for the end time
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::FractureProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 3e3;
+};
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!

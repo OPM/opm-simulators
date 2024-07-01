@@ -201,14 +201,6 @@ struct CellsY<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value 
 template<class TypeTag>
 struct CellsZ<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 16; };
 
-// The default for the end time of the simulation
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 30e3;
-};
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, TTag::LensBaseProblem>
@@ -234,6 +226,14 @@ struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::LensBaseProblem>
 template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::LensBaseProblem>
 { static constexpr bool value = true; };
+
+// The default for the end time of the simulation
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 30e3;
+};
 
 // Write the solutions of individual newton iterations?
 template<class TypeTag>

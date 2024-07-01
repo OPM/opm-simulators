@@ -116,14 +116,6 @@ public:
     using type = Opm::SomertonThermalConductionLaw<FluidSystem, Scalar>;
 };
 
-// The default for the end time of the simulation
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::CuvetteBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 180;
-};
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, TTag::CuvetteBaseProblem>
@@ -139,6 +131,14 @@ struct GridFile<TypeTag, TTag::CuvetteBaseProblem> { static constexpr auto value
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// The default for the end time of the simulation
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::CuvetteBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 180;
+};
 
 // Set the maximum time step
 template<class TypeTag>

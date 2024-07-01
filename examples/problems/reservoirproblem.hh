@@ -122,17 +122,6 @@ struct Temperature<TypeTag, TTag::ReservoirBaseProblem>
     static constexpr type value = 293.15;
 };
 
-//! The default for the end time of the simulation [s].
-//!
-//! By default this problem spans 1000 days (100 "settle down" days and 900 days of
-//! production)
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::ReservoirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1000.0*24*60*60;
-};
-
 // The default for the initial time step size of the simulation [s]
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, TTag::ReservoirBaseProblem>
@@ -174,6 +163,17 @@ struct GridFile<TypeTag, TTag::ReservoirBaseProblem> { static constexpr auto val
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+//! The default for the end time of the simulation [s].
+//!
+//! By default this problem spans 1000 days (100 "settle down" days and 900 days of
+//! production)
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1000.0*24*60*60;
+};
 
 // Write the Newton convergence behavior to disk?
 template<class TypeTag>

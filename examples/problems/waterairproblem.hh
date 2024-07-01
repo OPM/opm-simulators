@@ -123,14 +123,6 @@ struct EnableGravity<TypeTag, TTag::WaterAirBaseProblem> { static constexpr bool
 template<class TypeTag>
 struct NumericDifferenceMethod<TypeTag, TTag::WaterAirBaseProblem> { static constexpr int value = +1; };
 
-// The default for the end time of the simulation (1 year)
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::WaterAirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0 * 365 * 24 * 60 * 60;
-};
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, TTag::WaterAirBaseProblem>
@@ -161,6 +153,14 @@ struct PreconditionerOrder<TypeTag, TTag::WaterAirBaseProblem> { static constexp
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// The default for the end time of the simulation (1 year)
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::WaterAirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0 * 365 * 24 * 60 * 60;
+};
 
 // Write newton convergence
 template<class TypeTag>

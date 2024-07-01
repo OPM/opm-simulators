@@ -124,14 +124,6 @@ public:
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::Tutorial1Problem> { static constexpr bool value = false; }; /*@\label{tutorial1:gravity}@*/
 
-// define how long the simulation should run [s]
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::Tutorial1Problem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 100e3;
-}; /*@\label{tutorial1:default-params-begin}@*/
-
 // define the size of the initial time step [s]
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, TTag::Tutorial1Problem>
@@ -169,6 +161,18 @@ template<class TypeTag>
 struct CellsZ<TypeTag, TTag::Tutorial1Problem> { static constexpr unsigned value = 1; }; /*@\label{tutorial1:default-params-end}@*/
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// define how long the simulation should run [s]
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::Tutorial1Problem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 100e3;
+}; /*@\label{tutorial1:default-params-begin}@*/
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 //! Tutorial problem using the "immiscible" model.

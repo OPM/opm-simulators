@@ -32,6 +32,10 @@
 
 namespace Opm::Parameters {
 
+//! The default value for the simulation's end time
+template<class TypeTag, class MyTypeTag>
+struct EndTime { using type = Properties::UndefinedProperty; };
+
 //! Property which tells the Vanguard how often the grid should be refined
 //! after creation.
 template<class TypeTag, class MyTypeTag>

@@ -163,13 +163,6 @@ struct SimulationName<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr auto value = "co2_ptflash";
 };
 
-// The default for the end time of the simulation
-template <class TypeTag>
-struct EndTime<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 60. * 60.;
-};
-
 // convergence control
 template <class TypeTag>
 struct InitialTimeStepSize<TypeTag, TTag::CO2PTBaseProblem> {
@@ -276,6 +269,13 @@ struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// The default for the end time of the simulation
+template <class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::CO2PTBaseProblem> {
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 60. * 60.;
+};
 
 // Write the Newton convergence behavior to disk?
 template <class TypeTag>
