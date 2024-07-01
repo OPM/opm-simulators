@@ -27,49 +27,60 @@
 #ifndef EWOMS_VTK_BLACK_OIL_ENERGY_MODULE_HH
 #define EWOMS_VTK_BLACK_OIL_ENERGY_MODULE_HH
 
-#include "vtkmultiwriter.hh"
-#include "baseoutputmodule.hh"
-
 #include <dune/common/fvector.hh>
 
 #include <opm/material/densead/Math.hpp>
 
-#include <opm/models/discretization/common/fvbaseparameters.hh>
-
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
-namespace Opm::Properties {
+#include <opm/models/discretization/common/fvbaseparameters.hh>
 
-namespace TTag {
+#include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
+
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+
+namespace Opm::Properties::TTag {
 
 // create new type tag for the VTK multi-phase output
 struct VtkBlackOilEnergy {};
 
-} // namespace TTag
+} // namespace Opm::Properties::TTag
+
+namespace Opm::Parameters {
 
 // create the property tags needed for the energy module
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteRockInternalEnergy { using type = UndefinedProperty; };
+struct VtkWriteRockInternalEnergy { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteTotalThermalConductivity { using type = UndefinedProperty; };
+struct VtkWriteTotalThermalConductivity { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteFluidInternalEnergies { using type = UndefinedProperty; };
+struct VtkWriteFluidInternalEnergies { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteFluidEnthalpies { using type = UndefinedProperty; };
+struct VtkWriteFluidEnthalpies { using type = Properties::UndefinedProperty; };
 
 // set default values for what quantities to output
 template<class TypeTag>
-struct VtkWriteRockInternalEnergy<TypeTag, TTag::VtkBlackOilEnergy> { static constexpr bool value = true; };
-template<class TypeTag>
-struct VtkWriteTotalThermalConductivity<TypeTag, TTag::VtkBlackOilEnergy> { static constexpr bool value = true; };
-template<class TypeTag>
-struct VtkWriteFluidInternalEnergies<TypeTag, TTag::VtkBlackOilEnergy> { static constexpr bool value = true; };
-template<class TypeTag>
-struct VtkWriteFluidEnthalpies<TypeTag, TTag::VtkBlackOilEnergy> { static constexpr bool value = true; };
+struct VtkWriteRockInternalEnergy<TypeTag, Properties::TTag::VtkBlackOilEnergy>
+{ static constexpr bool value = true; };
 
-} // namespace Opm::Properties
+template<class TypeTag>
+struct VtkWriteTotalThermalConductivity<TypeTag, Properties::TTag::VtkBlackOilEnergy>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct VtkWriteFluidInternalEnergies<TypeTag, Properties::TTag::VtkBlackOilEnergy>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct VtkWriteFluidEnthalpies<TypeTag, Properties::TTag::VtkBlackOilEnergy>
+{ static constexpr bool value = true; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
@@ -112,15 +123,15 @@ public:
         if (!enableEnergy)
             return;
 
-        Parameters::registerParam<TypeTag, Properties::VtkWriteRockInternalEnergy>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteRockInternalEnergy>
             ("Include the volumetric internal energy of rock "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteTotalThermalConductivity>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteTotalThermalConductivity>
             ("Include the total thermal conductivity of the medium and the fluids "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteFluidInternalEnergies>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteFluidInternalEnergies>
             ("Include the internal energies of the fluids in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteFluidEnthalpies>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteFluidEnthalpies>
             ("Include the enthalpies of the fluids in the VTK output files");
     }
 
@@ -212,25 +223,25 @@ public:
 private:
     static bool rockInternalEnergyOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteRockInternalEnergy>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteRockInternalEnergy>();
         return val;
     }
 
     static bool totalThermalConductivityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteTotalThermalConductivity>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteTotalThermalConductivity>();
         return val;
     }
 
     static bool fluidInternalEnergiesOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFluidInternalEnergies>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFluidInternalEnergies>();
         return val;
     }
 
     static bool fluidEnthalpiesOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFluidEnthalpies>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFluidEnthalpies>();
         return val;
     }
 
