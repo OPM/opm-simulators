@@ -27,11 +27,12 @@
 #ifndef EWOMS_PARALLEL_BICGSTAB_BACKEND_HH
 #define EWOMS_PARALLEL_BICGSTAB_BACKEND_HH
 
-#include "linalgproperties.hh"
-#include "parallelbasebackend.hh"
-#include "bicgstabsolver.hh"
-#include "combinedcriterion.hh"
-#include "istlsparsematrixadapter.hh"
+#include <opm/simulators/linalg/bicgstabsolver.hh>
+#include <opm/simulators/linalg/combinedcriterion.hh>
+#include <opm/simulators/linalg/istlsparsematrixadapter.hh>
+#include <opm/simulators/linalg/linalgparameters.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
+#include <opm/simulators/linalg/parallelbasebackend.hh>
 
 #include <memory>
 

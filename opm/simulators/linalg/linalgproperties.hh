@@ -47,16 +47,6 @@ template<class TypeTag, class MyTypeTag>
 struct LinearSolverScalar { using type = UndefinedProperty; };
 
 /*!
- * \brief The size of the algebraic overlap of the linear solver.
- *
- * Algebraic overlaps can be thought as being the same as the overlap
- * of a grid, but it is only existant for the linear system of
- * equations.
- */
-template<class TypeTag, class MyTypeTag>
-struct LinearSolverOverlapSize { using type = UndefinedProperty; };
-
-/*!
  * \brief Maximum accepted error of the solution of the linear solver.
  */
 template<class TypeTag, class MyTypeTag>

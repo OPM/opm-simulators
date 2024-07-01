@@ -27,31 +27,31 @@
 #ifndef EWOMS_PARALLEL_BASE_BACKEND_HH
 #define EWOMS_PARALLEL_BASE_BACKEND_HH
 
-#include <opm/common/Exceptions.hpp>
+#include "opm/simulators/linalg/linalgparameters.hh"
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
 
-#include <opm/simulators/linalg/istlsparsematrixadapter.hh>
-#include <opm/simulators/linalg/overlappingbcrsmatrix.hh>
-#include <opm/simulators/linalg/overlappingblockvector.hh>
-#include <opm/simulators/linalg/overlappingpreconditioner.hh>
-#include <opm/simulators/linalg/overlappingscalarproduct.hh>
-#include <opm/simulators/linalg/overlappingoperator.hh>
-#include <opm/simulators/linalg/parallelbasebackend.hh>
-#include <opm/simulators/linalg/istlpreconditionerwrappers.hh>
+#include <dune/grid/io/file/vtk/vtkwriter.hh>
+
+#include <opm/common/Exceptions.hpp>
 
 #include <opm/models/utils/genericguard.hh>
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
-#include <opm/simulators/linalg/matrixblock.hh>
+
+#include <opm/simulators/linalg/istlpreconditionerwrappers.hh>
+#include <opm/simulators/linalg/istlsparsematrixadapter.hh>
 #include <opm/simulators/linalg/linalgproperties.hh>
+#include <opm/simulators/linalg/matrixblock.hh>
+#include <opm/simulators/linalg/overlappingbcrsmatrix.hh>
+#include <opm/simulators/linalg/overlappingblockvector.hh>
+#include <opm/simulators/linalg/overlappingoperator.hh>
+#include <opm/simulators/linalg/overlappingpreconditioner.hh>
+#include <opm/simulators/linalg/overlappingscalarproduct.hh>
 
-#include <dune/grid/io/file/vtk/vtkwriter.hh>
-
-#include <dune/common/fvector.hh>
-#include <dune/common/version.hh>
-
-#include <sstream>
-#include <memory>
 #include <iostream>
+#include <memory>
+#include <sstream>
 
 namespace Opm::Properties {
 
@@ -156,7 +156,7 @@ public:
             ("The maximum allowed error between of the linear solver");
         Parameters::registerParam<TypeTag, Properties::LinearSolverAbsTolerance>
             ("The maximum accepted error of the norm of the residual");
-        Parameters::registerParam<TypeTag, Properties::LinearSolverOverlapSize>
+        Parameters::registerParam<TypeTag, Parameters::LinearSolverOverlapSize>
             ("The size of the algebraic overlap for the linear solver");
         Parameters::registerParam<TypeTag, Properties::LinearSolverMaxIterations>
             ("The maximum number of iterations of the linear solver");
@@ -195,7 +195,7 @@ public:
                                             simulator_.model().dofMapper());
 
         // create the overlapping Jacobian matrix
-        unsigned overlapSize = Parameters::get<TypeTag, Properties::LinearSolverOverlapSize>();
+        unsigned overlapSize = Parameters::get<TypeTag, Parameters::LinearSolverOverlapSize>();
         overlappingMatrix_ = new OverlappingMatrix(M.istlMatrix(),
                                                    borderListCreator.borderList(),
                                                    borderListCreator.blackList(),
@@ -458,14 +458,19 @@ template<class TypeTag>
 struct PreconditionerWrapper<TypeTag, TTag::ParallelBaseLinearSolver>
 { using type = Opm::Linear::PreconditionerWrapperILU<TypeTag>; };
 
-//! set the default overlap size to 2
-template<class TypeTag>
-struct LinearSolverOverlapSize<TypeTag, TTag::ParallelBaseLinearSolver> { static constexpr unsigned value = 2; };
-
 //! set the default number of maximum iterations for the linear solver
 template<class TypeTag>
 struct LinearSolverMaxIterations<TypeTag, TTag::ParallelBaseLinearSolver> { static constexpr int value = 1000; };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+//! set the default overlap size to 2
+template<class TypeTag>
+struct LinearSolverOverlapSize<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
+{ static constexpr unsigned value = 2; };
+
+} // namespace Opm::Parameters
 
 #endif
