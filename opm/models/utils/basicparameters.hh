@@ -42,6 +42,15 @@ struct GridGlobalRefinements { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct ParameterFile { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief Print all properties on startup?
+ *
+ * 0 means 'no', 1 means 'yes', 2 means 'print only to logfiles'. The
+ * default is 2.
+ */
+template<class TypeTag, class MyTypeTag>
+struct PrintProperties { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm:Parameters
 
 #endif
