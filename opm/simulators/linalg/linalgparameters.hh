@@ -33,6 +33,10 @@
 
 namespace Opm::Parameters {
 
+//! number of iterations between solver restarts for the GMRES solver
+template<class TypeTag, class MyTypeTag>
+struct GMResRestart { using type = Properties::UndefinedProperty; };
+
 /*!
  * \brief Maximum accepted error of the norm of the residual.
  */

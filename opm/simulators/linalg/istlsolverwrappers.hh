@@ -125,7 +125,7 @@ public:
 
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::GMResRestart>
+        Parameters::registerParam<TypeTag, Parameters::GMResRestart>
             ("Number of iterations after which the GMRES linear solver is restarted");
     }
 
@@ -140,7 +140,7 @@ public:
         int verbosity = 0;
         if (parOperator.overlap().myRank() == 0)
             verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
-        int restartAfter = Parameters::get<TypeTag, Properties::GMResRestart>();
+        int restartAfter = Parameters::get<TypeTag, Parameters::GMResRestart>();
         solver_ = std::make_shared<RawSolver>(parOperator,
                                               parScalarProduct,
                                               parPreCond,

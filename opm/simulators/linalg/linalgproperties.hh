@@ -45,10 +45,6 @@ struct PreconditionerWrapper { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverScalar { using type = UndefinedProperty; };
 
-//! number of iterations between solver restarts for the GMRES solver
-template<class TypeTag, class MyTypeTag>
-struct GMResRestart { using type = UndefinedProperty; };
-
 //! The class that allows to manipulate sparse matrices
 template<class TypeTag, class MyTypeTag>
 struct SparseMatrixAdapter { using type = UndefinedProperty; };
