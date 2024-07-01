@@ -44,11 +44,13 @@
 #ifndef EWOMS_ISTL_SOLVER_WRAPPERS_HH
 #define EWOMS_ISTL_SOLVER_WRAPPERS_HH
 
+#include <dune/istl/solvers.hh>
+
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
-#include <opm/simulators/linalg/linalgproperties.hh>
 
-#include <dune/istl/solvers.hh>
+#include <opm/simulators/linalg/linalgparameters.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 namespace Opm::Linear {
 
@@ -82,7 +84,7 @@ namespace Opm::Linear {
                                                                                    \
             int verbosity = 0;                                                     \
             if (parOperator.overlap().myRank() == 0)                               \
-                verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>(); \
+                verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>(); \
             solver_ = std::make_shared<RawSolver>(parOperator, parScalarProduct,   \
                                                   parPreCond, tolerance, maxIter,  \
                                                   verbosity);                      \
@@ -137,7 +139,7 @@ public:
 
         int verbosity = 0;
         if (parOperator.overlap().myRank() == 0)
-            verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
+            verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
         int restartAfter = Parameters::get<TypeTag, Properties::GMResRestart>();
         solver_ = std::make_shared<RawSolver>(parOperator,
                                               parScalarProduct,

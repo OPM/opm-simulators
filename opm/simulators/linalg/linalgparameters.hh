@@ -55,6 +55,16 @@ struct LinearSolverOverlapSize { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverTolerance { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief Specifies the verbosity of the linear solver
+ *
+ * By default it is 0, i.e. it doesn't print anything. Setting this
+ * property to 1 prints aggregated convergence rates, 2 prints the
+ * convergence rate of every iteration of the scheme.
+ */
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverVerbosity { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm::Parameters
 
 #endif

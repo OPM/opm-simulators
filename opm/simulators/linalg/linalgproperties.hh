@@ -45,16 +45,6 @@ struct PreconditionerWrapper { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverScalar { using type = UndefinedProperty; };
 
-/*!
- * \brief Specifies the verbosity of the linear solver
- *
- * By default it is 0, i.e. it doesn't print anything. Setting this
- * property to 1 prints aggregated convergence rates, 2 prints the
- * convergence rate of every iteration of the scheme.
- */
-template<class TypeTag, class MyTypeTag>
-struct LinearSolverVerbosity { using type = UndefinedProperty; };
-
 //! Maximum number of iterations eyecuted by the linear solver
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverMaxIterations { using type = UndefinedProperty; };

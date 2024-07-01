@@ -160,7 +160,7 @@ public:
             ("The size of the algebraic overlap for the linear solver");
         Parameters::registerParam<TypeTag, Properties::LinearSolverMaxIterations>
             ("The maximum number of iterations of the linear solver");
-        Parameters::registerParam<TypeTag, Properties::LinearSolverVerbosity>
+        Parameters::registerParam<TypeTag, Parameters::LinearSolverVerbosity>
             ("The verbosity level of the linear solver");
 
         PreconditionerWrapper::registerParameters();
@@ -388,10 +388,6 @@ protected:
 
 namespace Opm::Properties {
 
-//! make the linear solver shut up by default
-template<class TypeTag>
-struct LinearSolverVerbosity<TypeTag, TTag::ParallelBaseLinearSolver> { static constexpr int value = 0; };
-
 //! set the preconditioner relaxation parameter to 1.0 by default
 template<class TypeTag>
 struct PreconditionerRelaxation<TypeTag, TTag::ParallelBaseLinearSolver>
@@ -470,6 +466,11 @@ namespace Opm::Parameters {
 template<class TypeTag>
 struct LinearSolverOverlapSize<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
 { static constexpr unsigned value = 2; };
+
+//! make the linear solver shut up by default
+template<class TypeTag>
+struct LinearSolverVerbosity<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
+{ static constexpr int value = 0; };
 
 } // namespace Opm::Parameters
 

@@ -208,7 +208,7 @@ protected:
 
         int verbosity = 0;
         if (parOperator.overlap().myRank() == 0)
-            verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
+            verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
         bicgstabSolver->setVerbosity(verbosity);
         bicgstabSolver->setMaxIterations(Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>());
         bicgstabSolver->setLinearOperator(&parOperator);
@@ -274,7 +274,7 @@ protected:
 
         int verbosity = 0;
         if (this->simulator_.vanguard().gridView().comm().rank() == 0)
-            verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
+            verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
 
         using SmootherArgs = typename Dune::Amg::SmootherTraits<ParallelSmoother>::Arguments;
 
