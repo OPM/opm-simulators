@@ -119,10 +119,6 @@ public:
     using type = Opm::EffToAbsLaw<EffectiveLaw>;
 };
 
-// Write out the filter velocities for this problem
-template<class TypeTag>
-struct VtkWriteFilterVelocities<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr bool value = true; };
-
 // Disable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr bool value = false; };
@@ -180,6 +176,11 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e-3;
 };
+
+// Write out the filter velocities for this problem
+template<class TypeTag>
+struct VtkWriteFilterVelocities<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 

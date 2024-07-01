@@ -176,16 +176,6 @@ struct LinearSolverAbsTolerance<TypeTag, TTag::CO2PTBaseProblem> {
 
 // output
 template <class TypeTag>
-struct VtkWriteFilterVelocities<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr bool value = true;
-};
-
-template <class TypeTag>
-struct VtkWritePotentialGradients<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr bool value = true;
-};
-
-template <class TypeTag>
 struct VtkWriteTotalMassFractions<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr bool value = true;
 };
@@ -304,7 +294,15 @@ struct VtkWriteEquilibriumConstants<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr bool value = true; };
 
 template <class TypeTag>
+struct VtkWriteFilterVelocities<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = true; };
+
+template <class TypeTag>
 struct VtkWriteLiquidMoleFractions<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = true; };
+
+template <class TypeTag>
+struct VtkWritePotentialGradients<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
