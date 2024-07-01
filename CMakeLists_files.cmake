@@ -247,29 +247,36 @@ endif()
 
 if(USE_BDA_BRIDGE)
   list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BdaBridge.cpp
+                                 opm/simulators/linalg/bda/CprCreation.cpp
+                                 opm/simulators/linalg/bda/Misc.cpp
                                  opm/simulators/linalg/bda/WellContributions.cpp
                                  opm/simulators/linalg/bda/MultisegmentWellContribution.cpp
                                  opm/simulators/linalg/ISTLSolverBda.cpp)
   if(OPENCL_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/BlockedMatrix.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/BILU0.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclBILU0.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/Reorder.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/ChowPatelIlu.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/BISAI.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/CPR.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclBISAI.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclCPR.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/opencl.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclKernels.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/OpenclMatrix.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/Preconditioner.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclPreconditioner.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclSolverBackend.cpp)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/opencl/openclWellContributions.cpp)
   endif()
   if(ROCALUTION_FOUND)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocalutionSolverBackend.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.cpp)
   endif()
   if(rocsparse_FOUND AND rocblas_FOUND)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocsparseSolverBackend.cpp)
-    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocsparseWellContributions.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseCPR.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseBILU0.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseWellContributions.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/hipKernels.cpp)
+    list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/rocm/rocsparseMatrix.cpp)
   endif()
   if(CUDA_FOUND)
     list (APPEND MAIN_SOURCE_FILES opm/simulators/linalg/bda/cuda/cusparseSolverBackend.cu)
@@ -660,25 +667,33 @@ if (USE_BDA_BRIDGE)
     opm/simulators/linalg/bda/BdaBridge.hpp
     opm/simulators/linalg/bda/BdaResult.hpp
     opm/simulators/linalg/bda/BdaSolver.hpp
-    opm/simulators/linalg/bda/opencl/BILU0.hpp
+    opm/simulators/linalg/bda/CprCreation.hpp
+    opm/simulators/linalg/bda/Preconditioner.hpp
+    opm/simulators/linalg/bda/Misc.hpp
+    opm/simulators/linalg/bda/opencl/openclBILU0.hpp
     opm/simulators/linalg/bda/BlockedMatrix.hpp
-    opm/simulators/linalg/bda/opencl/CPR.hpp
+    opm/simulators/linalg/bda/opencl/openclCPR.hpp
     opm/simulators/linalg/bda/cuda/cuda_header.hpp
     opm/simulators/linalg/bda/cuda/cusparseSolverBackend.hpp
     opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp
-    opm/simulators/linalg/bda/opencl/BISAI.hpp
+    opm/simulators/linalg/bda/opencl/openclBISAI.hpp
     opm/simulators/linalg/bda/Reorder.hpp
     opm/simulators/linalg/bda/opencl/opencl.hpp
     opm/simulators/linalg/bda/opencl/openclKernels.hpp
     opm/simulators/linalg/bda/opencl/OpenclMatrix.hpp
-    opm/simulators/linalg/bda/opencl/Preconditioner.hpp
+    opm/simulators/linalg/bda/opencl/openclPreconditioner.hpp
     opm/simulators/linalg/bda/opencl/openclSolverBackend.hpp
     opm/simulators/linalg/bda/opencl/openclWellContributions.hpp
     opm/simulators/linalg/bda/Matrix.hpp
     opm/simulators/linalg/bda/MultisegmentWellContribution.hpp
-    opm/simulators/linalg/bda/rocalutionSolverBackend.hpp
-    opm/simulators/linalg/bda/rocsparseSolverBackend.hpp
-    opm/simulators/linalg/bda/rocsparseWellContributions.hpp
+    opm/simulators/linalg/bda/rocm/hipKernels.hpp
+    opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.hpp
+    opm/simulators/linalg/bda/rocm/rocsparseBILU0.hpp
+    opm/simulators/linalg/bda/rocm/rocsparseCPR.hpp
+    opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.hpp
+    opm/simulators/linalg/bda/rocm/rocsparseSolverBackend.hpp
+    opm/simulators/linalg/bda/rocm/rocsparseWellContributions.hpp
+    opm/simulators/linalg/bda/rocm/rocsparseMatrix.hpp
     opm/simulators/linalg/bda/WellContributions.hpp
     opm/simulators/linalg/ISTLSolverBda.hpp
   )

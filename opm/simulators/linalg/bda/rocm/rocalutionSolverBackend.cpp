@@ -37,7 +37,7 @@
 
 #undef HAVE_CUDA
 
-#include <opm/simulators/linalg/bda/rocalutionSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.hpp>
 
 #include <rocalution.hpp>
 #include <base/matrix_formats_ind.hpp> // check if blocks are interpreted as row-major or column-major

@@ -71,16 +71,13 @@ openclSolverBackend(int verbosity_,
         OPM_THROW(std::logic_error, "Error unknown value for argument --linear-solver, " + linsolver);
     }
 
-    using PreconditionerType = Preconditioner<Scalar,block_size>;
+    using PreconditionerType = typename Opm::Accelerator::PreconditionerType;
     if (use_cpr) {
-        prec = PreconditionerType::create(PreconditionerType::Type::CPR,
-                                          opencl_ilu_parallel, verbosity);
+        prec = openclPreconditioner<Scalar, block_size>::create(PreconditionerType::CPR, verbosity, opencl_ilu_parallel);
     } else if (use_isai) {
-        prec = PreconditionerType::create(PreconditionerType::Type::BISAI,
-                                          opencl_ilu_parallel, verbosity);
+        prec = openclPreconditioner<Scalar, block_size>::create(PreconditionerType::BISAI, verbosity, opencl_ilu_parallel);
     } else {
-        prec = PreconditionerType::create(PreconditionerType::Type::BILU0,
-                                          opencl_ilu_parallel, verbosity);
+        prec = openclPreconditioner<Scalar, block_size>::create(PreconditionerType::BILU0, verbosity, opencl_ilu_parallel);
     }
 
     std::ostringstream out;
@@ -228,8 +225,10 @@ openclSolverBackend(int verbosity_,
 
 template<class Scalar, unsigned int block_size>
 openclSolverBackend<Scalar,block_size>::
-openclSolverBackend(int verbosity_, int maxit_,
-                    Scalar tolerance_, bool opencl_ilu_parallel_)
+openclSolverBackend(int verbosity_,
+                    int maxit_,
+                    Scalar tolerance_,
+                    bool opencl_ilu_parallel_)
     : Base(verbosity_, maxit_, tolerance_)
     , opencl_ilu_parallel(opencl_ilu_parallel_)
 {
@@ -248,7 +247,8 @@ setOpencl(std::shared_ptr<cl::Context>& context_,
 
 template<class Scalar, unsigned int block_size>
 void openclSolverBackend<Scalar,block_size>::
-gpu_pbicgstab(WellContributions<Scalar>& wellContribs, BdaResult& res)
+gpu_pbicgstab(WellContributions<Scalar>& wellContribs,
+              BdaResult& res)
 {
     float it;
     Scalar rho, rhop, beta, alpha, omega, tmp1, tmp2;

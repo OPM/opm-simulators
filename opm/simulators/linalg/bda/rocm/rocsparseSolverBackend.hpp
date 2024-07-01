@@ -26,6 +26,8 @@
 #include <opm/simulators/linalg/bda/BdaSolver.hpp>
 #include <opm/simulators/linalg/bda/WellContributions.hpp>
 
+#include <opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.hpp>
+
 #include <rocblas/rocblas.h>
 #include <rocsparse/rocsparse.h>
 
@@ -57,29 +59,26 @@ private:
 
     bool analysis_done = false;
     std::shared_ptr<BlockedMatrix<Scalar>> mat{};                 // original matrix
-    std::shared_ptr<BlockedMatrix<Scalar>> jacMat{};              // matrix for preconditioner
-    int nnzbs_prec = 0;    // number of nnz blocks in preconditioner matrix M
 
     rocsparse_direction dir = rocsparse_direction_row;
     rocsparse_operation operation = rocsparse_operation_none;
     rocsparse_handle handle;
     rocblas_handle blas_handle;
-    rocsparse_mat_descr descr_A, descr_M, descr_L, descr_U;
-    rocsparse_mat_info ilu_info;
+    rocsparse_mat_descr descr_A;
 #if HIP_VERSION >= 50400000
     rocsparse_mat_info spmv_info;
 #endif
     hipStream_t stream;
 
-    rocsparse_int *d_Arows, *d_Mrows;
-    rocsparse_int *d_Acols, *d_Mcols;
-    Scalar *d_Avals, *d_Mvals;
-    Scalar *d_x, *d_b, *d_r, *d_rw, *d_p;     // vectors, used during linear solve
+    rocsparse_int *d_Arows, *d_Acols;
+    Scalar *d_Avals;
+    Scalar *d_x, *d_b, *d_r, *d_rw, *d_p; // vectors, used during linear solve
     Scalar *d_pw, *d_s, *d_t, *d_v;
-    void *d_buffer; // buffer space, used by rocsparse ilu0 analysis
     int  ver;
     char rev[64];
 
+    std::unique_ptr<rocsparsePreconditioner<Scalar, block_size> > prec; // can perform blocked ILU0 and AMG on pressure component
+    
     /// Solve linear system using ilu0-bicgstab
     /// \param[in] wellContribs   WellContributions, to apply them separately, instead of adding them to matrix A
     /// \param[inout] res         summary of solver result
@@ -119,14 +118,16 @@ public:
     /// \param[in] tolerance                  required relative tolerance for rocsparseSolver
     /// \param[in] platformID                 the OpenCL platform to be used
     /// \param[in] deviceID                   the device to be used
+    /// \param[in] linsolver                  indicating the preconditioner, equal to the --linear-solver cmdline argument
     rocsparseSolverBackend(int linear_solver_verbosity,
                            int maxit,
                            Scalar tolerance,
                            unsigned int platformID,
-                           unsigned int deviceID);
+                           unsigned int deviceID,
+                           std::string linsolver);
 
     /// For the CPR coarse solver
-    // rocsparseSolverBackend(int linear_solver_verbosity, int maxit, double tolerance, ILUReorder opencl_ilu_reorder);
+    rocsparseSolverBackend(int linear_solver_verbosity, int maxit, Scalar tolerance, bool opencl_ilu_reorder);
 
     /// Destroy a openclSolver, and free memory
     ~rocsparseSolverBackend();
@@ -143,10 +144,6 @@ public:
                               std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                               WellContributions<Scalar>& wellContribs,
                               BdaResult& res) override;
-
-    /// Solve scalar linear system, for example a coarse system of an AMG preconditioner
-    /// Data is already on the GPU
-    // SolverStatus solve_system(BdaResult &res);
 
     /// Get result after linear solve, and peform postprocessing if necessary
     /// \param[inout] x          resulting x vector, caller must guarantee that x points to a valid array

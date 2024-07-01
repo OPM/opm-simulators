@@ -43,11 +43,11 @@
 
 #include <opm/grid/polyhedralgrid.hh>
 
-#if HAVE_OPENMP
 #include <thread>
-#include <omp.h>
-
 std::shared_ptr<std::thread> copyThread;
+
+#if HAVE_OPENMP
+#include <omp.h>
 #endif // HAVE_OPENMP
 
 namespace Opm::detail {
@@ -113,9 +113,11 @@ apply(Vector& rhs,
         }
 #endif
 
-	bool use_multithreading = false;
+	bool use_multithreading = true;
 #if HAVE_OPENMP
-	use_multithreading = omp_get_max_threads() > 1;
+	// if user  manually sets --threads-per-process=1, do not use multithreading 
+        if (omp_get_max_threads() == 1)
+	    use_multithreading = false;
 #endif // HAVE_OPENMP
 
         if (numJacobiBlocks_ > 1) {
@@ -123,9 +125,9 @@ apply(Vector& rhs,
 	      //NOTE: copyThread can safely write to jacMat because in solve_system both matrix and *blockJacobiForGPUILU0_ diagonal entries
 	      //are checked and potentially overwritten in replaceZeroDiagonal() by mainThread. However, no matter the thread writing sequence,
 	      //the final entry in jacMat is correct.
-#if HAVE_OPENMP
+//#if HAVE_OPENMP
               copyThread = std::make_shared<std::thread>([&](){this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);});
-#endif // HAVE_OPENMP
+//#endif // HAVE_OPENMP
 	    }
 	    else {
 	      this->copyMatToBlockJac(matrix, *blockJacobiForGPUILU0_);
