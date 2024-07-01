@@ -27,7 +27,6 @@
 #ifndef EWOMS_PARALLEL_BASE_BACKEND_HH
 #define EWOMS_PARALLEL_BASE_BACKEND_HH
 
-#include "opm/simulators/linalg/linalgparameters.hh"
 #include <dune/common/fvector.hh>
 #include <dune/common/version.hh>
 
@@ -41,6 +40,7 @@
 
 #include <opm/simulators/linalg/istlpreconditionerwrappers.hh>
 #include <opm/simulators/linalg/istlsparsematrixadapter.hh>
+#include <opm/simulators/linalg/linalgparameters.hh>
 #include <opm/simulators/linalg/linalgproperties.hh>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <opm/simulators/linalg/overlappingbcrsmatrix.hh>
@@ -388,14 +388,6 @@ protected:
 
 namespace Opm::Properties {
 
-//! set the preconditioner relaxation parameter to 1.0 by default
-template<class TypeTag>
-struct PreconditionerRelaxation<TypeTag, TTag::ParallelBaseLinearSolver>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-
 //! by default use the same kind of floating point values for the linearization and for
 //! the linear solve
 template<class TypeTag>
@@ -473,6 +465,14 @@ struct LinearSolverVerbosity<TypeTag, Properties::TTag::ParallelBaseLinearSolver
 template<class TypeTag>
 struct PreconditionerOrder<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
 { static constexpr int value = 0; };
+
+//! set the preconditioner relaxation parameter to 1.0 by default
+template<class TypeTag>
+struct PreconditionerRelaxation<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
 
 } // namespace Opm::Parameters
 

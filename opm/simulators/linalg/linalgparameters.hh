@@ -76,6 +76,10 @@ struct LinearSolverVerbosity { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct PreconditionerOrder { using type = Properties::UndefinedProperty; };
 
+//! The relaxation factor of the preconditioner
+template<class TypeTag, class MyTypeTag>
+struct PreconditionerRelaxation { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm::Parameters
 
 #endif

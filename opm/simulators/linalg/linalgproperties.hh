@@ -45,10 +45,6 @@ struct PreconditionerWrapper { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverScalar { using type = UndefinedProperty; };
 
-//! The relaxation factor of the preconditioner
-template<class TypeTag, class MyTypeTag>
-struct PreconditionerRelaxation { using type = UndefinedProperty; };
-
 //! number of iterations between solver restarts for the GMRES solver
 template<class TypeTag, class MyTypeTag>
 struct GMResRestart { using type = UndefinedProperty; };
