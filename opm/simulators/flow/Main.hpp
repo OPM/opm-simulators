@@ -336,7 +336,7 @@ private:
         }
         else {
             deckFilename = Parameters::get<PreTypeTag, Properties::EclDeckFileName>();
-            outputDir = Parameters::get<PreTypeTag, Properties::OutputDir>();
+            outputDir = Parameters::get<PreTypeTag, Parameters::OutputDir>();
         }
 
 #if HAVE_DAMARIS
@@ -719,7 +719,7 @@ private:
         else {
             threads = 2;
 
-            const int input_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
+            const int input_threads = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
 
             if (input_threads > 0)
                 threads = input_threads;

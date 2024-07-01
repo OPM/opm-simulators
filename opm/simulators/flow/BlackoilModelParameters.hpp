@@ -20,6 +20,7 @@
 #ifndef OPM_BLACKOILMODELPARAMETERS_HEADER_INCLUDED
 #define OPM_BLACKOILMODELPARAMETERS_HEADER_INCLUDED
 
+#include <opm/models/discretization/common/fvbaseparameters.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/models/utils/basicproperties.hh>
@@ -467,15 +468,21 @@ template<class TypeTag>
 struct LocalDomainsOrderingMeasure<TypeTag, TTag::FlowModelParameters> {
     static constexpr auto value = "maxpressure";
 };
+
+} // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
 // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, TTag::FlowModelParameters> {
+struct ThreadsPerProcess<TypeTag, Properties::TTag::FlowModelParameters>
+{
     static constexpr int value = -1;
 };
 #endif
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm
 {

@@ -297,12 +297,6 @@ struct NewtonTolerance<TypeTag, TTag::FlowBaseProblem> {
     static constexpr type value = 1e-2;
 };
 
-// Disable the VTK output by default for this problem ...
-template<class TypeTag>
-struct EnableVtkOutput<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr bool value = false;
-};
-
 // ... but enable the ECL output by default
 template<class TypeTag>
 struct EnableEclOutput<TypeTag,TTag::FlowBaseProblem> {
@@ -404,25 +398,6 @@ struct EclOutputDoublePrecision<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
 };
 
-// The default location for the ECL output files
-template<class TypeTag>
-struct OutputDir<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr auto value = ".";
-};
-
-// the cache for intensive quantities can be used for ECL problems and also yields a
-// decent speedup...
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr bool value = true;
-};
-
-// the cache for the storage term can also be used and also yields a decent speedup
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr bool value = true;
-};
-
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::FlowBaseProblem> {
@@ -522,5 +497,30 @@ struct ExplicitRockCompaction<TypeTag, TTag::FlowBaseProblem> {
 };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// The default location for the ECL output files
+template<class TypeTag>
+struct OutputDir<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr auto value = "."; };
+
+// Disable the VTK output by default for this problem ...
+template<class TypeTag>
+struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = false; };
+
+// the cache for intensive quantities can be used for ECL problems and also yields a
+// decent speedup...
+template<class TypeTag>
+struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = true; };
+
+// the cache for the storage term can also be used and also yields a decent speedup
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = true; };
+
+} // namespace Opm::Parameters
 
 #endif // OPM_FLOW_PROBLEM_PROPERTIES_HPP

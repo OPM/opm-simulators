@@ -129,25 +129,25 @@ namespace Opm {
 
             // hide the parameters unused by flow. TODO: this is a pain to maintain
             Parameters::hideParam<TypeTag, Properties::EnableGravity>();
-            Parameters::hideParam<TypeTag, Properties::EnableGridAdaptation>();
+            Parameters::hideParam<TypeTag, Parameters::EnableGridAdaptation>();
 
             // this parameter is actually used in eWoms, but the flow well model
             // hard-codes the assumption that the intensive quantities cache is enabled,
             // so flow crashes. Let's hide the parameter for that reason.
-            Parameters::hideParam<TypeTag, Properties::EnableIntensiveQuantityCache>();
+            Parameters::hideParam<TypeTag, Parameters::EnableIntensiveQuantityCache>();
 
             // thermodynamic hints are not implemented/required by the eWoms blackoil
             // model
-            Parameters::hideParam<TypeTag, Properties::EnableThermodynamicHints>();
+            Parameters::hideParam<TypeTag, Parameters::EnableThermodynamicHints>();
 
             // in flow only the deck file determines the end time of the simulation
             Parameters::hideParam<TypeTag, Properties::EndTime>();
 
             // time stepping is not done by the eWoms code in flow
             Parameters::hideParam<TypeTag, Properties::InitialTimeStepSize>();
-            Parameters::hideParam<TypeTag, Properties::MaxTimeStepDivisions>();
-            Parameters::hideParam<TypeTag, Properties::MaxTimeStepSize>();
-            Parameters::hideParam<TypeTag, Properties::MinTimeStepSize>();
+            Parameters::hideParam<TypeTag, Parameters::MaxTimeStepDivisions>();
+            Parameters::hideParam<TypeTag, Parameters::MaxTimeStepSize>();
+            Parameters::hideParam<TypeTag, Parameters::MinTimeStepSize>();
             Parameters::hideParam<TypeTag, Properties::PredeterminedTimeStepsFile>();
 
             // flow also does not use the eWoms Newton method
@@ -388,7 +388,7 @@ namespace Opm {
             if (!getenv("OMP_NUM_THREADS"))
             {
                 int threads = 2;
-                const int requested_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
+                const int requested_threads = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
                 if (requested_threads > 0)
                     threads = requested_threads;
 
