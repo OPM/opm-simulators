@@ -27,6 +27,7 @@
  */
 #include "config.h"
 
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
 #include <opm/models/pvs/pvsmodel.hh>
 #include "problems/waterairproblem.hh"

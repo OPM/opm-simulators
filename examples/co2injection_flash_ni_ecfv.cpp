@@ -28,7 +28,10 @@
  */
 #include "config.h"
 
+// this must be included before the vanguard
 #include <opm/material/common/quad.hpp>
+
+#include <opm/models/io/dgfvanguard.hh>
 #include <opm/models/utils/start.hh>
 #include <opm/models/flash/flashmodel.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>

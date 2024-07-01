@@ -38,6 +38,12 @@
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
 #endif
 
+namespace Opm {
+
+template<class TypeTag> class DgfVanguard;
+
+}
+
 namespace Opm::Properties {
 
 ///////////////////////////////////
@@ -254,6 +260,8 @@ struct RestartTime<TypeTag, TTag::NumericModel>
 template<class TypeTag>
 struct PredeterminedTimeStepsFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
 
+template<class TypeTag>
+struct Vanguard<TypeTag, TTag::NumericModel> { using type = Opm::DgfVanguard<TypeTag>; };
 
 } // namespace Opm::Properties
 

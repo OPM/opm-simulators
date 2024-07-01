@@ -31,7 +31,6 @@
 #define EWOMS_FV_BASE_PROPERTIES_HH
 
 #include <opm/models/utils/basicproperties.hh>
-#include <opm/models/io/dgfvanguard.hh>
 
 namespace Opm::Properties {
 
@@ -256,9 +255,6 @@ struct UseVolumetricResidual { using type = UndefinedProperty; };
 //! Specify if experimental features should be enabled or not.
 template<class TypeTag, class MyTypeTag>
 struct EnableExperiments { using type = UndefinedProperty; };
-
-template<class TypeTag>
-struct Vanguard<TypeTag, TTag::NumericModel> { using type = Opm::DgfVanguard<TypeTag>; };
 
 } // namespace Opm::Properties
 
