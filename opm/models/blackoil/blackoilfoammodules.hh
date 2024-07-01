@@ -78,7 +78,6 @@ class BlackOilFoamModule
     static constexpr unsigned waterPhaseIdx = FluidSystem::waterPhaseIdx;
 
     static constexpr unsigned enableFoam = enableFoamV;
-    static constexpr bool enableVtkOutput = getPropValue<TypeTag, Properties::EnableVtkOutput>();
 
     static constexpr unsigned numEq = getPropValue<TypeTag, Properties::NumEq>();
     static constexpr unsigned numPhases = FluidSystem::numPhases;
@@ -188,7 +187,7 @@ public:
                                       Simulator&)
     {
         if constexpr (enableFoam) {
-            if (enableVtkOutput) {
+            if (Parameters::get<TypeTag, Properties::EnableVtkOutput>()) {
                 OpmLog::warning("VTK output requested, currently unsupported by the foam module.");
             }
         }
