@@ -27,56 +27,75 @@
 #ifndef EWOMS_VTK_COMPOSITION_MODULE_HH
 #define EWOMS_VTK_COMPOSITION_MODULE_HH
 
-#include "vtkmultiwriter.hh"
-#include "baseoutputmodule.hh"
-
 #include <opm/material/common/MathToolbox.hpp>
 
 #include <opm/models/discretization/common/fvbaseparameters.hh>
 
-#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
+
 #include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Properties {
-
-namespace TTag {
+namespace Opm::Properties::TTag {
 
 // create new type tag for the VTK composition output
 struct VtkComposition {};
 
-} // namespace TTag
+} // namespace Opm::Properties::TTag
+
+namespace Opm::Parameters {
 
 // create the property tags needed for the composition module
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteMassFractions { using type = UndefinedProperty; };
+struct VtkWriteMassFractions { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteMoleFractions { using type = UndefinedProperty; };
+struct VtkWriteMoleFractions { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteTotalMassFractions { using type = UndefinedProperty; };
+struct VtkWriteTotalMassFractions { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteTotalMoleFractions { using type = UndefinedProperty; };
+struct VtkWriteTotalMoleFractions { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteMolarities { using type = UndefinedProperty; };
+struct VtkWriteMolarities { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteFugacities { using type = UndefinedProperty; };
+struct VtkWriteFugacities { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteFugacityCoeffs { using type = UndefinedProperty; };
+struct VtkWriteFugacityCoeffs { using type = Properties::UndefinedProperty; };
 
 // set default values for what quantities to output
 template<class TypeTag>
-struct VtkWriteMassFractions<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
+struct VtkWriteMassFractions<TypeTag, Properties::TTag::VtkComposition>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct VtkWriteMoleFractions<TypeTag, TTag::VtkComposition> { static constexpr bool value = true; };
+struct VtkWriteMoleFractions<TypeTag, Properties::TTag::VtkComposition>
+{ static constexpr bool value = true; };
+
 template<class TypeTag>
-struct VtkWriteTotalMassFractions<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
+struct VtkWriteTotalMassFractions<TypeTag, Properties::TTag::VtkComposition>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct VtkWriteTotalMoleFractions<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
+struct VtkWriteTotalMoleFractions<TypeTag, Properties::TTag::VtkComposition>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct VtkWriteMolarities<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
+struct VtkWriteMolarities<TypeTag, Properties::TTag::VtkComposition>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct VtkWriteFugacities<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
+struct VtkWriteFugacities<TypeTag, Properties::TTag::VtkComposition>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct VtkWriteFugacityCoeffs<TypeTag, TTag::VtkComposition> { static constexpr bool value = false; };
+struct VtkWriteFugacityCoeffs<TypeTag, Properties::TTag::VtkComposition>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Properties
 
@@ -125,19 +144,19 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::VtkWriteMassFractions>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteMassFractions>
             ("Include mass fractions in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteMoleFractions>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteMoleFractions>
             ("Include mole fractions in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteTotalMassFractions>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteTotalMassFractions>
             ("Include total mass fractions in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteTotalMoleFractions>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteTotalMoleFractions>
             ("Include total mole fractions in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteMolarities>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteMolarities>
             ("Include component molarities in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteFugacities>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteFugacities>
             ("Include component fugacities in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteFugacityCoeffs>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteFugacityCoeffs>
             ("Include component fugacity coefficients in the VTK output files");
     }
 
@@ -258,43 +277,43 @@ public:
 private:
     static bool massFracOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteMassFractions>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteMassFractions>();
         return val;
     }
 
     static bool moleFracOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteMoleFractions>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteMoleFractions>();
         return val;
     }
 
     static bool totalMassFracOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteTotalMassFractions>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteTotalMassFractions>();
         return val;
     }
 
     static bool totalMoleFracOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteTotalMoleFractions>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteTotalMoleFractions>();
         return val;
     }
 
     static bool molarityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteMolarities>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteMolarities>();
         return val;
     }
 
     static bool fugacityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFugacities>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFugacities>();
         return val;
     }
 
     static bool fugacityCoeffOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFugacityCoeffs>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFugacityCoeffs>();
         return val;
     }
 
