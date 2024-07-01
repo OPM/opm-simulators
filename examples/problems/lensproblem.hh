@@ -62,20 +62,6 @@ namespace TTag {
 struct LensBaseProblem { using InheritsFrom = std::tuple<StructuredGridVanguard>; };
 } // end namespace TTag
 
-// declare the properties specific for the lens problem
-template<class TypeTag, class MyTypeTag>
-struct LensLowerLeftX { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct LensLowerLeftY { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct LensLowerLeftZ { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct LensUpperRightX { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct LensUpperRightY { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct LensUpperRightZ { using type = UndefinedProperty; };
-
 // Set the problem property
 template<class TypeTag>
 struct Problem<TypeTag, TTag::LensBaseProblem> { using type = Opm::LensProblem<TypeTag>; };
@@ -129,48 +115,28 @@ public:
     using type = Opm::EffToAbsLaw<EffectiveLaw>;
 };
 
-
-// define the properties specific for the lens problem
-template<class TypeTag>
-struct LensLowerLeftX<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-template<class TypeTag>
-struct LensLowerLeftY<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 2.0;
-};
-template<class TypeTag>
-struct LensLowerLeftZ<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.0;
-};
-template<class TypeTag>
-struct LensUpperRightX<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 4.0;
-};
-template<class TypeTag>
-struct LensUpperRightY<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 3.0;
-};
-template<class TypeTag>
-struct LensUpperRightZ<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// declare the properties specific for the lens problem
+template<class TypeTag, class MyTypeTag>
+struct LensLowerLeftX { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct LensLowerLeftY { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct LensLowerLeftZ { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct LensUpperRightX { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct LensUpperRightY { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct LensUpperRightZ { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag>
 struct CellsX<TypeTag, Properties::TTag::LensBaseProblem>
@@ -234,6 +200,49 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::LensBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 250;
+};
+
+// define the properties specific for the lens problem
+template<class TypeTag>
+struct LensLowerLeftX<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
+
+template<class TypeTag>
+struct LensLowerLeftY<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 2.0;
+};
+
+template<class TypeTag>
+struct LensLowerLeftZ<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.0;
+};
+
+template<class TypeTag>
+struct LensUpperRightX<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 4.0;
+};
+
+template<class TypeTag>
+struct LensUpperRightY<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 3.0;
+};
+
+template<class TypeTag>
+struct LensUpperRightZ<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
 };
 
 // Write the solutions of individual newton iterations?
@@ -329,14 +338,14 @@ public:
         FluidSystem::init();
 
         temperature_ = 273.15 + 20; // -> 20°C
-        lensLowerLeft_[0] = Parameters::get<TypeTag, Properties::LensLowerLeftX>();
-        lensLowerLeft_[1] = Parameters::get<TypeTag, Properties::LensLowerLeftY>();
-        lensUpperRight_[0] = Parameters::get<TypeTag, Properties::LensUpperRightX>();
-        lensUpperRight_[1] = Parameters::get<TypeTag, Properties::LensUpperRightY>();
+        lensLowerLeft_[0] = Parameters::get<TypeTag, Parameters::LensLowerLeftX>();
+        lensLowerLeft_[1] = Parameters::get<TypeTag, Parameters::LensLowerLeftY>();
+        lensUpperRight_[0] = Parameters::get<TypeTag, Parameters::LensUpperRightX>();
+        lensUpperRight_[1] = Parameters::get<TypeTag, Parameters::LensUpperRightY>();
 
         if (dimWorld == 3) {
-            lensLowerLeft_[2] = Parameters::get<TypeTag, Properties::LensLowerLeftZ>();
-            lensUpperRight_[2] = Parameters::get<TypeTag, Properties::LensUpperRightZ>();
+            lensLowerLeft_[2] = Parameters::get<TypeTag, Parameters::LensLowerLeftZ>();
+            lensUpperRight_[2] = Parameters::get<TypeTag, Parameters::LensUpperRightZ>();
         }
 
         // residual saturations
@@ -370,19 +379,19 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::LensLowerLeftX>
+        Parameters::registerParam<TypeTag, Parameters::LensLowerLeftX>
             ("The x-coordinate of the lens' lower-left corner [m].");
-        Parameters::registerParam<TypeTag, Properties::LensLowerLeftY>
+        Parameters::registerParam<TypeTag, Parameters::LensLowerLeftY>
             ("The y-coordinate of the lens' lower-left corner [m].");
-        Parameters::registerParam<TypeTag, Properties::LensUpperRightX>
+        Parameters::registerParam<TypeTag, Parameters::LensUpperRightX>
             ("The x-coordinate of the lens' upper-right corner [m].");
-        Parameters::registerParam<TypeTag, Properties::LensUpperRightY>
+        Parameters::registerParam<TypeTag, Parameters::LensUpperRightY>
             ("The y-coordinate of the lens' upper-right corner [m].");
 
         if (dimWorld == 3) {
-            Parameters::registerParam<TypeTag, Properties::LensLowerLeftZ>
+            Parameters::registerParam<TypeTag, Parameters::LensLowerLeftZ>
                 ("The z-coordinate of the lens' lower-left corner [m].");
-            Parameters::registerParam<TypeTag, Properties::LensUpperRightZ>
+            Parameters::registerParam<TypeTag, Parameters::LensUpperRightZ>
                 ("The z-coordinate of the lens' upper-right corner [m].");
         }
     }
