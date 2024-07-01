@@ -62,7 +62,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag,Properties::GridFile>
+        Parameters::registerParam<TypeTag, Parameters::GridFile>
             ("The file name of the DGF file to load");
         Parameters::registerParam<TypeTag, Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
@@ -75,7 +75,7 @@ public:
     DgfVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
-        const std::string dgfFileName = Parameters::get<TypeTag, Properties::GridFile>();
+        const std::string dgfFileName = Parameters::get<TypeTag, Parameters::GridFile>();
         unsigned numRefinments = Parameters::get<TypeTag, Parameters::GridGlobalRefinements>();
 
         {

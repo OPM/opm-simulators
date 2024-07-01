@@ -32,15 +32,73 @@
 
 namespace Opm::Parameters {
 
+//! grid resolution
+template<class TypeTag, class MyTypeTag>
+struct CellsX { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct CellsY { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct CellsZ { using type = Properties::UndefinedProperty; };
+
+//! domain size
+template<class TypeTag, class MyTypeTag>
+struct DomainSizeX { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DomainSizeY { using type = Properties::UndefinedProperty; };
+
+template<class TypeTag, class MyTypeTag>
+struct DomainSizeZ { using type = Properties::UndefinedProperty; };
+
+//! The default value for the simulation's end time
+template<class TypeTag, class MyTypeTag>
+struct EndTime { using type = Properties::UndefinedProperty; };
+
+//! name of the grid file
+template<class TypeTag, class MyTypeTag>
+struct GridFile { using type = Properties::UndefinedProperty; };
+
 //! Property which tells the Vanguard how often the grid should be refined
 //! after creation.
 template<class TypeTag, class MyTypeTag>
 struct GridGlobalRefinements { using type = Properties::UndefinedProperty; };
 
+//! The default value for the simulation's initial time step size
+template<class TypeTag, class MyTypeTag>
+struct InitialTimeStepSize { using type = Properties::UndefinedProperty; };
+
 //! Property provides the name of the file from which the additional runtime
 //! parameters should to be loaded from
 template<class TypeTag, class MyTypeTag>
 struct ParameterFile { using type = Properties::UndefinedProperty; };
+
+//! The name of the file with a number of forced time step lengths
+template<class TypeTag, class MyTypeTag>
+struct PredeterminedTimeStepsFile { using type = Properties::UndefinedProperty; };
+
+/*!
+ * \brief Print all parameters on startup?
+ *
+ * 0 means 'no', 1 means 'yes', 2 means 'print only to logfiles'. The
+ * default is 2.
+ */
+template<class TypeTag, class MyTypeTag>
+struct PrintParameters { using type = Properties::UndefinedProperty; };
+
+/*!
+ * \brief Print all properties on startup?
+ *
+ * 0 means 'no', 1 means 'yes', 2 means 'print only to logfiles'. The
+ * default is 2.
+ */
+template<class TypeTag, class MyTypeTag>
+struct PrintProperties { using type = Properties::UndefinedProperty; };
+
+//! The default value for the simulation's restart time
+template<class TypeTag, class MyTypeTag>
+struct RestartTime { using type = Properties::UndefinedProperty; };
 
 } // namespace Opm:Parameters
 

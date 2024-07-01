@@ -107,29 +107,30 @@ struct EnableGravity<TypeTag, TTag::RichardsLensProblem> { static constexpr bool
 template<class TypeTag>
 struct NumericDifferenceMethod<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 0; };
 
+} // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
 // The default for the end time of the simulation
 template<class TypeTag>
-struct EndTime<TypeTag, TTag::RichardsLensProblem>
+struct EndTime<TypeTag, Properties::TTag::RichardsLensProblem>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 3000;
-};
-
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::RichardsLensProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 100;
 };
 
 // The default DGF file to load
 template<class TypeTag>
-struct GridFile<TypeTag, TTag::RichardsLensProblem> { static constexpr auto value = "./data/richardslens_24x16.dgf"; };
+struct GridFile<TypeTag, Properties::TTag::RichardsLensProblem>
+{ static constexpr auto value = "./data/richardslens_24x16.dgf"; };
 
-} // namespace Opm::Properties
-
-namespace Opm::Parameters {
+// The default for the initial time step size of the simulation
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::RichardsLensProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 100;
+};
 
 // Do not write the intermediate results of the newton method
 template<class TypeTag>

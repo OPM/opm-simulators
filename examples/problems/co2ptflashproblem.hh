@@ -53,7 +53,6 @@
 #include <dune/common/fmatrix.hh>
 
 #include <sstream>
-#include <iostream>
 #include <string>
 
 namespace Opm {
@@ -163,20 +162,6 @@ struct SimulationName<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr auto value = "co2_ptflash";
 };
 
-// The default for the end time of the simulation
-template <class TypeTag>
-struct EndTime<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 60. * 60.;
-};
-
-// convergence control
-template <class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.1 * 60. * 60.;
-};
-
 template <class TypeTag>
 struct LinearSolverTolerance<TypeTag, TTag::CO2PTBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
@@ -238,36 +223,6 @@ struct Vanguard<TypeTag, TTag::CO2PTBaseProblem> {
     using type = Opm::StructuredGridVanguard<TypeTag>;
 };
 
-//\Note: from the Julia code, the problem is a 1D problem with 3X1 cell.
-//\Note: DomainSizeX is 3.0 meters
-//\Note: DomainSizeY is 1.0 meters
-template <class TypeTag>
-struct DomainSizeX<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 300; // meter
-};
-
-template <class TypeTag>
-struct DomainSizeY<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-
-// DomainSizeZ is not needed, while to keep structuredgridvanguard.hh compile
-template <class TypeTag>
-struct DomainSizeZ<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-
-template<class TypeTag>
-struct CellsX<TypeTag, TTag::CO2PTBaseProblem> { static constexpr unsigned value = 30; };
-template<class TypeTag>
-struct CellsY<TypeTag, TTag::CO2PTBaseProblem> { static constexpr unsigned value = 1; };
-// CellsZ is not needed, while to keep structuredgridvanguard.hh compile
-template<class TypeTag>
-struct CellsZ<TypeTag, TTag::CO2PTBaseProblem> { static constexpr unsigned value = 1; };
-
 template <class TypeTag>
 struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr bool value = false;
@@ -276,6 +231,60 @@ struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template<class TypeTag>
+struct CellsX<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr unsigned value = 30; };
+
+template<class TypeTag>
+struct CellsY<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr unsigned value = 1; };
+
+// CellsZ is not needed, while to keep structuredgridvanguard.hh compile
+template<class TypeTag>
+struct CellsZ<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr unsigned value = 1; };
+
+//\Note: from the Julia code, the problem is a 1D problem with 3X1 cell.
+//\Note: DomainSizeX is 3.0 meters
+//\Note: DomainSizeY is 1.0 meters
+template <class TypeTag>
+struct DomainSizeX<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 300; // meter
+};
+
+template <class TypeTag>
+struct DomainSizeY<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
+
+// DomainSizeZ is not needed, while to keep structuredgridvanguard.hh compile
+template <class TypeTag>
+struct DomainSizeZ<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
+
+// The default for the end time of the simulation
+template <class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 60. * 60.;
+};
+
+// convergence control
+template <class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.1 * 60. * 60.;
+};
 
 // Write the Newton convergence behavior to disk?
 template <class TypeTag>
@@ -508,7 +517,7 @@ public:
     {
         int spatialIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         int inj = 0;
-        int prod = Parameters::get<TypeTag, Properties::CellsX>() - 1;
+        int prod = Parameters::get<TypeTag, Parameters::CellsX>() - 1;
         if (spatialIdx == inj || spatialIdx == prod) {
             return 1.0;
         } else {
@@ -516,7 +525,7 @@ public:
         }
     }
 
-        /*!
+    /*!
      * \copydoc FvBaseMultiPhaseProblem::materialLawParams
      */
     template <class Context>
@@ -559,7 +568,7 @@ private:
         // p0 = 75e5
         // T0 = 423.25
         int inj = 0;
-        int prod = Parameters::get<TypeTag, Properties::CellsX>() - 1;
+        int prod = Parameters::get<TypeTag, Parameters::CellsX>() - 1;
         int spatialIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         ComponentVector comp;
         comp[0] = Evaluation::createVariable(0.5, 1);

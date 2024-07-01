@@ -110,50 +110,61 @@ struct EnableDiffusion<TypeTag, TTag::DiffusionBaseProblem> { static constexpr b
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::DiffusionBaseProblem> { static constexpr bool value = false; };
 
+} // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+template<class TypeTag>
+struct CellsX<TypeTag, Properties::TTag::DiffusionBaseProblem>
+{ static constexpr unsigned value = 250; };
+
+template<class TypeTag>
+struct CellsY<TypeTag, Properties::TTag::DiffusionBaseProblem>
+{ static constexpr unsigned value = 1; };
+
+template<class TypeTag>
+struct CellsZ<TypeTag, Properties::TTag::DiffusionBaseProblem>
+{ static constexpr unsigned value = 1; };
+
 // define the properties specific for the diffusion problem
 template<class TypeTag>
-struct DomainSizeX<TypeTag, TTag::DiffusionBaseProblem>
+struct DomainSizeX<TypeTag, Properties::TTag::DiffusionBaseProblem>
 {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-template<class TypeTag>
-struct DomainSizeY<TypeTag, TTag::DiffusionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, TTag::DiffusionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1.0;
 };
 
 template<class TypeTag>
-struct CellsX<TypeTag, TTag::DiffusionBaseProblem> { static constexpr unsigned value = 250; };
+struct DomainSizeY<TypeTag, Properties::TTag::DiffusionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
+
 template<class TypeTag>
-struct CellsY<TypeTag, TTag::DiffusionBaseProblem> { static constexpr unsigned value = 1; };
-template<class TypeTag>
-struct CellsZ<TypeTag, TTag::DiffusionBaseProblem> { static constexpr unsigned value = 1; };
+struct DomainSizeZ<TypeTag, Properties::TTag::DiffusionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
 
 // The default for the end time of the simulation
 template<class TypeTag>
-struct EndTime<TypeTag, TTag::DiffusionBaseProblem>
+struct EndTime<TypeTag, Properties::TTag::DiffusionBaseProblem>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e6;
 };
 
 // The default for the initial time step size of the simulation
 template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::DiffusionBaseProblem>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::DiffusionBaseProblem>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1000;
 };
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!

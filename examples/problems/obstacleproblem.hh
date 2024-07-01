@@ -115,27 +115,32 @@ struct SolidEnergyLaw<TypeTag, TTag::ObstacleBaseProblem>
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::ObstacleBaseProblem> { static constexpr bool value = true; };
 
+} // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
 // The default for the end time of the simulation
 template<class TypeTag>
-struct EndTime<TypeTag, TTag::ObstacleBaseProblem>
+struct EndTime<TypeTag, Properties::TTag::ObstacleBaseProblem>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e4;
-};
-
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::ObstacleBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 250;
 };
 
 // The default DGF file to load
 template<class TypeTag>
-struct GridFile<TypeTag, TTag::ObstacleBaseProblem> { static constexpr auto value = "./data/obstacle_24x16.dgf"; };
+struct GridFile<TypeTag, Properties::TTag::ObstacleBaseProblem>
+{ static constexpr auto value = "./data/obstacle_24x16.dgf"; };
 
-} // namespace Opm::Properties
+// The default for the initial time step size of the simulation
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::ObstacleBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 250;
+};
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!

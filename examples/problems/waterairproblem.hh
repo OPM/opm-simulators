@@ -123,26 +123,6 @@ struct EnableGravity<TypeTag, TTag::WaterAirBaseProblem> { static constexpr bool
 template<class TypeTag>
 struct NumericDifferenceMethod<TypeTag, TTag::WaterAirBaseProblem> { static constexpr int value = +1; };
 
-// The default for the end time of the simulation (1 year)
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::WaterAirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0 * 365 * 24 * 60 * 60;
-};
-
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::WaterAirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 250;
-};
-
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, TTag::WaterAirBaseProblem> { static constexpr auto value = "./data/waterair.dgf"; };
-
 // Use the restarted GMRES linear solver with the ILU-2 preconditioner from dune-istl
 template<class TypeTag>
 struct LinearSolverSplice<TypeTag, TTag::WaterAirBaseProblem>
@@ -161,6 +141,27 @@ struct PreconditionerOrder<TypeTag, TTag::WaterAirBaseProblem> { static constexp
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// The default for the end time of the simulation (1 year)
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::WaterAirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0 * 365 * 24 * 60 * 60;
+};
+
+// The default DGF file to load
+template<class TypeTag>
+struct GridFile<TypeTag, Properties::TTag::WaterAirBaseProblem>
+{ static constexpr auto value = "./data/waterair.dgf"; };
+
+// The default for the initial time step size of the simulation
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::WaterAirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 250;
+};
 
 // Write newton convergence
 template<class TypeTag>

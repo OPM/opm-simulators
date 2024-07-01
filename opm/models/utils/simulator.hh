@@ -129,11 +129,11 @@ public:
         timeStepIdx_ = 0;
         startTime_ = 0.0;
         time_ = 0.0;
-        endTime_ = Parameters::get<TypeTag, Properties::EndTime>();
-        timeStepSize_ = Parameters::get<TypeTag, Properties::InitialTimeStepSize>();
+        endTime_ = Parameters::get<TypeTag, Parameters::EndTime>();
+        timeStepSize_ = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
         assert(timeStepSize_ > 0);
         const std::string& predetTimeStepFile =
-            Parameters::get<TypeTag, Properties::PredeterminedTimeStepsFile>();
+            Parameters::get<TypeTag, Parameters::PredeterminedTimeStepsFile>();
         if (!predetTimeStepFile.empty()) {
             std::ifstream is(predetTimeStepFile);
             while (!is.eof()) {
@@ -254,13 +254,13 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::EndTime>
+        Parameters::registerParam<TypeTag, Parameters::EndTime>
             ("The simulation time at which the simulation is finished [s]");
-        Parameters::registerParam<TypeTag, Properties::InitialTimeStepSize>
+        Parameters::registerParam<TypeTag, Parameters::InitialTimeStepSize>
             ("The size of the initial time step [s]");
-        Parameters::registerParam<TypeTag, Properties::RestartTime>
+        Parameters::registerParam<TypeTag, Parameters::RestartTime>
             ("The simulation time at which a restart should be attempted [s]");
-        Parameters::registerParam<TypeTag, Properties::PredeterminedTimeStepsFile>
+        Parameters::registerParam<TypeTag, Parameters::PredeterminedTimeStepsFile>
             ("A file with a list of predetermined time step sizes (one "
              "time step per line)");
 
@@ -649,7 +649,7 @@ public:
         TimerGuard writeTimerGuard(writeTimer_);
 
         setupTimer_.start();
-        Scalar restartTime = Parameters::get<TypeTag, Properties::RestartTime>();
+        Scalar restartTime = Parameters::get<TypeTag, Parameters::RestartTime>();
         if (restartTime > -1e30) {
             // try to restart a previous simulation
             time_ = restartTime;

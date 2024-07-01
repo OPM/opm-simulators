@@ -175,48 +175,6 @@ struct LensUpperRightZ<TypeTag, TTag::LensBaseProblem>
     static constexpr type value = 1.0;
 };
 
-template<class TypeTag>
-struct DomainSizeX<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 6.0;
-};
-template<class TypeTag>
-struct DomainSizeY<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 4.0;
-};
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-
-template<class TypeTag>
-struct CellsX<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 48; };
-template<class TypeTag>
-struct CellsY<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 32; };
-template<class TypeTag>
-struct CellsZ<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 16; };
-
-// The default for the end time of the simulation
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 30e3;
-};
-
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 250;
-};
-
 // By default, include the intrinsic permeability tensor to the VTK output files
 template<class TypeTag>
 struct VtkWriteIntrinsicPermeabilities<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
@@ -224,6 +182,39 @@ struct VtkWriteIntrinsicPermeabilities<TypeTag, TTag::LensBaseProblem> { static 
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template<class TypeTag>
+struct CellsX<TypeTag, Properties::TTag::LensBaseProblem>
+{ static constexpr unsigned value = 48; };
+
+template<class TypeTag>
+struct CellsY<TypeTag, Properties::TTag::LensBaseProblem>
+{ static constexpr unsigned value = 32; };
+
+template<class TypeTag>
+struct CellsZ<TypeTag, Properties::TTag::LensBaseProblem>
+{ static constexpr unsigned value = 16; };
+
+template<class TypeTag>
+struct DomainSizeX<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 6.0;
+};
+
+template<class TypeTag>
+struct DomainSizeY<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 4.0;
+};
+
+template<class TypeTag>
+struct DomainSizeZ<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
 
 // enable the cache for intensive quantities by default for this problem
 template<class TypeTag>
@@ -234,6 +225,22 @@ struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::LensBaseProblem>
 template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::LensBaseProblem>
 { static constexpr bool value = true; };
+
+// The default for the end time of the simulation
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 30e3;
+};
+
+// The default for the initial time step size of the simulation
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 250;
+};
 
 // Write the solutions of individual newton iterations?
 template<class TypeTag>

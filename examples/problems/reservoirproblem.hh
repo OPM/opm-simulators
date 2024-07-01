@@ -28,7 +28,12 @@
 #ifndef EWOMS_RESERVOIR_PROBLEM_HH
 #define EWOMS_RESERVOIR_PROBLEM_HH
 
-#include <opm/models/blackoil/blackoilproperties.hh>
+#include <dune/common/version.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/fmatrix.hh>
+
+#include <dune/grid/yaspgrid.hh>
+#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
@@ -39,15 +44,11 @@
 #include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 
-#include <dune/grid/yaspgrid.hh>
-#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/nonlinear/newtonmethodparameters.hh>
 
-#include <dune/common/version.hh>
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
-
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace Opm {
 template <class TypeTag>
@@ -122,25 +123,6 @@ struct Temperature<TypeTag, TTag::ReservoirBaseProblem>
     static constexpr type value = 293.15;
 };
 
-//! The default for the end time of the simulation [s].
-//!
-//! By default this problem spans 1000 days (100 "settle down" days and 900 days of
-//! production)
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::ReservoirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1000.0*24*60*60;
-};
-
-// The default for the initial time step size of the simulation [s]
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::ReservoirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 100e3;
-};
-
 // The width of producer/injector wells as a fraction of the width of the spatial domain
 template<class TypeTag>
 struct WellWidth<TypeTag, TTag::ReservoirBaseProblem>
@@ -167,13 +149,33 @@ public:
     using type = Opm::BlackOilFluidSystem<Scalar>;
 };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, TTag::ReservoirBaseProblem> { static constexpr auto value = "data/reservoir.dgf"; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+//! The default for the end time of the simulation [s].
+//!
+//! By default this problem spans 1000 days (100 "settle down" days and 900 days of
+//! production)
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1000.0*24*60*60;
+};
+
+// The default DGF file to load
+template<class TypeTag>
+struct GridFile<TypeTag, Properties::TTag::ReservoirBaseProblem>
+{ static constexpr auto value = "data/reservoir.dgf"; };
+
+// The default for the initial time step size of the simulation [s]
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 100e3;
+};
 
 // Write the Newton convergence behavior to disk?
 template<class TypeTag>

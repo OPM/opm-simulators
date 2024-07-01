@@ -105,60 +105,6 @@ template<class TypeTag, class MyTypeTag>
 struct GridPart { using type = UndefinedProperty; };
 #endif
 
-/*!
- * \brief Print all properties on startup?
- *
- * 0 means 'no', 1 means 'yes', 2 means 'print only to logfiles'. The
- * default is 2.
- */
-template<class TypeTag, class MyTypeTag>
-struct PrintProperties { using type = UndefinedProperty; };
-
-/*!
- * \brief Print all parameters on startup?
- *
- * 0 means 'no', 1 means 'yes', 2 means 'print only to logfiles'. The
- * default is 2.
- */
-template<class TypeTag, class MyTypeTag>
-struct PrintParameters { using type = UndefinedProperty; };
-
-//! The default value for the simulation's end time
-template<class TypeTag, class MyTypeTag>
-struct EndTime { using type = UndefinedProperty; };
-
-//! The default value for the simulation's initial time step size
-template<class TypeTag, class MyTypeTag>
-struct InitialTimeStepSize { using type = UndefinedProperty; };
-
-//! The default value for the simulation's restart time
-template<class TypeTag, class MyTypeTag>
-struct RestartTime { using type = UndefinedProperty; };
-
-//! The name of the file with a number of forced time step lengths
-template<class TypeTag, class MyTypeTag>
-struct PredeterminedTimeStepsFile { using type = UndefinedProperty; };
-
-//! domain size
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeX { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeY { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeZ { using type = UndefinedProperty; };
-
-//! grid resolution
-template<class TypeTag, class MyTypeTag>
-struct CellsX { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct CellsY { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct CellsZ { using type = UndefinedProperty; };
-
-//! name of the grid file
-template<class TypeTag, class MyTypeTag>
-struct GridFile { using type = UndefinedProperty; };
-
 //! level of the grid view
 template<class TypeTag, class MyTypeTag>
 struct GridViewLevel { using type = UndefinedProperty; };
@@ -199,11 +145,8 @@ struct ParameterTree<TypeTag, TTag::NumericModel>
 
 //! use the global group as default for the model's parameter group
 template<class TypeTag>
-struct ModelParameterGroup<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
-
-//! Set a value for the GridFile property
-template<class TypeTag>
-struct GridFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
+struct ModelParameterGroup<TypeTag, TTag::NumericModel>
+{ static constexpr auto value = ""; };
 
 #if HAVE_DUNE_FEM
 template<class TypeTag>
@@ -214,58 +157,38 @@ struct GridPart<TypeTag, TTag::NumericModel>
 };
 
 template<class TypeTag>
-struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType<TypeTag, Properties::GridPart>::GridViewType; };
+struct GridView<TypeTag, TTag::NumericModel>
+{ using type = typename GetPropType<TypeTag, Properties::GridPart>::GridViewType; };
 #else
 //! Use the leaf grid view by default.
 //!
 //! Except for spatial refinement, there is rarly a reason to use
 //! anything else...
 template<class TypeTag>
-struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView; };
+struct GridView<TypeTag, TTag::NumericModel>
+{ using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView; };
 #endif
 
-//! By default, print the properties on startup
 template<class TypeTag>
-struct PrintProperties<TypeTag, TTag::NumericModel> { static constexpr int value = 2; };
-
-//! By default, print the values of the run-time parameters on startup
-template<class TypeTag>
-struct PrintParameters<TypeTag, TTag::NumericModel> { static constexpr int value = 2; };
-
-//! The default value for the simulation's end time
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::NumericModel>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1e35;
-};
-
-//! The default value for the simulation's initial time step size
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::NumericModel>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1e35;
-};
-
-//! The default value for the simulation's restart time
-template<class TypeTag>
-struct RestartTime<TypeTag, TTag::NumericModel>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1e35;
-};
-
-//! By default, do not force any time steps
-template<class TypeTag>
-struct PredeterminedTimeStepsFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
-
-template<class TypeTag>
-struct Vanguard<TypeTag, TTag::NumericModel> { using type = Opm::DgfVanguard<TypeTag>; };
+struct Vanguard<TypeTag, TTag::NumericModel>
+{ using type = Opm::DgfVanguard<TypeTag>; };
 
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+//! The default value for the simulation's end time
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = -1e35;
+};
+
+//! Set a value for the GridFile property
+template<class TypeTag>
+struct GridFile<TypeTag, Properties::TTag::NumericModel>
+{ static constexpr auto value = ""; };
 
 //! Set the number of refinement levels of the grid to 0. This does not belong
 //! here, strictly speaking.
@@ -273,11 +196,42 @@ template<class TypeTag>
 struct GridGlobalRefinements<TypeTag, Properties::TTag::NumericModel>
 { static constexpr unsigned value = 0; };
 
+//! The default value for the simulation's initial time step size
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = -1e35;
+};
+
 //! Set a value for the ParameterFile property
 template<class TypeTag>
 struct ParameterFile<TypeTag, Properties::TTag::NumericModel>
 { static constexpr auto value = ""; };
 
-}
+//! By default, do not force any time steps
+template<class TypeTag>
+struct PredeterminedTimeStepsFile<TypeTag, Properties::TTag::NumericModel>
+{ static constexpr auto value = ""; };
+
+//! By default, print the values of the run-time parameters on startup
+template<class TypeTag>
+struct PrintParameters<TypeTag, Properties::TTag::NumericModel>
+{ static constexpr int value = 2; };
+
+//! By default, print the properties on startup
+template<class TypeTag>
+struct PrintProperties<TypeTag, Properties::TTag::NumericModel>
+{ static constexpr int value = 2; };
+
+//! The default value for the simulation's restart time
+template<class TypeTag>
+struct RestartTime<TypeTag, Properties::TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = -1e35;
+};
+
+} // namespace Opm::Parameters
 
 #endif
