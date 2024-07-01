@@ -45,6 +45,11 @@ struct NewtonWriteConvergence { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct NewtonTolerance { using type = Properties::UndefinedProperty; };
 
+//! The maximum error which may occur in a simulation before the
+//! Newton method for the time step is aborted
+template<class TypeTag, class MyTypeTag>
+struct NewtonMaxError { using type = Properties::UndefinedProperty; };
+
 } // end namespace Opm::Parameters
 
 #endif

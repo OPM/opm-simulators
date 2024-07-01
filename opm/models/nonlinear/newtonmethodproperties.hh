@@ -44,11 +44,6 @@ struct NewtonConvergenceWriter { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct ConvergenceWriter { using type = UndefinedProperty; };
 
-//! The maximum error which may occur in a simulation before the
-//! Newton method for the time step is aborted
-template<class TypeTag, class MyTypeTag>
-struct NewtonMaxError { using type = UndefinedProperty; };
-
 /*!
  * \brief The number of iterations at which the Newton method
  *        should aim at.
