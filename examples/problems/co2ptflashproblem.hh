@@ -200,16 +200,6 @@ struct VtkWriteFugacityCoeffs<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr bool value = true;
 };
 
-template <class TypeTag>
-struct VtkWriteLiquidMoleFractions<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr bool value = true;
-};
-
-template <class TypeTag>
-struct VtkWriteEquilibriumConstants<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr bool value = true;
-};
-
 // this is kinds of telling the report step length
 template <class TypeTag>
 struct EpisodeLength<TypeTag, TTag::CO2PTBaseProblem> {
@@ -308,6 +298,14 @@ struct NewtonTargetIterations<TypeTag, Properties::TTag::CO2PTBaseProblem>
 template <class TypeTag>
 struct NewtonMaxIterations<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr int value = 30; };
+
+template <class TypeTag>
+struct VtkWriteEquilibriumConstants<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = true; };
+
+template <class TypeTag>
+struct VtkWriteLiquidMoleFractions<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 

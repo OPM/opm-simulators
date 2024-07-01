@@ -37,28 +37,32 @@
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 
-namespace Opm::Properties {
-
-namespace TTag {
+namespace Opm::Properties::TTag {
 
 // create new type tag for the VTK PTFlash output
 struct VtkPTFlash {};
 
-} // namespace TTag
+} // namespace Opm::Properties::TTag
+
+namespace Opm::Parameters {
 
 // create the property tags needed for the composition module
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteLiquidMoleFractions { using type = UndefinedProperty; };
+struct VtkWriteLiquidMoleFractions { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteEquilibriumConstants { using type = UndefinedProperty; };
+struct VtkWriteEquilibriumConstants { using type = Properties::UndefinedProperty; };
 
 // set default values for what quantities to output
 template<class TypeTag>
-struct VtkWriteLiquidMoleFractions<TypeTag, TTag::VtkPTFlash> { static constexpr bool value = false; };
-template<class TypeTag>
-struct VtkWriteEquilibriumConstants<TypeTag, TTag::VtkPTFlash> { static constexpr bool value = false; };
+struct VtkWriteLiquidMoleFractions<TypeTag, Properties::TTag::VtkPTFlash>
+{ static constexpr bool value = false; };
 
-} // namespace Opm::Properties
+template<class TypeTag>
+struct VtkWriteEquilibriumConstants<TypeTag, Properties::TTag::VtkPTFlash>
+{ static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -101,9 +105,9 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::VtkWriteLiquidMoleFractions>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteLiquidMoleFractions>
             ("Include liquid mole fractions (L) in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteEquilibriumConstants>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteEquilibriumConstants>
             ("Include equilibrium constants (K) in the VTK output files");
     }
 
@@ -164,13 +168,13 @@ public:
 private:
     static bool LOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteLiquidMoleFractions>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteLiquidMoleFractions>();
         return val;
     }
 
     static bool equilConstOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteEquilibriumConstants>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteEquilibriumConstants>();
         return val;
     }
 
