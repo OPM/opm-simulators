@@ -112,20 +112,6 @@ struct LinearSolverBackend<TTag::TestTypeTag, TTag::FlowIstlSolverParams> {
     using type = ISTLSolver<TTag::TestTypeTag>;
 };
 
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::TestTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-1;
-};
-
-// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
-// relatively often)
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::TestTypeTag> {
-    static constexpr int value = 8;
-};
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -143,6 +129,20 @@ struct ThreadsPerProcess<TypeTag, Properties::TTag::TestTypeTag>
 template<class TypeTag>
 struct ContinueOnConvergenceError<TypeTag, Properties::TTag::TestTypeTag>
 { static constexpr bool value = true; };
+
+// the default for the allowed volumetric error for oil per second
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, Properties::TTag::TestTypeTag>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-1;
+};
+
+// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
+// relatively often)
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, Properties::TTag::TestTypeTag>
+{ static constexpr int value = 8; };
 
 } // namespace Opm::Parameters
 

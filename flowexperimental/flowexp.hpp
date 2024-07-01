@@ -28,15 +28,20 @@
 #ifndef FLOW_EXP_HPP
 #define FLOW_EXP_HPP
 
+#include <opm/models/discretization/common/fvbaseproblem.hh>
+
+#include <opm/models/utils/propertysystem.hh>
+#include <opm/models/utils/start.hh>
+
+#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+
 #include <opm/simulators/flow/FlowProblem.hpp>
 #include <opm/simulators/flow/FlowProblemProperties.hpp>
 
-#include <opm/models/utils/start.hh>
-#include <opm/models/discretization/common/fvbaseproblem.hh>
-
-#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
+
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
+
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
 namespace Opm {
@@ -125,26 +130,12 @@ struct LinearSolverBackend<TTag::FlowExpTypeTag, TTag::FlowIstlSolverParams> {
     using type = ISTLSolver<TTag::FlowExpTypeTag>;
 };
 
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::FlowExpTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-1;
-};
-
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
 template<class TypeTag>
 struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::FlowExpTypeTag> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.05;
-};
-
-// the maximum volumetric error of a cell in the relaxed region
-template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::FlowExpTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e6*getPropValue<TypeTag, Properties::NewtonTolerance>();
 };
 
 // the tolerated amount of "incorrect" amount of oil per time step for the complete
@@ -167,13 +158,6 @@ struct EclNewtonSumToleranceExponent<TypeTag, TTag::FlowExpTypeTag> {
 template<class TypeTag>
 struct EclNewtonStrictIterations<TypeTag, TTag::FlowExpTypeTag> {
     static constexpr int value = 100;
-};
-
-// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
-// relatively often)
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::FlowExpTypeTag> {
-    static constexpr int value = 8;
 };
 
 template<class TypeTag>
@@ -199,7 +183,32 @@ template<class TypeTag>
 struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FlowExpTypeTag>
 { static constexpr bool value = true; };
 
+// the default for the allowed volumetric error for oil per second
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, Properties::TTag::FlowExpTypeTag>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-1;
+};
+
+// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
+// relatively often)
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, Properties::TTag::FlowExpTypeTag>
+{ static constexpr int value = 8; };
+
 } // namespace Opm::Parameters
+
+namespace Opm::Properties {
+
+// the maximum volumetric error of a cell in the relaxed region
+template<class TypeTag>
+struct EclNewtonRelaxedTolerance<TypeTag, TTag::FlowExpTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e6*Parameters::NewtonTolerance<TypeTag, TTag::FlowExpTypeTag>::value;
+};
+
+}
 
 namespace Opm {
 template <class TypeTag>

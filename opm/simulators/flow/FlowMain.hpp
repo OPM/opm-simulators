@@ -151,11 +151,11 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Properties::PredeterminedTimeStepsFile>();
 
             // flow also does not use the eWoms Newton method
-            Parameters::hideParam<TypeTag, Properties::NewtonMaxError>();
-            Parameters::hideParam<TypeTag, Properties::NewtonTolerance>();
-            Parameters::hideParam<TypeTag, Properties::NewtonTargetIterations>();
-            Parameters::hideParam<TypeTag, Properties::NewtonVerbose>();
-            Parameters::hideParam<TypeTag, Properties::NewtonWriteConvergence>();
+            Parameters::hideParam<TypeTag, Parameters::NewtonMaxError>();
+            Parameters::hideParam<TypeTag, Parameters::NewtonTolerance>();
+            Parameters::hideParam<TypeTag, Parameters::NewtonTargetIterations>();
+            Parameters::hideParam<TypeTag, Parameters::NewtonVerbose>();
+            Parameters::hideParam<TypeTag, Parameters::NewtonWriteConvergence>();
 
             // the default eWoms checkpoint/restart mechanism does not work with flow
             Parameters::hideParam<TypeTag, Properties::RestartTime>();

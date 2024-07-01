@@ -21,6 +21,7 @@
 #include "flowexp.hpp"
 
 #include <opm/models/discretization/common/tpfalinearizer.hh>
+#include <opm/models/utils/parametersystem.hh>
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/simulators/flow/FlowProblem.hpp>
 
@@ -61,14 +62,6 @@ struct EclNewtonSumTolerance<TypeTag, TTag::FlowExpProblemBlackOil>
     static constexpr type value = 1e-5;
 };
 
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-2;
-};
-
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
 template<class TypeTag>
@@ -76,13 +69,6 @@ struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::FlowExpProblemBlackOil>
 {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.0;
-};
-
-template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::FlowExpProblemBlackOil>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 10*getPropValue<TypeTag, Properties::NewtonTolerance>();
 };
 
 template<class TypeTag>
@@ -103,7 +89,7 @@ struct Simulator<TypeTag, TTag::FlowExpProblemBlackOil>
     using type = Opm::Simulator<TypeTag>;
 };
 
-}
+} // namespace Opm::Properties
 
 namespace Opm::Parameters {
 
@@ -115,7 +101,26 @@ template<class TypeTag>
 struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
 { static constexpr bool value = false; };
 
+// the default for the allowed volumetric error for oil per second
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-2;
+};
+
 } // namespace Opm::Parameters
+
+namespace Opm::Properties {
+
+template<class TypeTag>
+struct EclNewtonRelaxedTolerance<TypeTag, TTag::FlowExpProblemBlackOil>
+{
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 10 * Parameters::NewtonTolerance<TypeTag,TTag::FlowExpProblemBlackOil>::value;
+};
+
+} // namespace Opm::Properties
 
 int main(int argc, char** argv)
 {

@@ -156,7 +156,7 @@ public:
     {
         const auto& constraintsMap = this->model().linearizer().constraintsMap();
         this->lastError_ = this->error_;
-        Scalar newtonMaxError = Parameters::get<TypeTag, Properties::NewtonMaxError>();
+        Scalar newtonMaxError = Parameters::get<TypeTag, Parameters::NewtonMaxError>();
 
         // calculate the error as the maximum weighted tolerance of
         // the solution's residual

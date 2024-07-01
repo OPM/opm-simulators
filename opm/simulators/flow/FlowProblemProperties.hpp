@@ -290,13 +290,6 @@ struct InitialTimeStepSize<TypeTag, TTag::FlowBaseProblem> {
     static constexpr type value = 3600*24;
 };
 
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::FlowBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-2;
-};
-
 // ... but enable the ECL output by default
 template<class TypeTag>
 struct EnableEclOutput<TypeTag,TTag::FlowBaseProblem> {
@@ -520,6 +513,14 @@ struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlowBaseProblem>
 template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
+
+// the default for the allowed volumetric error for oil per second
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, Properties::TTag::FlowBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-2;
+};
 
 } // namespace Opm::Parameters
 
