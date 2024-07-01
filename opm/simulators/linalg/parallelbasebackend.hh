@@ -154,7 +154,7 @@ public:
     {
         Parameters::registerParam<TypeTag, Parameters::LinearSolverTolerance>
             ("The maximum allowed error between of the linear solver");
-        Parameters::registerParam<TypeTag, Properties::LinearSolverAbsTolerance>
+        Parameters::registerParam<TypeTag, Parameters::LinearSolverAbsTolerance>
             ("The maximum accepted error of the norm of the residual");
         Parameters::registerParam<TypeTag, Parameters::LinearSolverOverlapSize>
             ("The size of the algebraic overlap for the linear solver");

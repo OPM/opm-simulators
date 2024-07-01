@@ -41,16 +41,9 @@ struct LinearSolverBackend { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct PreconditionerWrapper { using type = UndefinedProperty; };
 
-
 //! The floating point type used internally by the linear solver
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverScalar { using type = UndefinedProperty; };
-
-/*!
- * \brief Maximum accepted error of the norm of the residual.
- */
-template<class TypeTag, class MyTypeTag>
-struct LinearSolverAbsTolerance { using type = UndefinedProperty; };
 
 /*!
  * \brief Specifies the verbosity of the linear solver
@@ -88,18 +81,25 @@ struct GlobalEqVector { using type = UndefinedProperty; };
 
 template<class TypeTag, class MyTypeTag>
 struct AmgCoarsenTarget { using type = UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverMaxError { using type = UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverWrapper { using type = UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
 struct Overlap { using type = UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
 struct OverlappingLinearOperator { using type = UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
 struct OverlappingMatrix { using type = UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
 struct OverlappingScalarProduct { using type = UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
 struct OverlappingVector { using type = UndefinedProperty; };
 

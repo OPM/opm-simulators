@@ -242,14 +242,6 @@ template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
 
-// use default initialization based on rule-of-thumb of Newton tolerance
-template<class TypeTag>
-struct LinearSolverAbsTolerance<TypeTag, TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1.;
-};
-
 //! Set the history size of the time discretization to 2 (for implicit euler)
 template<class TypeTag>
 struct TimeDiscHistorySize<TypeTag, TTag::FvBaseDiscretization>
@@ -334,6 +326,14 @@ struct EnableVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
 template<class TypeTag>
 struct EnableThermodynamicHints<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
+
+// use default initialization based on rule-of-thumb of Newton tolerance
+template<class TypeTag>
+struct LinearSolverAbsTolerance<TypeTag, Properties::TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = -1.;
+};
 
 // if the deflection of the newton method is large, we do not need to solve the linear
 // approximation accurately. Assuming that the value for the current solution is quite

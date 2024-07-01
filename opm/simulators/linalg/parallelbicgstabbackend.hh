@@ -138,7 +138,7 @@ protected:
         using CCC = CombinedCriterion<OverlappingVector, decltype(gridView.comm())>;
 
         Scalar linearSolverTolerance = Parameters::get<TypeTag, Parameters::LinearSolverTolerance>();
-        Scalar linearSolverAbsTolerance = Parameters::get<TypeTag, Properties::LinearSolverAbsTolerance>();
+        Scalar linearSolverAbsTolerance = Parameters::get<TypeTag, Parameters::LinearSolverAbsTolerance>();
         if(linearSolverAbsTolerance < 0.0)
             linearSolverAbsTolerance = this->simulator_.model().newtonMethod().tolerance() / 100.0;
 

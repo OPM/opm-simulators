@@ -157,12 +157,6 @@ struct SimulationName<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr auto value = "co2_ptflash";
 };
 
-template <class TypeTag>
-struct LinearSolverAbsTolerance<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.;
-};
-
 // this is kinds of telling the report step length
 template <class TypeTag>
 struct EpisodeLength<TypeTag, TTag::CO2PTBaseProblem> {
@@ -242,6 +236,13 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::CO2PTBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 0.1 * 60. * 60.;
+};
+
+template <class TypeTag>
+struct LinearSolverAbsTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.;
 };
 
 template <class TypeTag>

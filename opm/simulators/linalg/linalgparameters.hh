@@ -34,6 +34,12 @@
 namespace Opm::Parameters {
 
 /*!
+ * \brief Maximum accepted error of the norm of the residual.
+ */
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverAbsTolerance { using type = Properties::UndefinedProperty; };
+
+/*!
  * \brief The size of the algebraic overlap of the linear solver.
  *
  * Algebraic overlaps can be thought as being the same as the overlap
