@@ -2226,10 +2226,10 @@ namespace Opm {
         DeferredLogger global_deferredLogger = gatherDeferredLogger(local_deferredLogger, comm);
 
         for (const auto& [group_name, to] : this->closed_offending_wells_) {
-            if (!this->wasDynamicallyShutThisTimeStep(to.second)) {
+            if (this->hasWell(to.second) && !this->wasDynamicallyShutThisTimeStep(to.second)) {
                 wellTestState.close_well(to.second, WellTestConfig::Reason::GROUP, simulationTime);
                 this->updateClosedWellsThisStep(to.second);
-                const std::string msg = 
+                const std::string msg =
                     fmt::format("Procedure on exceeding {} limit is WELL for group {}. Well {} is {}.",
                                 to.first,
                                 group_name,
