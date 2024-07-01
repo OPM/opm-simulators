@@ -28,34 +28,41 @@
 #ifndef OPM_PTFLASH_MODEL_HH
 #define OPM_PTFLASH_MODEL_HH
 
+#include <opm/material/constraintsolvers/PTFlash.hpp>
+
 #include <opm/material/densead/Math.hpp>
 
-#include "flashproperties.hh"
-#include "flashprimaryvariables.hh"
-#include "flashlocalresidual.hh"
-#include <opm/models/flash/flashratevector.hh>
-#include <opm/models/flash/flashboundaryratevector.hh>
-#include "flashintensivequantities.hh"
-#include <opm/models/flash/flashextensivequantities.hh>
-#include "flashindices.hh"
-#include "flashnewtonmethod.hh"
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
+#include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 
 #include <opm/models/common/multiphasebasemodel.hh>
 #include <opm/models/common/energymodule.hh>
+
+#include <opm/models/flash/flashratevector.hh>
+#include <opm/models/flash/flashboundaryratevector.hh>
+#include <opm/models/flash/flashextensivequantities.hh>
+#include <opm/models/flash/flashproperties.hh>
+
 #include <opm/models/io/vtkcompositionmodule.hh>
-#include <opm/models/io/vtkenergymodule.hh>
 #include <opm/models/io/vtkdiffusionmodule.hh>
+#include <opm/models/io/vtkenergymodule.hh>
 #include <opm/models/io/vtkptflashmodule.hh>
-#include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/constraintsolvers/PTFlash.hpp>
+
+#include <opm/models/ptflash/flashindices.hh>
+#include <opm/models/ptflash/flashintensivequantities.hh>
+#include <opm/models/ptflash/flashlocalresidual.hh>
+#include <opm/models/ptflash/flashnewtonmethod.hh>
+#include <opm/models/ptflash/flashparameters.hh>
+#include <opm/models/ptflash/flashprimaryvariables.hh>
 
 #include <sstream>
 #include <string>
 
 namespace Opm {
+
 template <class TypeTag>
 class FlashModel;
+
 }
 
 namespace Opm::Properties {
@@ -71,69 +78,66 @@ struct FlashModel { using InheritsFrom = std::tuple<VtkDiffusion,
 
 //! Use the FlashLocalResidual function for the flash model
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::FlashModel> { using type = Opm::FlashLocalResidual<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::FlashModel>
+{ using type = Opm::FlashLocalResidual<TypeTag>; };
 
 //! Use the PT flash specific newton method for the flash model
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::FlashModel> { using type = Opm::FlashNewtonMethod<TypeTag>; };
+struct NewtonMethod<TypeTag, TTag::FlashModel>
+{ using type = Opm::FlashNewtonMethod<TypeTag>; };
 
 //! Use the Pt flash solver by default
 template<class TypeTag>
 struct FlashSolver<TypeTag, TTag::FlashModel>
-{ using type = Opm::PTFlash<GetPropType<TypeTag, Properties::Scalar>,
-                             GetPropType<TypeTag, Properties::FluidSystem>>; };
-
-//! Let the flash solver choose its tolerance by default
-template<class TypeTag>
-struct FlashTolerance<TypeTag, TTag::FlashModel>
 {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.e-12;
+    using type = Opm::PTFlash<GetPropType<TypeTag, Properties::Scalar>,
+                             GetPropType<TypeTag, Properties::FluidSystem>>;
 };
-
-// Flash solver verbosity
-template<class TypeTag>
-struct FlashVerbosity<TypeTag, TTag::FlashModel> { static constexpr int value = 0; };
-
-// Flash two-phase method
-template<class TypeTag>
-struct FlashTwoPhaseMethod<TypeTag, TTag::FlashModel> { static constexpr auto value = "ssi"; };
 
 //! the Model property
 template<class TypeTag>
-struct Model<TypeTag, TTag::FlashModel> { using type = Opm::FlashModel<TypeTag>; };
+struct Model<TypeTag, TTag::FlashModel>
+{ using type = Opm::FlashModel<TypeTag>; };
 
 //! the PrimaryVariables property
 template<class TypeTag>
-struct PrimaryVariables<TypeTag, TTag::FlashModel> { using type = Opm::FlashPrimaryVariables<TypeTag>; };
+struct PrimaryVariables<TypeTag, TTag::FlashModel>
+{ using type = Opm::FlashPrimaryVariables<TypeTag>; };
 
 //! the RateVector property
 template<class TypeTag>
-struct RateVector<TypeTag, TTag::FlashModel> { using type = Opm::FlashRateVector<TypeTag>; };
+struct RateVector<TypeTag, TTag::FlashModel>
+{ using type = Opm::FlashRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
 template<class TypeTag>
-struct BoundaryRateVector<TypeTag, TTag::FlashModel> { using type = Opm::FlashBoundaryRateVector<TypeTag>; };
+struct BoundaryRateVector<TypeTag, TTag::FlashModel>
+{ using type = Opm::FlashBoundaryRateVector<TypeTag>; };
 
 //! the IntensiveQuantities property
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::FlashModel> { using type = Opm::FlashIntensiveQuantities<TypeTag>; };
+struct IntensiveQuantities<TypeTag, TTag::FlashModel>
+{ using type = Opm::FlashIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
 template<class TypeTag>
-struct ExtensiveQuantities<TypeTag, TTag::FlashModel> { using type = Opm::FlashExtensiveQuantities<TypeTag>; };
+struct ExtensiveQuantities<TypeTag, TTag::FlashModel>
+{ using type = Opm::FlashExtensiveQuantities<TypeTag>; };
 
 //! The indices required by the flash-baseed isothermal compositional model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::FlashModel> { using type = Opm::FlashIndices<TypeTag, /*PVIdx=*/0>; };
+struct Indices<TypeTag, TTag::FlashModel>
+{ using type = Opm::FlashIndices<TypeTag, /*PVIdx=*/0>; };
 
 // disable molecular diffusion by default
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlashModel> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::FlashModel>
+{ static constexpr bool value = false; };
 
 //! Disable the energy equation by default
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::FlashModel> { static constexpr bool value = false; };
+struct EnableEnergy<TypeTag, TTag::FlashModel>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Properties
 
@@ -151,6 +155,24 @@ struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlashModel>
 template<class TypeTag>
 struct EnableThermodynamicHints<TypeTag, Properties::TTag::FlashModel>
 { static constexpr bool value = true; };
+
+//! Let the flash solver choose its tolerance by default
+template<class TypeTag>
+struct FlashTolerance<TypeTag, Properties::TTag::FlashModel>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.e-12;
+};
+
+// Flash two-phase method
+template<class TypeTag>
+struct FlashTwoPhaseMethod<TypeTag, Properties::TTag::FlashModel>
+{ static constexpr auto value = "ssi"; };
+
+// Flash solver verbosity
+template<class TypeTag>
+struct FlashVerbosity<TypeTag, Properties::TTag::FlashModel>
+{ static constexpr int value = 0; };
 
 } // namespace Opm::Parameters
 
@@ -239,12 +261,12 @@ public:
         if (enableEnergy)
             Opm::VtkEnergyModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::FlashTolerance>
+        Parameters::registerParam<TypeTag, Parameters::FlashTolerance>
             ("The maximum tolerance for the flash solver to "
              "consider the solution converged");
-        Parameters::registerParam<TypeTag, Properties::FlashVerbosity>
+        Parameters::registerParam<TypeTag, Parameters::FlashVerbosity>
             ("Flash solver verbosity level");
-        Parameters::registerParam<TypeTag, Properties::FlashTwoPhaseMethod>
+        Parameters::registerParam<TypeTag, Parameters::FlashTwoPhaseMethod>
             ("Method for solving vapor-liquid composition. Available options include: "
              "ssi, newton, ssi+newton");
     }

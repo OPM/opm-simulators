@@ -24,32 +24,26 @@
  * \file
  * \ingroup FlashModel
  *
- * \brief Declares the properties required by the compositional
+ * \brief Declares the parameters for the compositional
  *        multi-phase model based on flash calculations.
  */
-#ifndef OPM_PTFLASH_PROPERTIES_HH
-#define OPM_PTFLASH_PROPERTIES_HH
+#ifndef EWOMS_PTFLASH_PARAMETERS_HH
+#define EWOMS_PTFLASH_PARAMETERS_HH
 
-#include <opm/models/common/multiphasebaseproperties.hh>
-#include <opm/models/io/vtkcompositionmodule.hh>
-#include <opm/models/io/vtkenergymodule.hh>
-#include <opm/models/io/vtkdiffusionmodule.hh>
+#include <opm/models/flash/flashparameters.hh>
 
-namespace Opm::Properties {
+#include <opm/models/utils/propertysystem.hh>
 
-//! The type of the flash constraint solver
-template<class TypeTag, class MyTypeTag>
-struct FlashSolver { using type = UndefinedProperty; };
-//! The maximum accepted error of the flash solver
-template<class TypeTag, class MyTypeTag>
-struct FlashTolerance { using type = UndefinedProperty; };
-//! The verbosity level of the flash solver
-template<class TypeTag, class MyTypeTag>
-struct FlashVerbosity { using type = UndefinedProperty; };
+namespace Opm::Parameters {
+
 //! Two-phase flash method
 template<class TypeTag, class MyTypeTag>
-struct FlashTwoPhaseMethod { using type = UndefinedProperty; };
+struct FlashTwoPhaseMethod { using type = Properties::UndefinedProperty; };
 
-} // namespace Opm::Properties
+//! The verbosity level of the flash solver
+template<class TypeTag, class MyTypeTag>
+struct FlashVerbosity { using type = Properties::UndefinedProperty; };
+
+} // namespace Opm::Parameters
 
 #endif
