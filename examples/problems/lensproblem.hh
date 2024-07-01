@@ -176,25 +176,6 @@ struct LensUpperRightZ<TypeTag, TTag::LensBaseProblem>
 };
 
 template<class TypeTag>
-struct DomainSizeX<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 6.0;
-};
-template<class TypeTag>
-struct DomainSizeY<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 4.0;
-};
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-
-template<class TypeTag>
 struct CellsX<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 48; };
 template<class TypeTag>
 struct CellsY<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 32; };
@@ -208,6 +189,27 @@ struct VtkWriteIntrinsicPermeabilities<TypeTag, TTag::LensBaseProblem> { static 
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template<class TypeTag>
+struct DomainSizeX<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 6.0;
+};
+
+template<class TypeTag>
+struct DomainSizeY<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 4.0;
+};
+
+template<class TypeTag>
+struct DomainSizeZ<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
 
 // enable the cache for intensive quantities by default for this problem
 template<class TypeTag>

@@ -136,26 +136,6 @@ struct EnableConstraints<TypeTag, TTag::FingerBaseProblem> { static constexpr in
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::FingerBaseProblem> { static constexpr bool value = true; };
 
-// define the properties specific for the finger problem
-template<class TypeTag>
-struct DomainSizeX<TypeTag, TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.1;
-};
-template<class TypeTag>
-struct DomainSizeY<TypeTag, TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.3;
-};
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.1;
-};
-
 template<class TypeTag>
 struct InitialWaterSaturation<TypeTag, TTag::FingerBaseProblem>
 {
@@ -173,6 +153,28 @@ struct CellsZ<TypeTag, TTag::FingerBaseProblem> { static constexpr unsigned valu
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// define the properties specific for the finger problem
+template<class TypeTag>
+struct DomainSizeX<TypeTag, Properties::TTag::FingerBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.1;
+};
+
+template<class TypeTag>
+struct DomainSizeY<TypeTag, Properties::TTag::FingerBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.3;
+};
+
+template<class TypeTag>
+struct DomainSizeZ<TypeTag, Properties::TTag::FingerBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.1;
+};
 
 // The default for the end time of the simulation
 template<class TypeTag>

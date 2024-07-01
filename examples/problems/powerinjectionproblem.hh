@@ -127,26 +127,6 @@ struct VtkWriteFilterVelocities<TypeTag, TTag::PowerInjectionBaseProblem> { stat
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr bool value = false; };
 
-// define the properties specific for the power injection problem
-template<class TypeTag>
-struct DomainSizeX<TypeTag, TTag::PowerInjectionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 100.0;
-};
-template<class TypeTag>
-struct DomainSizeY<TypeTag, TTag::PowerInjectionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, TTag::PowerInjectionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-
 template<class TypeTag>
 struct CellsX<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr unsigned value = 250; };
 template<class TypeTag>
@@ -157,6 +137,28 @@ struct CellsZ<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr unsig
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// define the properties specific for the power injection problem
+template<class TypeTag>
+struct DomainSizeX<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 100.0;
+};
+
+template<class TypeTag>
+struct DomainSizeY<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
+
+template<class TypeTag>
+struct DomainSizeZ<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
 
 // The default for the end time of the simulation
 template<class TypeTag>

@@ -105,14 +105,6 @@ template<class TypeTag, class MyTypeTag>
 struct GridPart { using type = UndefinedProperty; };
 #endif
 
-//! domain size
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeX { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeY { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeZ { using type = UndefinedProperty; };
-
 //! grid resolution
 template<class TypeTag, class MyTypeTag>
 struct CellsX { using type = UndefinedProperty; };

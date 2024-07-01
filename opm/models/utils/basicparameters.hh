@@ -32,6 +32,14 @@
 
 namespace Opm::Parameters {
 
+//! domain size
+template<class TypeTag, class MyTypeTag>
+struct DomainSizeX { using type = Properties::UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct DomainSizeY { using type = Properties::UndefinedProperty; };
+template<class TypeTag, class MyTypeTag>
+struct DomainSizeZ { using type = Properties::UndefinedProperty; };
+
 //! The default value for the simulation's end time
 template<class TypeTag, class MyTypeTag>
 struct EndTime { using type = Properties::UndefinedProperty; };

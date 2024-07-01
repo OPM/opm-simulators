@@ -70,18 +70,18 @@ public:
         Parameters::registerParam<TypeTag, Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
-        Parameters::registerParam<TypeTag, Properties::DomainSizeX>
+        Parameters::registerParam<TypeTag, Parameters::DomainSizeX>
             ("The size of the domain in x direction");
         Parameters::registerParam<TypeTag, Properties::CellsX>
             ("The number of intervalls in x direction");
         if (dimWorld > 1) {
-            Parameters::registerParam<TypeTag, Properties::DomainSizeY>
+            Parameters::registerParam<TypeTag, Parameters::DomainSizeY>
                 ("The size of the domain in y direction");
             Parameters::registerParam<TypeTag, Properties::CellsY>
                 ("The number of intervalls in y direction");
         }
         if (dimWorld > 2) {
-            Parameters::registerParam<TypeTag, Properties::DomainSizeZ>
+            Parameters::registerParam<TypeTag, Parameters::DomainSizeZ>
                 ("The size of the domain in z direction");
             Parameters::registerParam<TypeTag, Properties::CellsZ>
                 ("The number of intervalls in z direction");
@@ -101,14 +101,14 @@ public:
         for (unsigned i = 0; i < dimWorld; ++i)
             cellRes[i] = 0;
 
-        upperRight[0] = Parameters::get<TypeTag, Properties::DomainSizeX>();
+        upperRight[0] = Parameters::get<TypeTag, Parameters::DomainSizeX>();
         cellRes[0] = Parameters::get<TypeTag, Properties::CellsX>();
         if (dimWorld > 1) {
-            upperRight[1] = Parameters::get<TypeTag, Properties::DomainSizeY>();
+            upperRight[1] = Parameters::get<TypeTag, Parameters::DomainSizeY>();
             cellRes[1] = Parameters::get<TypeTag, Properties::CellsY>();
         }
         if (dimWorld > 2) {
-            upperRight[2] = Parameters::get<TypeTag, Properties::DomainSizeZ>();
+            upperRight[2] = Parameters::get<TypeTag, Parameters::DomainSizeZ>();
             cellRes[2] = Parameters::get<TypeTag, Properties::CellsZ>();
         }
 

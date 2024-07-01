@@ -53,7 +53,6 @@
 #include <dune/common/fmatrix.hh>
 
 #include <sstream>
-#include <iostream>
 #include <string>
 
 namespace Opm {
@@ -224,28 +223,6 @@ struct Vanguard<TypeTag, TTag::CO2PTBaseProblem> {
     using type = Opm::StructuredGridVanguard<TypeTag>;
 };
 
-//\Note: from the Julia code, the problem is a 1D problem with 3X1 cell.
-//\Note: DomainSizeX is 3.0 meters
-//\Note: DomainSizeY is 1.0 meters
-template <class TypeTag>
-struct DomainSizeX<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 300; // meter
-};
-
-template <class TypeTag>
-struct DomainSizeY<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-
-// DomainSizeZ is not needed, while to keep structuredgridvanguard.hh compile
-template <class TypeTag>
-struct DomainSizeZ<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1.0;
-};
-
 template<class TypeTag>
 struct CellsX<TypeTag, TTag::CO2PTBaseProblem> { static constexpr unsigned value = 30; };
 template<class TypeTag>
@@ -262,6 +239,31 @@ struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+//\Note: from the Julia code, the problem is a 1D problem with 3X1 cell.
+//\Note: DomainSizeX is 3.0 meters
+//\Note: DomainSizeY is 1.0 meters
+template <class TypeTag>
+struct DomainSizeX<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 300; // meter
+};
+
+template <class TypeTag>
+struct DomainSizeY<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
+
+// DomainSizeZ is not needed, while to keep structuredgridvanguard.hh compile
+template <class TypeTag>
+struct DomainSizeZ<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
 
 // The default for the end time of the simulation
 template <class TypeTag>
