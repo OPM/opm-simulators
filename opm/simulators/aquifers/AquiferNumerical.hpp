@@ -21,6 +21,8 @@
 #ifndef OPM_AQUIFERNUMERICAL_HEADER_INCLUDED
 #define OPM_AQUIFERNUMERICAL_HEADER_INCLUDED
 
+#include <dune/grid/common/partitionset.hh>
+
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/SingleNumericalAquifer.hpp>
 
 #include <opm/material/common/MathToolbox.hpp>
