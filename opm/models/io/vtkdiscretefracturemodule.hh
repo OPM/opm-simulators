@@ -27,62 +27,81 @@
 #ifndef EWOMS_VTK_DISCRETE_FRACTURE_MODULE_HH
 #define EWOMS_VTK_DISCRETE_FRACTURE_MODULE_HH
 
-#include "vtkmultiwriter.hh"
-#include "baseoutputmodule.hh"
-
 #include <dune/common/fvector.hh>
 
+#include <opm/material/common/Valgrind.hpp>
+
 #include <opm/models/discretization/common/fvbaseparameters.hh>
+
+#include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
 
-#include <opm/material/common/Valgrind.hpp>
-
 #include <cstdio>
 
-namespace Opm::Properties {
-
-namespace TTag {
+namespace Opm::Properties::TTag {
 
 // create new type tag for the VTK multi-phase output
 struct VtkDiscreteFracture {};
 
-} // namespace TTag
+} // namespace Opm::Properties::TTag
+
+namespace Opm::Parameters {
 
 // create the property tags needed for the multi phase module
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteFractureSaturations { using type = UndefinedProperty; };
+struct VtkWriteFractureSaturations { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteFractureMobilities { using type = UndefinedProperty; };
+struct VtkWriteFractureMobilities { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteFractureRelativePermeabilities { using type = UndefinedProperty; };
+struct VtkWriteFractureRelativePermeabilities { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteFracturePorosity { using type = UndefinedProperty; };
+struct VtkWriteFracturePorosity { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteFractureIntrinsicPermeabilities { using type = UndefinedProperty; };
+struct VtkWriteFractureIntrinsicPermeabilities { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteFractureFilterVelocities { using type = UndefinedProperty; };
+struct VtkWriteFractureFilterVelocities { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteFractureVolumeFraction { using type = UndefinedProperty; };
+struct VtkWriteFractureVolumeFraction { using type = Properties::UndefinedProperty; };
 
 // set default values for what quantities to output
 template<class TypeTag>
-struct VtkWriteFractureSaturations<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = true; };
-template<class TypeTag>
-struct VtkWriteFractureMobilities<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = false; };
-template<class TypeTag>
-struct VtkWriteFractureRelativePermeabilities<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = true; };
-template<class TypeTag>
-struct VtkWriteFracturePorosity<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = true; };
-template<class TypeTag>
-struct VtkWriteFractureIntrinsicPermeabilities<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = false; };
-template<class TypeTag>
-struct VtkWriteFractureFilterVelocities<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = false; };
-template<class TypeTag>
-struct VtkWriteFractureVolumeFraction<TypeTag, TTag::VtkDiscreteFracture> { static constexpr bool value = true; };
+struct VtkWriteFractureSaturations<TypeTag, Properties::TTag::VtkDiscreteFracture>
+{ static constexpr bool value = true; };
 
-} // namespace Opm::Properties
+template<class TypeTag>
+struct VtkWriteFractureMobilities<TypeTag, Properties::TTag::VtkDiscreteFracture>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct VtkWriteFractureRelativePermeabilities<TypeTag, Properties::TTag::VtkDiscreteFracture>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct VtkWriteFracturePorosity<TypeTag, Properties::TTag::VtkDiscreteFracture>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct VtkWriteFractureIntrinsicPermeabilities<TypeTag, Properties::TTag::VtkDiscreteFracture>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct VtkWriteFractureFilterVelocities<TypeTag, Properties::TTag::VtkDiscreteFracture>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct VtkWriteFractureVolumeFraction<TypeTag, Properties::TTag::VtkDiscreteFracture>
+{ static constexpr bool value = true; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
@@ -134,20 +153,20 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureSaturations>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteFractureSaturations>
             ("Include the phase saturations in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureMobilities>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteFractureMobilities>
             ("Include the phase mobilities in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureRelativePermeabilities>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteFractureRelativePermeabilities>
             ("Include the phase relative permeabilities in the "
              "VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteFracturePorosity>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteFracturePorosity>
             ("Include the porosity in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureIntrinsicPermeabilities>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteFractureIntrinsicPermeabilities>
             ("Include the intrinsic permeability in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureFilterVelocities>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteFractureFilterVelocities>
             ("Include in the filter velocities of the phases in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteFractureVolumeFraction>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteFractureVolumeFraction>
             ("Add the fraction of the total volume which is "
              "occupied by fractures in the VTK output");
     }
@@ -319,43 +338,43 @@ public:
 private:
     static bool saturationOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureSaturations>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFractureSaturations>();
         return val;
     }
 
     static bool mobilityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureMobilities>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFractureMobilities>();
         return val;
     }
 
     static bool relativePermeabilityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureRelativePermeabilities>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFractureRelativePermeabilities>();
         return val;
     }
 
     static bool porosityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFracturePorosity>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFracturePorosity>();
         return val;
     }
 
     static bool intrinsicPermeabilityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureIntrinsicPermeabilities>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFractureIntrinsicPermeabilities>();
         return val;
     }
 
     static bool volumeFractionOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureVolumeFraction>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFractureVolumeFraction>();
         return val;
     }
 
     static bool velocityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteFractureFilterVelocities>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFractureFilterVelocities>();
         return val;
     }
 
