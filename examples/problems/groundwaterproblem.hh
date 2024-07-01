@@ -145,10 +145,6 @@ struct PermeabilityLens<TypeTag, TTag::GroundWaterBaseProblem>
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::GroundWaterBaseProblem> { static constexpr bool value = true; };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, TTag::GroundWaterBaseProblem> { static constexpr auto value = "./data/groundwater_2d.dgf"; };
-
 // Use the conjugated gradient linear solver with the default preconditioner (i.e.,
 // ILU-0) from dune-istl
 template<class TypeTag>
@@ -169,6 +165,11 @@ struct EndTime<TypeTag, Properties::TTag::GroundWaterBaseProblem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1;
 };
+
+// The default DGF file to load
+template<class TypeTag>
+struct GridFile<TypeTag, Properties::TTag::GroundWaterBaseProblem>
+{ static constexpr auto value = "./data/groundwater_2d.dgf"; };
 
 // The default for the initial time step size of the simulation
 template<class TypeTag>

@@ -80,10 +80,6 @@ struct EnableGravity<TypeTag, TTag::OutflowBaseProblem> { static constexpr bool 
 template<class TypeTag>
 struct VtkWriteMassFractions<TypeTag, TTag::OutflowBaseProblem> { static constexpr bool value = true; };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, TTag::OutflowBaseProblem> { static constexpr auto value = "./data/outflow.dgf"; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -95,6 +91,11 @@ struct EndTime<TypeTag, Properties::TTag::OutflowBaseProblem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 100;
 };
+
+// The default DGF file to load
+template<class TypeTag>
+struct GridFile<TypeTag, Properties::TTag::OutflowBaseProblem>
+{ static constexpr auto value = "./data/outflow.dgf"; };
 
 // The default for the initial time step size of the simulation
 template<class TypeTag>

@@ -107,10 +107,6 @@ struct EnableGravity<TypeTag, TTag::RichardsLensProblem> { static constexpr bool
 template<class TypeTag>
 struct NumericDifferenceMethod<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 0; };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, TTag::RichardsLensProblem> { static constexpr auto value = "./data/richardslens_24x16.dgf"; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -122,6 +118,11 @@ struct EndTime<TypeTag, Properties::TTag::RichardsLensProblem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 3000;
 };
+
+// The default DGF file to load
+template<class TypeTag>
+struct GridFile<TypeTag, Properties::TTag::RichardsLensProblem>
+{ static constexpr auto value = "./data/richardslens_24x16.dgf"; };
 
 // The default for the initial time step size of the simulation
 template<class TypeTag>

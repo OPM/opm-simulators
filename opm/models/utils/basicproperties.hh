@@ -105,10 +105,6 @@ template<class TypeTag, class MyTypeTag>
 struct GridPart { using type = UndefinedProperty; };
 #endif
 
-//! name of the grid file
-template<class TypeTag, class MyTypeTag>
-struct GridFile { using type = UndefinedProperty; };
-
 //! level of the grid view
 template<class TypeTag, class MyTypeTag>
 struct GridViewLevel { using type = UndefinedProperty; };
@@ -151,10 +147,6 @@ struct ParameterTree<TypeTag, TTag::NumericModel>
 template<class TypeTag>
 struct ModelParameterGroup<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
 
-//! Set a value for the GridFile property
-template<class TypeTag>
-struct GridFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
-
 #if HAVE_DUNE_FEM
 template<class TypeTag>
 struct GridPart<TypeTag, TTag::NumericModel>
@@ -188,6 +180,11 @@ struct EndTime<TypeTag, Properties::TTag::NumericModel>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = -1e35;
 };
+
+//! Set a value for the GridFile property
+template<class TypeTag>
+struct GridFile<TypeTag, Properties::TTag::NumericModel>
+{ static constexpr auto value = ""; };
 
 //! Set the number of refinement levels of the grid to 0. This does not belong
 //! here, strictly speaking.

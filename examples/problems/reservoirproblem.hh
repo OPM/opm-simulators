@@ -149,10 +149,6 @@ public:
     using type = Opm::BlackOilFluidSystem<Scalar>;
 };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, TTag::ReservoirBaseProblem> { static constexpr auto value = "data/reservoir.dgf"; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -167,6 +163,11 @@ struct EndTime<TypeTag, Properties::TTag::ReservoirBaseProblem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1000.0*24*60*60;
 };
+
+// The default DGF file to load
+template<class TypeTag>
+struct GridFile<TypeTag, Properties::TTag::ReservoirBaseProblem>
+{ static constexpr auto value = "data/reservoir.dgf"; };
 
 // The default for the initial time step size of the simulation [s]
 template<class TypeTag>
