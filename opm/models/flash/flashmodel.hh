@@ -28,25 +28,29 @@
 #ifndef EWOMS_FLASH_MODEL_HH
 #define EWOMS_FLASH_MODEL_HH
 
+#include <opm/material/constraintsolvers/NcpFlash.hpp>
+
 #include <opm/material/densead/Math.hpp>
 
-#include "flashproperties.hh"
-#include "flashprimaryvariables.hh"
-#include "flashlocalresidual.hh"
-#include "flashratevector.hh"
-#include "flashboundaryratevector.hh"
-#include "flashintensivequantities.hh"
-#include "flashextensivequantities.hh"
-#include "flashindices.hh"
-
-#include <opm/models/common/multiphasebasemodel.hh>
-#include <opm/models/common/energymodule.hh>
-#include <opm/models/io/vtkcompositionmodule.hh>
-#include <opm/models/io/vtkenergymodule.hh>
-#include <opm/models/io/vtkdiffusionmodule.hh>
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
+
+#include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebasemodel.hh>
+
+#include <opm/models/flash/flashboundaryratevector.hh>
+#include <opm/models/flash/flashextensivequantities.hh>
+#include <opm/models/flash/flashindices.hh>
+#include <opm/models/flash/flashintensivequantities.hh>
+#include <opm/models/flash/flashlocalresidual.hh>
+#include <opm/models/flash/flashparameters.hh>
+#include <opm/models/flash/flashproperties.hh>
+#include <opm/models/flash/flashprimaryvariables.hh>
+#include <opm/models/flash/flashratevector.hh>
+
+#include <opm/models/io/vtkcompositionmodule.hh>
+#include <opm/models/io/vtkdiffusionmodule.hh>
+#include <opm/models/io/vtkenergymodule.hh>
 
 #include <sstream>
 #include <string>
@@ -75,14 +79,6 @@ template<class TypeTag>
 struct FlashSolver<TypeTag, TTag::FlashModel>
 { using type = Opm::NcpFlash<GetPropType<TypeTag, Properties::Scalar>,
                              GetPropType<TypeTag, Properties::FluidSystem>>; };
-
-//! Let the flash solver choose its tolerance by default
-template<class TypeTag>
-struct FlashTolerance<TypeTag, TTag::FlashModel>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1.0;
-};
 
 //! the Model property
 template<class TypeTag>
@@ -136,6 +132,14 @@ struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlashModel>
 template<class TypeTag>
 struct EnableThermodynamicHints<TypeTag, Properties::TTag::FlashModel>
 { static constexpr bool value = true; };
+
+//! Let the flash solver choose its tolerance by default
+template<class TypeTag>
+struct FlashTolerance<TypeTag, Properties::TTag::FlashModel>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = -1.0;
+};
 
 } // namespace Opm::Parameters
 
@@ -240,7 +244,7 @@ public:
         if (enableEnergy)
             Opm::VtkEnergyModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::FlashTolerance>
+        Parameters::registerParam<TypeTag, Parameters::FlashTolerance>
             ("The maximum tolerance for the flash solver to "
              "consider the solution converged");
     }

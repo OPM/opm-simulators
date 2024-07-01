@@ -24,20 +24,20 @@
  * \file
  * \ingroup FlashModel
  *
- * \brief Declares the properties required by the compositional
+ * \brief Declares the parameters for the compositional
  *        multi-phase model based on flash calculations.
  */
-#ifndef EWOMS_FLASH_PROPERTIES_HH
-#define EWOMS_FLASH_PROPERTIES_HH
+#ifndef EWOMS_FLASH_PARAMETERS_HH
+#define EWOMS_FLASH_PARAMETERS_HH
 
 #include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
-//! The type of the flash constraint solver
+//! The maximum accepted error of the flash solver
 template<class TypeTag, class MyTypeTag>
-struct FlashSolver { using type = UndefinedProperty; };
+struct FlashTolerance { using type = Properties::UndefinedProperty; };
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 #endif
