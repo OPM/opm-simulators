@@ -396,10 +396,6 @@ struct PreconditionerRelaxation<TypeTag, TTag::ParallelBaseLinearSolver>
     static constexpr type value = 1.0;
 };
 
-//! set the preconditioner order to 0 by default
-template<class TypeTag>
-struct PreconditionerOrder<TypeTag, TTag::ParallelBaseLinearSolver> { static constexpr int value = 0; };
-
 //! by default use the same kind of floating point values for the linearization and for
 //! the linear solve
 template<class TypeTag>
@@ -471,6 +467,11 @@ struct LinearSolverOverlapSize<TypeTag, Properties::TTag::ParallelBaseLinearSolv
 //! make the linear solver shut up by default
 template<class TypeTag>
 struct LinearSolverVerbosity<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
+{ static constexpr int value = 0; };
+
+//! set the preconditioner order to 0 by default
+template<class TypeTag>
+struct PreconditionerOrder<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
 { static constexpr int value = 0; };
 
 } // namespace Opm::Parameters

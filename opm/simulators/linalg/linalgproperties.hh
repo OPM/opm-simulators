@@ -45,10 +45,6 @@ struct PreconditionerWrapper { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverScalar { using type = UndefinedProperty; };
 
-//! The order of the sequential preconditioner
-template<class TypeTag, class MyTypeTag>
-struct PreconditionerOrder { using type = UndefinedProperty; };
-
 //! The relaxation factor of the preconditioner
 template<class TypeTag, class MyTypeTag>
 struct PreconditionerRelaxation { using type = UndefinedProperty; };
