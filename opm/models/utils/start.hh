@@ -83,7 +83,7 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
     Parameters::registerParam<TypeTag, Parameters::PrintProperties>
         ("Print the values of the compile time properties at "
          "the start of the simulation");
-    Parameters::registerParam<TypeTag, Properties::PrintParameters>
+    Parameters::registerParam<TypeTag, Parameters::PrintParameters>
         ("Print the values of the run-time parameters at the "
          "start of the simulation");
 
@@ -354,7 +354,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         }
 
         // print the parameters if requested
-        int printParams = Parameters::get<TypeTag, Properties::PrintParameters>();
+        int printParams = Parameters::get<TypeTag, Parameters::PrintParameters>();
         if (myRank == 0) {
             std::string endParametersSeparator("# [end of parameters]\n");
             if (printParams) {

@@ -105,15 +105,6 @@ template<class TypeTag, class MyTypeTag>
 struct GridPart { using type = UndefinedProperty; };
 #endif
 
-/*!
- * \brief Print all parameters on startup?
- *
- * 0 means 'no', 1 means 'yes', 2 means 'print only to logfiles'. The
- * default is 2.
- */
-template<class TypeTag, class MyTypeTag>
-struct PrintParameters { using type = UndefinedProperty; };
-
 //! The default value for the simulation's end time
 template<class TypeTag, class MyTypeTag>
 struct EndTime { using type = UndefinedProperty; };
@@ -215,10 +206,6 @@ template<class TypeTag>
 struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView; };
 #endif
 
-//! By default, print the values of the run-time parameters on startup
-template<class TypeTag>
-struct PrintParameters<TypeTag, TTag::NumericModel> { static constexpr int value = 2; };
-
 //! The default value for the simulation's end time
 template<class TypeTag>
 struct EndTime<TypeTag, TTag::NumericModel>
@@ -265,11 +252,16 @@ template<class TypeTag>
 struct ParameterFile<TypeTag, Properties::TTag::NumericModel>
 { static constexpr auto value = ""; };
 
+//! By default, print the values of the run-time parameters on startup
+template<class TypeTag>
+struct PrintParameters<TypeTag, Properties::TTag::NumericModel>
+{ static constexpr int value = 2; };
+
 //! By default, print the properties on startup
 template<class TypeTag>
 struct PrintProperties<TypeTag, Properties::TTag::NumericModel>
 { static constexpr int value = 2; };
 
-}
+} // namespace Opm::Parameters
 
 #endif
