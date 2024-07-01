@@ -105,10 +105,6 @@ template<class TypeTag, class MyTypeTag>
 struct GridPart { using type = UndefinedProperty; };
 #endif
 
-//! The name of the file with a number of forced time step lengths
-template<class TypeTag, class MyTypeTag>
-struct PredeterminedTimeStepsFile { using type = UndefinedProperty; };
-
 //! domain size
 template<class TypeTag, class MyTypeTag>
 struct DomainSizeX { using type = UndefinedProperty; };
@@ -194,10 +190,6 @@ template<class TypeTag>
 struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView; };
 #endif
 
-//! By default, do not force any time steps
-template<class TypeTag>
-struct PredeterminedTimeStepsFile<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
-
 template<class TypeTag>
 struct Vanguard<TypeTag, TTag::NumericModel> { using type = Opm::DgfVanguard<TypeTag>; };
 
@@ -230,6 +222,11 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::NumericModel>
 //! Set a value for the ParameterFile property
 template<class TypeTag>
 struct ParameterFile<TypeTag, Properties::TTag::NumericModel>
+{ static constexpr auto value = ""; };
+
+//! By default, do not force any time steps
+template<class TypeTag>
+struct PredeterminedTimeStepsFile<TypeTag, Properties::TTag::NumericModel>
 { static constexpr auto value = ""; };
 
 //! By default, print the values of the run-time parameters on startup

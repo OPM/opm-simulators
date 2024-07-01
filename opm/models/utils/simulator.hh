@@ -133,7 +133,7 @@ public:
         timeStepSize_ = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
         assert(timeStepSize_ > 0);
         const std::string& predetTimeStepFile =
-            Parameters::get<TypeTag, Properties::PredeterminedTimeStepsFile>();
+            Parameters::get<TypeTag, Parameters::PredeterminedTimeStepsFile>();
         if (!predetTimeStepFile.empty()) {
             std::ifstream is(predetTimeStepFile);
             while (!is.eof()) {
@@ -260,7 +260,7 @@ public:
             ("The size of the initial time step [s]");
         Parameters::registerParam<TypeTag, Parameters::RestartTime>
             ("The simulation time at which a restart should be attempted [s]");
-        Parameters::registerParam<TypeTag, Properties::PredeterminedTimeStepsFile>
+        Parameters::registerParam<TypeTag, Parameters::PredeterminedTimeStepsFile>
             ("A file with a list of predetermined time step sizes (one "
              "time step per line)");
 

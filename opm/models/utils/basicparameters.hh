@@ -50,6 +50,10 @@ struct InitialTimeStepSize { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct ParameterFile { using type = Properties::UndefinedProperty; };
 
+//! The name of the file with a number of forced time step lengths
+template<class TypeTag, class MyTypeTag>
+struct PredeterminedTimeStepsFile { using type = Properties::UndefinedProperty; };
+
 /*!
  * \brief Print all parameters on startup?
  *
