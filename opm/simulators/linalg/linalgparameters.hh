@@ -39,6 +39,9 @@ namespace Opm::Parameters {
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverAbsTolerance { using type = Properties::UndefinedProperty; };
 
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverMaxError { using type = Properties::UndefinedProperty; };
+
 //! Maximum number of iterations eyecuted by the linear solver
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverMaxIterations { using type = Properties::UndefinedProperty; };

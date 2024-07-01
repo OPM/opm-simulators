@@ -37,32 +37,41 @@
 #include <memory>
 
 namespace Opm::Linear {
+
 template <class TypeTag>
 class ParallelBiCGStabSolverBackend;
+
 } // namespace Opm::Linear
 
 namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct ParallelBiCGStabLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
+
+struct ParallelBiCGStabLinearSolver
+{ using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
+
 } // end namespace TTag
 
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::ParallelBiCGStabLinearSolver>
 { using type = Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>; };
 
+} // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
 template<class TypeTag>
-struct LinearSolverMaxError<TypeTag, TTag::ParallelBiCGStabLinearSolver>
+struct LinearSolverMaxError<TypeTag, Properties::TTag::ParallelBiCGStabLinearSolver>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e7;
 };
 
-} // namespace Opm::Properties
+}
 
-namespace Opm {
-namespace Linear {
+namespace Opm::Linear {
+
 /*!
  * \ingroup Linear
  *
@@ -122,7 +131,7 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::LinearSolverMaxError>
+        Parameters::registerParam<TypeTag, Parameters::LinearSolverMaxError>
             ("The maximum residual error which the linear solver tolerates"
              " without giving up");
     }
@@ -145,7 +154,7 @@ protected:
         convCrit_.reset(new CCC(gridView.comm(),
                                 /*residualReductionTolerance=*/linearSolverTolerance,
                                 /*absoluteResidualTolerance=*/linearSolverAbsTolerance,
-                                Parameters::get<TypeTag, Properties::LinearSolverMaxError>()));
+                                Parameters::get<TypeTag, Parameters::LinearSolverMaxError>()));
 
         auto bicgstabSolver =
             std::make_shared<RawLinearSolver>(parPreCond, *convCrit_, parScalarProduct);
@@ -173,6 +182,6 @@ protected:
     std::unique_ptr<ConvergenceCriterion<OverlappingVector> > convCrit_;
 };
 
-}} // namespace Linear, Opm
+} // namespace Opm::Linear
 
 #endif

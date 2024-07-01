@@ -43,28 +43,27 @@
 #include <utility>
 
 namespace Opm::Linear {
+
 template <class TypeTag>
 class ParallelAmgBackend;
+
 } // namespace Opm::Linear
 
 namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct ParallelAmgLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
+
+struct ParallelAmgLinearSolver
+{ using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
+
 } // end namespace TTag
 
 //! The target number of DOFs per processor for the parallel algebraic
 //! multi-grid solver
 template<class TypeTag>
-struct AmgCoarsenTarget<TypeTag, TTag::ParallelAmgLinearSolver> { static constexpr int value = 5000; };
-
-template<class TypeTag>
-struct LinearSolverMaxError<TypeTag, TTag::ParallelAmgLinearSolver>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e7;
-};
+struct AmgCoarsenTarget<TypeTag, TTag::ParallelAmgLinearSolver>
+{ static constexpr int value = 5000; };
 
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::ParallelAmgLinearSolver>
@@ -72,8 +71,19 @@ struct LinearSolverBackend<TypeTag, TTag::ParallelAmgLinearSolver>
 
 } // namespace Opm::Properties
 
-namespace Opm {
-namespace Linear {
+namespace Opm::Parameters {
+
+template<class TypeTag>
+struct LinearSolverMaxError<TypeTag, Properties::TTag::ParallelAmgLinearSolver>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e7;
+};
+
+}
+
+namespace Opm::Linear {
+
 /*!
  * \ingroup Linear
  *
@@ -150,7 +160,7 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::LinearSolverMaxError>
+        Parameters::registerParam<TypeTag, Parameters::LinearSolverMaxError>
             ("The maximum residual error which the linear solver tolerates "
              "without giving up");
         Parameters::registerParam<TypeTag, Properties::AmgCoarsenTarget>
@@ -201,7 +211,7 @@ protected:
         convCrit_.reset(new CCC(gridView.comm(),
                                 /*residualReductionTolerance=*/linearSolverTolerance,
                                 /*absoluteResidualTolerance=*/linearSolverAbsTolerance,
-                                Parameters::get<TypeTag, Properties::LinearSolverMaxError>()));
+                                Parameters::get<TypeTag, Parameters::LinearSolverMaxError>()));
 
         auto bicgstabSolver =
             std::make_shared<RawLinearSolver>(parPreCond, *convCrit_, parScalarProduct);
@@ -323,7 +333,6 @@ protected:
 #endif
 };
 
-} // namespace Linear
-} // namespace Opm
+} // namespace Opm::Linear
 
 #endif
