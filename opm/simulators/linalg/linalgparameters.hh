@@ -43,6 +43,12 @@ namespace Opm::Parameters {
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverOverlapSize { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief Maximum accepted error of the solution of the linear solver.
+ */
+template<class TypeTag, class MyTypeTag>
+struct LinearSolverTolerance { using type = Properties::UndefinedProperty; };
+
 } // namespace Opm::Parameters
 
 #endif

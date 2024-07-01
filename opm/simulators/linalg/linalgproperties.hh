@@ -47,12 +47,6 @@ template<class TypeTag, class MyTypeTag>
 struct LinearSolverScalar { using type = UndefinedProperty; };
 
 /*!
- * \brief Maximum accepted error of the solution of the linear solver.
- */
-template<class TypeTag, class MyTypeTag>
-struct LinearSolverTolerance { using type = UndefinedProperty; };
-
-/*!
  * \brief Maximum accepted error of the norm of the residual.
  */
 template<class TypeTag, class MyTypeTag>

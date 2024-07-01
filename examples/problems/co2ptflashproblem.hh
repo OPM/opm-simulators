@@ -158,12 +158,6 @@ struct SimulationName<TypeTag, TTag::CO2PTBaseProblem> {
 };
 
 template <class TypeTag>
-struct LinearSolverTolerance<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-3;
-};
-
-template <class TypeTag>
 struct LinearSolverAbsTolerance<TypeTag, TTag::CO2PTBaseProblem> {
     using type = GetPropType<TypeTag, Scalar>;
     static constexpr type value = 0.;
@@ -248,6 +242,13 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::CO2PTBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 0.1 * 60. * 60.;
+};
+
+template <class TypeTag>
+struct LinearSolverTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-3;
 };
 
 // Write the Newton convergence behavior to disk?

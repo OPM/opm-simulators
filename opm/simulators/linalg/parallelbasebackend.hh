@@ -152,7 +152,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::LinearSolverTolerance>
+        Parameters::registerParam<TypeTag, Parameters::LinearSolverTolerance>
             ("The maximum allowed error between of the linear solver");
         Parameters::registerParam<TypeTag, Properties::LinearSolverAbsTolerance>
             ("The maximum accepted error of the norm of the residual");

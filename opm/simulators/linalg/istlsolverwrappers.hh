@@ -77,8 +77,8 @@ namespace Opm::Linear {
                                        ScalarProduct& parScalarProduct,            \
                                        Preconditioner& parPreCond)                 \
         {                                                                          \
-            Scalar tolerance = Parameters::get<TypeTag, Properties::LinearSolverTolerance>(); \
-            int maxIter = Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>();\
+            Scalar tolerance = Parameters::get<TypeTag, Parameters::LinearSolverTolerance>(); \
+            int maxIter = Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>();  \
                                                                                    \
             int verbosity = 0;                                                     \
             if (parOperator.overlap().myRank() == 0)                               \
@@ -132,7 +132,7 @@ public:
                                    ScalarProduct& parScalarProduct,
                                    Preconditioner& parPreCond)
     {
-        Scalar tolerance = Parameters::get<TypeTag, Properties::LinearSolverTolerance>();
+        Scalar tolerance = Parameters::get<TypeTag, Parameters::LinearSolverTolerance>();
         int maxIter = Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>();
 
         int verbosity = 0;
