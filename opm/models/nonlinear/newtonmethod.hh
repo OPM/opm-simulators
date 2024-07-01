@@ -76,12 +76,6 @@ template<class TypeTag>
 struct NewtonMethod<TypeTag, TTag::NewtonMethod> { using type = ::Opm::NewtonMethod<TypeTag>; };
 template<class TypeTag>
 struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = NullConvergenceWriter<TypeTag>; };
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::NewtonMethod>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-8;
-};
 // set the abortion tolerace to some very large value. if not
 // overwritten at run-time this basically disables abortions
 template<class TypeTag>
@@ -106,6 +100,13 @@ struct NewtonVerbose<TypeTag, Properties::TTag::NewtonMethod>
 template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::NewtonMethod>
 { static constexpr bool value = false; };
+
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, Properties::TTag::NewtonMethod>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-8;
+};
 
 } // namespace Opm::Parameters
 
@@ -148,7 +149,7 @@ public:
     {
         lastError_ = 1e100;
         error_ = 1e100;
-        tolerance_ = Parameters::get<TypeTag, Properties::NewtonTolerance>();
+        tolerance_ = Parameters::get<TypeTag, Parameters::NewtonTolerance>();
 
         numIterations_ = 0;
     }
@@ -170,7 +171,7 @@ public:
             ("The 'optimum' number of Newton iterations per time step");
         Parameters::registerParam<TypeTag, Properties::NewtonMaxIterations>
             ("The maximum number of Newton iterations per time step");
-        Parameters::registerParam<TypeTag, Properties::NewtonTolerance>
+        Parameters::registerParam<TypeTag, Parameters::NewtonTolerance>
             ("The maximum raw error tolerated by the Newton"
              "method for considering a solution to be converged");
         Parameters::registerParam<TypeTag, Properties::NewtonMaxError>

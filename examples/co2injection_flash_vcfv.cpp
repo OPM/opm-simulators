@@ -65,16 +65,22 @@ struct FlashSolver<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
 template<class TypeTag>
 struct Scalar<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
 { using type = quad; };
-#else
+#endif
+
+} // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+#if ! HAVE_QUAD
 template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
+struct NewtonTolerance<TypeTag, Properties::TTag::Co2InjectionFlashVcfvProblem>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e-5;
 };
 #endif
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 int main(int argc, char **argv)
 {

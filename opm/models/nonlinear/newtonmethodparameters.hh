@@ -36,6 +36,15 @@ struct NewtonVerbose { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct NewtonWriteConvergence { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief The value for the error below which convergence is declared
+ *
+ * This value can (and for the porous media models will) be changed to account for grid
+ * scaling and other effects.
+ */
+template<class TypeTag, class MyTypeTag>
+struct NewtonTolerance { using type = Properties::UndefinedProperty; };
+
 } // end namespace Opm::Parameters
 
 #endif

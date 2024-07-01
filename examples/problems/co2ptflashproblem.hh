@@ -190,12 +190,6 @@ struct LinearSolverAbsTolerance<TypeTag, TTag::CO2PTBaseProblem> {
 };
 
 template <class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-3;
-};
-
-template <class TypeTag>
 struct NewtonMaxIterations<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr int value = 30;
 };
@@ -298,6 +292,13 @@ namespace Opm::Parameters {
 template <class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr bool value = false; };
+
+template <class TypeTag>
+struct NewtonTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-3;
+};
 
 } // namespace Opm::Parameters
 
