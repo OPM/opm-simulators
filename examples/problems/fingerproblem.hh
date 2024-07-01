@@ -170,14 +170,6 @@ struct CellsY<TypeTag, TTag::FingerBaseProblem> { static constexpr unsigned valu
 template<class TypeTag>
 struct CellsZ<TypeTag, TTag::FingerBaseProblem> { static constexpr unsigned value = 1; };
 
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 10;
-};
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -188,6 +180,14 @@ struct EndTime<TypeTag, Properties::TTag::FingerBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 215;
+};
+
+// The default for the initial time step size of the simulation
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::FingerBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 10;
 };
 
 // Write the solutions of individual newton iterations?

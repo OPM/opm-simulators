@@ -124,14 +124,6 @@ public:
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::Tutorial1Problem> { static constexpr bool value = false; }; /*@\label{tutorial1:gravity}@*/
 
-// define the size of the initial time step [s]
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::Tutorial1Problem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 125.0;
-};
-
 // define the physical size of the problem's domain [m]
 template<class TypeTag>
 struct DomainSizeX<TypeTag, TTag::Tutorial1Problem>
@@ -171,6 +163,14 @@ struct EndTime<TypeTag, Properties::TTag::Tutorial1Problem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 100e3;
 }; /*@\label{tutorial1:default-params-begin}@*/
+
+// define the size of the initial time step [s]
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::Tutorial1Problem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 125.0;
+};
 
 } // namespace Opm::Parameters
 

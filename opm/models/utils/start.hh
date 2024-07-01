@@ -326,7 +326,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
             return 1;
         }
 
-        Scalar initialTimeStepSize = Parameters::get<TypeTag, Properties::InitialTimeStepSize>();
+        Scalar initialTimeStepSize = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
         if (initialTimeStepSize < -1e50) {
             if (myRank == 0)
                 Parameters::printUsage<TypeTag>(argv[0],

@@ -116,14 +116,6 @@ public:
     using type = Opm::SomertonThermalConductionLaw<FluidSystem, Scalar>;
 };
 
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::CuvetteBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1;
-};
-
 // The default DGF file to load
 template<class TypeTag>
 struct GridFile<TypeTag, TTag::CuvetteBaseProblem> { static constexpr auto value = "./data/cuvette_11x4.dgf"; };
@@ -138,6 +130,14 @@ struct EndTime<TypeTag, Properties::TTag::CuvetteBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 180;
+};
+
+// The default for the initial time step size of the simulation
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::CuvetteBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1;
 };
 
 // Set the maximum time step

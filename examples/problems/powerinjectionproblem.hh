@@ -154,14 +154,6 @@ struct CellsY<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr unsig
 template<class TypeTag>
 struct CellsZ<TypeTag, TTag::PowerInjectionBaseProblem> { static constexpr unsigned value = 1; };
 
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::PowerInjectionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-3;
-};
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -172,6 +164,14 @@ struct EndTime<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 100;
+};
+
+// The default for the initial time step size of the simulation
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-3;
 };
 
 } // namespace Opm::Parameters

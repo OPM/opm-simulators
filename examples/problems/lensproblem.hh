@@ -201,14 +201,6 @@ struct CellsY<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value 
 template<class TypeTag>
 struct CellsZ<TypeTag, TTag::LensBaseProblem> { static constexpr unsigned value = 16; };
 
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 250;
-};
-
 // By default, include the intrinsic permeability tensor to the VTK output files
 template<class TypeTag>
 struct VtkWriteIntrinsicPermeabilities<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
@@ -233,6 +225,14 @@ struct EndTime<TypeTag, Properties::TTag::LensBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 30e3;
+};
+
+// The default for the initial time step size of the simulation
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::LensBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 250;
 };
 
 // Write the solutions of individual newton iterations?

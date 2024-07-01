@@ -145,14 +145,6 @@ struct PermeabilityLens<TypeTag, TTag::GroundWaterBaseProblem>
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::GroundWaterBaseProblem> { static constexpr bool value = true; };
 
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::GroundWaterBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1;
-};
-
 // The default DGF file to load
 template<class TypeTag>
 struct GridFile<TypeTag, TTag::GroundWaterBaseProblem> { static constexpr auto value = "./data/groundwater_2d.dgf"; };
@@ -173,6 +165,14 @@ namespace Opm::Parameters {
 // The default for the end time of the simulation
 template<class TypeTag>
 struct EndTime<TypeTag, Properties::TTag::GroundWaterBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1;
+};
+
+// The default for the initial time step size of the simulation
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::GroundWaterBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1;

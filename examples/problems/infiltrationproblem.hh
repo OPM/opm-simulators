@@ -96,14 +96,6 @@ public:
     using type = Opm::ThreePhaseParkerVanGenuchten<Traits>;
 };
 
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::InfiltrationBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 60;
-};
-
 // The default DGF file to load
 template<class TypeTag>
 struct GridFile<TypeTag, TTag::InfiltrationBaseProblem>
@@ -119,6 +111,14 @@ struct EndTime<TypeTag, Properties::TTag::InfiltrationBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 6e3;
+};
+
+// The default for the initial time step size of the simulation
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::InfiltrationBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 60;
 };
 
 // Write newton convergence?

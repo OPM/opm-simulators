@@ -105,10 +105,6 @@ template<class TypeTag, class MyTypeTag>
 struct GridPart { using type = UndefinedProperty; };
 #endif
 
-//! The default value for the simulation's initial time step size
-template<class TypeTag, class MyTypeTag>
-struct InitialTimeStepSize { using type = UndefinedProperty; };
-
 //! The default value for the simulation's restart time
 template<class TypeTag, class MyTypeTag>
 struct RestartTime { using type = UndefinedProperty; };
@@ -202,14 +198,6 @@ template<class TypeTag>
 struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView; };
 #endif
 
-//! The default value for the simulation's initial time step size
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::NumericModel>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1e35;
-};
-
 //! The default value for the simulation's restart time
 template<class TypeTag>
 struct RestartTime<TypeTag, TTag::NumericModel>
@@ -242,6 +230,14 @@ struct EndTime<TypeTag, Properties::TTag::NumericModel>
 template<class TypeTag>
 struct GridGlobalRefinements<TypeTag, Properties::TTag::NumericModel>
 { static constexpr unsigned value = 0; };
+
+//! The default value for the simulation's initial time step size
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::NumericModel>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = -1e35;
+};
 
 //! Set a value for the ParameterFile property
 template<class TypeTag>
