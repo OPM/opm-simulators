@@ -144,6 +144,7 @@ public:
     ~Main();
 
     void setArgvArgc_(const std::string& filename);
+    void handleReservoirCouplingSlaveStdoutStderr_();
 
     void initMPI();
 
@@ -422,6 +423,7 @@ private:
                            Parameters::get<PreTypeTag, Properties::InputSkipMode>(),
                            getNumThreads<PreTypeTag>(),
                            Parameters::get<PreTypeTag, Properties::EclOutputInterval>(),
+                           Parameters::get<PreTypeTag, Properties::Slave>(),
                            cmdline_params,
                            Opm::moduleVersion(),
                            Opm::compileTimestamp());
@@ -697,6 +699,7 @@ private:
                   const std::string& inputSkipMode,
                   const std::size_t numThreads,
                   const int output_param,
+                  const bool slaveMode,
                   const std::string& parameters,
                   std::string_view moduleVersion,
                   std::string_view compileTimestamp);

@@ -44,6 +44,7 @@ namespace Opm {
 Main::Main(int argc, char** argv, bool ownMPI)
     : argc_(argc), argv_(argv), ownMPI_(ownMPI)
 {
+    handleReservoirCouplingSlaveStdoutStderr_();
     if (ownMPI_) {
         initMPI();
     }
@@ -117,6 +118,28 @@ Main::~Main()
         MPI_Finalize();
     }
 #endif
+}
+
+void Main::handleReservoirCouplingSlaveStdoutStderr_()
+{
+    // If first command line argument is "--slave-log-file=<filename>",
+    // then redirect stdout and stderr to the specified file.
+    if (this->argc_ >= 2) {
+        std::string_view arg = this->argv_[1];
+        if (arg.substr(0, 17) == "--slave-log-file=") {
+            std::string filename = std::string(arg.substr(17));
+            freopen(filename.c_str(), "w", stdout);
+            freopen(filename.c_str(), "w", stderr);
+            this->argc_ -= 1;
+            char *program_name = this->argv_[0];
+            this->argv_ += 1;
+            // We assume the "argv" array pointers remain valid (not freed) for the lifetime
+            //   of this program, so the following assignment is safe.
+            // Overwrite the first argument with the program name, i.e. pretend the program
+            //   was called with the same arguments, but without the "--slave-log-file" argument.
+            this->argv_[0] = program_name;
+        }
+    }
 }
 
 void Main::setArgvArgc_(const std::string& filename)
@@ -203,6 +226,7 @@ void Main::readDeck(const std::string& deckFilename,
                     const std::string& inputSkipMode,
                     const std::size_t numThreads,
                     const int output_param,
+                    const bool slaveMode,
                     const std::string& parameters,
                     std::string_view moduleVersion,
                     std::string_view compileTimestamp)
@@ -236,7 +260,8 @@ void Main::readDeck(const std::string& deckFilename,
                   inputSkipMode,
                   init_from_restart_file,
                   outputCout_,
-                  outputInterval);
+                  outputInterval,
+                  slaveMode);
 
     verifyValidCellGeometry(FlowGenericVanguard::comm(), *this->eclipseState_);
 
