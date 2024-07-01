@@ -115,10 +115,6 @@ struct NewtonMaxIterations<TypeTag, TTag::RichardsLensProblem> { static constexp
 template<class TypeTag>
 struct NewtonTargetIterations<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 18; };
 
-// Do not write the intermediate results of the newton method
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, TTag::RichardsLensProblem> { static constexpr bool value = false; };
-
 // The default for the end time of the simulation
 template<class TypeTag>
 struct EndTime<TypeTag, TTag::RichardsLensProblem>
@@ -140,6 +136,15 @@ template<class TypeTag>
 struct GridFile<TypeTag, TTag::RichardsLensProblem> { static constexpr auto value = "./data/richardslens_24x16.dgf"; };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// Do not write the intermediate results of the newton method
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, Properties::TTag::RichardsLensProblem>
+{ static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 

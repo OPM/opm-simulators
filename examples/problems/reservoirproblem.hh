@@ -100,10 +100,6 @@ public:
     using type = Opm::LinearMaterial<Traits>;
 };
 
-// Write the Newton convergence behavior to disk?
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, TTag::ReservoirBaseProblem> { static constexpr bool value = false; };
-
 // Enable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::ReservoirBaseProblem> { static constexpr bool value = true; };
@@ -184,6 +180,15 @@ struct NewtonTolerance<TypeTag, TTag::ReservoirBaseProblem>
 };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// Write the Newton convergence behavior to disk?
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, Properties::TTag::ReservoirBaseProblem>
+{ static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 

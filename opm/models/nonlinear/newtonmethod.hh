@@ -77,8 +77,6 @@ struct NewtonMethod<TypeTag, TTag::NewtonMethod> { using type = ::Opm::NewtonMet
 template<class TypeTag>
 struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = NullConvergenceWriter<TypeTag>; };
 template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, TTag::NewtonMethod> { static constexpr bool value = false; };
-template<class TypeTag>
 struct NewtonTolerance<TypeTag, TTag::NewtonMethod>
 {
     using type = GetPropType<TypeTag, Scalar>;
@@ -104,6 +102,10 @@ namespace Opm::Parameters {
 template<class TypeTag>
 struct NewtonVerbose<TypeTag, Properties::TTag::NewtonMethod>
 { static constexpr bool value = true; };
+
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, Properties::TTag::NewtonMethod>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
@@ -161,7 +163,7 @@ public:
         Parameters::registerParam<TypeTag, Parameters::NewtonVerbose>
             ("Specify whether the Newton method should inform "
              "the user about its progress or not");
-        Parameters::registerParam<TypeTag, Properties::NewtonWriteConvergence>
+        Parameters::registerParam<TypeTag, Parameters::NewtonWriteConvergence>
             ("Write the convergence behaviour of the Newton "
              "method to a VTK file");
         Parameters::registerParam<TypeTag, Properties::NewtonTargetIterations>
@@ -549,7 +551,7 @@ protected:
     {
         numIterations_ = 0;
 
-        if (Parameters::get<TypeTag, Properties::NewtonWriteConvergence>())
+        if (Parameters::get<TypeTag, Parameters::NewtonWriteConvergence>())
             convergenceWriter_.beginTimeStep();
     }
 
@@ -766,7 +768,7 @@ protected:
     void writeConvergence_(const SolutionVector& currentSolution,
                            const GlobalEqVector& solutionUpdate)
     {
-        if (Parameters::get<TypeTag, Properties::NewtonWriteConvergence>()) {
+        if (Parameters::get<TypeTag, Parameters::NewtonWriteConvergence>()) {
             convergenceWriter_.beginIteration();
             convergenceWriter_.writeFields(currentSolution, solutionUpdate);
             convergenceWriter_.endIteration();
@@ -838,7 +840,7 @@ protected:
      */
     void end_()
     {
-        if (Parameters::get<TypeTag, Properties::NewtonWriteConvergence>())
+        if (Parameters::get<TypeTag, Parameters::NewtonWriteConvergence>())
             convergenceWriter_.endTimeStep();
     }
 

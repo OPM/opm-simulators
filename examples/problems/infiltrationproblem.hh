@@ -74,10 +74,6 @@ struct FluidSystem<TypeTag, TTag::InfiltrationBaseProblem>
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::InfiltrationBaseProblem> { static constexpr bool value = true; };
 
-// Write newton convergence?
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, TTag::InfiltrationBaseProblem> { static constexpr bool value = false; };
-
 // -1 backward differences, 0: central differences, +1: forward differences
 template<class TypeTag>
 struct NumericDifferenceMethod<TypeTag, TTag::InfiltrationBaseProblem> { static constexpr int value = 1; };
@@ -122,6 +118,15 @@ struct GridFile<TypeTag, TTag::InfiltrationBaseProblem>
 { static constexpr auto value = "./data/infiltration_50x3.dgf"; };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// Write newton convergence?
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, Properties::TTag::InfiltrationBaseProblem>
+{ static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!

@@ -31,6 +31,11 @@ namespace Opm::Parameters {
 template<class TypeTag, class MyTypeTag>
 struct NewtonVerbose { using type = Properties::UndefinedProperty; };
 
+//! Specifies whether the convergence rate and the global residual
+//! gets written out to disk for every Newton iteration
+template<class TypeTag, class MyTypeTag>
+struct NewtonWriteConvergence { using type = Properties::UndefinedProperty; };
+
 } // end namespace Opm::Parameters
 
 #endif

@@ -42,11 +42,6 @@ struct NewtonConvergenceWriter { using type = UndefinedProperty; };
 //! Specifies whether the convergence rate and the global residual
 //! gets written out to disk for every Newton iteration
 template<class TypeTag, class MyTypeTag>
-struct NewtonWriteConvergence { using type = UndefinedProperty; };
-
-//! Specifies whether the convergence rate and the global residual
-//! gets written out to disk for every Newton iteration
-template<class TypeTag, class MyTypeTag>
 struct ConvergenceWriter { using type = UndefinedProperty; };
 
 /*!

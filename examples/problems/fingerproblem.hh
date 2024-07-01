@@ -124,10 +124,6 @@ struct MaterialLaw<TypeTag, TTag::FingerBaseProblem>
     using type = ParkerLenhard;
 };
 
-// Write the solutions of individual newton iterations?
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, TTag::FingerBaseProblem> { static constexpr bool value = false; };
-
 // Use forward differences instead of central differences
 template<class TypeTag>
 struct NumericDifferenceMethod<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = +1; };
@@ -191,6 +187,15 @@ struct InitialTimeStepSize<TypeTag, TTag::FingerBaseProblem>
 };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// Write the solutions of individual newton iterations?
+template<class TypeTag>
+struct NewtonWriteConvergence<TypeTag, Properties::TTag::FingerBaseProblem>
+{ static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 

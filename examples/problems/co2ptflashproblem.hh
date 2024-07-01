@@ -140,11 +140,6 @@ public:
      using type = EffMaterialLaw;
 };
 
-// Write the Newton convergence behavior to disk?
-template <class TypeTag>
-struct NewtonWriteConvergence<TypeTag, TTag::CO2PTBaseProblem> {
-static constexpr bool value = false; };
-
 // Enable gravity false
 template <class TypeTag>
 struct EnableGravity<TypeTag, TTag::CO2PTBaseProblem> { static constexpr bool value = false;
@@ -297,8 +292,14 @@ struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
 
 } // namespace Opm::Properties
 
+namespace Opm::Parameters {
 
+// Write the Newton convergence behavior to disk?
+template <class TypeTag>
+struct NewtonWriteConvergence<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = false; };
 
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
