@@ -145,7 +145,8 @@ struct ParameterTree<TypeTag, TTag::NumericModel>
 
 //! use the global group as default for the model's parameter group
 template<class TypeTag>
-struct ModelParameterGroup<TypeTag, TTag::NumericModel> { static constexpr auto value = ""; };
+struct ModelParameterGroup<TypeTag, TTag::NumericModel>
+{ static constexpr auto value = ""; };
 
 #if HAVE_DUNE_FEM
 template<class TypeTag>
@@ -156,18 +157,21 @@ struct GridPart<TypeTag, TTag::NumericModel>
 };
 
 template<class TypeTag>
-struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType<TypeTag, Properties::GridPart>::GridViewType; };
+struct GridView<TypeTag, TTag::NumericModel>
+{ using type = typename GetPropType<TypeTag, Properties::GridPart>::GridViewType; };
 #else
 //! Use the leaf grid view by default.
 //!
 //! Except for spatial refinement, there is rarly a reason to use
 //! anything else...
 template<class TypeTag>
-struct GridView<TypeTag, TTag::NumericModel> { using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView; };
+struct GridView<TypeTag, TTag::NumericModel>
+{ using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView; };
 #endif
 
 template<class TypeTag>
-struct Vanguard<TypeTag, TTag::NumericModel> { using type = Opm::DgfVanguard<TypeTag>; };
+struct Vanguard<TypeTag, TTag::NumericModel>
+{ using type = Opm::DgfVanguard<TypeTag>; };
 
 } // namespace Opm::Properties
 
