@@ -28,29 +28,29 @@
 #ifndef EWOMS_PVS_MODEL_HH
 #define EWOMS_PVS_MODEL_HH
 
-#include <opm/material/densead/Math.hpp>
-
-#include "pvsproperties.hh"
-#include "pvslocalresidual.hh"
-#include "pvsnewtonmethod.hh"
-#include "pvsprimaryvariables.hh"
-#include "pvsratevector.hh"
-#include "pvsboundaryratevector.hh"
-#include "pvsintensivequantities.hh"
-#include "pvsextensivequantities.hh"
-#include "pvsindices.hh"
-
 #include <opm/common/Exceptions.hpp>
 
-#include <opm/models/common/multiphasebasemodel.hh>
+#include <opm/material/densead/Math.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
+#include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
+
 #include <opm/models/common/diffusionmodule.hh>
 #include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebasemodel.hh>
+
 #include <opm/models/io/vtkcompositionmodule.hh>
 #include <opm/models/io/vtkenergymodule.hh>
 #include <opm/models/io/vtkdiffusionmodule.hh>
 
-#include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
+#include <opm/models/pvs/pvsboundaryratevector.hh>
+#include <opm/models/pvs/pvsextensivequantities.hh>
+#include <opm/models/pvs/pvsindices.hh>
+#include <opm/models/pvs/pvsintensivequantities.hh>
+#include <opm/models/pvs/pvslocalresidual.hh>
+#include <opm/models/pvs/pvsnewtonmethod.hh>
+#include <opm/models/pvs/pvsprimaryvariables.hh>
+#include <opm/models/pvs/pvsproperties.hh>
+#include <opm/models/pvs/pvsratevector.hh>
 
 #include <iostream>
 #include <sstream>
@@ -65,61 +65,71 @@ class PvsModel;
 namespace Opm::Properties {
 
 namespace TTag {
+
 //! The type tag for the isothermal single phase problems
-struct PvsModel { using InheritsFrom = std::tuple<VtkDiffusion,
-                                                  VtkEnergy,
-                                                  VtkComposition,
-                                                  VtkPhasePresence,
-                                                  MultiPhaseBaseModel>; };
+struct PvsModel
+{
+    using InheritsFrom = std::tuple<VtkDiffusion,
+                                    VtkEnergy,
+                                    VtkComposition,
+                                    VtkPhasePresence,
+                                    MultiPhaseBaseModel>; };
 } // namespace TTag
 
 //! Use the PVS local jacobian operator for the PVS model
 template<class TypeTag>
-struct LocalResidual<TypeTag, TTag::PvsModel> { using type = Opm::PvsLocalResidual<TypeTag>; };
+struct LocalResidual<TypeTag, TTag::PvsModel>
+{ using type = Opm::PvsLocalResidual<TypeTag>; };
 
 //! Use the PVS specific newton method for the PVS model
 template<class TypeTag>
-struct NewtonMethod<TypeTag, TTag::PvsModel> { using type = Opm::PvsNewtonMethod<TypeTag>; };
+struct NewtonMethod<TypeTag, TTag::PvsModel>
+{ using type = Opm::PvsNewtonMethod<TypeTag>; };
 
 //! the Model property
 template<class TypeTag>
-struct Model<TypeTag, TTag::PvsModel> { using type = Opm::PvsModel<TypeTag>; };
+struct Model<TypeTag, TTag::PvsModel>
+{ using type = Opm::PvsModel<TypeTag>; };
 
 //! the PrimaryVariables property
 template<class TypeTag>
-struct PrimaryVariables<TypeTag, TTag::PvsModel> { using type = Opm::PvsPrimaryVariables<TypeTag>; };
+struct PrimaryVariables<TypeTag, TTag::PvsModel>
+{ using type = Opm::PvsPrimaryVariables<TypeTag>; };
 
 //! the RateVector property
 template<class TypeTag>
-struct RateVector<TypeTag, TTag::PvsModel> { using type = Opm::PvsRateVector<TypeTag>; };
+struct RateVector<TypeTag, TTag::PvsModel>
+{ using type = Opm::PvsRateVector<TypeTag>; };
 
 //! the BoundaryRateVector property
 template<class TypeTag>
-struct BoundaryRateVector<TypeTag, TTag::PvsModel> { using type = Opm::PvsBoundaryRateVector<TypeTag>; };
+struct BoundaryRateVector<TypeTag, TTag::PvsModel>
+{ using type = Opm::PvsBoundaryRateVector<TypeTag>; };
 
 //! the IntensiveQuantities property
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::PvsModel> { using type = Opm::PvsIntensiveQuantities<TypeTag>; };
+struct IntensiveQuantities<TypeTag, TTag::PvsModel>
+{ using type = Opm::PvsIntensiveQuantities<TypeTag>; };
 
 //! the ExtensiveQuantities property
 template<class TypeTag>
-struct ExtensiveQuantities<TypeTag, TTag::PvsModel> { using type = Opm::PvsExtensiveQuantities<TypeTag>; };
+struct ExtensiveQuantities<TypeTag, TTag::PvsModel>
+{ using type = Opm::PvsExtensiveQuantities<TypeTag>; };
 
 //! The indices required by the isothermal PVS model
 template<class TypeTag>
-struct Indices<TypeTag, TTag::PvsModel> { using type = Opm::PvsIndices<TypeTag, /*PVIdx=*/0>; };
-
-// set the model to a medium verbosity
-template<class TypeTag>
-struct PvsVerbosity<TypeTag, TTag::PvsModel> { static constexpr int value = 1; };
+struct Indices<TypeTag, TTag::PvsModel>
+{ using type = Opm::PvsIndices<TypeTag, /*PVIdx=*/0>; };
 
 //! Disable the energy equation by default
 template<class TypeTag>
-struct EnableEnergy<TypeTag, TTag::PvsModel> { static constexpr bool value = false; };
+struct EnableEnergy<TypeTag, TTag::PvsModel>
+{ static constexpr bool value = false; };
 
 // disable molecular diffusion by default
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::PvsModel> { static constexpr bool value = false; };
+struct EnableDiffusion<TypeTag, TTag::PvsModel>
+{ static constexpr bool value = false; };
 
 //! The basis value for the weight of the pressure primary variable
 template<class TypeTag>
@@ -146,6 +156,19 @@ struct PvsMoleFractionsBaseWeight<TypeTag, TTag::PvsModel>
 };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+//! The verbosity of the model (0 -> do not print anything, 2 -> spam stdout a lot)
+template<class TypeTag, class MyTypeTag>
+struct PvsVerbosity { using type = Properties::UndefinedProperty; };
+
+// set the model to a medium verbosity
+template<class TypeTag>
+struct PvsVerbosity<TypeTag, Properties::TTag::PvsModel>
+{ static constexpr int value = 1; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -275,7 +298,7 @@ public:
     PvsModel(Simulator& simulator)
         : ParentType(simulator)
     {
-        verbosity_ = Parameters::get<TypeTag, Properties::PvsVerbosity>();
+        verbosity_ = Parameters::get<TypeTag, Parameters::PvsVerbosity>();
         numSwitched_ = 0;
     }
 
@@ -296,7 +319,7 @@ public:
         if (enableEnergy)
             Opm::VtkEnergyModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::PvsVerbosity>
+        Parameters::registerParam<TypeTag, Parameters::PvsVerbosity>
             ("The verbosity level of the primary variable "
              "switching model");
     }

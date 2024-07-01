@@ -44,12 +44,16 @@ struct OutflowProblem
 
 } // end namespace TTag
 
+} // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
 // Verbosity of the PVS model (0=silent, 1=medium, 2=chatty)
 template<class TypeTag>
-struct PvsVerbosity<TypeTag, TTag::OutflowProblem>
+struct PvsVerbosity<TypeTag, Properties::TTag::OutflowProblem>
 { static constexpr int value = 1; };
 
-} // namespace Opm::Properties
+}
 
 int main(int argc, char **argv)
 {
