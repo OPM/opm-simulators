@@ -50,25 +50,10 @@ struct FvBaseDiscretization
 } // namespace TTag
 
 
-//! set the splices for the finite volume discretizations
 template<class TypeTag, class MyTypeTag>
 struct LinearSolverSplice { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LocalLinearizerSplice { using type = UndefinedProperty; };
-template<class TypeTag>
-struct Splices<TypeTag, TTag::FvBaseDiscretization>
-{
-    using type = std::tuple<GetSplicePropType<TypeTag, TTag::FvBaseDiscretization, Properties::LinearSolverSplice>,
-                            GetSplicePropType<TypeTag, TTag::FvBaseDiscretization, Properties::LocalLinearizerSplice>>;
-};
-
-//! use a parallel BiCGStab linear solver by default
-template<class TypeTag>
-struct LinearSolverSplice<TypeTag, TTag::FvBaseDiscretization> { using type = TTag::ParallelBiCGStabLinearSolver; };
-
-//! by default, use finite differences to linearize the system of PDEs
-template<class TypeTag>
-struct LocalLinearizerSplice<TypeTag, TTag::FvBaseDiscretization> { using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 /*!
  * \brief Representation of a function evaluation and all necessary derivatives with
@@ -255,6 +240,26 @@ struct UseVolumetricResidual { using type = UndefinedProperty; };
 //! Specify if experimental features should be enabled or not.
 template<class TypeTag, class MyTypeTag>
 struct EnableExperiments { using type = UndefinedProperty; };
+
+// Set defaults
+
+//! set the splices for the finite volume discretizations
+template<class TypeTag>
+struct Splices<TypeTag, TTag::FvBaseDiscretization>
+{
+    using type = std::tuple<GetSplicePropType<TypeTag, TTag::FvBaseDiscretization, Properties::LinearSolverSplice>,
+                            GetSplicePropType<TypeTag, TTag::FvBaseDiscretization, Properties::LocalLinearizerSplice>>;
+};
+
+//! use a parallel BiCGStab linear solver by default
+template<class TypeTag>
+struct LinearSolverSplice<TypeTag, TTag::FvBaseDiscretization>
+{ using type = TTag::ParallelBiCGStabLinearSolver; };
+
+//! by default, use finite differences to linearize the system of PDEs
+template<class TypeTag>
+struct LocalLinearizerSplice<TypeTag, TTag::FvBaseDiscretization>
+{ using type = TTag::FiniteDifferenceLocalLinearizer; };
 
 } // namespace Opm::Properties
 
