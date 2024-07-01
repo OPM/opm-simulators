@@ -194,12 +194,6 @@ struct NewtonMaxIterations<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr int value = 30;
 };
 
-template <class TypeTag>
-struct NewtonTargetIterations<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 6;
-};
-
 // output
 template <class TypeTag>
 struct VtkWriteFilterVelocities<TypeTag, TTag::CO2PTBaseProblem> {
@@ -298,6 +292,13 @@ struct NewtonTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e-3;
+};
+
+template <class TypeTag>
+struct NewtonTargetIterations<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 6;
 };
 
 } // namespace Opm::Parameters

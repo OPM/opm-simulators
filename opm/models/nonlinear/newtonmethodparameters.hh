@@ -50,6 +50,17 @@ struct NewtonTolerance { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct NewtonMaxError { using type = Properties::UndefinedProperty; };
 
+/*!
+ * \brief The number of iterations at which the Newton method
+ *        should aim at.
+ *
+ * This is used to control the time-step size. The heuristic used
+ * is to scale the last time-step size by the deviation of the
+ * number of iterations used from the target steps.
+ */
+template<class TypeTag, class MyTypeTag>
+struct NewtonTargetIterations { using type = Properties::UndefinedProperty; };
+
 } // end namespace Opm::Parameters
 
 #endif

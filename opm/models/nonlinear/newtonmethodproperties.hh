@@ -44,17 +44,6 @@ struct NewtonConvergenceWriter { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct ConvergenceWriter { using type = UndefinedProperty; };
 
-/*!
- * \brief The number of iterations at which the Newton method
- *        should aim at.
- *
- * This is used to control the time-step size. The heuristic used
- * is to scale the last time-step size by the deviation of the
- * number of iterations used from the target steps.
- */
-template<class TypeTag, class MyTypeTag>
-struct NewtonTargetIterations { using type = UndefinedProperty; };
-
 //! Number of maximum iterations for the Newton method.
 template<class TypeTag, class MyTypeTag>
 struct NewtonMaxIterations { using type = UndefinedProperty; };

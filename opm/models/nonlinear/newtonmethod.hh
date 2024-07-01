@@ -79,8 +79,6 @@ struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = NullC
 // set the abortion tolerace to some very large value. if not
 // overwritten at run-time this basically disables abortions
 template<class TypeTag>
-struct NewtonTargetIterations<TypeTag, TTag::NewtonMethod> { static constexpr int value = 10; };
-template<class TypeTag>
 struct NewtonMaxIterations<TypeTag, TTag::NewtonMethod> { static constexpr int value = 20; };
 
 } // namespace Opm::Properties
@@ -108,6 +106,10 @@ struct NewtonMaxError<TypeTag, Properties::TTag::NewtonMethod>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e100;
 };
+
+template<class TypeTag>
+struct NewtonTargetIterations<TypeTag, Properties::TTag::NewtonMethod>
+{ static constexpr int value = 10; };
 
 } // namespace Opm::Parameters
 
@@ -168,7 +170,7 @@ public:
         Parameters::registerParam<TypeTag, Parameters::NewtonWriteConvergence>
             ("Write the convergence behaviour of the Newton "
              "method to a VTK file");
-        Parameters::registerParam<TypeTag, Properties::NewtonTargetIterations>
+        Parameters::registerParam<TypeTag, Parameters::NewtonTargetIterations>
             ("The 'optimum' number of Newton iterations per time step");
         Parameters::registerParam<TypeTag, Properties::NewtonMaxIterations>
             ("The maximum number of Newton iterations per time step");
@@ -864,7 +866,7 @@ protected:
 
     // optimal number of iterations we want to achieve
     int targetIterations_() const
-    { return Parameters::get<TypeTag, Properties::NewtonTargetIterations>(); }
+    { return Parameters::get<TypeTag, Parameters::NewtonTargetIterations>(); }
     // maximum number of iterations we do before giving up
     int maxIterations_() const
     { return Parameters::get<TypeTag, Properties::NewtonMaxIterations>(); }
