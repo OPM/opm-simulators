@@ -361,10 +361,10 @@ struct StandardPreconditioners {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
-            using CuILU0_OPM_Impl = typename gpuistl::CuILU0_OPM_Impl<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
-            auto cuilu0 = std::make_shared<CuILU0_OPM_Impl>(op.getmat(), split_matrix, tune_gpu_kernels);
+            using GpuILU0_OPM_Impl = typename gpuistl::GpuILU0_OPM_Impl<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            auto gpuilu0 = std::make_shared<GpuILU0_OPM_Impl>(op.getmat(), split_matrix, tune_gpu_kernels);
 
-            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, CuILU0_OPM_Impl>>(cuilu0);
+            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, GpuILU0_OPM_Impl>>(gpuilu0);
             auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
@@ -619,9 +619,9 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
-            using CUILU0 = typename gpuistl::CuILU0_OPM_Impl<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            using GPUILU0 = typename gpuistl::GpuILU0_OPM_Impl<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
 
-            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, CUILU0>>(std::make_shared<CUILU0>(op.getmat(), split_matrix, tune_gpu_kernels));
+            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GPUILU0>>(std::make_shared<GPUILU0>(op.getmat(), split_matrix, tune_gpu_kernels));
         });
 
         F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {

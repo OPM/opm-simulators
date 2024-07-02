@@ -43,7 +43,7 @@ namespace Opm::gpuistl
 //! \note We assume X and Y are both GpuVector<real_type>, but we leave them as template
 //! arguments in case of future additions.
 template <class M, class X, class Y, int l = 1>
-class CuILU0_OPM_Impl : public Dune::PreconditionerWithUpdate<X, Y>
+class GpuILU0_OPM_Impl : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
     //! \brief The matrix type the preconditioner is for.
@@ -63,7 +63,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    explicit CuILU0_OPM_Impl(const M& A, bool splitMatrix, bool tuneKernels);
+    explicit GpuILU0_OPM_Impl(const M& A, bool splitMatrix, bool tuneKernels);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.

@@ -41,7 +41,7 @@ namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
-CuILU0_OPM_Impl<M, X, Y, l>::CuILU0_OPM_Impl(const M& A, bool splitMatrix, bool tuneKernels)
+GpuILU0_OPM_Impl<M, X, Y, l>::GpuILU0_OPM_Impl(const M& A, bool splitMatrix, bool tuneKernels)
     : m_cpuMatrix(A)
     , m_levelSets(Opm::getMatrixRowColoring(m_cpuMatrix, Opm::ColoringType::LOWER))
     , m_reorderedToNatural(detail::createReorderedToNatural(m_levelSets))
@@ -59,17 +59,17 @@ CuILU0_OPM_Impl<M, X, Y, l>::CuILU0_OPM_Impl(const M& A, bool splitMatrix, bool 
     // TODO: Should in some way verify that this matrix is symmetric, only do it debug mode?
     // Some sanity check
     OPM_ERROR_IF(A.N() != m_gpuMatrix.N(),
-                 fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_gpuMatrix.N(), A.N()));
+                 fmt::format("cu/hipSPARSE matrix not same size as DUNE matrix. {} vs {}.", m_gpuMatrix.N(), A.N()));
     OPM_ERROR_IF(A[0][0].N() != m_gpuMatrix.blockSize(),
-                 fmt::format("CuSparse matrix not same blocksize as DUNE matrix. {} vs {}.",
+                 fmt::format("cu/hipSPARSE matrix not same blocksize as DUNE matrix. {} vs {}.",
                              m_gpuMatrix.blockSize(),
                              A[0][0].N()));
     OPM_ERROR_IF(A.N() * A[0][0].N() != m_gpuMatrix.dim(),
-                 fmt::format("CuSparse matrix not same dimension as DUNE matrix. {} vs {}.",
+                 fmt::format("cu/hipSPARSE matrix not same dimension as DUNE matrix. {} vs {}.",
                              m_gpuMatrix.dim(),
                              A.N() * A[0][0].N()));
     OPM_ERROR_IF(A.nonzeroes() != m_gpuMatrix.nonzeroes(),
-                 fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
+                 fmt::format("cu/hipSPARSE matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
                              m_gpuMatrix.nonzeroes(),
                              A.nonzeroes()));
     if (m_splitMatrix) {
@@ -94,13 +94,13 @@ CuILU0_OPM_Impl<M, X, Y, l>::CuILU0_OPM_Impl(const M& A, bool splitMatrix, bool 
 
 template <class M, class X, class Y, int l>
 void
-CuILU0_OPM_Impl<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
+GpuILU0_OPM_Impl<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
 {
 }
 
 template <class M, class X, class Y, int l>
 void
-CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
+GpuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
 {
     // ScopeTimer timer("Apply");
     OPM_TIMEBLOCK(prec_apply);
@@ -175,20 +175,20 @@ CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
 
 template <class M, class X, class Y, int l>
 void
-CuILU0_OPM_Impl<M, X, Y, l>::post([[maybe_unused]] X& x)
+GpuILU0_OPM_Impl<M, X, Y, l>::post([[maybe_unused]] X& x)
 {
 }
 
 template <class M, class X, class Y, int l>
 Dune::SolverCategory::Category
-CuILU0_OPM_Impl<M, X, Y, l>::category() const
+GpuILU0_OPM_Impl<M, X, Y, l>::category() const
 {
     return Dune::SolverCategory::sequential;
 }
 
 template <class M, class X, class Y, int l>
 void
-CuILU0_OPM_Impl<M, X, Y, l>::update()
+GpuILU0_OPM_Impl<M, X, Y, l>::update()
 {
     OPM_TIMEBLOCK(prec_update);
     {
@@ -207,7 +207,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::update()
 
 template <class M, class X, class Y, int l>
 void
-CuILU0_OPM_Impl<M, X, Y, l>::computeDiagAndMoveReorderedData()
+GpuILU0_OPM_Impl<M, X, Y, l>::computeDiagAndMoveReorderedData()
 {
     OPM_TIMEBLOCK(prec_update);
     {
@@ -269,7 +269,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::computeDiagAndMoveReorderedData()
 
 template <class M, class X, class Y, int l>
 void
-CuILU0_OPM_Impl<M, X, Y, l>::tuneThreadBlockSizes()
+GpuILU0_OPM_Impl<M, X, Y, l>::tuneThreadBlockSizes()
 {
 
     using GpuDILUType = std::remove_reference_t<decltype(*this)>;
@@ -288,24 +288,24 @@ CuILU0_OPM_Impl<M, X, Y, l>::tuneThreadBlockSizes()
 }
 
 } // namespace Opm::gpuistl
-#define INSTANTIATE_CUDILU_DUNE(realtype, blockdim)                                                                    \
-    template class ::Opm::gpuistl::CuILU0_OPM_Impl<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,            \
+#define INSTANTIATE_GPUILU0_DUNE(realtype, blockdim)                                                                    \
+    template class ::Opm::gpuistl::GpuILU0_OPM_Impl<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,            \
                                          ::Opm::gpuistl::GpuVector<realtype>,                                            \
                                          ::Opm::gpuistl::GpuVector<realtype>>;                                           \
-    template class ::Opm::gpuistl::CuILU0_OPM_Impl<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,             \
+    template class ::Opm::gpuistl::GpuILU0_OPM_Impl<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,             \
                                          ::Opm::gpuistl::GpuVector<realtype>,                                            \
                                          ::Opm::gpuistl::GpuVector<realtype>>
 
-INSTANTIATE_CUDILU_DUNE(double, 1);
-INSTANTIATE_CUDILU_DUNE(double, 2);
-INSTANTIATE_CUDILU_DUNE(double, 3);
-INSTANTIATE_CUDILU_DUNE(double, 4);
-INSTANTIATE_CUDILU_DUNE(double, 5);
-INSTANTIATE_CUDILU_DUNE(double, 6);
+INSTANTIATE_GPUILU0_DUNE(double, 1);
+INSTANTIATE_GPUILU0_DUNE(double, 2);
+INSTANTIATE_GPUILU0_DUNE(double, 3);
+INSTANTIATE_GPUILU0_DUNE(double, 4);
+INSTANTIATE_GPUILU0_DUNE(double, 5);
+INSTANTIATE_GPUILU0_DUNE(double, 6);
 
-INSTANTIATE_CUDILU_DUNE(float, 1);
-INSTANTIATE_CUDILU_DUNE(float, 2);
-INSTANTIATE_CUDILU_DUNE(float, 3);
-INSTANTIATE_CUDILU_DUNE(float, 4);
-INSTANTIATE_CUDILU_DUNE(float, 5);
-INSTANTIATE_CUDILU_DUNE(float, 6);
+INSTANTIATE_GPUILU0_DUNE(float, 1);
+INSTANTIATE_GPUILU0_DUNE(float, 2);
+INSTANTIATE_GPUILU0_DUNE(float, 3);
+INSTANTIATE_GPUILU0_DUNE(float, 4);
+INSTANTIATE_GPUILU0_DUNE(float, 5);
+INSTANTIATE_GPUILU0_DUNE(float, 6);
