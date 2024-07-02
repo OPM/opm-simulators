@@ -196,7 +196,7 @@ private:
                 = Dune::OverlappingSchwarzOperator<GpuSparseMatrix<real_type>, XGPU, XGPU, CudaCommunication>;
             auto cudaCommunication = std::make_shared<CudaCommunication>(gpuComm);
 
-            auto mpiPreconditioner = std::make_shared<CuBlockPreconditioner<XGPU, XGPU, CudaCommunication>>(
+            auto mpiPreconditioner = std::make_shared<GpuBlockPreconditioner<XGPU, XGPU, CudaCommunication>>(
                 preconditionerReallyOnGPU, cudaCommunication);
 
             auto scalarProduct = std::make_shared<Dune::ParallelScalarProduct<XGPU, CudaCommunication>>(

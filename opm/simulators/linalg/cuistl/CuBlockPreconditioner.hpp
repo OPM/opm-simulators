@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUISTL_CUBLOCKPRECONDITIONER_HPP
-#define OPM_CUISTL_CUBLOCKPRECONDITIONER_HPP
+#ifndef OPM_GPUISTL_GPUBLOCKPRECONDITIONER_HPP
+#define OPM_GPUISTL_GPUBLOCKPRECONDITIONER_HPP
 
 #include <dune/common/shared_ptr.hh>
 #include <memory>
@@ -31,7 +31,7 @@ namespace Opm::gpuistl
 //!
 //! @note We aim to intgrate this into OwningBlockPreconditioner (or a relative thereof).
 template <class X, class Y, class C, class P = Dune::PreconditionerWithUpdate<X, Y>>
-class CuBlockPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>, public PreconditionerHolder<X, Y>
+class GpuBlockPreconditioner : public Dune::PreconditionerWithUpdate<X, Y>, public PreconditionerHolder<X, Y>
 {
 public:
     using domain_type = X;
@@ -47,13 +47,13 @@ public:
     //! @param c The communication object for syncing overlap and copy
     //! data points. (E.~g. OwnerOverlapCopyCommunication )
     //!
-    CuBlockPreconditioner(const std::shared_ptr<P>& p, const std::shared_ptr<const communication_type>& c)
+    GpuBlockPreconditioner(const std::shared_ptr<P>& p, const std::shared_ptr<const communication_type>& c)
         : m_preconditioner(p)
         , m_communication(c)
     {
     }
 
-    CuBlockPreconditioner(const std::shared_ptr<P>& p, const communication_type& c)
+    GpuBlockPreconditioner(const std::shared_ptr<P>& p, const communication_type& c)
         : m_preconditioner(p)
         , m_communication(Dune::stackobject_to_shared_ptr(c))
     {
