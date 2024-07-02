@@ -23,7 +23,7 @@
 #include <stdexcept>
 #include <config.h>
 
-namespace Opm::cuistl::detail::JAC
+namespace Opm::gpuistl::detail::JAC
 {
 namespace
 {
@@ -59,8 +59,8 @@ void
 invertDiagonalAndFlatten(T* mat, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec)
 {
     if (blocksize <= 3) {
-        int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuInvertDiagonalAndFlatten<T, blocksize>);
-        int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
+        int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuInvertDiagonalAndFlatten<T, blocksize>);
+        int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
         cuInvertDiagonalAndFlatten<T, blocksize>
             <<<nThreadBlocks, threadBlockSize>>>(mat, rowIndices, colIndices, numberOfRows, vec);
     } else {
@@ -84,4 +84,4 @@ INSTANTIATE_KERNEL_WRAPPERS(double, 4);
 INSTANTIATE_KERNEL_WRAPPERS(double, 5);
 INSTANTIATE_KERNEL_WRAPPERS(double, 6);
 
-} // namespace Opm::cuistl::detail::JAC
+} // namespace Opm::gpuistl::detail::JAC

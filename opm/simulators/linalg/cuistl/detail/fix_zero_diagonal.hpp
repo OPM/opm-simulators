@@ -22,7 +22,7 @@
 #include <limits>
 #include <vector>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 /**
@@ -53,6 +53,6 @@ makeMatrixWithNonzeroDiagonal(const Matrix& matrix,
 
     return newMatrix;
 }
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 
 #endif

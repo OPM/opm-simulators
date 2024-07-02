@@ -21,7 +21,7 @@
 #include <cublas_v2.h>
 #include <memory>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 /**
@@ -31,7 +31,7 @@ namespace Opm::cuistl::detail
  * @code{.cpp}
  * #include <opm/simulators/linalg/cuistl/detail/CuBlasHandle.hpp>
  * void someFunction() {
- *     auto& cublasHandle = ::Opm::cuistl::detail::CuBlasHandle::getInstance();
+ *     auto& cublasHandle = ::Opm::gpuistl::detail::CuBlasHandle::getInstance();
  *     int cuBlasVersion = -1;
  *     OPM_CUBLAS_SAFE_CALL(cublasGetVersion(cublasHandle.get(), &cuBlasVersion));
  * }
@@ -64,5 +64,5 @@ private:
     CuBlasHandle();
     cublasHandle_t m_handle;
 };
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 #endif // OPM_CUBLASHANDLE_HPP

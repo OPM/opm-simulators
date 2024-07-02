@@ -37,7 +37,7 @@
 #include <config.h>
 #include <chrono>
 #include <tuple>
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
@@ -287,14 +287,14 @@ CuILU0_OPM_Impl<M, X, Y, l>::tuneThreadBlockSizes()
     detail::tuneThreadBlockSize(applyFunc, m_upperSolveThreadBlockSize, tmpV, tmpD);
 }
 
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl
 #define INSTANTIATE_CUDILU_DUNE(realtype, blockdim)                                                                    \
-    template class ::Opm::cuistl::CuILU0_OPM_Impl<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,            \
-                                         ::Opm::cuistl::CuVector<realtype>,                                            \
-                                         ::Opm::cuistl::CuVector<realtype>>;                                           \
-    template class ::Opm::cuistl::CuILU0_OPM_Impl<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,             \
-                                         ::Opm::cuistl::CuVector<realtype>,                                            \
-                                         ::Opm::cuistl::CuVector<realtype>>
+    template class ::Opm::gpuistl::CuILU0_OPM_Impl<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,            \
+                                         ::Opm::gpuistl::CuVector<realtype>,                                            \
+                                         ::Opm::gpuistl::CuVector<realtype>>;                                           \
+    template class ::Opm::gpuistl::CuILU0_OPM_Impl<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,             \
+                                         ::Opm::gpuistl::CuVector<realtype>,                                            \
+                                         ::Opm::gpuistl::CuVector<realtype>>
 
 INSTANTIATE_CUDILU_DUNE(double, 1);
 INSTANTIATE_CUDILU_DUNE(double, 2);

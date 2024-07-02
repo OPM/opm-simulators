@@ -29,7 +29,7 @@
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <type_traits>
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 
 namespace
@@ -343,4 +343,4 @@ INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 4);
 INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 5);
 INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 6);
 
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl

@@ -22,7 +22,7 @@
 
 #include <opm/simulators/linalg/cuistl/detail/has_function.hpp>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 //! @brief Tests (compile time) if the preconditioner type needs to call pre() before a call to apply()
@@ -60,5 +60,5 @@ shouldCallPreconditionerPost()
         return true;
     }
 }
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 #endif

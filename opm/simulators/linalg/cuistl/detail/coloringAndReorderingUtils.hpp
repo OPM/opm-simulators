@@ -38,16 +38,16 @@ This file contains a collection of utility functions used in the GPU implementat
 The functions deal with creating the mappings between reordered and natural indices, as well as
 extracting sparsity structures from dune matrices and creating cusparsematrix indices
 */
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
     inline std::vector<int>
     createReorderedToNatural(Opm::SparseTable<size_t>& levelSets)
     {
-        auto res = std::vector<int>(Opm::cuistl::detail::to_size_t(levelSets.dataSize()));
+        auto res = std::vector<int>(Opm::gpuistl::detail::to_size_t(levelSets.dataSize()));
         int globCnt = 0;
         for (auto row : levelSets) {
             for (auto col : row) {
-                OPM_ERROR_IF(Opm::cuistl::detail::to_size_t(globCnt) >= res.size(),
+                OPM_ERROR_IF(Opm::gpuistl::detail::to_size_t(globCnt) >= res.size(),
                             fmt::format("Internal error. globCnt = {}, res.size() = {}", globCnt, res.size()));
                 res[globCnt++] = static_cast<int>(col);
             }
@@ -58,11 +58,11 @@ namespace Opm::cuistl::detail
     inline std::vector<int>
     createNaturalToReordered(Opm::SparseTable<size_t>& levelSets)
     {
-        auto res = std::vector<int>(Opm::cuistl::detail::to_size_t(levelSets.dataSize()));
+        auto res = std::vector<int>(Opm::gpuistl::detail::to_size_t(levelSets.dataSize()));
         int globCnt = 0;
         for (auto row : levelSets) {
             for (auto col : row) {
-                OPM_ERROR_IF(Opm::cuistl::detail::to_size_t(globCnt) >= res.size(),
+                OPM_ERROR_IF(Opm::gpuistl::detail::to_size_t(globCnt) >= res.size(),
                             fmt::format("Internal error. globCnt = {}, res.size() = {}", globCnt, res.size()));
                 res[col] = globCnt++;
             }

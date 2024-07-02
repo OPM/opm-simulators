@@ -21,7 +21,7 @@
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 //! \brief Common interface for adapters that hold preconditioners.
 //!
@@ -38,6 +38,6 @@ public:
      */
     virtual std::shared_ptr<Dune::PreconditionerWithUpdate<X, Y>> getUnderlyingPreconditioner() = 0;
 };
-} // end namespace Opm::cuistl
+} // end namespace Opm::gpuistl
 
 #endif

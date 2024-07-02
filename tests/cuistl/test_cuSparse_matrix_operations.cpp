@@ -85,10 +85,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FlattenAndInvertDiagonalWith3By3Blocks, T, Numeric
     B[1][1][1][1] = -1.0;
     B[1][1][2][2] = -1.0;
 
-    Opm::cuistl::CuSparseMatrix<T> m = Opm::cuistl::CuSparseMatrix<T>::fromMatrix(B);
-    Opm::cuistl::CuVector<T> dInvDiag(blocksize * blocksize * N);
+    Opm::gpuistl::CuSparseMatrix<T> m = Opm::gpuistl::CuSparseMatrix<T>::fromMatrix(B);
+    Opm::gpuistl::CuVector<T> dInvDiag(blocksize * blocksize * N);
 
-    Opm::cuistl::detail::JAC::invertDiagonalAndFlatten<T, 3>(
+    Opm::gpuistl::detail::JAC::invertDiagonalAndFlatten<T, 3>(
         m.getNonZeroValues().data(), m.getRowIndices().data(), m.getColumnIndices().data(), N, dInvDiag.data());
 
     std::vector<T> expectedInvDiag {-1.0 / 4.0,
@@ -159,10 +159,10 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(FlattenAndInvertDiagonalWith2By2Blocks, T, Numeric
     B[1][1][0][0] = -1.0;
     B[1][1][1][1] = -1.0;
 
-    Opm::cuistl::CuSparseMatrix<T> m = Opm::cuistl::CuSparseMatrix<T>::fromMatrix(B);
-    Opm::cuistl::CuVector<T> dInvDiag(blocksize * blocksize * N);
+    Opm::gpuistl::CuSparseMatrix<T> m = Opm::gpuistl::CuSparseMatrix<T>::fromMatrix(B);
+    Opm::gpuistl::CuVector<T> dInvDiag(blocksize * blocksize * N);
 
-    Opm::cuistl::detail::JAC::invertDiagonalAndFlatten<T, 2>(
+    Opm::gpuistl::detail::JAC::invertDiagonalAndFlatten<T, 2>(
         m.getNonZeroValues().data(), m.getRowIndices().data(), m.getColumnIndices().data(), N, dInvDiag.data());
 
     std::vector<T> expectedInvDiag {2.0, -2.0, -1.0 / 2.0, 1.0, -1.0, 0.0, 0.0, -1.0};

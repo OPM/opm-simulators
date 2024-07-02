@@ -24,7 +24,7 @@
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <vector>
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 /**
  * @brief GPUSender is a wrapper class for classes which will implement copOwnerToAll
@@ -409,5 +409,5 @@ public:
 private:
     std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> m_sender;
 };
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl
 #endif

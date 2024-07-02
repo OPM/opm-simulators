@@ -36,7 +36,7 @@
  * while Dune::BlockVector (and relatives) use unsigned size_t.
  */
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 /**
@@ -102,6 +102,6 @@ to_size_t(int i)
 
     return std::size_t(i);
 }
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 
 #endif

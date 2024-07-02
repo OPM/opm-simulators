@@ -41,7 +41,7 @@
 #include <opm/simulators/linalg/cuistl/detail/preconditionerKernels/JacKernels.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
@@ -122,14 +122,14 @@ CuJac<M, X, Y, l>::invertDiagonalAndFlatten()
                                                                                 m_diagInvFlattened.data());
 }
 
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl
 #define INSTANTIATE_CUJAC_DUNE(realtype, blockdim)                                                                     \
-    template class ::Opm::cuistl::CuJac<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,             \
-                                        ::Opm::cuistl::CuVector<realtype>,                                             \
-                                        ::Opm::cuistl::CuVector<realtype>>;                                            \
-    template class ::Opm::cuistl::CuJac<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,              \
-                                        ::Opm::cuistl::CuVector<realtype>,                                             \
-                                        ::Opm::cuistl::CuVector<realtype>>
+    template class ::Opm::gpuistl::CuJac<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,             \
+                                        ::Opm::gpuistl::CuVector<realtype>,                                             \
+                                        ::Opm::gpuistl::CuVector<realtype>>;                                            \
+    template class ::Opm::gpuistl::CuJac<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,              \
+                                        ::Opm::gpuistl::CuVector<realtype>,                                             \
+                                        ::Opm::gpuistl::CuVector<realtype>>
 
 INSTANTIATE_CUJAC_DUNE(double, 1);
 INSTANTIATE_CUJAC_DUNE(double, 2);

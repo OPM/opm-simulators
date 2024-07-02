@@ -41,11 +41,11 @@ using B1x1Vec = Dune::BlockVector<Dune::FieldVector<double, 1>>;
 using B2x2Vec = Dune::BlockVector<Dune::FieldVector<double, 2>>;
 using Sp1x1BlockMatrix = Dune::BCRSMatrix<FM1x1>;
 using Sp2x2BlockMatrix = Dune::BCRSMatrix<FM2x2>;
-using CuMatrix = Opm::cuistl::CuSparseMatrix<T>;
-using CuIntVec = Opm::cuistl::CuVector<int>;
-using CuFloatingPointVec = Opm::cuistl::CuVector<T>;
-using CuDilu1x1 = Opm::cuistl::CuDILU<Sp1x1BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
-using CuDilu2x2 = Opm::cuistl::CuDILU<Sp2x2BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
+using CuMatrix = Opm::gpuistl::CuSparseMatrix<T>;
+using CuIntVec = Opm::gpuistl::CuVector<int>;
+using CuFloatingPointVec = Opm::gpuistl::CuVector<T>;
+using CuDilu1x1 = Opm::gpuistl::CuDILU<Sp1x1BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
+using CuDilu2x2 = Opm::gpuistl::CuDILU<Sp2x2BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
 
 Sp1x1BlockMatrix
 get1x1BlockTestMatrix()

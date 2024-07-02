@@ -20,7 +20,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 namespace
@@ -100,4 +100,4 @@ CuSparseResource<T>::~CuSparseResource()
     // proper name of the function being called.
     OPM_CUSPARSE_WARN_IF_ERROR(m_deleter(m_resource));
 }
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail

@@ -21,7 +21,7 @@
 #include <opm/simulators/linalg/cuistl/detail/CuSparseResource.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 /**
@@ -52,7 +52,7 @@ createMatrixDescription()
 
 /**
  * @brief createLowerDiagonalDescription creates a lower diagonal matrix description
- * @return a lower diagonal matrix description overlapped with options from ::Opm::cuistl::detail::createMatrixDescription()
+ * @return a lower diagonal matrix description overlapped with options from ::Opm::gpuistl::detail::createMatrixDescription()
  *
  * @note This will assume it has a unit diagonal
  */
@@ -67,7 +67,7 @@ createLowerDiagonalDescription()
 
 /**
  * @brief createUpperDiagonalDescription creates an upper diagonal matrix description
- * @return an upper diagonal matrix description overlapped with options from ::Opm::cuistl::detail::createMatrixDescription()
+ * @return an upper diagonal matrix description overlapped with options from ::Opm::gpuistl::detail::createMatrixDescription()
  *
  * @note This will assume it has a non-unit diagonal.
  */
@@ -81,6 +81,6 @@ createUpperDiagonalDescription()
     return description;
 }
 
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 
 #endif // CU_MATRIX_DESCRIPTION_HPP

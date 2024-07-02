@@ -163,7 +163,7 @@ BOOST_AUTO_TEST_CASE(TestFiniteDifference1D)
         expectedOutputVector[i][1] = 43.0;
         inputVector[i][0] = 1.0;
         auto converter
-            = Opm::cuistl::PreconditionerConvertFieldTypeAdapter<TestPreconditioner, SpMatrixDouble, XDouble, XDouble>(
+            = Opm::gpuistl::PreconditionerConvertFieldTypeAdapter<TestPreconditioner, SpMatrixDouble, XDouble, XDouble>(
                 B);
         auto underlyingPreconditioner = std::make_shared<TestPreconditioner>(
             converter.getConvertedMatrix(), inputVector, B, expectedOutputVector);

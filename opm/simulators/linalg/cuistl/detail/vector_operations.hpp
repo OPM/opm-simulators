@@ -20,7 +20,7 @@
 #define OPM_CUISTL_VECTOR_OPERATIONS_HPP
 #include <cstddef>
 #include <cublas_v2.h>
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 /**
@@ -81,5 +81,5 @@ void weightedDiagMV(const T* squareBlockVector,
                     T relaxationFactor,
                     const T* srcVec,
                     T* dstVec);
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 #endif

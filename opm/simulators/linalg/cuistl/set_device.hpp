@@ -20,7 +20,7 @@
 #ifndef OPM_CUISTL_SET_DEVICE_HEADER
 #define OPM_CUISTL_SET_DEVICE_HEADER
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 //! @brief Sets the correct CUDA device in the setting of MPI
 //!
@@ -32,5 +32,5 @@ namespace Opm::cuistl
 //!
 //! @note If no CUDA device is present, this does nothing.
 void setDevice(int mpiRank, int numberOfMpiRanks);
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl
 #endif

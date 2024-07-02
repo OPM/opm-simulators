@@ -28,7 +28,7 @@
 
 
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 //! \brief Jacobi preconditioner on the GPU.
 //!
@@ -106,6 +106,6 @@ private:
 
     void invertDiagonalAndFlatten();
 };
-} // end namespace Opm::cuistl
+} // end namespace Opm::gpuistl
 
 #endif

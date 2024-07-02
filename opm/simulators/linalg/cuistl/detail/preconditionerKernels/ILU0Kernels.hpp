@@ -20,7 +20,7 @@
 #define OPM_ILU0_KERNELS_HPP
 #include <cstddef>
 #include <vector>
-namespace Opm::cuistl::detail::ILU0
+namespace Opm::gpuistl::detail::ILU0
 {
 
 /**
@@ -190,5 +190,5 @@ void LUFactorizationSplit(T* reorderedLowerMat,
                           int rowsInLevelSet,
                           int threadBlockSize);
 
-} // namespace Opm::cuistl::detail::ILU0
+} // namespace Opm::gpuistl::detail::ILU0
 #endif

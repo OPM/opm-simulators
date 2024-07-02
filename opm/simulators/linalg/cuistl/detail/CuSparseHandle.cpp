@@ -18,7 +18,7 @@
 */
 #include <opm/simulators/linalg/cuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 
@@ -46,4 +46,4 @@ CuSparseHandle::getInstance()
     return instance;
 }
 
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail

@@ -28,7 +28,7 @@
 
 
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 //! \brief Sequential ILU0 preconditioner on the GPU through the CuSparse library.
 //!
@@ -129,6 +129,6 @@ private:
 
     void updateILUConfiguration();
 };
-} // end namespace Opm::cuistl
+} // end namespace Opm::gpuistl
 
 #endif

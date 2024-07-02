@@ -21,7 +21,7 @@
 #include <cstddef>
 #include <cuda.h>
 #include <cuda_runtime.h>
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
     constexpr inline size_t getThreads([[maybe_unused]] size_t numberOfRows)
     {

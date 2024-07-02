@@ -20,7 +20,7 @@
 #define OPM_JAC_KERNELS_HPP
 #include <cstddef>
 #include <vector>
-namespace Opm::cuistl::detail::JAC
+namespace Opm::gpuistl::detail::JAC
 {
 
 /**
@@ -34,5 +34,5 @@ namespace Opm::cuistl::detail::JAC
 template <class T, int blocksize>
 void invertDiagonalAndFlatten(T* mat, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec);
 
-} // namespace Opm::cuistl::detail::JAC
+} // namespace Opm::gpuistl::detail::JAC
 #endif

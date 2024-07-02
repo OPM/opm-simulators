@@ -26,7 +26,7 @@
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/detail/vector_operations.hpp>
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 
 template <class T>
@@ -304,4 +304,4 @@ template class CuVector<double>;
 template class CuVector<float>;
 template class CuVector<int>;
 
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl

@@ -46,7 +46,7 @@ main(int argc, char** argv)
     int rank, totalRanks;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &totalRanks);
-    Opm::cuistl::setDevice(rank, totalRanks);
+    Opm::gpuistl::setDevice(rank, totalRanks);
     boost::unit_test::unit_test_main(&init_unit_test_func, argc, argv);
 }
 
@@ -62,12 +62,12 @@ BOOST_AUTO_TEST_CASE(TestProject)
 
     auto ownerOverlapCopy = Dune::OwnerOverlapCopyCommunication<int>(indexInfo, MPI_COMM_WORLD);
     auto xCPU = std::vector<double> {{1.0, 2.0, 3.0}};
-    auto xGPU = Opm::cuistl::CuVector<double>(xCPU);
+    auto xGPU = Opm::gpuistl::CuVector<double>(xCPU);
 
-    auto gpuComm = std::make_shared<Opm::cuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
+    auto gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
     
     auto cuOwnerOverlapCopy
-        = Opm::cuistl::CuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
+        = Opm::gpuistl::CuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
 
     cuOwnerOverlapCopy.project(xGPU);
 
@@ -94,12 +94,12 @@ BOOST_AUTO_TEST_CASE(TestDot)
     indexInfo.addRemoteIndex(std::make_tuple(0, 2, Dune::OwnerOverlapCopyAttributeSet::copy));
     auto ownerOverlapCopy = Dune::OwnerOverlapCopyCommunication<int>(indexInfo, MPI_COMM_WORLD);
     auto xCPU = std::vector<double> {{1.0, 2.0, 3.0}};
-    auto xGPU = Opm::cuistl::CuVector<double>(xCPU);
+    auto xGPU = Opm::gpuistl::CuVector<double>(xCPU);
 
-    auto gpuComm = std::make_shared<Opm::cuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
+    auto gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
 
     auto cuOwnerOverlapCopy
-        = Opm::cuistl::CuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
+        = Opm::gpuistl::CuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
 
     double outputDune = -1.0;
     auto xDune = xGPU.asDuneBlockVector<1>();

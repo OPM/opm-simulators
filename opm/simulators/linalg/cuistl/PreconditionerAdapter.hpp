@@ -26,7 +26,7 @@
 #include <opm/simulators/linalg/cuistl/detail/preconditioner_should_call_post_pre.hpp>
 
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 //!\brief Makes a CUDA preconditioner available to a CPU simulator.
 //!
@@ -130,6 +130,6 @@ private:
     std::unique_ptr<CuVector<field_type>> m_inputBuffer;
     std::unique_ptr<CuVector<field_type>> m_outputBuffer;
 };
-} // end namespace Opm::cuistl
+} // end namespace Opm::gpuistl
 
 #endif

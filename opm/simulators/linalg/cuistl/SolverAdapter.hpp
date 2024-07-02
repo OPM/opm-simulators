@@ -39,7 +39,7 @@
 #endif
 #endif
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 //! @brief Wraps a CUDA solver to work with CPU data.
 //!
@@ -56,7 +56,7 @@ public:
     using typename Dune::IterativeSolver<X, X>::real_type;
     using typename Dune::IterativeSolver<X, X>::scalar_real_type;
     static constexpr auto block_size = domain_type::block_type::dimension;
-    using XGPU = Opm::cuistl::CuVector<real_type>;
+    using XGPU = Opm::gpuistl::CuVector<real_type>;
 
     // TODO: Use a std::forward
     SolverAdapter(Operator& op,
@@ -148,8 +148,8 @@ private:
             if (!precAsHolder) {
                 OPM_THROW(std::invalid_argument,
                           "The preconditioner needs to be a CUDA preconditioner (eg. CuILU0) wrapped in a "
-                          "Opm::cuistl::PreconditionerAdapter wrapped in a "
-                          "Opm::cuistl::CuBlockPreconditioner. If you are unsure what this means, set "
+                          "Opm::gpuistl::PreconditionerAdapter wrapped in a "
+                          "Opm::gpuistl::CuBlockPreconditioner. If you are unsure what this means, set "
                           "preconditioner to 'CUILU0'"); // TODO: Suggest a better preconditioner
             }
 
@@ -159,8 +159,8 @@ private:
             if (!preconditionerAdapterAsHolder) {
                 OPM_THROW(std::invalid_argument,
                           "The preconditioner needs to be a CUDA preconditioner (eg. CuILU0) wrapped in a "
-                          "Opm::cuistl::PreconditionerAdapter wrapped in a "
-                          "Opm::cuistl::CuBlockPreconditioner. If you are unsure what this means, set "
+                          "Opm::gpuistl::PreconditionerAdapter wrapped in a "
+                          "Opm::gpuistl::CuBlockPreconditioner. If you are unsure what this means, set "
                           "preconditioner to 'CUILU0'"); // TODO: Suggest a better preconditioner
             }
             // We need to get the underlying preconditioner:
@@ -183,12 +183,12 @@ private:
 
 
             // TODO add typename Operator communication type as a named type with using
-            std::shared_ptr<Opm::cuistl::GPUSender<real_type, typename Operator::communication_type>> gpuComm;
+            std::shared_ptr<Opm::gpuistl::GPUSender<real_type, typename Operator::communication_type>> gpuComm;
             if (mpiSupportsCudaAwareAtCompileTime && mpiSupportsCudaAwareAtRunTime){
-                gpuComm = std::make_shared<Opm::cuistl::GPUAwareMPISender<real_type, block_size, typename Operator::communication_type>>(communication);
+                gpuComm = std::make_shared<Opm::gpuistl::GPUAwareMPISender<real_type, block_size, typename Operator::communication_type>>(communication);
             }
             else{
-                gpuComm = std::make_shared<Opm::cuistl::GPUObliviousMPISender<real_type, block_size, typename Operator::communication_type>>(communication);
+                gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<real_type, block_size, typename Operator::communication_type>>(communication);
             }
 
             using CudaCommunication = CuOwnerOverlapCopy<real_type, block_size, typename Operator::communication_type>;
@@ -222,7 +222,7 @@ private:
             if (!precAsHolder) {
                 OPM_THROW(std::invalid_argument,
                           "The preconditioner needs to be a CUDA preconditioner wrapped in a "
-                          "Opm::cuistl::PreconditionerHolder (eg. CuILU0).");
+                          "Opm::gpuistl::PreconditionerHolder (eg. CuILU0).");
             }
             auto preconditionerOnGPU = precAsHolder->getUnderlyingPreconditioner();
 
@@ -237,6 +237,6 @@ private:
     std::unique_ptr<XGPU> m_inputBuffer;
     std::unique_ptr<XGPU> m_outputBuffer;
 };
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl
 
 #endif

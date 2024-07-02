@@ -31,7 +31,7 @@
 #include <opm/simulators/linalg/cuistl/detail/preconditioner_should_call_post_pre.hpp>
 
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 //! \brief Converts the field type (eg. double to float) to benchmark single precision preconditioners
 //!
@@ -64,7 +64,7 @@ namespace Opm::cuistl
 //! void applyILU0AsFloat(const MDouble& matrix, const XDouble& x, XDouble& y) {
 //!
 //!     using FloatILU0 = typename Opm::ParallelOverlappingILU0<MFloat, XFloat, XFloat, ParallelInfo>;
-//!     using DoubleToFloatConverter = typename Opm::cuistl::PreconditionerConvertFieldTypeAdapter<FloatILU0, MDouble,
+//!     using DoubleToFloatConverter = typename Opm::gpuistl::PreconditionerConvertFieldTypeAdapter<FloatILU0, MDouble,
 //!     XDouble, XDouble>;
 //!
 //!     // Note that we do not need to make a new instance for every invocation, this
@@ -235,6 +235,6 @@ private:
     //! \brief the underlying preconditioner to use
     std::shared_ptr<CudaPreconditionerType> m_underlyingPreconditioner;
 };
-} // end namespace Opm::cuistl
+} // end namespace Opm::gpuistl
 
 #endif

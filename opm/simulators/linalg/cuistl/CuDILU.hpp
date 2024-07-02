@@ -33,7 +33,7 @@
 
 
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 //! \brief DILU preconditioner on the GPU.
 //!
@@ -142,6 +142,6 @@ private:
     int m_moveThreadBlockSize = -1;
     int m_DILUFactorizationThreadBlockSize = -1;
 };
-} // end namespace Opm::cuistl
+} // end namespace Opm::gpuistl
 
 #endif

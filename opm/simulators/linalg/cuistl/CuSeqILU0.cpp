@@ -39,7 +39,7 @@
 // it highly recommended to read that before proceeding.
 
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
@@ -353,14 +353,14 @@ CuSeqILU0<M, X, Y, l>::updateILUConfiguration()
     analyzeMatrix();
     createILU();
 }
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl
 #define INSTANTIATE_CUSEQILU0_DUNE(realtype, blockdim)                                                                 \
-    template class ::Opm::cuistl::CuSeqILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
-                                            ::Opm::cuistl::CuVector<realtype>,                                         \
-                                            ::Opm::cuistl::CuVector<realtype>>;                                        \
-    template class ::Opm::cuistl::CuSeqILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
-                                            ::Opm::cuistl::CuVector<realtype>,                                         \
-                                            ::Opm::cuistl::CuVector<realtype>>
+    template class ::Opm::gpuistl::CuSeqILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
+                                            ::Opm::gpuistl::CuVector<realtype>,                                         \
+                                            ::Opm::gpuistl::CuVector<realtype>>;                                        \
+    template class ::Opm::gpuistl::CuSeqILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
+                                            ::Opm::gpuistl::CuVector<realtype>,                                         \
+                                            ::Opm::gpuistl::CuVector<realtype>>
 
 
 INSTANTIATE_CUSEQILU0_DUNE(double, 1);

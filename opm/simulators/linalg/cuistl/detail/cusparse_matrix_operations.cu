@@ -23,7 +23,7 @@
 #include <stdexcept>
 #include <config.h>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 namespace
 {
@@ -105,8 +105,8 @@ copyMatDataToReordered(
     T* srcMatrix, int* srcRowIndices, T* dstMatrix, int* dstRowIndices, int* naturalToReordered, size_t numberOfRows,
     int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuMoveDataToReordered<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuMoveDataToReordered<T, blocksize>, thrBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
     cuMoveDataToReordered<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         srcMatrix, srcRowIndices, dstMatrix, dstRowIndices, naturalToReordered, numberOfRows);
 }
@@ -125,8 +125,8 @@ copyMatDataToReorderedSplit(T* srcMatrix,
                             size_t numberOfRows,
                             int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuMoveDataToReorderedSplit<T, blocksize>, thrBlockSize);
-    int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuMoveDataToReorderedSplit<T, blocksize>, thrBlockSize);
+    int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
     cuMoveDataToReorderedSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(srcMatrix,
                                                                                  srcRowIndices,
                                                                                  srcColumnIndices,
@@ -155,4 +155,4 @@ INSTANTIATE_KERNEL_WRAPPERS(double, 3);
 INSTANTIATE_KERNEL_WRAPPERS(double, 4);
 INSTANTIATE_KERNEL_WRAPPERS(double, 5);
 INSTANTIATE_KERNEL_WRAPPERS(double, 6);
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail

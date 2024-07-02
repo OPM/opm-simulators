@@ -25,7 +25,7 @@
 #include <opm/simulators/linalg/cuistl/PreconditionerHolder.hpp>
 #include <opm/simulators/linalg/cuistl/detail/preconditioner_should_call_post_pre.hpp>
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 //! @brief Is an adaptation of Dune::BlockPreconditioner that works within the CuISTL framework.
 //!
@@ -121,5 +121,5 @@ private:
     //! \brief the communication object
     std::shared_ptr<const communication_type> m_communication;
 };
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl
 #endif

@@ -29,7 +29,7 @@
  * TODO: Use the requires-keyword once C++20 becomes availble (https://en.cppreference.com/w/cpp/language/constraints ).
  * With C++20 this file can be removed.
  */
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
 /**
@@ -121,5 +121,5 @@ public:
     static constexpr bool value = std::is_same_v<decltype(test<T>(0)), std::true_type>;
 };
 
-} // namespace Opm::cuistl::detail
+} // namespace Opm::gpuistl::detail
 #endif

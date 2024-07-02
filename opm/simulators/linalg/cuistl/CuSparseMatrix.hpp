@@ -28,7 +28,7 @@
 #include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
 #include <vector>
 
-namespace Opm::cuistl
+namespace Opm::gpuistl
 {
 
 /**
@@ -298,5 +298,5 @@ private:
     template <class VectorType>
     void assertSameSize(const VectorType& vector) const;
 };
-} // namespace Opm::cuistl
+} // namespace Opm::gpuistl
 #endif

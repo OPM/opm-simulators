@@ -27,7 +27,7 @@
 #include <utility>
 #include <limits>
 
-namespace Opm::cuistl::detail
+namespace Opm::gpuistl::detail
 {
 
     /// @brief Function that tests the best thread block size, assumes updating the reference will affect runtimes
@@ -86,6 +86,6 @@ namespace Opm::cuistl::detail
         threadBlockSize = bestBlockSize;
     }
 
-} // end namespace Opm::cuistl::detail
+} // end namespace Opm::gpuistl::detail
 
 #endif
