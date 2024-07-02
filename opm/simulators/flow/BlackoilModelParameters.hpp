@@ -288,7 +288,7 @@ struct ToleranceCnvRelaxed<TypeTag, TTag::FlowModelParameters> {
 template<class TypeTag>
 struct ToleranceWells<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-4;
+    static constexpr type value = 1e-8;
 };
 template<class TypeTag>
 struct ToleranceWellControl<TypeTag, TTag::FlowModelParameters> {
