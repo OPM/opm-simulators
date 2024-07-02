@@ -27,7 +27,7 @@
 BOOST_AUTO_TEST_CASE(TestCreateHandle)
 {
     cusparseHandle_t cusparseHandle;
-    BOOST_CHECK_NO_THROW(OPM_CUSPARSE_SAFE_CALL(cusparseCreate(&cusparseHandle)););
+    BOOST_CHECK_NO_THROW(OPM_GPUSPARSE_SAFE_CALL(cusparseCreate(&cusparseHandle)););
 }
 
 BOOST_AUTO_TEST_CASE(TestThrows)
@@ -44,6 +44,6 @@ BOOST_AUTO_TEST_CASE(TestThrows)
                                                CUSPARSE_STATUS_NOT_SUPPORTED,
                                                CUSPARSE_STATUS_INSUFFICIENT_RESOURCES}};
     for (auto code : errorCodes) {
-        BOOST_CHECK_THROW(OPM_CUSPARSE_SAFE_CALL(code), std::exception);
+        BOOST_CHECK_THROW(OPM_GPUSPARSE_SAFE_CALL(code), std::exception);
     }
 }

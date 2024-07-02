@@ -172,28 +172,28 @@ template <typename T>
 void
 GpuSparseMatrix<T>::setUpperTriangular()
 {
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatFillMode(m_matrixDescription->get(), CUSPARSE_FILL_MODE_UPPER));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseSetMatFillMode(m_matrixDescription->get(), CUSPARSE_FILL_MODE_UPPER));
 }
 
 template <typename T>
 void
 GpuSparseMatrix<T>::setLowerTriangular()
 {
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatFillMode(m_matrixDescription->get(), CUSPARSE_FILL_MODE_LOWER));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseSetMatFillMode(m_matrixDescription->get(), CUSPARSE_FILL_MODE_LOWER));
 }
 
 template <typename T>
 void
 GpuSparseMatrix<T>::setUnitDiagonal()
 {
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatDiagType(m_matrixDescription->get(), CUSPARSE_DIAG_TYPE_UNIT));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseSetMatDiagType(m_matrixDescription->get(), CUSPARSE_DIAG_TYPE_UNIT));
 }
 
 template <typename T>
 void
 GpuSparseMatrix<T>::setNonUnitDiagonal()
 {
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatDiagType(m_matrixDescription->get(), CUSPARSE_DIAG_TYPE_NON_UNIT));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseSetMatDiagType(m_matrixDescription->get(), CUSPARSE_DIAG_TYPE_NON_UNIT));
 }
 
 template <typename T>
@@ -213,8 +213,8 @@ GpuSparseMatrix<T>::mv(const GpuVector<T>& x, GpuVector<T>& y) const
     auto columnIndices = getColumnIndices().data();
     T alpha = 1.0;
     T beta = 0.0;
-    OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
-                                                 detail::GPUSPARSE_MATRIX_ROW,
+    OPM_GPUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
+                                                 detail::CUSPARSE_MATRIX_ORDER,
                                                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                  m_numberOfRows,
                                                  m_numberOfRows,
@@ -248,8 +248,8 @@ GpuSparseMatrix<T>::umv(const GpuVector<T>& x, GpuVector<T>& y) const
     auto columnIndices = getColumnIndices().data();
     T alpha = 1.0;
     T beta = 1.0;
-    OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
-                                                 detail::GPUSPARSE_MATRIX_ROW,
+    OPM_GPUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
+                                                 detail::CUSPARSE_MATRIX_ORDER,
                                                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                  m_numberOfRows,
                                                  m_numberOfRows,
@@ -284,8 +284,8 @@ GpuSparseMatrix<T>::usmv(T alpha, const GpuVector<T>& x, GpuVector<T>& y) const
     auto columnIndices = getColumnIndices().data();
 
     T beta = 1.0;
-    OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
-                                                 detail::GPUSPARSE_MATRIX_ROW,
+    OPM_GPUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
+                                                 detail::CUSPARSE_MATRIX_ORDER,
                                                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                  numberOfRows,
                                                  numberOfRows,

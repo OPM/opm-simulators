@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUSPARSE_SAFE_CALL_HPP
-#define OPM_CUSPARSE_SAFE_CALL_HPP
+#ifndef OPM_GPUSPARSE_SAFE_CALL_HPP
+#define OPM_GPUSPARSE_SAFE_CALL_HPP
 #include <cusparse.h>
 #include <exception>
 #include <fmt/core.h>
@@ -27,36 +27,36 @@
 namespace Opm::gpuistl::detail
 {
 
-#define CHECK_CUSPARSE_ERROR_TYPE(code, x)                                                                             \
+#define CHECK_GPUSPARSE_ERROR_TYPE(code, x)                                                                             \
     if (code == x) {                                                                                                   \
         return #x;                                                                                                     \
     }
 /**
- * @brief getCusparseErrorCodeToString Converts an error code returned from a cusparse function a human readable string.
- * @param code an error code from a cusparse routine
+ * @brief getGpuSPARSEErrorCodeToString Converts an error code returned from a cu/hipSPARSE function a human readable string.
+ * @param code an error code from a cu/hipSPARSE routine
  * @return a human readable string.
  */
 inline std::string
-getCusparseErrorCodeToString(int code)
+getGpuSPARSEErrorCodeToString(int code)
 {
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_SUCCESS);
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_NOT_INITIALIZED);
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_ALLOC_FAILED);
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_INVALID_VALUE);
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_ARCH_MISMATCH);
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_MAPPING_ERROR);
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_EXECUTION_FAILED);
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_INTERNAL_ERROR);
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_MATRIX_TYPE_NOT_SUPPORTED);
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_ZERO_PIVOT);
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_NOT_SUPPORTED);
-    CHECK_CUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_INSUFFICIENT_RESOURCES);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_SUCCESS);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_NOT_INITIALIZED);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_ALLOC_FAILED);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_INVALID_VALUE);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_ARCH_MISMATCH);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_MAPPING_ERROR);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_EXECUTION_FAILED);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_INTERNAL_ERROR);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_MATRIX_TYPE_NOT_SUPPORTED);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_ZERO_PIVOT);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_NOT_SUPPORTED);
+    CHECK_GPUSPARSE_ERROR_TYPE(code, CUSPARSE_STATUS_INSUFFICIENT_RESOURCES);
     return fmt::format("UNKNOWN CUSPARSE ERROR {}.", code);
 }
 
-#undef CHECK_CUSPARSE_ERROR_TYPE
+#undef CHECK_GPUSPARSE_ERROR_TYPE
 /**
- * @brief getCusparseErrorMessage generates the error message to display for a given error.
+ * @brief getGpuSPARSEErrorMessage generates the error message to display for a given error.
  *
  * @param error the error code from cublas
  * @param expression the expresison (say "cusparseCreate(&handle)")
@@ -71,7 +71,7 @@ getCusparseErrorCodeToString(int code)
  * @note This function is mostly for internal use.
  */
 inline std::string
-getCusparseErrorMessage(cusparseStatus_t error,
+getGpuSPARSEErrorMessage(cusparseStatus_t error,
                         const std::string_view& expression,
                         const std::string_view& filename,
                         const std::string_view& functionName,
@@ -84,11 +84,11 @@ getCusparseErrorMessage(cusparseStatus_t error,
                        functionName,
                        filename,
                        lineNumber,
-                       getCusparseErrorCodeToString(error));
+                       getGpuSPARSEErrorCodeToString(error));
 }
 
 /**
- * @brief cusparseSafeCall checks the return type of the CUSPARSE expression (function call) and throws an exception if
+ * @brief gpuSPARSESafeCall checks the return type of the CUSPARSE expression (function call) and throws an exception if
  * it does not equal CUSPARSE_STATUS_SUCCESS.
  *
  * Example usage:
@@ -98,7 +98,7 @@ getCusparseErrorMessage(cusparseStatus_t error,
  *
  * void some_function() {
  *     cusparseHandle_t cusparseHandle;
- *     cusparseSafeCall(cusparseCreate(&cusparseHandle), "cusparseCreate(&cusparseHandle)", __FILE__, __func__,
+ *     gpuSPARSESafeCall(cusparseCreate(&cusparseHandle), "cusparseCreate(&cusparseHandle)", __FILE__, __func__,
  * __LINE__);
  * }
  * @endcode
@@ -108,14 +108,14 @@ getCusparseErrorMessage(cusparseStatus_t error,
  * @todo Refactor to use std::source_location once we shift to C++20
  */
 inline void
-cusparseSafeCall(cusparseStatus_t error,
+gpuSPARSESafeCall(cusparseStatus_t error,
                  const std::string_view& expression,
                  const std::string_view& filename,
                  const std::string_view& functionName,
                  size_t lineNumber)
 {
     if (error != CUSPARSE_STATUS_SUCCESS) {
-        OPM_THROW(std::runtime_error, getCusparseErrorMessage(error, expression, filename, functionName, lineNumber));
+        OPM_THROW(std::runtime_error, getGpuSPARSEErrorMessage(error, expression, filename, functionName, lineNumber));
     }
 }
 
@@ -143,8 +143,8 @@ cusparseSafeCall(cusparseStatus_t error,
  * }
  * @endcode
  *
- * @note It is probably easier to use the macro OPM_CUSPARSE_WARN_IF_ERROR
- * @note Prefer the cusparseSafeCall/OPM_CUSPARSE_SAFE_CALL counterpart unless you really don't want to throw an
+ * @note It is probably easier to use the macro OPM_GPUSPARSE_WARN_IF_ERROR
+ * @note Prefer the gpuSPARSESafeCall/OPM_GPUSPARSE_SAFE_CALL counterpart unless you really don't want to throw an
  * exception.
  * @todo Refactor to use std::source_location once we shift to C++20
  */
@@ -156,7 +156,7 @@ cusparseWarnIfError(cusparseStatus_t error,
                     size_t lineNumber)
 {
     if (error != CUSPARSE_STATUS_SUCCESS) {
-        OpmLog::warning(getCusparseErrorMessage(error, expression, filename, functionName, lineNumber));
+        OpmLog::warning(getGpuSPARSEErrorMessage(error, expression, filename, functionName, lineNumber));
     }
 
     return error;
@@ -166,7 +166,7 @@ cusparseWarnIfError(cusparseStatus_t error,
 
 
 /**
- * @brief OPM_CUSPARSE_SAFE_CALL checks the return type of the cusparse expression (function call) and throws an
+ * @brief OPM_GPUSPARSE_SAFE_CALL checks the return type of the cusparse expression (function call) and throws an
  * exception if it does not equal CUSPARSE_STATUS_SUCCESS.
  *
  * Example usage:
@@ -176,17 +176,17 @@ cusparseWarnIfError(cusparseStatus_t error,
  *
  * void some_function() {
  *     cusparseHandle_t cusparseHandle;
- *     OPM_CUSPARSE_SAFE_CALL(cusparseCreate(&cusparseHandle));
+ *     OPM_GPUSPARSE_SAFE_CALL(cusparseCreate(&cusparseHandle));
  * }
  * @endcode
  *
  * @note This should be used for any call to cuSparse unless you have a good reason not to.
  */
-#define OPM_CUSPARSE_SAFE_CALL(expression)                                                                             \
-    ::Opm::gpuistl::detail::cusparseSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
+#define OPM_GPUSPARSE_SAFE_CALL(expression)                                                                             \
+    ::Opm::gpuistl::detail::gpuSPARSESafeCall(expression, #expression, __FILE__, __func__, __LINE__)
 
 /**
- * @brief OPM_CUSPARSE_WARN_IF_ERROR checks the return type of the cusparse expression (function call) and issues a
+ * @brief OPM_GPUSPARSE_WARN_IF_ERROR checks the return type of the cusparse expression (function call) and issues a
  * warning if it does not equal CUSPARSE_STATUS_SUCCESS.
  *
  * Example usage:
@@ -196,13 +196,13 @@ cusparseWarnIfError(cusparseStatus_t error,
  *
  * void some_function() {
  *     cusparseHandle_t cusparseHandle;
- *     OPM_CUSPARSE_WARN_IF_ERROR(cusparseCreate(&cusparseHandle));
+ *     OPM_GPUSPARSE_WARN_IF_ERROR(cusparseCreate(&cusparseHandle));
  * }
  * @endcode
  *
- * @note Prefer the cusparseSafeCall/OPM_CUBLAS_SAFE_CALL counterpart unless you really don't want to throw an
+ * @note Prefer the gpuSPARSESafeCall/OPM_CUBLAS_SAFE_CALL counterpart unless you really don't want to throw an
  * exception.
  */
-#define OPM_CUSPARSE_WARN_IF_ERROR(expression)                                                                         \
+#define OPM_GPUSPARSE_WARN_IF_ERROR(expression)                                                                         \
     ::Opm::gpuistl::detail::cusparseWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
-#endif // OPM_CUSPARSE_SAFE_CALL_HPP
+#endif // OPM_GPUSPARSE_SAFE_CALL_HPP

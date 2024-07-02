@@ -33,7 +33,7 @@ namespace Opm::gpuistl::detail
  * void someFunction() {
  *     auto& cuSparseHandle = ::Opm::gpuistl::detail::CuSparseHandle::getInstance();
  *     int cuSparseVersion = -1;
- *     OPM_CUSPARSE_SAFE_CALL(cusparseGetVersion(cuSparseHandle.get(), &cuSparseVersion));
+ *     OPM_GPUSPARSE_SAFE_CALL(cusparseGetVersion(cuSparseHandle.get(), &cuSparseVersion));
  * }
  * @endcode
  */

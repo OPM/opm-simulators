@@ -24,13 +24,13 @@ namespace Opm::gpuistl::detail
 
 CuSparseHandle::CuSparseHandle()
 {
-    OPM_CUSPARSE_SAFE_CALL(cusparseCreate(&m_handle));
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetStream(m_handle, 0));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseCreate(&m_handle));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseSetStream(m_handle, 0));
 }
 
 CuSparseHandle::~CuSparseHandle()
 {
-    OPM_CUSPARSE_WARN_IF_ERROR(cusparseDestroy(m_handle));
+    OPM_GPUSPARSE_WARN_IF_ERROR(cusparseDestroy(m_handle));
 }
 
 cusparseHandle_t

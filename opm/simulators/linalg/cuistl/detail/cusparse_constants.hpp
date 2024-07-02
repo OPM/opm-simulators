@@ -16,12 +16,12 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CUSPARSE_CONSTANTS_HPP
-#define CUSPARSE_CONSTANTS_HPP
+#ifndef GPUSPARSE_CONSTANTS_HPP
+#define GPUSPARSE_CONSTANTS_HPP
 #include <cusparse.h>
 namespace Opm::gpuistl::detail
 {
-const constexpr auto GPUSPARSE_MATRIX_ROW = CUSPARSE_DIRECTION_ROW;
+const constexpr auto CUSPARSE_MATRIX_ORDER = CUSPARSE_DIRECTION_ROW;
 }
 
 #endif

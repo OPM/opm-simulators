@@ -44,8 +44,8 @@ createMatrixDescription()
     auto description = std::make_shared<GpuSparseMatrixDescription>();
 
     // Note: We always want to use zero base indexing.
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatType(description->get(), CUSPARSE_MATRIX_TYPE_GENERAL));
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatIndexBase(description->get(), CUSPARSE_INDEX_BASE_ZERO));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseSetMatType(description->get(), CUSPARSE_MATRIX_TYPE_GENERAL));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseSetMatIndexBase(description->get(), CUSPARSE_INDEX_BASE_ZERO));
 
     return description;
 }
@@ -60,8 +60,8 @@ inline GpuSparseMatrixDescriptionPtr
 createLowerDiagonalDescription()
 {
     auto description = createMatrixDescription();
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatFillMode(description->get(), CUSPARSE_FILL_MODE_LOWER));
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatDiagType(description->get(), CUSPARSE_DIAG_TYPE_UNIT));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseSetMatFillMode(description->get(), CUSPARSE_FILL_MODE_LOWER));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseSetMatDiagType(description->get(), CUSPARSE_DIAG_TYPE_UNIT));
     return description;
 }
 
@@ -75,8 +75,8 @@ inline GpuSparseMatrixDescriptionPtr
 createUpperDiagonalDescription()
 {
     auto description = createMatrixDescription();
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatFillMode(description->get(), CUSPARSE_FILL_MODE_UPPER));
-    OPM_CUSPARSE_SAFE_CALL(cusparseSetMatDiagType(description->get(), CUSPARSE_DIAG_TYPE_NON_UNIT));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseSetMatFillMode(description->get(), CUSPARSE_FILL_MODE_UPPER));
+    OPM_GPUSPARSE_SAFE_CALL(cusparseSetMatDiagType(description->get(), CUSPARSE_DIAG_TYPE_NON_UNIT));
 
     return description;
 }

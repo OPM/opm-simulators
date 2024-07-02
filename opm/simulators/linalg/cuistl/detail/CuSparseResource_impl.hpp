@@ -84,7 +84,7 @@ CuSparseResource<T>::CuSparseResource(CreatorType creator, DeleterType deleter)
 {
     // TODO: This should probably not use this macro since it will disguise the
     // proper name of the function being called.
-    OPM_CUSPARSE_SAFE_CALL(creator(&m_resource));
+    OPM_GPUSPARSE_SAFE_CALL(creator(&m_resource));
 }
 
 template <class T>
@@ -98,6 +98,6 @@ CuSparseResource<T>::~CuSparseResource()
 {
     // TODO: This should probably not use this macro since it will disguise the
     // proper name of the function being called.
-    OPM_CUSPARSE_WARN_IF_ERROR(m_deleter(m_resource));
+    OPM_GPUSPARSE_WARN_IF_ERROR(m_deleter(m_resource));
 }
 } // namespace Opm::gpuistl::detail
