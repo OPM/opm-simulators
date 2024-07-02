@@ -26,7 +26,7 @@
 BOOST_AUTO_TEST_CASE(TestCudaMalloc)
 {
     void* pointer;
-    BOOST_CHECK_NO_THROW(OPM_CUDA_SAFE_CALL(cudaMalloc(&pointer, 1)););
+    BOOST_CHECK_NO_THROW(OPM_GPU_SAFE_CALL(cudaMalloc(&pointer, 1)););
 }
 
 
@@ -41,6 +41,6 @@ BOOST_AUTO_TEST_CASE(TestThrows)
      errorCodes = {{cudaErrorAddressOfConstant, cudaErrorAlreadyAcquired}};
 #endif
     for (auto code : errorCodes) {
-        BOOST_CHECK_THROW(OPM_CUDA_SAFE_CALL(code), std::exception);
+        BOOST_CHECK_THROW(OPM_GPU_SAFE_CALL(code), std::exception);
     }
 }

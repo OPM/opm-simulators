@@ -106,7 +106,7 @@ BOOST_AUTO_TEST_CASE(TestDataPointer)
     auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.data(), data.size());
 
     std::vector<double> buffer(data.size(), 0.0);
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(buffer.data(), vectorOnGPU.data(), sizeof(double) * data.size(), cudaMemcpyDeviceToHost));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(buffer.data(), vectorOnGPU.data(), sizeof(double) * data.size(), cudaMemcpyDeviceToHost));
     BOOST_CHECK_EQUAL_COLLECTIONS(data.begin(), data.end(), buffer.begin(), buffer.end());
 }
 

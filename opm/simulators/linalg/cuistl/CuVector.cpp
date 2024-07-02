@@ -40,7 +40,7 @@ GpuVector<T>::GpuVector(const size_t numberOfElements)
     : m_numberOfElements(detail::to_int(numberOfElements))
     , m_cuBlasHandle(detail::GpuBLASHandle::getInstance())
 {
-    OPM_CUDA_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * detail::to_size_t(m_numberOfElements)));
+    OPM_GPU_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * detail::to_size_t(m_numberOfElements)));
 }
 
 template <class T>
@@ -48,7 +48,7 @@ GpuVector<T>::GpuVector(const T* dataOnHost, const size_t numberOfElements)
     : GpuVector(numberOfElements)
 {
 
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(
+    OPM_GPU_SAFE_CALL(cudaMemcpy(
         m_dataOnDevice, dataOnHost, detail::to_size_t(m_numberOfElements) * sizeof(T), cudaMemcpyHostToDevice));
 }
 
@@ -68,7 +68,7 @@ GpuVector<T>::operator=(const GpuVector<T>& other)
     assertHasElements();
     assertSameSize(other);
 
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
+    OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
                                   other.m_dataOnDevice,
                                   detail::to_size_t(m_numberOfElements) * sizeof(T),
                                   cudaMemcpyDeviceToDevice));
@@ -81,7 +81,7 @@ GpuVector<T>::GpuVector(const GpuVector<T>& other)
 {
     assertHasElements();
     assertSameSize(other);
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
+    OPM_GPU_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
                                   other.m_dataOnDevice,
                                   detail::to_size_t(m_numberOfElements) * sizeof(T),
                                   cudaMemcpyDeviceToDevice));
@@ -90,7 +90,7 @@ GpuVector<T>::GpuVector(const GpuVector<T>& other)
 template <class T>
 GpuVector<T>::~GpuVector()
 {
-    OPM_CUDA_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
+    OPM_GPU_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
 }
 
 template <typename T>
@@ -263,7 +263,7 @@ GpuVector<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
                               dim(),
                               numberOfElements));
     }
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(data(), dataPointer, numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
 }
 
 template <class T>
@@ -271,7 +271,7 @@ void
 GpuVector<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
     assertSameSize(detail::to_int(numberOfElements));
-    OPM_CUDA_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
+    OPM_GPU_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
 }
 
 template <class T>

@@ -113,7 +113,7 @@ getGpuBLASErrorMessage(cublasStatus_t error,
  *
  * void some_function() {
  *     cublasHandle_t cublasHandle;
- *     cudaSafeCall(cublasCreate(&cublasHandle), "cublasCreate(&cublasHandle)", __FILE__, __func__, __LINE__);
+ *     gpuSafeCall(cublasCreate(&cublasHandle), "cublasCreate(&cublasHandle)", __FILE__, __func__, __LINE__);
  * }
  * @endcode
  *
