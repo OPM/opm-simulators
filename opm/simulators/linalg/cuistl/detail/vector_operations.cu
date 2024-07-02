@@ -23,6 +23,7 @@
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <stdexcept>
+#include <config.h>
 namespace Opm::cuistl::detail
 {
 
@@ -115,10 +116,31 @@ namespace
     }
 } // namespace
 
+// Kernel here is the function object of the cuda kernel
+template <class Kernel>
+inline int getCudaRecomendedThreadBlockSize(Kernel k)
+{
+#if USE_HIP
+    return 512;
+#else
+    int blockSize;
+    int tmpGridSize;
+    std::ignore = cudaOccupancyMaxPotentialBlockSize(&tmpGridSize, &blockSize, k, 0, 0);
+    return blockSize;
+#endif
+}
+
+inline int getNumberOfBlocks(int wantedThreads, int threadBlockSize)
+{
+    return (wantedThreads + threadBlockSize - 1) / threadBlockSize;
+}
+
 template <class T>
 void
 setVectorValue(T* deviceData, size_t numberOfElements, const T& value)
 {
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(setVectorValueKernel<T>);
+    int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
     setVectorValueKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
         deviceData, numberOfElements, value);
 }
@@ -131,6 +153,8 @@ template <class T>
 void
 setZeroAtIndexSet(T* deviceData, size_t numberOfElements, const int* indices)
 {
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(setZeroAtIndexSetKernel<T>);
+    int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
     setZeroAtIndexSetKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
         deviceData, numberOfElements, indices);
 }
@@ -142,6 +166,8 @@ template <class T>
 T
 innerProductAtIndices(cublasHandle_t cublasHandle, const T* deviceA, const T* deviceB, T* buffer, size_t numberOfElements, const int* indices)
 {
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(elementWiseMultiplyKernel<T>);
+    int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
     elementWiseMultiplyKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
         deviceA, deviceB, buffer, numberOfElements, indices);
 
@@ -160,6 +186,8 @@ template int innerProductAtIndices(cublasHandle_t, const int*, const int*, int* 
 template <class T>
 void prepareSendBuf(const T* deviceA, T* buffer, size_t numberOfElements, const int* indices)
 {
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(prepareSendBufKernel<T>);
+    int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
     prepareSendBufKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(deviceA, buffer, numberOfElements, indices);
     OPM_CUDA_SAFE_CALL(cudaDeviceSynchronize()); // The buffers are prepared for MPI. Wait for them to finish.
 }
@@ -170,6 +198,8 @@ template void prepareSendBuf(const int* deviceA, int* buffer, size_t numberOfEle
 template <class T>
 void syncFromRecvBuf(T* deviceA, T* buffer, size_t numberOfElements, const int* indices)
 {
+    int threadBlockSize = getCudaRecomendedThreadBlockSize(syncFromRecvBufKernel<T>);
+    int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
     syncFromRecvBufKernel<<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(deviceA, buffer, numberOfElements, indices);
     //cudaDeviceSynchronize(); // Not needed, I guess...
 }
@@ -188,16 +218,28 @@ weightedDiagMV(const T* squareBlockVector,
 {
     switch (blocksize) {
     case 1:
-        weightedDiagMV<T, 1><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
-            squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
+        {
+            int threadBlockSize = getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 1>);
+            int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
+            weightedDiagMV<T, 1><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+                squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
+        }
         break;
     case 2:
-        weightedDiagMV<T, 2><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
-            squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
+        {
+            int threadBlockSize = getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 2>);
+            int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
+            weightedDiagMV<T, 2><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+                squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
+        }
         break;
     case 3:
-        weightedDiagMV<T, 3><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
-            squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
+        {
+            int threadBlockSize = getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 3>);
+            int nThreadBlocks = getNumberOfBlocks(numberOfElements, threadBlockSize);
+            weightedDiagMV<T, 3><<<getBlocks(numberOfElements), getThreads(numberOfElements)>>>(
+                squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
+        }
         break;
     default:
         OPM_THROW(std::invalid_argument, "blockvector Hadamard product not implemented for blocksize>3");
