@@ -321,7 +321,7 @@ struct StandardPreconditioners {
         }
 
 #if HAVE_CUDA
-        F::addCreator("CUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("GPUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
             using GpuILU0 = typename gpuistl::
@@ -333,7 +333,7 @@ struct StandardPreconditioners {
             return wrapped;
         });
 
-        F::addCreator("CUJac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("GPUJac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
             using GpuJac =
@@ -345,7 +345,7 @@ struct StandardPreconditioners {
             return wrapped;
         });
 
-        F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("GPUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
@@ -357,7 +357,7 @@ struct StandardPreconditioners {
             return wrapped;
         });
 
-        F::addCreator("CUILU0OPM", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+        F::addCreator("GPUILU0OPM", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
@@ -581,7 +581,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             });
 
 #if HAVE_CUDA
-        F::addCreator("CUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("GPUILU0", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
             using GpuILU0 = typename gpuistl::
@@ -590,7 +590,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 std::make_shared<GpuILU0>(op.getmat(), w));
         });
 
-        F::addCreator("CUILU0Float", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("GPUILU0Float", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using block_type = typename V::block_type;
             using VTo = Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
@@ -606,7 +606,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             return converted;
         });
 
-        F::addCreator("CUJac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("GPUJac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
             using GpuJac =
@@ -615,7 +615,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 std::make_shared<GpuJac>(op.getmat(), w));
         });
 
-        F::addCreator("CUILU0OPM", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("GPUILU0OPM", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
@@ -624,7 +624,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GPUILU0>>(std::make_shared<GPUILU0>(op.getmat(), split_matrix, tune_gpu_kernels));
         });
 
-        F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("GPUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
@@ -632,7 +632,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GPUDILU>>(std::make_shared<GPUDILU>(op.getmat(), split_matrix, tune_gpu_kernels));
         });
 
-        F::addCreator("CUDILUFloat", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+        F::addCreator("GPUDILUFloat", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using block_type = typename V::block_type;

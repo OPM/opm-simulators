@@ -31,7 +31,7 @@ setDevice(int mpiRank, [[maybe_unused]] int numberOfMpiRanks)
     [[maybe_unused]] auto cuError = cudaGetDeviceCount(&deviceCount);
 
     if (deviceCount <= 0) {
-        // If they have CUDA/HIP enabled (ie. using a component that needs CUDA, eg. cubicgstab or CUILU0), this will fail
+        // If they have CUDA/HIP enabled (ie. using a component that needs CUDA, eg. gpubicgstab or CUILU0), this will fail
         // later down the line. At this point in the simulator, we can not determine if CUDA is enabled, so we can only
         // issue a warning.
         OpmLog::warning("Could not find any CUDA/HIP devices.");

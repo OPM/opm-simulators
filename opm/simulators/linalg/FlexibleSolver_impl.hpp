@@ -200,7 +200,7 @@ namespace Dune
             direct_solver_ = true;
 #endif
 #if HAVE_CUDA
-        } else if (solver_type == "cubicgstab") {
+        } else if (solver_type == "gpubicgstab") {
             linsolver_.reset(new Opm::gpuistl::SolverAdapter<Operator, Dune::BiCGSTABSolver, VectorType>(
                 *linearoperator_for_solver_,
                 *scalarproduct_,
