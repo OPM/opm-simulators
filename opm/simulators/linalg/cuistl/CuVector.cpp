@@ -30,13 +30,13 @@ namespace Opm::gpuistl
 {
 
 template <class T>
-CuVector<T>::CuVector(const std::vector<T>& data)
-    : CuVector(data.data(), detail::to_int(data.size()))
+GpuVector<T>::GpuVector(const std::vector<T>& data)
+    : GpuVector(data.data(), detail::to_int(data.size()))
 {
 }
 
 template <class T>
-CuVector<T>::CuVector(const size_t numberOfElements)
+GpuVector<T>::GpuVector(const size_t numberOfElements)
     : m_numberOfElements(detail::to_int(numberOfElements))
     , m_cuBlasHandle(detail::CuBlasHandle::getInstance())
 {
@@ -44,8 +44,8 @@ CuVector<T>::CuVector(const size_t numberOfElements)
 }
 
 template <class T>
-CuVector<T>::CuVector(const T* dataOnHost, const size_t numberOfElements)
-    : CuVector(numberOfElements)
+GpuVector<T>::GpuVector(const T* dataOnHost, const size_t numberOfElements)
+    : GpuVector(numberOfElements)
 {
 
     OPM_CUDA_SAFE_CALL(cudaMemcpy(
@@ -53,8 +53,8 @@ CuVector<T>::CuVector(const T* dataOnHost, const size_t numberOfElements)
 }
 
 template <class T>
-CuVector<T>&
-CuVector<T>::operator=(T scalar)
+GpuVector<T>&
+GpuVector<T>::operator=(T scalar)
 {
     assertHasElements();
     detail::setVectorValue(data(), detail::to_size_t(m_numberOfElements), scalar);
@@ -62,8 +62,8 @@ CuVector<T>::operator=(T scalar)
 }
 
 template <class T>
-CuVector<T>&
-CuVector<T>::operator=(const CuVector<T>& other)
+GpuVector<T>&
+GpuVector<T>::operator=(const GpuVector<T>& other)
 {
     assertHasElements();
     assertSameSize(other);
@@ -76,8 +76,8 @@ CuVector<T>::operator=(const CuVector<T>& other)
 }
 
 template <class T>
-CuVector<T>::CuVector(const CuVector<T>& other)
-    : CuVector(other.m_numberOfElements)
+GpuVector<T>::GpuVector(const GpuVector<T>& other)
+    : GpuVector(other.m_numberOfElements)
 {
     assertHasElements();
     assertSameSize(other);
@@ -88,21 +88,21 @@ CuVector<T>::CuVector(const CuVector<T>& other)
 }
 
 template <class T>
-CuVector<T>::~CuVector()
+GpuVector<T>::~GpuVector()
 {
     OPM_CUDA_WARN_IF_ERROR(cudaFree(m_dataOnDevice));
 }
 
 template <typename T>
 const T*
-CuVector<T>::data() const
+GpuVector<T>::data() const
 {
     return m_dataOnDevice;
 }
 
 template <typename T>
-typename CuVector<T>::size_type
-CuVector<T>::dim() const
+typename GpuVector<T>::size_type
+GpuVector<T>::dim() const
 {
     // Note that there is no way for m_numberOfElements to be non-positive,
     // but for sanity we still use the safe conversion function here.
@@ -114,7 +114,7 @@ CuVector<T>::dim() const
 
 template <typename T>
 std::vector<T>
-CuVector<T>::asStdVector() const
+GpuVector<T>::asStdVector() const
 {
     std::vector<T> temporary(detail::to_size_t(m_numberOfElements));
     copyToHost(temporary);
@@ -123,21 +123,21 @@ CuVector<T>::asStdVector() const
 
 template <typename T>
 void
-CuVector<T>::setZeroAtIndexSet(const CuVector<int>& indexSet)
+GpuVector<T>::setZeroAtIndexSet(const GpuVector<int>& indexSet)
 {
     detail::setZeroAtIndexSet(m_dataOnDevice, indexSet.dim(), indexSet.data());
 }
 
 template <typename T>
 void
-CuVector<T>::assertSameSize(const CuVector<T>& x) const
+GpuVector<T>::assertSameSize(const GpuVector<T>& x) const
 {
     assertSameSize(x.m_numberOfElements);
 }
 
 template <typename T>
 void
-CuVector<T>::assertSameSize(int size) const
+GpuVector<T>::assertSameSize(int size) const
 {
     if (size != m_numberOfElements) {
         OPM_THROW(std::invalid_argument,
@@ -147,7 +147,7 @@ CuVector<T>::assertSameSize(int size) const
 
 template <typename T>
 void
-CuVector<T>::assertHasElements() const
+GpuVector<T>::assertHasElements() const
 {
     if (m_numberOfElements <= 0) {
         OPM_THROW(std::invalid_argument, "We have 0 elements");
@@ -156,14 +156,14 @@ CuVector<T>::assertHasElements() const
 
 template <typename T>
 T*
-CuVector<T>::data()
+GpuVector<T>::data()
 {
     return m_dataOnDevice;
 }
 
 template <class T>
-CuVector<T>&
-CuVector<T>::operator*=(const T& scalar)
+GpuVector<T>&
+GpuVector<T>::operator*=(const T& scalar)
 {
     assertHasElements();
     OPM_CUBLAS_SAFE_CALL(detail::cublasScal(m_cuBlasHandle.get(), m_numberOfElements, &scalar, data(), 1));
@@ -171,8 +171,8 @@ CuVector<T>::operator*=(const T& scalar)
 }
 
 template <class T>
-CuVector<T>&
-CuVector<T>::axpy(T alpha, const CuVector<T>& y)
+GpuVector<T>&
+GpuVector<T>::axpy(T alpha, const GpuVector<T>& y)
 {
     assertHasElements();
     assertSameSize(y);
@@ -182,7 +182,7 @@ CuVector<T>::axpy(T alpha, const CuVector<T>& y)
 
 template <class T>
 T
-CuVector<T>::dot(const CuVector<T>& other) const
+GpuVector<T>::dot(const GpuVector<T>& other) const
 {
     assertHasElements();
     assertSameSize(other);
@@ -193,7 +193,7 @@ CuVector<T>::dot(const CuVector<T>& other) const
 }
 template <class T>
 T
-CuVector<T>::two_norm() const
+GpuVector<T>::two_norm() const
 {
     assertHasElements();
     T result = T(0);
@@ -203,14 +203,14 @@ CuVector<T>::two_norm() const
 
 template <typename T>
 T
-CuVector<T>::dot(const CuVector<T>& other, const CuVector<int>& indexSet, CuVector<T>& buffer) const
+GpuVector<T>::dot(const GpuVector<T>& other, const GpuVector<int>& indexSet, GpuVector<T>& buffer) const
 {
     return detail::innerProductAtIndices(m_cuBlasHandle.get(), m_dataOnDevice, other.data(), buffer.data(), indexSet.dim(), indexSet.data());
 }
 
 template <typename T>
 T
-CuVector<T>::two_norm(const CuVector<int>& indexSet, CuVector<T>& buffer) const
+GpuVector<T>::two_norm(const GpuVector<int>& indexSet, GpuVector<T>& buffer) const
 {
     // TODO: [perf] Optimize this to a single call
     return std::sqrt(this->dot(*this, indexSet, buffer));
@@ -218,23 +218,23 @@ CuVector<T>::two_norm(const CuVector<int>& indexSet, CuVector<T>& buffer) const
 
 template <typename T>
 T
-CuVector<T>::dot(const CuVector<T>& other, const CuVector<int>& indexSet) const
+GpuVector<T>::dot(const GpuVector<T>& other, const GpuVector<int>& indexSet) const
 {
-    CuVector<T> buffer(indexSet.dim());
+    GpuVector<T> buffer(indexSet.dim());
     return detail::innerProductAtIndices(m_cuBlasHandle.get(), m_dataOnDevice, other.data(), buffer.data(), indexSet.dim(), indexSet.data());
 }
 
 template <typename T>
 T
-CuVector<T>::two_norm(const CuVector<int>& indexSet) const
+GpuVector<T>::two_norm(const GpuVector<int>& indexSet) const
 {
-    CuVector<T> buffer(indexSet.dim());
+    GpuVector<T> buffer(indexSet.dim());
     // TODO: [perf] Optimize this to a single call
     return std::sqrt(this->dot(*this, indexSet, buffer));
 }
 template <class T>
-CuVector<T>&
-CuVector<T>::operator+=(const CuVector<T>& other)
+GpuVector<T>&
+GpuVector<T>::operator+=(const GpuVector<T>& other)
 {
     assertHasElements();
     assertSameSize(other);
@@ -243,8 +243,8 @@ CuVector<T>::operator+=(const CuVector<T>& other)
 }
 
 template <class T>
-CuVector<T>&
-CuVector<T>::operator-=(const CuVector<T>& other)
+GpuVector<T>&
+GpuVector<T>::operator-=(const GpuVector<T>& other)
 {
     assertHasElements();
     assertSameSize(other);
@@ -255,7 +255,7 @@ CuVector<T>::operator-=(const CuVector<T>& other)
 
 template <class T>
 void
-CuVector<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
+GpuVector<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
 {
     if (numberOfElements > dim()) {
         OPM_THROW(std::runtime_error,
@@ -268,7 +268,7 @@ CuVector<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
 
 template <class T>
 void
-CuVector<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
+GpuVector<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
     assertSameSize(detail::to_int(numberOfElements));
     OPM_CUDA_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
@@ -276,32 +276,32 @@ CuVector<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 
 template <class T>
 void
-CuVector<T>::copyFromHost(const std::vector<T>& data)
+GpuVector<T>::copyFromHost(const std::vector<T>& data)
 {
     copyFromHost(data.data(), data.size());
 }
 template <class T>
 void
-CuVector<T>::copyToHost(std::vector<T>& data) const
+GpuVector<T>::copyToHost(std::vector<T>& data) const
 {
     copyToHost(data.data(), data.size());
 }
 
 template <typename T>
 void
-CuVector<T>::prepareSendBuf(CuVector<T>& buffer, const CuVector<int>& indexSet) const
+GpuVector<T>::prepareSendBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const
 {
     return detail::prepareSendBuf(m_dataOnDevice, buffer.data(), indexSet.dim(), indexSet.data());
 }
 template <typename T>
 void
-CuVector<T>::syncFromRecvBuf(CuVector<T>& buffer, const CuVector<int>& indexSet) const
+GpuVector<T>::syncFromRecvBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const
 {
     return detail::syncFromRecvBuf(m_dataOnDevice, buffer.data(), indexSet.dim(), indexSet.data());
 }
 
-template class CuVector<double>;
-template class CuVector<float>;
-template class CuVector<int>;
+template class GpuVector<double>;
+template class GpuVector<float>;
+template class GpuVector<int>;
 
 } // namespace Opm::gpuistl

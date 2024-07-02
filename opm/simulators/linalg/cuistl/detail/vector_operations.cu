@@ -143,7 +143,7 @@ innerProductAtIndices(cublasHandle_t cublasHandle, const T* deviceA, const T* de
         deviceA, deviceB, buffer, numberOfElements, indices);
 
     // TODO: [perf] Get rid of the allocation here.
-    CuVector<T> oneVector(numberOfElements);
+    GpuVector<T> oneVector(numberOfElements);
     oneVector = 1.0;
     T result = 0.0;
     OPM_CUBLAS_SAFE_CALL(cublasDot(cublasHandle, numberOfElements, oneVector.data(), 1, buffer, 1, &result));

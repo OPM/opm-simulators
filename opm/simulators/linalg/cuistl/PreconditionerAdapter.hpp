@@ -35,11 +35,11 @@ namespace Opm::gpuistl
 //!
 //! \tparam X the domain type (should be on the CPU). Typicall a Dune::BlockVector
 //! \tparam Y the range type (should be on the CPU). Typicall a Dune::BlockVector
-//! \tparam CudaPreconditionerType the preconditioner taking CuVector<real_type> as arguments to apply
+//! \tparam CudaPreconditionerType the preconditioner taking GpuVector<real_type> as arguments to apply
 template <class X, class Y, class CudaPreconditionerType>
 class PreconditionerAdapter
     : public Dune::PreconditionerWithUpdate<X, Y>,
-      public PreconditionerHolder<CuVector<typename X::field_type>, CuVector<typename Y::field_type>>
+      public PreconditionerHolder<GpuVector<typename X::field_type>, GpuVector<typename Y::field_type>>
 {
 public:
     //! \brief The domain type of the preconditioner.
@@ -77,8 +77,8 @@ public:
     virtual void apply(X& v, const Y& d) override
     {
         if (!m_inputBuffer) {
-            m_inputBuffer.reset(new CuVector<field_type>(v.dim()));
-            m_outputBuffer.reset(new CuVector<field_type>(v.dim()));
+            m_inputBuffer.reset(new GpuVector<field_type>(v.dim()));
+            m_outputBuffer.reset(new GpuVector<field_type>(v.dim()));
         }
         m_inputBuffer->copyFromHost(d);
         m_underlyingPreconditioner->apply(*m_outputBuffer, *m_inputBuffer);
@@ -117,7 +117,7 @@ public:
         return detail::shouldCallPreconditionerPre<CudaPreconditionerType>();
     }
 
-    virtual std::shared_ptr<Dune::PreconditionerWithUpdate<CuVector<field_type>, CuVector<field_type>>>
+    virtual std::shared_ptr<Dune::PreconditionerWithUpdate<GpuVector<field_type>, GpuVector<field_type>>>
     getUnderlyingPreconditioner() override
     {
         return m_underlyingPreconditioner;
@@ -127,8 +127,8 @@ private:
     //! \brief the underlying preconditioner to use
     std::shared_ptr<CudaPreconditionerType> m_underlyingPreconditioner;
 
-    std::unique_ptr<CuVector<field_type>> m_inputBuffer;
-    std::unique_ptr<CuVector<field_type>> m_outputBuffer;
+    std::unique_ptr<GpuVector<field_type>> m_inputBuffer;
+    std::unique_ptr<GpuVector<field_type>> m_outputBuffer;
 };
 } // end namespace Opm::gpuistl
 

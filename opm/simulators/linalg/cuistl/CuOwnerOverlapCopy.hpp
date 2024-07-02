@@ -36,7 +36,7 @@ namespace Opm::gpuistl
 template<class field_type, class OwnerOverlapCopyCommunicationType>
 class GPUSender {
 public:
-    using X = CuVector<field_type>;
+    using X = GpuVector<field_type>;
 
     GPUSender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy) : m_cpuOwnerOverlapCopy(cpuOwnerOverlapCopy){}
 
@@ -97,8 +97,8 @@ protected:
     // premature optimization, in the sense that we could just initialize these indices
     // always, but they are not always used.
     mutable std::once_flag m_initializedIndices;
-    mutable std::unique_ptr<CuVector<int>> m_indicesOwner;
-    mutable std::unique_ptr<CuVector<int>> m_indicesCopy;
+    mutable std::unique_ptr<GpuVector<int>> m_indicesOwner;
+    mutable std::unique_ptr<GpuVector<int>> m_indicesCopy;
     const OwnerOverlapCopyCommunicationType& m_cpuOwnerOverlapCopy;
 };
 
@@ -113,7 +113,7 @@ template <class field_type, int block_size, class OwnerOverlapCopyCommunicationT
 class GPUObliviousMPISender : public GPUSender<field_type, OwnerOverlapCopyCommunicationType>
 {
 public:
-    using X = CuVector<field_type>;
+    using X = GpuVector<field_type>;
 
     GPUObliviousMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
         : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy)
@@ -151,8 +151,8 @@ private:
             }
         }
 
-        this->m_indicesCopy = std::make_unique<CuVector<int>>(indicesCopyOnCPU);
-        this->m_indicesOwner = std::make_unique<CuVector<int>>(indicesOwnerCPU);
+        this->m_indicesCopy = std::make_unique<GpuVector<int>>(indicesCopyOnCPU);
+        this->m_indicesOwner = std::make_unique<GpuVector<int>>(indicesOwnerCPU);
     }
 };
 
@@ -168,7 +168,7 @@ template <class field_type, int block_size, class OwnerOverlapCopyCommunicationT
 class GPUAwareMPISender : public GPUSender<field_type, OwnerOverlapCopyCommunicationType>
 {
 public:
-    using X = CuVector<field_type>;
+    using X = GpuVector<field_type>;
 
     GPUAwareMPISender(const OwnerOverlapCopyCommunicationType& cpuOwnerOverlapCopy)
         : GPUSender<field_type, OwnerOverlapCopyCommunicationType>(cpuOwnerOverlapCopy)
@@ -251,10 +251,10 @@ public:
     }
 
 private:
-    mutable std::unique_ptr<CuVector<int>> m_commpairIndicesCopy;
-    mutable std::unique_ptr<CuVector<int>> m_commpairIndicesOwner;
-    mutable std::unique_ptr<CuVector<field_type>> m_GPUSendBuf;
-    mutable std::unique_ptr<CuVector<field_type>> m_GPURecvBuf;
+    mutable std::unique_ptr<GpuVector<int>> m_commpairIndicesCopy;
+    mutable std::unique_ptr<GpuVector<int>> m_commpairIndicesOwner;
+    mutable std::unique_ptr<GpuVector<field_type>> m_GPUSendBuf;
+    mutable std::unique_ptr<GpuVector<field_type>> m_GPURecvBuf;
 
     struct MessageInformation
     {
@@ -332,11 +332,11 @@ private:
             }
         }
 
-        m_commpairIndicesCopy = std::make_unique<CuVector<int>>(commpairIndicesCopyOnCPU);
-        m_commpairIndicesOwner = std::make_unique<CuVector<int>>(commpairIndicesOwnerCPU);
+        m_commpairIndicesCopy = std::make_unique<GpuVector<int>>(commpairIndicesCopyOnCPU);
+        m_commpairIndicesOwner = std::make_unique<GpuVector<int>>(commpairIndicesOwnerCPU);
 
-        m_GPUSendBuf = std::make_unique<CuVector<field_type>>(sendBufIdx * block_size);
-        m_GPURecvBuf = std::make_unique<CuVector<field_type>>(recvBufIdx * block_size);
+        m_GPUSendBuf = std::make_unique<GpuVector<field_type>>(sendBufIdx * block_size);
+        m_GPURecvBuf = std::make_unique<GpuVector<field_type>>(recvBufIdx * block_size);
     }
 
     void initIndexSet() const override
@@ -360,8 +360,8 @@ private:
             }
         }
 
-        this->m_indicesCopy = std::make_unique<CuVector<int>>(indicesCopyOnCPU);
-        this->m_indicesOwner = std::make_unique<CuVector<int>>(indicesOwnerCPU);
+        this->m_indicesCopy = std::make_unique<GpuVector<int>>(indicesCopyOnCPU);
+        this->m_indicesOwner = std::make_unique<GpuVector<int>>(indicesOwnerCPU);
 
         buildCommPairIdxs();
     }
@@ -383,7 +383,7 @@ template <class field_type, int block_size, class OwnerOverlapCopyCommunicationT
 class CuOwnerOverlapCopy
 {
 public:
-    using X = CuVector<field_type>;
+    using X = GpuVector<field_type>;
 
     CuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> sender) : m_sender(sender){}
 

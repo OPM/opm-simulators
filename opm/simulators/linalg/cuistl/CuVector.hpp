@@ -50,7 +50,7 @@ namespace Opm::gpuistl
  * void someFunction() {
  *     auto someDataOnCPU = std::vector<double>({1.0, 2.0, 42.0, 59.9451743, 10.7132692});
  *
- *     auto dataOnGPU = CuVector<double>(someDataOnCPU);
+ *     auto dataOnGPU = GpuVector<double>(someDataOnCPU);
  *
  *     // Multiply by 4.0:
  *     dataOnGPU *= 4.0;
@@ -62,7 +62,7 @@ namespace Opm::gpuistl
  * @tparam T the type to store. Can be either float, double or int.
  */
 template <typename T>
-class CuVector
+class GpuVector
 {
 public:
     using field_type = T;
@@ -70,17 +70,17 @@ public:
 
 
     /**
-     * @brief CuVector allocates new GPU memory of the same size as other and copies the content of the other vector to
+     * @brief GpuVector allocates new GPU memory of the same size as other and copies the content of the other vector to
      * this newly allocated memory.
      *
      * @note This does synchronous transfer.
      *
      * @param other the vector to copy from
      */
-    CuVector(const CuVector<T>& other);
+    GpuVector(const GpuVector<T>& other);
 
     /**
-     * @brief CuVector allocates new GPU memory of the same size as data and copies the content of the data vector to
+     * @brief GpuVector allocates new GPU memory of the same size as data and copies the content of the data vector to
      * this newly allocated memory.
      *
      * @note This does CPU to GPU transfer.
@@ -90,7 +90,7 @@ public:
      *
      * @param data the vector to copy from
      */
-    explicit CuVector(const std::vector<T>& data);
+    explicit GpuVector(const std::vector<T>& data);
 
     /**
      * @brief operator= copies the content of the data vector to the memory of this vector.
@@ -100,7 +100,7 @@ public:
      *
      * @param other the vector to copy from
      */
-    CuVector& operator=(const CuVector<T>& other);
+    GpuVector& operator=(const GpuVector<T>& other);
 
     /**
      * @brief operator= sets the whole vector equal to the scalar value.
@@ -109,20 +109,20 @@ public:
      *
      * @param scalar the value all elements will be set to.
      */
-    CuVector& operator=(T scalar);
+    GpuVector& operator=(T scalar);
 
     /**
-     * @brief CuVector allocates new GPU memory of size numberOfElements * sizeof(T)
+     * @brief GpuVector allocates new GPU memory of size numberOfElements * sizeof(T)
      *
      * @note For now numberOfElements needs to be within the limits of int due to restrictions in cublas
      *
      * @param numberOfElements number of T elements to allocate
      */
-    explicit CuVector(const size_t numberOfElements);
+    explicit GpuVector(const size_t numberOfElements);
 
 
     /**
-     * @brief CuVector allocates new GPU memory of size numberOfElements * sizeof(T) and copies numberOfElements from
+     * @brief GpuVector allocates new GPU memory of size numberOfElements * sizeof(T) and copies numberOfElements from
      * data
      *
      * @note This assumes the data is on the CPU.
@@ -132,12 +132,12 @@ public:
      *
      * @note For now numberOfElements needs to be within the limits of int due to restrictions in cublas
      */
-    CuVector(const T* dataOnHost, const size_t numberOfElements);
+    GpuVector(const T* dataOnHost, const size_t numberOfElements);
 
     /**
-     * @brief ~CuVector calls cudaFree
+     * @brief ~GpuVector calls cudaFree
      */
-    virtual ~CuVector();
+    virtual ~GpuVector();
 
     /**
      * @return the raw pointer to the GPU data
@@ -162,7 +162,7 @@ public:
         // TODO: [perf] vector.dim() can be replaced by bvector.N() * BlockDimension
         if (detail::to_size_t(m_numberOfElements) != bvector.dim()) {
             OPM_THROW(std::runtime_error,
-                      fmt::format("Given incompatible vector size. CuVector has size {}, \n"
+                      fmt::format("Given incompatible vector size. GpuVector has size {}, \n"
                                   "however, BlockVector has N() = {}, and dim = {}.",
                                   m_numberOfElements,
                                   bvector.N(),
@@ -185,7 +185,7 @@ public:
         // TODO: [perf] vector.dim() can be replaced by bvector.N() * BlockDimension
         if (detail::to_size_t(m_numberOfElements) != bvector.dim()) {
             OPM_THROW(std::runtime_error,
-                      fmt::format("Given incompatible vector size. CuVector has size {},\n however, the BlockVector "
+                      fmt::format("Given incompatible vector size. GpuVector has size {},\n however, the BlockVector "
                                   "has has N() = {}, and dim() = {}.",
                                   m_numberOfElements,
                                   bvector.N(),
@@ -231,8 +231,8 @@ public:
      */
     void copyToHost(std::vector<T>& data) const;
 
-    void prepareSendBuf(CuVector<T>& buffer, const CuVector<int>& indexSet) const;
-    void syncFromRecvBuf(CuVector<T>& buffer, const CuVector<int>& indexSet) const;
+    void prepareSendBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const;
+    void syncFromRecvBuf(GpuVector<T>& buffer, const GpuVector<int>& indexSet) const;
 
     /**
      * @brief operator *= multiplies every element by scalar
@@ -242,7 +242,7 @@ public:
      *
      * @note int is not supported
      */
-    CuVector<T>& operator*=(const T& scalar);
+    GpuVector<T>& operator*=(const T& scalar);
 
     /**
      * @brief axpy sets this vector equal to this + alha * y
@@ -252,7 +252,7 @@ public:
      * @note this will call CuBlas in the background
      * @note int is not supported
      */
-    CuVector<T>& axpy(T alpha, const CuVector<T>& y);
+    GpuVector<T>& axpy(T alpha, const GpuVector<T>& y);
 
     /**
      * @brief operator+= adds the other vector to this vector
@@ -260,7 +260,7 @@ public:
      * @note this will call CuBlas in the background
      * @note int is not supported
      */
-    CuVector<T>& operator+=(const CuVector<T>& other);
+    GpuVector<T>& operator+=(const GpuVector<T>& other);
 
     /**
      * @brief operator-= subtracts the other vector from this vector
@@ -268,7 +268,7 @@ public:
      * @note this will call CuBlas in the background
      * @note int is not supported
      */
-    CuVector<T>& operator-=(const CuVector<T>& other);
+    GpuVector<T>& operator-=(const GpuVector<T>& other);
 
     /**
      * @brief dot computes the dot product (standard inner product) against the other vector
@@ -278,7 +278,7 @@ public:
      *
      * @return the result on the inner product
      */
-    T dot(const CuVector<T>& other) const;
+    T dot(const GpuVector<T>& other) const;
 
     /**
      * @brief returns the l2 norm of the vector
@@ -294,14 +294,14 @@ public:
      *
      * @note int is not supported
      */
-    T dot(const CuVector<T>& other, const CuVector<int>& indexSet, CuVector<T>& buffer) const;
+    T dot(const GpuVector<T>& other, const GpuVector<int>& indexSet, GpuVector<T>& buffer) const;
 
     /**
      * Computes the norm sqrt(sum_i this[indexSet[i]] * this[indexSet[i]])
      *
      * @note int is not supported
      */
-    T two_norm(const CuVector<int>& indexSet, CuVector<T>& buffer) const;
+    T two_norm(const GpuVector<int>& indexSet, GpuVector<T>& buffer) const;
 
 
     /**
@@ -309,14 +309,14 @@ public:
      *
      * @note int is not supported
      */
-    T dot(const CuVector<T>& other, const CuVector<int>& indexSet) const;
+    T dot(const GpuVector<T>& other, const GpuVector<int>& indexSet) const;
 
     /**
      * Computes the norm sqrt(sum_i this[indexSet[i]] * this[indexSet[i]])
      *
      * @note int is not supported
      */
-    T two_norm(const CuVector<int>& indexSet) const;
+    T two_norm(const GpuVector<int>& indexSet) const;
 
 
     /**
@@ -363,9 +363,9 @@ public:
      * }
      * @endcode
      */
-    void setZeroAtIndexSet(const CuVector<int>& indexSet);
+    void setZeroAtIndexSet(const GpuVector<int>& indexSet);
 
-    // Slow method that creates a string representation of a CuVector for debug purposes
+    // Slow method that creates a string representation of a GpuVector for debug purposes
     std::string toDebugString()
     {
         std::vector<T> v = asStdVector();
@@ -385,7 +385,7 @@ private:
     const int m_numberOfElements;
     detail::CuBlasHandle& m_cuBlasHandle;
 
-    void assertSameSize(const CuVector<T>& other) const;
+    void assertSameSize(const GpuVector<T>& other) const;
     void assertSameSize(int size) const;
 
     void assertHasElements() const;

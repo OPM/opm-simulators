@@ -149,8 +149,8 @@ BOOST_AUTO_TEST_CASE(RandomSparsityMatrix)
         std::vector<double> inputDataX(N * dim, 0.0);
         inputDataX[component] = 1.0;
         std::vector<double> inputDataY(N * dim, .25);
-        auto inputVectorX = Opm::gpuistl::CuVector<double>(inputDataX.data(), inputDataX.size());
-        auto inputVectorY = Opm::gpuistl::CuVector<double>(inputDataY.data(), inputDataY.size());
+        auto inputVectorX = Opm::gpuistl::GpuVector<double>(inputDataX.data(), inputDataX.size());
+        auto inputVectorY = Opm::gpuistl::GpuVector<double>(inputDataY.data(), inputDataY.size());
         Vector xHost(N), yHost(N);
         yHost = inputDataY[0];
         inputVectorX.copyToHost(xHost);

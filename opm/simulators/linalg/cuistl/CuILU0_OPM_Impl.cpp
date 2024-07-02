@@ -73,7 +73,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::CuILU0_OPM_Impl(const M& A, bool splitMatrix, bool 
                              m_gpuMatrix.nonzeroes(),
                              A.nonzeroes()));
     if (m_splitMatrix) {
-        m_gpuMatrixReorderedDiag.emplace(CuVector<field_type>(blocksize_ * blocksize_ * m_cpuMatrix.N()));
+        m_gpuMatrixReorderedDiag.emplace(GpuVector<field_type>(blocksize_ * blocksize_ * m_cpuMatrix.N()));
         detail::extractLowerAndUpperMatrices<M, field_type, GpuSparseMatrix<field_type>>(
             m_cpuMatrix, m_reorderedToNatural, m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper);
     } else {
@@ -279,8 +279,8 @@ CuILU0_OPM_Impl<M, X, Y, l>::tuneThreadBlockSizes()
     detail::tuneThreadBlockSize(updateFunc, m_moveThreadBlockSize);
     detail::tuneThreadBlockSize(updateFunc, m_LUThreadBlockSize);
 
-    CuVector<field_type> tmpV(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
-    CuVector<field_type> tmpD(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
+    GpuVector<field_type> tmpV(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
+    GpuVector<field_type> tmpD(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
     tmpD = 1;
 
     detail::tuneThreadBlockSize(applyFunc, m_lowerSolveThreadBlockSize, tmpV, tmpD);
@@ -290,11 +290,11 @@ CuILU0_OPM_Impl<M, X, Y, l>::tuneThreadBlockSizes()
 } // namespace Opm::gpuistl
 #define INSTANTIATE_CUDILU_DUNE(realtype, blockdim)                                                                    \
     template class ::Opm::gpuistl::CuILU0_OPM_Impl<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,            \
-                                         ::Opm::gpuistl::CuVector<realtype>,                                            \
-                                         ::Opm::gpuistl::CuVector<realtype>>;                                           \
+                                         ::Opm::gpuistl::GpuVector<realtype>,                                            \
+                                         ::Opm::gpuistl::GpuVector<realtype>>;                                           \
     template class ::Opm::gpuistl::CuILU0_OPM_Impl<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,             \
-                                         ::Opm::gpuistl::CuVector<realtype>,                                            \
-                                         ::Opm::gpuistl::CuVector<realtype>>
+                                         ::Opm::gpuistl::GpuVector<realtype>,                                            \
+                                         ::Opm::gpuistl::GpuVector<realtype>>
 
 INSTANTIATE_CUDILU_DUNE(double, 1);
 INSTANTIATE_CUDILU_DUNE(double, 2);

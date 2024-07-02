@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifference1D, T, NumericTypes)
     using M = Dune::FieldMatrix<T, 1, 1>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, 1>>;
-    using CuILU0 = Opm::gpuistl::CuSeqILU0<SpMatrix, Opm::gpuistl::CuVector<T>, Opm::gpuistl::CuVector<T>>;
+    using CuILU0 = Opm::gpuistl::CuSeqILU0<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {
@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifferenceBlock2, T, NumericTypes)
     using M = Dune::FieldMatrix<T, 2, 2>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, 2>>;
-    using CuILU0 = Opm::gpuistl::CuSeqILU0<SpMatrix, Opm::gpuistl::CuVector<T>, Opm::gpuistl::CuVector<T>>;
+    using CuILU0 = Opm::gpuistl::CuSeqILU0<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {

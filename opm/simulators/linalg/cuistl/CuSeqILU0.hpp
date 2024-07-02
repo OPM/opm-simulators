@@ -43,7 +43,7 @@ namespace Opm::gpuistl
 //! \tparam l Ignored. Just there to have the same number of template arguments
 //!    as other preconditioners.
 //!
-//! \note We assume X and Y are both CuVector<real_type>, but we leave them as template
+//! \note We assume X and Y are both GpuVector<real_type>, but we leave them as template
 //! arguments in case of future additions.
 template <class M, class X, class Y, int l = 1>
 class CuSeqILU0 : public Dune::PreconditionerWithUpdate<X, Y>
@@ -108,7 +108,7 @@ private:
     //! modified in the constructor to be the proper LU decomposition.
     GpuSparseMatrix<field_type> m_LU;
 
-    CuVector<field_type> m_temporaryStorage;
+    GpuVector<field_type> m_temporaryStorage;
 
 
     detail::CuSparseMatrixDescriptionPtr m_descriptionL;
@@ -117,7 +117,7 @@ private:
     detail::CuSparseResource<bsrsv2Info_t> m_infoU;
     detail::CuSparseResource<bsrilu02Info_t> m_infoM;
 
-    std::unique_ptr<CuVector<field_type>> m_buffer;
+    std::unique_ptr<GpuVector<field_type>> m_buffer;
     detail::CuSparseHandle& m_cuSparseHandle;
 
     bool m_analysisDone = false;

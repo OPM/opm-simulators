@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize2, T, NumericTypes)
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, blocksize>>;
-    using CuJac = Opm::gpuistl::CuJac<SpMatrix, Opm::gpuistl::CuVector<T>, Opm::gpuistl::CuVector<T>>;
+    using CuJac = Opm::gpuistl::CuJac<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize1, T, NumericTypes)
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, blocksize>>;
-    using CuJac = Opm::gpuistl::CuJac<SpMatrix, Opm::gpuistl::CuVector<T>, Opm::gpuistl::CuVector<T>>;
+    using CuJac = Opm::gpuistl::CuJac<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {

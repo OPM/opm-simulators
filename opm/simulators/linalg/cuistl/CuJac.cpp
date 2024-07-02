@@ -125,11 +125,11 @@ CuJac<M, X, Y, l>::invertDiagonalAndFlatten()
 } // namespace Opm::gpuistl
 #define INSTANTIATE_CUJAC_DUNE(realtype, blockdim)                                                                     \
     template class ::Opm::gpuistl::CuJac<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,             \
-                                        ::Opm::gpuistl::CuVector<realtype>,                                             \
-                                        ::Opm::gpuistl::CuVector<realtype>>;                                            \
+                                        ::Opm::gpuistl::GpuVector<realtype>,                                             \
+                                        ::Opm::gpuistl::GpuVector<realtype>>;                                            \
     template class ::Opm::gpuistl::CuJac<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,              \
-                                        ::Opm::gpuistl::CuVector<realtype>,                                             \
-                                        ::Opm::gpuistl::CuVector<realtype>>
+                                        ::Opm::gpuistl::GpuVector<realtype>,                                             \
+                                        ::Opm::gpuistl::GpuVector<realtype>>
 
 INSTANTIATE_CUJAC_DUNE(double, 1);
 INSTANTIATE_CUJAC_DUNE(double, 2);

@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE(TestDocumentedUsage)
 {
     auto someDataOnCPU = std::vector<double>({1.0, 2.0, 42.0, 59.9451743, 10.7132692});
 
-    auto dataOnGPU = ::Opm::gpuistl::CuVector<double>(someDataOnCPU);
+    auto dataOnGPU = ::Opm::gpuistl::GpuVector<double>(someDataOnCPU);
 
     // Multiply by 4.0:
     dataOnGPU *= 4.0;
@@ -50,14 +50,14 @@ BOOST_AUTO_TEST_CASE(TestDocumentedUsage)
 BOOST_AUTO_TEST_CASE(TestConstructionSize)
 {
     const int numberOfElements = 1234;
-    auto vectorOnGPU = Opm::gpuistl::CuVector<double>(numberOfElements);
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(numberOfElements);
     BOOST_CHECK_EQUAL(numberOfElements, vectorOnGPU.dim());
 }
 
 BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructor)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
-    auto vectorOnGPU = Opm::gpuistl::CuVector<double>(data.data(), data.size());
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.data(), data.size());
     BOOST_CHECK_EQUAL(data.size(), vectorOnGPU.dim());
     std::vector<double> buffer(data.size(), 0.0);
     vectorOnGPU.copyToHost(buffer.data(), buffer.size());
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(TestCopyFromHostConstructor)
 BOOST_AUTO_TEST_CASE(TestCopyFromHostFunction)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
-    auto vectorOnGPU = Opm::gpuistl::CuVector<double>(data.size());
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.size());
     BOOST_CHECK_EQUAL(data.size(), vectorOnGPU.dim());
     vectorOnGPU.copyFromHost(data.data(), data.size());
     std::vector<double> buffer(data.size(), 0.0);
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(TestCopyFromHostFunction)
 BOOST_AUTO_TEST_CASE(TestCopyFromBvector)
 {
     auto blockVector = Dune::BlockVector<Dune::FieldVector<double, 2>> {{{42, 43}, {44, 45}, {46, 47}}};
-    auto vectorOnGPU = Opm::gpuistl::CuVector<double>(blockVector.dim());
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(blockVector.dim());
     vectorOnGPU.copyFromHost(blockVector);
     std::vector<double> buffer(vectorOnGPU.dim());
     vectorOnGPU.copyToHost(buffer.data(), buffer.size());
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE(TestCopyToBvector)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7, 8, 9}};
     auto blockVector = Dune::BlockVector<Dune::FieldVector<double, 3>>(3);
-    auto vectorOnGPU = Opm::gpuistl::CuVector<double>(data.data(), data.size());
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.data(), data.size());
     vectorOnGPU.copyToHost(blockVector);
 
 
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(TestCopyToBvector)
 BOOST_AUTO_TEST_CASE(TestDataPointer)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7, 8, 9}};
-    auto vectorOnGPU = Opm::gpuistl::CuVector<double>(data.data(), data.size());
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.data(), data.size());
 
     std::vector<double> buffer(data.size(), 0.0);
     OPM_CUDA_SAFE_CALL(cudaMemcpy(buffer.data(), vectorOnGPU.data(), sizeof(double) * data.size(), cudaMemcpyDeviceToHost));
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE(TestDataPointer)
 BOOST_AUTO_TEST_CASE(TestCopyScalarMultiply)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
-    auto vectorOnGPU = Opm::gpuistl::CuVector<double>(data.data(), data.size());
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.data(), data.size());
     BOOST_CHECK_EQUAL(data.size(), vectorOnGPU.dim());
     const double scalar = 42.25;
     vectorOnGPU *= scalar;
@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE(TestCopyScalarMultiply)
 BOOST_AUTO_TEST_CASE(TestTwoNorm)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
-    auto vectorOnGPU = Opm::gpuistl::CuVector<double>(data.data(), data.size());
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.data(), data.size());
     auto twoNorm = vectorOnGPU.two_norm();
 
     double correctAnswer = 0.0;
@@ -143,8 +143,8 @@ BOOST_AUTO_TEST_CASE(TestDot)
 {
     std::vector<double> dataA {{1, 2, 3, 4, 5, 6, 7}};
     std::vector<double> dataB {{8, 9, 10, 11, 12, 13, 14}};
-    auto vectorOnGPUA = Opm::gpuistl::CuVector<double>(dataA.data(), dataA.size());
-    auto vectorOnGPUB = Opm::gpuistl::CuVector<double>(dataB.data(), dataB.size());
+    auto vectorOnGPUA = Opm::gpuistl::GpuVector<double>(dataA.data(), dataA.size());
+    auto vectorOnGPUB = Opm::gpuistl::GpuVector<double>(dataB.data(), dataB.size());
     auto dot = vectorOnGPUA.dot(vectorOnGPUB);
 
     double correctAnswer = 0.0;
@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE(TestDot)
 BOOST_AUTO_TEST_CASE(Assigment)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
-    auto vectorOnGPU = Opm::gpuistl::CuVector<double>(data.data(), data.size());
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.data(), data.size());
     vectorOnGPU = 10.0;
     vectorOnGPU.copyToHost(data.data(), data.size());
 
@@ -171,9 +171,9 @@ BOOST_AUTO_TEST_CASE(Assigment)
 BOOST_AUTO_TEST_CASE(CopyAssignment)
 {
     std::vector<double> data {{1, 2, 3, 4, 5, 6, 7}};
-    auto vectorOnGPU = Opm::gpuistl::CuVector<double>(data.data(), data.size());
+    auto vectorOnGPU = Opm::gpuistl::GpuVector<double>(data.data(), data.size());
     vectorOnGPU.copyToHost(data.data(), data.size());
-    auto vectorOnGPUB = Opm::gpuistl::CuVector<double>(data.size());
+    auto vectorOnGPUB = Opm::gpuistl::GpuVector<double>(data.size());
     vectorOnGPUB = 4.0;
     vectorOnGPUB = vectorOnGPU;
 
@@ -185,7 +185,7 @@ BOOST_AUTO_TEST_CASE(CopyAssignment)
 BOOST_AUTO_TEST_CASE(RandomVectors)
 {
 
-    using GVector = Opm::gpuistl::CuVector<double>;
+    using GVector = Opm::gpuistl::GpuVector<double>;
     std::srand(0);
     std::mt19937 generator;
     std::uniform_real_distribution<double> distribution(-100.0, 100.0);
@@ -268,7 +268,7 @@ BOOST_AUTO_TEST_CASE(RandomVectors)
                 indexSet.push_back(i);
             }
         }
-        auto indexSetGPU = Opm::gpuistl::CuVector<int>(indexSet);
+        auto indexSetGPU = Opm::gpuistl::GpuVector<int>(indexSet);
 
         aGPU.setZeroAtIndexSet(indexSetGPU);
         auto projectedA = aGPU.asStdVector();

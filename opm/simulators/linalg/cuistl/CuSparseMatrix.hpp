@@ -144,7 +144,7 @@ public:
      *
      * @note Read the CuSPARSE documentation on Block Compressed Sparse Row Format (BSR) for the exact ordering.
      */
-    CuVector<T>& getNonZeroValues()
+    GpuVector<T>& getNonZeroValues()
     {
         return m_nonZeroElements;
     }
@@ -154,7 +154,7 @@ public:
      *
      * @note Read the CuSPARSE documentation on Block Compressed Sparse Row Format (BSR) for the exact ordering.
      */
-    const CuVector<T>& getNonZeroValues() const
+    const GpuVector<T>& getNonZeroValues() const
     {
         return m_nonZeroElements;
     }
@@ -164,7 +164,7 @@ public:
      *
      * @note Read the CuSPARSE documentation on Block Compressed Sparse Row Format (BSR) for the exact ordering.
      */
-    CuVector<int>& getRowIndices()
+    GpuVector<int>& getRowIndices()
     {
         return m_rowIndices;
     }
@@ -174,7 +174,7 @@ public:
      *
      * @note Read the CuSPARSE documentation on Block Compressed Sparse Row Format (BSR) for the exact ordering.
      */
-    const CuVector<int>& getRowIndices() const
+    const GpuVector<int>& getRowIndices() const
     {
         return m_rowIndices;
     }
@@ -184,7 +184,7 @@ public:
      *
      * @return Read the CuSPARSE documentation on Block Compressed Sparse Row Format (BSR) for the exact ordering.
      */
-    CuVector<int>& getColumnIndices()
+    GpuVector<int>& getColumnIndices()
     {
         return m_columnIndices;
     }
@@ -194,7 +194,7 @@ public:
      *
      * @return Read the CuSPARSE documentation on Block Compressed Sparse Row Format (BSR) for the exact ordering.
      */
-    const CuVector<int>& getColumnIndices() const
+    const GpuVector<int>& getColumnIndices() const
     {
         return m_columnIndices;
     }
@@ -245,7 +245,7 @@ public:
      *
      * @note Due to limitations of CuSparse, this is only supported for block sizes greater than 1.
      */
-    virtual void mv(const CuVector<T>& x, CuVector<T>& y) const;
+    virtual void mv(const GpuVector<T>& x, GpuVector<T>& y) const;
 
     /**
      * @brief umv computes y=Ax+y
@@ -254,7 +254,7 @@ public:
      *
      * @note Due to limitations of CuSparse, this is only supported for block sizes greater than 1.
      */
-    virtual void umv(const CuVector<T>& x, CuVector<T>& y) const;
+    virtual void umv(const GpuVector<T>& x, GpuVector<T>& y) const;
 
 
     /**
@@ -264,7 +264,7 @@ public:
      *
      * @note Due to limitations of CuSparse, this is only supported for block sizes greater than 1.
      */
-    virtual void usmv(T alpha, const CuVector<T>& x, CuVector<T>& y) const;
+    virtual void usmv(T alpha, const GpuVector<T>& x, GpuVector<T>& y) const;
 
     /**
      * @brief updateNonzeroValues updates the non-zero values by using the non-zero values of the supplied matrix
@@ -280,9 +280,9 @@ public:
     void updateNonzeroValues(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false);
 
 private:
-    CuVector<T> m_nonZeroElements;
-    CuVector<int> m_columnIndices;
-    CuVector<int> m_rowIndices;
+    GpuVector<T> m_nonZeroElements;
+    GpuVector<int> m_columnIndices;
+    GpuVector<int> m_rowIndices;
 
     // Notice that we store these three as int to make sure we are cusparse compatible.
     //
