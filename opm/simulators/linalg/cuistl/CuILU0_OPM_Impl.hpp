@@ -25,7 +25,6 @@
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuMatrixDescription.hpp>
-#include <opm/simulators/linalg/cuistl/detail/CuSparseResource.hpp>
 #include <optional>
 #include <vector>
 #include <memory>

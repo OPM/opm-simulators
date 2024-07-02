@@ -26,13 +26,13 @@ namespace Opm::gpuistl::detail
 namespace
 {
     template <class T>
-    struct CuSparseDeleteAndCreate {
+    struct GpuSparseDeleteAndCreate {
     };
 
     template <>
-    struct CuSparseDeleteAndCreate<bsrilu02Info_t> {
-        using DeleterType = typename CuSparseResource<bsrilu02Info_t>::DeleterType;
-        using CreatorType = typename CuSparseResource<bsrilu02Info_t>::CreatorType;
+    struct GpuSparseDeleteAndCreate<bsrilu02Info_t> {
+        using DeleterType = typename GpuSparseResource<bsrilu02Info_t>::DeleterType;
+        using CreatorType = typename GpuSparseResource<bsrilu02Info_t>::CreatorType;
 
         static DeleterType getDeleter()
         {
@@ -46,9 +46,9 @@ namespace
     };
 
     template <>
-    struct CuSparseDeleteAndCreate<bsrsv2Info_t> {
-        using DeleterType = typename CuSparseResource<bsrsv2Info_t>::DeleterType;
-        using CreatorType = typename CuSparseResource<bsrsv2Info_t>::CreatorType;
+    struct GpuSparseDeleteAndCreate<bsrsv2Info_t> {
+        using DeleterType = typename GpuSparseResource<bsrsv2Info_t>::DeleterType;
+        using CreatorType = typename GpuSparseResource<bsrsv2Info_t>::CreatorType;
 
         static DeleterType getDeleter()
         {
@@ -62,9 +62,9 @@ namespace
     };
 
     template <>
-    struct CuSparseDeleteAndCreate<cusparseMatDescr_t> {
-        using DeleterType = typename CuSparseResource<cusparseMatDescr_t>::DeleterType;
-        using CreatorType = typename CuSparseResource<cusparseMatDescr_t>::CreatorType;
+    struct GpuSparseDeleteAndCreate<cusparseMatDescr_t> {
+        using DeleterType = typename GpuSparseResource<cusparseMatDescr_t>::DeleterType;
+        using CreatorType = typename GpuSparseResource<cusparseMatDescr_t>::CreatorType;
 
         static DeleterType getDeleter()
         {
@@ -79,7 +79,7 @@ namespace
 
 } // namespace
 template <class T>
-CuSparseResource<T>::CuSparseResource(CreatorType creator, DeleterType deleter)
+GpuSparseResource<T>::GpuSparseResource(CreatorType creator, DeleterType deleter)
     : m_deleter(deleter)
 {
     // TODO: This should probably not use this macro since it will disguise the
@@ -88,13 +88,13 @@ CuSparseResource<T>::CuSparseResource(CreatorType creator, DeleterType deleter)
 }
 
 template <class T>
-CuSparseResource<T>::CuSparseResource()
-    : CuSparseResource<T>(CuSparseDeleteAndCreate<T>::getCreator(), CuSparseDeleteAndCreate<T>::getDeleter())
+GpuSparseResource<T>::GpuSparseResource()
+    : GpuSparseResource<T>(GpuSparseDeleteAndCreate<T>::getCreator(), GpuSparseDeleteAndCreate<T>::getDeleter())
 {
 }
 
 template <class T>
-CuSparseResource<T>::~CuSparseResource()
+GpuSparseResource<T>::~GpuSparseResource()
 {
     // TODO: This should probably not use this macro since it will disguise the
     // proper name of the function being called.

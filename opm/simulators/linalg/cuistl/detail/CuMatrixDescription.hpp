@@ -27,12 +27,12 @@ namespace Opm::gpuistl::detail
 /**
  * GpuSparseMatrixDescription holder. This is internal information needed for most calls to the CuSparse API.
  */
-using GpuSparseMatrixDescription = CuSparseResource<cusparseMatDescr_t>;
+using GpuSparseMatrixDescription = GpuSparseResource<cusparseMatDescr_t>;
 
 /**
  * Pointer to GpuSparseMatrixDescription holder. This is internal information needed for most calls to the CuSparse API.
  */
-using GpuSparseMatrixDescriptionPtr = std::shared_ptr<CuSparseResource<cusparseMatDescr_t>>;
+using GpuSparseMatrixDescriptionPtr = std::shared_ptr<GpuSparseResource<cusparseMatDescr_t>>;
 
 /**
  * @brief createMatrixDescription creates a default matrix description

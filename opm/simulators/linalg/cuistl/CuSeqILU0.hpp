@@ -113,9 +113,9 @@ private:
 
     detail::GpuSparseMatrixDescriptionPtr m_descriptionL;
     detail::GpuSparseMatrixDescriptionPtr m_descriptionU;
-    detail::CuSparseResource<bsrsv2Info_t> m_infoL;
-    detail::CuSparseResource<bsrsv2Info_t> m_infoU;
-    detail::CuSparseResource<bsrilu02Info_t> m_infoM;
+    detail::GpuSparseResource<bsrsv2Info_t> m_infoL;
+    detail::GpuSparseResource<bsrsv2Info_t> m_infoU;
+    detail::GpuSparseResource<bsrilu02Info_t> m_infoM;
 
     std::unique_ptr<GpuVector<field_type>> m_buffer;
     detail::GpuSparseHandle& m_cuSparseHandle;

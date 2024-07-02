@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CUSPARSERESOURCE_HPP
-#define CUSPARSERESOURCE_HPP
+#ifndef GPUSPARSERESOURCE_HPP
+#define GPUSPARSERESOURCE_HPP
 #include <cusparse.h>
 #include <functional>
 #include <memory>
@@ -27,7 +27,7 @@ namespace Opm::gpuistl::detail
 {
 
 /**
- * @brief The CuSparseResource class wraps a CuSparse resource in a proper RAII pattern
+ * @brief The GpuSparseResource class wraps a cu/hipSPARSE resource in a proper RAII pattern
  *
  * Current we support the following types for T:
  *   - bsrilu02Info_t
@@ -43,42 +43,42 @@ namespace Opm::gpuistl::detail
  *
  * Example usage:
  * @code{.cpp}
- * #include <opm/simulator/linalg/cuistl/detail/CuSparseResource.hpp>
+ * #include <opm/simulator/linalg/cuistl/detail/GpuSparseResource.hpp>
  *
  * void someFunction() {
- *     auto resource = CuSparseResource<cuSparseMatDescr_t>();
+ *     auto resource = GpuSparseResource<cuSparseMatDescr_t>();
  * }
  * @endcode
  */
 template <class T>
-class CuSparseResource
+class GpuSparseResource
 {
 public:
     using CreatorType = typename std::function<cusparseStatus_t(T*)>;
     using DeleterType = typename std::function<cusparseStatus_t(T)>;
 
     /**
-     * @brief CuSparseResource creates a new instance by calling creator, and will delete using deleter
+     * @brief GpuSparseResource creates a new instance by calling creator, and will delete using deleter
      * @param creator a functor used to create an instance
      * @param deleter a functor used to delete the instance
      *
      * @note Using this constructor it is possible to add support for new types not already accounted for.
      */
-    CuSparseResource(CreatorType creator, DeleterType deleter);
+    GpuSparseResource(CreatorType creator, DeleterType deleter);
 
     /**
-     * @brief CuSparseResource will automatically select the proper creator and deleter based on the type (and throw an exception if not available)
+     * @brief GpuSparseResource will automatically select the proper creator and deleter based on the type (and throw an exception if not available)
      */
-    CuSparseResource();
+    GpuSparseResource();
 
     /**
      * Calls the deleter functor
      */
-    ~CuSparseResource();
+    ~GpuSparseResource();
 
     // This should not be copyable.
-    CuSparseResource(const CuSparseResource&) = delete;
-    CuSparseResource& operator=(const CuSparseResource&) = delete;
+    GpuSparseResource(const GpuSparseResource&) = delete;
+    GpuSparseResource& operator=(const GpuSparseResource&) = delete;
 
     /**
      * @brief get returns the raw pointer to the resource.
