@@ -24,8 +24,8 @@
  * instead of calling cublasDscal and cublasSscal respectively.
  */
 
-#ifndef OPM_CUBLASWRAPPER_HEADER_INCLUDED
-#define OPM_CUBLASWRAPPER_HEADER_INCLUDED
+#ifndef OPM_GPUBLASWRAPPER_HEADER_INCLUDED
+#define OPM_GPUBLASWRAPPER_HEADER_INCLUDED
 #include <cublas_v2.h>
 #include <opm/common/ErrorMacros.hpp>
 

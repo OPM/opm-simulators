@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUISTL_CUSPARSE_MATRIX_OPERATIONS_HPP
-#define OPM_CUISTL_CUSPARSE_MATRIX_OPERATIONS_HPP
+#ifndef OPM_GPUISTL_CUSPARSE_MATRIX_OPERATIONS_HPP
+#define OPM_GPUISTL_CUSPARSE_MATRIX_OPERATIONS_HPP
 #include <cstddef>
 #include <vector>
 namespace Opm::gpuistl::detail

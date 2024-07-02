@@ -21,7 +21,7 @@
 #include <cusparse.h>
 namespace Opm::gpuistl::detail
 {
-const constexpr auto CUSPARSE_MATRIX_ORDER = CUSPARSE_DIRECTION_ROW;
+const constexpr auto GPUSPARSE_MATRIX_ROW = CUSPARSE_DIRECTION_ROW;
 }
 
 #endif

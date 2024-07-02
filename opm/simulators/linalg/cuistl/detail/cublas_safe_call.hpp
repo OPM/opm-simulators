@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUBLAS_SAFE_CALL_HPP
-#define OPM_CUBLAS_SAFE_CALL_HPP
+#ifndef OPM_GPU_BLAS_SAFE_CALL_HPP
+#define OPM_GPU_BLAS_SAFE_CALL_HPP
 #include <cublas_v2.h>
 #include <exception>
 #include <fmt/core.h>

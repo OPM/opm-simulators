@@ -214,7 +214,7 @@ GpuSparseMatrix<T>::mv(const GpuVector<T>& x, GpuVector<T>& y) const
     T alpha = 1.0;
     T beta = 0.0;
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
-                                                 detail::CUSPARSE_MATRIX_ORDER,
+                                                 detail::GPUSPARSE_MATRIX_ROW,
                                                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                  m_numberOfRows,
                                                  m_numberOfRows,
@@ -249,7 +249,7 @@ GpuSparseMatrix<T>::umv(const GpuVector<T>& x, GpuVector<T>& y) const
     T alpha = 1.0;
     T beta = 1.0;
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
-                                                 detail::CUSPARSE_MATRIX_ORDER,
+                                                 detail::GPUSPARSE_MATRIX_ROW,
                                                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                  m_numberOfRows,
                                                  m_numberOfRows,
@@ -285,7 +285,7 @@ GpuSparseMatrix<T>::usmv(T alpha, const GpuVector<T>& x, GpuVector<T>& y) const
 
     T beta = 1.0;
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
-                                                 detail::CUSPARSE_MATRIX_ORDER,
+                                                 detail::GPUSPARSE_MATRIX_ROW,
                                                  CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                  numberOfRows,
                                                  numberOfRows,

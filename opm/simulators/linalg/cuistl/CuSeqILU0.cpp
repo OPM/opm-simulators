@@ -97,7 +97,7 @@ CuSeqILU0<M, X, Y, l>::apply(X& v, const Y& d)
 
     // Solve L m_temporaryStorage = d
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrsv2_solve(m_cuSparseHandle.get(),
-                                                        detail::CUSPARSE_MATRIX_ORDER,
+                                                        detail::GPUSPARSE_MATRIX_ROW,
                                                         CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                         numberOfRows,
                                                         numberOfNonzeroBlocks,
@@ -115,7 +115,7 @@ CuSeqILU0<M, X, Y, l>::apply(X& v, const Y& d)
 
     // Solve U v = m_temporaryStorage
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrsv2_solve(m_cuSparseHandle.get(),
-                                                        detail::CUSPARSE_MATRIX_ORDER,
+                                                        detail::GPUSPARSE_MATRIX_ROW,
                                                         CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                         numberOfRows,
                                                         numberOfNonzeroBlocks,
@@ -186,7 +186,7 @@ CuSeqILU0<M, X, Y, l>::analyzeMatrix()
     auto columnIndices = m_LU.getColumnIndices().data();
     // analysis of ilu LU decomposition
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrilu02_analysis(m_cuSparseHandle.get(),
-                                                             detail::CUSPARSE_MATRIX_ORDER,
+                                                             detail::GPUSPARSE_MATRIX_ROW,
                                                              numberOfRows,
                                                              numberOfNonzeroBlocks,
                                                              m_LU.getDescription().get(),
@@ -211,7 +211,7 @@ CuSeqILU0<M, X, Y, l>::analyzeMatrix()
 
     // analysis of ilu apply
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrsv2_analysis(m_cuSparseHandle.get(),
-                                                           detail::CUSPARSE_MATRIX_ORDER,
+                                                           detail::GPUSPARSE_MATRIX_ROW,
                                                            CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                            numberOfRows,
                                                            numberOfNonzeroBlocks,
@@ -225,7 +225,7 @@ CuSeqILU0<M, X, Y, l>::analyzeMatrix()
                                                            m_buffer->data()));
 
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrsv2_analysis(m_cuSparseHandle.get(),
-                                                           detail::CUSPARSE_MATRIX_ORDER,
+                                                           detail::GPUSPARSE_MATRIX_ROW,
                                                            CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                            numberOfRows,
                                                            numberOfNonzeroBlocks,
@@ -259,7 +259,7 @@ CuSeqILU0<M, X, Y, l>::findBufferSize()
 
     int bufferSizeM = 0;
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrilu02_bufferSize(m_cuSparseHandle.get(),
-                                                               detail::CUSPARSE_MATRIX_ORDER,
+                                                               detail::GPUSPARSE_MATRIX_ROW,
                                                                numberOfRows,
                                                                numberOfNonzeroBlocks,
                                                                m_LU.getDescription().get(),
@@ -271,7 +271,7 @@ CuSeqILU0<M, X, Y, l>::findBufferSize()
                                                                &bufferSizeM));
     int bufferSizeL = 0;
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrsv2_bufferSize(m_cuSparseHandle.get(),
-                                                             detail::CUSPARSE_MATRIX_ORDER,
+                                                             detail::GPUSPARSE_MATRIX_ROW,
                                                              CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                              numberOfRows,
                                                              numberOfNonzeroBlocks,
@@ -285,7 +285,7 @@ CuSeqILU0<M, X, Y, l>::findBufferSize()
 
     int bufferSizeU = 0;
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrsv2_bufferSize(m_cuSparseHandle.get(),
-                                                             detail::CUSPARSE_MATRIX_ORDER,
+                                                             detail::GPUSPARSE_MATRIX_ROW,
                                                              CUSPARSE_OPERATION_NON_TRANSPOSE,
                                                              numberOfRows,
                                                              numberOfNonzeroBlocks,
@@ -319,7 +319,7 @@ CuSeqILU0<M, X, Y, l>::createILU()
     auto rowIndices = m_LU.getRowIndices().data();
     auto columnIndices = m_LU.getColumnIndices().data();
     OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrilu02(m_cuSparseHandle.get(),
-                                                    detail::CUSPARSE_MATRIX_ORDER,
+                                                    detail::GPUSPARSE_MATRIX_ROW,
                                                     numberOfRows,
                                                     numberOfNonzeroBlocks,
                                                     m_LU.getDescription().get(),

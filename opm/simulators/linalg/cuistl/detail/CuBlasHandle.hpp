@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUBLASHANDLE_HPP
-#define OPM_CUBLASHANDLE_HPP
+#ifndef OPM_GPUBLASHANDLE_HPP
+#define OPM_GPUBLASHANDLE_HPP
 #include <cublas_v2.h>
 #include <memory>
 
@@ -65,4 +65,4 @@ private:
     cublasHandle_t m_handle;
 };
 } // namespace Opm::gpuistl::detail
-#endif // OPM_CUBLASHANDLE_HPP
+#endif // OPM_GPUBLASHANDLE_HPP
