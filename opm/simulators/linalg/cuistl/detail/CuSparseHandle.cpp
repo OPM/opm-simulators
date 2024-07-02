@@ -22,27 +22,27 @@ namespace Opm::gpuistl::detail
 {
 
 
-CuSparseHandle::CuSparseHandle()
+GpuSparseHandle::GpuSparseHandle()
 {
     OPM_GPUSPARSE_SAFE_CALL(cusparseCreate(&m_handle));
     OPM_GPUSPARSE_SAFE_CALL(cusparseSetStream(m_handle, 0));
 }
 
-CuSparseHandle::~CuSparseHandle()
+GpuSparseHandle::~GpuSparseHandle()
 {
     OPM_GPUSPARSE_WARN_IF_ERROR(cusparseDestroy(m_handle));
 }
 
 cusparseHandle_t
-CuSparseHandle::get()
+GpuSparseHandle::get()
 {
     return m_handle;
 }
 
-CuSparseHandle&
-CuSparseHandle::getInstance()
+GpuSparseHandle&
+GpuSparseHandle::getInstance()
 {
-    static CuSparseHandle instance;
+    static GpuSparseHandle instance;
     return instance;
 }
 

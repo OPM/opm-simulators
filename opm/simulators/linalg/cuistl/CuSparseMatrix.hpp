@@ -293,7 +293,7 @@ private:
     const int m_blockSize;
 
     detail::GpuSparseMatrixDescriptionPtr m_matrixDescription;
-    detail::CuSparseHandle& m_cusparseHandle;
+    detail::GpuSparseHandle& m_cusparseHandle;
 
     template <class VectorType>
     void assertSameSize(const VectorType& vector) const;

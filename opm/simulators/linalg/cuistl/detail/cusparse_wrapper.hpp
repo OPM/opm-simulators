@@ -25,8 +25,8 @@
  */
 #include <cusparse.h>
 #include <type_traits>
-#ifndef OPM_CUSPARSE_WRAPPER_HPP
-#define OPM_CUSPARSE_WRAPPER_HPP
+#ifndef OPM_GPUSPARSE_WRAPPER_HPP
+#define OPM_GPUSPARSE_WRAPPER_HPP
 namespace Opm::gpuistl::detail
 {
 

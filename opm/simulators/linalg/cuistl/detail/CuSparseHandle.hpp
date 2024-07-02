@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUSPARSEHANDLE_HPP
-#define OPM_CUSPARSEHANDLE_HPP
+#ifndef OPM_GPUSPARSEHANDLE_HPP
+#define OPM_GPUSPARSEHANDLE_HPP
 #include <cusparse.h>
 #include <memory>
 
@@ -25,29 +25,29 @@ namespace Opm::gpuistl::detail
 {
 
 /**
- * @brief The CuSparseHandle class provides a singleton for the simulator universal cuSparseHandle.
+ * @brief The GpuSparseHandle class provides a singleton for the simulator universal cuSparseHandle/hipSparseHandle.
  *
  * Example use:
  * @code{.cpp}
- * #include <opm/simulators/linalg/cuistl/detail/CuSparseHandle.hpp>
+ * #include <opm/simulators/linalg/cuistl/detail/GpuSparseHandle.hpp>
  * void someFunction() {
- *     auto& cuSparseHandle = ::Opm::gpuistl::detail::CuSparseHandle::getInstance();
+ *     auto& cuSparseHandle = ::Opm::gpuistl::detail::GpuSparseHandle::getInstance();
  *     int cuSparseVersion = -1;
  *     OPM_GPUSPARSE_SAFE_CALL(cusparseGetVersion(cuSparseHandle.get(), &cuSparseVersion));
  * }
  * @endcode
  */
-class CuSparseHandle
+class GpuSparseHandle
 {
 public:
     // This should not be copyable.
-    CuSparseHandle(const CuSparseHandle&) = delete;
-    CuSparseHandle& operator=(const CuSparseHandle&) = delete;
+    GpuSparseHandle(const GpuSparseHandle&) = delete;
+    GpuSparseHandle& operator=(const GpuSparseHandle&) = delete;
 
     /**
      * Calls cuSparseDestroy on the handle
      */
-    ~CuSparseHandle();
+    ~GpuSparseHandle();
 
     /**
      * @brief get returns the underlying cuSparse handle (to be used in calls to cusparse)
@@ -55,13 +55,13 @@ public:
     cusparseHandle_t get();
 
     /**
-     * @brief getInstance creates (if necessary) and returns the single unique instance of CuSparseHandle (singleton)
+     * @brief getInstance creates (if necessary) and returns the single unique instance of GpuSparseHandle (singleton)
      */
-    static CuSparseHandle& getInstance();
+    static GpuSparseHandle& getInstance();
 
 private:
-    CuSparseHandle();
+    GpuSparseHandle();
     cusparseHandle_t m_handle;
 };
 } // namespace Opm::gpuistl::detail
-#endif // OPM_CUSPARSEHANDLE_HPP
+#endif // OPM_GPUSPARSEHANDLE_HPP

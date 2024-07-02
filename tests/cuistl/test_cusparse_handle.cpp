@@ -26,7 +26,7 @@
 
 BOOST_AUTO_TEST_CASE(TestGetSparseVersion)
 {
-    auto& cuSparseHandle = ::Opm::gpuistl::detail::CuSparseHandle::getInstance();
+    auto& cuSparseHandle = ::Opm::gpuistl::detail::GpuSparseHandle::getInstance();
     int cuSparseVersion = -1;
     OPM_GPUSPARSE_SAFE_CALL(cusparseGetVersion(cuSparseHandle.get(), &cuSparseVersion));
     BOOST_CHECK_LT(0, cuSparseVersion);

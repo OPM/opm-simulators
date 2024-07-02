@@ -50,7 +50,7 @@ CuSeqILU0<M, X, Y, l>::CuSeqILU0(const M& A, field_type w)
     , m_temporaryStorage(m_LU.N() * m_LU.blockSize())
     , m_descriptionL(detail::createLowerDiagonalDescription())
     , m_descriptionU(detail::createUpperDiagonalDescription())
-    , m_cuSparseHandle(detail::CuSparseHandle::getInstance())
+    , m_cuSparseHandle(detail::GpuSparseHandle::getInstance())
 {
     // Some sanity check
     OPM_ERROR_IF(A.N() != m_LU.N(),

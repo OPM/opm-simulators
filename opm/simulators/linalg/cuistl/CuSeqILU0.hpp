@@ -118,7 +118,7 @@ private:
     detail::CuSparseResource<bsrilu02Info_t> m_infoM;
 
     std::unique_ptr<GpuVector<field_type>> m_buffer;
-    detail::CuSparseHandle& m_cuSparseHandle;
+    detail::GpuSparseHandle& m_cuSparseHandle;
 
     bool m_analysisDone = false;
 
