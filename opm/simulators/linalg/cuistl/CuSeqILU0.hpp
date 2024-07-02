@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUSEQILU0_HPP
-#define OPM_CUSEQILU0_HPP
+#ifndef OPM_GPUSEQILU0_HPP
+#define OPM_GPUSEQILU0_HPP
 
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
@@ -46,7 +46,7 @@ namespace Opm::gpuistl
 //! \note We assume X and Y are both GpuVector<real_type>, but we leave them as template
 //! arguments in case of future additions.
 template <class M, class X, class Y, int l = 1>
-class CuSeqILU0 : public Dune::PreconditionerWithUpdate<X, Y>
+class GpuSeqILU0 : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
     //! \brief The matrix type the preconditioner is for.
@@ -64,7 +64,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    CuSeqILU0(const M& A, field_type w);
+    GpuSeqILU0(const M& A, field_type w);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.

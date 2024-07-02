@@ -43,7 +43,7 @@ namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
-CuSeqILU0<M, X, Y, l>::CuSeqILU0(const M& A, field_type w)
+GpuSeqILU0<M, X, Y, l>::GpuSeqILU0(const M& A, field_type w)
     : m_underlyingMatrix(A)
     , m_w(w)
     , m_LU(GpuSparseMatrix<field_type>::fromMatrix(detail::makeMatrixWithNonzeroDiagonal(A)))
@@ -54,15 +54,15 @@ CuSeqILU0<M, X, Y, l>::CuSeqILU0(const M& A, field_type w)
 {
     // Some sanity check
     OPM_ERROR_IF(A.N() != m_LU.N(),
-                 fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_LU.N(), A.N()));
+                 fmt::format("cu/hipSPARSE matrix not same size as DUNE matrix. {} vs {}.", m_LU.N(), A.N()));
     OPM_ERROR_IF(
         A[0][0].N() != m_LU.blockSize(),
-        fmt::format("CuSparse matrix not same blocksize as DUNE matrix. {} vs {}.", m_LU.blockSize(), A[0][0].N()));
+        fmt::format("cu/hipSPARSE matrix not same blocksize as DUNE matrix. {} vs {}.", m_LU.blockSize(), A[0][0].N()));
     OPM_ERROR_IF(
         A.N() * A[0][0].N() != m_LU.dim(),
-        fmt::format("CuSparse matrix not same dimension as DUNE matrix. {} vs {}.", m_LU.dim(), A.N() * A[0][0].N()));
+        fmt::format("cu/hipSPARSE matrix not same dimension as DUNE matrix. {} vs {}.", m_LU.dim(), A.N() * A[0][0].N()));
     OPM_ERROR_IF(A.nonzeroes() != m_LU.nonzeroes(),
-                 fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
+                 fmt::format("cu/hipSPARSE matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
                              m_LU.nonzeroes(),
                              A.nonzeroes()));
 
@@ -72,13 +72,13 @@ CuSeqILU0<M, X, Y, l>::CuSeqILU0(const M& A, field_type w)
 
 template <class M, class X, class Y, int l>
 void
-CuSeqILU0<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
+GpuSeqILU0<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
 {
 }
 
 template <class M, class X, class Y, int l>
 void
-CuSeqILU0<M, X, Y, l>::apply(X& v, const Y& d)
+GpuSeqILU0<M, X, Y, l>::apply(X& v, const Y& d)
 {
     cudaDeviceSynchronize();
         auto start = std::chrono::high_resolution_clock::now();
@@ -141,20 +141,20 @@ CuSeqILU0<M, X, Y, l>::apply(X& v, const Y& d)
 
 template <class M, class X, class Y, int l>
 void
-CuSeqILU0<M, X, Y, l>::post([[maybe_unused]] X& x)
+GpuSeqILU0<M, X, Y, l>::post([[maybe_unused]] X& x)
 {
 }
 
 template <class M, class X, class Y, int l>
 Dune::SolverCategory::Category
-CuSeqILU0<M, X, Y, l>::category() const
+GpuSeqILU0<M, X, Y, l>::category() const
 {
     return Dune::SolverCategory::sequential;
 }
 
 template <class M, class X, class Y, int l>
 void
-CuSeqILU0<M, X, Y, l>::update()
+GpuSeqILU0<M, X, Y, l>::update()
 {
     cudaDeviceSynchronize();
         auto start = std::chrono::high_resolution_clock::now();
@@ -170,7 +170,7 @@ CuSeqILU0<M, X, Y, l>::update()
 
 template <class M, class X, class Y, int l>
 void
-CuSeqILU0<M, X, Y, l>::analyzeMatrix()
+GpuSeqILU0<M, X, Y, l>::analyzeMatrix()
 {
 
     if (!m_buffer) {
@@ -242,7 +242,7 @@ CuSeqILU0<M, X, Y, l>::analyzeMatrix()
 
 template <class M, class X, class Y, int l>
 size_t
-CuSeqILU0<M, X, Y, l>::findBufferSize()
+GpuSeqILU0<M, X, Y, l>::findBufferSize()
 {
     // We have three calls that need buffers:
     //   1) LU decomposition
@@ -306,7 +306,7 @@ CuSeqILU0<M, X, Y, l>::findBufferSize()
 
 template <class M, class X, class Y, int l>
 void
-CuSeqILU0<M, X, Y, l>::createILU()
+GpuSeqILU0<M, X, Y, l>::createILU()
 {
     OPM_ERROR_IF(!m_buffer, "Buffer not initialized. Call findBufferSize() then initialize with the appropiate size.");
     OPM_ERROR_IF(!m_analysisDone, "Analyzis of matrix not done. Call analyzeMatrix() first.");
@@ -344,7 +344,7 @@ CuSeqILU0<M, X, Y, l>::createILU()
 
 template <class M, class X, class Y, int l>
 void
-CuSeqILU0<M, X, Y, l>::updateILUConfiguration()
+GpuSeqILU0<M, X, Y, l>::updateILUConfiguration()
 {
     auto bufferSize = findBufferSize();
     if (!m_buffer || m_buffer->dim() < bufferSize) {
@@ -354,25 +354,25 @@ CuSeqILU0<M, X, Y, l>::updateILUConfiguration()
     createILU();
 }
 } // namespace Opm::gpuistl
-#define INSTANTIATE_CUSEQILU0_DUNE(realtype, blockdim)                                                                 \
-    template class ::Opm::gpuistl::CuSeqILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
+#define INSTANTIATE_GPUSEQILU0_DUNE(realtype, blockdim)                                                                 \
+    template class ::Opm::gpuistl::GpuSeqILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>;                                        \
-    template class ::Opm::gpuistl::CuSeqILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
+    template class ::Opm::gpuistl::GpuSeqILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
                                             ::Opm::gpuistl::GpuVector<realtype>,                                         \
                                             ::Opm::gpuistl::GpuVector<realtype>>
 
 
-INSTANTIATE_CUSEQILU0_DUNE(double, 1);
-INSTANTIATE_CUSEQILU0_DUNE(double, 2);
-INSTANTIATE_CUSEQILU0_DUNE(double, 3);
-INSTANTIATE_CUSEQILU0_DUNE(double, 4);
-INSTANTIATE_CUSEQILU0_DUNE(double, 5);
-INSTANTIATE_CUSEQILU0_DUNE(double, 6);
+INSTANTIATE_GPUSEQILU0_DUNE(double, 1);
+INSTANTIATE_GPUSEQILU0_DUNE(double, 2);
+INSTANTIATE_GPUSEQILU0_DUNE(double, 3);
+INSTANTIATE_GPUSEQILU0_DUNE(double, 4);
+INSTANTIATE_GPUSEQILU0_DUNE(double, 5);
+INSTANTIATE_GPUSEQILU0_DUNE(double, 6);
 
-INSTANTIATE_CUSEQILU0_DUNE(float, 1);
-INSTANTIATE_CUSEQILU0_DUNE(float, 2);
-INSTANTIATE_CUSEQILU0_DUNE(float, 3);
-INSTANTIATE_CUSEQILU0_DUNE(float, 4);
-INSTANTIATE_CUSEQILU0_DUNE(float, 5);
-INSTANTIATE_CUSEQILU0_DUNE(float, 6);
+INSTANTIATE_GPUSEQILU0_DUNE(float, 1);
+INSTANTIATE_GPUSEQILU0_DUNE(float, 2);
+INSTANTIATE_GPUSEQILU0_DUNE(float, 3);
+INSTANTIATE_GPUSEQILU0_DUNE(float, 4);
+INSTANTIATE_GPUSEQILU0_DUNE(float, 5);
+INSTANTIATE_GPUSEQILU0_DUNE(float, 6);
