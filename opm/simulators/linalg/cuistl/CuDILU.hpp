@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUDILU_HPP
-#define OPM_CUDILU_HPP
+#ifndef OPM_GPUDILU_HPP
+#define OPM_GPUDILU_HPP
 
 #include <dune/istl/preconditioner.hh>
 #include <opm/grid/utility/SparseTable.hpp>
@@ -44,7 +44,7 @@ namespace Opm::gpuistl
 //! \note We assume X and Y are both GpuVector<real_type>, but we leave them as template
 //! arguments in case of future additions.
 template <class M, class X, class Y, int l = 1>
-class CuDILU : public Dune::PreconditionerWithUpdate<X, Y>
+class GpuDILU : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
     //! \brief The matrix type the preconditioner is for.
@@ -56,7 +56,7 @@ public:
     //! \brief The field type of the preconditioner.
     using field_type = typename X::field_type;
     //! \brief The GPU matrix type
-    using CuMat = GpuSparseMatrix<field_type>;
+    using GpuMat = GpuSparseMatrix<field_type>;
 
     //! \brief Constructor.
     //!
@@ -64,7 +64,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    explicit CuDILU(const M& A, bool splitMatrix, bool tuneKernels);
+    explicit GpuDILU(const M& A, bool splitMatrix, bool tuneKernels);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -86,7 +86,7 @@ public:
     //! \brief Compute the diagonal of the DILU, and update the data of the reordered matrix
     void computeDiagAndMoveReorderedData();
 
-    //! \brief function that will experimentally tune the thread block sizes of the important cuda kernels
+    //! \brief function that will experimentally tune the thread block sizes of the important cuda/hip kernels
     void tuneThreadBlockSizes();
 
 
@@ -115,12 +115,12 @@ private:
     //! \brief converts from index in natural ordered structure to index reordered strucutre
     std::vector<int> m_naturalToReordered;
     //! \brief The A matrix stored on the gpu, and its reordred version
-    CuMat m_gpuMatrix;
+    GpuMat m_gpuMatrix;
     //! \brief Stores the matrix in its entirety reordered. Optional in case splitting is used
-    std::unique_ptr<CuMat> m_gpuMatrixReordered;
+    std::unique_ptr<GpuMat> m_gpuMatrixReordered;
     //! \brief If matrix splitting is enabled, then we store the lower and upper part separately
-    std::unique_ptr<CuMat> m_gpuMatrixReorderedLower;
-    std::unique_ptr<CuMat> m_gpuMatrixReorderedUpper;
+    std::unique_ptr<GpuMat> m_gpuMatrixReorderedLower;
+    std::unique_ptr<GpuMat> m_gpuMatrixReorderedUpper;
     //! \brief If matrix splitting is enabled, we also store the diagonal separately
     std::unique_ptr<GpuVector<field_type>> m_gpuMatrixReorderedDiag;
     //! row conversion from natural to reordered matrix indices stored on the GPU

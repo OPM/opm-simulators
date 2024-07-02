@@ -272,9 +272,9 @@ void
 CuILU0_OPM_Impl<M, X, Y, l>::tuneThreadBlockSizes()
 {
 
-    using CuDILUType = std::remove_reference_t<decltype(*this)>;
-    auto updateFunc = std::bind(&CuDILUType::update, this);
-    auto applyFunc = std::bind(&CuDILUType::apply, this, std::placeholders::_1, std::placeholders::_1);
+    using GpuDILUType = std::remove_reference_t<decltype(*this)>;
+    auto updateFunc = std::bind(&GpuDILUType::update, this);
+    auto applyFunc = std::bind(&GpuDILUType::apply, this, std::placeholders::_1, std::placeholders::_1);
 
     detail::tuneThreadBlockSize(updateFunc, m_moveThreadBlockSize);
     detail::tuneThreadBlockSize(updateFunc, m_LUThreadBlockSize);

@@ -44,8 +44,8 @@ using Sp2x2BlockMatrix = Dune::BCRSMatrix<FM2x2>;
 using CuMatrix = Opm::gpuistl::GpuSparseMatrix<T>;
 using CuIntVec = Opm::gpuistl::GpuVector<int>;
 using CuFloatingPointVec = Opm::gpuistl::GpuVector<T>;
-using CuDilu1x1 = Opm::gpuistl::CuDILU<Sp1x1BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
-using CuDilu2x2 = Opm::gpuistl::CuDILU<Sp2x2BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
+using CuDilu1x1 = Opm::gpuistl::GpuDILU<Sp1x1BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
+using CuDilu2x2 = Opm::gpuistl::GpuDILU<Sp2x2BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
 
 Sp1x1BlockMatrix
 get1x1BlockTestMatrix()

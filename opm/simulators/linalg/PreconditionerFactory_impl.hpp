@@ -349,10 +349,10 @@ struct StandardPreconditioners {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
-            using CuDILU = typename gpuistl::CuDILU<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
-            auto cuDILU = std::make_shared<CuDILU>(op.getmat(), split_matrix, tune_gpu_kernels);
+            using GPUDILU = typename gpuistl::GpuDILU<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            auto gpuDILU = std::make_shared<GPUDILU>(op.getmat(), split_matrix, tune_gpu_kernels);
 
-            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, CuDILU>>(cuDILU);
+            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, GPUDILU>>(gpuDILU);
             auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
@@ -628,8 +628,8 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
             const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
-            using CUDILU = typename gpuistl::CuDILU<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
-            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, CUDILU>>(std::make_shared<CUDILU>(op.getmat(), split_matrix, tune_gpu_kernels));
+            using GPUDILU = typename gpuistl::GpuDILU<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GPUDILU>>(std::make_shared<GPUDILU>(op.getmat(), split_matrix, tune_gpu_kernels));
         });
 
         F::addCreator("CUDILUFloat", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
@@ -638,11 +638,11 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             using block_type = typename V::block_type;
             using VTo = Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
             using matrix_type_to = typename Dune::BCRSMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
-            using CuDILU = typename gpuistl::CuDILU<matrix_type_to, gpuistl::GpuVector<float>, gpuistl::GpuVector<float>>;
-            using Adapter = typename gpuistl::PreconditionerAdapter<VTo, VTo, CuDILU>;
+            using GPUDILU = typename gpuistl::GpuDILU<matrix_type_to, gpuistl::GpuVector<float>, gpuistl::GpuVector<float>>;
+            using Adapter = typename gpuistl::PreconditionerAdapter<VTo, VTo, GPUDILU>;
             using Converter = typename gpuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
             auto converted = std::make_shared<Converter>(op.getmat());
-            auto adapted = std::make_shared<Adapter>(std::make_shared<CuDILU>(converted->getConvertedMatrix(), split_matrix, tune_gpu_kernels));
+            auto adapted = std::make_shared<Adapter>(std::make_shared<GPUDILU>(converted->getConvertedMatrix(), split_matrix, tune_gpu_kernels));
             converted->setUnderlyingPreconditioner(adapted);
             return converted;
         });
