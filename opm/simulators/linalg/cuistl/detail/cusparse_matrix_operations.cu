@@ -105,7 +105,7 @@ copyMatDataToReordered(
     T* srcMatrix, int* srcRowIndices, T* dstMatrix, int* dstRowIndices, int* naturalToReordered, size_t numberOfRows,
     int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(gpuMoveDataToReordered<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(gpuMoveDataToReordered<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
     gpuMoveDataToReordered<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         srcMatrix, srcRowIndices, dstMatrix, dstRowIndices, naturalToReordered, numberOfRows);
@@ -125,7 +125,7 @@ copyMatDataToReorderedSplit(T* srcMatrix,
                             size_t numberOfRows,
                             int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(gpuMoveDataToReorderedSplit<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(gpuMoveDataToReorderedSplit<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
     gpuMoveDataToReorderedSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(srcMatrix,
                                                                                  srcRowIndices,

@@ -36,7 +36,7 @@ namespace Opm::gpuistl::detail
 
     // Kernel here is the function object of the cuda kernel
     template <class Kernel>
-    inline int getCudaRecomendedThreadBlockSize(Kernel k, int suggestedThrBlockSize=-1)
+    inline int getRecomendedThreadBlockSize(Kernel k, int suggestedThrBlockSize=-1)
     {
         if (suggestedThrBlockSize != -1){
             return suggestedThrBlockSize;

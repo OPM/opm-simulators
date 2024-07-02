@@ -59,7 +59,7 @@ void
 invertDiagonalAndFlatten(T* mat, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec)
 {
     if (blocksize <= 3) {
-        int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(gpuInvertDiagonalAndFlatten<T, blocksize>);
+        int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(gpuInvertDiagonalAndFlatten<T, blocksize>);
         int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
         gpuInvertDiagonalAndFlatten<T, blocksize>
             <<<nThreadBlocks, threadBlockSize>>>(mat, rowIndices, colIndices, numberOfRows, vec);

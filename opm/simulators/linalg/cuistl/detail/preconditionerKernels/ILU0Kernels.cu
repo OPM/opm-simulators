@@ -337,7 +337,7 @@ solveLowerLevelSet(T* reorderedMat,
                                T* v,
                                int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(gpuSolveLowerLevelSet<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(gpuSolveLowerLevelSet<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     gpuSolveLowerLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, d, v);
@@ -354,7 +354,7 @@ solveUpperLevelSet(T* reorderedMat,
                           T* v,
                           int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(gpuSolveUpperLevelSet<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(gpuSolveUpperLevelSet<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     gpuSolveUpperLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, v);
@@ -373,7 +373,7 @@ solveLowerLevelSetSplit(T* reorderedMat,
                                T* v,
                                int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(gpuSolveLowerLevelSetSplit<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(gpuSolveLowerLevelSetSplit<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     gpuSolveLowerLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
@@ -391,7 +391,7 @@ solveUpperLevelSetSplit(T* reorderedMat,
                                T* v,
                                int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(gpuSolveUpperLevelSetSplit<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(gpuSolveUpperLevelSetSplit<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     gpuSolveUpperLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
@@ -399,7 +399,7 @@ solveUpperLevelSetSplit(T* reorderedMat,
 
 template <class T, int blocksize>
 void LUFactorization(T* srcMatrix, int* srcRowIndices, int* srcColumnIndices, int* naturalToReordered, int* reorderedToNatual, size_t rowsInLevelSet, int startIdx, int thrBlockSize){
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(gpuLUFactorization<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(gpuLUFactorization<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     gpuLUFactorization<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(srcMatrix, srcRowIndices, srcColumnIndices, naturalToReordered, reorderedToNatual, rowsInLevelSet, startIdx);
 }
@@ -417,7 +417,7 @@ void LUFactorizationSplit(T* reorderedLowerMat,
                          const int startIdx,
                          int rowsInLevelSet,
                          int thrBlockSize){
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(gpuLUFactorizationSplit<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(gpuLUFactorizationSplit<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     gpuLUFactorizationSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(reorderedLowerMat,
                                                                                      lowerRowIndices,

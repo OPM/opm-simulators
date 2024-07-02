@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_CUISTL_DEVICE_BLOCK_OPERATIONS_HPP
-#define OPM_CUISTL_DEVICE_BLOCK_OPERATIONS_HPP
+#ifndef OPM_GPUISTL_DEVICE_BLOCK_OPERATIONS_HPP
+#define OPM_GPUISTL_DEVICE_BLOCK_OPERATIONS_HPP
 
 #include <cuda_runtime.h>
 #include <config.h>

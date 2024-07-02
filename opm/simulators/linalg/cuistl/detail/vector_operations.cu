@@ -110,7 +110,7 @@ template <class T>
 void
 setVectorValue(T* deviceData, size_t numberOfElements, const T& value)
 {
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(setVectorValueKernel<T>);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(setVectorValueKernel<T>);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
     setVectorValueKernel<<<nThreadBlocks, threadBlockSize>>>(
         deviceData, numberOfElements, value);
@@ -124,7 +124,7 @@ template <class T>
 void
 setZeroAtIndexSet(T* deviceData, size_t numberOfElements, const int* indices)
 {
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(setZeroAtIndexSetKernel<T>);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(setZeroAtIndexSetKernel<T>);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
     setZeroAtIndexSetKernel<<<nThreadBlocks, threadBlockSize>>>(
         deviceData, numberOfElements, indices);
@@ -137,7 +137,7 @@ template <class T>
 T
 innerProductAtIndices(cublasHandle_t cublasHandle, const T* deviceA, const T* deviceB, T* buffer, size_t numberOfElements, const int* indices)
 {
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(elementWiseMultiplyKernel<T>);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(elementWiseMultiplyKernel<T>);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
     elementWiseMultiplyKernel<<<nThreadBlocks, threadBlockSize>>>(
         deviceA, deviceB, buffer, numberOfElements, indices);
@@ -157,7 +157,7 @@ template int innerProductAtIndices(cublasHandle_t, const int*, const int*, int* 
 template <class T>
 void prepareSendBuf(const T* deviceA, T* buffer, size_t numberOfElements, const int* indices)
 {
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(prepareSendBufKernel<T>);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(prepareSendBufKernel<T>);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
     prepareSendBufKernel<<<nThreadBlocks, threadBlockSize>>>(deviceA, buffer, numberOfElements, indices);
     OPM_GPU_SAFE_CALL(cudaDeviceSynchronize()); // The buffers are prepared for MPI. Wait for them to finish.
@@ -169,7 +169,7 @@ template void prepareSendBuf(const int* deviceA, int* buffer, size_t numberOfEle
 template <class T>
 void syncFromRecvBuf(T* deviceA, T* buffer, size_t numberOfElements, const int* indices)
 {
-    int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(syncFromRecvBufKernel<T>);
+    int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(syncFromRecvBufKernel<T>);
     int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
     syncFromRecvBufKernel<<<nThreadBlocks, threadBlockSize>>>(deviceA, buffer, numberOfElements, indices);
     //cudaDeviceSynchronize(); // Not needed, I guess...
@@ -190,7 +190,7 @@ weightedDiagMV(const T* squareBlockVector,
     switch (blocksize) {
     case 1:
         {
-            int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 1>);
+            int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(weightedDiagMV<T, 1>);
             int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
             weightedDiagMV<T, 1><<<nThreadBlocks, threadBlockSize>>>(
                 squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
@@ -198,7 +198,7 @@ weightedDiagMV(const T* squareBlockVector,
         break;
     case 2:
         {
-            int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 2>);
+            int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(weightedDiagMV<T, 2>);
             int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
             weightedDiagMV<T, 2><<<nThreadBlocks, threadBlockSize>>>(
                 squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
@@ -206,7 +206,7 @@ weightedDiagMV(const T* squareBlockVector,
         break;
     case 3:
         {
-            int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(weightedDiagMV<T, 3>);
+            int threadBlockSize = ::Opm::gpuistl::detail::getRecomendedThreadBlockSize(weightedDiagMV<T, 3>);
             int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
             weightedDiagMV<T, 3><<<nThreadBlocks, threadBlockSize>>>(
                 squareBlockVector, numberOfElements, relaxationFactor, srcVec, dstVec);
