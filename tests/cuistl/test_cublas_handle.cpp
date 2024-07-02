@@ -32,7 +32,7 @@ BOOST_AUTO_TEST_CASE(TestGetCublasVersion)
     // that checks the version of blas programatically. Let the test pass for now.
     BOOST_CHECK(true);
 #else
-    auto& cublasHandle = ::Opm::gpuistl::detail::CuBlasHandle::getInstance();
+    auto& cublasHandle = ::Opm::gpuistl::detail::GpuBLASHandle::getInstance();
     int cuBlasVersion = -1;
     OPM_GPU_BLAS_SAFE_CALL(cublasGetVersion(cublasHandle.get(), &cuBlasVersion));
 

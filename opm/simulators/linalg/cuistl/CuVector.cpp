@@ -38,7 +38,7 @@ GpuVector<T>::GpuVector(const std::vector<T>& data)
 template <class T>
 GpuVector<T>::GpuVector(const size_t numberOfElements)
     : m_numberOfElements(detail::to_int(numberOfElements))
-    , m_cuBlasHandle(detail::CuBlasHandle::getInstance())
+    , m_cuBlasHandle(detail::GpuBLASHandle::getInstance())
 {
     OPM_CUDA_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * detail::to_size_t(m_numberOfElements)));
 }

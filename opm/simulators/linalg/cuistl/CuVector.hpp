@@ -383,7 +383,7 @@ private:
     // Note that we store this as int to make sure we are always cublas compatible.
     // This gives the added benefit that a size_t to int conversion error occurs during construction.
     const int m_numberOfElements;
-    detail::CuBlasHandle& m_cuBlasHandle;
+    detail::GpuBLASHandle& m_cuBlasHandle;
 
     void assertSameSize(const GpuVector<T>& other) const;
     void assertSameSize(int size) const;

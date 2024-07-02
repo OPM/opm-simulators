@@ -23,26 +23,26 @@ namespace Opm::gpuistl::detail
 {
 
 
-CuBlasHandle::CuBlasHandle()
+GpuBLASHandle::GpuBLASHandle()
 {
     OPM_GPU_BLAS_SAFE_CALL(cublasCreate(&m_handle));
 }
 
-CuBlasHandle::~CuBlasHandle()
+GpuBLASHandle::~GpuBLASHandle()
 {
     OPM_CUBLAS_WARN_IF_ERROR(cublasDestroy(m_handle));
 }
 
 cublasHandle_t
-CuBlasHandle::get()
+GpuBLASHandle::get()
 {
     return m_handle;
 }
 
-CuBlasHandle&
-CuBlasHandle::getInstance()
+GpuBLASHandle&
+GpuBLASHandle::getInstance()
 {
-    static CuBlasHandle instance;
+    static GpuBLASHandle instance;
     return instance;
 }
 

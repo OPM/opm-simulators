@@ -25,30 +25,30 @@ namespace Opm::gpuistl::detail
 {
 
 /**
- * @brief The CuBlasHandle class provides a singleton for the simulator universal cuBlasHandle.
+ * @brief The GpuBLASHandle class provides a singleton for the simulator universal cuBlasHandle.
  *
  * Example use:
  * @code{.cpp}
- * #include <opm/simulators/linalg/cuistl/detail/CuBlasHandle.hpp>
+ * #include <opm/simulators/linalg/cuistl/detail/GpuBLASHandle.hpp>
  * void someFunction() {
- *     auto& cublasHandle = ::Opm::gpuistl::detail::CuBlasHandle::getInstance();
+ *     auto& cublasHandle = ::Opm::gpuistl::detail::GpuBLASHandle::getInstance();
  *     int cuBlasVersion = -1;
  *     OPM_GPU_BLAS_SAFE_CALL(cublasGetVersion(cublasHandle.get(), &cuBlasVersion));
  * }
  * @endcode
  *
  */
-class CuBlasHandle
+class GpuBLASHandle
 {
 public:
     // This should not be copyable.
-    CuBlasHandle(const CuBlasHandle&) = delete;
-    CuBlasHandle& operator=(const CuBlasHandle&) = delete;
+    GpuBLASHandle(const GpuBLASHandle&) = delete;
+    GpuBLASHandle& operator=(const GpuBLASHandle&) = delete;
 
     /**
      * Calls cublasDestroy() on the handle
      */
-    ~CuBlasHandle();
+    ~GpuBLASHandle();
 
     /**
      * @brief get returns the underlying cuBlas handle (to be used in calls to cublas)
@@ -56,12 +56,12 @@ public:
     cublasHandle_t get();
 
     /**
-     * @brief getInstance creates (if necessary) and returns the single unique instance of CuBlasHandle (singleton)
+     * @brief getInstance creates (if necessary) and returns the single unique instance of GpuBLASHandle (singleton)
      */
-    static CuBlasHandle& getInstance();
+    static GpuBLASHandle& getInstance();
 
 private:
-    CuBlasHandle();
+    GpuBLASHandle();
     cublasHandle_t m_handle;
 };
 } // namespace Opm::gpuistl::detail
