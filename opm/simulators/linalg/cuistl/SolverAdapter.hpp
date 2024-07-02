@@ -41,7 +41,7 @@
 
 namespace Opm::gpuistl
 {
-//! @brief Wraps a CUDA solver to work with CPU data.
+//! @brief Wraps a GPU solver to work with CPU data.
 //!
 //! @tparam Operator the Dune::LinearOperator to use
 //! @tparam UnderlyingSolver a Dune solver like class, eg Dune::BiCGSTABSolver
@@ -130,7 +130,7 @@ private:
 
         OPM_ERROR_IF(
             detail::is_a_well_operator<Operator>::value,
-            "Currently we only support operators of type MatrixAdapter in the CUDA solver. "
+            "Currently we only support operators of type MatrixAdapter in the GPU solver. "
             "Use --matrix-add-well-contributions=true. "
             "Using WellModelMatrixAdapter with SolverAdapter is not well-defined so it will not work well, or at all.");
 
@@ -147,10 +147,10 @@ private:
             auto precAsHolder = std::dynamic_pointer_cast<PreconditionerHolder<X, X>>(prec);
             if (!precAsHolder) {
                 OPM_THROW(std::invalid_argument,
-                          "The preconditioner needs to be a CUDA preconditioner (eg. CuILU0) wrapped in a "
+                          "The preconditioner needs to be a GPU preconditioner (eg. GPUDILU) wrapped in a "
                           "Opm::gpuistl::PreconditionerAdapter wrapped in a "
-                          "Opm::gpuistl::CuBlockPreconditioner. If you are unsure what this means, set "
-                          "preconditioner to 'CUILU0'"); // TODO: Suggest a better preconditioner
+                          "Opm::gpuistl::GpuBlockPreconditioner. If you are unsure what this means, set "
+                          "preconditioner to 'GPUDILU'");
             }
 
             auto preconditionerAdapter = precAsHolder->getUnderlyingPreconditioner();
@@ -158,10 +158,10 @@ private:
                 = std::dynamic_pointer_cast<PreconditionerHolder<XGPU, XGPU>>(preconditionerAdapter);
             if (!preconditionerAdapterAsHolder) {
                 OPM_THROW(std::invalid_argument,
-                          "The preconditioner needs to be a CUDA preconditioner (eg. CuILU0) wrapped in a "
+                          "The preconditioner needs to be a GPU preconditioner (eg. GPUDILU) wrapped in a "
                           "Opm::gpuistl::PreconditionerAdapter wrapped in a "
-                          "Opm::gpuistl::CuBlockPreconditioner. If you are unsure what this means, set "
-                          "preconditioner to 'CUILU0'"); // TODO: Suggest a better preconditioner
+                          "Opm::gpuistl::GpuBlockPreconditioner. If you are unsure what this means, set "
+                          "preconditioner to 'GPUDILU'");
             }
             // We need to get the underlying preconditioner:
             auto preconditionerReallyOnGPU = preconditionerAdapterAsHolder->getUnderlyingPreconditioner();
@@ -191,28 +191,28 @@ private:
                 gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<real_type, block_size, typename Operator::communication_type>>(communication);
             }
 
-            using CudaCommunication = GpuOwnerOverlapCopy<real_type, block_size, typename Operator::communication_type>;
+            using GpuCommunication = GpuOwnerOverlapCopy<real_type, block_size, typename Operator::communication_type>;
             using SchwarzOperator
-                = Dune::OverlappingSchwarzOperator<GpuSparseMatrix<real_type>, XGPU, XGPU, CudaCommunication>;
-            auto cudaCommunication = std::make_shared<CudaCommunication>(gpuComm);
+                = Dune::OverlappingSchwarzOperator<GpuSparseMatrix<real_type>, XGPU, XGPU, GpuCommunication>;
+            auto gpuCommunication = std::make_shared<GpuCommunication>(gpuComm);
 
-            auto mpiPreconditioner = std::make_shared<GpuBlockPreconditioner<XGPU, XGPU, CudaCommunication>>(
-                preconditionerReallyOnGPU, cudaCommunication);
+            auto mpiPreconditioner = std::make_shared<GpuBlockPreconditioner<XGPU, XGPU, GpuCommunication>>(
+                preconditionerReallyOnGPU, gpuCommunication);
 
-            auto scalarProduct = std::make_shared<Dune::ParallelScalarProduct<XGPU, CudaCommunication>>(
-                cudaCommunication, m_opOnCPUWithMatrix.category());
+            auto scalarProduct = std::make_shared<Dune::ParallelScalarProduct<XGPU, GpuCommunication>>(
+                gpuCommunication, m_opOnCPUWithMatrix.category());
 
 
-            // NOTE: Ownsership of cudaCommunication is handled by mpiPreconditioner. However, just to make sure we
+            // NOTE: Ownsership of gpuCommunication is handled by mpiPreconditioner. However, just to make sure we
             // remember
             //       this, we add this check. So remember that we hold one count in this scope, and one in the
-            //       CuBlockPreconditioner instance. We accomedate for the fact that it could be passed around in
-            //       CuBlockPreconditioner, hence we do not test for != 2
-            OPM_ERROR_IF(cudaCommunication.use_count() < 2, "Internal error. Shared pointer not owned properly.");
-            auto overlappingCudaOperator = std::make_shared<SchwarzOperator>(m_matrix, *cudaCommunication);
+            //       GpuBlockPreconditioner instance. We accomedate for the fact that it could be passed around in
+            //       GpuBlockPreconditioner, hence we do not test for != 2
+            OPM_ERROR_IF(gpuCommunication.use_count() < 2, "Internal error. Shared pointer not owned properly.");
+            auto overlappingGpuOperator = std::make_shared<SchwarzOperator>(m_matrix, *gpuCommunication);
 
             return UnderlyingSolver<XGPU>(
-                overlappingCudaOperator, scalarProduct, mpiPreconditioner, reduction, maxit, verbose);
+                overlappingGpuOperator, scalarProduct, mpiPreconditioner, reduction, maxit, verbose);
         } else {
             // TODO: Fix the reliance on casting here. This is a code smell to a certain degree, and assumes
             //       a certain setup beforehand. The only reason we do it this way is to minimize edits to the
@@ -221,8 +221,8 @@ private:
             auto precAsHolder = std::dynamic_pointer_cast<PreconditionerHolder<XGPU, XGPU>>(prec);
             if (!precAsHolder) {
                 OPM_THROW(std::invalid_argument,
-                          "The preconditioner needs to be a CUDA preconditioner wrapped in a "
-                          "Opm::gpuistl::PreconditionerHolder (eg. CuILU0).");
+                          "The preconditioner needs to be a GPU preconditioner wrapped in a "
+                          "Opm::gpuistl::PreconditionerHolder (eg. GPUDILU).");
             }
             auto preconditionerOnGPU = precAsHolder->getUnderlyingPreconditioner();
 

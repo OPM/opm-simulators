@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_CUISTL_SET_DEVICE_HEADER
-#define OPM_CUISTL_SET_DEVICE_HEADER
+#ifndef OPM_GPUISTL_SET_DEVICE_HEADER
+#define OPM_GPUISTL_SET_DEVICE_HEADER
 
 namespace Opm::gpuistl
 {

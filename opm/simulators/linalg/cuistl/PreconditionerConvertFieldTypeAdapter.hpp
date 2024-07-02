@@ -81,7 +81,7 @@ namespace Opm::gpuistl
 //! }
 //!
 //! \endcode
-template <class CudaPreconditionerType, class M, class X, class Y, int l = 1>
+template <class GpuPreconditionerType, class M, class X, class Y, int l = 1>
 class PreconditionerConvertFieldTypeAdapter : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
@@ -96,9 +96,9 @@ public:
     using field_type = typename X::field_type;
 
 
-    using domain_type_to = typename CudaPreconditionerType::domain_type;
+    using domain_type_to = typename GpuPreconditionerType::domain_type;
     //! \brief The range type of the preconditioner.
-    using range_type_to = typename CudaPreconditionerType::range_type;
+    using range_type_to = typename GpuPreconditionerType::range_type;
     //! \brief The field type of the preconditioner.
     using field_type_to = typename domain_type_to::field_type;
 
@@ -126,7 +126,7 @@ public:
     //! \brief Not used at the moment
     virtual void pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b) override
     {
-        static_assert(!detail::shouldCallPreconditionerPre<CudaPreconditionerType>(),
+        static_assert(!detail::shouldCallPreconditionerPre<GpuPreconditionerType>(),
                       "We currently do not support Preconditioner::pre().");
     }
 
@@ -161,7 +161,7 @@ public:
     //! \brief Not used at the moment
     virtual void post([[maybe_unused]] X& x) override
     {
-        static_assert(!detail::shouldCallPreconditionerPost<CudaPreconditionerType>(),
+        static_assert(!detail::shouldCallPreconditionerPost<GpuPreconditionerType>(),
                       "We currently do not support Preconditioner::post().");
     }
 
@@ -184,7 +184,7 @@ public:
         return m_convertedMatrix;
     }
 
-    void setUnderlyingPreconditioner(const std::shared_ptr<CudaPreconditionerType>& conditioner)
+    void setUnderlyingPreconditioner(const std::shared_ptr<GpuPreconditionerType>& conditioner)
     {
         m_underlyingPreconditioner = conditioner;
     }
@@ -233,7 +233,7 @@ private:
     const M& m_matrix;
     matrix_type_to m_convertedMatrix;
     //! \brief the underlying preconditioner to use
-    std::shared_ptr<CudaPreconditionerType> m_underlyingPreconditioner;
+    std::shared_ptr<GpuPreconditionerType> m_underlyingPreconditioner;
 };
 } // end namespace Opm::gpuistl
 

@@ -35,8 +35,8 @@ namespace Opm::gpuistl
 //!
 //! \tparam X the domain type (should be on the CPU). Typicall a Dune::BlockVector
 //! \tparam Y the range type (should be on the CPU). Typicall a Dune::BlockVector
-//! \tparam CudaPreconditionerType the preconditioner taking GpuVector<real_type> as arguments to apply
-template <class X, class Y, class CudaPreconditionerType>
+//! \tparam GpuPreconditionerType the preconditioner taking GpuVector<real_type> as arguments to apply
+template <class X, class Y, class GpuPreconditionerType>
 class PreconditionerAdapter
     : public Dune::PreconditionerWithUpdate<X, Y>,
       public PreconditionerHolder<GpuVector<typename X::field_type>, GpuVector<typename Y::field_type>>
@@ -55,7 +55,7 @@ public:
     //!    \param A The matrix to operate on.
     //!    \param w The relaxation factor.
     //!
-    explicit PreconditionerAdapter(std::shared_ptr<CudaPreconditionerType> preconditioner)
+    explicit PreconditionerAdapter(std::shared_ptr<GpuPreconditionerType> preconditioner)
         : m_underlyingPreconditioner(preconditioner)
     {
     }
@@ -66,7 +66,7 @@ public:
     //! Currently not supported.
     virtual void pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b) override
     {
-        static_assert(!detail::shouldCallPreconditionerPre<CudaPreconditionerType>(),
+        static_assert(!detail::shouldCallPreconditionerPre<GpuPreconditionerType>(),
                       "We currently do not support Preconditioner::pre().");
     }
 
@@ -91,7 +91,7 @@ public:
     //! Currently not supported.
     virtual void post([[maybe_unused]] X& x) override
     {
-        static_assert(!detail::shouldCallPreconditionerPost<CudaPreconditionerType>(),
+        static_assert(!detail::shouldCallPreconditionerPost<GpuPreconditionerType>(),
                       "We currently do not support Preconditioner::post().");
     }
 
@@ -110,11 +110,11 @@ public:
 
     static constexpr bool shouldCallPre()
     {
-        return detail::shouldCallPreconditionerPost<CudaPreconditionerType>();
+        return detail::shouldCallPreconditionerPost<GpuPreconditionerType>();
     }
     static constexpr bool shouldCallPost()
     {
-        return detail::shouldCallPreconditionerPre<CudaPreconditionerType>();
+        return detail::shouldCallPreconditionerPre<GpuPreconditionerType>();
     }
 
     virtual std::shared_ptr<Dune::PreconditionerWithUpdate<GpuVector<field_type>, GpuVector<field_type>>>
@@ -125,7 +125,7 @@ public:
 
 private:
     //! \brief the underlying preconditioner to use
-    std::shared_ptr<CudaPreconditionerType> m_underlyingPreconditioner;
+    std::shared_ptr<GpuPreconditionerType> m_underlyingPreconditioner;
 
     std::unique_ptr<GpuVector<field_type>> m_inputBuffer;
     std::unique_ptr<GpuVector<field_type>> m_outputBuffer;

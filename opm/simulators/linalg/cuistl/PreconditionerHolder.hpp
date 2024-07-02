@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUISTL_PRECONDITIONERHOLDER_HPP
-#define OPM_CUISTL_PRECONDITIONERHOLDER_HPP
+#ifndef OPM_GPUISTL_PRECONDITIONERHOLDER_HPP
+#define OPM_GPUISTL_PRECONDITIONERHOLDER_HPP
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 
 
