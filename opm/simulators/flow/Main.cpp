@@ -36,7 +36,7 @@
 #endif
 
 #if HAVE_CUDA
-#include <opm/simulators/linalg/cuistl/set_device.hpp>
+#include <opm/simulators/linalg/gpuistl/set_device.hpp>
 #endif
 
 namespace Opm {

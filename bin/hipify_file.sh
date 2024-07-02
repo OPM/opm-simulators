@@ -15,6 +15,6 @@ hipify-perl $input_file > $output_file
 sed -i 's/^#include <hipblas\.h>/#include <hipblas\/hipblas.h>/g' $output_file
 sed -i 's/^#include <hipsparse\.h>/#include <hipsparse\/hipsparse.h>/g' $output_file
 # make sure includes refer to hipistl/ files (the ones that are also hipified)
-sed -i 's/cuistl\//hipistl\//g' $output_file
+sed -i 's/gpuistl\//gpuistl_hip\//g' $output_file
 
 echo "$output_file hipified"

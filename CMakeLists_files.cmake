@@ -21,22 +21,22 @@
 #                       the library needs it.
 
 # This macro adds a cuda/hip source file to the correct source file list
-# it takes in the list to add it to, the path to the cuistl directory, and then
-# the rest of the file path after cuistl. The reason for splitting this into to
-# paths is to simplify replacing the cuistl part with hipistl.
+# it takes in the list to add it to, the path to the gpuistl directory, and then
+# the rest of the file path after gpuistl. The reason for splitting this into to
+# paths is to simplify replacing the gpuistl part with gpuistl_hip.
 # Cuda files are added as they are, whereas hip files should be added after
 # hipification, we a dependency that will trigger when the cuda source code is
 # changed.
 macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
-  set (cuda_file_path "${PROJECT_SOURCE_DIR}/${DIR}/cuistl/${FILE}")
+  set (cuda_file_path "${PROJECT_SOURCE_DIR}/${DIR}/gpuistl/${FILE}")
 
   if(CUDA_FOUND AND NOT CONVERT_CUDA_TO_HIP)
-    list (APPEND ${LIST} "${DIR}/cuistl/${FILE}")
+    list (APPEND ${LIST} "${DIR}/gpuistl/${FILE}")
   else()
     # we must hipify the code
     # and include the correct path which is in the build/binary dir
     string(REPLACE ".cu" ".hip" HIP_SOURCE_FILE ${FILE})
-    set (hip_file_path "${PROJECT_BINARY_DIR}/${DIR}/hipistl/${HIP_SOURCE_FILE}")
+    set (hip_file_path "${PROJECT_BINARY_DIR}/${DIR}/gpuistl_hip/${HIP_SOURCE_FILE}")
     file(RELATIVE_PATH relpath ${PROJECT_SOURCE_DIR} ${hip_file_path})
 
     # add a custom command that will hipify
