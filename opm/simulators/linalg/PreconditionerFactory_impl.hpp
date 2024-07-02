@@ -50,6 +50,15 @@
 #include <opm/simulators/linalg/PreconditionerFactoryGPUIncludeWrapper.hpp>
 
 
+
+#include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
+#include <opm/simulators/linalg/hipistl/CuSparseMatrix.hpp>
+#include <opm/simulators/linalg/hipistl/detail/CuMatrixDescription.hpp>
+#include <opm/simulators/linalg/hipistl/detail/CuSparseHandle.hpp>
+#include <opm/simulators/linalg/hipistl/detail/CuSparseResource.hpp>
+#include <dune/istl/ilu.hh>
+
+
 namespace Opm {
 
 template <class Smoother>
@@ -347,12 +356,25 @@ struct StandardPreconditioners {
         });
 
         F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
-            const bool split_matrix = prm.get<double>("split_matrix", true);
+            const bool split_matrix = prm.get<bool>("split_matrix", true);
+            const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
             using CuDILU = typename cuistl::CuDILU<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
-            auto cuDILU = std::make_shared<CuDILU>(op.getmat(), split_matrix);
+            auto cuDILU = std::make_shared<CuDILU>(op.getmat(), split_matrix, tune_gpu_kernels);
 
             auto adapted = std::make_shared<cuistl::PreconditionerAdapter<V, V, CuDILU>>(cuDILU);
+            auto wrapped = std::make_shared<cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
+            return wrapped;
+        });
+
+        F::addCreator("CUILU0OPM", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
+            const bool split_matrix = prm.get<bool>("split_matrix", true);
+            const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
+            using field_type = typename V::field_type;
+            using CuILU0_OPM_Impl = typename cuistl::CuILU0_OPM_Impl<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
+            auto cuilu0 = std::make_shared<CuILU0_OPM_Impl>(op.getmat(), split_matrix, tune_gpu_kernels);
+
+            auto adapted = std::make_shared<cuistl::PreconditionerAdapter<V, V, CuILU0_OPM_Impl>>(cuilu0);
             auto wrapped = std::make_shared<cuistl::CuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
@@ -603,14 +625,26 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
                 std::make_shared<CUJac>(op.getmat(), w));
         });
 
+        F::addCreator("CUILU0OPM", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+            const bool split_matrix = prm.get<bool>("split_matrix", true);
+            const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
+            using field_type = typename V::field_type;
+            using CUILU0 = typename cuistl::CuILU0_OPM_Impl<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
+
+            return std::make_shared<cuistl::PreconditionerAdapter<V, V, CUILU0>>(std::make_shared<CUILU0>(op.getmat(), split_matrix, tune_gpu_kernels));
+        });
+
         F::addCreator("CUDILU", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
             const bool split_matrix = prm.get<bool>("split_matrix", true);
+            const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using field_type = typename V::field_type;
             using CUDILU = typename cuistl::CuDILU<M, cuistl::CuVector<field_type>, cuistl::CuVector<field_type>>;
-            return std::make_shared<cuistl::PreconditionerAdapter<V, V, CUDILU>>(std::make_shared<CUDILU>(op.getmat(), split_matrix));
+            return std::make_shared<cuistl::PreconditionerAdapter<V, V, CUDILU>>(std::make_shared<CUDILU>(op.getmat(), split_matrix, tune_gpu_kernels));
         });
 
         F::addCreator("CUDILUFloat", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {
+            const bool split_matrix = prm.get<bool>("split_matrix", true);
+            const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
             using block_type = typename V::block_type;
             using VTo = Dune::BlockVector<Dune::FieldVector<float, block_type::dimension>>;
             using matrix_type_to = typename Dune::BCRSMatrix<Dune::FieldMatrix<float, block_type::dimension, block_type::dimension>>;
@@ -618,7 +652,7 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             using Adapter = typename cuistl::PreconditionerAdapter<VTo, VTo, CuDILU>;
             using Converter = typename cuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
             auto converted = std::make_shared<Converter>(op.getmat());
-            auto adapted = std::make_shared<Adapter>(std::make_shared<CuDILU>(converted->getConvertedMatrix()));
+            auto adapted = std::make_shared<Adapter>(std::make_shared<CuDILU>(converted->getConvertedMatrix(), split_matrix, tune_gpu_kernels));
             converted->setUnderlyingPreconditioner(adapted);
             return converted;
         });
