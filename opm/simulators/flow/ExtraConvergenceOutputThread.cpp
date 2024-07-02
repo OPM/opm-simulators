@@ -57,8 +57,13 @@ namespace {
             "ReportStep"s,
             "TimeStep"s,
             "Time"s,
-            "CnvErrPvFrac"s,
             "Iteration"s,
+            "CnvPvFracConv"s,
+            "CnvPvFracRelax"s,
+            "CnvPvFracUnconv"s,
+            "CnvCellCntConv"s,
+            "CnvCellCntRelax"s,
+            "CnvCellCntUnconv"s,
         };
     }
 
@@ -149,9 +154,16 @@ namespace {
                << std::setw(firstColSize)          << request.currentStep << ' '
                << std::setprecision(4)             << std::setw(firstColSize)
                << convertTime(report.reportTime()) << ' '
-               << std::setprecision(4)             << std::setw(firstColSize)
-               << report.cnvViolatedPvFraction()   << ' '
                << std::setw(firstColSize)          << iter;
+
+            for (const auto& splitPv : report.cnvPvSplit().first) {
+                os << ' ' << std::setprecision(4) << std::setw(firstColSize)
+                   << splitPv / report.eligiblePoreVolume();
+            }
+
+            for (const auto& splitPv : report.cnvPvSplit().second) {
+                os << ' ' << std::setw(firstColSize) << splitPv;
+            }
 
             for (const auto& metric : report.reservoirConvergence()) {
                 os << std::setprecision(4) << std::setw(colSize) << metric.value();
