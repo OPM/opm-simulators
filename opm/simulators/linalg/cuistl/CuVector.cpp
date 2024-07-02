@@ -166,7 +166,7 @@ GpuVector<T>&
 GpuVector<T>::operator*=(const T& scalar)
 {
     assertHasElements();
-    OPM_CUBLAS_SAFE_CALL(detail::cublasScal(m_cuBlasHandle.get(), m_numberOfElements, &scalar, data(), 1));
+    OPM_GPU_BLAS_SAFE_CALL(detail::cublasScal(m_cuBlasHandle.get(), m_numberOfElements, &scalar, data(), 1));
     return *this;
 }
 
@@ -176,7 +176,7 @@ GpuVector<T>::axpy(T alpha, const GpuVector<T>& y)
 {
     assertHasElements();
     assertSameSize(y);
-    OPM_CUBLAS_SAFE_CALL(detail::cublasAxpy(m_cuBlasHandle.get(), m_numberOfElements, &alpha, y.data(), 1, data(), 1));
+    OPM_GPU_BLAS_SAFE_CALL(detail::cublasAxpy(m_cuBlasHandle.get(), m_numberOfElements, &alpha, y.data(), 1, data(), 1));
     return *this;
 }
 
@@ -187,7 +187,7 @@ GpuVector<T>::dot(const GpuVector<T>& other) const
     assertHasElements();
     assertSameSize(other);
     T result = T(0);
-    OPM_CUBLAS_SAFE_CALL(
+    OPM_GPU_BLAS_SAFE_CALL(
         detail::cublasDot(m_cuBlasHandle.get(), m_numberOfElements, data(), 1, other.data(), 1, &result));
     return result;
 }
@@ -197,7 +197,7 @@ GpuVector<T>::two_norm() const
 {
     assertHasElements();
     T result = T(0);
-    OPM_CUBLAS_SAFE_CALL(detail::cublasNrm2(m_cuBlasHandle.get(), m_numberOfElements, data(), 1, &result));
+    OPM_GPU_BLAS_SAFE_CALL(detail::cublasNrm2(m_cuBlasHandle.get(), m_numberOfElements, data(), 1, &result));
     return result;
 }
 

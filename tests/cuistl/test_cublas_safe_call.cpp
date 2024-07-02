@@ -27,7 +27,7 @@
 BOOST_AUTO_TEST_CASE(TestCreateHandle)
 {
     cublasHandle_t cublasHandle;
-    BOOST_CHECK_NO_THROW(OPM_CUBLAS_SAFE_CALL(cublasCreate(&cublasHandle)););
+    BOOST_CHECK_NO_THROW(OPM_GPU_BLAS_SAFE_CALL(cublasCreate(&cublasHandle)););
 }
 
 BOOST_AUTO_TEST_CASE(TestThrows)
@@ -42,6 +42,6 @@ BOOST_AUTO_TEST_CASE(TestThrows)
                                              CUBLAS_STATUS_NOT_SUPPORTED,
                                              CUBLAS_STATUS_LICENSE_ERROR}};
     for (auto code : errorCodes) {
-        BOOST_CHECK_THROW(OPM_CUBLAS_SAFE_CALL(code), std::exception);
+        BOOST_CHECK_THROW(OPM_GPU_BLAS_SAFE_CALL(code), std::exception);
     }
 }

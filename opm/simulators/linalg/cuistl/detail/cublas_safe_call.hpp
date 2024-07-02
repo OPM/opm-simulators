@@ -39,11 +39,11 @@ namespace Opm::gpuistl::detail
 namespace
 {
     /**
-     * @brief getCublasErrorCodeToString Converts an error code returned from a cublas function a human readable string.
+     * @brief getGpuBLASErrorCodeToString Converts an error code returned from a cublas function a human readable string.
      * @param code an error code from a cublas routine
      * @return a human readable string.
      */
-    inline std::string getCublasErrorCodeToString(int code)
+    inline std::string getGpuBLASErrorCodeToString(int code)
     {
         CHECK_CUBLAS_ERROR_TYPE(code, CUBLAS_STATUS_SUCCESS);
         CHECK_CUBLAS_ERROR_TYPE(code, CUBLAS_STATUS_NOT_INITIALIZED);
@@ -64,9 +64,9 @@ namespace
 } // namespace
 
 /**
- * @brief getCublasErrorMessage generates the error message to display for a given error.
+ * @brief getGpuBLASErrorMessage generates the error message to display for a given error.
  *
- * @param error the error code from cublas
+ * @param error the error code from cu/hipBLAS
  * @param expression the expresison (say "cublasCreate(&handle)")
  * @param filename the code file the error occured in (typically __FILE__)
  * @param functionName name of the function the error occured in (typically __func__)
@@ -79,7 +79,7 @@ namespace
  * @note This function is mostly for internal use.
  */
 inline std::string
-getCublasErrorMessage(cublasStatus_t error,
+getGpuBLASErrorMessage(cublasStatus_t error,
                       const std::string_view& expression,
                       const std::string_view& filename,
                       const std::string_view& functionName,
@@ -93,11 +93,11 @@ getCublasErrorMessage(cublasStatus_t error,
                        functionName,
                        filename,
                        lineNumber,
-                       getCublasErrorCodeToString(error));
+                       getGpuBLASErrorCodeToString(error));
 }
 
 /**
- * @brief cublasSafeCall checks the return type of the CUBLAS expression (function call) and throws an exception if it
+ * @brief gpuBLASSafeCall checks the return type of the CUBLAS expression (function call) and throws an exception if it
  * does not equal CUBLAS_STATUS_SUCCESS.
  *
  * @param error the error code from cublas
@@ -117,24 +117,24 @@ getCublasErrorMessage(cublasStatus_t error,
  * }
  * @endcode
  *
- * @note It is probably easier to use the macro OPM_CUBLAS_SAFE_CALL
+ * @note It is probably easier to use the macro OPM_GPU_BLAS_SAFE_CALL
  *
  * @todo Refactor to use std::source_location once we shift to C++20
  */
 inline void
-cublasSafeCall(cublasStatus_t error,
+gpuBLASSafeCall(cublasStatus_t error,
                const std::string_view& expression,
                const std::string_view& filename,
                const std::string_view& functionName,
                size_t lineNumber)
 {
     if (error != CUBLAS_STATUS_SUCCESS) {
-        OPM_THROW(std::runtime_error, getCublasErrorMessage(error, expression, filename, functionName, lineNumber));
+        OPM_THROW(std::runtime_error, getGpuBLASErrorMessage(error, expression, filename, functionName, lineNumber));
     }
 }
 
 /**
- * @brief cublasWarnIfError checks the return type of the CUBLAS expression (function call) and issues a warning if it
+ * @brief gpuBLASWarnIfError checks the return type of the CUBLAS expression (function call) and issues a warning if it
  * does not equal CUBLAS_STATUS_SUCCESS.
  *
  * @param error the error code from cublas
@@ -152,24 +152,24 @@ cublasSafeCall(cublasStatus_t error,
  *
  * void some_function() {
  *     cublasHandle_t cublasHandle;
- *     cublasWarnIfError(cublasCreate(&cublasHandle), "cublasCreate(&cublasHandle)", __FILE__, __func__, __LINE__);
+ *     gpuBLASWarnIfError(cublasCreate(&cublasHandle), "cublasCreate(&cublasHandle)", __FILE__, __func__, __LINE__);
  * }
  * @endcode
  *
  * @note It is probably easier to use the macro OPM_CUBLAS_WARN_IF_ERROR
- * @note Prefer the cublasSafeCall/OPM_CUBLAS_SAFE_CALL counterpart unless you really don't want to throw an exception.
+ * @note Prefer the gpuBLASSafeCall/OPM_GPU_BLAS_SAFE_CALL counterpart unless you really don't want to throw an exception.
  *
  * @todo Refactor to use std::source_location once we shift to C++20
  */
 inline cublasStatus_t
-cublasWarnIfError(cublasStatus_t error,
+gpuBLASWarnIfError(cublasStatus_t error,
                   const std::string_view& expression,
                   const std::string_view& filename,
                   const std::string_view& functionName,
                   size_t lineNumber)
 {
     if (error != CUBLAS_STATUS_SUCCESS) {
-        OpmLog::warning(getCublasErrorMessage(error, expression, filename, functionName, lineNumber));
+        OpmLog::warning(getGpuBLASErrorMessage(error, expression, filename, functionName, lineNumber));
     }
 
     return error;
@@ -177,7 +177,7 @@ cublasWarnIfError(cublasStatus_t error,
 } // namespace Opm::gpuistl::detail
 
 /**
- * @brief OPM_CUBLAS_SAFE_CALL checks the return type of the cublas expression (function call) and throws an exception
+ * @brief OPM_GPU_BLAS_SAFE_CALL checks the return type of the cublas expression (function call) and throws an exception
  * if it does not equal CUBLAS_STATUS_SUCCESS.
  *
  * Example usage:
@@ -187,14 +187,14 @@ cublasWarnIfError(cublasStatus_t error,
  *
  * void some_function() {
  *     cublasHandle_t cublasHandle;
- *     OPM_CUBLAS_SAFE_CALL(cublasCreate(&cublasHandle));
+ *     OPM_GPU_BLAS_SAFE_CALL(cublasCreate(&cublasHandle));
  * }
  * @endcode
  *
  * @note This should be used for any call to cuBlas unless you have a good reason not to.
  */
-#define OPM_CUBLAS_SAFE_CALL(expression)                                                                               \
-    ::Opm::gpuistl::detail::cublasSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
+#define OPM_GPU_BLAS_SAFE_CALL(expression)                                                                               \
+    ::Opm::gpuistl::detail::gpuBLASSafeCall(expression, #expression, __FILE__, __func__, __LINE__)
 
 /**
  * @brief OPM_CUBLAS_WARN_IF_ERROR checks the return type of the cublas expression (function call) and issues a warning
@@ -211,9 +211,9 @@ cublasWarnIfError(cublasStatus_t error,
  * }
  * @endcode
  *
- * @note Prefer the cublasSafeCall/OPM_CUBLAS_SAFE_CALL counterpart unless you really don't want to throw an exception.
+ * @note Prefer the gpuBLASSafeCall/OPM_GPU_BLAS_SAFE_CALL counterpart unless you really don't want to throw an exception.
  */
 #define OPM_CUBLAS_WARN_IF_ERROR(expression)                                                                           \
-    ::Opm::gpuistl::detail::cublasWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
+    ::Opm::gpuistl::detail::gpuBLASWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
 
-#endif // OPM_CUBLAS_SAFE_CALL_HPP
+#endif // OPM_GPU_BLAS_SAFE_CALL_HPP

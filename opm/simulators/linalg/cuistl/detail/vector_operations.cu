@@ -146,7 +146,7 @@ innerProductAtIndices(cublasHandle_t cublasHandle, const T* deviceA, const T* de
     GpuVector<T> oneVector(numberOfElements);
     oneVector = 1.0;
     T result = 0.0;
-    OPM_CUBLAS_SAFE_CALL(cublasDot(cublasHandle, numberOfElements, oneVector.data(), 1, buffer, 1, &result));
+    OPM_GPU_BLAS_SAFE_CALL(cublasDot(cublasHandle, numberOfElements, oneVector.data(), 1, buffer, 1, &result));
     return result;
 }
 

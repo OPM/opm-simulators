@@ -33,7 +33,7 @@ namespace Opm::gpuistl::detail
  * void someFunction() {
  *     auto& cublasHandle = ::Opm::gpuistl::detail::CuBlasHandle::getInstance();
  *     int cuBlasVersion = -1;
- *     OPM_CUBLAS_SAFE_CALL(cublasGetVersion(cublasHandle.get(), &cuBlasVersion));
+ *     OPM_GPU_BLAS_SAFE_CALL(cublasGetVersion(cublasHandle.get(), &cuBlasVersion));
  * }
  * @endcode
  *

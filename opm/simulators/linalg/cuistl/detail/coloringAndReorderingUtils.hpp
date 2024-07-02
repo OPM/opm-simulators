@@ -36,7 +36,7 @@
 /*
 This file contains a collection of utility functions used in the GPU implementation of ILU and DILU
 The functions deal with creating the mappings between reordered and natural indices, as well as
-extracting sparsity structures from dune matrices and creating cusparsematrix indices
+extracting sparsity structures from dune matrices and creating GpuSparseMatrix indices
 */
 namespace Opm::gpuistl::detail
 {

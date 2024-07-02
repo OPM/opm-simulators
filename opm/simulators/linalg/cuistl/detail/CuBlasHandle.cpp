@@ -25,7 +25,7 @@ namespace Opm::gpuistl::detail
 
 CuBlasHandle::CuBlasHandle()
 {
-    OPM_CUBLAS_SAFE_CALL(cublasCreate(&m_handle));
+    OPM_GPU_BLAS_SAFE_CALL(cublasCreate(&m_handle));
 }
 
 CuBlasHandle::~CuBlasHandle()
