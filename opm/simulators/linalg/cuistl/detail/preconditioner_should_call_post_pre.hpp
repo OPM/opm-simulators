@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_CUISTL_PRECONDIDTIONER_SHOULD_CALL_POST_PRE_HPP
-#define OPM_CUISTL_PRECONDIDTIONER_SHOULD_CALL_POST_PRE_HPP
+#ifndef OPM_GPUISTL_PRECONDIDTIONER_SHOULD_CALL_POST_PRE_HPP
+#define OPM_GPUISTL_PRECONDIDTIONER_SHOULD_CALL_POST_PRE_HPP
 
 #include <opm/simulators/linalg/cuistl/detail/has_function.hpp>
 

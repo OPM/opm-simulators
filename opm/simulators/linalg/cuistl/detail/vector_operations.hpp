@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUISTL_VECTOR_OPERATIONS_HPP
-#define OPM_CUISTL_VECTOR_OPERATIONS_HPP
+#ifndef OPM_GPUISTL_VECTOR_OPERATIONS_HPP
+#define OPM_GPUISTL_VECTOR_OPERATIONS_HPP
 #include <cstddef>
 #include <cublas_v2.h>
 namespace Opm::gpuistl::detail

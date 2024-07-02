@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUISTL_DETAIL_HAS_FUNCTION_HPP
-#define OPM_CUISTL_DETAIL_HAS_FUNCTION_HPP
+#ifndef OPM_GPUISTL_DETAIL_HAS_FUNCTION_HPP
+#define OPM_GPUISTL_DETAIL_HAS_FUNCTION_HPP
 #include <type_traits>
 /**
  * Simple utility structs to test for the existence of functions in types.

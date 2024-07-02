@@ -32,7 +32,7 @@
  * Provides various utilities for doing signed to unsigned conversion, unsigned to signed, 32 bits to 64 bits and 64
  * bits to 32 bits.
  *
- * The main use case within cuistl is that the cusparse library requires signed int for all its size parameters,
+ * The main use case within gpuistl is that the cu/hipSPARSE library requires signed int for all its size parameters,
  * while Dune::BlockVector (and relatives) use unsigned size_t.
  */
 
