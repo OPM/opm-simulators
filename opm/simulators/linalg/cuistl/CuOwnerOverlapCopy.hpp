@@ -380,12 +380,12 @@ private:
  * @tparam OwnerOverlapCopyCommunicationType should mimic Dune::OwnerOverlapCopyCommunication.
  */
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
-class CuOwnerOverlapCopy
+class GpuOwnerOverlapCopy
 {
 public:
     using X = GpuVector<field_type>;
 
-    CuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> sender) : m_sender(sender){}
+    GpuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> sender) : m_sender(sender){}
 
     void copyOwnerToAll(const X& source, X& dest) const {
         m_sender->copyOwnerToAll(source, dest);
