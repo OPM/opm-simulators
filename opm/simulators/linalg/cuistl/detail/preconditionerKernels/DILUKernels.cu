@@ -29,7 +29,7 @@ namespace
 {
 
     template <class T, int blocksize>
-    __global__ void cuComputeLowerSolveLevelSet(T* mat,
+    __global__ void cuSolveLowerLevelSet(T* mat,
                                                 int* rowIndices,
                                                 int* colIndices,
                                                 int* indexConversion,
@@ -60,7 +60,7 @@ namespace
     }
 
     template <class T, int blocksize>
-    __global__ void cuComputeLowerSolveLevelSetSplit(T* mat,
+    __global__ void cuSolveLowerLevelSetSplit(T* mat,
                                                      int* rowIndices,
                                                      int* colIndices,
                                                      int* indexConversion,
@@ -94,7 +94,7 @@ namespace
 
 
     template <class T, int blocksize>
-    __global__ void cuComputeUpperSolveLevelSet(T* mat,
+    __global__ void cuSolveUpperLevelSet(T* mat,
                                                 int* rowIndices,
                                                 int* colIndices,
                                                 int* indexConversion,
@@ -119,7 +119,7 @@ namespace
     }
 
     template <class T, int blocksize>
-    __global__ void cuComputeUpperSolveLevelSetSplit(T* mat,
+    __global__ void cuSolveUpperLevelSetSplit(T* mat,
                                                      int* rowIndices,
                                                      int* colIndices,
                                                      int* indexConversion,
@@ -270,7 +270,7 @@ namespace
 // perform the lower solve for all rows in the same level set
 template <class T, int blocksize>
 void
-computeLowerSolveLevelSet(T* reorderedMat,
+solveLowerLevelSet(T* reorderedMat,
                           int* rowIndices,
                           int* colIndices,
                           int* indexConversion,
@@ -281,16 +281,16 @@ computeLowerSolveLevelSet(T* reorderedMat,
                           T* v,
                           int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSet<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveLowerLevelSet<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuComputeLowerSolveLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveLowerLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
 }
 
 
 template <class T, int blocksize>
 void
-computeLowerSolveLevelSetSplit(T* reorderedMat,
+solveLowerLevelSetSplit(T* reorderedMat,
                                int* rowIndices,
                                int* colIndices,
                                int* indexConversion,
@@ -301,15 +301,15 @@ computeLowerSolveLevelSetSplit(T* reorderedMat,
                                T* v,
                                int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuComputeLowerSolveLevelSetSplit<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveLowerLevelSetSplit<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuComputeLowerSolveLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveLowerLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
 }
 // perform the upper solve for all rows in the same level set
 template <class T, int blocksize>
 void
-computeUpperSolveLevelSet(T* reorderedMat,
+solveUpperLevelSet(T* reorderedMat,
                           int* rowIndices,
                           int* colIndices,
                           int* indexConversion,
@@ -319,15 +319,15 @@ computeUpperSolveLevelSet(T* reorderedMat,
                           T* v,
                           int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuComputeUpperSolveLevelSet<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveUpperLevelSet<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuComputeUpperSolveLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveUpperLevelSet<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
 
 template <class T, int blocksize>
 void
-computeUpperSolveLevelSetSplit(T* reorderedMat,
+solveUpperLevelSetSplit(T* reorderedMat,
                                int* rowIndices,
                                int* colIndices,
                                int* indexConversion,
@@ -337,9 +337,9 @@ computeUpperSolveLevelSetSplit(T* reorderedMat,
                                T* v,
                                int thrBlockSize)
 {
-    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuComputeUpperSolveLevelSetSplit<T, blocksize>, thrBlockSize);
+    int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveUpperLevelSetSplit<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
-    cuComputeUpperSolveLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
+    cuSolveUpperLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
         reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, v);
 }
 
@@ -412,10 +412,10 @@ computeDiluDiagonalSplit(T* reorderedLowerMat,
     template void computeDiluDiagonal<T, blocksize>(T*, int*, int*, int*, int*, const int, int, T*, int);                   \
     template void computeDiluDiagonalSplit<T, blocksize>(                                                              \
         T*, int*, int*, T*, int*, int*, T*, int*, int*, const int, int, T*, int);                                           \
-    template void computeUpperSolveLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);               \
-    template void computeLowerSolveLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);     \
-    template void computeUpperSolveLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);          \
-    template void computeLowerSolveLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);
+    template void solveUpperLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);               \
+    template void solveLowerLevelSet<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);     \
+    template void solveUpperLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);          \
+    template void solveLowerLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);
 
 INSTANTIATE_KERNEL_WRAPPERS(float, 1);
 INSTANTIATE_KERNEL_WRAPPERS(float, 2);

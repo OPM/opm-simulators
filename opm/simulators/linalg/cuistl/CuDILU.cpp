@@ -103,7 +103,7 @@ CuDILU<M, X, Y, l>::apply(X& v, const Y& d)
         for (int level = 0; level < m_levelSets.size(); ++level) {
             const int numOfRowsInLevel = m_levelSets[level].size();
             if (m_splitMatrix) {
-                detail::DILU::computeLowerSolveLevelSetSplit<field_type, blocksize_>(
+                detail::DILU::solveLowerLevelSetSplit<field_type, blocksize_>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
                     m_gpuMatrixReorderedLower->getRowIndices().data(),
                     m_gpuMatrixReorderedLower->getColumnIndices().data(),
@@ -115,7 +115,7 @@ CuDILU<M, X, Y, l>::apply(X& v, const Y& d)
                     v.data(),
                     m_applyThreadBlockSize);
             } else {
-                detail::DILU::computeLowerSolveLevelSet<field_type, blocksize_>(
+                detail::DILU::solveLowerLevelSet<field_type, blocksize_>(
                     m_gpuMatrixReordered->getNonZeroValues().data(),
                     m_gpuMatrixReordered->getRowIndices().data(),
                     m_gpuMatrixReordered->getColumnIndices().data(),
@@ -136,7 +136,7 @@ CuDILU<M, X, Y, l>::apply(X& v, const Y& d)
             const int numOfRowsInLevel = m_levelSets[level].size();
             levelStartIdx -= numOfRowsInLevel;
             if (m_splitMatrix) {
-                detail::DILU::computeUpperSolveLevelSetSplit<field_type, blocksize_>(
+                detail::DILU::solveUpperLevelSetSplit<field_type, blocksize_>(
                     m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
                     m_gpuMatrixReorderedUpper->getRowIndices().data(),
                     m_gpuMatrixReorderedUpper->getColumnIndices().data(),
@@ -147,7 +147,7 @@ CuDILU<M, X, Y, l>::apply(X& v, const Y& d)
                     v.data(),
                     m_applyThreadBlockSize);
             } else {
-                detail::DILU::computeUpperSolveLevelSet<field_type, blocksize_>(
+                detail::DILU::solveUpperLevelSet<field_type, blocksize_>(
                     m_gpuMatrixReordered->getNonZeroValues().data(),
                     m_gpuMatrixReordered->getRowIndices().data(),
                     m_gpuMatrixReordered->getColumnIndices().data(),

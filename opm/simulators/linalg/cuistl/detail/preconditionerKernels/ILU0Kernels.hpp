@@ -38,7 +38,7 @@ namespace Opm::cuistl::detail::ILU0
  * @param threadBlockSize The number of threads per threadblock. Leave as -1 if no blocksize is already chosen
  */
 template <class T, int blocksize>
-void ILUUpperSolveLevelSet(T* reorderedMat,
+void solveUpperLevelSet(T* reorderedMat,
                            int* rowIndices,
                            int* colIndices,
                            int* indexConversion,
@@ -63,7 +63,7 @@ void ILUUpperSolveLevelSet(T* reorderedMat,
  * @param threadBlockSize The number of threads per threadblock. Leave as -1 if no blocksize is already chosen
  */
 template <class T, int blocksize>
-void ILULowerSolveLevelSet(T* reorderedMat,
+void solveLowerLevelSet(T* reorderedMat,
                            int* rowIndices,
                            int* colIndices,
                            int* indexConversion,
@@ -90,7 +90,7 @@ void ILULowerSolveLevelSet(T* reorderedMat,
  * @param threadBlockSize The number of threads per threadblock. Leave as -1 if no blocksize is already chosen
  */
 template <class T, int blocksize>
-void ILUUpperSolveLevelSetSplit(T* reorderedMat,
+void solveUpperLevelSetSplit(T* reorderedMat,
                                 int* rowIndices,
                                 int* colIndices,
                                 int* indexConversion,
@@ -118,7 +118,7 @@ void ILUUpperSolveLevelSetSplit(T* reorderedMat,
  * @param threadBlockSize The number of threads per threadblock. Leave as -1 if no blocksize is already chosen
  */
 template <class T, int blocksize>
-void ILULowerSolveLevelSetSplit(T* reorderedLowerMat,
+void solveLowerLevelSetSplit(T* reorderedLowerMat,
                                 int* rowIndices,
                                 int* colIndices,
                                 int* indexConversion,

@@ -104,7 +104,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
         for (int level = 0; level < m_levelSets.size(); ++level) {
             const int numOfRowsInLevel = m_levelSets[level].size();
             if (m_splitMatrix) {
-                detail::ILU0::ILULowerSolveLevelSetSplit<field_type, blocksize_>(
+                detail::ILU0::solveLowerLevelSetSplit<field_type, blocksize_>(
                     m_gpuMatrixReorderedLower->getNonZeroValues().data(),
                     m_gpuMatrixReorderedLower->getRowIndices().data(),
                     m_gpuMatrixReorderedLower->getColumnIndices().data(),
@@ -116,7 +116,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
                     v.data(),
                     m_applyThreadBlockSize);
             } else {
-                detail::ILU0::ILULowerSolveLevelSet<field_type, blocksize_>(
+                detail::ILU0::solveLowerLevelSet<field_type, blocksize_>(
                     m_gpuReorderedLU->getNonZeroValues().data(),
                     m_gpuReorderedLU->getRowIndices().data(),
                     m_gpuReorderedLU->getColumnIndices().data(),
@@ -136,7 +136,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
             const int numOfRowsInLevel = m_levelSets[level].size();
             levelStartIdx -= numOfRowsInLevel;
             if (m_splitMatrix) {
-                detail::ILU0::ILUUpperSolveLevelSetSplit<field_type, blocksize_>(
+                detail::ILU0::solveUpperLevelSetSplit<field_type, blocksize_>(
                     m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
                     m_gpuMatrixReorderedUpper->getRowIndices().data(),
                     m_gpuMatrixReorderedUpper->getColumnIndices().data(),
@@ -147,7 +147,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
                     v.data(),
                     m_applyThreadBlockSize);
             } else {
-                detail::ILU0::ILUUpperSolveLevelSet<field_type, blocksize_>(
+                detail::ILU0::solveUpperLevelSet<field_type, blocksize_>(
                     m_gpuReorderedLU->getNonZeroValues().data(),
                     m_gpuReorderedLU->getRowIndices().data(),
                     m_gpuReorderedLU->getColumnIndices().data(),

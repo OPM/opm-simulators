@@ -44,7 +44,7 @@ namespace Opm::cuistl::detail::DILU
  * @param [out] v Will store the results of the lower solve
  */
 template <class T, int blocksize>
-void computeLowerSolveLevelSet(T* reorderedMat,
+void solveLowerLevelSet(T* reorderedMat,
                                int* rowIndices,
                                int* colIndices,
                                int* indexConversion,
@@ -72,7 +72,7 @@ void computeLowerSolveLevelSet(T* reorderedMat,
  * @param [out] v Will store the results of the lower solve
  */
 template <class T, int blocksize>
-void computeLowerSolveLevelSetSplit(T* reorderedUpperMat,
+void solveLowerLevelSetSplit(T* reorderedUpperMat,
                                int* rowIndices,
                                int* colIndices,
                                int* indexConversion,
@@ -99,7 +99,7 @@ void computeLowerSolveLevelSetSplit(T* reorderedUpperMat,
  * solve
  */
 template <class T, int blocksize>
-void computeUpperSolveLevelSet(T* reorderedMat,
+void solveUpperLevelSet(T* reorderedMat,
                                int* rowIndices,
                                int* colIndices,
                                int* indexConversion,
@@ -125,7 +125,7 @@ void computeUpperSolveLevelSet(T* reorderedMat,
  * solve
  */
 template <class T, int blocksize>
-void computeUpperSolveLevelSetSplit(T* reorderedUpperMat,
+void solveUpperLevelSetSplit(T* reorderedUpperMat,
                                int* rowIndices,
                                int* colIndices,
                                int* indexConversion,
