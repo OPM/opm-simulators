@@ -91,7 +91,7 @@ gpuSafeCall(cudaError_t error,
 }
 
 /**
- * @brief cudaWarnIfError checks the return type of the CUDA expression (function call) and issues a warning if it
+ * @brief gpuWarnIfError checks the return type of the CUDA expression (function call) and issues a warning if it
  * does not equal cudaSuccess.
  *
  * @param error the error code from cublas
@@ -107,7 +107,7 @@ gpuSafeCall(cudaError_t error,
  *
  * void some_function() {
  *     void* somePointer;
- *     cudaWarnIfError(cudaMalloc(&somePointer, 1), "cudaMalloc(&somePointer, 1)", __FILE__, __func__, __LINE__);
+ *     gpuWarnIfError(cudaMalloc(&somePointer, 1), "cudaMalloc(&somePointer, 1)", __FILE__, __func__, __LINE__);
  * }
  * @endcode
  *
@@ -118,7 +118,7 @@ gpuSafeCall(cudaError_t error,
  * @todo Refactor to use std::source_location once we shift to C++20
  */
 inline void
-cudaWarnIfError(cudaError_t error,
+gpuWarnIfError(cudaError_t error,
                 const std::string_view& expression,
                 const std::string_view& filename,
                 const std::string_view& functionName,
@@ -169,6 +169,6 @@ cudaWarnIfError(cudaError_t error,
  * @note Prefer the gpuSafeCall/OPM_GPU_SAFE_CALL counterpart unless you really don't want to throw an exception.
  */
 #define OPM_GPU_WARN_IF_ERROR(expression)                                                                             \
-    ::Opm::gpuistl::detail::cudaWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
+    ::Opm::gpuistl::detail::gpuWarnIfError(expression, #expression, __FILE__, __func__, __LINE__)
 
 #endif
