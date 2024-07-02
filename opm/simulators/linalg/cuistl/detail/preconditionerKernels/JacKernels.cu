@@ -29,7 +29,7 @@ namespace
 {
     template <class T, int blocksize>
     __global__ void
-    cuInvertDiagonalAndFlatten(T* matNonZeroValues, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec)
+    gpuInvertDiagonalAndFlatten(T* matNonZeroValues, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec)
     {
         const auto row = blockDim.x * blockIdx.x + threadIdx.x;
 
@@ -59,9 +59,9 @@ void
 invertDiagonalAndFlatten(T* mat, int* rowIndices, int* colIndices, size_t numberOfRows, T* vec)
 {
     if (blocksize <= 3) {
-        int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(cuInvertDiagonalAndFlatten<T, blocksize>);
+        int threadBlockSize = ::Opm::gpuistl::detail::getCudaRecomendedThreadBlockSize(gpuInvertDiagonalAndFlatten<T, blocksize>);
         int nThreadBlocks = ::Opm::gpuistl::detail::getNumberOfBlocks(numberOfRows, threadBlockSize);
-        cuInvertDiagonalAndFlatten<T, blocksize>
+        gpuInvertDiagonalAndFlatten<T, blocksize>
             <<<nThreadBlocks, threadBlockSize>>>(mat, rowIndices, colIndices, numberOfRows, vec);
     } else {
         OPM_THROW(std::invalid_argument, "Inverting diagonal is not implemented for blocksizes > 3");
