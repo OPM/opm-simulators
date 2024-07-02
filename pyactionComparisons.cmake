@@ -95,6 +95,16 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_wefac_insert_kw
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH)
 
+add_test_compareSeparateECLFiles(CASENAME pyaction_welpi_insert_kw
+                                 DIR1 pyaction
+                                 FILENAME1 PYACTION_WELPI_INSERT_KW
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_WELPI
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH)
+
 add_test_compareSeparateECLFiles(CASENAME pyaction_wesegvalv_insert_kw
                                  DIR1 pyaction
                                  FILENAME1 PYACTION_WSEGVALV_INSERT_KW
