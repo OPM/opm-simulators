@@ -47,7 +47,7 @@ CuDILU<M, X, Y, l>::CuDILU(const M& A, bool splitMatrix, bool tuneKernels)
     , m_levelSets(Opm::getMatrixRowColoring(m_cpuMatrix, Opm::ColoringType::LOWER))
     , m_reorderedToNatural(detail::createReorderedToNatural(m_levelSets))
     , m_naturalToReordered(detail::createNaturalToReordered(m_levelSets))
-    , m_gpuMatrix(CuSparseMatrix<field_type>::fromMatrix(m_cpuMatrix, true))
+    , m_gpuMatrix(GpuSparseMatrix<field_type>::fromMatrix(m_cpuMatrix, true))
     , m_gpuNaturalToReorder(m_naturalToReordered)
     , m_gpuReorderToNatural(m_reorderedToNatural)
     , m_gpuDInv(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
@@ -73,10 +73,10 @@ CuDILU<M, X, Y, l>::CuDILU(const M& A, bool splitMatrix, bool tuneKernels)
                              A.nonzeroes()));
     if (m_splitMatrix) {
         m_gpuMatrixReorderedDiag.reset(new auto(CuVector<field_type>(blocksize_ * blocksize_ * m_cpuMatrix.N())));
-        detail::extractLowerAndUpperMatrices<M, field_type, CuSparseMatrix<field_type>>(
+        detail::extractLowerAndUpperMatrices<M, field_type, GpuSparseMatrix<field_type>>(
             m_cpuMatrix, m_reorderedToNatural, m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper);
     } else {
-        detail::createReorderedMatrix<M, field_type, CuSparseMatrix<field_type>>(
+        detail::createReorderedMatrix<M, field_type, GpuSparseMatrix<field_type>>(
             m_cpuMatrix, m_reorderedToNatural, m_gpuMatrixReordered);
     }
     computeDiagAndMoveReorderedData();

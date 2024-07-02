@@ -61,7 +61,7 @@ namespace
 
 
 template <class T>
-CuSparseMatrix<T>::CuSparseMatrix(const T* nonZeroElements,
+GpuSparseMatrix<T>::GpuSparseMatrix(const T* nonZeroElements,
                                   const int* rowIndices,
                                   const int* columnIndices,
                                   size_t numberOfNonzeroBlocks,
@@ -82,15 +82,15 @@ CuSparseMatrix<T>::CuSparseMatrix(const T* nonZeroElements,
 }
 
 template <class T>
-CuSparseMatrix<T>::~CuSparseMatrix()
+GpuSparseMatrix<T>::~GpuSparseMatrix()
 {
     // empty
 }
 
 template <typename T>
 template <typename MatrixType>
-CuSparseMatrix<T>
-CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly)
+GpuSparseMatrix<T>
+GpuSparseMatrix<T>::fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly)
 {
     // TODO: Do we need this intermediate storage? Or this shuffling of data?
     std::vector<int> columnIndices;
@@ -129,18 +129,18 @@ CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix, bool copyNonZeroElements
     // Sanity check
     // h_rows and h_cols could be changed to 'unsigned int', but cusparse expects 'int'
     OPM_ERROR_IF(rowIndices[matrix.N()] != detail::to_int(matrix.nonzeroes()),
-                 "Error size of rows do not sum to number of nonzeroes in CuSparseMatrix.");
-    OPM_ERROR_IF(rowIndices.size() != numberOfRows + 1, "Row indices do not match for CuSparseMatrix.");
-    OPM_ERROR_IF(columnIndices.size() != numberOfNonzeroBlocks, "Column indices do not match for CuSparseMatrix.");
+                 "Error size of rows do not sum to number of nonzeroes in GpuSparseMatrix.");
+    OPM_ERROR_IF(rowIndices.size() != numberOfRows + 1, "Row indices do not match for GpuSparseMatrix.");
+    OPM_ERROR_IF(columnIndices.size() != numberOfNonzeroBlocks, "Column indices do not match for GpuSparseMatrix.");
 
 
     if (copyNonZeroElementsDirectly) {
         const T* nonZeroElements = nonZeroElementsTmp;
-        return CuSparseMatrix<T>(
+        return GpuSparseMatrix<T>(
             nonZeroElements, rowIndices.data(), columnIndices.data(), numberOfNonzeroBlocks, blockSize, numberOfRows);
     } else {
         auto nonZeroElementData = extractNonzeroValues<T>(matrix);
-        return CuSparseMatrix<T>(nonZeroElementData.data(),
+        return GpuSparseMatrix<T>(nonZeroElementData.data(),
                                  rowIndices.data(),
                                  columnIndices.data(),
                                  numberOfNonzeroBlocks,
@@ -152,7 +152,7 @@ CuSparseMatrix<T>::fromMatrix(const MatrixType& matrix, bool copyNonZeroElements
 template <class T>
 template <class MatrixType>
 void
-CuSparseMatrix<T>::updateNonzeroValues(const MatrixType& matrix, bool copyNonZeroElementsDirectly)
+GpuSparseMatrix<T>::updateNonzeroValues(const MatrixType& matrix, bool copyNonZeroElementsDirectly)
 {
     OPM_ERROR_IF(nonzeroes() != matrix.nonzeroes(), "Matrix does not have the same number of non-zero elements.");
     OPM_ERROR_IF(matrix[0][0].N() != blockSize(), "Matrix does not have the same blocksize.");
@@ -170,42 +170,42 @@ CuSparseMatrix<T>::updateNonzeroValues(const MatrixType& matrix, bool copyNonZer
 
 template <typename T>
 void
-CuSparseMatrix<T>::setUpperTriangular()
+GpuSparseMatrix<T>::setUpperTriangular()
 {
     OPM_CUSPARSE_SAFE_CALL(cusparseSetMatFillMode(m_matrixDescription->get(), CUSPARSE_FILL_MODE_UPPER));
 }
 
 template <typename T>
 void
-CuSparseMatrix<T>::setLowerTriangular()
+GpuSparseMatrix<T>::setLowerTriangular()
 {
     OPM_CUSPARSE_SAFE_CALL(cusparseSetMatFillMode(m_matrixDescription->get(), CUSPARSE_FILL_MODE_LOWER));
 }
 
 template <typename T>
 void
-CuSparseMatrix<T>::setUnitDiagonal()
+GpuSparseMatrix<T>::setUnitDiagonal()
 {
     OPM_CUSPARSE_SAFE_CALL(cusparseSetMatDiagType(m_matrixDescription->get(), CUSPARSE_DIAG_TYPE_UNIT));
 }
 
 template <typename T>
 void
-CuSparseMatrix<T>::setNonUnitDiagonal()
+GpuSparseMatrix<T>::setNonUnitDiagonal()
 {
     OPM_CUSPARSE_SAFE_CALL(cusparseSetMatDiagType(m_matrixDescription->get(), CUSPARSE_DIAG_TYPE_NON_UNIT));
 }
 
 template <typename T>
 void
-CuSparseMatrix<T>::mv(const CuVector<T>& x, CuVector<T>& y) const
+GpuSparseMatrix<T>::mv(const CuVector<T>& x, CuVector<T>& y) const
 {
     assertSameSize(x);
     assertSameSize(y);
     if (blockSize() < 2u) {
         OPM_THROW(
             std::invalid_argument,
-            "CuSparseMatrix<T>::usmv and CuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
+            "GpuSparseMatrix<T>::usmv and GpuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
     }
     const auto nonzeroValues = getNonZeroValues().data();
 
@@ -232,14 +232,14 @@ CuSparseMatrix<T>::mv(const CuVector<T>& x, CuVector<T>& y) const
 
 template <typename T>
 void
-CuSparseMatrix<T>::umv(const CuVector<T>& x, CuVector<T>& y) const
+GpuSparseMatrix<T>::umv(const CuVector<T>& x, CuVector<T>& y) const
 {
     assertSameSize(x);
     assertSameSize(y);
     if (blockSize() < 2u) {
         OPM_THROW(
             std::invalid_argument,
-            "CuSparseMatrix<T>::usmv and CuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
+            "GpuSparseMatrix<T>::usmv and GpuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
     }
 
     const auto nonzeroValues = getNonZeroValues().data();
@@ -267,14 +267,14 @@ CuSparseMatrix<T>::umv(const CuVector<T>& x, CuVector<T>& y) const
 
 template <typename T>
 void
-CuSparseMatrix<T>::usmv(T alpha, const CuVector<T>& x, CuVector<T>& y) const
+GpuSparseMatrix<T>::usmv(T alpha, const CuVector<T>& x, CuVector<T>& y) const
 {
     assertSameSize(x);
     assertSameSize(y);
     if (blockSize() < 2) {
         OPM_THROW(
             std::invalid_argument,
-            "CuSparseMatrix<T>::usmv and CuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
+            "GpuSparseMatrix<T>::usmv and GpuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
     }
     const auto numberOfRows = N();
     const auto numberOfNonzeroBlocks = nonzeroes();
@@ -304,7 +304,7 @@ CuSparseMatrix<T>::usmv(T alpha, const CuVector<T>& x, CuVector<T>& y) const
 template <class T>
 template <class VectorType>
 void
-CuSparseMatrix<T>::assertSameSize(const VectorType& x) const
+GpuSparseMatrix<T>::assertSameSize(const VectorType& x) const
 {
     if (x.dim() != blockSize() * N()) {
         OPM_THROW(std::invalid_argument,
@@ -317,17 +317,17 @@ CuSparseMatrix<T>::assertSameSize(const VectorType& x) const
 
 
 #define INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(realtype, blockdim)                                     \
-    template CuSparseMatrix<realtype> CuSparseMatrix<realtype>::fromMatrix(                                            \
+    template GpuSparseMatrix<realtype> GpuSparseMatrix<realtype>::fromMatrix(                                            \
         const Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&, bool);                               \
-    template CuSparseMatrix<realtype> CuSparseMatrix<realtype>::fromMatrix(                                            \
+    template GpuSparseMatrix<realtype> GpuSparseMatrix<realtype>::fromMatrix(                                            \
         const Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&, bool);                                \
-    template void CuSparseMatrix<realtype>::updateNonzeroValues(                                                       \
+    template void GpuSparseMatrix<realtype>::updateNonzeroValues(                                                       \
         const Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>&, bool);                               \
-    template void CuSparseMatrix<realtype>::updateNonzeroValues(                                                       \
+    template void GpuSparseMatrix<realtype>::updateNonzeroValues(                                                       \
         const Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>&, bool)
 
-template class CuSparseMatrix<float>;
-template class CuSparseMatrix<double>;
+template class GpuSparseMatrix<float>;
+template class GpuSparseMatrix<double>;
 
 INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(double, 1);
 INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(double, 2);

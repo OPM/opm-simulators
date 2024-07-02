@@ -48,7 +48,7 @@ template <class M, class X, class Y, int l>
 CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
     : m_cpuMatrix(A)
     , m_relaxationFactor(w)
-    , m_gpuMatrix(CuSparseMatrix<field_type>::fromMatrix(A))
+    , m_gpuMatrix(GpuSparseMatrix<field_type>::fromMatrix(A))
     , m_diagInvFlattened(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
 {
     // Some sanity check

@@ -67,7 +67,7 @@ public:
                   int verbose)
         : Dune::IterativeSolver<X, X>(op, sp, *prec, reduction, maxit, verbose)
         , m_opOnCPUWithMatrix(op)
-        , m_matrix(CuSparseMatrix<real_type>::fromMatrix(op.getmat()))
+        , m_matrix(GpuSparseMatrix<real_type>::fromMatrix(op.getmat()))
         , m_underlyingSolver(constructSolver(prec, reduction, maxit, verbose))
     {
     }
@@ -116,7 +116,7 @@ public:
 
 private:
     Operator& m_opOnCPUWithMatrix;
-    CuSparseMatrix<real_type> m_matrix;
+    GpuSparseMatrix<real_type> m_matrix;
 
     UnderlyingSolver<XGPU> m_underlyingSolver;
 
@@ -193,7 +193,7 @@ private:
 
             using CudaCommunication = CuOwnerOverlapCopy<real_type, block_size, typename Operator::communication_type>;
             using SchwarzOperator
-                = Dune::OverlappingSchwarzOperator<CuSparseMatrix<real_type>, XGPU, XGPU, CudaCommunication>;
+                = Dune::OverlappingSchwarzOperator<GpuSparseMatrix<real_type>, XGPU, XGPU, CudaCommunication>;
             auto cudaCommunication = std::make_shared<CudaCommunication>(gpuComm);
 
             auto mpiPreconditioner = std::make_shared<CuBlockPreconditioner<XGPU, XGPU, CudaCommunication>>(
@@ -227,7 +227,7 @@ private:
             auto preconditionerOnGPU = precAsHolder->getUnderlyingPreconditioner();
 
             auto matrixOperator
-                = std::make_shared<Dune::MatrixAdapter<CuSparseMatrix<real_type>, XGPU, XGPU>>(m_matrix);
+                = std::make_shared<Dune::MatrixAdapter<GpuSparseMatrix<real_type>, XGPU, XGPU>>(m_matrix);
             auto scalarProduct = std::make_shared<Dune::SeqScalarProduct<XGPU>>();
             return UnderlyingSolver<XGPU>(
                 matrixOperator, scalarProduct, preconditionerOnGPU, reduction, maxit, verbose);

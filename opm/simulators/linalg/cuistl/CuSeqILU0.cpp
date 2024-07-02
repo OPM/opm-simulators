@@ -46,7 +46,7 @@ template <class M, class X, class Y, int l>
 CuSeqILU0<M, X, Y, l>::CuSeqILU0(const M& A, field_type w)
     : m_underlyingMatrix(A)
     , m_w(w)
-    , m_LU(CuSparseMatrix<field_type>::fromMatrix(detail::makeMatrixWithNonzeroDiagonal(A)))
+    , m_LU(GpuSparseMatrix<field_type>::fromMatrix(detail::makeMatrixWithNonzeroDiagonal(A)))
     , m_temporaryStorage(m_LU.N() * m_LU.blockSize())
     , m_descriptionL(detail::createLowerDiagonalDescription())
     , m_descriptionU(detail::createUpperDiagonalDescription())

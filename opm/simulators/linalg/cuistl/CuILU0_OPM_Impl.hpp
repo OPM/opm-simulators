@@ -57,7 +57,7 @@ public:
     //! \brief The field type of the preconditioner.
     using field_type = typename X::field_type;
     //! \brief The GPU matrix type
-    using CuMat = CuSparseMatrix<field_type>;
+    using CuMat = GpuSparseMatrix<field_type>;
 
     //! \brief Constructor.
     //!

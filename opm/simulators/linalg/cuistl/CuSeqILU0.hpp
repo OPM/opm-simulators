@@ -106,7 +106,7 @@ private:
     //! This is the storage for the LU composition.
     //! Initially this will have the values of A, but will be
     //! modified in the constructor to be the proper LU decomposition.
-    CuSparseMatrix<field_type> m_LU;
+    GpuSparseMatrix<field_type> m_LU;
 
     CuVector<field_type> m_temporaryStorage;
 
