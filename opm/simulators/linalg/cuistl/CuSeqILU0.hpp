@@ -111,8 +111,8 @@ private:
     GpuVector<field_type> m_temporaryStorage;
 
 
-    detail::CuSparseMatrixDescriptionPtr m_descriptionL;
-    detail::CuSparseMatrixDescriptionPtr m_descriptionU;
+    detail::GpuSparseMatrixDescriptionPtr m_descriptionL;
+    detail::GpuSparseMatrixDescriptionPtr m_descriptionU;
     detail::CuSparseResource<bsrsv2Info_t> m_infoL;
     detail::CuSparseResource<bsrsv2Info_t> m_infoU;
     detail::CuSparseResource<bsrilu02Info_t> m_infoM;

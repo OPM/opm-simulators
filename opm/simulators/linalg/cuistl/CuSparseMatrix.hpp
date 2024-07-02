@@ -233,7 +233,7 @@ public:
      *
      * This description is needed for most calls to the CuSparse library
      */
-    detail::CuSparseMatrixDescription& getDescription()
+    detail::GpuSparseMatrixDescription& getDescription()
     {
         return *m_matrixDescription;
     }
@@ -292,7 +292,7 @@ private:
     const int m_numberOfRows;
     const int m_blockSize;
 
-    detail::CuSparseMatrixDescriptionPtr m_matrixDescription;
+    detail::GpuSparseMatrixDescriptionPtr m_matrixDescription;
     detail::CuSparseHandle& m_cusparseHandle;
 
     template <class VectorType>
