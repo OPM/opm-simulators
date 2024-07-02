@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUILU0_OPM_Impl_HPP
-#define OPM_CUILU0_OPM_Impl_HPP
+#ifndef OPM_GPUILU0_OPM_Impl_HPP
+#define OPM_GPUILU0_OPM_Impl_HPP
 
 #include <dune/istl/preconditioner.hh>
 #include <opm/grid/utility/SparseTable.hpp>

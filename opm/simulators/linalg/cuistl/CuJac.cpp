@@ -44,7 +44,7 @@ namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
-CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
+GpuJac<M, X, Y, l>::GpuJac(const M& A, field_type w)
     : m_cpuMatrix(A)
     , m_relaxationFactor(w)
     , m_gpuMatrix(GpuSparseMatrix<field_type>::fromMatrix(A))
@@ -52,17 +52,17 @@ CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
 {
     // Some sanity check
     OPM_ERROR_IF(A.N() != m_gpuMatrix.N(),
-                 fmt::format("CuSparse matrix not same size as DUNE matrix. {} vs {}.", m_gpuMatrix.N(), A.N()));
+                 fmt::format("cu/hipSPARSE matrix not same size as DUNE matrix. {} vs {}.", m_gpuMatrix.N(), A.N()));
     OPM_ERROR_IF(A[0][0].N() != m_gpuMatrix.blockSize(),
-                 fmt::format("CuSparse matrix not same blocksize as DUNE matrix. {} vs {}.",
+                 fmt::format("cu/hipSPARSE matrix not same blocksize as DUNE matrix. {} vs {}.",
                              m_gpuMatrix.blockSize(),
                              A[0][0].N()));
     OPM_ERROR_IF(A.N() * A[0][0].N() != m_gpuMatrix.dim(),
-                 fmt::format("CuSparse matrix not same dimension as DUNE matrix. {} vs {}.",
+                 fmt::format("cu/hipSPARSE matrix not same dimension as DUNE matrix. {} vs {}.",
                              m_gpuMatrix.dim(),
                              A.N() * A[0][0].N()));
     OPM_ERROR_IF(A.nonzeroes() != m_gpuMatrix.nonzeroes(),
-                 fmt::format("CuSparse matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
+                 fmt::format("cu/hipSPARSE matrix not same number of non zeroes as DUNE matrix. {} vs {}. ",
                              m_gpuMatrix.nonzeroes(),
                              A.nonzeroes()));
 
@@ -72,13 +72,13 @@ CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
+GpuJac<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
 {
 }
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::apply(X& v, const Y& d)
+GpuJac<M, X, Y, l>::apply(X& v, const Y& d)
 {
     // Jacobi preconditioner: x_{n+1} = x_n + w * (D^-1 * (b - Ax_n) )
     // Working with defect d and update v it we only need to set v = w*(D^-1)*d
@@ -91,20 +91,20 @@ CuJac<M, X, Y, l>::apply(X& v, const Y& d)
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::post([[maybe_unused]] X& x)
+GpuJac<M, X, Y, l>::post([[maybe_unused]] X& x)
 {
 }
 
 template <class M, class X, class Y, int l>
 Dune::SolverCategory::Category
-CuJac<M, X, Y, l>::category() const
+GpuJac<M, X, Y, l>::category() const
 {
     return Dune::SolverCategory::sequential;
 }
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::update()
+GpuJac<M, X, Y, l>::update()
 {
     m_gpuMatrix.updateNonzeroValues(m_cpuMatrix);
     invertDiagonalAndFlatten();
@@ -112,7 +112,7 @@ CuJac<M, X, Y, l>::update()
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::invertDiagonalAndFlatten()
+GpuJac<M, X, Y, l>::invertDiagonalAndFlatten()
 {
     detail::JAC::invertDiagonalAndFlatten<field_type, matrix_type::block_type::cols>(m_gpuMatrix.getNonZeroValues().data(),
                                                                                 m_gpuMatrix.getRowIndices().data(),
@@ -122,24 +122,24 @@ CuJac<M, X, Y, l>::invertDiagonalAndFlatten()
 }
 
 } // namespace Opm::gpuistl
-#define INSTANTIATE_CUJAC_DUNE(realtype, blockdim)                                                                     \
-    template class ::Opm::gpuistl::CuJac<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,             \
+#define INSTANTIATE_GPUJAC_DUNE(realtype, blockdim)                                                                     \
+    template class ::Opm::gpuistl::GpuJac<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,             \
                                         ::Opm::gpuistl::GpuVector<realtype>,                                             \
                                         ::Opm::gpuistl::GpuVector<realtype>>;                                            \
-    template class ::Opm::gpuistl::CuJac<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,              \
+    template class ::Opm::gpuistl::GpuJac<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,              \
                                         ::Opm::gpuistl::GpuVector<realtype>,                                             \
                                         ::Opm::gpuistl::GpuVector<realtype>>
 
-INSTANTIATE_CUJAC_DUNE(double, 1);
-INSTANTIATE_CUJAC_DUNE(double, 2);
-INSTANTIATE_CUJAC_DUNE(double, 3);
-INSTANTIATE_CUJAC_DUNE(double, 4);
-INSTANTIATE_CUJAC_DUNE(double, 5);
-INSTANTIATE_CUJAC_DUNE(double, 6);
+INSTANTIATE_GPUJAC_DUNE(double, 1);
+INSTANTIATE_GPUJAC_DUNE(double, 2);
+INSTANTIATE_GPUJAC_DUNE(double, 3);
+INSTANTIATE_GPUJAC_DUNE(double, 4);
+INSTANTIATE_GPUJAC_DUNE(double, 5);
+INSTANTIATE_GPUJAC_DUNE(double, 6);
 
-INSTANTIATE_CUJAC_DUNE(float, 1);
-INSTANTIATE_CUJAC_DUNE(float, 2);
-INSTANTIATE_CUJAC_DUNE(float, 3);
-INSTANTIATE_CUJAC_DUNE(float, 4);
-INSTANTIATE_CUJAC_DUNE(float, 5);
-INSTANTIATE_CUJAC_DUNE(float, 6);
+INSTANTIATE_GPUJAC_DUNE(float, 1);
+INSTANTIATE_GPUJAC_DUNE(float, 2);
+INSTANTIATE_GPUJAC_DUNE(float, 3);
+INSTANTIATE_GPUJAC_DUNE(float, 4);
+INSTANTIATE_GPUJAC_DUNE(float, 5);
+INSTANTIATE_GPUJAC_DUNE(float, 6);

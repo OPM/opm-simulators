@@ -336,11 +336,11 @@ struct StandardPreconditioners {
         F::addCreator("CUJac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t, const C& comm) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
-            using CuJac =
-                typename gpuistl::CuJac<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
-            auto cuJac = std::make_shared<CuJac>(op.getmat(), w);
+            using GpuJac =
+                typename gpuistl::GpuJac<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            auto cuJac = std::make_shared<GpuJac>(op.getmat(), w);
 
-            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, CuJac>>(cuJac);
+            auto adapted = std::make_shared<gpuistl::PreconditionerAdapter<V, V, GpuJac>>(cuJac);
             auto wrapped = std::make_shared<gpuistl::GpuBlockPreconditioner<V, V, Comm>>(adapted, comm);
             return wrapped;
         });
@@ -609,10 +609,10 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
         F::addCreator("CUJac", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using field_type = typename V::field_type;
-            using CUJac =
-                typename gpuistl::CuJac<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
-            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, CUJac>>(
-                std::make_shared<CUJac>(op.getmat(), w));
+            using GpuJac =
+                typename gpuistl::GpuJac<M, gpuistl::GpuVector<field_type>, gpuistl::GpuVector<field_type>>;
+            return std::make_shared<gpuistl::PreconditionerAdapter<V, V, GpuJac>>(
+                std::make_shared<GpuJac>(op.getmat(), w));
         });
 
         F::addCreator("CUILU0OPM", [](const O& op, [[maybe_unused]] const P& prm, const std::function<V()>&, std::size_t) {

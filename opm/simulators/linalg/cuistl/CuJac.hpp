@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUJAC_HPP
-#define OPM_CUJAC_HPP
+#ifndef OPM_GPUJAC_HPP
+#define OPM_GPUJAC_HPP
 
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
@@ -41,7 +41,7 @@ namespace Opm::gpuistl
 //! \note We assume X and Y are both GpuVector<real_type>, but we leave them as template
 //! arguments in case of future additions.
 template <class M, class X, class Y, int l = 1>
-class CuJac : public Dune::PreconditionerWithUpdate<X, Y>
+class GpuJac : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
     //! \brief The matrix type the preconditioner is for.
@@ -59,7 +59,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    CuJac(const M& A, field_type w);
+    GpuJac(const M& A, field_type w);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.
@@ -99,7 +99,7 @@ private:
     const field_type m_relaxationFactor;
     //! \brief The A matrix stored on the gpu
     GpuSparseMatrix<field_type> m_gpuMatrix;
-    //! \brief the diagonal of cuMatrix inverted, and then flattened to fit in a vector
+    //! \brief the diagonal of a BCRS matrix inverted, and then flattened to fit in a vector
     GpuVector<field_type> m_diagInvFlattened;
 
     void invertDiagonalAndFlatten();

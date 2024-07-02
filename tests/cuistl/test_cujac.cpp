@@ -18,7 +18,7 @@
 */
 #include <config.h>
 
-#define BOOST_TEST_MODULE TestCuJac
+#define BOOST_TEST_MODULE TestGpuJac
 #include <boost/mpl/list.hpp>
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize2, T, NumericTypes)
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, blocksize>>;
-    using CuJac = Opm::gpuistl::CuJac<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
+    using GpuJac = Opm::gpuistl::GpuJac<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize2, T, NumericTypes)
     B[1][1][0][0] = -1.0;
     B[1][1][1][1] = -1.0;
 
-    auto cujac = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, CuJac>(std::make_shared<CuJac>(B, 0.5));
+    auto gpujac = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, GpuJac>(std::make_shared<GpuJac>(B, 0.5));
 
     Vector vVector(2);
     Vector dVector(2);
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize2, T, NumericTypes)
 
     const T expectedAns[2][2] = {{1.0 / 2.0, -1.0 / 2.0}, {-3.0 / 2.0, -2.0}};
 
-    cujac.apply(vVector, dVector);
+    gpujac.apply(vVector, dVector);
     BOOST_CHECK_CLOSE(vVector[0][0], expectedAns[0][0], 1e-7);
     BOOST_CHECK_CLOSE(vVector[0][1], expectedAns[0][1], 1e-7);
     BOOST_CHECK_CLOSE(vVector[1][0], expectedAns[1][0], 1e-7);
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize1, T, NumericTypes)
     using M = Dune::FieldMatrix<T, blocksize, blocksize>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, blocksize>>;
-    using CuJac = Opm::gpuistl::CuJac<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
+    using GpuJac = Opm::gpuistl::GpuJac<SpMatrix, Opm::gpuistl::GpuVector<T>, Opm::gpuistl::GpuVector<T>>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {
@@ -129,7 +129,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize1, T, NumericTypes)
     B[2][2][0][0] = -1.0;
     B[3][3][0][0] = -1.0;
 
-    auto cujac = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, CuJac>(std::make_shared<CuJac>(B, 0.5));
+    auto gpujac = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, GpuJac>(std::make_shared<GpuJac>(B, 0.5));
 
     Vector vVector(4);
     Vector dVector(4);
@@ -140,7 +140,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(CUJACApplyBlocksize1, T, NumericTypes)
 
     const T expectedAns[4] = {1.0 / 3.0, 1.0 / 2.0, -3.0 / 2.0, -2.0};
 
-    cujac.apply(vVector, dVector);
+    gpujac.apply(vVector, dVector);
     BOOST_CHECK_CLOSE(vVector[0], expectedAns[0], 1e-7);
     BOOST_CHECK_CLOSE(vVector[1], expectedAns[1], 1e-7);
     BOOST_CHECK_CLOSE(vVector[2], expectedAns[2], 1e-7);
