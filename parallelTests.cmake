@@ -212,3 +212,10 @@ add_test_compare_parallel_simulation(CASENAME rxft
                                      REL_TOL 1.0e-3
                                      DIR rxft_smry
                                      TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
+
+add_test_compare_parallel_simulation(CASENAME editnnc_multregt
+                                     FILENAME EDITNNC_AND_MULTREGT
+                                     SIMULATOR flow
+                                     ABS_TOL ${abs_tol_parallel}
+                                     REL_TOL ${rel_tol_parallel}
+                                     DIR editnnc
