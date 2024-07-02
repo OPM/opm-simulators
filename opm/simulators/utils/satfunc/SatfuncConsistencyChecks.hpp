@@ -51,6 +51,9 @@ namespace Opm {
         class Check
         {
         public:
+            /// Virtual destructor since class has virtual functions
+            virtual ~Check() = default;
+
             /// Run specific check against a set of saturation function end-points.
             ///
             /// \param[in] endPoints Set of saturation function end-points.
