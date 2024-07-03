@@ -35,6 +35,7 @@
 #include <opm/simulators/wells/WellHelpers.hpp>
 #include <opm/simulators/wells/WellInterfaceFluidSystem.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/input/eclipse/Schedule/Network/ExtNetwork.hpp>
 
 #include <cassert>
 #include <stdexcept>
@@ -162,12 +163,13 @@ assembleControlEqProd(const WellState<Scalar>& well_state,
                 well_.rateConverter().calcCoeff(id, region, coeff);
 
         };
-        WellGroupControls(well_).getGroupProductionControl(group,
+
+        WellGroupControls(well_).getGroupProductionControl(group, 
                                                            well_state,
                                                            group_state,
                                                            schedule,
                                                            summaryState,
-                                                           bhp,
+                                                           bhp, 
                                                            active_rates,
                                                            rCoeff,
                                                            efficiencyFactor,

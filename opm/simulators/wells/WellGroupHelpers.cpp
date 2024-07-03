@@ -41,6 +41,7 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/wells/VFPProdProperties.hpp>
 #include <opm/simulators/wells/WellState.hpp>
+#include <opm/simulators/wells/GroupState.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -935,7 +936,12 @@ computeNetworkPressures(const Network::ExtNetwork& network,
 #endif
                 } else {
                     // Table number specified as 9999 in the deck, no pressure loss.
-                    node_pressures[node] = up_press;
+                    if (network.node(node).as_choke()){
+                        // Node pressure is set to the group THP.
+                        node_pressures[node] = group_state.well_group_thp(node);
+                    } else {
+                            node_pressures[node] = up_press;
+                    }
                 }
             }
         }
