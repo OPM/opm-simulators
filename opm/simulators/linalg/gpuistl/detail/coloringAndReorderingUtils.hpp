@@ -23,10 +23,10 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/CuSparseMatrix.hpp>
-#include <opm/simulators/linalg/gpuistl/CuVector.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cusparse_matrix_operations.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/sparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/GraphColoring.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <vector>

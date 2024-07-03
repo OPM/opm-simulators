@@ -26,10 +26,10 @@
 #include <dune/istl/schwarz.hh>
 #include <dune/istl/solver.hh>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/gpuistl/CuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/gpuistl/CuOwnerOverlapCopy.hpp>
-#include <opm/simulators/linalg/gpuistl/CuSparseMatrix.hpp>
-#include <opm/simulators/linalg/gpuistl/CuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBlockPreconditioner.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuOwnerOverlapCopy.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/has_function.hpp>
 

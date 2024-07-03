@@ -21,7 +21,7 @@
 #include <cusparse.h>
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <opm/simulators/linalg/gpuistl/CuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerHolder.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/preconditioner_should_call_post_pre.hpp>
 

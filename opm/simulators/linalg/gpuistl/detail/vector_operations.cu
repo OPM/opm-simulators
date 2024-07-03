@@ -18,11 +18,11 @@
 */
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/vector_operations.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cublas_safe_call.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cublas_wrapper.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpuBLAS_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpuBLAS_wrapper.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/gpuThreadUtils.hpp>
-#include <opm/simulators/linalg/gpuistl/CuVector.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuVector.hpp>
 #include <stdexcept>
 #include <config.h>
 namespace Opm::gpuistl::detail

@@ -22,12 +22,12 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <opm/simulators/linalg/gpuistl/CuSparseMatrix.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/CuMatrixDescription.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/CuSparseHandle.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/CuSparseResource.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSparseMatrix.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/GpuMatrixDescription.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/GpuSparseHandle.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/GpuSparseResource.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/cusparse_constants.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cusparse_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpusparse_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/detail/preconditioner_should_call_post_pre.hpp>
 
 

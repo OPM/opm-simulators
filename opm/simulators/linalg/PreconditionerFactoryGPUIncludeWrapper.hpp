@@ -22,22 +22,22 @@
 // both with the normal cuistl path, and the hipistl path
 #if HAVE_CUDA
 #if USE_HIP
-#include <opm/simulators/linalg/hipistl/CuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/hipistl/CuDILU.hpp>
-#include <opm/simulators/linalg/hipistl/CuILU0_OPM_Impl.hpp>
-#include <opm/simulators/linalg/hipistl/CuJac.hpp>
-#include <opm/simulators/linalg/hipistl/CuSeqILU0.hpp>
+#include <opm/simulators/linalg/hipistl/GpuBlockPreconditioner.hpp>
+#include <opm/simulators/linalg/hipistl/GpuDILU.hpp>
+#include <opm/simulators/linalg/hipistl/GpuILU0_OPM_Impl.hpp>
+#include <opm/simulators/linalg/hipistl/GpuJac.hpp>
+#include <opm/simulators/linalg/hipistl/GpuSeqILU0.hpp>
 #include <opm/simulators/linalg/hipistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/hipistl/PreconditionerConvertFieldTypeAdapter.hpp>
-#include <opm/simulators/linalg/hipistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/hipistl/detail/gpu_safe_call.hpp>
 #else
-#include <opm/simulators/linalg/gpuistl/CuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/gpuistl/CuDILU.hpp>
-#include <opm/simulators/linalg/gpuistl/CuILU0_OPM_Impl.hpp>
-#include <opm/simulators/linalg/gpuistl/CuJac.hpp>
-#include <opm/simulators/linalg/gpuistl/CuSeqILU0.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuBlockPreconditioner.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuDILU.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuILU0_OPM_Impl.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuJac.hpp>
+#include <opm/simulators/linalg/gpuistl/GpuSeqILU0.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/gpuistl/PreconditionerConvertFieldTypeAdapter.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #endif
 #endif

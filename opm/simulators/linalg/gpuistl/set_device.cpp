@@ -19,7 +19,7 @@
 #include <config.h>
 #include <cuda_runtime.h>
 #include <opm/common/OpmLog/OpmLog.hpp>
-#include <opm/simulators/linalg/gpuistl/detail/cuda_safe_call.hpp>
+#include <opm/simulators/linalg/gpuistl/detail/gpu_safe_call.hpp>
 #include <opm/simulators/linalg/gpuistl/set_device.hpp>
 namespace Opm::gpuistl
 {

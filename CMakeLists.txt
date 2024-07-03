@@ -743,7 +743,7 @@ if(CUDA_FOUND)
   if (NOT USE_HIP)
     target_link_libraries( opmsimulators PUBLIC ${CUDA_cusparse_LIBRARY} )
     target_link_libraries( opmsimulators PUBLIC ${CUDA_cublas_LIBRARY} )
-    foreach(tgt test_cuda_safe_call test_cuda_check_last_error test_cuvector)
+    foreach(tgt test_gpu_safe_call test_gpu_check_last_error test_gpuVector)
       target_link_libraries(${tgt} CUDA::cudart)
     endforeach()
   endif()
@@ -751,25 +751,25 @@ if(CUDA_FOUND)
     set_tests_properties(cusparseSolver PROPERTIES LABELS gpu_cuda)
   endif()
 
-  # CUISTL
+  # GPUISTL
   set(gpu_label "gpu_cuda")
   if(USE_HIP)
     set(gpu_label "gpu_hip")
   endif()
-  set_tests_properties(cusparse_safe_call
-                       cublas_safe_call
-                       cuda_safe_call
-                       cuda_check_last_error
-                       cublas_handle
-                       cujac
-                       cudilu
-                       cusparse_handle
-                       cuSparse_matrix_operations
-                       cuVector_operations
-                       cuvector
-                       cusparsematrix
-                       cuseqilu0
-                       cuowneroverlapcopy
+  set_tests_properties(gpuSparse_safe_call
+                       gpu_BLAS_safe_call
+                       gpu_safe_call
+                       gpu_check_last_error
+                       gpu_BLAS_handle
+                       gpuJac
+                       gpuDilu
+                       gpuSparse_handle
+                       gpuSparse_matrix_operations
+                       gpuVector_operations
+                       gpuVector
+                       gpuSparseMatrix
+                       gpuSeqilu0
+                       gpuOwnerOverlapCopy
                        solver_adapter
                        PROPERTIES LABELS ${gpu_label})
 endif()
