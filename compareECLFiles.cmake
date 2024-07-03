@@ -347,7 +347,11 @@ function(add_test_compareDamarisFiles)
                EXE_NAME ${PARAM_SIMULATOR}
                DRIVER_ARGS ${DRIVER_ARGS}
                TEST_ARGS ${TEST_ARGS})
-  set_tests_properties(${TEST_NAME} PROPERTIES PROCESSORS ${MPI_PROCS})
+  set_tests_properties(${TEST_NAME} PROPERTIES PROCESSORS ${MPI_PROCS}
+                                    DIRNAME ${PARAM_DIR}
+                                    FILENAME ${PARAM_FILENAME}
+                                    SIMULATOR ${PARAM_SIMULATOR}
+                                    TESTNAME ${PARAM_CASENAME})
 endfunction()
 
 

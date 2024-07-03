@@ -49,6 +49,26 @@ copyToReferenceDir () {
   return $DIFF
 }
 
+# Copy damaris results from a test run to refence dir
+# $1 = source directory to copy data from
+# $2 = destination directory to copy data to
+# $3 = base file name for files to copy
+copyDamarisToReferenceDir () {
+  SRC_DIR=$1
+  DST_DIR=$2
+  STEM=$3
+  mkdir -p $DST_DIR
+
+  FIRST_FILE=`ls -v1 $SRC_DIR/$STEM*.h5 | head -n1`
+  LAST_FILE=`ls -v1 $SRC_DIR/$STEM*.h5 | tail -n1`
+
+  for file in $FIRST_FILE $LAST_FILE
+  do
+    h5diff -v "$file" "$DST_DIR/`basename $file`" >> $WORKSPACE/data_diff
+    cp "$file" $DST_DIR
+  done
+}
+
 changed_tests=""
 
 # Read failed tests
@@ -58,7 +78,7 @@ test -z "$FAILED_TESTS" && exit 5
 
 for failed_test in $FAILED_TESTS
 do
-  grep -q compareECLFiles <<< $failed_test
+  grep -q -E "compareECLFiles|compareDamarisFiles" <<< $failed_test
   test $? -ne 0 && continue
   failed_test=`echo $failed_test | sed -e 's/.*://g' -e 's/\+/./g'`
   # Extract test properties
@@ -68,29 +88,38 @@ do
   file_name=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="FILENAME" -f $dir/getprop.awk $BUILD_DIR/CTestTestfile.cmake)
   test_name=$(awk -v search="set_tests_properties\\\($failed_test\$" -v prop="TESTNAME" -f $dir/getprop.awk $BUILD_DIR/CTestTestfile.cmake)
   echo "$failed_test ${binary} ${dirname} ${file_name} ${test_name}"
-  copyToReferenceDir \
-          $BUILD_DIR/tests/results/$binary+$test_name \
-          $OPM_TESTS_ROOT/$dir_name/opm-simulation-reference/$binary \
-          $file_name \
-          EGRID INIT RFT SMSPEC UNRST UNSMRY
-  test $? -eq 0 && changed_tests="$changed_tests $test_name"
-
-  if [ -d $configuration/build-opm-simulators/tests/results/$binary+$test_name/restart ]
+  if grep -q compareECLFiles <<< $failed_test
   then
+    copyToReferenceDir \
+            $BUILD_DIR/tests/results/$binary+$test_name \
+            $OPM_TESTS_ROOT/$dir_name/opm-simulation-reference/$binary \
+            $file_name \
+            EGRID INIT RFT SMSPEC UNRST UNSMRY
+    test $? -eq 0 && changed_tests="$changed_tests $test_name"
 
-    RSTEPS=`ls -1 $BUILD_DIR/tests/results/$binary+$test_name/restart/*.UNRST | sed -e 's/.*RESTART_*//' | sed 's/[.].*//' `
-    result=0
-    for RSTEP in $RSTEPS
-    do
-      copyToReferenceDir \
-          $BUILD_DIR/tests/results/$binary+$test_name/restart/ \
-          $OPM_TESTS_ROOT/$dir_name/opm-simulation-reference/$binary/restart \
-          ${file_name}_RESTART_${RSTEP} \
-          EGRID INIT RFT SMSPEC UNRST UNSMRY
-      res=$?
-      test $result -eq 0 || result=$res
-    done
-    test $result -eq 0 && changed_tests="$changed_tests $test_name(restart)"
+    if [ -d $configuration/build-opm-simulators/tests/results/$binary+$test_name/restart ]
+    then
+
+      RSTEPS=`ls -1 $BUILD_DIR/tests/results/$binary+$test_name/restart/*.UNRST | sed -e 's/.*RESTART_*//' | sed 's/[.].*//' `
+      result=0
+      for RSTEP in $RSTEPS
+      do
+        copyToReferenceDir \
+            $BUILD_DIR/tests/results/$binary+$test_name/restart/ \
+            $OPM_TESTS_ROOT/$dir_name/opm-simulation-reference/$binary/restart \
+            ${file_name}_RESTART_${RSTEP} \
+            EGRID INIT RFT SMSPEC UNRST UNSMRY
+        res=$?
+        test $result -eq 0 || result=$res
+      done
+      test $result -eq 0 && changed_tests="$changed_tests $test_name(restart)"
+    fi
+  else
+    copyDamarisToReferenceDir \
+            $BUILD_DIR/tests/results/$binary+$test_name \
+            $OPM_TESTS_ROOT/$dir_name/opm-simulation-reference/$binary \
+            $file_name
+    changed_tests="$changed_tests $test_name"
   fi
 done
 
