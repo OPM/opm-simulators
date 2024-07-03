@@ -150,7 +150,7 @@ public:
 #if HAVE_MPI
     using communication_type = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
-    using communication_type = Dune::CollectiveCommunication<int>;
+    using communication_type = Dune::Communication<int>;
 #endif
 
     Dune::SolverCategory::Category category() const override
@@ -244,7 +244,7 @@ public:
 #if HAVE_MPI
     using communication_type = Dune::OwnerOverlapCopyCommunication<int,int>;
 #else
-    using communication_type = Dune::CollectiveCommunication<int>;
+    using communication_type = Dune::Communication<int>;
 #endif
 
     Dune::SolverCategory::Category category() const override
