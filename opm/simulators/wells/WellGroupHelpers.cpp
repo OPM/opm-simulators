@@ -1756,25 +1756,35 @@ updateGuideRatesForWells(const Schedule& schedule,
     }
 }
 
-template class WellGroupHelpers<double>;
+template<class Scalar>
+using AvgP = RegionAverageCalculator::
+    AverageRegionalPressure<BlackOilFluidSystem<Scalar>,std::vector<int>>;
 
-using AvgP = RegionAverageCalculator::AverageRegionalPressure<BlackOilFluidSystem<double>,std::vector<int>>;
-using AvgPMap = std::map<std::string, std::unique_ptr<AvgP>>;
+template<class Scalar>
+using AvgPMap = std::map<std::string, std::unique_ptr<AvgP<Scalar>>>;
 
-template void WellGroupHelpers<double>::
-    updateGpMaintTargetForGroups<AvgPMap>(const Group&,
-                                          const Schedule&,
-                                          const AvgPMap&,
-                                          int,
-                                          double,
-                                          const WellState<double>&,
-                                          GroupState<double>&);
-template void WellGroupHelpers<double>::
-    setRegionAveragePressureCalculator<AvgP>(const Group&,
-                                             const Schedule&,
-                                             const int,
-                                             const FieldPropsManager&,
-                                             const PhaseUsage&,
-                                             AvgPMap&);
+#define INSTANTIATE_TYPE(T)                                                   \
+    template class WellGroupHelpers<T>;                                       \
+    template void WellGroupHelpers<T>::                                       \
+        updateGpMaintTargetForGroups<AvgPMap<T>>(const Group&,                \
+                                                 const Schedule&,             \
+                                                 const AvgPMap<T>&,           \
+                                                 int,                         \
+                                                 double,                      \
+                                                 const WellState<T>&,         \
+                                                 GroupState<T>&);             \
+    template void WellGroupHelpers<T>::                                       \
+        setRegionAveragePressureCalculator<AvgP<T>>(const Group&,             \
+                                                    const Schedule&,          \
+                                                    const int,                \
+                                                    const FieldPropsManager&, \
+                                                    const PhaseUsage&,        \
+                                                    AvgPMap<T>&);
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::WellGroupHelpers

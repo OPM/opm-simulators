@@ -262,5 +262,9 @@ void WellContributionsCuda<Scalar>::setCudaStream(cudaStream_t stream_)
 
 template class WellContributionsCuda<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class WellContributionsCuda<float>;
+#endif
+
 } //namespace Opm
 

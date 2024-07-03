@@ -201,34 +201,41 @@ bhp(const int       table_id,
     return bhp;
 }
 
-template class VFPProdProperties<double>;
+#define INSTANTIATE(T,...)                        \
+    template __VA_ARGS__                          \
+    VFPProdProperties<T>::bhp(const int,          \
+                              const __VA_ARGS__&, \
+                              const __VA_ARGS__&, \
+                              const __VA_ARGS__&, \
+                              const T ,           \
+                              const T ,           \
+                              const T ,           \
+                              const T ,           \
+                              const bool) const;
 
-#define INSTANCE(...) \
-    template __VA_ARGS__ VFPProdProperties<double>::bhp<__VA_ARGS__>(const int, \
-                                                                     const __VA_ARGS__&, \
-                                                                     const __VA_ARGS__&, \
-                                                                     const __VA_ARGS__&, \
-                                                                     const double, \
-                                                                     const double, \
-                                                                     const double, \
-                                                                     const double, \
-                                                                     const bool) const;
+#define INSTANTIATE_TYPE(T)                        \
+    template class VFPProdProperties<T>;           \
+    INSTANTIATE(T,DenseAd::Evaluation<T, -1, 4u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T, -1, 5u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T, -1, 6u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T, -1, 7u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T, -1, 8u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T, -1, 9u>)  \
+    INSTANTIATE(T,DenseAd::Evaluation<T, -1, 10u>) \
+    INSTANTIATE(T,DenseAd::Evaluation<T, -1, 11u>) \
+    INSTANTIATE(T,DenseAd::Evaluation<T, 3, 0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T, 4, 0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T, 5, 0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T, 6, 0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T, 7, 0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T, 8, 0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T, 9, 0u>)   \
+    INSTANTIATE(T,DenseAd::Evaluation<T, 10, 0u>)
 
-INSTANCE(DenseAd::Evaluation<double, -1, 4u>)
-INSTANCE(DenseAd::Evaluation<double, -1, 5u>)
-INSTANCE(DenseAd::Evaluation<double, -1, 6u>)
-INSTANCE(DenseAd::Evaluation<double, -1, 7u>)
-INSTANCE(DenseAd::Evaluation<double, -1, 8u>)
-INSTANCE(DenseAd::Evaluation<double, -1, 9u>)
-INSTANCE(DenseAd::Evaluation<double, -1, 10u>)
-INSTANCE(DenseAd::Evaluation<double, -1, 11u>)
-INSTANCE(DenseAd::Evaluation<double, 3, 0u>)
-INSTANCE(DenseAd::Evaluation<double, 4, 0u>)
-INSTANCE(DenseAd::Evaluation<double, 5, 0u>)
-INSTANCE(DenseAd::Evaluation<double, 6, 0u>)
-INSTANCE(DenseAd::Evaluation<double, 7, 0u>)
-INSTANCE(DenseAd::Evaluation<double, 8, 0u>)
-INSTANCE(DenseAd::Evaluation<double, 9, 0u>)
-INSTANCE(DenseAd::Evaluation<double, 10, 0u>)
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 }

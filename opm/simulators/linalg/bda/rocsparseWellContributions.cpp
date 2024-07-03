@@ -274,4 +274,8 @@ void WellContributionsRocsparse<Scalar>::APIalloc()
 
 template class WellContributionsRocsparse<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class WellContributionsRocsparse<float>;
+#endif
+
 } // namespace Opm

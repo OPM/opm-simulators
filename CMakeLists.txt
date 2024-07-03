@@ -22,6 +22,7 @@ option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 set( USE_OPENMP_DEFAULT OFF ) # Use of OpenMP is considered experimental
 option(BUILD_FLOW "Build the production oriented flow simulator?" ON)
 option(BUILD_FLOW_VARIANTS "Build the variants for flow by default?" OFF)
+option(BUILD_FLOW_FLOAT_VARIANTS "Build the variants for flow using float?" OFF)
 option(BUILD_FLOW_POLY_GRID "Build flow blackoil with polyhedral grid" OFF)
 option(OPM_ENABLE_PYTHON "Enable python bindings?" OFF)
 option(OPM_ENABLE_PYTHON_TESTS "Enable tests for the python bindings?" ON)
@@ -288,6 +289,10 @@ macro (config_hook)
   include_directories(${EXTRA_INCLUDES})
 
   include(UseDamaris)
+
+  if(BUILD_FLOW_FLOAT_VARIANTS)
+    set(FLOW_INSTANTIATE_FLOAT 1)
+  endif()
 endmacro (config_hook)
 
 macro (prereqs_hook)
@@ -692,6 +697,18 @@ if (BUILD_FLOW)
     COMMAND flow --version)
   set_tests_properties(flow__version PROPERTIES
     PASS_REGULAR_EXPRESSION "${${project}_LABEL}")
+endif()
+
+if(BUILD_FLOW_FLOAT_VARIANTS)
+  opm_add_test(flow_blackoil_float
+    ONLY_COMPILE
+    ALWAYS_ENABLE
+    DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+    DEPENDS opmsimulators
+    LIBRARIES opmsimulators
+    SOURCES
+    flow/flow_blackoil_float_main.cpp
+    $<TARGET_OBJECTS:moduleVersion>)
 endif()
 
 if (OPM_ENABLE_PYTHON)

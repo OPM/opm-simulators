@@ -175,3 +175,7 @@ void Opm::ParallelPAvgDynamicSourceData<Scalar>::defineCommunication()
 }
 
 template class Opm::ParallelPAvgDynamicSourceData<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class Opm::ParallelPAvgDynamicSourceData<float>;
+#endif
