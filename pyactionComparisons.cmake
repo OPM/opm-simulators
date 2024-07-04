@@ -95,7 +95,7 @@ add_test_compareSeparateECLFiles(CASENAME pyaction_wefac_insert_kw
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH)
 
-add_test_compareSeparateECLFiles(CASENAME pyaction_wesegvalv_insert_kw
+add_test_compareSeparateECLFiles(CASENAME pyaction_wsegvalv_insert_kw
                                  DIR1 pyaction
                                  FILENAME1 PYACTION_WSEGVALV_INSERT_KW
                                  DIR2 actionx
