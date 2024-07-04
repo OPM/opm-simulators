@@ -258,7 +258,7 @@ protected:
                                  const Scalar& poro) const;
 
     DimVector distanceVector_(const DimVector& faceCenter,
-                              const std::array<double,dimWorld>& cellCenter) const;
+                              const unsigned& cellIdx) const;
 
     void applyMultipliers_(Scalar& trans,
                            unsigned faceIdx,

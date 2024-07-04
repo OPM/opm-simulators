@@ -253,7 +253,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                   faceAreaNormal,
                                   intersection.indexInInside(),
                                   distanceVector_(faceCenterInside,
-                                                  centroids_(elemIdx)),
+                                                  elemIdx),
                                   permeability_[elemIdx]);
 
                 // normally there would be two half-transmissibilities that would be
@@ -270,7 +270,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                     computeHalfDiffusivity_(transBoundaryEnergyIs,
                                             faceAreaNormal,
                                             distanceVector_(faceCenterInside,
-                                                            centroids_(elemIdx)),
+                                                            elemIdx),
                                             1.0);
                     thermalHalfTransBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] =
                         transBoundaryEnergyIs;
@@ -350,13 +350,13 @@ update(bool global, const TransUpdateQuantities update_quantities,
                               faceAreaNormal,
                               insideFaceIdx,
                               distanceVector_(faceCenterInside,
-                                              centroids_(elemIdx)),
+                                              elemIdx),
                               permeability_[elemIdx]);
             computeHalfTrans_(halfTrans2,
                               faceAreaNormal,
                               outsideFaceIdx,
                               distanceVector_(faceCenterOutside,
-                                              centroids_(outsideElemIdx)),
+                                              outsideElemIdx),
                               permeability_[outsideElemIdx]);
 
             applyNtg_(halfTrans1, insideFaceIdx, elemIdx, ntg);
@@ -443,12 +443,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 computeHalfDiffusivity_(halfDiffusivity1,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterInside,
-                                                        centroids_(elemIdx)),
+                                                        elemIdx),
                                         1.0);
                 computeHalfDiffusivity_(halfDiffusivity2,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterOutside,
-                                                        centroids_(outsideElemIdx)),
+                                                        outsideElemIdx),
                                         1.0);
                 //TODO Add support for multipliers
                 thermalHalfTrans_[details::directionalIsId(elemIdx, outsideElemIdx)] = halfDiffusivity1;
@@ -464,12 +464,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 computeHalfDiffusivity_(halfDiffusivity1,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterInside,
-                                                        centroids_(elemIdx)),
+                                                        elemIdx),
                                         porosity_[elemIdx]);
                 computeHalfDiffusivity_(halfDiffusivity2,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterOutside,
-                                                        centroids_(outsideElemIdx)),
+                                                        outsideElemIdx),
                                         porosity_[outsideElemIdx]);
 
                 applyNtg_(halfDiffusivity1, insideFaceIdx, elemIdx, ntg);
@@ -496,12 +496,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 computeHalfDiffusivity_(halfDispersivity1,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterInside,
-                                                        centroids_(elemIdx)),
+                                                        elemIdx),
                                         dispersion_[elemIdx]);
                 computeHalfDiffusivity_(halfDispersivity2,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterOutside,
-                                                        centroids_(outsideElemIdx)),
+                                                        outsideElemIdx),
                                         dispersion_[outsideElemIdx]);
 
                 applyNtg_(halfDispersivity1, insideFaceIdx, elemIdx, ntg);
@@ -1283,8 +1283,9 @@ template<class Grid, class GridView, class ElementMapper, class CartesianIndexMa
 typename Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::DimVector
 Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
 distanceVector_(const DimVector& faceCenter,
-                const std::array<double,dimWorld>& cellCenter) const
+                const unsigned& cellIdx) const
 {
+    const auto& cellCenter = centroids_(cellIdx);
     DimVector x = faceCenter;
     for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
         x[dimIdx] -= cellCenter[dimIdx];
