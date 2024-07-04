@@ -257,10 +257,8 @@ protected:
                                  const DimVector& distance,
                                  const Scalar& poro) const;
 
-    DimVector distanceVector_(const DimVector& center,
-                              int faceIdx, // in the reference element that contains the intersection
-                              unsigned elemIdx,
-                              const std::array<std::vector<DimVector>, dimWorld>& axisCentroids) const;
+    DimVector distanceVector_(const DimVector& faceCenter,
+                              const unsigned& cellIdx) const;
 
     void applyMultipliers_(Scalar& trans,
                            unsigned faceIdx,

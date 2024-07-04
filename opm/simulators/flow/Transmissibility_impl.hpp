@@ -182,25 +182,6 @@ update(bool global, const TransUpdateQuantities update_quantities,
     else
         extractPermeability_();
 
-    // calculate the axis specific centroids of all elements
-    std::array<std::vector<DimVector>, dimWorld> axisCentroids;
-
-    for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
-        axisCentroids[dimIdx].resize(numElements);
-
-    for (const auto& elem : elements(gridView_)) {
-        unsigned elemIdx = elemMapper.index(elem);
-
-        // compute the axis specific "centroids" used for the transmissibilities. for
-        // consistency with the flow simulator, we use the element centers as
-        // computed by opm-parser's Opm::EclipseGrid class for all axes.
-        std::array<double, dimWorld> centroid = centroids_(elemIdx);
-
-        for (unsigned axisIdx = 0; axisIdx < dimWorld; ++axisIdx)
-            for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
-                axisCentroids[axisIdx][elemIdx][dimIdx] = centroid[dimIdx];
-    }
-
     // reserving some space in the hashmap upfront saves quite a bit of time because
     // resizes are costly for hashmaps and there would be quite a few of them if we
     // would not have a rough idea of how large the final map will be (the rough idea
@@ -272,9 +253,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                                   faceAreaNormal,
                                   intersection.indexInInside(),
                                   distanceVector_(faceCenterInside,
-                                                  intersection.indexInInside(),
-                                                  elemIdx,
-                                                  axisCentroids),
+                                                  elemIdx),
                                   permeability_[elemIdx]);
 
                 // normally there would be two half-transmissibilities that would be
@@ -291,9 +270,7 @@ update(bool global, const TransUpdateQuantities update_quantities,
                     computeHalfDiffusivity_(transBoundaryEnergyIs,
                                             faceAreaNormal,
                                             distanceVector_(faceCenterInside,
-                                                            intersection.indexInInside(),
-                                                            elemIdx,
-                                                            axisCentroids),
+                                                            elemIdx),
                                             1.0);
                     thermalHalfTransBoundary_[std::make_pair(elemIdx, boundaryIsIdx)] =
                         transBoundaryEnergyIs;
@@ -373,17 +350,13 @@ update(bool global, const TransUpdateQuantities update_quantities,
                               faceAreaNormal,
                               insideFaceIdx,
                               distanceVector_(faceCenterInside,
-                                              intersection.indexInInside(),
-                                              elemIdx,
-                                              axisCentroids),
+                                              elemIdx),
                               permeability_[elemIdx]);
             computeHalfTrans_(halfTrans2,
                               faceAreaNormal,
                               outsideFaceIdx,
                               distanceVector_(faceCenterOutside,
-                                              intersection.indexInOutside(),
-                                              outsideElemIdx,
-                                              axisCentroids),
+                                              outsideElemIdx),
                               permeability_[outsideElemIdx]);
 
             applyNtg_(halfTrans1, insideFaceIdx, elemIdx, ntg);
@@ -470,16 +443,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 computeHalfDiffusivity_(halfDiffusivity1,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterInside,
-                                                        intersection.indexInInside(),
-                                                        elemIdx,
-                                                        axisCentroids),
+                                                        elemIdx),
                                         1.0);
                 computeHalfDiffusivity_(halfDiffusivity2,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterOutside,
-                                                        intersection.indexInOutside(),
-                                                        outsideElemIdx,
-                                                        axisCentroids),
+                                                        outsideElemIdx),
                                         1.0);
                 //TODO Add support for multipliers
                 thermalHalfTrans_[details::directionalIsId(elemIdx, outsideElemIdx)] = halfDiffusivity1;
@@ -495,16 +464,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 computeHalfDiffusivity_(halfDiffusivity1,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterInside,
-                                                        intersection.indexInInside(),
-                                                        elemIdx,
-                                                        axisCentroids),
+                                                        elemIdx),
                                         porosity_[elemIdx]);
                 computeHalfDiffusivity_(halfDiffusivity2,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterOutside,
-                                                        intersection.indexInOutside(),
-                                                        outsideElemIdx,
-                                                        axisCentroids),
+                                                        outsideElemIdx),
                                         porosity_[outsideElemIdx]);
 
                 applyNtg_(halfDiffusivity1, insideFaceIdx, elemIdx, ntg);
@@ -531,16 +496,12 @@ update(bool global, const TransUpdateQuantities update_quantities,
                 computeHalfDiffusivity_(halfDispersivity1,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterInside,
-                                                        intersection.indexInInside(),
-                                                        elemIdx,
-                                                        axisCentroids),
+                                                        elemIdx),
                                         dispersion_[elemIdx]);
                 computeHalfDiffusivity_(halfDispersivity2,
                                         faceAreaNormal,
                                         distanceVector_(faceCenterOutside,
-                                                        intersection.indexInOutside(),
-                                                        outsideElemIdx,
-                                                        axisCentroids),
+                                                        outsideElemIdx),
                                         dispersion_[outsideElemIdx]);
 
                 applyNtg_(halfDispersivity1, insideFaceIdx, elemIdx, ntg);
@@ -1312,16 +1273,13 @@ computeHalfDiffusivity_(Scalar& halfDiff,
 template<class Grid, class GridView, class ElementMapper, class CartesianIndexMapper, class Scalar>
 typename Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::DimVector
 Transmissibility<Grid,GridView,ElementMapper,CartesianIndexMapper,Scalar>::
-distanceVector_(const DimVector& center,
-                int faceIdx, // in the reference element that contains the intersection
-                unsigned elemIdx,
-                const std::array<std::vector<DimVector>, dimWorld>& axisCentroids) const
+distanceVector_(const DimVector& faceCenter,
+                const unsigned& cellIdx) const
 {
-    assert(faceIdx >= 0);
-    unsigned dimIdx = faceIdx/2;
-    assert(dimIdx < dimWorld);
-    DimVector x = center;
-    x -= axisCentroids[dimIdx][elemIdx];
+    const auto& cellCenter = centroids_(cellIdx);
+    DimVector x = faceCenter;
+    for (unsigned dimIdx = 0; dimIdx < dimWorld; ++dimIdx)
+        x[dimIdx] -= cellCenter[dimIdx];
 
     return x;
 }
