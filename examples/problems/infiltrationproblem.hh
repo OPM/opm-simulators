@@ -97,11 +97,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::InfiltrationBaseProblem>
 { static constexpr bool value = true; };
 
-// Write newton convergence?
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::InfiltrationBaseProblem>
-{ static constexpr bool value = false; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {

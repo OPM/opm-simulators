@@ -140,10 +140,9 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::WaterAirBaseProblem>
 { static constexpr bool value = true; };
 
-// Write newton convergence
 template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::WaterAirBaseProblem>
-{ static constexpr bool value = false; };
+struct PreconditionerOrder<TypeTag, Properties::TTag::WaterAirBaseProblem>
+{ static constexpr int value = 2; };
 
 } // namespace Opm::Parameters
 

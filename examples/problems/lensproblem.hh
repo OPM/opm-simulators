@@ -186,10 +186,10 @@ struct LensUpperRightZ<TypeTag, Properties::TTag::LensBaseProblem>
     static constexpr type value = 1.0;
 };
 
-// Write the solutions of individual newton iterations?
+// By default, include the intrinsic permeability tensor to the VTK output files
 template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr bool value = false; };
+struct VtkWriteIntrinsicPermeabilities<TypeTag, Properties::TTag::LensBaseProblem>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 

@@ -32,8 +32,7 @@ struct NewtonVerbose { static constexpr bool value = true; };
 
 //! Specifies whether the convergence rate and the global residual
 //! gets written out to disk for every Newton iteration
-template<class TypeTag, class MyTypeTag>
-struct NewtonWriteConvergence { using type = Properties::UndefinedProperty; };
+struct NewtonWriteConvergence { static constexpr bool value = false; };
 
 /*!
  * \brief The value for the error below which convergence is declared

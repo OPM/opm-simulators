@@ -148,11 +148,6 @@ struct MaxDepth<TypeTag, Properties::TTag::ReservoirBaseProblem>
     static constexpr type value = 2500;
 };
 
-// Write the Newton convergence behavior to disk?
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::ReservoirBaseProblem>
-{ static constexpr bool value = false; };
-
 // increase the tolerance for this problem to get larger time steps
 template<class TypeTag>
 struct NewtonTolerance<TypeTag, Properties::TTag::ReservoirBaseProblem>

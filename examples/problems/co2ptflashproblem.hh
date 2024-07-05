@@ -190,11 +190,6 @@ struct LinearSolverTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
     static constexpr type value = 1e-3;
 };
 
-// Write the Newton convergence behavior to disk?
-template <class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr bool value = false; };
-
 template <class TypeTag>
 struct NewtonTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
 {

@@ -143,11 +143,6 @@ struct InitialWaterSaturation<TypeTag, Properties::TTag::FingerBaseProblem>
     static constexpr type value = 0.01;
 };
 
-// Write the solutions of individual newton iterations?
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::FingerBaseProblem>
-{ static constexpr bool value = false; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {

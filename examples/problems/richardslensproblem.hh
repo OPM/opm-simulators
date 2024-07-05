@@ -108,11 +108,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::RichardsLensProblem>
 { static constexpr bool value = true; };
 
-// Do not write the intermediate results of the newton method
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::RichardsLensProblem>
-{ static constexpr bool value = false; };
-
 // Set the "desireable" number of newton iterations of a time step
 template<class TypeTag>
 struct NewtonTargetIterations<TypeTag, Properties::TTag::RichardsLensProblem>

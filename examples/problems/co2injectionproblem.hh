@@ -217,11 +217,6 @@ struct MaxDepth<TypeTag, Properties::TTag::Co2InjectionBaseProblem>
     static constexpr type value = 2500;
 };
 
-// Write the Newton convergence behavior to disk?
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::Co2InjectionBaseProblem>
-{ static constexpr bool value = false; };
-
 template<class TypeTag>
 struct SimulationName<TypeTag, Properties::TTag::Co2InjectionBaseProblem>
 { static constexpr auto value = "co2injection"; };
