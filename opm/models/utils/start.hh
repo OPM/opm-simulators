@@ -80,7 +80,7 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
 
     Parameters::Register<Parameters::ParameterFile>
         ("An .ini file which contains a set of run-time parameters");
-    Parameters::registerParam<TypeTag, Parameters::PrintParameters>
+    Parameters::Register<Parameters::PrintParameters>
         ("Print the values of the run-time parameters at the "
          "start of the simulation");
 
@@ -351,7 +351,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         }
 
         // print the parameters if requested
-        int printParams = Parameters::get<TypeTag, Parameters::PrintParameters>();
+        int printParams = Parameters::Get<Parameters::PrintParameters>();
         if (myRank == 0) {
             std::string endParametersSeparator("# [end of parameters]\n");
             if (printParams) {
