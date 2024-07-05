@@ -832,7 +832,7 @@ auto get(bool errorIfNotRegistered)
  * The two arguments besides the TypeTag are assumed to be STL containers which store
  * std::pair<std::string, std::string>.
  */
-template <class TypeTag, class Container>
+template <class Container>
 void getLists(Container& usedParams, Container& unusedParams)
 {
     usedParams.clear();

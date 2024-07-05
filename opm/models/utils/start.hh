@@ -177,7 +177,7 @@ static inline int setupParameters_(int argc,
     ParamList usedParams;
     ParamList unusedParams;
 
-    Parameters::getLists<TypeTag>(usedParams, unusedParams);
+    Parameters::getLists(usedParams, unusedParams);
     if (!allowUnused && !unusedParams.empty()) {
         if (myRank == 0) {
             if (unusedParams.size() == 1)
