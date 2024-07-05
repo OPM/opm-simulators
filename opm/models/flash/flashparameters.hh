@@ -30,13 +30,12 @@
 #ifndef EWOMS_FLASH_PARAMETERS_HH
 #define EWOMS_FLASH_PARAMETERS_HH
 
-#include <opm/models/utils/propertysystem.hh>
-
 namespace Opm::Parameters {
 
 //! The maximum accepted error of the flash solver
-template<class TypeTag, class MyTypeTag>
-struct FlashTolerance { using type = Properties::UndefinedProperty; };
+//! Let the flash solver choose its tolerance by default
+template<class Scalar>
+struct FlashTolerance { static constexpr Scalar value = -1.0; };
 
 } // namespace Opm::Parameters
 
