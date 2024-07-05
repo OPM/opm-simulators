@@ -356,11 +356,6 @@ struct MinTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
     static constexpr type value = 0.0;
 };
 
-//! By default, write the simulation output to the current working directory
-template<class TypeTag>
-struct OutputDir<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr auto value = "."; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -546,7 +541,7 @@ public:
             ("Turn on caching of intensive quantities");
         Parameters::registerParam<TypeTag, Parameters::EnableStorageCache>
             ("Store previous storage terms and avoid re-calculating them.");
-        Parameters::registerParam<TypeTag, Parameters::OutputDir>
+        Parameters::Register<Parameters::OutputDir>
             ("The directory to which result files are written");
     }
 

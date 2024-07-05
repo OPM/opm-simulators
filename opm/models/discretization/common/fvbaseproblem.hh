@@ -204,7 +204,7 @@ public:
      */
     std::string outputDir() const
     {
-        std::string outputDir = Parameters::get<TypeTag, Parameters::OutputDir>();
+        std::string outputDir = Parameters::Get<Parameters::OutputDir>();
 
         if (outputDir.empty())
             outputDir = ".";
