@@ -33,14 +33,9 @@
 namespace Opm::Parameters {
 
 //! grid resolution
-template<class TypeTag, class MyTypeTag>
-struct CellsX { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct CellsY { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct CellsZ { using type = Properties::UndefinedProperty; };
+struct CellsX { static constexpr unsigned value = 1; };
+struct CellsY { static constexpr unsigned value = 1; };
+struct CellsZ { static constexpr unsigned value = 1; };
 
 //! domain size
 template<class TypeTag, class MyTypeTag>

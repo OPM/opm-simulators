@@ -100,7 +100,7 @@ class StructuredGridVanguard : public BaseVanguard<TypeTag>
 
     using GridPointer = std::unique_ptr<Grid>;
 
-    static const int dim = Grid::dimension;
+    static constexpr int dim = Grid::dimension;
 
 public:
     /*!
@@ -113,18 +113,18 @@ public:
              "executed after it was loaded");
         Parameters::registerParam<TypeTag, Parameters::DomainSizeX>
             ("The size of the domain in x direction");
-        Parameters::registerParam<TypeTag, Parameters::CellsX>
+        Parameters::Register<Parameters::CellsX>
             ("The number of intervalls in x direction");
         if (dim > 1) {
             Parameters::registerParam<TypeTag, Parameters::DomainSizeY>
                 ("The size of the domain in y direction");
-            Parameters::registerParam<TypeTag, Parameters::CellsY>
+            Parameters::Register<Parameters::CellsY>
                 ("The number of intervalls in y direction");
         }
-        if (dim > 2) {
+        if constexpr (dim > 2) {
             Parameters::registerParam<TypeTag, Parameters::DomainSizeZ>
                 ("The size of the domain in z direction");
-            Parameters::registerParam<TypeTag, Parameters::CellsZ>
+            Parameters::Register<Parameters::CellsZ>
                 ("The number of intervalls in z direction");
         }
     }
@@ -144,11 +144,11 @@ public:
         upperRight[0] = Parameters::get<TypeTag, Parameters::DomainSizeX>();
         upperRight[1] = Parameters::get<TypeTag, Parameters::DomainSizeY>();
 
-        cellRes[0] = Parameters::get<TypeTag, Parameters::CellsX>();
-        cellRes[1] = Parameters::get<TypeTag, Parameters::CellsY>();
-        if (dim == 3) {
+        cellRes[0] = Parameters::Get<Parameters::CellsX>();
+        cellRes[1] = Parameters::Get<Parameters::CellsY>();
+        if constexpr (dim == 3) {
             upperRight[2] = Parameters::get<TypeTag, Parameters::DomainSizeZ>();
-            cellRes[2] = Parameters::get<TypeTag, Parameters::CellsZ>();
+            cellRes[2] = Parameters::Get<Parameters::CellsZ>();
         }
 
         std::stringstream dgffile;

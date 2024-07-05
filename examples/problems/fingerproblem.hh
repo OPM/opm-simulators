@@ -131,18 +131,6 @@ namespace Opm::Parameters {
 template<class TypeTag, class MyTypeTag>
 struct InitialWaterSaturation { using type = Properties::UndefinedProperty; };
 
-template<class TypeTag>
-struct CellsX<TypeTag, Properties::TTag::FingerBaseProblem>
-{ static constexpr unsigned value = 20; };
-
-template<class TypeTag>
-struct CellsY<TypeTag, Properties::TTag::FingerBaseProblem>
-{ static constexpr unsigned value = 70; };
-
-template<class TypeTag>
-struct CellsZ<TypeTag, Properties::TTag::FingerBaseProblem>
-{ static constexpr unsigned value = 1; };
-
 // define the properties specific for the finger problem
 template<class TypeTag>
 struct DomainSizeX<TypeTag, Properties::TTag::FingerBaseProblem>
@@ -320,6 +308,16 @@ public:
 
         Parameters::registerParam<TypeTag, Parameters::InitialWaterSaturation>
             ("The initial saturation in the domain [] of the wetting phase");
+
+        Parameters::SetDefault<Parameters::CellsX>(20);
+
+        if constexpr (dim > 1) {
+            Parameters::SetDefault<Parameters::CellsY>(70);
+        }
+
+        if constexpr (dim == 3) {
+            Parameters::SetDefault<Parameters::CellsZ>(1);
+        }
     }
 
     /*!

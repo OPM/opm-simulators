@@ -53,7 +53,10 @@ class SimplexGridVanguard
 
     using GridPointer = std::unique_ptr<Grid>;
     using CoordScalar = typename Grid::ctype;
-    enum { dimWorld = Grid::dimensionworld };
+    enum {
+        dim = Grid::dimension,
+        dimWorld = Grid::dimensionworld,
+    };
     using GlobalPosition = Dune::FieldVector<CoordScalar, dimWorld>;
 
 public:
@@ -67,18 +70,18 @@ public:
              "executed after it was loaded");
         Parameters::registerParam<TypeTag, Parameters::DomainSizeX>
             ("The size of the domain in x direction");
-        Parameters::registerParam<TypeTag, Parameters::CellsX>
+        Parameters::Register<Parameters::CellsX>
             ("The number of intervalls in x direction");
         if (dimWorld > 1) {
             Parameters::registerParam<TypeTag, Parameters::DomainSizeY>
                 ("The size of the domain in y direction");
-            Parameters::registerParam<TypeTag, Parameters::CellsY>
+            Parameters::Register<Parameters::CellsY>
                 ("The number of intervalls in y direction");
         }
-        if (dimWorld > 2) {
+        if constexpr (dim > 2) {
             Parameters::registerParam<TypeTag, Parameters::DomainSizeZ>
                 ("The size of the domain in z direction");
-            Parameters::registerParam<TypeTag, Parameters::CellsZ>
+            Parameters::Register<Parameters::CellsZ>
                 ("The number of intervalls in z direction");
         }
     }
@@ -89,22 +92,22 @@ public:
     SimplexGridVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
-        Dune::array<unsigned, dimWorld> cellRes;
+        Dune::array<unsigned, dim> cellRes;
         GlobalPosition upperRight;
         GlobalPosition lowerLeft;
 
         lowerLeft[0] = 0.0;
         upperRight[0] = Parameters::get<TypeTag, Parameters::DomainSizeX>();
-        cellRes[0] = Parameters::get<TypeTag, Parameters::CellsX>();
-        if (dimWorld > 1) {
+        cellRes[0] = Parameters::Get<Parameters::CellsX>();
+        if constexpr (dim > 1) {
             lowerLeft[1] = 0.0;
             upperRight[1] = Parameters::get<TypeTag, Parameters::DomainSizeY>();
-            cellRes[1] = Parameters::get<TypeTag, Parameters::CellsY>();
+            cellRes[1] = Parameters::Get<Parameters::CellsY>();
         }
-        if (dimWorld > 2) {
+        if constexpr (dim > 2) {
             lowerLeft[2] = 0.0;
             upperRight[2] = Parameters::get<TypeTag, Parameters::DomainSizeZ>();
-            cellRes[2] = Parameters::get<TypeTag, Parameters::CellsZ>();
+            cellRes[2] = Parameters::Get<Parameters::CellsZ>();
         }
 
         simplexGrid_ = Dune::StructuredGridFactory<Grid>::createSimplexGrid(lowerLeft,

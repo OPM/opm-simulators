@@ -139,18 +139,6 @@ template<class TypeTag, class MyTypeTag>
 struct LensUpperRightZ { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag>
-struct CellsX<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr unsigned value = 48; };
-
-template<class TypeTag>
-struct CellsY<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr unsigned value = 32; };
-
-template<class TypeTag>
-struct CellsZ<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr unsigned value = 16; };
-
-template<class TypeTag>
 struct DomainSizeX<TypeTag, Properties::TTag::LensBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
@@ -343,7 +331,7 @@ public:
         lensUpperRight_[0] = Parameters::get<TypeTag, Parameters::LensUpperRightX>();
         lensUpperRight_[1] = Parameters::get<TypeTag, Parameters::LensUpperRightY>();
 
-        if (dimWorld == 3) {
+        if constexpr (dim == 3) {
             lensLowerLeft_[2] = Parameters::get<TypeTag, Parameters::LensLowerLeftZ>();
             lensUpperRight_[2] = Parameters::get<TypeTag, Parameters::LensUpperRightZ>();
         }
@@ -388,11 +376,18 @@ public:
         Parameters::registerParam<TypeTag, Parameters::LensUpperRightY>
             ("The y-coordinate of the lens' upper-right corner [m].");
 
-        if (dimWorld == 3) {
+        if constexpr (dim == 3) {
             Parameters::registerParam<TypeTag, Parameters::LensLowerLeftZ>
                 ("The z-coordinate of the lens' lower-left corner [m].");
             Parameters::registerParam<TypeTag, Parameters::LensUpperRightZ>
                 ("The z-coordinate of the lens' upper-right corner [m].");
+        }
+
+        Parameters::SetDefault<Parameters::CellsX>(48);
+        Parameters::SetDefault<Parameters::CellsY>(32);
+
+        if constexpr (dim == 3) {
+            Parameters::SetDefault<Parameters::CellsZ>(16);
         }
     }
 

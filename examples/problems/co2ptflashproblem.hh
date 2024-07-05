@@ -156,19 +156,6 @@ struct EpisodeLength { using type = Properties::UndefinedProperty;};
 template <class TypeTag, class MyTypeTag>
 struct Initialpressure { using type = Properties::UndefinedProperty;};
 
-template<class TypeTag>
-struct CellsX<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr unsigned value = 30; };
-
-template<class TypeTag>
-struct CellsY<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr unsigned value = 1; };
-
-// CellsZ is not needed, while to keep structuredgridvanguard.hh compile
-template<class TypeTag>
-struct CellsZ<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr unsigned value = 1; };
-
 //\Note: from the Julia code, the problem is a 1D problem with 3X1 cell.
 //\Note: DomainSizeX is 3.0 meters
 //\Note: DomainSizeY is 1.0 meters
@@ -424,6 +411,16 @@ public:
             ("The name of the simulation used for the output files");
         Parameters::registerParam<TypeTag, Parameters::EpisodeLength>
             ("Time interval [s] for episode length");
+
+        Parameters::SetDefault<Parameters::CellsX>(30);
+
+        if constexpr (dim > 1) {
+            Parameters::SetDefault<Parameters::CellsY>(1);
+        }
+
+        if constexpr (dim == 3) {
+            Parameters::SetDefault<Parameters::CellsZ>(1);
+        }
     }
 
     /*!
@@ -517,7 +514,7 @@ public:
     {
         int spatialIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         int inj = 0;
-        int prod = Parameters::get<TypeTag, Parameters::CellsX>() - 1;
+        int prod = Parameters::Get<Parameters::CellsX>() - 1;
         if (spatialIdx == inj || spatialIdx == prod) {
             return 1.0;
         } else {
@@ -568,7 +565,7 @@ private:
         // p0 = 75e5
         // T0 = 423.25
         int inj = 0;
-        int prod = Parameters::get<TypeTag, Parameters::CellsX>() - 1;
+        int prod = Parameters::Get<Parameters::CellsX>() - 1;
         int spatialIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
         ComponentVector comp;
         comp[0] = Evaluation::createVariable(0.5, 1);
