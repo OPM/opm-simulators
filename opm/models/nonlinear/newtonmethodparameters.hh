@@ -28,8 +28,7 @@
 namespace Opm::Parameters {
 
 //! Specifies whether the Newton method should print messages or not
-template<class TypeTag, class MyTypeTag>
-struct NewtonVerbose { using type = Properties::UndefinedProperty; };
+struct NewtonVerbose { static constexpr bool value = true; };
 
 //! Specifies whether the convergence rate and the global residual
 //! gets written out to disk for every Newton iteration

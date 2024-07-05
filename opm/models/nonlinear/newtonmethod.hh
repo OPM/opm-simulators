@@ -82,10 +82,6 @@ struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = NullC
 namespace Opm::Parameters {
 
 template<class TypeTag>
-struct NewtonVerbose<TypeTag, Properties::TTag::NewtonMethod>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::NewtonMethod>
 { static constexpr bool value = false; };
 
@@ -166,7 +162,7 @@ public:
     {
         LinearSolverBackend::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::NewtonVerbose>
+        Parameters::Register<Parameters::NewtonVerbose>
             ("Specify whether the Newton method should inform "
              "the user about its progress or not");
         Parameters::registerParam<TypeTag, Parameters::NewtonWriteConvergence>
@@ -544,7 +540,7 @@ protected:
      */
     bool verbose_() const
     {
-        return Parameters::get<TypeTag, Parameters::NewtonVerbose>() && (comm_.rank() == 0);
+        return Parameters::Get<Parameters::NewtonVerbose>() && (comm_.rank() == 0);
     }
 
     /*!
