@@ -74,6 +74,14 @@ struct EnableGridAdaptation { static constexpr bool value = false; };
 struct EnableIntensiveQuantityCache { static constexpr bool value = false; };
 
 /*!
+ * \brief Specify whether the storage terms for previous solutions should be cached.
+ *
+ * This potentially reduces the CPU time, but comes at the cost of higher memory
+ * consumption.
+ */
+struct EnableStorageCache { static constexpr bool value = false; };
+
+/*!
  * \brief Global switch to enable or disable the writing of VTK output files
  *
  * If writing VTK files is disabled, then the WriteVtk$FOO options do
@@ -110,15 +118,6 @@ struct OutputDir { static constexpr auto value = ""; };
 
 //! \brief Number of threads per process.
 struct ThreadsPerProcess { static constexpr int value = 1; };
-
-/*!
- * \brief Specify whether the storage terms for previous solutions should be cached.
- *
- * This potentially reduces the CPU time, but comes at the cost of higher memory
- * consumption.
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableStorageCache { using type = Properties::UndefinedProperty; };
 
 /*!
  * \brief Specify whether to use the already calculated solutions as

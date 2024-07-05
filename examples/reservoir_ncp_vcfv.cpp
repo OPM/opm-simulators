@@ -62,16 +62,6 @@ struct BaseEpsilon<TypeTag, TTag::ReservoirNcpVcfvProblem>
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// enable the storage cache for this problem so that the storage cache receives wider
-// testing
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, Properties::TTag::ReservoirNcpVcfvProblem>
-{ static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
-
 int main(int argc, char **argv)
 {
     using ProblemTypeTag = Opm::Properties::TTag::ReservoirNcpVcfvProblem;

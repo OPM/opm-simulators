@@ -46,6 +46,7 @@
 
 #include <opm/models/blackoil/blackoilproperties.hh>
 
+#include <opm/models/discretization/common/fvbaseparameters.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 
 #include <opm/models/nonlinear/newtonmethodparameters.hh>
@@ -432,6 +433,7 @@ public:
         //! production)
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(1000.0*24*60*60);
 
+        Parameters::SetDefault<Parameters::EnableStorageCache>(true);
         Parameters::SetDefault<Parameters::GridFile>("data/reservoir.dgf");
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(100e3);
     }

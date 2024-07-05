@@ -284,11 +284,6 @@ struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization>
 
 namespace Opm::Parameters {
 
-// disable caching the storage term by default
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = false; };
-
 // do not use thermodynamic hints by default. If you enable this, make sure to also
 // enable the intensive quantity cache above to avoid getting an exception...
 template<class TypeTag>
@@ -434,7 +429,7 @@ public:
         , linearizer_(new Linearizer())
         , enableGridAdaptation_(Parameters::Get<Parameters::EnableGridAdaptation>() )
         , enableIntensiveQuantityCache_(Parameters::Get<Parameters::EnableIntensiveQuantityCache>())
-        , enableStorageCache_(Parameters::get<TypeTag, Parameters::EnableStorageCache>())
+        , enableStorageCache_(Parameters::Get<Parameters::EnableStorageCache>())
         , enableThermodynamicHints_(Parameters::get<TypeTag, Parameters::EnableThermodynamicHints>())
     {
         bool isEcfv = std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value;
@@ -442,8 +437,6 @@ public:
             throw std::invalid_argument("Grid adaptation currently only works for the "
                                         "element-centered finite volume discretization (is: "
                                         +Dune::className<Discretization>()+")");
-
-        enableStorageCache_ = Parameters::get<TypeTag, Parameters::EnableStorageCache>();
 
         PrimaryVariables::init();
         size_t numDof = asImp_().numGridDof();
@@ -497,7 +490,7 @@ public:
             ("Enable thermodynamic hints");
         Parameters::Register<Parameters::EnableIntensiveQuantityCache>
             ("Turn on caching of intensive quantities");
-        Parameters::registerParam<TypeTag, Parameters::EnableStorageCache>
+        Parameters::Register<Parameters::EnableStorageCache>
             ("Store previous storage terms and avoid re-calculating them.");
         Parameters::Register<Parameters::OutputDir>
             ("The directory to which result files are written");

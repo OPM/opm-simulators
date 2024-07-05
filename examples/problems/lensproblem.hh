@@ -143,11 +143,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::LensBaseProblem>
 { static constexpr bool value = true; };
 
-// enable the storage cache by default for this problem
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr bool value = true; };
-
 // define the properties specific for the lens problem
 template<class TypeTag>
 struct LensLowerLeftX<TypeTag, Properties::TTag::LensBaseProblem>
@@ -360,6 +355,7 @@ public:
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(30e3);
         Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
+        Parameters::SetDefault<Parameters::EnableStorageCache>(true);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250.0);
     }
 
