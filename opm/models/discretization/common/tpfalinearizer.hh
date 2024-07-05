@@ -53,10 +53,7 @@
 
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct SeparateSparseSourceTerms {
-    static constexpr bool value = false;
-};
+struct SeparateSparseSourceTerms { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
@@ -111,8 +108,9 @@ class TpfaLinearizer
     static const bool linearizeNonLocalElements = getPropValue<TypeTag, Properties::LinearizeNonLocalElements>();
     static const bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
     static const bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
+
     // copying the linearizer is not a good idea
-    TpfaLinearizer(const TpfaLinearizer&);
+    TpfaLinearizer(const TpfaLinearizer&) = delete;
 //! \endcond
 
 public:
@@ -120,7 +118,7 @@ public:
         : jacobian_()
     {
         simulatorPtr_ = 0;
-        separateSparseSourceTerms_ = Parameters::get<TypeTag, Parameters::SeparateSparseSourceTerms>();
+        separateSparseSourceTerms_ = Parameters::Get<Parameters::SeparateSparseSourceTerms>();
     }
 
     ~TpfaLinearizer()
@@ -132,7 +130,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::SeparateSparseSourceTerms>
+        Parameters::Register<Parameters::SeparateSparseSourceTerms>
             ("Treat well source terms all in one go, instead of on a cell by cell basis.");
     }
 
