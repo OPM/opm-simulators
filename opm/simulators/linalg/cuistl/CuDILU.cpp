@@ -32,6 +32,7 @@
 #include <vector>
 #include <config.h>
 #include <chrono>
+#include <limits>
 #include <tuple>
 
 
@@ -338,8 +339,8 @@ void
 CuDILU<M, X, Y, l>::tuneThreadBlockSizes()
 {
     // TODO: generalize this code and put it somewhere outside of this class
-    long long bestApplyTime = __LONG_LONG_MAX__;
-    long long bestUpdateTime = __LONG_LONG_MAX__;
+    long long bestApplyTime = std::numeric_limits<long long>::max();
+    long long bestUpdateTime = std::numeric_limits<long long>::max();
     int bestApplyBlockSize = -1;
     int bestUpdateBlockSize = -1;
     int interval = 64;
