@@ -121,14 +121,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::CuvetteBaseProblem>
 { static constexpr bool value = true; };
 
-// Set the maximum time step
-template<class TypeTag>
-struct MaxTimeStepSize<TypeTag, Properties::TTag::CuvetteBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 600.;
-};
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -298,6 +290,7 @@ public:
         Parameters::SetDefault<Parameters::GridFile>("./data/cuvette_11x4.dgf");
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(100.0);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(1.0);
+        Parameters::SetDefault<Parameters::MaxTimeStepSize<Scalar>>(600.0);
     }
 
     /*!

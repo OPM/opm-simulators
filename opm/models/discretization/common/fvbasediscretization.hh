@@ -329,14 +329,6 @@ struct LinearSolverTolerance<TypeTag, Properties::TTag::FvBaseDiscretization>
     static constexpr type value = 1e-3;
 };
 
-//! use an unlimited time step size by default
-template<class TypeTag>
-struct MaxTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = std::numeric_limits<type>::infinity();
-};
-
 //! The maximum allowed number of timestep divisions for the
 //! Newton solver
 template<class TypeTag>
