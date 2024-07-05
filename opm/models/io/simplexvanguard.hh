@@ -62,7 +62,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::GridGlobalRefinements>
+        Parameters::Register<Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
         Parameters::registerParam<TypeTag, Parameters::DomainSizeX>
@@ -111,7 +111,7 @@ public:
                                                                             upperRight,
                                                                             cellRes);
 
-        unsigned numRefinments = Parameters::get<TypeTag, Parameters::GridGlobalRefinements>();
+        unsigned numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
         simplexGrid_->globalRefine(numRefinments);
 
         this->finalizeInit_();

@@ -108,7 +108,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::GridGlobalRefinements>
+        Parameters::Register<Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
         Parameters::registerParam<TypeTag, Parameters::DomainSizeX>
@@ -167,7 +167,7 @@ public:
         // use DGF parser to create a grid from interval block
         gridPtr_.reset( Dune::GridPtr< Grid >( dgffile ).release() );
 
-        unsigned numRefinements = Parameters::get<TypeTag, Parameters::GridGlobalRefinements>();
+        unsigned numRefinements = Parameters::Get<Parameters::GridGlobalRefinements>();
         gridPtr_->globalRefine(static_cast<int>(numRefinements));
 
         this->finalizeInit_();

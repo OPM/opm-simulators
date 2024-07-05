@@ -52,7 +52,7 @@ class UnstructuredGridVanguard : public BaseVanguard<TypeTag> {
      * unstructured grid simulator vanguard.
      */
     static void registerParameters() {
-        Parameters::registerParam<TypeTag, Parameters::GridGlobalRefinements>
+        Parameters::Register<Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
         Parameters::registerParam<TypeTag, Parameters::GridFile>,
@@ -65,7 +65,7 @@ class UnstructuredGridVanguard : public BaseVanguard<TypeTag> {
     UnstructuredGridVanguard(Simulator& simulator) : ParentType(simulator){
 #ifdef HAVE_OPM_GRID
         const std::string gridFileName = Parameters::get<TypeTag, Parameters::GridFile>();
-        unsigned numRefinments = Parameters::get<TypeTag, Parameters::GridGlobalRefinements>();
+        unsigned numRefinments = Parameters::Get<Parameters::GridGlobalRefinements>();
 
         const char* c_str = gridFileName.c_str();
 

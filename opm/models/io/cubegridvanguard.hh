@@ -67,7 +67,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::GridGlobalRefinements>
+        Parameters::Register<Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
         Parameters::registerParam<TypeTag, Parameters::DomainSizeX>
@@ -112,7 +112,7 @@ public:
             cellRes[2] = Parameters::get<TypeTag, Parameters::CellsZ>();
         }
 
-        unsigned numRefinements = Parameters::get<TypeTag, Parameters::GridGlobalRefinements>();
+        unsigned numRefinements = Parameters::Get<Parameters::GridGlobalRefinements>();
         cubeGrid_ = Dune::StructuredGridFactory<Grid>::createCubeGrid(lowerLeft, upperRight, cellRes);
         cubeGrid_->globalRefine(static_cast<int>(numRefinements));
 

@@ -62,8 +62,7 @@ struct GridFile { using type = Properties::UndefinedProperty; };
 
 //! Property which tells the Vanguard how often the grid should be refined
 //! after creation.
-template<class TypeTag, class MyTypeTag>
-struct GridGlobalRefinements { using type = Properties::UndefinedProperty; };
+struct GridGlobalRefinements { static constexpr unsigned value = 0; };
 
 //! The default value for the simulation's initial time step size
 template<class TypeTag, class MyTypeTag>
