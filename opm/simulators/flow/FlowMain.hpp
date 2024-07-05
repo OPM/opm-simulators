@@ -213,7 +213,7 @@ namespace Opm {
 
                 int unknownKeyWords = 0;
                 if (mpiRank == 0) {
-                    unknownKeyWords = Parameters::printUnused<TypeTag>(std::cerr);
+                    unknownKeyWords = Parameters::printUnused(std::cerr);
                 }
                 int globalUnknownKeyWords = comm.sum(unknownKeyWords);
                 unknownKeyWords = globalUnknownKeyWords;
@@ -524,7 +524,7 @@ namespace Opm {
 
                 // This allows a user to catch typos and misunderstandings in the
                 // use of simulator parameters.
-                if (Parameters::printUnused<TypeTag>(oss)) {
+                if (Parameters::printUnused(oss)) {
                     std::cout << "-----------------   Unrecognized parameters:   -----------------\n";
                     std::cout << oss.str();
                     std::cout << "----------------------------------------------------------------" << std::endl;
