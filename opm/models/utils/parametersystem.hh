@@ -55,8 +55,7 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 
-namespace Opm {
-namespace Parameters {
+namespace Opm::Parameters {
 
 struct ParamInfo
 {
@@ -114,40 +113,21 @@ public:
         std::ignore = get<TypeTag, Property>(/*errorIfNotRegistered=*/true);
     }
 };
-} // namespace Parameters
 
-} // namespace Opm
-
-namespace Opm::Properties {
-
-namespace TTag {
-
-// type tag which is supposed to spliced in or inherited from if the
-// parameter system is to be used
-struct ParameterSystem {};
-
-} // namespace TTag
-
-template<class TypeTag, class MyTypeTag>
-struct ParameterMetaData { using type = UndefinedProperty; };
-
-
-//! Set the ParameterMetaData property
-template<class TypeTag>
-struct ParameterMetaData<TypeTag, TTag::ParameterSystem>
+struct MetaData
 {
     using type = Dune::ParameterTree;
 
     static Dune::ParameterTree& tree()
     { return *storage_().tree; }
 
-    static std::map<std::string, ::Opm::Parameters::ParamInfo>& mutableRegistry()
+    static std::map<std::string, ParamInfo>& mutableRegistry()
     { return storage_().registry; }
 
-    static const std::map<std::string, ::Opm::Parameters::ParamInfo>& registry()
+    static const std::map<std::string, ParamInfo>& registry()
     { return storage_().registry; }
 
-    static std::list<std::unique_ptr<::Opm::Parameters::ParamRegFinalizerBase_> > &registrationFinalizers()
+    static std::list<std::unique_ptr<ParamRegFinalizerBase_>> &registrationFinalizers()
     { return storage_().finalizers; }
 
     static bool& registrationOpen()
@@ -155,7 +135,7 @@ struct ParameterMetaData<TypeTag, TTag::ParameterSystem>
 
     static void clear()
     {
-        storage_().tree.reset(new Dune::ParameterTree());
+        storage_().tree = std::make_unique<Dune::ParameterTree>();
         storage_().finalizers.clear();
         storage_().registrationOpen = true;
         storage_().registry.clear();
@@ -166,27 +146,26 @@ private:
     // member functions of the ParameterMetaData property class triggers a bug in clang
     // 3.5's address sanitizer which causes these variables to be initialized multiple
     // times...
-    struct Storage_ {
+    struct Storage_
+    {
         Storage_()
         {
-            tree.reset(new Dune::ParameterTree());
+            tree = std::make_unique<Dune::ParameterTree>();
             registrationOpen = true;
         }
 
         std::unique_ptr<Dune::ParameterTree> tree;
-        std::map<std::string, ::Opm::Parameters::ParamInfo> registry;
-        std::list<std::unique_ptr<::Opm::Parameters::ParamRegFinalizerBase_> > finalizers;
+        std::map<std::string, ParamInfo> registry;
+        std::list<std::unique_ptr<ParamRegFinalizerBase_>> finalizers;
         bool registrationOpen;
     };
-    static Storage_& storage_() {
+
+    static Storage_& storage_()
+    {
         static Storage_ obj;
         return obj;
     }
 };
-
-} // namespace Opm::Properties
-
-namespace Opm::Parameters {
 
 // function prototype declarations
 void printParamUsage_(std::ostream& os, const ParamInfo& paramInfo);
@@ -366,14 +345,14 @@ inline void getFlattenedKeyList_(std::list<std::string>& dest,
 
 // print the values of a list of parameters
 template <class TypeTag>
-void printParamList_(std::ostream& os, const std::list<std::string>& keyList, bool printDefaults = false)
+void printParamList_(std::ostream& os,
+                     const std::list<std::string>& keyList,
+                     bool printDefaults = false)
 {
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-
-    const Dune::ParameterTree& tree = ParamsMeta::tree();
+    const Dune::ParameterTree& tree = MetaData::tree();
 
     for (const auto& key : keyList) {
-        const auto& paramInfo = ParamsMeta::registry().at(key);
+        const auto& paramInfo = MetaData::registry().at(key);
         const std::string& defaultValue = paramInfo.compileTimeValue;
         std::string value = defaultValue;
         if (tree.hasKey(key))
@@ -402,11 +381,8 @@ void printUsage(const std::string& helpPreamble,
                 std::ostream& os = std::cerr,
                 const bool showAll = false)
 {
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-
-    if (errorMsg != "") {
-        os << errorMsg << "\n"
-           << "\n";
+    if (!errorMsg.empty()) {
+        os << errorMsg << "\n\n";
     }
 
     os << breakLines_(helpPreamble, /*indent=*/2, /*maxWidth=*/getTtyWidth_());
@@ -424,11 +400,9 @@ void printUsage(const std::string& helpPreamble,
         printParamUsage_(os, pInfo);
     }
 
-    auto paramIt = ParamsMeta::registry().begin();
-    const auto& paramEndIt = ParamsMeta::registry().end();
-    for (; paramIt != paramEndIt; ++paramIt) {
-        if (showAll || !paramIt->second.isHidden)
-            printParamUsage_(os, paramIt->second);
+    for (const auto& param : MetaData::registry()) {
+        if (showAll || !param.second.isHidden)
+            printParamUsage_(os, param.second);
     }
 }
 
@@ -573,8 +547,6 @@ std::string parseCommandLineOptions(int argc,
                                     const std::string& helpPreamble = "",
                                     const PositionalArgumentCallback& posArgCallback = noPositionalParameters_)
 {
-    Dune::ParameterTree& paramTree = GetProp<TypeTag, Properties::ParameterMetaData>::tree();
-
     // handle the "--help" parameter
     if (!helpPreamble.empty()) {
         for (int i = 1; i < argc; ++i) {
@@ -599,7 +571,8 @@ std::string parseCommandLineOptions(int argc,
             || argv[i][1] != '-')
         {
             std::string errorMsg;
-            int numHandled = posArgCallback(seenKeys, errorMsg, argc, argv, i, numPositionalParams);
+            int numHandled = posArgCallback(seenKeys, errorMsg, argc, argv,
+                                            i, numPositionalParams);
 
             if (numHandled < 1) {
                 std::ostringstream oss;
@@ -664,7 +637,7 @@ std::string parseCommandLineOptions(int argc,
         paramValue = s.substr(1);
 
         // Put the key=value pair into the parameter tree
-        paramTree[paramName] = paramValue;
+        MetaData::tree()[paramName] = paramValue;
     }
     return "";
 }
@@ -678,8 +651,6 @@ std::string parseCommandLineOptions(int argc,
 template <class TypeTag>
 void parseParameterFile(const std::string& fileName, bool overwrite = true)
 {
-    Dune::ParameterTree& paramTree = GetProp<TypeTag, Properties::ParameterMetaData>::tree();
-
     std::set<std::string> seenKeys;
     std::ifstream ifs(fileName);
     unsigned curLineNum = 0;
@@ -731,8 +702,9 @@ void parseParameterFile(const std::string& fileName, bool overwrite = true)
             std::runtime_error(errorPrefix+"Syntax error, expecting 'key=value'");
 
         // all went well, add the parameter to the database object
-        if (overwrite || !paramTree.hasKey(canonicalKey))
-            paramTree[canonicalKey] = value;
+        if (overwrite || !MetaData::tree().hasKey(canonicalKey)) {
+            MetaData::tree()[canonicalKey] = value;
+        }
     }
 }
 
@@ -745,17 +717,13 @@ void parseParameterFile(const std::string& fileName, bool overwrite = true)
 template <class TypeTag>
 void printValues(std::ostream& os = std::cout)
 {
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-
-    const Dune::ParameterTree& tree = ParamsMeta::tree();
-
     std::list<std::string> runTimeAllKeyList;
     std::list<std::string> runTimeKeyList;
     std::list<std::string> unknownKeyList;
 
-    getFlattenedKeyList_(runTimeAllKeyList, tree);
+    getFlattenedKeyList_(runTimeAllKeyList, MetaData::tree());
     for (const auto& key : runTimeAllKeyList) {
-        if (ParamsMeta::registry().find(key) == ParamsMeta::registry().end()) {
+        if (MetaData::registry().find(key) == MetaData::registry().end()) {
             // key was not registered by the program!
             unknownKeyList.push_back(key);
         }
@@ -767,9 +735,9 @@ void printValues(std::ostream& os = std::cout)
 
     // loop over all registered parameters
     std::list<std::string> compileTimeKeyList;
-    for (const auto& reg : ParamsMeta::registry()) {
+    for (const auto& reg : MetaData::registry()) {
         // check whether the key was specified at run-time
-        if (tree.hasKey(reg.first)) {
+        if (MetaData::tree().hasKey(reg.first)) {
             continue;
         } else  {
             compileTimeKeyList.push_back(reg.first);
@@ -791,7 +759,7 @@ void printValues(std::ostream& os = std::cout)
     if (unknownKeyList.size() > 0) {
         os << "# [unused run-time specified parameters]\n";
         for (const auto& unused : unknownKeyList) {
-            os << unused << "=\"" << tree.get(unused, "") << "\"\n" << std::flush;
+            os << unused << "=\"" << MetaData::tree().get(unused, "") << "\"\n" << std::flush;
         }
     }
 }
@@ -807,15 +775,12 @@ void printValues(std::ostream& os = std::cout)
 template <class TypeTag>
 bool printUnused(std::ostream& os = std::cout)
 {
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-
-    const Dune::ParameterTree& tree = ParamsMeta::tree();
     std::list<std::string> runTimeAllKeyList;
     std::list<std::string> unknownKeyList;
 
-    getFlattenedKeyList_(runTimeAllKeyList, tree);
+    getFlattenedKeyList_(runTimeAllKeyList, MetaData::tree());
     for (const auto& key : runTimeAllKeyList) {
-        if (ParamsMeta::registry().find(key) == ParamsMeta::registry().end()) {
+        if (MetaData::registry().find(key) == MetaData::registry().end()) {
             // key was not registered by the program!
             unknownKeyList.push_back(key);
         }
@@ -824,7 +789,8 @@ bool printUnused(std::ostream& os = std::cout)
     if (unknownKeyList.size() > 0) {
         os << "# [unused run-time specified parameters]\n";
         for (const auto& unused : unknownKeyList) {
-            os << unused << "=\"" << tree.get(unused, "") << "\"\n" << std::flush;
+            os << unused << "=\""
+               << MetaData::tree().get(unused, "") << "\"\n" << std::flush;
         }
         return true;
     }
@@ -834,20 +800,20 @@ bool printUnused(std::ostream& os = std::cout)
 template <class TypeTag, template<class,class> class Param>
 auto get(bool errorIfNotRegistered)
 {
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
     const std::string paramName = getPropName<TypeTag, Param>();
     const auto defaultValue = getPropValue<TypeTag, Param>();
     using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
                                                         const char* const>, std::string,
                                          std::remove_const_t<decltype(defaultValue)>>;
     if (errorIfNotRegistered) {
-        if (ParamsMeta::registrationOpen())
+        if (MetaData::registrationOpen())
             throw std::runtime_error("Parameters can only retrieved after _all_ of them have "
                                      "been registered.");
 
-        if (ParamsMeta::registry().find(paramName) == ParamsMeta::registry().end())
+        if (MetaData::registry().find(paramName) == MetaData::registry().end()) {
             throw std::runtime_error("Accessing parameter " + paramName
                                      +" without prior registration is not allowed.");
+        }
     }
 
     // prefix the parameter name by the model's GroupName. E.g. If
@@ -857,7 +823,7 @@ auto get(bool errorIfNotRegistered)
     // [Stokes]
     // NewtonWriteConvergence = true
     // retrieve actual parameter from the parameter tree
-    return ParamsMeta::tree().template get<ParamType>(paramName, defaultValue);
+    return MetaData::tree().template get<ParamType>(paramName, defaultValue);
 }
 
 /*!
@@ -872,33 +838,30 @@ void getLists(Container& usedParams, Container& unusedParams)
     usedParams.clear();
     unusedParams.clear();
 
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-    if (ParamsMeta::registrationOpen())
+    if (MetaData::registrationOpen()) {
         throw std::runtime_error("Parameter lists can only retieved after _all_ of them have "
                                  "been registered.");
+    }
 
     // get all parameter keys
     std::list<std::string> allKeysList;
-    const auto& paramTree = ParamsMeta::tree();
-    getFlattenedKeyList_(allKeysList, paramTree);
+    getFlattenedKeyList_(allKeysList, MetaData::tree());
 
     for (const auto& key : allKeysList) {
-        if (ParamsMeta::registry().find(key) == ParamsMeta::registry().end()) {
+        if (MetaData::registry().find(key) == MetaData::registry().end()) {
             // key was not registered
-            unusedParams.emplace_back(key, paramTree[key]);
+            unusedParams.emplace_back(key, MetaData::tree()[key]);
         }
         else {
             // key was registered
-            usedParams.emplace_back(key, paramTree[key]);
+            usedParams.emplace_back(key, MetaData::tree()[key]);
         }
     }
 }
 
-template <class TypeTag>
-void reset()
+inline void reset()
 {
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-    ParamsMeta::clear();
+    MetaData::clear();
 }
 
 /*!
@@ -910,21 +873,21 @@ void reset()
 template <class TypeTag, template<class, class> class Param>
 bool isSet(bool errorIfNotRegistered = true)
 {
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
     const std::string paramName = getPropName<TypeTag,Param>();
 
     if (errorIfNotRegistered) {
-        if (ParamsMeta::registrationOpen())
+        if (MetaData::registrationOpen()) {
             throw std::runtime_error("Parameters can only checked after _all_ of them have "
                                      "been registered.");
+        }
 
-        if (ParamsMeta::registry().find(paramName) == ParamsMeta::registry().end())
-            throw std::runtime_error("Accessing parameter "+std::string(paramName)
-                                     +" without prior registration is not allowed.");
+        if (MetaData::registry().find(paramName) == MetaData::registry().end())
+            throw std::runtime_error("Accessing parameter " + std::string(paramName) +
+                                     " without prior registration is not allowed.");
     }
 
     // check whether the parameter is in the parameter tree
-    return ParamsMeta::tree().hasKey(paramName);
+    return MetaData::tree().hasKey(paramName);
 }
 
 /*!
@@ -946,9 +909,8 @@ bool isSet(bool errorIfNotRegistered = true)
 template <class TypeTag, template<class,class> class Param>
 void registerParam(const char* usageString)
 {
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
     const std::string paramName = getPropName<TypeTag,Param>();
-    if (!ParamsMeta::registrationOpen()) {
+    if (!MetaData::registrationOpen()) {
         throw std::logic_error("Parameter registration was already closed before "
                                "the parameter '" + paramName + "' was registered.");
     }
@@ -957,7 +919,7 @@ void registerParam(const char* usageString)
     using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
                                                         const char* const>, std::string,
                                          std::remove_const_t<decltype(defaultValue)>>;
-    ParamsMeta::registrationFinalizers().push_back(
+    MetaData::registrationFinalizers().push_back(
         std::make_unique<ParamRegFinalizer_<TypeTag, Param>>());
 
     ParamInfo paramInfo;
@@ -970,16 +932,17 @@ void registerParam(const char* usageString)
     oss << defaultValue;
     paramInfo.compileTimeValue = oss.str();
     paramInfo.isHidden = false;
-    if (ParamsMeta::registry().find(paramName) != ParamsMeta::registry().end()) {
+    if (MetaData::registry().find(paramName) != MetaData::registry().end()) {
         // allow to register a parameter twice, but only if the
         // parameter name, type and usage string are exactly the same.
-        if (ParamsMeta::registry().at(paramName) == paramInfo)
+        if (MetaData::registry().at(paramName) == paramInfo) {
             return;
+        }
         throw std::logic_error("Parameter " + paramName
                                +" registered twice with non-matching characteristics.");
     }
 
-    ParamsMeta::mutableRegistry()[paramName] = paramInfo;
+    MetaData::mutableRegistry()[paramName] = paramInfo;
 }
 
 /*!
@@ -991,15 +954,16 @@ template <class TypeTag, template<class,class> class Param>
 void hideParam()
 {
     const std::string paramName = getPropName<TypeTag,Param>();
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-    if (!ParamsMeta::registrationOpen())
+    if (!MetaData::registrationOpen()) {
         throw std::logic_error("Parameter '" +paramName + "' declared as hidden"
                                " when parameter registration was already closed.");
+    }
 
-    auto paramInfoIt = ParamsMeta::mutableRegistry().find(paramName);
-    if (paramInfoIt == ParamsMeta::mutableRegistry().end())
+    auto paramInfoIt = MetaData::mutableRegistry().find(paramName);
+    if (paramInfoIt == MetaData::mutableRegistry().end()) {
         throw std::logic_error("Tried to declare unknown parameter '"
                                + paramName + "' hidden.");
+    }
 
     auto& paramInfo = paramInfoIt->second;
     paramInfo.isHidden = true;
@@ -1015,19 +979,19 @@ void hideParam()
 template <class TypeTag>
 void endParamRegistration()
 {
-    using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-    if (!ParamsMeta::registrationOpen())
+    if (!MetaData::registrationOpen()) {
         throw std::logic_error("Parameter registration was already closed. It is only possible "
                                "to close it once.");
+    }
 
-    ParamsMeta::registrationOpen() = false;
+    MetaData::registrationOpen() = false;
 
     // loop over all parameters and retrieve their values to make sure
     // that there is no syntax error
-    for (const auto& param : ParamsMeta::registrationFinalizers()) {
+    for (const auto& param : MetaData::registrationFinalizers()) {
         param->retrieve();
     }
-    ParamsMeta::registrationFinalizers().clear();
+    MetaData::registrationFinalizers().clear();
 }
 //! \endcond
 
