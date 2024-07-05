@@ -161,7 +161,7 @@ static inline int setupParameters_(int argc,
             if (myRank == 0) {
                 oss << "Parameter file \"" << paramFileName
                     << "\" does not exist or is not readable.";
-                Parameters::printUsage<TypeTag>(argv[0], oss.str());
+                Parameters::printUsage(argv[0], oss.str());
             }
             return /*status=*/1;
         }
@@ -318,17 +318,17 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         Scalar endTime = Parameters::get<TypeTag, Parameters::EndTime>();
         if (endTime < -1e50) {
             if (myRank == 0)
-                Parameters::printUsage<TypeTag>(argv[0],
-                                                "Mandatory parameter '--end-time' not specified!");
+                Parameters::printUsage(argv[0],
+                                       "Mandatory parameter '--end-time' not specified!");
             return 1;
         }
 
         Scalar initialTimeStepSize = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
         if (initialTimeStepSize < -1e50) {
             if (myRank == 0)
-                Parameters::printUsage<TypeTag>(argv[0],
-                                                "Mandatory parameter '--initial-time-step-size' "
-                                                "not specified!");
+                Parameters::printUsage(argv[0],
+                                       "Mandatory parameter '--initial-time-step-size' "
+                                       "not specified!");
             return 1;
         }
 

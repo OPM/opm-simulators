@@ -374,11 +374,10 @@ inline void printParamList_(std::ostream& os,
  * \param errorMsg The error message to be printed, if any
  * \param os The \c std::ostream which should be used.
  */
-template <class TypeTag>
-void printUsage(const std::string& helpPreamble,
-                const std::string& errorMsg = "",
-                std::ostream& os = std::cerr,
-                const bool showAll = false)
+inline void printUsage(const std::string& helpPreamble,
+                       const std::string& errorMsg = "",
+                       std::ostream& os = std::cerr,
+                       const bool showAll = false)
 {
     if (!errorMsg.empty()) {
         os << errorMsg << "\n\n";
@@ -551,11 +550,11 @@ std::string parseCommandLineOptions(int argc,
         for (int i = 1; i < argc; ++i) {
             if (std::string("-h") == argv[i]
                 || std::string("--help") == argv[i]) {
-                printUsage<TypeTag>(helpPreamble, /*errorMsg=*/"", std::cout);
+                printUsage(helpPreamble, /*errorMsg=*/"", std::cout);
                 return "Help called";
             }
             if (std::string("--help-all") == argv[i]) {
-                printUsage<TypeTag>(helpPreamble, /*errorMsg=*/"", std::cout, true);
+                printUsage(helpPreamble, /*errorMsg=*/"", std::cout, true);
                 return "Help called";
             }
         }
@@ -577,7 +576,7 @@ std::string parseCommandLineOptions(int argc,
                 std::ostringstream oss;
 
                 if (!helpPreamble.empty())
-                    printUsage<TypeTag>(helpPreamble, errorMsg, std::cerr);
+                    printUsage(helpPreamble, errorMsg, std::cerr);
 
                 return errorMsg;
             }
@@ -602,7 +601,7 @@ std::string parseCommandLineOptions(int argc,
                 << "is invalid because it does not start with a letter.";
 
             if (!helpPreamble.empty())
-                printUsage<TypeTag>(helpPreamble, oss.str(), std::cerr);
+                printUsage(helpPreamble, oss.str(), std::cerr);
 
             return oss.str();
         }
@@ -618,7 +617,7 @@ std::string parseCommandLineOptions(int argc,
                 "command line parameter";
 
             if (!helpPreamble.empty())
-                printUsage<TypeTag>(helpPreamble, msg, std::cerr);
+                printUsage(helpPreamble, msg, std::cerr);
             return msg;
         }
         seenKeys.insert(paramName);
@@ -629,7 +628,7 @@ std::string parseCommandLineOptions(int argc,
                 +" Please use "+argv[i]+"=value.";
 
             if (!helpPreamble.empty())
-                printUsage<TypeTag>(helpPreamble, msg, std::cerr);
+                printUsage(helpPreamble, msg, std::cerr);
             return msg;
         }
 
