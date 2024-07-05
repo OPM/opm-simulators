@@ -195,11 +195,6 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::NumericModel>
     static constexpr type value = -1e35;
 };
 
-//! By default, do not force any time steps
-template<class TypeTag>
-struct PredeterminedTimeStepsFile<TypeTag, Properties::TTag::NumericModel>
-{ static constexpr auto value = ""; };
-
 //! By default, print the values of the run-time parameters on startup
 template<class TypeTag>
 struct PrintParameters<TypeTag, Properties::TTag::NumericModel>

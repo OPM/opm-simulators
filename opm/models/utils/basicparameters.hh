@@ -65,9 +65,8 @@ struct InitialTimeStepSize { using type = Properties::UndefinedProperty; };
 //! Set a value for the ParameterFile property
 struct ParameterFile { static constexpr auto value = ""; };
 
-//! The name of the file with a number of forced time step lengths
-template<class TypeTag, class MyTypeTag>
-struct PredeterminedTimeStepsFile { using type = Properties::UndefinedProperty; };
+//! By default, do not force any time steps
+struct PredeterminedTimeStepsFile { static constexpr auto value = ""; };
 
 /*!
  * \brief Print all parameters on startup?
