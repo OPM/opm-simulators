@@ -6,7 +6,8 @@ on:
         paths:
           - 'python/**'
           - '.github/workflows/python_sphinx_docs.yml'
-    pull_request:
+    pull_request_target:
+        types: closed
         branches: master
         paths:
           - 'python/**'
