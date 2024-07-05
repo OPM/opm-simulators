@@ -79,14 +79,6 @@ struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = NullC
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, Properties::TTag::NewtonMethod>
-{ static constexpr int value = 20; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 /*!
  * \ingroup Newton
@@ -146,7 +138,7 @@ public:
              "method to a VTK file");
         Parameters::Register<Parameters::NewtonTargetIterations>
             ("The 'optimum' number of Newton iterations per time step");
-        Parameters::registerParam<TypeTag, Parameters::NewtonMaxIterations>
+        Parameters::Register<Parameters::NewtonMaxIterations>
             ("The maximum number of Newton iterations per time step");
         Parameters::Register<Parameters::NewtonTolerance<Scalar>>
             ("The maximum raw error tolerated by the Newton"
@@ -845,7 +837,7 @@ protected:
     { return Parameters::Get<Parameters::NewtonTargetIterations>(); }
     // maximum number of iterations we do before giving up
     int maxIterations_() const
-    { return Parameters::get<TypeTag, Parameters::NewtonMaxIterations>(); }
+    { return Parameters::Get<Parameters::NewtonMaxIterations>(); }
 
     static bool enableConstraints_()
     { return getPropValue<TypeTag, Properties::EnableConstraints>(); }

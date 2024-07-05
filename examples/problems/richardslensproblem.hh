@@ -108,10 +108,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::RichardsLensProblem>
 { static constexpr bool value = true; };
 
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, Properties::TTag::RichardsLensProblem>
-{ static constexpr int value = 28; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -248,6 +244,7 @@ public:
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(3000.0);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(100.0);
+        Parameters::SetDefault<Parameters::NewtonMaxIterations>(28);
         Parameters::SetDefault<Parameters::NewtonTargetIterations>(18);
     }
 

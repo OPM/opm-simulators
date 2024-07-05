@@ -23,14 +23,15 @@
 #ifndef EWOMS_NEWTON_METHOD_PARAMETERS_HH
 #define EWOMS_NEWTON_METHOD_PARAMETERS_HH
 
-#include <opm/models/utils/propertysystem.hh>
-
 namespace Opm::Parameters {
 
 //! The maximum error which may occur in a simulation before the
 //! Newton method for the time step is aborted
 template<class Scalar>
 struct NewtonMaxError { static constexpr Scalar value = 1e100; };
+
+//! Number of maximum iterations for the Newton method.
+struct NewtonMaxIterations { static constexpr int value = 20; };
 
 /*!
  * \brief The number of iterations at which the Newton method
@@ -57,10 +58,6 @@ struct NewtonVerbose { static constexpr bool value = true; };
 //! Specifies whether the convergence rate and the global residual
 //! gets written out to disk for every Newton iteration
 struct NewtonWriteConvergence { static constexpr bool value = false; };
-
-//! Number of maximum iterations for the Newton method.
-template<class TypeTag, class MyTypeTag>
-struct NewtonMaxIterations { using type = Properties::UndefinedProperty; };
 
 } // end namespace Opm::Parameters
 
