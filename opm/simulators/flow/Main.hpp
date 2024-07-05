@@ -409,7 +409,7 @@ private:
                             getNumThreads<PreTypeTag>(),
                             Opm::moduleVersionName());
             std::ostringstream str;
-            Parameters::printValues<PreTypeTag>(str);
+            Parameters::printValues(str);
             cmdline_params = str.str();
         }
 

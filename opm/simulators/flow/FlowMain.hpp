@@ -238,7 +238,7 @@ namespace Opm {
                 // deal with --print-parameters and unknown parameters.
                 if (Parameters::get<TypeTag, Parameters::PrintParameters>() == 1) {
                     if (mpiRank == 0) {
-                        Parameters::printValues<TypeTag>();
+                        Parameters::printValues();
                     }
                     return -1;
                 }
