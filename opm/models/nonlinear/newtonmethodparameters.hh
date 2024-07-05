@@ -27,6 +27,11 @@
 
 namespace Opm::Parameters {
 
+//! The maximum error which may occur in a simulation before the
+//! Newton method for the time step is aborted
+template<class Scalar>
+struct NewtonMaxError { static constexpr Scalar value = 1e100; };
+
 /*!
  * \brief The value for the error below which convergence is declared
  *
@@ -42,11 +47,6 @@ struct NewtonVerbose { static constexpr bool value = true; };
 //! Specifies whether the convergence rate and the global residual
 //! gets written out to disk for every Newton iteration
 struct NewtonWriteConvergence { static constexpr bool value = false; };
-
-//! The maximum error which may occur in a simulation before the
-//! Newton method for the time step is aborted
-template<class TypeTag, class MyTypeTag>
-struct NewtonMaxError { using type = Properties::UndefinedProperty; };
 
 /*!
  * \brief The number of iterations at which the Newton method

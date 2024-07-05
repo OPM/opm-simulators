@@ -81,15 +81,6 @@ struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = NullC
 
 namespace Opm::Parameters {
 
-// set the abortion tolerance to some very large value. if not
-// overwritten at run-time this basically disables abortions
-template<class TypeTag>
-struct NewtonMaxError<TypeTag, Properties::TTag::NewtonMethod>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e100;
-};
-
 template<class TypeTag>
 struct NewtonTargetIterations<TypeTag, Properties::TTag::NewtonMethod>
 { static constexpr int value = 10; };
@@ -164,7 +155,7 @@ public:
         Parameters::Register<Parameters::NewtonTolerance<Scalar>>
             ("The maximum raw error tolerated by the Newton"
              "method for considering a solution to be converged");
-        Parameters::registerParam<TypeTag, Parameters::NewtonMaxError>
+        Parameters::Register<Parameters::NewtonMaxError<Scalar>>
             ("The maximum error tolerated by the Newton "
              "method to which does not cause an abort");
     }
@@ -595,7 +586,7 @@ protected:
     {
         const auto& constraintsMap = model().linearizer().constraintsMap();
         lastError_ = error_;
-        Scalar newtonMaxError = Parameters::get<TypeTag, Parameters::NewtonMaxError>();
+        Scalar newtonMaxError = Parameters::Get<Parameters::NewtonMaxError<Scalar>>();
 
         // calculate the error as the maximum weighted tolerance of
         // the solution's residual
