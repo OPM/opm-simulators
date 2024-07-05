@@ -37,6 +37,13 @@
 namespace Opm::Parameters {
 
 /*!
+ * \brief Continue with a non-converged solution instead of giving up
+ *        if we encounter a time step size smaller than the minimum time
+ *        step size.
+ */
+struct ContinueOnConvergenceError { static constexpr bool value = false; };
+
+/*!
  * \brief Determines if the VTK output is written to disk asynchronously
  *
  * I.e. written to disk using a separate thread. This has only an effect if
@@ -92,14 +99,6 @@ struct OutputDir { static constexpr auto value = ""; };
 
 //! \brief Number of threads per process.
 struct ThreadsPerProcess { static constexpr int value = 1; };
-
-/*!
- * \brief Continue with a non-converged solution instead of giving up
- *        if we encounter a time step size smaller than the minimum time
- *        step size.
- */
-template<class TypeTag, class MyTypeTag>
-struct ContinueOnConvergenceError { using type = Properties::UndefinedProperty; };
 
 /*!
  * \brief Specify whether all intensive quantities for the grid should be

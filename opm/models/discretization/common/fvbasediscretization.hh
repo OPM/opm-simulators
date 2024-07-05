@@ -284,13 +284,6 @@ struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization>
 
 namespace Opm::Parameters {
 
-//! By default, do not continue with a non-converged solution instead of giving up
-//! if we encounter a time step size smaller than the minimum time
-//! step size.
-template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = false; };
-
 //! by default, disable the intensive quantity cache. If the intensive quantities are
 //! relatively cheap to calculate, the cache basically does not yield any performance
 //! impact because of the intensive quantity cache will cause additional pressure on the
