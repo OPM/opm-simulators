@@ -329,12 +329,6 @@ struct LinearSolverTolerance<TypeTag, Properties::TTag::FvBaseDiscretization>
     static constexpr type value = 1e-3;
 };
 
-//! The maximum allowed number of timestep divisions for the
-//! Newton solver
-template<class TypeTag>
-struct MaxTimeStepDivisions<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr unsigned value = 10; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {
