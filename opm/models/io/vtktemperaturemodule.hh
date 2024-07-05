@@ -37,23 +37,10 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Properties::TTag {
-
-// create new type tag for the VTK temperature output
-struct VtkTemperature {};
-
-} // namespace Opm::Properties::TTag
-
 namespace Opm::Parameters {
 
-// create the property tags needed for the temperature module
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteTemperature { using type = Properties::UndefinedProperty; };
-
 // set default values for what quantities to output
-template<class TypeTag>
-struct VtkWriteTemperature<TypeTag, Properties::TTag::VtkTemperature>
-{ static constexpr bool value = true; };
+struct VtkWriteTemperature { static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 
@@ -91,7 +78,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteTemperature>
+        Parameters::Register<Parameters::VtkWriteTemperature>
             ("Include the temperature in the VTK output files");
     }
 
@@ -143,7 +130,7 @@ public:
 private:
     static bool temperatureOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteTemperature>();
+        static bool val = Parameters::Get<Parameters::VtkWriteTemperature>();
         return val;
     }
 
