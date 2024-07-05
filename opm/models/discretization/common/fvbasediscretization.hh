@@ -335,14 +335,6 @@ template<class TypeTag>
 struct MaxTimeStepDivisions<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr unsigned value = 10; };
 
-//! By default, accept any time step larger than zero
-template<class TypeTag>
-struct MinTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.0;
-};
-
 } // namespace Opm::Parameters
 
 namespace Opm {

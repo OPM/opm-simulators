@@ -72,20 +72,20 @@ template<class Scalar>
 struct MaxTimeStepSize { static constexpr Scalar value = std::numeric_limits<Scalar>::infinity(); };
 
 /*!
+ * \brief Specify the minimal size of a time integration [s].
+ *
+ * The default is to not limit the step size.
+ */
+template<class Scalar>
+struct MinTimeStepSize { static constexpr Scalar value = 0.0; };
+
+/*!
  * \brief The directory to which simulation output ought to be written to.
  */
 struct OutputDir { static constexpr auto value = ""; };
 
 //! \brief Number of threads per process.
 struct ThreadsPerProcess { static constexpr int value = 1; };
-
-/*!
- * \brief Specify the minimal size of a time integration [s].
- *
- * The default is to not limit the step size.
- */
-template<class TypeTag, class MyTypeTag>
-struct MinTimeStepSize { using type = Properties::UndefinedProperty; };
 
 /*!
  * \brief The maximum allowed number of timestep divisions for the

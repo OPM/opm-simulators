@@ -171,7 +171,7 @@ public:
         Model::registerParameters();
         Parameters::Register<Parameters::MaxTimeStepSize<Scalar>>
             ("The maximum size to which all time steps are limited to [s]");
-        Parameters::registerParam<TypeTag, Parameters::MinTimeStepSize>
+        Parameters::Register<Parameters::MinTimeStepSize<Scalar>>
             ("The minimum size to which all time steps are limited to [s]");
         Parameters::registerParam<TypeTag, Parameters::MaxTimeStepDivisions>
             ("The maximum number of divisions by two of the timestep size "
@@ -560,7 +560,7 @@ public:
      * \brief Returns the minimum allowable size of a time step.
      */
     Scalar minTimeStepSize() const
-    { return Parameters::get<TypeTag, Parameters::MinTimeStepSize>(); }
+    { return Parameters::Get<Parameters::MinTimeStepSize<Scalar>>(); }
 
     /*!
      * \brief Returns the maximum number of subsequent failures for the time integration
