@@ -98,8 +98,7 @@ namespace Opm {
         // Read the command line parameters. Throws an exception if something goes wrong.
         static int setupParameters_(int argc, char** argv, Parallel::Communication comm)
         {
-            using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-            if (!ParamsMeta::registrationOpen()) {
+            if (!Parameters::MetaData::registrationOpen()) {
                 // We have already successfully run setupParameters_().
                 // For the dynamically chosen runs (as from the main flow
                 // executable) we must run this function again with the

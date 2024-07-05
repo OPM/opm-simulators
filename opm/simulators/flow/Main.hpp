@@ -152,6 +152,7 @@ public:
     {
         int exitCode = EXIT_SUCCESS;
         if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
+            Parameters::reset();
             if (isSimulationRank_) {
                 return this->dispatchDynamic_();
             }
