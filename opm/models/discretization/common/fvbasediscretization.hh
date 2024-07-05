@@ -284,12 +284,6 @@ struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization>
 
 namespace Opm::Parameters {
 
-// do not use thermodynamic hints by default. If you enable this, make sure to also
-// enable the intensive quantity cache above to avoid getting an exception...
-template<class TypeTag>
-struct EnableThermodynamicHints<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = false; };
-
 // use default initialization based on rule-of-thumb of Newton tolerance
 template<class TypeTag>
 struct LinearSolverAbsTolerance<TypeTag, Properties::TTag::FvBaseDiscretization>
@@ -430,7 +424,7 @@ public:
         , enableGridAdaptation_(Parameters::Get<Parameters::EnableGridAdaptation>() )
         , enableIntensiveQuantityCache_(Parameters::Get<Parameters::EnableIntensiveQuantityCache>())
         , enableStorageCache_(Parameters::Get<Parameters::EnableStorageCache>())
-        , enableThermodynamicHints_(Parameters::get<TypeTag, Parameters::EnableThermodynamicHints>())
+        , enableThermodynamicHints_(Parameters::Get<Parameters::EnableThermodynamicHints>())
     {
         bool isEcfv = std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value;
         if (enableGridAdaptation_ && !isEcfv)
@@ -486,7 +480,7 @@ public:
             ("Enable adaptive grid refinement/coarsening");
         Parameters::Register<Parameters::EnableVtkOutput>
             ("Global switch for turning on writing VTK files");
-        Parameters::registerParam<TypeTag, Parameters::EnableThermodynamicHints>
+        Parameters::Register<Parameters::EnableThermodynamicHints>
             ("Enable thermodynamic hints");
         Parameters::Register<Parameters::EnableIntensiveQuantityCache>
             ("Turn on caching of intensive quantities");

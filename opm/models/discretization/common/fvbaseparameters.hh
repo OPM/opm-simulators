@@ -30,8 +30,6 @@
 #ifndef EWOMS_FV_BASE_PARAMETERS_HH
 #define EWOMS_FV_BASE_PARAMETERS_HH
 
-#include <opm/models/utils/propertysystem.hh>
-
 #include <limits>
 
 namespace Opm::Parameters {
@@ -82,6 +80,16 @@ struct EnableIntensiveQuantityCache { static constexpr bool value = false; };
 struct EnableStorageCache { static constexpr bool value = false; };
 
 /*!
+ * \brief Specify whether to use the already calculated solutions as
+ *        starting values of the intensive quantities.
+ *
+ * This only makes sense if the calculation of the intensive quantities is
+ * very expensive (e.g. for non-linear fugacity functions where the
+ * solver converges faster).
+ */
+struct EnableThermodynamicHints { static constexpr bool value = false; };
+
+/*!
  * \brief Global switch to enable or disable the writing of VTK output files
  *
  * If writing VTK files is disabled, then the WriteVtk$FOO options do
@@ -118,17 +126,6 @@ struct OutputDir { static constexpr auto value = ""; };
 
 //! \brief Number of threads per process.
 struct ThreadsPerProcess { static constexpr int value = 1; };
-
-/*!
- * \brief Specify whether to use the already calculated solutions as
- *        starting values of the intensive quantities.
- *
- * This only makes sense if the calculation of the intensive quantities is
- * very expensive (e.g. for non-linear fugacity functions where the
- * solver converges faster).
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableThermodynamicHints { using type = Properties::UndefinedProperty; };
 
 } // namespace Opm::Parameters
 
