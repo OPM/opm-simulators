@@ -84,8 +84,8 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
         ("Print the values of the run-time parameters at the "
          "start of the simulation");
 
-    Simulator::registerParameters();
     ThreadManager::registerParameters();
+    Simulator::registerParameters();
 
     if (finalizeRegistration) {
         Parameters::endRegistration();

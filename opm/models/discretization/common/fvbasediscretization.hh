@@ -366,11 +366,6 @@ template<class TypeTag>
 struct OutputDir<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr auto value = "."; };
 
-
-template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr int value = 1; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {

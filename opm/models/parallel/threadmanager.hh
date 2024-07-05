@@ -60,7 +60,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::ThreadsPerProcess>
+        Parameters::Register<Parameters::ThreadsPerProcess>
             ("The maximum number of threads to be instantiated per process "
              "('-1' means 'automatic')");
     }
@@ -78,7 +78,7 @@ public:
     {
         if (queryCommandLineParameter)
         {
-            numThreads_ = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
+            numThreads_ = Parameters::Get<Parameters::ThreadsPerProcess>();
 
             // some safety checks. This is pretty ugly macro-magic, but so what?
 #if !defined(_OPENMP)
