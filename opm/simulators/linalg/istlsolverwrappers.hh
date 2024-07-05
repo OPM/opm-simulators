@@ -79,12 +79,12 @@ namespace Opm::Linear {
                                        ScalarProduct& parScalarProduct,            \
                                        Preconditioner& parPreCond)                 \
         {                                                                          \
-            Scalar tolerance = Parameters::get<TypeTag, Parameters::LinearSolverTolerance>(); \
-            int maxIter = Parameters::get<TypeTag, Parameters::LinearSolverMaxIterations>();  \
+            Scalar tolerance = Parameters::Get<Parameters::LinearSolverTolerance<Scalar>>(); \
+            int maxIter = Parameters::Get<Parameters::LinearSolverMaxIterations>();\
                                                                                    \
             int verbosity = 0;                                                     \
             if (parOperator.overlap().myRank() == 0)                               \
-                verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>(); \
+                verbosity = Parameters::Get<Parameters::LinearSolverVerbosity>();  \
             solver_ = std::make_shared<RawSolver>(parOperator, parScalarProduct,   \
                                                   parPreCond, tolerance, maxIter,  \
                                                   verbosity);                      \
@@ -125,7 +125,7 @@ public:
 
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::GMResRestart>
+        Parameters::Register<Parameters::GMResRestart>
             ("Number of iterations after which the GMRES linear solver is restarted");
     }
 
@@ -134,13 +134,13 @@ public:
                                    ScalarProduct& parScalarProduct,
                                    Preconditioner& parPreCond)
     {
-        Scalar tolerance = Parameters::get<TypeTag, Parameters::LinearSolverTolerance>();
-        int maxIter = Parameters::get<TypeTag, Parameters::LinearSolverMaxIterations>();
+        Scalar tolerance = Parameters::Get<Parameters::LinearSolverTolerance<Scalar>>();
+        int maxIter = Parameters::Get<Parameters::LinearSolverMaxIterations>();
 
         int verbosity = 0;
         if (parOperator.overlap().myRank() == 0)
-            verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
-        int restartAfter = Parameters::get<TypeTag, Parameters::GMResRestart>();
+            verbosity = Parameters::Get<Parameters::LinearSolverVerbosity>();
+        int restartAfter = Parameters::Get<Parameters::GMResRestart>();
         solver_ = std::make_shared<RawSolver>(parOperator,
                                               parScalarProduct,
                                               parPreCond,

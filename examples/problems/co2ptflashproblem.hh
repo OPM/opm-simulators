@@ -172,20 +172,6 @@ struct Initialpressure<TypeTag, Properties::TTag::CO2PTBaseProblem>
 };
 
 template <class TypeTag>
-struct LinearSolverAbsTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.;
-};
-
-template <class TypeTag>
-struct LinearSolverTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-3;
-};
-
-template <class TypeTag>
 struct SimulationName<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr auto value = "co2_ptflash"; };
 
@@ -339,6 +325,9 @@ public:
         Parameters::SetDefault<Parameters::VtkWriteTotalMoleFractions>(true);
         Parameters::SetDefault<Parameters::VtkWriteEquilibriumConstants>(true);
         Parameters::SetDefault<Parameters::VtkWriteLiquidMoleFractions>(true);
+
+        Parameters::SetDefault<Parameters::LinearSolverAbsTolerance<Scalar>>(0.0);
+        Parameters::SetDefault<Parameters::LinearSolverTolerance<Scalar>>(1e-3);
     }
 
     /*!

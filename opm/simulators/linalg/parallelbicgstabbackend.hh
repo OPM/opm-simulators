@@ -59,17 +59,6 @@ struct LinearSolverBackend<TypeTag, TTag::ParallelBiCGStabLinearSolver>
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-template<class TypeTag>
-struct LinearSolverMaxError<TypeTag, Properties::TTag::ParallelBiCGStabLinearSolver>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e7;
-};
-
-}
-
 namespace Opm::Linear {
 
 /*!
@@ -131,7 +120,7 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::LinearSolverMaxError>
+        Parameters::Register<Parameters::LinearSolverMaxError<Scalar>>
             ("The maximum residual error which the linear solver tolerates"
              " without giving up");
     }
@@ -146,24 +135,24 @@ protected:
         const auto& gridView = this->simulator_.gridView();
         using CCC = CombinedCriterion<OverlappingVector, decltype(gridView.comm())>;
 
-        Scalar linearSolverTolerance = Parameters::get<TypeTag, Parameters::LinearSolverTolerance>();
-        Scalar linearSolverAbsTolerance = Parameters::get<TypeTag, Parameters::LinearSolverAbsTolerance>();
+        Scalar linearSolverTolerance = Parameters::Get<Parameters::LinearSolverTolerance<Scalar>>();
+        Scalar linearSolverAbsTolerance = Parameters::Get<Parameters::LinearSolverAbsTolerance<Scalar>>();
         if(linearSolverAbsTolerance < 0.0)
             linearSolverAbsTolerance = this->simulator_.model().newtonMethod().tolerance() / 100.0;
 
         convCrit_.reset(new CCC(gridView.comm(),
                                 /*residualReductionTolerance=*/linearSolverTolerance,
                                 /*absoluteResidualTolerance=*/linearSolverAbsTolerance,
-                                Parameters::get<TypeTag, Parameters::LinearSolverMaxError>()));
+                                Parameters::Get<Parameters::LinearSolverMaxError<Scalar>>()));
 
         auto bicgstabSolver =
             std::make_shared<RawLinearSolver>(parPreCond, *convCrit_, parScalarProduct);
 
         int verbosity = 0;
         if (parOperator.overlap().myRank() == 0)
-            verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
+            verbosity = Parameters::Get<Parameters::LinearSolverVerbosity>();
         bicgstabSolver->setVerbosity(verbosity);
-        bicgstabSolver->setMaxIterations(Parameters::get<TypeTag, Parameters::LinearSolverMaxIterations>());
+        bicgstabSolver->setMaxIterations(Parameters::Get<Parameters::LinearSolverMaxIterations>());
         bicgstabSolver->setLinearOperator(&parOperator);
         bicgstabSolver->setRhs(this->overlappingb_);
 

@@ -69,16 +69,7 @@ namespace Opm::Parameters {
 
 //! The target number of DOFs per processor for the parallel algebraic
 //! multi-grid solver
-template<class TypeTag>
-struct AmgCoarsenTarget<TypeTag, Properties::TTag::ParallelAmgLinearSolver>
-{ static constexpr int value = 5000; };
-
-template<class TypeTag>
-struct LinearSolverMaxError<TypeTag, Properties::TTag::ParallelAmgLinearSolver>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e7;
-};
+struct AmgCoarsenTarget { static constexpr int value = 5000; };
 
 }
 
@@ -160,10 +151,10 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::LinearSolverMaxError>
+        Parameters::Register<Parameters::LinearSolverMaxError<Scalar>>
             ("The maximum residual error which the linear solver tolerates "
              "without giving up");
-        Parameters::registerParam<TypeTag, Parameters::AmgCoarsenTarget>
+        Parameters::Register<Parameters::AmgCoarsenTarget>
             ("The coarsening target for the agglomerations of "
              "the AMG preconditioner");
     }
@@ -203,24 +194,25 @@ protected:
         const auto& gridView = this->simulator_.gridView();
         using CCC = CombinedCriterion<OverlappingVector, decltype(gridView.comm())>;
 
-        Scalar linearSolverTolerance = Parameters::get<TypeTag, Parameters::LinearSolverTolerance>();
-        Scalar linearSolverAbsTolerance = Parameters::get<TypeTag, Parameters::LinearSolverAbsTolerance>();
-        if(linearSolverAbsTolerance < 0.0)
+        Scalar linearSolverTolerance = Parameters::Get<Parameters::LinearSolverTolerance<Scalar>>();
+        Scalar linearSolverAbsTolerance = Parameters::Get<Parameters::LinearSolverAbsTolerance<Scalar>>();
+        if (linearSolverAbsTolerance < 0.0) {
             linearSolverAbsTolerance = this->simulator_.model().newtonMethod().tolerance()/100.0;
+        }
 
         convCrit_.reset(new CCC(gridView.comm(),
                                 /*residualReductionTolerance=*/linearSolverTolerance,
                                 /*absoluteResidualTolerance=*/linearSolverAbsTolerance,
-                                Parameters::get<TypeTag, Parameters::LinearSolverMaxError>()));
+                                Parameters::Get<Parameters::LinearSolverMaxError<Scalar>>()));
 
         auto bicgstabSolver =
             std::make_shared<RawLinearSolver>(parPreCond, *convCrit_, parScalarProduct);
 
         int verbosity = 0;
         if (parOperator.overlap().myRank() == 0)
-            verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
+            verbosity = Parameters::Get<Parameters::LinearSolverVerbosity>();
         bicgstabSolver->setVerbosity(verbosity);
-        bicgstabSolver->setMaxIterations(Parameters::get<TypeTag, Parameters::LinearSolverMaxIterations>());
+        bicgstabSolver->setMaxIterations(Parameters::Get<Parameters::LinearSolverMaxIterations>());
         bicgstabSolver->setLinearOperator(&parOperator);
         bicgstabSolver->setRhs(this->overlappingb_);
 
@@ -284,7 +276,7 @@ protected:
 
         int verbosity = 0;
         if (this->simulator_.vanguard().gridView().comm().rank() == 0)
-            verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
+            verbosity = Parameters::Get<Parameters::LinearSolverVerbosity>();
 
         using SmootherArgs = typename Dune::Amg::SmootherTraits<ParallelSmoother>::Arguments;
 
@@ -299,7 +291,7 @@ protected:
         //                             Dune::Amg::FirstDiagonal>>
         using CoarsenCriterion = Dune::Amg::
             CoarsenCriterion<Dune::Amg::SymmetricCriterion<IstlMatrix, Dune::Amg::FrobeniusNorm> >;
-        int coarsenTarget = Parameters::get<TypeTag, Parameters::AmgCoarsenTarget>();
+        int coarsenTarget = Parameters::Get<Parameters::AmgCoarsenTarget>();
         CoarsenCriterion coarsenCriterion(/*maxLevel=*/15, coarsenTarget);
         coarsenCriterion.setDefaultValuesAnisotropic(GridView::dimension,
                                                      /*aggregateSizePerDim=*/3);

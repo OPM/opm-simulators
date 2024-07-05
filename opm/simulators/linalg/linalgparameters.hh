@@ -29,29 +29,22 @@
 #ifndef EWOMS_LINALG_PARAMETERS_HH
 #define EWOMS_LINALG_PARAMETERS_HH
 
-#include <opm/models/utils/parametersystem.hh>
-
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct AmgCoarsenTarget { using type = Properties::UndefinedProperty; };
-
 //! number of iterations between solver restarts for the GMRES solver
-template<class TypeTag, class MyTypeTag>
-struct GMResRestart { using type = Properties::UndefinedProperty; };
+struct GMResRestart { static constexpr int value = 10; };
 
 /*!
  * \brief Maximum accepted error of the norm of the residual.
  */
-template<class TypeTag, class MyTypeTag>
-struct LinearSolverAbsTolerance { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LinearSolverAbsTolerance { static constexpr Scalar value = -1.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct LinearSolverMaxError { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LinearSolverMaxError { static constexpr Scalar value = 1e7; };
 
 //! Maximum number of iterations eyecuted by the linear solver
-template<class TypeTag, class MyTypeTag>
-struct LinearSolverMaxIterations { using type = Properties::UndefinedProperty; };
+struct LinearSolverMaxIterations { static constexpr int value = 1000; };
 
 /*!
  * \brief The size of the algebraic overlap of the linear solver.
@@ -60,14 +53,13 @@ struct LinearSolverMaxIterations { using type = Properties::UndefinedProperty; }
  * of a grid, but it is only existant for the linear system of
  * equations.
  */
-template<class TypeTag, class MyTypeTag>
-struct LinearSolverOverlapSize { using type = Properties::UndefinedProperty; };
+struct LinearSolverOverlapSize { static constexpr unsigned value = 2; };
 
 /*!
  * \brief Maximum accepted error of the solution of the linear solver.
  */
-template<class TypeTag, class MyTypeTag>
-struct LinearSolverTolerance { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LinearSolverTolerance { static constexpr Scalar value = 1e-3; };
 
 /*!
  * \brief Specifies the verbosity of the linear solver
@@ -76,16 +68,14 @@ struct LinearSolverTolerance { using type = Properties::UndefinedProperty; };
  * property to 1 prints aggregated convergence rates, 2 prints the
  * convergence rate of every iteration of the scheme.
  */
-template<class TypeTag, class MyTypeTag>
-struct LinearSolverVerbosity { using type = Properties::UndefinedProperty; };
+struct LinearSolverVerbosity { static constexpr int value = 0; };
 
 //! The order of the sequential preconditioner
-template<class TypeTag, class MyTypeTag>
-struct PreconditionerOrder { using type = Properties::UndefinedProperty; };
+struct PreconditionerOrder { static constexpr int value = 0; };
 
 //! The relaxation factor of the preconditioner
-template<class TypeTag, class MyTypeTag>
-struct PreconditionerRelaxation { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct PreconditionerRelaxation { static constexpr Scalar value = 1.0; };
 
 } // namespace Opm::Parameters
 
