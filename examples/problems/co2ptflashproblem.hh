@@ -202,14 +202,6 @@ struct SimulationName<TypeTag, Properties::TTag::CO2PTBaseProblem>
      static constexpr type value = 423.25; // TODO
  };
 
-template <class TypeTag>
-struct VtkWriteEquilibriumConstants<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr bool value = true; };
-
-template <class TypeTag>
-struct VtkWriteLiquidMoleFractions<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr bool value = true; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -350,6 +342,8 @@ public:
         Parameters::SetDefault<Parameters::VtkWritePotentialGradients>(true);
         Parameters::SetDefault<Parameters::VtkWriteTotalMassFractions>(true);
         Parameters::SetDefault<Parameters::VtkWriteTotalMoleFractions>(true);
+        Parameters::SetDefault<Parameters::VtkWriteEquilibriumConstants>(true);
+        Parameters::SetDefault<Parameters::VtkWriteLiquidMoleFractions>(true);
     }
 
     /*!

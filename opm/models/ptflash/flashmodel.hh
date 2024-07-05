@@ -69,8 +69,7 @@ namespace Opm::Properties {
 
 namespace TTag {
 //! The type tag for the isothermal single phase problems
-struct FlashModel { using InheritsFrom = std::tuple<VtkPTFlash,
-                                                    MultiPhaseBaseModel>; };
+struct FlashModel { using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
 } // namespace TTag
 
 //! Use the FlashLocalResidual function for the flash model
