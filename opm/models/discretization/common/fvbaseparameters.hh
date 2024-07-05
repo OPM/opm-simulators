@@ -34,9 +34,6 @@
 
 namespace Opm::Parameters {
 
-//! \brief Number of threads per process.
-struct ThreadsPerProcess { static constexpr int value = 1; };
-
 /*!
  * \brief Determines if the VTK output is written to disk asynchronously
  *
@@ -54,8 +51,10 @@ struct EnableAsyncVtkOutput { static constexpr bool value = true; };
  * Currently grid adaptation requires the presence of the dune-FEM module. If it is not
  * available and grid adaptation is enabled, an exception is thrown.
  */
-template<class TypeTag, class MyTypeTag>
-struct EnableGridAdaptation { using type = Properties::UndefinedProperty; };
+struct EnableGridAdaptation { static constexpr bool value = false; };
+
+//! \brief Number of threads per process.
+struct ThreadsPerProcess { static constexpr int value = 1; };
 
 /*!
  * \brief The directory to which simulation output ought to be written to.

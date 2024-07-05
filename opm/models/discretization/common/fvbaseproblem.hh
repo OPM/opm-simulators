@@ -147,7 +147,7 @@ public:
             // asynchonous VTK output currently does not work in conjunction with grid
             // adaptivity because the async-IO code assumes that the grid stays
             // constant. complain about that case.
-            bool enableGridAdaptation = Parameters::get<TypeTag, Parameters::EnableGridAdaptation>();
+            bool enableGridAdaptation = Parameters::Get<Parameters::EnableGridAdaptation>();
             if (asyncVtkOutput && enableGridAdaptation)
                 throw std::runtime_error("Asynchronous VTK output currently cannot be used "
                                          "at the same time as grid adaptivity");
