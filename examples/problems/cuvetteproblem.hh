@@ -114,15 +114,6 @@ public:
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::CuvetteBaseProblem>
-{ static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 /*!
  * \ingroup TestProblems
@@ -291,6 +282,7 @@ public:
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(100.0);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(1.0);
         Parameters::SetDefault<Parameters::MaxTimeStepSize<Scalar>>(600.0);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!

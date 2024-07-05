@@ -28,19 +28,22 @@
 #ifndef EWOMS_GROUND_WATER_PROBLEM_HH
 #define EWOMS_GROUND_WATER_PROBLEM_HH
 
-#include <opm/models/immiscible/immiscibleproperties.hh>
-#include <opm/simulators/linalg/parallelistlbackend.hh>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+
+#include <dune/grid/yaspgrid.hh>
+#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/fluidsystems/LiquidPhase.hpp>
 
-#include <dune/grid/yaspgrid.hh>
-#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
+#include <opm/models/common/multiphasebaseparameters.hh>
 
-#include <dune/common/version.hh>
-#include <dune/common/fmatrix.hh>
-#include <dune/common/fvector.hh>
+#include <opm/models/immiscible/immiscibleproperties.hh>
+
+#include <opm/simulators/linalg/parallelistlbackend.hh>
 
 #include <sstream>
 #include <string>
@@ -111,11 +114,6 @@ struct Permeability { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag, class MyTypeTag>
 struct PermeabilityLens { using type = Properties::UndefinedProperty; };
-
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{ static constexpr bool value = true; };
 
 template<class TypeTag>
 struct LensLowerLeftX<TypeTag, Properties::TTag::GroundWaterBaseProblem>
@@ -289,6 +287,7 @@ public:
         Parameters::SetDefault<Parameters::GridFile>("./data/groundwater_2d.dgf");
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(1.0);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(1.0);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!

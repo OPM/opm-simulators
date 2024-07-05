@@ -101,15 +101,6 @@ public:
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// Enable gravitational acceleration
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::RichardsLensProblem>
-{ static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 
 /*!
@@ -246,6 +237,7 @@ public:
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(100.0);
         Parameters::SetDefault<Parameters::NewtonMaxIterations>(28);
         Parameters::SetDefault<Parameters::NewtonTargetIterations>(18);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!

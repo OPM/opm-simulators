@@ -141,15 +141,6 @@ struct ThermalConductionLawParams<TypeTag, TTag::MultiPhaseBaseModel>
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-//! disable gravity by default
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::MultiPhaseBaseModel>
-{ static constexpr bool value = false; };
-
-}
-
 namespace Opm {
 
 /*!

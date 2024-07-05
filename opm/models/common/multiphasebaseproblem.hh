@@ -93,7 +93,7 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::EnableGravity>
+        Parameters::Register<Parameters::EnableGravity>
             ("Use the gravity correction for the pressure gradients.");
     }
 
@@ -398,8 +398,9 @@ private:
     void init_()
     {
         gravity_ = 0.0;
-        if (Parameters::get<TypeTag, Parameters::EnableGravity>())
+        if (Parameters::Get<Parameters::EnableGravity>()) {
             gravity_[dimWorld-1]  = -9.81;
+        }
     }
 };
 

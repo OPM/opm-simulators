@@ -27,21 +27,25 @@
 #ifndef EWOMS_INFILTRATION_PROBLEM_HH
 #define EWOMS_INFILTRATION_PROBLEM_HH
 
-#include <opm/models/pvs/pvsproperties.hh>
-
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/fluidsystems/H2OAirMesityleneFluidSystem.hpp>
-#include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
-#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
 
 #include <dune/grid/yaspgrid.hh>
 #include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
-#include <dune/common/version.hh>
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/constraintsolvers/ComputeFromReferencePhase.hpp>
+#include <opm/material/fluidmatrixinteractions/ThreePhaseParkerVanGenuchten.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+#include <opm/material/fluidsystems/H2OAirMesityleneFluidSystem.hpp>
+
+#include <opm/models/common/multiphasebaseparameters.hh>
+
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
+
+#include <opm/models/pvs/pvsproperties.hh>
 
 #include <sstream>
 #include <string>
@@ -89,15 +93,6 @@ public:
 };
 
 } // namespace Opm::Properties
-
-namespace Opm::Parameters {
-
-// Enable gravity?
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::InfiltrationBaseProblem>
-{ static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
@@ -224,6 +219,7 @@ public:
         Parameters::SetDefault<Parameters::NumericDifferenceMethod>(1);
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(6e3);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(60.0);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!

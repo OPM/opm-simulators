@@ -189,7 +189,7 @@ public:
                                       Simulator&)
     {
         if constexpr (enableFoam) {
-            if (Parameters::get<TypeTag, Parameters::EnableVtkOutput>()) {
+            if (Parameters::Get<Parameters::EnableVtkOutput>()) {
                 OpmLog::warning("VTK output requested, currently unsupported by the foam module.");
             }
         }

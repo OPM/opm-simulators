@@ -24,19 +24,16 @@
  * \file
  * \ingroup MultiPhaseBaseModel
  *
- * \brief Defines the common paramamters for the porous medium
+ * \brief Defines the common parameters for the porous medium
  *        multi-phase models.
  */
 #ifndef EWOMS_MULTI_PHASE_BASE_PARAMETERS_HH
 #define EWOMS_MULTI_PHASE_BASE_PARAMETERS_HH
 
-#include <opm/models/utils/propertysystem.hh>
-
 namespace Opm::Parameters {
 
-//! Returns whether gravity is considered in the problem
-template<class TypeTag, class MyTypeTag>
-struct EnableGravity { using type = Properties::UndefinedProperty; };
+//! Returns whether gravity is considered in the problem.
+struct EnableGravity { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 

@@ -156,11 +156,6 @@ struct EpisodeLength { using type = Properties::UndefinedProperty;};
 template <class TypeTag, class MyTypeTag>
 struct Initialpressure { using type = Properties::UndefinedProperty;};
 
-// Enable gravity false
-template <class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr bool value = false; };
-
 // this is kinds of telling the report step length
 template <class TypeTag>
 struct EpisodeLength<TypeTag, Properties::TTag::CO2PTBaseProblem>

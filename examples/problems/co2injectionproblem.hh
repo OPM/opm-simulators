@@ -169,11 +169,6 @@ struct Temperature { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct SimulationName { using type = Properties::UndefinedProperty; };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::Co2InjectionBaseProblem>
-{ static constexpr bool value = true; };
-
 template<class TypeTag>
 struct FluidSystemNumPressure<TypeTag, Properties::TTag::Co2InjectionBaseProblem>
 { static constexpr unsigned value = 100; };
@@ -396,8 +391,8 @@ public:
         Parameters::SetDefault<Parameters::GridFile>("data/co2injection.dgf");
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(1e4);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250);
-
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(Scalar{Co2InjectionTolerance});
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!

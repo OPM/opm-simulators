@@ -121,15 +121,6 @@ public:
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// Disable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
-{ static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 /*!
  * \ingroup TestProblems

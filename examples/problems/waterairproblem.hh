@@ -135,11 +135,6 @@ struct PreconditionerWrapper<TypeTag, TTag::WaterAirBaseProblem>
 
 namespace Opm::Parameters {
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::WaterAirBaseProblem>
-{ static constexpr bool value = true; };
-
 template<class TypeTag>
 struct PreconditionerOrder<TypeTag, Properties::TTag::WaterAirBaseProblem>
 { static constexpr int value = 2; };
@@ -302,6 +297,7 @@ public:
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(1.0 * 365 * 24 * 60 * 60);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250.0);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!

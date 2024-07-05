@@ -143,11 +143,6 @@ struct LensUpperRightY { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LensUpperRightZ { using type = Properties::UndefinedProperty; };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr bool value = true; };
-
 // define the properties specific for the lens problem
 template<class TypeTag>
 struct LensLowerLeftX<TypeTag, Properties::TTag::LensBaseProblem>
@@ -358,6 +353,7 @@ public:
         Parameters::SetDefault<Parameters::EnableStorageCache>(true);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250.0);
         Parameters::SetDefault<Parameters::VtkWriteIntrinsicPermeabilities>(true);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!

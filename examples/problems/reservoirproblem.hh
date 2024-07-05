@@ -135,11 +135,6 @@ struct Temperature { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct WellWidth { using type = Properties::UndefinedProperty; };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::ReservoirBaseProblem>
-{ static constexpr bool value = true; };
-
 // set the defaults for some problem specific properties
 template<class TypeTag>
 struct MaxDepth<TypeTag, Properties::TTag::ReservoirBaseProblem>
@@ -425,6 +420,8 @@ public:
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(100e3);
         // increase the tolerance for this problem to get larger time steps
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-6);
+
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!

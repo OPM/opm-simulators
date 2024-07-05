@@ -122,16 +122,8 @@ public:
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// Disable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::Tutorial1Problem>
-{ static constexpr bool value = false; }; /*@\label{tutorial1:gravity}@*/
-
-} // namespace Opm::Parameters
-
 namespace Opm {
+
 //! Tutorial problem using the "immiscible" model.
 template <class TypeTag>
 class Tutorial1Problem
