@@ -291,13 +291,6 @@ template<class TypeTag>
 struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
 
-//! By default, write the VTK output to asynchronously to disk
-//!
-//! This has only an effect if EnableVtkOutput is true
-template<class TypeTag>
-struct EnableAsyncVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = true; };
-
 //! Disable grid adaptation by default
 template<class TypeTag>
 struct EnableGridAdaptation<TypeTag, Properties::TTag::FvBaseDiscretization>
