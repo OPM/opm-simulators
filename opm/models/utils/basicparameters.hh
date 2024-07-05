@@ -77,8 +77,8 @@ struct PredeterminedTimeStepsFile { static constexpr auto value = ""; };
 struct PrintParameters { static constexpr int value = 2; };
 
 //! The default value for the simulation's restart time
-template<class TypeTag, class MyTypeTag>
-struct RestartTime { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct RestartTime { static constexpr Scalar value = -1e35; };
 
 } // namespace Opm:Parameters
 

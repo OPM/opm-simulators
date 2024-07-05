@@ -195,14 +195,6 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::NumericModel>
     static constexpr type value = -1e35;
 };
 
-//! The default value for the simulation's restart time
-template<class TypeTag>
-struct RestartTime<TypeTag, Properties::TTag::NumericModel>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = -1e35;
-};
-
 } // namespace Opm::Parameters
 
 #endif
