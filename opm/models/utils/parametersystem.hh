@@ -646,8 +646,7 @@ std::string parseCommandLineOptions(int argc,
  *
  * This function does some basic syntax checks.
  */
-template <class TypeTag>
-void parseParameterFile(const std::string& fileName, bool overwrite = true)
+inline void parseParameterFile(const std::string& fileName, bool overwrite = true)
 {
     std::set<std::string> seenKeys;
     std::ifstream ifs(fileName);

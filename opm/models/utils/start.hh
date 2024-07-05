@@ -167,7 +167,7 @@ static inline int setupParameters_(int argc,
         }
 
         // read the parameter file.
-        Parameters::parseParameterFile<TypeTag>(paramFileName, /*overwrite=*/false);
+        Parameters::parseParameterFile(paramFileName, /*overwrite=*/false);
     }
 
     // make sure that no unknown parameters are encountered
