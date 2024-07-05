@@ -139,11 +139,6 @@ template<class TypeTag>
 struct NewtonMaxIterations<TypeTag, Properties::TTag::RichardsLensProblem>
 { static constexpr int value = 28; };
 
-// Use central differences to approximate the Jacobian matrix
-template<class TypeTag>
-struct NumericDifferenceMethod<TypeTag, Properties::TTag::RichardsLensProblem>
-{ static constexpr int value = 0; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -270,6 +265,13 @@ public:
         ParentType::registerParameters();
 
         Parameters::SetDefault<Parameters::GridFile>("./data/richardslens_24x16.dgf");
+
+        // Use central differences to approximate the Jacobian matrix
+        using LLS = GetPropType<TypeTag, Properties::LocalLinearizerSplice>;
+        constexpr bool useFD = std::is_same_v<LLS, Properties::TTag::FiniteDifferenceLocalLinearizer>;
+        if constexpr (useFD) {
+            Parameters::SetDefault<Parameters::NumericDifferenceMethod>(0);
+        }
     }
 
     /*!

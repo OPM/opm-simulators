@@ -118,11 +118,6 @@ template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::InfiltrationBaseProblem>
 { static constexpr bool value = false; };
 
-// -1 backward differences, 0: central differences, +1: forward differences
-template<class TypeTag>
-struct NumericDifferenceMethod<TypeTag, Properties::TTag::InfiltrationBaseProblem>
-{ static constexpr int value = 1; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -247,6 +242,7 @@ public:
         ParentType::registerParameters();
 
         Parameters::SetDefault<Parameters::GridFile>("./data/infiltration_50x3.dgf");
+        Parameters::SetDefault<Parameters::NumericDifferenceMethod>(1);
     }
 
     /*!

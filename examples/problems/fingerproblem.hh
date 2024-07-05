@@ -164,11 +164,6 @@ template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::FingerBaseProblem>
 { static constexpr bool value = false; };
 
-// Use forward differences instead of central differences
-template<class TypeTag>
-struct NumericDifferenceMethod<TypeTag, Properties::TTag::FingerBaseProblem>
-{ static constexpr int value = +1; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -298,6 +293,9 @@ public:
             Parameters::SetDefault<Parameters::CellsZ>(1);
             Parameters::SetDefault<Parameters::DomainSizeZ<Scalar>>(0.1);
         }
+
+        // Use forward differences
+        Parameters::SetDefault<Parameters::NumericDifferenceMethod>(+1);
     }
 
     /*!
