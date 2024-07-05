@@ -131,28 +131,6 @@ namespace Opm::Parameters {
 template<class TypeTag, class MyTypeTag>
 struct InitialWaterSaturation { using type = Properties::UndefinedProperty; };
 
-// define the properties specific for the finger problem
-template<class TypeTag>
-struct DomainSizeX<TypeTag, Properties::TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.1;
-};
-
-template<class TypeTag>
-struct DomainSizeY<TypeTag, Properties::TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.3;
-};
-
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, Properties::TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.1;
-};
-
 // Enable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::FingerBaseProblem>
@@ -310,13 +288,15 @@ public:
             ("The initial saturation in the domain [] of the wetting phase");
 
         Parameters::SetDefault<Parameters::CellsX>(20);
+        Parameters::SetDefault<Parameters::DomainSizeX<Scalar>>(0.1);
 
         if constexpr (dim > 1) {
             Parameters::SetDefault<Parameters::CellsY>(70);
+            Parameters::SetDefault<Parameters::DomainSizeY<Scalar>>(0.3);
         }
-
         if constexpr (dim == 3) {
             Parameters::SetDefault<Parameters::CellsZ>(1);
+            Parameters::SetDefault<Parameters::DomainSizeZ<Scalar>>(0.1);
         }
     }
 

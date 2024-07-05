@@ -138,27 +138,6 @@ struct LensUpperRightY { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LensUpperRightZ { using type = Properties::UndefinedProperty; };
 
-template<class TypeTag>
-struct DomainSizeX<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 6.0;
-};
-
-template<class TypeTag>
-struct DomainSizeY<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 4.0;
-};
-
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
 // Enable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::LensBaseProblem>
@@ -385,9 +364,12 @@ public:
 
         Parameters::SetDefault<Parameters::CellsX>(48);
         Parameters::SetDefault<Parameters::CellsY>(32);
+        Parameters::SetDefault<Parameters::DomainSizeX<Scalar>>(6.0);
+        Parameters::SetDefault<Parameters::DomainSizeY<Scalar>>(4.0);
 
         if constexpr (dim == 3) {
             Parameters::SetDefault<Parameters::CellsZ>(16);
+            Parameters::SetDefault<Parameters::DomainSizeZ<Scalar>>(1.0);
         }
     }
 

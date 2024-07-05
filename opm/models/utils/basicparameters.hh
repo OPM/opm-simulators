@@ -38,14 +38,14 @@ struct CellsY { static constexpr unsigned value = 1; };
 struct CellsZ { static constexpr unsigned value = 1; };
 
 //! domain size
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeX { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct DomainSizeX { static constexpr Scalar value = 1.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeY { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct DomainSizeY { static constexpr Scalar value = 1.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeZ { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct DomainSizeZ { static constexpr Scalar value = 1.0; };
 
 //! The default value for the simulation's end time
 template<class TypeTag, class MyTypeTag>

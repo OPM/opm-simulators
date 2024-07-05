@@ -156,31 +156,6 @@ struct EpisodeLength { using type = Properties::UndefinedProperty;};
 template <class TypeTag, class MyTypeTag>
 struct Initialpressure { using type = Properties::UndefinedProperty;};
 
-//\Note: from the Julia code, the problem is a 1D problem with 3X1 cell.
-//\Note: DomainSizeX is 3.0 meters
-//\Note: DomainSizeY is 1.0 meters
-template <class TypeTag>
-struct DomainSizeX<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 300; // meter
-};
-
-template <class TypeTag>
-struct DomainSizeY<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
-// DomainSizeZ is not needed, while to keep structuredgridvanguard.hh compile
-template <class TypeTag>
-struct DomainSizeZ<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
 // Enable gravity false
 template <class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::CO2PTBaseProblem>
@@ -413,13 +388,15 @@ public:
             ("Time interval [s] for episode length");
 
         Parameters::SetDefault<Parameters::CellsX>(30);
+        Parameters::SetDefault<Parameters::DomainSizeX<Scalar>>(300.0);
 
         if constexpr (dim > 1) {
             Parameters::SetDefault<Parameters::CellsY>(1);
+            Parameters::SetDefault<Parameters::DomainSizeY<Scalar>>(1.0);
         }
-
         if constexpr (dim == 3) {
             Parameters::SetDefault<Parameters::CellsZ>(1);
+            Parameters::SetDefault<Parameters::DomainSizeZ<Scalar>>(1.0);
         }
     }
 

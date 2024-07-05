@@ -111,18 +111,18 @@ public:
         Parameters::Register<Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
-        Parameters::registerParam<TypeTag, Parameters::DomainSizeX>
+        Parameters::Register<Parameters::DomainSizeX<Scalar>>
             ("The size of the domain in x direction");
         Parameters::Register<Parameters::CellsX>
             ("The number of intervalls in x direction");
         if (dim > 1) {
-            Parameters::registerParam<TypeTag, Parameters::DomainSizeY>
+            Parameters::Register<Parameters::DomainSizeY<Scalar>>
                 ("The size of the domain in y direction");
             Parameters::Register<Parameters::CellsY>
                 ("The number of intervalls in y direction");
         }
         if constexpr (dim > 2) {
-            Parameters::registerParam<TypeTag, Parameters::DomainSizeZ>
+            Parameters::Register<Parameters::DomainSizeZ<Scalar>>
                 ("The size of the domain in z direction");
             Parameters::Register<Parameters::CellsZ>
                 ("The number of intervalls in z direction");
@@ -141,13 +141,13 @@ public:
         Dune::FieldVector<GridScalar, dim> upperRight;
         Dune::FieldVector<GridScalar, dim> lowerLeft( 0 );
 
-        upperRight[0] = Parameters::get<TypeTag, Parameters::DomainSizeX>();
-        upperRight[1] = Parameters::get<TypeTag, Parameters::DomainSizeY>();
+        upperRight[0] = Parameters::Get<Parameters::DomainSizeX<Scalar>>();
+        upperRight[1] = Parameters::Get<Parameters::DomainSizeY<Scalar>>();
 
         cellRes[0] = Parameters::Get<Parameters::CellsX>();
         cellRes[1] = Parameters::Get<Parameters::CellsY>();
         if constexpr (dim == 3) {
-            upperRight[2] = Parameters::get<TypeTag, Parameters::DomainSizeZ>();
+            upperRight[2] = Parameters::Get<Parameters::DomainSizeZ<Scalar>>();
             cellRes[2] = Parameters::Get<Parameters::CellsZ>();
         }
 

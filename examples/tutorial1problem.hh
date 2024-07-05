@@ -124,28 +124,6 @@ public:
 
 namespace Opm::Parameters {
 
-// define the physical size of the problem's domain [m]
-template<class TypeTag>
-struct DomainSizeX<TypeTag, Properties::TTag::Tutorial1Problem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 300.0;
-}; /*@\label{tutorial1:grid-default-params-begin}@*/
-
-template<class TypeTag>
-struct DomainSizeY<TypeTag, Properties::TTag::Tutorial1Problem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 60.0;
-};
-
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, Properties::TTag::Tutorial1Problem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.0;
-};
-
 // Disable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::Tutorial1Problem>
@@ -246,9 +224,12 @@ public:
 
         Parameters::SetDefault<Parameters::CellsX>(100);
         Parameters::SetDefault<Parameters::CellsY>(1);
+        Parameters::SetDefault<Parameters::DomainSizeX<Scalar>>(300.0);
+        Parameters::SetDefault<Parameters::DomainSizeY<Scalar>>(60.0);
 
         if constexpr (dim == 3) {
             Parameters::SetDefault<Parameters::CellsZ>(1);
+            Parameters::SetDefault<Parameters::DomainSizeZ<Scalar>>(0.0);
         }
     }
 

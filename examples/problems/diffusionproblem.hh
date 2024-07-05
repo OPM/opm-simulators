@@ -110,28 +110,6 @@ struct EnableDiffusion<TypeTag, TTag::DiffusionBaseProblem> { static constexpr b
 
 namespace Opm::Parameters {
 
-// define the properties specific for the diffusion problem
-template<class TypeTag>
-struct DomainSizeX<TypeTag, Properties::TTag::DiffusionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
-template<class TypeTag>
-struct DomainSizeY<TypeTag, Properties::TTag::DiffusionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, Properties::TTag::DiffusionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
 // Disable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::DiffusionBaseProblem>

@@ -73,18 +73,19 @@ public:
         Parameters::Register<Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
-        Parameters::registerParam<TypeTag, Parameters::DomainSizeX>
+        Parameters::Register<Parameters::DomainSizeX<Scalar>>
             ("The size of the domain in x direction");
         Parameters::Register<Parameters::CellsX>
             ("The number of intervalls in x direction");
+
         if constexpr (dim > 1) {
-            Parameters::registerParam<TypeTag, Parameters::DomainSizeY>
+            Parameters::Register<Parameters::DomainSizeY<Scalar>>
                 ("The size of the domain in y direction");
             Parameters::Register<Parameters::CellsY>
                 ("The number of intervalls in y direction");
         }
         if constexpr (dim > 2) {
-            Parameters::registerParam<TypeTag, Parameters::DomainSizeZ>
+            Parameters::Register<Parameters::DomainSizeZ<Scalar>>
                 ("The size of the domain in z direction");
             Parameters::Register<Parameters::CellsZ>
                 ("The number of intervalls in z direction");
@@ -104,14 +105,15 @@ public:
         for (unsigned i = 0; i < dim; ++i)
             cellRes[i] = 0;
 
-        upperRight[0] = Parameters::get<TypeTag, Parameters::DomainSizeX>();
+        upperRight[0] = Parameters::Get<Parameters::DomainSizeX<Scalar>>();
         cellRes[0] = Parameters::Get<Parameters::CellsX>();
+
         if constexpr (dim > 1) {
-            upperRight[1] = Parameters::get<TypeTag, Parameters::DomainSizeY>();
+            upperRight[1] = Parameters::Get<Parameters::DomainSizeY<Scalar>>();
             cellRes[1] = Parameters::Get<Parameters::CellsY>();
         }
         if constexpr (dim > 2) {
-            upperRight[2] = Parameters::get<TypeTag, Parameters::DomainSizeZ>();
+            upperRight[2] = Parameters::Get<Parameters::DomainSizeZ<Scalar>>();
             cellRes[2] = Parameters::Get<Parameters::CellsZ>();
         }
 
