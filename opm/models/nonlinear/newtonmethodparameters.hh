@@ -27,21 +27,21 @@
 
 namespace Opm::Parameters {
 
-//! Specifies whether the Newton method should print messages or not
-struct NewtonVerbose { static constexpr bool value = true; };
-
-//! Specifies whether the convergence rate and the global residual
-//! gets written out to disk for every Newton iteration
-struct NewtonWriteConvergence { static constexpr bool value = false; };
-
 /*!
  * \brief The value for the error below which convergence is declared
  *
  * This value can (and for the porous media models will) be changed to account for grid
  * scaling and other effects.
  */
-template<class TypeTag, class MyTypeTag>
-struct NewtonTolerance { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct NewtonTolerance { static constexpr Scalar value = 1e-8; };
+
+//! Specifies whether the Newton method should print messages or not
+struct NewtonVerbose { static constexpr bool value = true; };
+
+//! Specifies whether the convergence rate and the global residual
+//! gets written out to disk for every Newton iteration
+struct NewtonWriteConvergence { static constexpr bool value = false; };
 
 //! The maximum error which may occur in a simulation before the
 //! Newton method for the time step is aborted

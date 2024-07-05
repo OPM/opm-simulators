@@ -69,21 +69,11 @@ struct Scalar<TypeTag, TTag::Co2InjectionFlashVcfvProblem>
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-#if ! HAVE_QUAD
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, Properties::TTag::Co2InjectionFlashVcfvProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-5;
-};
-#endif
-
-} // namespace Opm::Parameters
-
 int main(int argc, char **argv)
 {
     using VcfvProblemTypeTag = Opm::Properties::TTag::Co2InjectionFlashVcfvProblem;
+#if ! HAVE_QUAD
+    Opm::Co2InjectionTolerance = 1e-5;
+#endif
     return Opm::start<VcfvProblemTypeTag>(argc, argv);
 }

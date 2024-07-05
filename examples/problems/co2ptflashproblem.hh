@@ -191,13 +191,6 @@ struct LinearSolverTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
 };
 
 template <class TypeTag>
-struct NewtonTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-3;
-};
-
-template <class TypeTag>
 struct NewtonTargetIterations<TypeTag, Properties::TTag::CO2PTBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
@@ -380,6 +373,7 @@ public:
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(60. * 60.);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(0.1 * 60. * 60.);
+        Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-3);
     }
 
     /*!

@@ -231,6 +231,9 @@ struct Temperature<TypeTag, Properties::TTag::Co2InjectionBaseProblem>
 } // namespace Opm::Parameters
 
 namespace Opm {
+
+double Co2InjectionTolerance = 1e-8;
+
 /*!
  * \ingroup TestProblems
  *
@@ -393,6 +396,8 @@ public:
         Parameters::SetDefault<Parameters::GridFile>("data/co2injection.dgf");
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(1e4);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250);
+
+        Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(Scalar{Co2InjectionTolerance});
     }
 
     /*!

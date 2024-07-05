@@ -148,14 +148,6 @@ struct MaxDepth<TypeTag, Properties::TTag::ReservoirBaseProblem>
     static constexpr type value = 2500;
 };
 
-// increase the tolerance for this problem to get larger time steps
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, Properties::TTag::ReservoirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-6;
-};
-
 template<class TypeTag>
 struct Temperature<TypeTag, Properties::TTag::ReservoirBaseProblem>
 {
@@ -431,6 +423,8 @@ public:
         Parameters::SetDefault<Parameters::EnableStorageCache>(true);
         Parameters::SetDefault<Parameters::GridFile>("data/reservoir.dgf");
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(100e3);
+        // increase the tolerance for this problem to get larger time steps
+        Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-6);
     }
 
     /*!
