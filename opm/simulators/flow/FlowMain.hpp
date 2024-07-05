@@ -201,7 +201,7 @@ namespace Opm {
             // hide average density option
             Parameters::hideParam<TypeTag, Parameters::UseAverageDensityMsWells>();
 
-            Parameters::endParamRegistration<TypeTag>();
+            Parameters::endRegistration();
 
             int mpiRank = comm.rank();
 
