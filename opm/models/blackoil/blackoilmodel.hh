@@ -73,8 +73,7 @@ namespace Opm::Properties {
 
 namespace TTag {
 //! The type tag for the black-oil problems
-struct BlackOilModel { using InheritsFrom = std::tuple<VtkBlackOilEnergy,
-                                                       VtkBlackOilPolymer,
+struct BlackOilModel { using InheritsFrom = std::tuple<VtkBlackOilPolymer,
                                                        VtkBlackOilSolvent,
                                                        VtkBlackOil,
                                                        MultiPhaseBaseModel,
