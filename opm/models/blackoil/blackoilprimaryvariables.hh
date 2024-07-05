@@ -584,6 +584,8 @@ public:
             sw = (*this)[waterSwitchIdx];
         if (primaryVarsMeaningGas() == GasMeaning::Sg)
             sg = (*this)[compositionSwitchIdx];
+        if (primaryVarsMeaningWater() == WaterMeaning::Rsw)
+            sw = 1.0;
 
         if (primaryVarsMeaningGas() == GasMeaning::Disabled && gasEnabled)
             sg = 1.0 - sw; // water + gas case
