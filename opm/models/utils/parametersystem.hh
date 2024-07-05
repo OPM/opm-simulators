@@ -103,7 +103,7 @@ public:
 };
 
 template <class TypeTag, template<class,class> class Property>
-class ParamRegFinalizer_ : public ParamRegFinalizerBase_
+class ParamRegFinalizerTT_ : public ParamRegFinalizerBase_
 {
 public:
     void retrieve() override
@@ -915,7 +915,7 @@ void registerParam(const char* usageString)
                                                         const char* const>, std::string,
                                          std::remove_const_t<decltype(defaultValue)>>;
     MetaData::registrationFinalizers().push_back(
-        std::make_unique<ParamRegFinalizer_<TypeTag, Param>>());
+        std::make_unique<ParamRegFinalizerTT_<TypeTag, Param>>());
 
     ParamInfo paramInfo;
     paramInfo.paramName = paramName;
