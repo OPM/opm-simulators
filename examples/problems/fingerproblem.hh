@@ -134,15 +134,8 @@ struct EnableConstraints<TypeTag, TTag::FingerBaseProblem> { static constexpr in
 
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct InitialWaterSaturation { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag>
-struct InitialWaterSaturation<TypeTag, Properties::TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.01;
-};
+template<class Scalar>
+struct InitialWaterSaturation { static constexpr Scalar value = 0.01;  };
 
 } // namespace Opm::Parameters
 
@@ -259,7 +252,7 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::InitialWaterSaturation>
+        Parameters::Register<Parameters::InitialWaterSaturation<Scalar>>
             ("The initial saturation in the domain [] of the wetting phase");
 
         Parameters::SetDefault<Parameters::CellsX>(20);
@@ -531,7 +524,7 @@ private:
         auto& fs = initialFluidState_;
         fs.setPressure(wettingPhaseIdx, /*pressure=*/1e5);
 
-        Scalar Sw = Parameters::get<TypeTag, Parameters::InitialWaterSaturation>();
+        Scalar Sw = Parameters::Get<Parameters::InitialWaterSaturation<Scalar>>();
         fs.setSaturation(wettingPhaseIdx, Sw);
         fs.setSaturation(nonWettingPhaseIdx, 1 - Sw);
 
