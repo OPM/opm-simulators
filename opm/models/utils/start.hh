@@ -88,7 +88,7 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
     ThreadManager::registerParameters();
 
     if (finalizeRegistration) {
-        Parameters::endParamRegistration<TypeTag>();
+        Parameters::endRegistration();
     }
 }
 

@@ -976,8 +976,7 @@ void hideParam()
  * \c endParamRegistration, a <tt>std::logic_error</tt> exception
  * will be thrown.
  */
-template <class TypeTag>
-void endParamRegistration()
+inline void endRegistration()
 {
     if (!MetaData::registrationOpen()) {
         throw std::logic_error("Parameter registration was already closed. It is only possible "
