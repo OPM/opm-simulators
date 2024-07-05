@@ -28,27 +28,32 @@
 #ifndef EWOMS_LENS_PROBLEM_HH
 #define EWOMS_LENS_PROBLEM_HH
 
-#include <opm/models/io/structuredgridvanguard.hh>
-#include <opm/models/immiscible/immiscibleproperties.hh>
-#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
-#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
-#include <opm/models/common/transfluxmodule.hh>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+
+#include <opm/material/components/Dnapl.hpp>
+#include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
-#include <opm/material/components/SimpleH2O.hpp>
-#include <opm/material/components/Dnapl.hpp>
+#include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 
-#include <dune/common/version.hh>
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/models/common/transfluxmodule.hh>
 
+#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+
+#include <opm/models/immiscible/immiscibleproperties.hh>
+
+#include <opm/models/io/structuredgridvanguard.hh>
+#include <opm/models/io/vtkmultiphasemodule.hh>
+
+#include <iostream>
 #include <sstream>
 #include <string>
-#include <iostream>
 
 namespace Opm {
 template <class TypeTag>
@@ -185,11 +190,6 @@ struct LensUpperRightZ<TypeTag, Properties::TTag::LensBaseProblem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1.0;
 };
-
-// By default, include the intrinsic permeability tensor to the VTK output files
-template<class TypeTag>
-struct VtkWriteIntrinsicPermeabilities<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 
@@ -357,6 +357,7 @@ public:
         Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
         Parameters::SetDefault<Parameters::EnableStorageCache>(true);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250.0);
+        Parameters::SetDefault<Parameters::VtkWriteIntrinsicPermeabilities>(true);
     }
 
     /*!

@@ -57,7 +57,7 @@ namespace Opm::Properties {
 //! The generic type tag for problems using the immiscible multi-phase model
 // Create new type tags
 namespace TTag {
-struct MultiPhaseBaseModel { using InheritsFrom = std::tuple<VtkTemperature, VtkMultiPhase>; };
+struct MultiPhaseBaseModel { using InheritsFrom = std::tuple<VtkTemperature>; };
 } // end namespace TTag
 
 //! Specify the splices of the MultiPhaseBaseModel type tag

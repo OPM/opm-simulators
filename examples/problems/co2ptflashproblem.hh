@@ -207,19 +207,11 @@ struct VtkWriteEquilibriumConstants<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr bool value = true; };
 
 template <class TypeTag>
-struct VtkWriteFilterVelocities<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr bool value = true; };
-
-template <class TypeTag>
 struct VtkWriteFugacityCoeffs<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr bool value = true; };
 
 template <class TypeTag>
 struct VtkWriteLiquidMoleFractions<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr bool value = true; };
-
-template <class TypeTag>
-struct VtkWritePotentialGradients<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr bool value = true; };
 
 template <class TypeTag>
@@ -365,6 +357,8 @@ public:
         Parameters::SetDefault<Parameters::NewtonMaxIterations>(30);
         Parameters::SetDefault<Parameters::NewtonTargetIterations>(6);
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-3);
+        Parameters::SetDefault<Parameters::VtkWriteFilterVelocities>(true);
+        Parameters::SetDefault<Parameters::VtkWritePotentialGradients>(true);
     }
 
     /*!
