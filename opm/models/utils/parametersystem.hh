@@ -344,10 +344,9 @@ inline void getFlattenedKeyList_(std::list<std::string>& dest,
 }
 
 // print the values of a list of parameters
-template <class TypeTag>
-void printParamList_(std::ostream& os,
-                     const std::list<std::string>& keyList,
-                     bool printDefaults = false)
+inline void printParamList_(std::ostream& os,
+                            const std::list<std::string>& keyList,
+                            bool printDefaults = false)
 {
     const Dune::ParameterTree& tree = MetaData::tree();
 
@@ -714,8 +713,7 @@ void parseParameterFile(const std::string& fileName, bool overwrite = true)
  *
  * \param os The \c std::ostream on which the message should be printed
  */
-template <class TypeTag>
-void printValues(std::ostream& os = std::cout)
+inline void printValues(std::ostream& os = std::cout)
 {
     std::list<std::string> runTimeAllKeyList;
     std::list<std::string> runTimeKeyList;
@@ -748,12 +746,12 @@ void printValues(std::ostream& os = std::cout)
     // parameters
     if (runTimeKeyList.size() > 0) {
         os << "# [known parameters which were specified at run-time]\n";
-        printParamList_<TypeTag>(os, runTimeKeyList, /*printDefaults=*/true);
+        printParamList_(os, runTimeKeyList, /*printDefaults=*/true);
     }
 
     if (compileTimeKeyList.size() > 0) {
         os << "# [parameters which were specified at compile-time]\n";
-        printParamList_<TypeTag>(os, compileTimeKeyList, /*printDefaults=*/false);
+        printParamList_(os, compileTimeKeyList, /*printDefaults=*/false);
     }
 
     if (unknownKeyList.size() > 0) {
