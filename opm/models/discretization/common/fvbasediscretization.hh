@@ -304,11 +304,6 @@ template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
 
-//! Enable the VTK output by default
-template<class TypeTag>
-struct EnableVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = true; };
-
 // do not use thermodynamic hints by default. If you enable this, make sure to also
 // enable the intensive quantity cache above to avoid getting an exception...
 template<class TypeTag>
@@ -533,7 +528,7 @@ public:
 
         Parameters::Register<Parameters::EnableGridAdaptation>
             ("Enable adaptive grid refinement/coarsening");
-        Parameters::registerParam<TypeTag, Parameters::EnableVtkOutput>
+        Parameters::Register<Parameters::EnableVtkOutput>
             ("Global switch for turning on writing VTK files");
         Parameters::registerParam<TypeTag, Parameters::EnableThermodynamicHints>
             ("Enable thermodynamic hints");

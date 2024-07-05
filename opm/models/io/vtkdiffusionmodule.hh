@@ -147,8 +147,9 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
+        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
             return;
+        }
 
         for (unsigned i = 0; i < elemCtx.numPrimaryDof(/*timeIdx=*/0); ++i) {
             unsigned I = elemCtx.globalSpaceIndex(i, /*timeIdx=*/0);

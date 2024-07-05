@@ -210,8 +210,9 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
+        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
             return;
+        }
 
         const auto& fractureMapper = elemCtx.simulator().vanguard().fractureMapper();
 

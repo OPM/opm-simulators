@@ -148,8 +148,9 @@ public:
      */
     void allocBuffers()
     {
-        if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
+        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
             return;
+        }
 
         if (!enableMICP)
             return;
@@ -172,8 +173,9 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
+        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
             return;
+        }
 
         if (!enableMICP)
             return;

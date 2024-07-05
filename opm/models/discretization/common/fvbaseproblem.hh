@@ -812,7 +812,7 @@ protected:
 
 private:
     bool enableVtkOutput_() const
-    { return Parameters::get<TypeTag, Parameters::EnableVtkOutput>(); }
+    { return Parameters::Get<Parameters::EnableVtkOutput>(); }
 
     //! Returns the implementation of the problem (i.e. static polymorphism)
     Implementation& asImp_()
