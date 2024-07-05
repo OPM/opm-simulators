@@ -30,51 +30,51 @@
 
 #include <opm/material/densead/Math.hpp>
 
-#include "blackoilproblem.hh"
-#include "blackoilindices.hh"
-#include "blackoiltwophaseindices.hh"
-#include "blackoilextensivequantities.hh"
-#include "blackoilprimaryvariables.hh"
-#include "blackoilintensivequantities.hh"
-#include "blackoilratevector.hh"
-#include "blackoilboundaryratevector.hh"
-#include "blackoillocalresidual.hh"
-#include "blackoilnewtonmethod.hh"
-#include "blackoilproperties.hh"
-#include "blackoilsolventmodules.hh"
-#include "blackoilpolymermodules.hh"
-#include "blackoilfoammodules.hh"
-#include "blackoilbrinemodules.hh"
-#include "blackoilextbomodules.hh"
-#include "blackoildarcyfluxmodule.hh"
-#include "blackoilmicpmodules.hh"
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+
+#include <opm/models/blackoil/blackoilboundaryratevector.hh>
+#include <opm/models/blackoil/blackoilbrinemodules.hh>
+#include <opm/models/blackoil/blackoildarcyfluxmodule.hh>
+#include <opm/models/blackoil/blackoildiffusionmodule.hh>
+#include <opm/models/blackoil/blackoildispersionmodule.hh>
+#include <opm/models/blackoil/blackoilextbomodules.hh>
+#include <opm/models/blackoil/blackoilextensivequantities.hh>
+#include <opm/models/blackoil/blackoilfoammodules.hh>
+#include <opm/models/blackoil/blackoilindices.hh>
+#include <opm/models/blackoil/blackoilintensivequantities.hh>
+#include <opm/models/blackoil/blackoillocalresidual.hh>
+#include <opm/models/blackoil/blackoilmicpmodules.hh>
+#include <opm/models/blackoil/blackoilnewtonmethod.hh>
+#include <opm/models/blackoil/blackoilpolymermodules.hh>
+#include <opm/models/blackoil/blackoilprimaryvariables.hh>
+#include <opm/models/blackoil/blackoilproblem.hh>
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/blackoil/blackoilratevector.hh>
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
+#include <opm/models/blackoil/blackoiltwophaseindices.hh>
 
 #include <opm/models/common/multiphasebasemodel.hh>
-#include <opm/models/io/vtkcompositionmodule.hh>
-#include <opm/models/io/vtkblackoilmodule.hh>
-#include "blackoildiffusionmodule.hh"
-#include "blackoildispersionmodule.hh"
-#include <opm/models/io/vtkdiffusionmodule.hh>
 
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+#include <opm/models/io/vtkblackoilmodule.hh>
+#include <opm/models/io/vtkcompositionmodule.hh>
+#include <opm/models/io/vtkdiffusionmodule.hh>
 
 #include <sstream>
 #include <string>
 
 namespace Opm {
+
 template <class TypeTag>
 class BlackOilModel;
 
-template <class TypeTag>
-class EclVanguard;
 }
 
 namespace Opm::Properties {
 
 namespace TTag {
+
 //! The type tag for the black-oil problems
 struct BlackOilModel { using InheritsFrom = std::tuple<VtkBlackOilPolymer,
-                                                       VtkBlackOilSolvent,
                                                        VtkBlackOil,
                                                        MultiPhaseBaseModel,
                                                        VtkBlackOilMICP>; };

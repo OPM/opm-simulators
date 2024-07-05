@@ -41,51 +41,14 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Properties::TTag {
-
-// create new type tag for the VTK multi-phase output
-struct VtkBlackOilSolvent {};
-
-} // namespace Opm::Properties::TTag
-
 namespace Opm::Parameters {
 
-// create the property tags needed for the solvent output module
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteSolventSaturation { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteSolventRsw { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteSolventDensity { using type = Properties::UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-
-struct VtkWriteSolventViscosity { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteSolventMobility { using type = Properties::UndefinedProperty; };
-
 // set default values for what quantities to output
-template<class TypeTag>
-struct VtkWriteSolventSaturation<TypeTag, Properties::TTag::VtkBlackOilSolvent>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct VtkWriteSolventRsw<TypeTag, Properties::TTag::VtkBlackOilSolvent>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct VtkWriteSolventDensity<TypeTag, Properties::TTag::VtkBlackOilSolvent>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct VtkWriteSolventViscosity<TypeTag, Properties::TTag::VtkBlackOilSolvent>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct VtkWriteSolventMobility<TypeTag, Properties::TTag::VtkBlackOilSolvent>
-{ static constexpr bool value = true; };
+struct VtkWriteSolventSaturation { static constexpr bool value = true; };
+struct VtkWriteSolventRsw { static constexpr bool value = true; };
+struct VtkWriteSolventDensity { static constexpr bool value = true; };
+struct VtkWriteSolventViscosity { static constexpr bool value = true; };
+struct VtkWriteSolventMobility { static constexpr bool value = true; };
 
 } // namespace Opm::Properties
 
@@ -127,19 +90,19 @@ public:
         if (!enableSolvent)
             return;
 
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteSolventSaturation>
+        Parameters::Register<Parameters::VtkWriteSolventSaturation>
             ("Include the \"saturation\" of the solvent component "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteSolventRsw>
+        Parameters::Register<Parameters::VtkWriteSolventRsw>
             ("Include the \"dissolved volume in water\" of the solvent component "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteSolventDensity>
+        Parameters::Register<Parameters::VtkWriteSolventDensity>
             ("Include the \"density\" of the solvent component "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteSolventViscosity>
+        Parameters::Register<Parameters::VtkWriteSolventViscosity>
             ("Include the \"viscosity\" of the solvent component "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteSolventMobility>
+        Parameters::Register<Parameters::VtkWriteSolventMobility>
             ("Include the \"mobility\" of the solvent component "
              "in the VTK output files");
     }
@@ -240,31 +203,31 @@ public:
 private:
     static bool solventSaturationOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSolventSaturation>();
+        static bool val = Parameters::Get<Parameters::VtkWriteSolventSaturation>();
         return val;
     }
 
     static bool solventRswOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSolventRsw>();
+        static bool val = Parameters::Get<Parameters::VtkWriteSolventRsw>();
         return val;
     }
 
     static bool solventDensityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSolventDensity>();
+        static bool val = Parameters::Get<Parameters::VtkWriteSolventDensity>();
         return val;
     }
 
     static bool solventViscosityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSolventViscosity>();
+        static bool val = Parameters::Get<Parameters::VtkWriteSolventViscosity>();
         return val;
     }
 
     static bool solventMobilityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSolventMobility>();
+        static bool val = Parameters::Get<Parameters::VtkWriteSolventMobility>();
         return val;
     }
 
