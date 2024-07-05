@@ -117,14 +117,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::GroundWaterBaseProblem>
 { static constexpr bool value = true; };
 
-// The default for the end time of the simulation
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1;
-};
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::GroundWaterBaseProblem>
@@ -303,6 +295,7 @@ public:
             ("The intrinsic permeability [m^2] of the lens.");
 
         Parameters::SetDefault<Parameters::GridFile>("./data/groundwater_2d.dgf");
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(1.0);
     }
 
     /*!

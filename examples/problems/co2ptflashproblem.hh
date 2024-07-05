@@ -161,14 +161,6 @@ template <class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr bool value = false; };
 
-// The default for the end time of the simulation
-template <class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 60. * 60.;
-};
-
 // this is kinds of telling the report step length
 template <class TypeTag>
 struct EpisodeLength<TypeTag, Properties::TTag::CO2PTBaseProblem>
@@ -398,6 +390,8 @@ public:
             Parameters::SetDefault<Parameters::CellsZ>(1);
             Parameters::SetDefault<Parameters::DomainSizeZ<Scalar>>(1.0);
         }
+
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(60. * 60.);
     }
 
     /*!

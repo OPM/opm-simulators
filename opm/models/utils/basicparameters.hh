@@ -48,8 +48,8 @@ template<class Scalar>
 struct DomainSizeZ { static constexpr Scalar value = 1.0; };
 
 //! The default value for the simulation's end time
-template<class TypeTag, class MyTypeTag>
-struct EndTime { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct EndTime { static constexpr Scalar value = -1e35; };
 
 //! Name of the grid file
 struct GridFile { static constexpr auto value = ""; };

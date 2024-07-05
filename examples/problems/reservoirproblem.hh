@@ -139,17 +139,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::ReservoirBaseProblem>
 { static constexpr bool value = true; };
 
-//! The default for the end time of the simulation [s].
-//!
-//! By default this problem spans 1000 days (100 "settle down" days and 900 days of
-//! production)
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::ReservoirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1000.0*24*60*60;
-};
-
 // The default for the initial time step size of the simulation [s]
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::ReservoirBaseProblem>
@@ -445,8 +434,11 @@ public:
             ("The width of producer/injector wells as a fraction of the width"
              " of the spatial domain");
 
-
         Parameters::SetDefault<Parameters::GridFile>("data/reservoir.dgf");
+
+        //! By default this problem spans 1000 days (100 "settle down" days and 900 days of
+        //! production)
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(1000.0*24*60*60);
     }
 
     /*!

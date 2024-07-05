@@ -153,14 +153,6 @@ template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::LensBaseProblem>
 { static constexpr bool value = true; };
 
-// The default for the end time of the simulation
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 30e3;
-};
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::LensBaseProblem>
@@ -378,6 +370,8 @@ public:
         if constexpr (useFD) {
             Parameters::SetDefault<Parameters::NumericDifferenceMethod>(+1);
         }
+
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(30e3);
     }
 
     /*!

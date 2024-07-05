@@ -140,14 +140,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::WaterAirBaseProblem>
 { static constexpr bool value = true; };
 
-// The default for the end time of the simulation (1 year)
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::WaterAirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0 * 365 * 24 * 60 * 60;
-};
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::WaterAirBaseProblem>
@@ -316,6 +308,8 @@ public:
 
         // Use forward differences
         Parameters::SetDefault<Parameters::NumericDifferenceMethod>(+1);
+
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(1.0 * 365 * 24 * 60 * 60);
     }
 
     /*!

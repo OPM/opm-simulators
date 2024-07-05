@@ -129,7 +129,7 @@ public:
         timeStepIdx_ = 0;
         startTime_ = 0.0;
         time_ = 0.0;
-        endTime_ = Parameters::get<TypeTag, Parameters::EndTime>();
+        endTime_ = Parameters::Get<Parameters::EndTime<Scalar>>();
         timeStepSize_ = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
         assert(timeStepSize_ > 0);
         const std::string& predetTimeStepFile =
@@ -254,7 +254,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::EndTime>
+        Parameters::Register<Parameters::EndTime<Scalar>>
             ("The simulation time at which the simulation is finished [s]");
         Parameters::registerParam<TypeTag, Parameters::InitialTimeStepSize>
             ("The size of the initial time step [s]");

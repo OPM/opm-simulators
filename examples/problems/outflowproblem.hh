@@ -81,14 +81,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::OutflowBaseProblem>
 { static constexpr bool value = false; };
 
-// The default for the end time of the simulation
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::OutflowBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 100;
-};
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::OutflowBaseProblem>
@@ -190,6 +182,7 @@ public:
         ParentType::registerParameters();
 
         Parameters::SetDefault<Parameters::GridFile>("./data/outflow.dgf");
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(100.0);
     }
 
     /*!

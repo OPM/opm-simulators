@@ -174,14 +174,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::Co2InjectionBaseProblem>
 { static constexpr bool value = true; };
 
-// The default for the end time of the simulation
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::Co2InjectionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e4;
-};
-
 template<class TypeTag>
 struct FluidSystemNumPressure<TypeTag, Properties::TTag::Co2InjectionBaseProblem>
 { static constexpr unsigned value = 100; };
@@ -412,6 +404,7 @@ public:
             ("The name of the simulation used for the output files");
 
         Parameters::SetDefault<Parameters::GridFile>("data/co2injection.dgf");
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(1e4);
     }
 
     /*!
