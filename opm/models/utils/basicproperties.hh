@@ -206,11 +206,6 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::NumericModel>
     static constexpr type value = -1e35;
 };
 
-//! Set a value for the ParameterFile property
-template<class TypeTag>
-struct ParameterFile<TypeTag, Properties::TTag::NumericModel>
-{ static constexpr auto value = ""; };
-
 //! By default, do not force any time steps
 template<class TypeTag>
 struct PredeterminedTimeStepsFile<TypeTag, Properties::TTag::NumericModel>

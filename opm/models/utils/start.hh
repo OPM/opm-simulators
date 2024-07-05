@@ -78,7 +78,7 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using ThreadManager = GetPropType<TypeTag, Properties::ThreadManager>;
 
-    Parameters::registerParam<TypeTag, Parameters::ParameterFile>
+    Parameters::Register<Parameters::ParameterFile>
         ("An .ini file which contains a set of run-time parameters");
     Parameters::registerParam<TypeTag, Parameters::PrintParameters>
         ("Print the values of the run-time parameters at the "
@@ -147,7 +147,7 @@ static inline int setupParameters_(int argc,
         return status;
     }
 
-    const std::string paramFileName = Parameters::get<TypeTag, Parameters::ParameterFile>(false);
+    const std::string paramFileName = Parameters::Get<Parameters::ParameterFile>(false);
     if (!paramFileName.empty()) {
         ////////////////////////////////////////////////////////////
         // add the parameters specified using an .ini file

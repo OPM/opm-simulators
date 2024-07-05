@@ -69,10 +69,8 @@ struct GridGlobalRefinements { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct InitialTimeStepSize { using type = Properties::UndefinedProperty; };
 
-//! Property provides the name of the file from which the additional runtime
-//! parameters should to be loaded from
-template<class TypeTag, class MyTypeTag>
-struct ParameterFile { using type = Properties::UndefinedProperty; };
+//! Set a value for the ParameterFile property
+struct ParameterFile { static constexpr auto value = ""; };
 
 //! The name of the file with a number of forced time step lengths
 template<class TypeTag, class MyTypeTag>
