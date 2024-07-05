@@ -28,8 +28,6 @@
 #ifndef EWOMS_BASIC_PARAMETERS_HH
 #define EWOMS_BASIC_PARAMETERS_HH
 
-#include <opm/models/utils/propertysystem.hh>
-
 namespace Opm::Parameters {
 
 //! grid resolution
@@ -59,8 +57,8 @@ struct GridFile { static constexpr auto value = ""; };
 struct GridGlobalRefinements { static constexpr unsigned value = 0; };
 
 //! The default value for the simulation's initial time step size
-template<class TypeTag, class MyTypeTag>
-struct InitialTimeStepSize { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct InitialTimeStepSize { static constexpr Scalar value = -1e35; };
 
 //! Set a value for the ParameterFile property
 struct ParameterFile { static constexpr auto value = ""; };

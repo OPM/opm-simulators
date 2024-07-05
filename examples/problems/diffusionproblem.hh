@@ -115,14 +115,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::DiffusionBaseProblem>
 { static constexpr bool value = false; };
 
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::DiffusionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1000;
-};
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -220,6 +212,7 @@ public:
         }
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(1e6);
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(1000);
     }
 
     /*!

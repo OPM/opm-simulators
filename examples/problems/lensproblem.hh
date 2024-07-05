@@ -153,14 +153,6 @@ template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::LensBaseProblem>
 { static constexpr bool value = true; };
 
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 250;
-};
-
 // define the properties specific for the lens problem
 template<class TypeTag>
 struct LensLowerLeftX<TypeTag, Properties::TTag::LensBaseProblem>
@@ -372,6 +364,7 @@ public:
         }
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(30e3);
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250.0);
     }
 
     /*!

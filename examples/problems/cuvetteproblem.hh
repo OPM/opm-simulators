@@ -121,14 +121,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::CuvetteBaseProblem>
 { static constexpr bool value = true; };
 
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::CuvetteBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1;
-};
-
 // Set the maximum time step
 template<class TypeTag>
 struct MaxTimeStepSize<TypeTag, Properties::TTag::CuvetteBaseProblem>
@@ -305,6 +297,7 @@ public:
 
         Parameters::SetDefault<Parameters::GridFile>("./data/cuvette_11x4.dgf");
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(100.0);
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(1.0);
     }
 
     /*!

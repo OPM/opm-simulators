@@ -136,14 +136,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::FingerBaseProblem>
 { static constexpr bool value = true; };
 
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 10;
-};
-
 template<class TypeTag>
 struct InitialWaterSaturation<TypeTag, Properties::TTag::FingerBaseProblem>
 {
@@ -290,6 +282,7 @@ public:
         Parameters::SetDefault<Parameters::NumericDifferenceMethod>(+1);
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(215);
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(10);
     }
 
     /*!

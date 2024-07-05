@@ -108,14 +108,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::RichardsLensProblem>
 { static constexpr bool value = true; };
 
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::RichardsLensProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 100;
-};
-
 // Do not write the intermediate results of the newton method
 template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::RichardsLensProblem>
@@ -266,6 +258,7 @@ public:
         }
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(3000.0);
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(100.0);
     }
 
     /*!

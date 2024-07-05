@@ -177,16 +177,4 @@ struct Vanguard<TypeTag, TTag::NumericModel>
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-//! The default value for the simulation's initial time step size
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::NumericModel>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = -1e35;
-};
-
-} // namespace Opm::Parameters
-
 #endif

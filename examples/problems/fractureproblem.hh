@@ -165,14 +165,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::FractureProblem>
 { static constexpr bool value = false; };
 
-// Set the default value for the initial time step size
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::FractureProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 100;
-};
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -306,6 +298,7 @@ public:
 
         Parameters::SetDefault<Parameters::GridFile>("data/fracture.art.dgf");
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(3e3);
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(100);
     }
 
     /*!

@@ -176,14 +176,6 @@ struct Initialpressure<TypeTag, Properties::TTag::CO2PTBaseProblem>
     static constexpr type value = 75.e5;
 };
 
-// convergence control
-template <class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.1 * 60. * 60.;
-};
-
 template <class TypeTag>
 struct LinearSolverAbsTolerance<TypeTag, Properties::TTag::CO2PTBaseProblem>
 {
@@ -392,6 +384,7 @@ public:
         }
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(60. * 60.);
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(0.1 * 60. * 60.);
     }
 
     /*!

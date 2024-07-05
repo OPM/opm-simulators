@@ -139,14 +139,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::ReservoirBaseProblem>
 { static constexpr bool value = true; };
 
-// The default for the initial time step size of the simulation [s]
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::ReservoirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 100e3;
-};
-
 // set the defaults for some problem specific properties
 template<class TypeTag>
 struct MaxDepth<TypeTag, Properties::TTag::ReservoirBaseProblem>
@@ -439,6 +431,9 @@ public:
         //! By default this problem spans 1000 days (100 "settle down" days and 900 days of
         //! production)
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(1000.0*24*60*60);
+
+        Parameters::SetDefault<Parameters::GridFile>("data/reservoir.dgf");
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(100e3);
     }
 
     /*!
