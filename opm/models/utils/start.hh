@@ -364,13 +364,13 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
                     // always print the list of specified but unused parameters
                     printSeparator =
                         printSeparator ||
-                        Parameters::printUnused<TypeTag>();
+                        Parameters::printUnused();
                 if (printSeparator)
                     std::cout << endParametersSeparator;
             }
             else
                 // always print the list of specified but unused parameters
-                if (Parameters::printUnused<TypeTag>())
+                if (Parameters::printUnused())
                     std::cout << endParametersSeparator;
         }
 

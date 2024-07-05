@@ -772,8 +772,7 @@ void printValues(std::ostream& os = std::cout)
  *
  * \return true if something was printed
  */
-template <class TypeTag>
-bool printUnused(std::ostream& os = std::cout)
+inline bool printUnused(std::ostream& os = std::cout)
 {
     std::list<std::string> runTimeAllKeyList;
     std::list<std::string> unknownKeyList;
