@@ -69,8 +69,7 @@ namespace TTag {
 /*!
  * \brief Define the type tag for the compositional NCP model.
  */
-struct NcpModel { using InheritsFrom = std::tuple<VtkDiffusion,
-                                                  VtkEnergy,
+struct NcpModel { using InheritsFrom = std::tuple<VtkEnergy,
                                                   VtkComposition,
                                                   MultiPhaseBaseModel>; };
 } // namespace TTag

@@ -69,8 +69,7 @@ namespace TTag {
 //! The type tag for the isothermal single phase problems
 struct PvsModel
 {
-    using InheritsFrom = std::tuple<VtkDiffusion,
-                                    VtkEnergy,
+    using InheritsFrom = std::tuple<VtkEnergy,
                                     VtkComposition,
                                     VtkPhasePresence,
                                     MultiPhaseBaseModel>; };

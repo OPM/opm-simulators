@@ -75,7 +75,6 @@ namespace TTag {
 //! The type tag for the black-oil problems
 struct BlackOilModel { using InheritsFrom = std::tuple<VtkComposition,
                                                        VtkBlackOilEnergy,
-                                                       VtkDiffusion,
                                                        VtkBlackOilPolymer,
                                                        VtkBlackOilSolvent,
                                                        VtkBlackOil,
