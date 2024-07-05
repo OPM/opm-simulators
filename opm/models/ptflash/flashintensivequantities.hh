@@ -112,7 +112,7 @@ public:
 
         const Scalar flashTolerance = Parameters::Get<Parameters::FlashTolerance<Scalar>>();
         const int flashVerbosity = Parameters::get<TypeTag, Parameters::FlashVerbosity>();
-        const std::string flashTwoPhaseMethod = Parameters::get<TypeTag, Parameters::FlashTwoPhaseMethod>();
+        const std::string flashTwoPhaseMethod = Parameters::Get<Parameters::FlashTwoPhaseMethod>();
 
         // extract the total molar densities of the components
         ComponentVector z(0.);

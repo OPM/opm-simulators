@@ -156,11 +156,6 @@ template<class TypeTag>
 struct EnableThermodynamicHints<TypeTag, Properties::TTag::FlashModel>
 { static constexpr bool value = true; };
 
-// Flash two-phase method
-template<class TypeTag>
-struct FlashTwoPhaseMethod<TypeTag, Properties::TTag::FlashModel>
-{ static constexpr auto value = "ssi"; };
-
 // Flash solver verbosity
 template<class TypeTag>
 struct FlashVerbosity<TypeTag, Properties::TTag::FlashModel>
@@ -258,7 +253,7 @@ public:
              "consider the solution converged");
         Parameters::registerParam<TypeTag, Parameters::FlashVerbosity>
             ("Flash solver verbosity level");
-        Parameters::registerParam<TypeTag, Parameters::FlashTwoPhaseMethod>
+        Parameters::Register<Parameters::FlashTwoPhaseMethod>
             ("Method for solving vapor-liquid composition. Available options include: "
              "ssi, newton, ssi+newton");
 

@@ -37,8 +37,7 @@
 namespace Opm::Parameters {
 
 //! Two-phase flash method
-template<class TypeTag, class MyTypeTag>
-struct FlashTwoPhaseMethod { using type = Properties::UndefinedProperty; };
+struct FlashTwoPhaseMethod { static constexpr auto value = "ssi"; };
 
 //! The verbosity level of the flash solver
 template<class TypeTag, class MyTypeTag>

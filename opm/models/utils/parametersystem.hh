@@ -100,8 +100,7 @@ struct ParamInfo
         return other.paramName == paramName
                && other.paramTypeName == paramTypeName
                && other.typeTagName == typeTagName
-               && other.usageString == usageString
-               && other.compileTimeValue == compileTimeValue;
+               && other.usageString == usageString;
     }
 };
 
