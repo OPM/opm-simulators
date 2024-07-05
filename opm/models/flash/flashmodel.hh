@@ -120,12 +120,6 @@ struct EnableEnergy<TypeTag, TTag::FlashModel> { static constexpr bool value = f
 
 namespace Opm::Parameters {
 
-// The updates of intensive quantities tend to be _very_ expensive for this
-// model, so let's try to minimize the number of required ones
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlashModel>
-{ static constexpr bool value = true; };
-
 // since thermodynamic hints are basically free if the cache for intensive quantities is
 // enabled, and this model usually shows quite a performance improvment if they are
 // enabled, let's enable them by default.
@@ -239,6 +233,10 @@ public:
         Parameters::Register<Parameters::FlashTolerance<Scalar>>
             ("The maximum tolerance for the flash solver to "
              "consider the solution converged");
+
+        // The updates of intensive quantities tend to be _very_ expensive for this
+        // model, so let's try to minimize the number of required ones
+        Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
     }
 
     /*!

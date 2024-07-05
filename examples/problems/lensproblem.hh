@@ -143,11 +143,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::LensBaseProblem>
 { static constexpr bool value = true; };
 
-// enable the cache for intensive quantities by default for this problem
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr bool value = true; };
-
 // enable the storage cache by default for this problem
 template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::LensBaseProblem>
@@ -364,6 +359,7 @@ public:
         }
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(30e3);
+        Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250.0);
     }
 

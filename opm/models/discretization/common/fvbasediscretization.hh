@@ -284,14 +284,6 @@ struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization>
 
 namespace Opm::Parameters {
 
-//! by default, disable the intensive quantity cache. If the intensive quantities are
-//! relatively cheap to calculate, the cache basically does not yield any performance
-//! impact because of the intensive quantity cache will cause additional pressure on the
-//! CPU caches...
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = false; };
-
 // disable caching the storage term by default
 template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::FvBaseDiscretization>
@@ -441,7 +433,7 @@ public:
         , localLinearizer_(ThreadManager::maxThreads())
         , linearizer_(new Linearizer())
         , enableGridAdaptation_(Parameters::Get<Parameters::EnableGridAdaptation>() )
-        , enableIntensiveQuantityCache_(Parameters::get<TypeTag, Parameters::EnableIntensiveQuantityCache>())
+        , enableIntensiveQuantityCache_(Parameters::Get<Parameters::EnableIntensiveQuantityCache>())
         , enableStorageCache_(Parameters::get<TypeTag, Parameters::EnableStorageCache>())
         , enableThermodynamicHints_(Parameters::get<TypeTag, Parameters::EnableThermodynamicHints>())
     {
@@ -503,7 +495,7 @@ public:
             ("Global switch for turning on writing VTK files");
         Parameters::registerParam<TypeTag, Parameters::EnableThermodynamicHints>
             ("Enable thermodynamic hints");
-        Parameters::registerParam<TypeTag, Parameters::EnableIntensiveQuantityCache>
+        Parameters::Register<Parameters::EnableIntensiveQuantityCache>
             ("Turn on caching of intensive quantities");
         Parameters::registerParam<TypeTag, Parameters::EnableStorageCache>
             ("Store previous storage terms and avoid re-calculating them.");

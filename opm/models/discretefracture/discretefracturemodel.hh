@@ -95,19 +95,6 @@ struct UseTwoPointGradients<TypeTag, TTag::DiscreteFractureModel> { static const
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// The intensive quantity cache cannot be used by the discrete fracture model, because
-// the intensive quantities of a control degree of freedom are not identical to the
-// intensive quantities of the other intensive quantities of the same of the same degree
-// of freedom. This is because the fracture properties (volume, permeability, etc) are
-// specific for each...
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::DiscreteFractureModel>
-{ static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 
 /*!
@@ -137,7 +124,7 @@ public:
     DiscreteFractureModel(Simulator& simulator)
         : ParentType(simulator)
     {
-        if (Parameters::get<TypeTag, Parameters::EnableIntensiveQuantityCache>()) {
+        if (Parameters::Get<Parameters::EnableIntensiveQuantityCache>()) {
             throw std::runtime_error("The discrete fracture model does not work in conjunction "
                                      "with intensive quantities caching");
         }
@@ -152,6 +139,13 @@ public:
 
         // register runtime parameters of the VTK output modules
         Opm::VtkDiscreteFractureModule<TypeTag>::registerParameters();
+
+        // The intensive quantity cache cannot be used by the discrete fracture model, because
+        // the intensive quantities of a control degree of freedom are not identical to the
+        // intensive quantities of the other intensive quantities of the same of the same degree
+        // of freedom. This is because the fracture properties (volume, permeability, etc) are
+        // specific for each...
+        Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(false);
     }
 
     /*!
