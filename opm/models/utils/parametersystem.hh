@@ -539,7 +539,7 @@ inline std::string parseUnquotedValue_(std::string& s, const std::string&)
  * \return Empty string if everything worked out. Otherwise the thing that could
  *         not be read.
  */
-template <class TypeTag, class PositionalArgumentCallback>
+template <class PositionalArgumentCallback>
 std::string parseCommandLineOptions(int argc,
                                     const char **argv,
                                     const std::string& helpPreamble = "",

@@ -129,10 +129,10 @@ static inline int setupParameters_(int argc,
     if (myRank == 0 && handleHelp)
         helpPreamble = Problem::helpPreamble(argc, argv);
     std::string s =
-        Parameters::parseCommandLineOptions<TypeTag>(argc,
-                                                     argv,
-                                                     helpPreamble,
-                                                     positionalParamCallback);
+        Parameters::parseCommandLineOptions(argc,
+                                            argv,
+                                            helpPreamble,
+                                            positionalParamCallback);
     if (!s.empty())
     {
         int status = 1;
