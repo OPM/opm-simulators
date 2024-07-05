@@ -144,44 +144,18 @@ struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
 
 namespace Opm::Parameters {
 
-template <class TypeTag, class MyTypeTag>
-struct Temperature { using type = Properties::UndefinedProperty; };
-
-template <class TypeTag, class MyTypeTag>
-struct SimulationName { using type = Properties::UndefinedProperty; };
-
-template <class TypeTag, class MyTypeTag>
-struct EpisodeLength { using type = Properties::UndefinedProperty;};
-
-template <class TypeTag, class MyTypeTag>
-struct Initialpressure { using type = Properties::UndefinedProperty;};
-
 // this is kinds of telling the report step length
-template <class TypeTag>
-struct EpisodeLength<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.1 * 60. * 60.;
-};
+template<class Scalar>
+struct EpisodeLength { static constexpr Scalar value = 0.1 * 60. * 60.; };
 
-template <class TypeTag>
-struct Initialpressure<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 75.e5;
-};
+template<class Scalar>
+struct Initialpressure { static constexpr Scalar value = 75e5; };
 
-template <class TypeTag>
-struct SimulationName<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr auto value = "co2_ptflash"; };
+struct SimulationName { static constexpr auto value = "co2_ptflash"; };
 
 // set the defaults for the problem specific properties
- template <class TypeTag>
- struct Temperature<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{
-     using type = GetPropType<TypeTag, Properties::Scalar>;
-     static constexpr type value = 423.25; // TODO
- };
+template<class Scalar>
+struct Temperature { static constexpr Scalar value = 423.25; };
 
 } // namespace Opm::Parameters
 
@@ -237,7 +211,7 @@ public:
     explicit CO2PTProblem(Simulator& simulator)
         : ParentType(simulator)
     {
-        const Scalar epi_len = Parameters::get<TypeTag, Parameters::EpisodeLength>();
+        const Scalar epi_len = Parameters::Get<Parameters::EpisodeLength<Scalar>>();
         simulator.setEpisodeLength(epi_len);
         FluidSystem::init();
         using CompParm = typename FluidSystem::ComponentParam;
@@ -255,7 +229,7 @@ public:
 
     void initPetrophysics()
     {
-        temperature_ = Parameters::get<TypeTag, Parameters::Temperature>();
+        temperature_ = Parameters::Get<Parameters::Temperature<Scalar>>();
         K_ = this->toDimMatrix_(9.869232667160131e-14);
 
         porosity_ = 0.1;
@@ -292,13 +266,13 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::Temperature>
+        Parameters::Register<Parameters::Temperature<Scalar>>
             ("The temperature [K] in the reservoir");
-        Parameters::registerParam<TypeTag, Parameters::Initialpressure>
+        Parameters::Register<Parameters::Initialpressure<Scalar>>
             ("The initial pressure [Pa s] in the reservoir");
-        Parameters::registerParam<TypeTag, Parameters::SimulationName>
+        Parameters::Register<Parameters::SimulationName>
             ("The name of the simulation used for the output files");
-        Parameters::registerParam<TypeTag, Parameters::EpisodeLength>
+        Parameters::Register<Parameters::EpisodeLength<Scalar>>
             ("Time interval [s] for episode length");
 
         Parameters::SetDefault<Parameters::CellsX>(30);
@@ -336,7 +310,7 @@ public:
     std::string name() const
     {
         std::ostringstream oss;
-        oss << Parameters::get<TypeTag, Parameters::SimulationName>();
+        oss << Parameters::Get<Parameters::SimulationName>();
         return oss.str();
     }
 
@@ -345,7 +319,7 @@ public:
     // the old one.
     void endEpisode()
     {
-        Scalar epi_len = Parameters::get<TypeTag, Parameters::EpisodeLength>();
+        Scalar epi_len = Parameters::Get<Parameters::EpisodeLength<Scalar>>();
         this->simulator().startNextEpisode(epi_len);
     }
 
@@ -487,7 +461,7 @@ private:
         sat[0] = 1.0;
         sat[1] = 1.0 - sat[0];
 
-        Scalar p0 = Parameters::get<TypeTag, Parameters::Initialpressure>();
+        Scalar p0 = Parameters::Get<Parameters::Initialpressure<Scalar>>();
 
         //\Note, for an AD variable, if we multiply it with 2, the derivative will also be scalced with 2,
         //\Note, so we should not do it.
