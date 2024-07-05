@@ -56,9 +56,8 @@ struct DomainSizeZ { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EndTime { using type = Properties::UndefinedProperty; };
 
-//! name of the grid file
-template<class TypeTag, class MyTypeTag>
-struct GridFile { using type = Properties::UndefinedProperty; };
+//! Name of the grid file
+struct GridFile { static constexpr auto value = ""; };
 
 //! Property which tells the Vanguard how often the grid should be refined
 //! after creation.

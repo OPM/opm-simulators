@@ -145,11 +145,6 @@ struct EndTime<TypeTag, Properties::TTag::WaterAirBaseProblem>
     static constexpr type value = 1.0 * 365 * 24 * 60 * 60;
 };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, Properties::TTag::WaterAirBaseProblem>
-{ static constexpr auto value = "./data/waterair.dgf"; };
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::WaterAirBaseProblem>
@@ -307,6 +302,15 @@ public:
      * \name Problem parameters
      */
     //! \{
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::registerParameters
+     */
+    static void registerParameters()
+    {
+        ParentType::registerParameters();
+
+        Parameters::SetDefault<Parameters::GridFile>("./data/waterair.dgf");
+    }
 
     /*!
      * \copydoc FvBaseProblem::name

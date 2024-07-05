@@ -105,11 +105,6 @@ struct EndTime<TypeTag, Properties::TTag::InfiltrationBaseProblem>
     static constexpr type value = 6e3;
 };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, Properties::TTag::InfiltrationBaseProblem>
-{ static constexpr auto value = "./data/infiltration_50x3.dgf"; };
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::InfiltrationBaseProblem>
@@ -242,6 +237,16 @@ public:
 
         materialParams_.finalize();
         materialParams_.checkDefined();
+    }
+
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::registerParameters
+     */
+    static void registerParameters()
+    {
+        ParentType::registerParameters();
+
+        Parameters::SetDefault<Parameters::GridFile>("./data/infiltration_50x3.dgf");
     }
 
     /*!

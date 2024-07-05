@@ -116,11 +116,6 @@ struct EndTime<TypeTag, Properties::TTag::RichardsLensProblem>
     static constexpr type value = 3000;
 };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, Properties::TTag::RichardsLensProblem>
-{ static constexpr auto value = "./data/richardslens_24x16.dgf"; };
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::RichardsLensProblem>
@@ -265,6 +260,16 @@ public:
                 dofIsInLens_[globalDofIdx] = isInLens_(dofPos);
             }
         }
+    }
+
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::registerParameters
+     */
+    static void registerParameters()
+    {
+        ParentType::registerParameters();
+
+        Parameters::SetDefault<Parameters::GridFile>("./data/richardslens_24x16.dgf");
     }
 
     /*!

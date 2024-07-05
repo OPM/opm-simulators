@@ -89,11 +89,6 @@ struct EndTime<TypeTag, Properties::TTag::OutflowBaseProblem>
     static constexpr type value = 100;
 };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, Properties::TTag::OutflowBaseProblem>
-{ static constexpr auto value = "./data/outflow.dgf"; };
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::OutflowBaseProblem>
@@ -185,6 +180,16 @@ public:
         perm_ = this->toDimMatrix_(1e-10);
         porosity_ = 0.4;
         tortuosity_ = 0.28;
+    }
+
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::registerParameters
+     */
+    static void registerParameters()
+    {
+        ParentType::registerParameters();
+
+        Parameters::SetDefault<Parameters::GridFile>("./data/outflow.dgf");
     }
 
     /*!

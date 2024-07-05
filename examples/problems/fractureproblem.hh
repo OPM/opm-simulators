@@ -173,11 +173,6 @@ struct EndTime<TypeTag, Properties::TTag::FractureProblem>
     static constexpr type value = 3e3;
 };
 
-// Set the default value for the file name of the grid
-template<class TypeTag>
-struct GridFile<TypeTag, Properties::TTag::FractureProblem>
-{ static constexpr auto value = "data/fracture.art.dgf"; };
-
 // Set the default value for the initial time step size
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::FractureProblem>
@@ -308,6 +303,16 @@ public:
 
         // initialize the energy-related parameters
         initEnergyParams_(thermalConductionParams_, matrixPorosity_);
+    }
+
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::registerParameters
+     */
+    static void registerParameters()
+    {
+        ParentType::registerParameters();
+
+        Parameters::SetDefault<Parameters::GridFile>("data/fracture.art.dgf");
     }
 
     /*!

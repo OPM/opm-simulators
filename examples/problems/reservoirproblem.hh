@@ -150,11 +150,6 @@ struct EndTime<TypeTag, Properties::TTag::ReservoirBaseProblem>
     static constexpr type value = 1000.0*24*60*60;
 };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, Properties::TTag::ReservoirBaseProblem>
-{ static constexpr auto value = "data/reservoir.dgf"; };
-
 // The default for the initial time step size of the simulation [s]
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::ReservoirBaseProblem>
@@ -449,6 +444,9 @@ public:
         Parameters::registerParam<TypeTag, Parameters::WellWidth>
             ("The width of producer/injector wells as a fraction of the width"
              " of the spatial domain");
+
+
+        Parameters::SetDefault<Parameters::GridFile>("data/reservoir.dgf");
     }
 
     /*!
