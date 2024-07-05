@@ -33,6 +33,16 @@ template<class Scalar>
 struct NewtonMaxError { static constexpr Scalar value = 1e100; };
 
 /*!
+ * \brief The number of iterations at which the Newton method
+ *        should aim at.
+ *
+ * This is used to control the time-step size. The heuristic used
+ * is to scale the last time-step size by the deviation of the
+ * number of iterations used from the target steps.
+ */
+struct NewtonTargetIterations { static constexpr int value = 10; };
+
+/*!
  * \brief The value for the error below which convergence is declared
  *
  * This value can (and for the porous media models will) be changed to account for grid
@@ -47,17 +57,6 @@ struct NewtonVerbose { static constexpr bool value = true; };
 //! Specifies whether the convergence rate and the global residual
 //! gets written out to disk for every Newton iteration
 struct NewtonWriteConvergence { static constexpr bool value = false; };
-
-/*!
- * \brief The number of iterations at which the Newton method
- *        should aim at.
- *
- * This is used to control the time-step size. The heuristic used
- * is to scale the last time-step size by the deviation of the
- * number of iterations used from the target steps.
- */
-template<class TypeTag, class MyTypeTag>
-struct NewtonTargetIterations { using type = Properties::UndefinedProperty; };
 
 //! Number of maximum iterations for the Newton method.
 template<class TypeTag, class MyTypeTag>
