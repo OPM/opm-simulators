@@ -36,7 +36,6 @@ namespace Opm::Properties {
 
 namespace TTag {
 struct FvBaseNewtonMethod;
-struct VtkPrimaryVars;
 struct FiniteDifferenceLocalLinearizer;
 struct ParallelBiCGStabLinearSolver;
 }
@@ -45,7 +44,7 @@ namespace TTag {
 
 //! The type tag for models based on the finite volume schemes
 struct FvBaseDiscretization
-{ using InheritsFrom = std::tuple<VtkPrimaryVars, FvBaseNewtonMethod, ImplicitModel>; };
+{ using InheritsFrom = std::tuple<FvBaseNewtonMethod, ImplicitModel>; };
 
 } // namespace TTag
 
