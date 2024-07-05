@@ -46,7 +46,7 @@ jobs:
             # Later we can add release tags to the list to get the docs for the releases
             # For example: -b "master, release/2024.04/final" will build the docs for
             # the master branch and the release/2024.04/final tag
-            poetry run sphinx-versioned -m master -b master --git-root ../../
+            poetry run sphinx-versioned -m master -b master --force --git-root ../../
         - name: Copy documentation to gh-pages
           run: |
             cp -r python/sphinx_docs/docs/_build/* python/gh-pages/
