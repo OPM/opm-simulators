@@ -81,12 +81,7 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::OutflowBaseProblem>
 { static constexpr bool value = false; };
 
-// Also write mass fractions to the output
-template<class TypeTag>
-struct VtkWriteMassFractions<TypeTag, Properties::TTag::OutflowBaseProblem>
-{ static constexpr bool value = true; };
-
-} // namespac Opm::Parameters
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
@@ -176,6 +171,8 @@ public:
         Parameters::SetDefault<Parameters::GridFile>("./data/outflow.dgf");
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(100.0);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(1.0);
+
+        Parameters::SetDefault<Parameters::VtkWriteMassFractions>(true);
     }
 
     /*!

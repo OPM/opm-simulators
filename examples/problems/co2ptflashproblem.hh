@@ -207,19 +207,7 @@ struct VtkWriteEquilibriumConstants<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr bool value = true; };
 
 template <class TypeTag>
-struct VtkWriteFugacityCoeffs<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr bool value = true; };
-
-template <class TypeTag>
 struct VtkWriteLiquidMoleFractions<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr bool value = true; };
-
-template <class TypeTag>
-struct VtkWriteTotalMassFractions<TypeTag, Properties::TTag::CO2PTBaseProblem>
-{ static constexpr bool value = true; };
-
-template <class TypeTag>
-struct VtkWriteTotalMoleFractions<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
@@ -358,7 +346,10 @@ public:
         Parameters::SetDefault<Parameters::NewtonTargetIterations>(6);
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-3);
         Parameters::SetDefault<Parameters::VtkWriteFilterVelocities>(true);
+        Parameters::SetDefault<Parameters::VtkWriteFugacityCoeffs>(true);
         Parameters::SetDefault<Parameters::VtkWritePotentialGradients>(true);
+        Parameters::SetDefault<Parameters::VtkWriteTotalMassFractions>(true);
+        Parameters::SetDefault<Parameters::VtkWriteTotalMoleFractions>(true);
     }
 
     /*!

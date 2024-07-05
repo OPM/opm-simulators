@@ -70,7 +70,6 @@ namespace TTag {
 struct PvsModel
 {
     using InheritsFrom = std::tuple<VtkEnergy,
-                                    VtkComposition,
                                     VtkPhasePresence,
                                     MultiPhaseBaseModel>; };
 } // namespace TTag
