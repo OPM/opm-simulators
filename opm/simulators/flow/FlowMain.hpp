@@ -124,7 +124,7 @@ namespace Opm {
 
             // thermodynamic hints are not implemented/required by the eWoms blackoil
             // model
-            Parameters::hideParam<TypeTag, Parameters::EnableThermodynamicHints>();
+            Parameters::Hide<Parameters::EnableThermodynamicHints>();
 
             // in flow only the deck file determines the end time of the simulation
             Parameters::Hide<Parameters::EndTime<Scalar>>();
