@@ -265,6 +265,7 @@ public:
         Parameters::SetDefault<Parameters::EnableStorageCache>(true);
         // the default for the allowed volumetric error for oil per second
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-2);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
 
@@ -414,7 +415,7 @@ public:
         // disables gravity, else the standard value of the gravity constant at sea level
         // on earth is used
         this->gravity_ = 0.0;
-        if (Parameters::get<TypeTag, Parameters::EnableGravity>())
+        if (Parameters::Get<Parameters::EnableGravity>())
             this->gravity_[dim - 1] = 9.80665;
         if (!eclState.getInitConfig().hasGravity())
             this->gravity_[dim - 1] = 0.0;

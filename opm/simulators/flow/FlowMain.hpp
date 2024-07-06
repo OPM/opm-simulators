@@ -114,7 +114,7 @@ namespace Opm {
             registerAllParameters_<TypeTag>(/*finalizeRegistration=*/false);
 
             // hide the parameters unused by flow. TODO: this is a pain to maintain
-            Parameters::hideParam<TypeTag, Parameters::EnableGravity>();
+            Parameters::Hide<Parameters::EnableGravity>();
             Parameters::Hide<Parameters::EnableGridAdaptation>();
 
             // this parameter is actually used in eWoms, but the flow well model

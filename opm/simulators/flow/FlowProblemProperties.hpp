@@ -383,11 +383,6 @@ template<class TypeTag>
 struct EnableEsmry<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
-
 // only write the solutions for the report steps to disk
 template<class TypeTag>
 struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowBaseProblem>
