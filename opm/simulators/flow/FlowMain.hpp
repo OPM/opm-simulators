@@ -177,13 +177,13 @@ namespace Opm {
                 Parameters::Hide<Parameters::VtkWriteMobilities>();
                 //}
             Parameters::Hide<Parameters::VtkWriteAverageMolarMasses>();
-            Parameters::hideParam<TypeTag, Parameters::VtkWriteFugacities>();
-            Parameters::hideParam<TypeTag, Parameters::VtkWriteFugacityCoeffs>();
-            Parameters::hideParam<TypeTag, Parameters::VtkWriteMassFractions>();
-            Parameters::hideParam<TypeTag, Parameters::VtkWriteMolarities>();
-            Parameters::hideParam<TypeTag, Parameters::VtkWriteMoleFractions>();
-            Parameters::hideParam<TypeTag, Parameters::VtkWriteTotalMassFractions>();
-            Parameters::hideParam<TypeTag, Parameters::VtkWriteTotalMoleFractions>();
+            Parameters::Hide<Parameters::VtkWriteFugacities>();
+            Parameters::Hide<Parameters::VtkWriteFugacityCoeffs>();
+            Parameters::Hide<Parameters::VtkWriteMassFractions>();
+            Parameters::Hide<Parameters::VtkWriteMolarities>();
+            Parameters::Hide<Parameters::VtkWriteMoleFractions>();
+            Parameters::Hide<Parameters::VtkWriteTotalMassFractions>();
+            Parameters::Hide<Parameters::VtkWriteTotalMoleFractions>();
 
             Parameters::Hide<Parameters::VtkWriteTortuosities>();
             Parameters::Hide<Parameters::VtkWriteDiffusionCoefficients>();
