@@ -133,7 +133,7 @@ namespace Opm {
             Parameters::Hide<Parameters::InitialTimeStepSize<Scalar>>();
             Parameters::hideParam<TypeTag, Parameters::MaxTimeStepDivisions>();
             Parameters::Hide<Parameters::MaxTimeStepSize<Scalar>>();
-            Parameters::hideParam<TypeTag, Parameters::MinTimeStepSize>();
+            Parameters::Hide<Parameters::MinTimeStepSize<Scalar>>();
             Parameters::Hide<Parameters::PredeterminedTimeStepsFile>();
 
             // flow also does not use the eWoms Newton method
