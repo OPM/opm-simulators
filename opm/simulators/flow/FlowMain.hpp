@@ -154,9 +154,9 @@ namespace Opm {
                 Parameters::Hide<Parameters::VtkWritePorosity>();
                 Parameters::Hide<Parameters::VtkWritePotentialGradients>();
                 Parameters::Hide<Parameters::VtkWritePressures>();
-                Parameters::hideParam<TypeTag, Parameters::VtkWritePrimaryVars>();
+                Parameters::Hide<Parameters::VtkWritePrimaryVars>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWritePrimaryVarsMeaning>();
-                Parameters::hideParam<TypeTag, Parameters::VtkWriteProcessRank>();
+                Parameters::Hide<Parameters::VtkWriteProcessRank>();
                 Parameters::Hide<Parameters::VtkWriteRelativePermeabilities>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteSaturatedGasOilVaporizationFactor>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteSaturatedOilGasDissolutionFactor>();
@@ -173,7 +173,7 @@ namespace Opm {
                 Parameters::Hide<Parameters::VtkWriteExtrusionFactor>();
                 Parameters::Hide<Parameters::VtkWriteFilterVelocities>();
                 Parameters::Hide<Parameters::VtkWriteDensities>();
-                Parameters::hideParam<TypeTag, Parameters::VtkWriteDofIndex>();
+                Parameters::Hide<Parameters::VtkWriteDofIndex>();
                 Parameters::Hide<Parameters::VtkWriteMobilities>();
                 //}
             Parameters::Hide<Parameters::VtkWriteAverageMolarMasses>();
