@@ -47,156 +47,25 @@
 #include <string>
 #include <vector>
 
-namespace Opm::Properties::TTag {
-
-struct FlowTimeSteppingParameters {};
-
-}
-
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct SolverContinueOnConvergenceFailure { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct SolverMaxRestarts { using type = Properties::UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-
-struct SolverVerbosity { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepVerbosity { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct InitialTimeStepInDays { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct FullTimeStepInitially { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepControl { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepControlTolerance { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepControlTargetIterations { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepControlTargetNewtonIterations { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepControlDecayRate { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepControlGrowthRate { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepControlDecayDampingFactor { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepControlGrowthDampingFactor { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepControlFileName { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct MinTimeStepBeforeShuttingProblematicWellsInDays { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct MinTimeStepBasedOnNewtonIterations { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag>
-struct SolverContinueOnConvergenceFailure<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct SolverMaxRestarts<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{ static constexpr int value = 10; };
-
-template<class TypeTag>
-struct SolverVerbosity<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{ static constexpr int value = 1; };
-
-template<class TypeTag>
-struct TimeStepVerbosity<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{ static constexpr int value = 1; };
-
-template<class TypeTag>
-struct InitialTimeStepInDays<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
-template<class TypeTag>
-struct FullTimeStepInitially<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct TimeStepControl<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{ static constexpr auto value = "pid+newtoniteration"; };
-
-template<class TypeTag>
-struct TimeStepControlTolerance<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-1;
-};
-
-template<class TypeTag>
-struct TimeStepControlTargetIterations<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{ static constexpr int value = 30; };
-
-template<class TypeTag>
-struct TimeStepControlTargetNewtonIterations<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{ static constexpr int value = 8; };
-
-template<class TypeTag>
-struct TimeStepControlDecayRate<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.75;
-};
-
-template<class TypeTag>
-struct TimeStepControlGrowthRate<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.25;
-};
-
-template<class TypeTag>
-struct TimeStepControlDecayDampingFactor<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
-template<class TypeTag>
-struct TimeStepControlGrowthDampingFactor<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 3.2;
-};
-
-template<class TypeTag>
-struct TimeStepControlFileName<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{ static constexpr auto value = "timesteps"; };
-
-template<class TypeTag>
-struct MinTimeStepBeforeShuttingProblematicWellsInDays<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.01;
-};
-
-template<class TypeTag>
-struct MinTimeStepBasedOnNewtonIterations<TypeTag, Properties::TTag::FlowTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.0;
-};
+struct SolverContinueOnConvergenceFailure { static constexpr bool value = false; };
+struct SolverMaxRestarts { static constexpr int value = 10; };
+struct SolverVerbosity { static constexpr int value = 1; };
+struct TimeStepVerbosity { static constexpr int value = 1; };
+struct InitialTimeStepInDays { static constexpr double value = 1.0;  };
+struct FullTimeStepInitially { static constexpr bool value = false; };
+struct TimeStepControl { static constexpr auto value = "pid+newtoniteration"; };
+struct TimeStepControlTolerance { static constexpr double value = 1e-1; };
+struct TimeStepControlTargetIterations { static constexpr int value = 30; };
+struct TimeStepControlTargetNewtonIterations { static constexpr int value = 8; };
+struct TimeStepControlDecayRate { static constexpr double value = 0.75; };
+struct TimeStepControlGrowthRate { static constexpr double  value = 1.25; };
+struct TimeStepControlDecayDampingFactor { static constexpr double value = 1.0;  };
+struct TimeStepControlGrowthDampingFactor { static constexpr double value = 3.2; };
+struct TimeStepControlFileName { static constexpr auto value = "timesteps"; };
+struct MinTimeStepBeforeShuttingProblematicWellsInDays { static constexpr double value = 0.01; };
+struct MinTimeStepBasedOnNewtonIterations { static constexpr double value = 0.0; };
 
 } // namespace Opm::Parameters
 
@@ -256,15 +125,15 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
             , maxGrowth_(Parameters::Get<Parameters::SolverMaxGrowth<Scalar>>()) // 3.0
             , maxTimeStep_(Parameters::Get<Parameters::SolverMaxTimeStepInDays<Scalar>>() * 24 * 60 * 60) // 365.25
             , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, Parameters::Get<Parameters::SolverMinTimeStep<Scalar>>())) // 1e-12;
-            , ignoreConvergenceFailure_(Parameters::get<TypeTag, Parameters::SolverContinueOnConvergenceFailure>()) // false;
-            , solverRestartMax_(Parameters::get<TypeTag, Parameters::SolverMaxRestarts>()) // 10
-            , solverVerbose_(Parameters::get<TypeTag, Parameters::SolverVerbosity>() > 0 && terminalOutput) // 2
-            , timestepVerbose_(Parameters::get<TypeTag, Parameters::TimeStepVerbosity>() > 0 && terminalOutput) // 2
-            , suggestedNextTimestep_((max_next_tstep <= 0 ? Parameters::get<TypeTag, Parameters::InitialTimeStepInDays>() : max_next_tstep) * 24 * 60 * 60) // 1.0
-            , fullTimestepInitially_(Parameters::get<TypeTag, Parameters::FullTimeStepInitially>()) // false
+            , ignoreConvergenceFailure_(Parameters::Get<Parameters::SolverContinueOnConvergenceFailure>()) // false;
+            , solverRestartMax_(Parameters::Get<Parameters::SolverMaxRestarts>()) // 10
+            , solverVerbose_(Parameters::Get<Parameters::SolverVerbosity>() > 0 && terminalOutput) // 2
+            , timestepVerbose_(Parameters::Get<Parameters::TimeStepVerbosity>() > 0 && terminalOutput) // 2
+            , suggestedNextTimestep_((max_next_tstep <= 0 ? Parameters::Get<Parameters::InitialTimeStepInDays>() : max_next_tstep) * 24 * 60 * 60) // 1.0
+            , fullTimestepInitially_(Parameters::Get<Parameters::FullTimeStepInitially>()) // false
             , timestepAfterEvent_(Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>() * 24 * 60 * 60) // 1e30
             , useNewtonIteration_(false)
-            , minTimeStepBeforeShuttingProblematicWells_(Parameters::get<TypeTag, Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day)
+            , minTimeStepBeforeShuttingProblematicWells_(Parameters::Get<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day)
 
         {
             init_(unitSystem);
@@ -286,14 +155,14 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
             , maxTimeStep_(tuning.TSMAXZ) // 365.25
             , minTimeStep_(tuning.TSFMIN) // 0.1;
             , ignoreConvergenceFailure_(true)
-            , solverRestartMax_(Parameters::get<TypeTag, Parameters::SolverMaxRestarts>()) // 10
-            , solverVerbose_(Parameters::get<TypeTag, Parameters::SolverVerbosity>() > 0 && terminalOutput) // 2
-            , timestepVerbose_(Parameters::get<TypeTag, Parameters::TimeStepVerbosity>() > 0 && terminalOutput) // 2
-            , suggestedNextTimestep_(max_next_tstep <= 0 ? Parameters::get<TypeTag, Parameters::InitialTimeStepInDays>() * 24 * 60 * 60 : max_next_tstep) // 1.0
-            , fullTimestepInitially_(Parameters::get<TypeTag, Parameters::FullTimeStepInitially>()) // false
+            , solverRestartMax_(Parameters::Get<Parameters::SolverMaxRestarts>()) // 10
+            , solverVerbose_(Parameters::Get<Parameters::SolverVerbosity>() > 0 && terminalOutput) // 2
+            , timestepVerbose_(Parameters::Get<Parameters::TimeStepVerbosity>() > 0 && terminalOutput) // 2
+            , suggestedNextTimestep_(max_next_tstep <= 0 ? Parameters::Get<Parameters::InitialTimeStepInDays>() * 24 * 60 * 60 : max_next_tstep) // 1.0
+            , fullTimestepInitially_(Parameters::Get<Parameters::FullTimeStepInitially>()) // false
             , timestepAfterEvent_(tuning.TMAXWC) // 1e30
             , useNewtonIteration_(false)
-            , minTimeStepBeforeShuttingProblematicWells_(Parameters::get<TypeTag, Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day)
+            , minTimeStepBeforeShuttingProblematicWells_(Parameters::Get<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day)
         {
             init_(unitSystem);
         }
@@ -302,20 +171,20 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
         {
             registerEclTimeSteppingParameters<Scalar>();
             // TODO: make sure the help messages are correct (and useful)
-            Parameters::registerParam<TypeTag, Parameters::SolverContinueOnConvergenceFailure>
+            Parameters::Register<Parameters::SolverContinueOnConvergenceFailure>
                 ("Continue instead of stop when minimum solver time step is reached");
-            Parameters::registerParam<TypeTag, Parameters::SolverMaxRestarts>
+            Parameters::Register<Parameters::SolverMaxRestarts>
                 ("The maximum number of breakdowns before a substep is given up and "
                  "the simulator is terminated");
-            Parameters::registerParam<TypeTag, Parameters::SolverVerbosity>
+            Parameters::Register<Parameters::SolverVerbosity>
                 ("Specify the \"chattiness\" of the non-linear solver itself");
-            Parameters::registerParam<TypeTag, Parameters::TimeStepVerbosity>
+            Parameters::Register<Parameters::TimeStepVerbosity>
                 ("Specify the \"chattiness\" during the time integration");
-            Parameters::registerParam<TypeTag, Parameters::InitialTimeStepInDays>
+            Parameters::Register<Parameters::InitialTimeStepInDays>
                 ("The size of the initial time step in days");
-            Parameters::registerParam<TypeTag, Parameters::FullTimeStepInitially>
+            Parameters::Register<Parameters::FullTimeStepInitially>
                 ("Always attempt to finish a report step using a single substep");
-            Parameters::registerParam<TypeTag, Parameters::TimeStepControl>
+            Parameters::Register<Parameters::TimeStepControl>
                 ("The algorithm used to determine time-step sizes. "
                  "Valid options are: "
                  "'pid' (default), "
@@ -324,31 +193,31 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                  "'iterationcount', "
                 "'newtoniterationcount' "
                 "and 'hardcoded'");
-            Parameters::registerParam<TypeTag, Parameters::TimeStepControlTolerance>
+            Parameters::Register<Parameters::TimeStepControlTolerance>
                 ("The tolerance used by the time step size control algorithm");
-            Parameters::registerParam<TypeTag, Parameters::TimeStepControlTargetIterations>
+            Parameters::Register<Parameters::TimeStepControlTargetIterations>
                 ("The number of linear iterations which the time step control scheme "
                  "should aim for (if applicable)");
-            Parameters::registerParam<TypeTag, Parameters::TimeStepControlTargetNewtonIterations>
+            Parameters::Register<Parameters::TimeStepControlTargetNewtonIterations>
                 ("The number of Newton iterations which the time step control scheme "
                  "should aim for (if applicable)");
-            Parameters::registerParam<TypeTag, Parameters::TimeStepControlDecayRate>
+            Parameters::Register<Parameters::TimeStepControlDecayRate>
                 ("The decay rate of the time step size of the number of "
                  "target iterations is exceeded");
-            Parameters::registerParam<TypeTag, Parameters::TimeStepControlGrowthRate>
+            Parameters::Register<Parameters::TimeStepControlGrowthRate>
                 ("The growth rate of the time step size of the number of "
                  "target iterations is undercut");
-            Parameters::registerParam<TypeTag, Parameters::TimeStepControlDecayDampingFactor>
+            Parameters::Register<Parameters::TimeStepControlDecayDampingFactor>
                 ("The decay rate of the time step decrease when the "
                  "target iterations is exceeded");
-            Parameters::registerParam<TypeTag, Parameters::TimeStepControlGrowthDampingFactor>
+            Parameters::Register<Parameters::TimeStepControlGrowthDampingFactor>
                 ("The growth rate of the time step increase when the "
                  "target iterations is undercut");
-            Parameters::registerParam<TypeTag, Parameters::TimeStepControlFileName>
+            Parameters::Register<Parameters::TimeStepControlFileName>
                 ("The name of the file which contains the hardcoded time steps sizes");
-            Parameters::registerParam<TypeTag, Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>
+            Parameters::Register<Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>
                 ("The minimum time step size in days for which problematic wells are not shut");
-            Parameters::registerParam<TypeTag, Parameters::MinTimeStepBasedOnNewtonIterations>
+            Parameters::Register<Parameters::MinTimeStepBasedOnNewtonIterations>
                 ("The minimum time step size (in days for field and metric unit and hours for lab unit) "
                  "can be reduced to based on newton iteration counts");
         }
@@ -812,25 +681,25 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
         void init_(const UnitSystem& unitSystem)
         {
             // valid are "pid" and "pid+iteration"
-            std::string control = Parameters::get<TypeTag, Parameters::TimeStepControl>(); // "pid"
+            std::string control = Parameters::Get<Parameters::TimeStepControl>(); // "pid"
 
-            const double tol =  Parameters::get<TypeTag, Parameters::TimeStepControlTolerance>(); // 1e-1
+            const double tol =  Parameters::Get<Parameters::TimeStepControlTolerance>(); // 1e-1
             if (control == "pid") {
                 timeStepControl_ = std::make_unique<PIDTimeStepControl>(tol);
                 timeStepControlType_ = TimeStepControlType::PID;
             }
             else if (control == "pid+iteration") {
-                const int iterations =  Parameters::get<TypeTag, Parameters::TimeStepControlTargetIterations>(); // 30
-                const double decayDampingFactor = Parameters::get<TypeTag, Parameters::TimeStepControlDecayDampingFactor>(); // 1.0
-                const double growthDampingFactor = Parameters::get<TypeTag, Parameters::TimeStepControlGrowthDampingFactor>(); // 3.2
+                const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetIterations>(); // 30
+                const double decayDampingFactor = Parameters::Get<Parameters::TimeStepControlDecayDampingFactor>(); // 1.0
+                const double growthDampingFactor = Parameters::Get<Parameters::TimeStepControlGrowthDampingFactor>(); // 3.2
                 timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor, growthDampingFactor, tol);
                 timeStepControlType_ = TimeStepControlType::PIDAndIterationCount;
             }
             else if (control == "pid+newtoniteration") {
-                const int iterations =  Parameters::get<TypeTag, Parameters::TimeStepControlTargetNewtonIterations>(); // 8
-                const double decayDampingFactor = Parameters::get<TypeTag, Parameters::TimeStepControlDecayDampingFactor>(); // 1.0
-                const double growthDampingFactor = Parameters::get<TypeTag, Parameters::TimeStepControlGrowthDampingFactor>(); // 3.2
-                const double nonDimensionalMinTimeStepIterations = Parameters::get<TypeTag, Parameters::MinTimeStepBasedOnNewtonIterations>(); // 0.0 by default
+                const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetNewtonIterations>(); // 8
+                const double decayDampingFactor = Parameters::Get<Parameters::TimeStepControlDecayDampingFactor>(); // 1.0
+                const double growthDampingFactor = Parameters::Get<Parameters::TimeStepControlGrowthDampingFactor>(); // 3.2
+                const double nonDimensionalMinTimeStepIterations = Parameters::Get<Parameters::MinTimeStepBasedOnNewtonIterations>(); // 0.0 by default
                 // the min time step can be reduced by the newton iteration numbers
                 double minTimeStepReducedByIterations = unitSystem.to_si(UnitSystem::measure::time, nonDimensionalMinTimeStepIterations);
                 timeStepControl_ = std::make_unique<PIDAndIterationCountTimeStepControl>(iterations, decayDampingFactor,
@@ -839,22 +708,22 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                 useNewtonIteration_ = true;
             }
             else if (control == "iterationcount") {
-                const int iterations =  Parameters::get<TypeTag, Parameters::TimeStepControlTargetIterations>(); // 30
-                const double decayrate = Parameters::get<TypeTag, Parameters::TimeStepControlDecayRate>(); // 0.75
-                const double growthrate = Parameters::get<TypeTag, Parameters::TimeStepControlGrowthRate>(); // 1.25
+                const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetIterations>(); // 30
+                const double decayrate = Parameters::Get<Parameters::TimeStepControlDecayRate>(); // 0.75
+                const double growthrate = Parameters::Get<Parameters::TimeStepControlGrowthRate>(); // 1.25
                 timeStepControl_ = std::make_unique<SimpleIterationCountTimeStepControl>(iterations, decayrate, growthrate);
                 timeStepControlType_ = TimeStepControlType::SimpleIterationCount;
             }
             else if (control == "newtoniterationcount") {
-                const int iterations =  Parameters::get<TypeTag, Parameters::TimeStepControlTargetNewtonIterations>(); // 8
-                const double decayrate = Parameters::get<TypeTag, Parameters::TimeStepControlDecayRate>(); // 0.75
-                const double growthrate = Parameters::get<TypeTag, Parameters::TimeStepControlGrowthRate>(); // 1.25
+                const int iterations =  Parameters::Get<Parameters::TimeStepControlTargetNewtonIterations>(); // 8
+                const double decayrate = Parameters::Get<Parameters::TimeStepControlDecayRate>(); // 0.75
+                const double growthrate = Parameters::Get<Parameters::TimeStepControlGrowthRate>(); // 1.25
                 timeStepControl_ = std::make_unique<SimpleIterationCountTimeStepControl>(iterations, decayrate, growthrate);
                 useNewtonIteration_ = true;
                 timeStepControlType_ = TimeStepControlType::SimpleIterationCount;
             }
             else if (control == "hardcoded") {
-                const std::string filename = Parameters::get<TypeTag, Parameters::TimeStepControlFileName>(); // "timesteps"
+                const std::string filename = Parameters::Get<Parameters::TimeStepControlFileName>(); // "timesteps"
                 timeStepControl_ = std::make_unique<HardcodedTimeStepControl>(filename);
                 timeStepControlType_ = TimeStepControlType::HardCodedTimeStep;
             }

@@ -74,11 +74,11 @@
 namespace Opm::Properties {
 
 namespace TTag {
-struct FlowProblem {
-    using InheritsFrom = std::tuple<FlowTimeSteppingParameters,
-                                    FlowBaseProblem, BlackOilModel>;
-};
+
+struct FlowProblem { using InheritsFrom = std::tuple<FlowBaseProblem, BlackOilModel>; };
+
 }
+
 // default in flow is to formulate the equations in surface volumes
 template<class TypeTag>
 struct BlackoilConserveSurfaceVolume<TypeTag, TTag::FlowProblem>
