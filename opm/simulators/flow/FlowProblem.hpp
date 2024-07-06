@@ -338,9 +338,9 @@ public:
         enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
         enableVtkOutput_ = Parameters::Get<Parameters::EnableVtkOutput>();
 
-        this->enableTuning_ = Parameters::get<TypeTag, Parameters::EnableTuning>();
+        this->enableTuning_ = Parameters::Get<Parameters::EnableTuning>();
         this->initialTimeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
-        this->maxTimeStepAfterWellEvent_ = Parameters::get<TypeTag, Parameters::TimeStepAfterEventInDays>() * 24 * 60 * 60;
+        this->maxTimeStepAfterWellEvent_ = Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>() * 24 * 60 * 60;
 
         // The value N for this parameter is defined in the following order of presedence:
         // 1. Command line value (--num-pressure-points-equil=N)
@@ -2723,7 +2723,7 @@ private:
             int episodeIdx = simulator.episodeIndex();
 
             // first thing in the morning, limit the time step size to the maximum size
-            Scalar maxTimeStepSize = Parameters::get<TypeTag, Parameters::SolverMaxTimeStepInDays>() * 24 * 60 * 60;
+            Scalar maxTimeStepSize = Parameters::Get<Parameters::SolverMaxTimeStepInDays<Scalar>>() * 24 * 60 * 60;
             int reportStepIdx = std::max(episodeIdx, 0);
             if (this->enableTuning_) {
                 const auto& tuning = schedule[reportStepIdx].tuning();

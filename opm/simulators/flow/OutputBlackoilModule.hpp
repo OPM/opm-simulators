@@ -65,28 +65,10 @@
 #include <utility>
 #include <vector>
 
-namespace Opm::Properties::TTag {
-
-// create new type tag for the Ecl-output
-struct OutputBlackOil {};
-
-} // namespace Opm::Properties::TTag
-
 namespace Opm::Parameters {
 
-template <class TypeTag, class MyTypeTag>
-struct ForceDisableFluidInPlaceOutput { using type = Properties::UndefinedProperty; };
-
-template <class TypeTag, class MyTypeTag>
-struct ForceDisableResvFluidInPlaceOutput { using type = Properties::UndefinedProperty; };
-
-template <class TypeTag>
-struct ForceDisableFluidInPlaceOutput<TypeTag, Properties::TTag::OutputBlackOil>
-{ static constexpr bool value = false; };
-
-template <class TypeTag>
-struct ForceDisableResvFluidInPlaceOutput<TypeTag, Properties::TTag::OutputBlackOil>
-{ static constexpr bool value = false; };
+struct ForceDisableFluidInPlaceOutput { static constexpr bool value = false; };
+struct ForceDisableResvFluidInPlaceOutput { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
@@ -165,10 +147,10 @@ public:
         this->setupBlockData(isCartIdxOnThisRank);
 
         this->forceDisableFipOutput_ =
-            Parameters::get<TypeTag, Parameters::ForceDisableFluidInPlaceOutput>();
+            Parameters::Get<Parameters::ForceDisableFluidInPlaceOutput>();
 
         this->forceDisableFipresvOutput_ =
-            Parameters::get<TypeTag, Parameters::ForceDisableResvFluidInPlaceOutput>();
+            Parameters::Get<Parameters::ForceDisableResvFluidInPlaceOutput>();
 
         if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
@@ -199,10 +181,10 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::ForceDisableFluidInPlaceOutput>
+        Parameters::Register<Parameters::ForceDisableFluidInPlaceOutput>
             ("Do not print fluid-in-place values after each report step "
              "even if requested by the deck.");
-        Parameters::registerParam<TypeTag, Parameters::ForceDisableResvFluidInPlaceOutput>
+        Parameters::Register<Parameters::ForceDisableResvFluidInPlaceOutput>
             ("Do not print reservoir volumes values after each report step "
              "even if requested by the deck.");
     }

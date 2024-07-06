@@ -26,104 +26,49 @@
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-
-namespace Opm::Properties::TTag {
-
-struct EclTimeSteppingParameters {};
-
-}
-
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct EnableTuning { using type = Properties::UndefinedProperty; };
+struct EnableTuning { static constexpr bool value = false; };
+template<class Scalar>
+struct SolverGrowthFactor { static constexpr Scalar value = 2.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct SolverGrowthFactor { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct SolverMaxGrowth { static constexpr Scalar value = 3.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct SolverMaxGrowth { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct SolverMinTimeStep { static constexpr Scalar value = 1e-12; };
 
-template<class TypeTag, class MyTypeTag>
-struct SolverMaxTimeStepInDays { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct SolverMaxTimeStepInDays { static constexpr Scalar value = 365.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct SolverMinTimeStep { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct SolverRestartFactor { static constexpr Scalar value = 0.33; };
 
-template<class TypeTag, class MyTypeTag>
-struct SolverRestartFactor { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct TimeStepAfterEventInDays { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag>
-struct EnableTuning<TypeTag, Properties::TTag::EclTimeSteppingParameters>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct SolverGrowthFactor<TypeTag, Properties::TTag::EclTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 2.0;
-};
-
-template<class TypeTag>
-struct SolverMaxGrowth<TypeTag, Properties::TTag::EclTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 3.0;
-};
-
-template<class TypeTag>
-struct SolverMinTimeStep<TypeTag, Properties::TTag::EclTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0e-12;
-};
-
-template<class TypeTag>
-struct SolverMaxTimeStepInDays<TypeTag, Properties::TTag::EclTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 365.0;
-};
-
-template<class TypeTag>
-struct SolverRestartFactor<TypeTag, Properties::TTag::EclTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.33;
-};
-
-template<class TypeTag>
-struct TimeStepAfterEventInDays<TypeTag, Properties::TTag::EclTimeSteppingParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = -1.0;
-};
+template<class Scalar>
+struct TimeStepAfterEventInDays { static constexpr Scalar value = -1.0; };
 
 } // namespace Opm::Properties
 
 namespace Opm {
 
-template<class TypeTag>
+template<class Scalar>
 void registerEclTimeSteppingParameters()
 {
-    Parameters::registerParam<TypeTag, Parameters::EnableTuning>
+    Parameters::Register<Parameters::EnableTuning>
         ("Honor some aspects of the TUNING keyword.");
-    Parameters::registerParam<TypeTag, Parameters::SolverGrowthFactor>
+    Parameters::Register<Parameters::SolverGrowthFactor<Scalar>>
         ("The factor time steps are elongated after a successful substep");
-    Parameters::registerParam<TypeTag, Parameters::SolverMaxGrowth>
+    Parameters::Register<Parameters::SolverMaxGrowth<Scalar>>
         ("The maximum factor time steps are elongated after a report step");
-    Parameters::registerParam<TypeTag, Parameters::SolverMaxTimeStepInDays>
+    Parameters::Register<Parameters::SolverMaxTimeStepInDays<Scalar>>
         ("The maximum size of a time step in days");
-    Parameters::registerParam<TypeTag, Parameters::SolverMinTimeStep>
+    Parameters::Register<Parameters::SolverMinTimeStep<Scalar>>
         ("The minimum size of a time step in days for field and "
          "metric and hours for lab. If a step cannot converge without "
          "getting cut below this step size the simulator will stop");
-    Parameters::registerParam<TypeTag, Parameters::SolverRestartFactor>
+    Parameters::Register<Parameters::SolverRestartFactor<Scalar>>
         ("The factor time steps are elongated after restarts");
-    Parameters::registerParam<TypeTag, Parameters::TimeStepAfterEventInDays>
+    Parameters::Register<Parameters::TimeStepAfterEventInDays<Scalar>>
         ("Time step size of the first time step after an event "
          "occurs during the simulation in days");
 }

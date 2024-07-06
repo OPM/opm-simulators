@@ -57,7 +57,7 @@ namespace TTag {
 
 struct FlowExpTypeTag
 {
-    using InheritsFrom = std::tuple<FlowBaseProblem, BlackOilModel, EclTimeSteppingParameters>;
+    using InheritsFrom = std::tuple<FlowBaseProblem, BlackOilModel>;
 };
 
 }

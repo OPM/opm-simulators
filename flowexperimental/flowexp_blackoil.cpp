@@ -78,6 +78,6 @@ struct Simulator<TypeTag, TTag::FlowExpProblemBlackOil>
 int main(int argc, char** argv)
 {
     using TypeTag = Opm::Properties::TTag::FlowExpProblemBlackOil;
-    Opm::registerEclTimeSteppingParameters<TypeTag>();
+    Opm::registerEclTimeSteppingParameters<double>();
     return Opm::start<TypeTag>(argc, argv);
 }

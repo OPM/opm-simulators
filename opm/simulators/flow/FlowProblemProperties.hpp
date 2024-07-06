@@ -60,7 +60,7 @@ namespace Opm::Properties {
 namespace TTag {
 
 struct FlowBaseProblem {
-    using InheritsFrom = std::tuple<OutputBlackOil, CpGridVanguard>;
+    using InheritsFrom = std::tuple<CpGridVanguard>;
 };
 
 }

@@ -43,9 +43,9 @@ namespace TTag {
 struct TestTypeTag
 {
     using InheritsFrom = std::tuple<FlowBaseProblem,
-                                    BlackOilModel,
-                                    EclTimeSteppingParameters>;
+                                    BlackOilModel>;
 };
+
 }
 
 // Set the problem class

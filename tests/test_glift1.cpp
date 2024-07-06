@@ -87,7 +87,7 @@ initSimulator(const char *filename)
 
     Parameters::reset();
     registerAllParameters_<TypeTag>(false);
-    registerEclTimeSteppingParameters<TypeTag>();
+    registerEclTimeSteppingParameters<double>();
     BlackoilModelParameters<TypeTag>::registerParameters();
     Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
     Opm::Parameters::SetDefault<Opm::Parameters::ThreadsPerProcess>(2);

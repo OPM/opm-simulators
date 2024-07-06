@@ -49,9 +49,7 @@
 
 namespace Opm::Properties::TTag {
 
-struct FlowTimeSteppingParameters {
-  using InheritsFrom = std::tuple<EclTimeSteppingParameters>;
-};
+struct FlowTimeSteppingParameters {};
 
 }
 
@@ -219,6 +217,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
     template<class TypeTag>
     class AdaptiveTimeStepping
     {
+        using Scalar = GetPropType<TypeTag, Properties::Scalar>;
         template <class Solver>
         class SolutionTimeErrorSolverWrapper : public RelativeChangeInterface
         {
@@ -252,18 +251,18 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
                              const double max_next_tstep = -1.0,
                              const bool terminalOutput = true)
             : timeStepControl_()
-            , restartFactor_(Parameters::get<TypeTag, Parameters::SolverRestartFactor>()) // 0.33
-            , growthFactor_(Parameters::get<TypeTag, Parameters::SolverGrowthFactor>()) // 2.0
-            , maxGrowth_(Parameters::get<TypeTag, Parameters::SolverMaxGrowth>()) // 3.0
-            , maxTimeStep_(Parameters::get<TypeTag, Parameters::SolverMaxTimeStepInDays>() * 24 * 60 * 60) // 365.25
-            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, Parameters::get<TypeTag, Parameters::SolverMinTimeStep>())) // 1e-12;
+            , restartFactor_(Parameters::Get<Parameters::SolverRestartFactor<Scalar>>()) // 0.33
+            , growthFactor_(Parameters::Get<Parameters::SolverGrowthFactor<Scalar>>()) // 2.0
+            , maxGrowth_(Parameters::Get<Parameters::SolverMaxGrowth<Scalar>>()) // 3.0
+            , maxTimeStep_(Parameters::Get<Parameters::SolverMaxTimeStepInDays<Scalar>>() * 24 * 60 * 60) // 365.25
+            , minTimeStep_(unitSystem.to_si(UnitSystem::measure::time, Parameters::Get<Parameters::SolverMinTimeStep<Scalar>>())) // 1e-12;
             , ignoreConvergenceFailure_(Parameters::get<TypeTag, Parameters::SolverContinueOnConvergenceFailure>()) // false;
             , solverRestartMax_(Parameters::get<TypeTag, Parameters::SolverMaxRestarts>()) // 10
             , solverVerbose_(Parameters::get<TypeTag, Parameters::SolverVerbosity>() > 0 && terminalOutput) // 2
             , timestepVerbose_(Parameters::get<TypeTag, Parameters::TimeStepVerbosity>() > 0 && terminalOutput) // 2
             , suggestedNextTimestep_((max_next_tstep <= 0 ? Parameters::get<TypeTag, Parameters::InitialTimeStepInDays>() : max_next_tstep) * 24 * 60 * 60) // 1.0
             , fullTimestepInitially_(Parameters::get<TypeTag, Parameters::FullTimeStepInitially>()) // false
-            , timestepAfterEvent_(Parameters::get<TypeTag, Parameters::TimeStepAfterEventInDays>() * 24 * 60 * 60) // 1e30
+            , timestepAfterEvent_(Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>() * 24 * 60 * 60) // 1e30
             , useNewtonIteration_(false)
             , minTimeStepBeforeShuttingProblematicWells_(Parameters::get<TypeTag, Parameters::MinTimeStepBeforeShuttingProblematicWellsInDays>() * unit::day)
 
@@ -301,7 +300,7 @@ std::set<std::string> consistentlyFailingWells(const std::vector<StepReport>& sr
 
         static void registerParameters()
         {
-            registerEclTimeSteppingParameters<TypeTag>();
+            registerEclTimeSteppingParameters<Scalar>();
             // TODO: make sure the help messages are correct (and useful)
             Parameters::registerParam<TypeTag, Parameters::SolverContinueOnConvergenceFailure>
                 ("Continue instead of stop when minimum solver time step is reached");
