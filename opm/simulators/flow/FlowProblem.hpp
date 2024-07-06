@@ -258,6 +258,9 @@ public:
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(3600*24);
         // Disable the VTK output by default for this problem ...
         Parameters::SetDefault<Parameters::EnableVtkOutput>(false);
+        // the cache for intensive quantities can be used for ECL problems and also yields a
+        // decent speedup...
+        Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
     }
 
 

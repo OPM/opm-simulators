@@ -120,7 +120,7 @@ namespace Opm {
             // this parameter is actually used in eWoms, but the flow well model
             // hard-codes the assumption that the intensive quantities cache is enabled,
             // so flow crashes. Let's hide the parameter for that reason.
-            Parameters::hideParam<TypeTag, Parameters::EnableIntensiveQuantityCache>();
+            Parameters::Hide<Parameters::EnableIntensiveQuantityCache>();
 
             // thermodynamic hints are not implemented/required by the eWoms blackoil
             // model
