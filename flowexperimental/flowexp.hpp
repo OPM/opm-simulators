@@ -54,9 +54,12 @@ class FlowExpProblem;
 namespace Opm::Properties {
 
 namespace TTag {
-struct FlowExpTypeTag {
-    using InheritsFrom = std::tuple<FlowModelParameters, FlowBaseProblem, BlackOilModel, EclTimeSteppingParameters>;
+
+struct FlowExpTypeTag
+{
+    using InheritsFrom = std::tuple<FlowBaseProblem, BlackOilModel, EclTimeSteppingParameters>;
 };
+
 }
 
 // Set the problem class
@@ -120,22 +123,6 @@ struct LinearSolverBackend<TypeTag, TTag::FlowExpTypeTag> {
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// currently, flowexp uses the non-multisegment well model by default to avoid
-// regressions. the --use-multisegment-well=true|false command line parameter is still
-// available in flowexp, but hidden from view.
-template<class TypeTag>
-struct UseMultisegmentWell<TypeTag, Properties::TTag::FlowExpTypeTag>
-{ static constexpr bool value = false; };
-
-// set some properties that are only required by the well model
-template<class TypeTag>
-struct MatrixAddWellContributions<TypeTag, Properties::TTag::FlowExpTypeTag>
-{ static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 template <class TypeTag>
 class FlowExpProblem : public FlowProblem<TypeTag> //, public FvBaseProblem<TypeTag>
@@ -165,33 +152,33 @@ public:
 
         BlackoilModelParameters<TypeTag>::registerParameters();
         Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
-        Parameters::hideParam<TypeTag, Parameters::DbhpMaxRel>();
-        Parameters::hideParam<TypeTag, Parameters::DwellFractionMax>();
-        Parameters::hideParam<TypeTag, Parameters::MaxResidualAllowed>();
-        Parameters::hideParam<TypeTag, Parameters::ToleranceMb>();
-        Parameters::hideParam<TypeTag, Parameters::ToleranceMbRelaxed>();
-        Parameters::hideParam<TypeTag, Parameters::ToleranceCnv>();
-        Parameters::hideParam<TypeTag, Parameters::ToleranceCnvRelaxed>();
-        Parameters::hideParam<TypeTag, Parameters::ToleranceWells>();
-        Parameters::hideParam<TypeTag, Parameters::ToleranceWellControl>();
-        Parameters::hideParam<TypeTag, Parameters::MaxWelleqIter>();
-        Parameters::hideParam<TypeTag, Parameters::UseMultisegmentWell>();
-        Parameters::hideParam<TypeTag, Parameters::TolerancePressureMsWells>();
-        Parameters::hideParam<TypeTag, Parameters::MaxPressureChangeMsWells>();
-        Parameters::hideParam<TypeTag, Parameters::MaxInnerIterMsWells>();
-        Parameters::hideParam<TypeTag, Parameters::MaxNewtonIterationsWithInnerWellIterations>();
-        Parameters::hideParam<TypeTag, Parameters::MaxInnerIterWells>();
-        Parameters::hideParam<TypeTag, Parameters::MaxSinglePrecisionDays>();
-        Parameters::hideParam<TypeTag, Parameters::MinStrictCnvIter>();
-        Parameters::hideParam<TypeTag, Parameters::MinStrictMbIter>();
-        Parameters::hideParam<TypeTag, Parameters::SolveWelleqInitially>();
-        Parameters::hideParam<TypeTag, Parameters::UpdateEquationsScaling>();
-        Parameters::hideParam<TypeTag, Parameters::UseUpdateStabilization>();
-        Parameters::hideParam<TypeTag, Parameters::MatrixAddWellContributions>();
+        Parameters::Hide<Parameters::DbhpMaxRel<Scalar>>();
+        Parameters::Hide<Parameters::DwellFractionMax<Scalar>>();
+        Parameters::Hide<Parameters::MaxResidualAllowed<Scalar>>();
+        Parameters::Hide<Parameters::ToleranceMb<Scalar>>();
+        Parameters::Hide<Parameters::ToleranceMbRelaxed<Scalar>>();
+        Parameters::Hide<Parameters::ToleranceCnv<Scalar>>();
+        Parameters::Hide<Parameters::ToleranceCnvRelaxed<Scalar>>();
+        Parameters::Hide<Parameters::ToleranceWells<Scalar>>();
+        Parameters::Hide<Parameters::ToleranceWellControl<Scalar>>();
+        Parameters::Hide<Parameters::MaxWelleqIter>();
+        Parameters::Hide<Parameters::UseMultisegmentWell>();
+        Parameters::Hide<Parameters::TolerancePressureMsWells<Scalar>>();
+        Parameters::Hide<Parameters::MaxPressureChangeMsWells<Scalar>>();
+        Parameters::Hide<Parameters::MaxInnerIterMsWells>();
+        Parameters::Hide<Parameters::MaxNewtonIterationsWithInnerWellIterations>();
+        Parameters::Hide<Parameters::MaxInnerIterWells>();
+        Parameters::Hide<Parameters::MaxSinglePrecisionDays<Scalar>>();
+        Parameters::Hide<Parameters::MinStrictCnvIter>();
+        Parameters::Hide<Parameters::MinStrictMbIter>();
+        Parameters::Hide<Parameters::SolveWelleqInitially>();
+        Parameters::Hide<Parameters::UpdateEquationsScaling>();
+        Parameters::Hide<Parameters::UseUpdateStabilization>();
+        Parameters::Hide<Parameters::MatrixAddWellContributions>();
         Parameters::Hide<Parameters::EnableTerminalOutput>();
 
         // if openMP is available, set the default the number of threads per process for the main
-        // simulation to 2 (instead of grabbing everything that is available).
+        // simulation to 1 (instead of grabbing everything that is available).
 #if _OPENMP
         Parameters::SetDefault<Parameters::ThreadsPerProcess>(2);
 #endif
@@ -206,6 +193,12 @@ public:
         Parameters::SetDefault<Parameters::EclNewtonRelaxedVolumeFraction<Scalar>>(0.0);
         Parameters::SetDefault<Parameters::EclNewtonSumTolerance<Scalar>>(1e-5);
         Parameters::SetDefault<Parameters::EnableTerminalOutput>(false);
+
+        // currently, flowexp uses the non-multisegment well model by default to avoid
+        // regressions. the --use-multisegment-well=true|false command line parameter is still
+        // available in flowexp, but hidden from view.
+        Parameters::SetDefault<Parameters::UseMultisegmentWell>(false);
+        Parameters::SetDefault<Parameters::MatrixAddWellContributions>(false);
     }
 
     // inherit the constructors

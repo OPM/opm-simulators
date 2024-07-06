@@ -94,7 +94,7 @@ namespace Opm {
         }
 
         this->alternative_well_rate_init_ =
-            Parameters::get<TypeTag, Parameters::AlternativeWellRateInit>();
+            Parameters::Get<Parameters::AlternativeWellRateInit>();
 
         using SourceDataSpan = 
             typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;

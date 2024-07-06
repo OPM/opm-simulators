@@ -27,6 +27,8 @@
 #ifndef OPM_FLOW_BASE_VANGUARD_HPP
 #define OPM_FLOW_BASE_VANGUARD_HPP
 
+#include <dune/grid/common/partitionset.hh>
+
 #include <opm/grid/common/GridEnums.hpp>
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 #include <opm/grid/LookUpCellCentroid.hh>
@@ -69,10 +71,6 @@ struct EquilGrid { using type = UndefinedProperty; };
 
 namespace Opm::Parameters {
 
-template<class TypeTag>
-struct EclDeckFileName<TypeTag, Properties::TTag::FlowBaseVanguard>
-{ static constexpr auto value = ""; };
-
 // TODO: enumeration parameters. we use strings for now.
 template<class TypeTag, class MyTypeTag>
 struct EnableDryRun { using type = Properties::UndefinedProperty; };
@@ -114,11 +112,6 @@ struct PartitionMethod { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag, class MyTypeTag>
 struct SerialPartitioning { using type = Properties::UndefinedProperty; };
-
-// Same as in BlackoilModelParameters.hpp but for here.
-template<class TypeTag>
-struct UseMultisegmentWell<TypeTag, Properties::TTag::FlowBaseVanguard>
-{ static constexpr bool value = true; };
 
 template<class TypeTag, class MyTypeTag>
 struct ZoltanImbalanceTol { using type = Properties::UndefinedProperty; };
@@ -247,7 +240,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::EclDeckFileName>
+        Parameters::Register<Parameters::EclDeckFileName>
             ("The name of the file which contains the ECL deck to be simulated");
         Parameters::registerParam<TypeTag, Parameters::EclOutputInterval>
             ("The number of report steps that ought to be skipped between two writes of ECL results");
@@ -316,7 +309,7 @@ public:
         Parameters::registerParam<TypeTag, Parameters::AllowDistributedWells>
             ("Allow the perforations of a well to be distributed to interior of multiple processes");
         // register here for the use in the tests without BlackoilModelParameters
-        Parameters::registerParam<TypeTag, Parameters::UseMultisegmentWell>
+        Parameters::Register<Parameters::UseMultisegmentWell>
             ("Use the well model for multi-segment wells instead of the one for single-segment wells");
     }
 
@@ -329,7 +322,7 @@ public:
     FlowBaseVanguard(Simulator& simulator)
         : ParentType(simulator)
     {
-        fileName_ = Parameters::get<TypeTag, Parameters::EclDeckFileName>();
+        fileName_ = Parameters::Get<Parameters::EclDeckFileName>();
         edgeWeightsMethod_   = Dune::EdgeWeightMethod(Parameters::get<TypeTag, Parameters::EdgeWeightsMethod>());
 
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
@@ -355,7 +348,7 @@ public:
         int output_param = Parameters::get<TypeTag, Parameters::EclOutputInterval>();
         if (output_param >= 0)
             outputInterval_ = output_param;
-        useMultisegmentWell_ = Parameters::get<TypeTag, Parameters::UseMultisegmentWell>();
+        useMultisegmentWell_ = Parameters::Get<Parameters::UseMultisegmentWell>();
         enableExperiments_ = enableExperiments;
 
         init();

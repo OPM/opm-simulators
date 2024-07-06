@@ -72,10 +72,13 @@ namespace TTag {
 
 
 struct TestEquilTypeTag {
-    using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters, FlowBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowTimeSteppingParameters,
+                                    FlowBaseProblem,
+                                    BlackOilModel>;
 };
 struct TestEquilVapwatTypeTag {
-    using InheritsFrom = std::tuple<FlowModelParameters, FlowBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowBaseProblem,
+                                    BlackOilModel>;
 };
 }
 
