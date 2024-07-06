@@ -129,7 +129,7 @@ namespace Opm {
             Parameters::Hide<Parameters::EndTime<Scalar>>();
 
             // time stepping is not done by the eWoms code in flow
-            Parameters::hideParam<TypeTag, Parameters::InitialTimeStepSize>();
+            Parameters::Hide<Parameters::InitialTimeStepSize<Scalar>>();
             Parameters::hideParam<TypeTag, Parameters::MaxTimeStepDivisions>();
             Parameters::hideParam<TypeTag, Parameters::MaxTimeStepSize>();
             Parameters::hideParam<TypeTag, Parameters::MinTimeStepSize>();

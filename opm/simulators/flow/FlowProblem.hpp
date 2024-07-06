@@ -252,6 +252,10 @@ public:
         // to exist. (the ECL problem will finish the simulation explicitly
         // after it simulated the last episode specified in the deck.)
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(1e100);
+        // The chosen value means that the size of the first time step is the
+        // one of the initial episode (if the length of the initial episode is
+        // not millions of trillions of years, that is...)
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(3600*24);
     }
 
 
@@ -325,7 +329,7 @@ public:
         enableVtkOutput_ = Parameters::get<TypeTag, Parameters::EnableVtkOutput>();
 
         this->enableTuning_ = Parameters::get<TypeTag, Parameters::EnableTuning>();
-        this->initialTimeStepSize_ = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
+        this->initialTimeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
         this->maxTimeStepAfterWellEvent_ = Parameters::get<TypeTag, Parameters::TimeStepAfterEventInDays>() * 24 * 60 * 60;
 
         // The value N for this parameter is defined in the following order of presedence:

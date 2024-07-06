@@ -414,18 +414,6 @@ template<class TypeTag>
 struct ExplicitRockCompaction<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
-// The default for the initial time step size of the simulation [s].
-//
-// The chosen value means that the size of the first time step is the
-// one of the initial episode (if the length of the initial episode is
-// not millions of trillions of years, that is...)
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::FlowBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 3600*24;
-};
-
 // the default for the allowed volumetric error for oil per second
 template<class TypeTag>
 struct NewtonTolerance<TypeTag, Properties::TTag::FlowBaseProblem>
