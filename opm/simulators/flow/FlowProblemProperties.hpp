@@ -399,11 +399,6 @@ template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
 
-// Disable the VTK output by default for this problem ...
-template<class TypeTag>
-struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = false; };
-
 // only write the solutions for the report steps to disk
 template<class TypeTag>
 struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowBaseProblem>

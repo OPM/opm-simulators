@@ -256,6 +256,8 @@ public:
         // one of the initial episode (if the length of the initial episode is
         // not millions of trillions of years, that is...)
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(3600*24);
+        // Disable the VTK output by default for this problem ...
+        Parameters::SetDefault<Parameters::EnableVtkOutput>(false);
     }
 
 
@@ -326,7 +328,7 @@ public:
         enableDriftCompensation_ = Parameters::get<TypeTag, Parameters::EnableDriftCompensation>();
 
         enableEclOutput_ = Parameters::get<TypeTag, Parameters::EnableEclOutput>();
-        enableVtkOutput_ = Parameters::get<TypeTag, Parameters::EnableVtkOutput>();
+        enableVtkOutput_ = Parameters::Get<Parameters::EnableVtkOutput>();
 
         this->enableTuning_ = Parameters::get<TypeTag, Parameters::EnableTuning>();
         this->initialTimeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
