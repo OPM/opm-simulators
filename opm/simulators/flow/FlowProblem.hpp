@@ -221,17 +221,17 @@ public:
 
         VtkTracerModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::EnableWriteAllSolutions>
+        Parameters::Register<Parameters::EnableWriteAllSolutions>
            ("Write all solutions to disk instead of only the ones for the "
             "report steps");
-        Parameters::registerParam<TypeTag, Parameters::EnableEclOutput>
+        Parameters::Register<Parameters::EnableEclOutput>
             ("Write binary output which is compatible with the commercial "
              "Eclipse simulator");
 #if HAVE_DAMARIS
         Parameters::Register<Parameters::EnableDamarisOutput>
             ("Write a specific variable using Damaris in a separate core");
 #endif
-        Parameters::registerParam<TypeTag, Parameters::EclOutputDoublePrecision>
+        Parameters::Register<Parameters::EclOutputDoublePrecision>
             ("Tell the output writer to use double precision. Useful for 'perfect' restarts");
         Parameters::Register<Parameters::RestartWritingInterval>
             ("The frequencies of which time steps are serialized to disk");
@@ -335,7 +335,7 @@ public:
 #endif
         enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>();
 
-        enableEclOutput_ = Parameters::get<TypeTag, Parameters::EnableEclOutput>();
+        enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
         enableVtkOutput_ = Parameters::Get<Parameters::EnableVtkOutput>();
 
         this->enableTuning_ = Parameters::get<TypeTag, Parameters::EnableTuning>();
@@ -810,7 +810,7 @@ public:
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
-        if (Parameters::get<TypeTag, Parameters::EnableWriteAllSolutions>() ||
+        if (Parameters::Get<Parameters::EnableWriteAllSolutions>() ||
             this->simulator().episodeWillBeOver()) {
             ParentType::writeOutput(verbose);
         }

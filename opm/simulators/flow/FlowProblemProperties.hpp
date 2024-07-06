@@ -275,40 +275,4 @@ struct EnableDebuggingChecks<TypeTag, TTag::FlowBaseProblem>
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// By default, use single precision for the ECL formated results
-template<class TypeTag>
-struct EclOutputDoublePrecision<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = false; };
-
-// If available, write the ECL output in a non-blocking manner
-template<class TypeTag>
-struct EnableAsyncEclOutput<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
-
-// Drift compensation is an experimental feature, i.e., systematic errors in the
-// conservation quantities are only compensated for
-// as default if experimental mode is enabled.
-template<class TypeTag>
-struct EnableDriftCompensation<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = false; };
-
-// enable the ECL output by default
-template<class TypeTag>
-struct EnableEclOutput<TypeTag,Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
-
-// Write ESMRY file for fast loading of summary data
-template<class TypeTag>
-struct EnableEsmry<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = false; };
-
-// only write the solutions for the report steps to disk
-template<class TypeTag>
-struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
-
 #endif // OPM_FLOW_PROBLEM_PROPERTIES_HPP

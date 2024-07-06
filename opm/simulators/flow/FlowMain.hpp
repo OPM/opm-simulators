@@ -137,7 +137,7 @@ namespace Opm {
             Parameters::Hide<Parameters::RestartTime<Scalar>>();
             Parameters::Hide<Parameters::RestartWritingInterval>();
             // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
-            //if(not(Parameters::get<TypeTag,Properties::EnableVtkOutput>())){
+            //if(not(Parameters::Get<Parameters::EnableVtkOutput>())){
                 Parameters::Hide<Parameters::VtkWriteOilFormationVolumeFactor>();
                 Parameters::Hide<Parameters::VtkWriteOilSaturationPressure>();
                 Parameters::Hide<Parameters::VtkWriteOilVaporizationFactor>();
