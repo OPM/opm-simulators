@@ -170,7 +170,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
 
         static void registerParameters()
         {
-            FlowLinearSolverParameters::registerParameters<TypeTag>();
+            FlowLinearSolverParameters::registerParameters();
         }
 
         /// Construct a system solver.
@@ -203,7 +203,7 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
               matrix_(nullptr)
         {
             parameters_.resize(1);
-            parameters_[0].template init<TypeTag>(simulator_.vanguard().eclState().getSimulationConfig().useCPR());
+            parameters_[0].init(simulator_.vanguard().eclState().getSimulationConfig().useCPR());
             initialize();
         }
 
@@ -220,21 +220,21 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 parameters_.clear();
                 {
                     FlowLinearSolverParameters para;
-                    para.init<TypeTag>(false);
+                    para.init(false);
                     para.linsolver_ = "cprw";
                     parameters_.push_back(para);
                     prm_.push_back(setupPropertyTree(parameters_[0],
-                                                     Parameters::isSet<TypeTag, Parameters::LinearSolverMaxIter>(),
-                                                     Parameters::isSet<TypeTag, Parameters::LinearSolverReduction>()));
+                                                     Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
+                                                     Parameters::IsSet<Parameters::LinearSolverReduction>()));
                 }
                 {
                     FlowLinearSolverParameters para;
-                    para.init<TypeTag>(false);
+                    para.init(false);
                     para.linsolver_ = "ilu0";
                     parameters_.push_back(para);
                     prm_.push_back(setupPropertyTree(parameters_[1],
-                                                     Parameters::isSet<TypeTag, Parameters::LinearSolverMaxIter>(),
-                                                     Parameters::isSet<TypeTag, Parameters::LinearSolverReduction>()));
+                                                     Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
+                                                     Parameters::IsSet<Parameters::LinearSolverReduction>()));
                 }
                 // ------------
             } else {
@@ -242,8 +242,8 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 assert(parameters_.size() == 1);
                 assert(prm_.empty());
                 prm_.push_back(setupPropertyTree(parameters_[0],
-                                                 Parameters::isSet<TypeTag, Parameters::LinearSolverMaxIter>(),
-                                                 Parameters::isSet<TypeTag, Parameters::LinearSolverReduction>()));
+                                                 Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
+                                                 Parameters::IsSet<Parameters::LinearSolverReduction>()));
             }
             flexibleSolver_.resize(prm_.size());
 

@@ -152,7 +152,7 @@ public:
     {
         OPM_TIMEBLOCK(initializeBda);
 
-        std::string accelerator_mode = Parameters::get<TypeTag, Parameters::AcceleratorMode>();
+        std::string accelerator_mode = Parameters::Get<Parameters::AcceleratorMode>();
         // Force accelerator mode to none if using MPI.
         if ((this->simulator_.vanguard().grid().comm().size() > 1) && (accelerator_mode != "none")) {
             const bool on_io_rank = (this->simulator_.gridView().comm().rank() == 0);
@@ -167,13 +167,13 @@ public:
         }
 
         // Initialize the BdaBridge
-        const int platformID = Parameters::get<TypeTag, Parameters::OpenclPlatformId>();
-        const int deviceID = Parameters::get<TypeTag, Parameters::BdaDeviceId>();
-        const int maxit = Parameters::get<TypeTag, Parameters::LinearSolverMaxIter>();
-        const double tolerance = Parameters::get<TypeTag, Parameters::LinearSolverReduction>();
-        const bool opencl_ilu_parallel = Parameters::get<TypeTag, Parameters::OpenclIluParallel>();
+        const int platformID = Parameters::Get<Parameters::OpenclPlatformId>();
+        const int deviceID = Parameters::Get<Parameters::BdaDeviceId>();
+        const int maxit = Parameters::Get<Parameters::LinearSolverMaxIter>();
+        const double tolerance = Parameters::Get<Parameters::LinearSolverReduction>();
+        const bool opencl_ilu_parallel = Parameters::Get<Parameters::OpenclIluParallel>();
         const int linear_solver_verbosity = this->parameters_[0].linear_solver_verbosity_;
-        std::string linsolver = Parameters::get<TypeTag, Parameters::LinearSolver>();
+        std::string linsolver = Parameters::Get<Parameters::LinearSolver>();
         bdaBridge_ = std::make_unique<detail::BdaSolverInfo<Matrix,Vector>>(accelerator_mode,
                                                                             linear_solver_verbosity,
                                                                             maxit,
