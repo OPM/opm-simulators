@@ -116,6 +116,7 @@ BOOST_FIXTURE_TEST_CASE(WithOutputDir, Fixture)
 
             Opm::Parameters::reset();
 
+            Opm::ThreadManager<int>::registerParameters();
             Opm::Main main(3, const_cast<char**>(no_param), false);
 
             BOOST_CHECK_EQUAL(main.justInitialize(), EXIT_SUCCESS);
@@ -153,6 +154,7 @@ BOOST_FIXTURE_TEST_CASE(NoOutputDir, Fixture)
         const char* no_param[] = {"test_outputdir", input_file_path.c_str(), nullptr};
 
         Opm::Parameters::reset();
+        Opm::ThreadManager<int>::registerParameters();
 
         Opm::Main main(2, const_cast<char**>(no_param), false);
 

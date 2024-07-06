@@ -717,7 +717,7 @@ private:
         // Hence we duplicate the code of setupParallelism to get the number of threads.
         static bool first_time = true;
         constexpr int default_threads = 2;
-        const int requested_threads = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
+        const int requested_threads = Parameters::Get<Parameters::ThreadsPerProcess>();
         threads = requested_threads > 0 ? requested_threads : default_threads;
 
         const char* env_var = getenv("OMP_NUM_THREADS");

@@ -455,15 +455,6 @@ template<class TypeTag>
 struct LocalDomainsOrderingMeasure<TypeTag, Properties::TTag::FlowModelParameters>
 { static constexpr auto value = "maxpressure"; };
 
-// if openMP is available, determine the number threads per process automatically.
-#if _OPENMP
-template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    static constexpr int value = -1;
-};
-#endif
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -790,7 +781,13 @@ public:
         Parameters::registerParam<TypeTag, Parameters::DebugEmitCellPartition>
             ("Whether or not to emit cell partitions as a debugging aid.");
 
+
         Parameters::hideParam<TypeTag, Parameters::DebugEmitCellPartition>();
+
+        // if openMP is available, determine the number threads per process automatically.
+#if _OPENMP
+        Parameters::SetDefault<Parameters::ThreadsPerProcess>(-1);
+#endif
     }
 };
 

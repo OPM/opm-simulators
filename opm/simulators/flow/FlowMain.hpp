@@ -107,6 +107,7 @@ namespace Opm {
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
 
+            ThreadManager<TypeTag>::registerParameters();
             Simulator::registerParameters();
 
             // register the base parameters
@@ -362,7 +363,7 @@ namespace Opm {
             // Issue a warning if both OMP_NUM_THREADS and --threads-per-process are set,
             // but let the environment variable take precedence.
             constexpr int default_threads = 2;
-            const int requested_threads = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
+            const int requested_threads = Parameters::Get<Parameters::ThreadsPerProcess>();
             int threads = requested_threads > 0 ? requested_threads : default_threads;
 
             const char* env_var = getenv("OMP_NUM_THREADS");

@@ -122,10 +122,6 @@ struct NewtonTolerance<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
 };
 
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
-{ static constexpr int value = 1; };
-
-template<class TypeTag>
 struct EclNewtonStrictIterations<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
 { static constexpr int value = 100; };
 

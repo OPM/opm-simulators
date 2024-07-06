@@ -239,6 +239,7 @@ struct EquilFixture {
 #endif
         using namespace Opm;
         FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
+        Opm::ThreadManager<TypeTag>::registerParameters();
         BlackoilModelParameters<TypeTag>::registerParameters();
         AdaptiveTimeStepping<TypeTag>::registerParameters();
         Parameters::registerParam<TypeTag,
