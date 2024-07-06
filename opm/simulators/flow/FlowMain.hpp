@@ -141,7 +141,7 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Parameters::NewtonTolerance>();
             Parameters::hideParam<TypeTag, Parameters::NewtonTargetIterations>();
             Parameters::Hide<Parameters::NewtonVerbose>();
-            Parameters::hideParam<TypeTag, Parameters::NewtonWriteConvergence>();
+            Parameters::Hide<Parameters::NewtonWriteConvergence>();
 
             // the default eWoms checkpoint/restart mechanism does not work with flow
             Parameters::Hide<Parameters::RestartTime<Scalar>>();
