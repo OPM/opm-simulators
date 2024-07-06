@@ -170,7 +170,7 @@ public:
         this->forceDisableFipresvOutput_ =
             Parameters::get<TypeTag, Parameters::ForceDisableResvFluidInPlaceOutput>();
 
-        if (! Parameters::get<TypeTag, Parameters::OwnerCellsFirst>()) {
+        if (! Parameters::Get<Parameters::OwnerCellsFirst>()) {
             const std::string msg = "The output code does not support --owner-cells-first=false.";
             if (collectToIORank.isIORank()) {
                 OpmLog::error(msg);
