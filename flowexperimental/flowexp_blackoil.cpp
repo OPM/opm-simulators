@@ -78,10 +78,6 @@ struct Simulator<TypeTag, TTag::FlowExpProblemBlackOil>
 namespace Opm::Parameters {
 
 template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
 struct EclNewtonRelaxedTolerance<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
