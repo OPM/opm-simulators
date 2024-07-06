@@ -44,20 +44,10 @@
 
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct OutputInterval { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct EnableLoggingFalloutWarning { using type = Properties::UndefinedProperty; };
-
 // Do not merge parallel output files or warn about them
-template<class TypeTag>
-struct EnableLoggingFalloutWarning<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr bool value = false; };
+struct EnableLoggingFalloutWarning { static constexpr bool value = false; };
 
-template<class TypeTag>
-struct OutputInterval<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr int value = 1; };
+struct OutputInterval { static constexpr int value = 1; };
 
 } // namespace Opm::Parameters
 
@@ -101,9 +91,9 @@ namespace Opm {
                 return EXIT_SUCCESS;
             }
             // register the flow specific parameters
-            Parameters::registerParam<TypeTag, Parameters::OutputInterval>
+            Parameters::Register<Parameters::OutputInterval>
                 ("Specify the number of report steps between two consecutive writes of restart data");
-            Parameters::registerParam<TypeTag, Parameters::EnableLoggingFalloutWarning>
+            Parameters::Register<Parameters::EnableLoggingFalloutWarning>
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
 
@@ -403,7 +393,7 @@ namespace Opm {
 
             detail::mergeParallelLogFiles(eclState().getIOConfig().getOutputDir(),
                                           Parameters::Get<Parameters::EclDeckFileName>(),
-                                          Parameters::get<TypeTag, Parameters::EnableLoggingFalloutWarning>());
+                                          Parameters::Get<Parameters::EnableLoggingFalloutWarning>());
         }
 
         void setupModelSimulator()
