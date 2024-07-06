@@ -342,7 +342,7 @@ private:
         }
 
 #if HAVE_DAMARIS
-        enableDamarisOutput_ = Parameters::get<PreTypeTag, Parameters::EnableDamarisOutput>();
+        enableDamarisOutput_ = Parameters::Get<Parameters::EnableDamarisOutput>();
         
         // Reset to false as we cannot use Damaris if there is only one rank.
         if ((enableDamarisOutput_ == true) && (FlowGenericVanguard::comm().size() == 1)) {

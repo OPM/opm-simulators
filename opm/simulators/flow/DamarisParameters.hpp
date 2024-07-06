@@ -31,51 +31,22 @@
 #ifndef OPM_DAMARIS_PARAMETERS_HPP
 #define OPM_DAMARIS_PARAMETERS_HPP
 
-#include <opm/models/utils/propertysystem.hh>
-
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct EnableDamarisOutput { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisOutputHdfCollective { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisSaveMeshToHdf { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisSaveToHdf { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisPythonScript { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisPythonParaviewScript { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisSimName { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisDedicatedCores { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisDedicatedNodes { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisSharedMemoryName { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisSharedMemorySizeBytes { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisLogLevel { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisDaskFile { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct DamarisLimitVariables { using type = Properties::UndefinedProperty; };
+struct EnableDamarisOutput { static constexpr bool value = false; };
+struct DamarisOutputHdfCollective { static constexpr bool value = true; };
+struct DamarisSaveMeshToHdf { static constexpr bool value = false; };
+struct DamarisSaveToHdf { static constexpr bool value = true; };
+struct DamarisPythonScript { static constexpr auto value = ""; };
+struct DamarisPythonParaviewScript { static constexpr auto value = ""; };
+struct DamarisSimName { static constexpr auto value = ""; };
+struct DamarisDedicatedCores { static constexpr int value = 1; };
+struct DamarisDedicatedNodes { static constexpr int value = 0; };
+struct DamarisSharedMemoryName { static constexpr auto value = "" ; };
+struct DamarisSharedMemorySizeBytes { static constexpr long value = 536870912; }; // 512 MB
+struct DamarisLogLevel { static constexpr auto value = "info"; };
+struct DamarisDaskFile { static constexpr auto value = ""; };
+struct DamarisLimitVariables  { static constexpr auto value = ""; };
 
 } // namespace Opm::Parameters
 

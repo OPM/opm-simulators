@@ -228,7 +228,7 @@ public:
             ("Write binary output which is compatible with the commercial "
              "Eclipse simulator");
 #if HAVE_DAMARIS
-        Parameters::registerParam<TypeTag, Parameters::EnableDamarisOutput>
+        Parameters::Register<Parameters::EnableDamarisOutput>
             ("Write a specific variable using Damaris in a separate core");
 #endif
         Parameters::registerParam<TypeTag, Parameters::EclOutputDoublePrecision>
@@ -331,7 +331,7 @@ public:
 #if HAVE_DAMARIS
         // create Damaris writer
         damarisWriter_ = std::make_unique<DamarisWriterType>(simulator);
-        enableDamarisOutput_ = Parameters::get<TypeTag, Parameters::EnableDamarisOutput>();
+        enableDamarisOutput_ = Parameters::Get<Parameters::EnableDamarisOutput>();
 #endif
         enableDriftCompensation_ = Parameters::get<TypeTag, Parameters::EnableDriftCompensation>();
 
