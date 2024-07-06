@@ -261,6 +261,8 @@ public:
         // the cache for intensive quantities can be used for ECL problems and also yields a
         // decent speedup...
         Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
+        // the cache for the storage term can also be used and also yields a decent speedup
+        Parameters::SetDefault<Parameters::EnableStorageCache>(true);
     }
 
 

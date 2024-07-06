@@ -388,11 +388,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
 
-// the cache for the storage term can also be used and also yields a decent speedup
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
-
 // only write the solutions for the report steps to disk
 template<class TypeTag>
 struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowBaseProblem>
