@@ -409,18 +409,6 @@ template<class TypeTag>
 struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
-// The default for the end time of the simulation [s]
-//
-// By default, stop it after the universe will probably have stopped
-// to exist. (the ECL problem will finish the simulation explicitly
-// after it simulated the last episode specified in the deck.)
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::FlowBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e100;
-};
-
 // By default, use implicit pressure in rock compaction
 template<class TypeTag>
 struct ExplicitRockCompaction<TypeTag, Properties::TTag::FlowBaseProblem>

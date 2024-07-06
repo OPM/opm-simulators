@@ -126,7 +126,7 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Parameters::EnableThermodynamicHints>();
 
             // in flow only the deck file determines the end time of the simulation
-            Parameters::hideParam<TypeTag, Parameters::EndTime>();
+            Parameters::Hide<Parameters::EndTime<Scalar>>();
 
             // time stepping is not done by the eWoms code in flow
             Parameters::hideParam<TypeTag, Parameters::InitialTimeStepSize>();

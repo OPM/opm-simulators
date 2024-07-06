@@ -247,6 +247,11 @@ public:
         Parameters::registerParam<TypeTag, Parameters::ExplicitRockCompaction>
             ("Use pressure from end of the last time step when evaluating rock compaction");
         Parameters::hideParam<TypeTag, Parameters::ExplicitRockCompaction>(); // Users will typically not need to modify this parameter..
+
+        // By default, stop it after the universe will probably have stopped
+        // to exist. (the ECL problem will finish the simulation explicitly
+        // after it simulated the last episode specified in the deck.)
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(1e100);
     }
 
 
