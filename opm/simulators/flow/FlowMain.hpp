@@ -143,7 +143,7 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Parameters::NewtonWriteConvergence>();
 
             // the default eWoms checkpoint/restart mechanism does not work with flow
-            Parameters::hideParam<TypeTag, Parameters::RestartTime>();
+            Parameters::Hide<Parameters::RestartTime<Scalar>>();
             Parameters::hideParam<TypeTag, Parameters::RestartWritingInterval>();
             // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
             //if(not(Parameters::get<TypeTag,Properties::EnableVtkOutput>())){
