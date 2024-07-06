@@ -126,16 +126,6 @@ template<class TypeTag>
 struct EnableTerminalOutput<TypeTag, Properties::TTag::FlowExpTypeTag>
 { static constexpr bool value = false; };
 
-// the maximum volumetric error of a cell in the relaxed region
-template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, Properties::TTag::FlowExpTypeTag>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr auto baseValue =
-        Parameters::NewtonTolerance<type>::value;
-    static constexpr type value = 1e6 * baseValue;
-};
-
 // currently, flowexp uses the non-multisegment well model by default to avoid
 // regressions. the --use-multisegment-well=true|false command line parameter is still
 // available in flowexp, but hidden from view.
@@ -216,6 +206,9 @@ public:
 
         Parameters::SetDefault<Parameters::NewtonMaxIterations>(8);
         Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-2);
+        Parameters::SetDefault<Parameters::EclNewtonRelaxedTolerance<Scalar>>(1e-1);
+        Parameters::SetDefault<Parameters::EclNewtonRelaxedVolumeFraction<Scalar>>(0.0);
+        Parameters::SetDefault<Parameters::EclNewtonSumTolerance<Scalar>>(1e-5);
     }
 
     // inherit the constructors
