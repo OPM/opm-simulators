@@ -39,23 +39,10 @@
 #include <string>
 #include <vector>
 
-namespace Opm::Properties::TTag {
-
-// create new type tag for the VTK tracer output
-struct VtkTracer {};
-
-}
-
 namespace Opm::Parameters {
 
-// create the property tags needed for the tracer model
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteTracerConcentration { using type = Properties::UndefinedProperty; };
-
 // set default values for what quantities to output
-template<class TypeTag>
-struct VtkWriteTracerConcentration<TypeTag, Properties::TTag::VtkTracer>
-{ static constexpr bool value = false; };
+struct VtkWriteTracerConcentration { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
@@ -95,7 +82,7 @@ namespace Opm {
      */
         static void registerParameters()
         {
-            Parameters::registerParam<TypeTag, Parameters::VtkWriteTracerConcentration>
+            Parameters::Register<Parameters::VtkWriteTracerConcentration>
                 ("Include the tracer concentration in the VTK output files");
         }
 
@@ -178,7 +165,7 @@ namespace Opm {
     private:
         static bool eclTracerConcentrationOutput_()
         {
-            static bool val = Parameters::get<TypeTag, Parameters::VtkWriteTracerConcentration>();
+            static bool val = Parameters::Get<Parameters::VtkWriteTracerConcentration>();
             return val;
         }
 
