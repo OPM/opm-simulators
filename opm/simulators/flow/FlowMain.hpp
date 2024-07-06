@@ -138,7 +138,7 @@ namespace Opm {
 
             // flow also does not use the eWoms Newton method
             Parameters::hideParam<TypeTag, Parameters::NewtonMaxError>();
-            Parameters::hideParam<TypeTag, Parameters::NewtonTolerance>();
+            Parameters::Hide<Parameters::NewtonTolerance<Scalar>>();
             Parameters::hideParam<TypeTag, Parameters::NewtonTargetIterations>();
             Parameters::Hide<Parameters::NewtonVerbose>();
             Parameters::Hide<Parameters::NewtonWriteConvergence>();

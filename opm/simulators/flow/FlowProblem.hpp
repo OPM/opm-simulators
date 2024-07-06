@@ -263,6 +263,8 @@ public:
         Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
         // the cache for the storage term can also be used and also yields a decent speedup
         Parameters::SetDefault<Parameters::EnableStorageCache>(true);
+        // the default for the allowed volumetric error for oil per second
+        Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-2);
     }
 
 

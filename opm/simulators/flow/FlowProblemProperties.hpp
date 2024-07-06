@@ -398,14 +398,6 @@ template<class TypeTag>
 struct ExplicitRockCompaction<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, Properties::TTag::FlowBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-2;
-};
-
 // Parameterize equilibration accuracy
 template<class TypeTag>
 struct NumPressurePointsEquil<TypeTag, Properties::TTag::FlowBaseProblem>
