@@ -1310,6 +1310,7 @@ namespace Opm {
     public:
         std::vector<bool> wasSwitched_;
     };
+
 } // namespace Opm
 
 #endif // OPM_BLACKOILMODEL_HEADER_INCLUDED

@@ -233,20 +233,20 @@ public:
 #endif
         Parameters::registerParam<TypeTag, Parameters::EclOutputDoublePrecision>
             ("Tell the output writer to use double precision. Useful for 'perfect' restarts");
-        Parameters::registerParam<TypeTag, Parameters::RestartWritingInterval>
+        Parameters::Register<Parameters::RestartWritingInterval>
             ("The frequencies of which time steps are serialized to disk");
-        Parameters::registerParam<TypeTag, Parameters::EnableDriftCompensation>
+        Parameters::Register<Parameters::EnableDriftCompensation>
             ("Enable partial compensation of systematic mass losses via "
              "the source term of the next time step");
-        Parameters::registerParam<TypeTag, Parameters::OutputMode>
+        Parameters::Register<Parameters::OutputMode>
             ("Specify which messages are going to be printed. "
              "Valid values are: none, log, all (default)");
-        Parameters::registerParam<TypeTag, Parameters::NumPressurePointsEquil>
+        Parameters::Register<Parameters::NumPressurePointsEquil>
             ("Number of pressure points (in each direction) in tables used for equilibration");
-        Parameters::hideParam<TypeTag, Parameters::NumPressurePointsEquil>(); // Users will typically not need to modify this parameter..
-        Parameters::registerParam<TypeTag, Parameters::ExplicitRockCompaction>
+        Parameters::Hide<Parameters::NumPressurePointsEquil>(); // Users will typically not need to modify this parameter..
+        Parameters::Register<Parameters::ExplicitRockCompaction>
             ("Use pressure from end of the last time step when evaluating rock compaction");
-        Parameters::hideParam<TypeTag, Parameters::ExplicitRockCompaction>(); // Users will typically not need to modify this parameter..
+        Parameters::Hide<Parameters::ExplicitRockCompaction>(); // Users will typically not need to modify this parameter..
 
         // By default, stop it after the universe will probably have stopped
         // to exist. (the ECL problem will finish the simulation explicitly
@@ -333,7 +333,7 @@ public:
         damarisWriter_ = std::make_unique<DamarisWriterType>(simulator);
         enableDamarisOutput_ = Parameters::Get<Parameters::EnableDamarisOutput>();
 #endif
-        enableDriftCompensation_ = Parameters::get<TypeTag, Parameters::EnableDriftCompensation>();
+        enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>();
 
         enableEclOutput_ = Parameters::get<TypeTag, Parameters::EnableEclOutput>();
         enableVtkOutput_ = Parameters::Get<Parameters::EnableVtkOutput>();
@@ -346,14 +346,14 @@ public:
         // 1. Command line value (--num-pressure-points-equil=N)
         // 2. EQLDIMS item 2
         // Default value is defined in opm-common/src/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
-        if (Parameters::isSet<TypeTag, Parameters::NumPressurePointsEquil>())
+        if (Parameters::IsSet<Parameters::NumPressurePointsEquil>())
         {
-            this->numPressurePointsEquil_ = Parameters::get<TypeTag, Parameters::NumPressurePointsEquil>();
+            this->numPressurePointsEquil_ = Parameters::Get<Parameters::NumPressurePointsEquil>();
         } else {
             this->numPressurePointsEquil_ = simulator.vanguard().eclState().getTableManager().getEqldims().getNumDepthNodesP();
         }
 
-        explicitRockCompaction_ = Parameters::get<TypeTag, Parameters::ExplicitRockCompaction>();
+        explicitRockCompaction_ = Parameters::Get<Parameters::ExplicitRockCompaction>();
 
 
         RelpermDiagnostics relpermDiagnostics;
