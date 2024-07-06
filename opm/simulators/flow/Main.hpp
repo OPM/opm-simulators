@@ -378,7 +378,7 @@ private:
         int mpiRank = FlowGenericVanguard::comm().rank();
         outputCout_ = false;
         if (mpiRank == 0)
-            outputCout_ = Parameters::get<PreTypeTag, Parameters::EnableTerminalOutput>();
+            outputCout_ = Parameters::Get<Parameters::EnableTerminalOutput>();
 
         if (deckFilename.empty()) {
             if (mpiRank == 0) {

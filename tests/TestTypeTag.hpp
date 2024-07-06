@@ -97,10 +97,6 @@ struct LinearSolverBackend<TTag::TestTypeTag, TTag::FlowIstlSolverParams> {
 
 namespace Opm::Parameters {
 
-template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, Properties::TTag::TestTypeTag>
-{ static constexpr bool value = false; };
-
 // set some parameters that are only required by the well model
 template<class TypeTag>
 struct MatrixAddWellContributions<TypeTag, Properties::TTag::TestTypeTag>

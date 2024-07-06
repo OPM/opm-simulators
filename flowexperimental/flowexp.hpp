@@ -122,10 +122,6 @@ struct LinearSolverBackend<TypeTag, TTag::FlowExpTypeTag> {
 
 namespace Opm::Parameters {
 
-template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, Properties::TTag::FlowExpTypeTag>
-{ static constexpr bool value = false; };
-
 // currently, flowexp uses the non-multisegment well model by default to avoid
 // regressions. the --use-multisegment-well=true|false command line parameter is still
 // available in flowexp, but hidden from view.
@@ -168,7 +164,7 @@ public:
         ParentType::registerParameters();
 
         BlackoilModelParameters<TypeTag>::registerParameters();
-        Parameters::registerParam<TypeTag, Parameters::EnableTerminalOutput>("Do *NOT* use!");
+        Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
         Parameters::hideParam<TypeTag, Parameters::DbhpMaxRel>();
         Parameters::hideParam<TypeTag, Parameters::DwellFractionMax>();
         Parameters::hideParam<TypeTag, Parameters::MaxResidualAllowed>();
@@ -192,7 +188,7 @@ public:
         Parameters::hideParam<TypeTag, Parameters::UpdateEquationsScaling>();
         Parameters::hideParam<TypeTag, Parameters::UseUpdateStabilization>();
         Parameters::hideParam<TypeTag, Parameters::MatrixAddWellContributions>();
-        Parameters::hideParam<TypeTag, Parameters::EnableTerminalOutput>();
+        Parameters::Hide<Parameters::EnableTerminalOutput>();
 
         // if openMP is available, set the default the number of threads per process for the main
         // simulation to 2 (instead of grabbing everything that is available).
@@ -209,6 +205,7 @@ public:
         Parameters::SetDefault<Parameters::EclNewtonRelaxedTolerance<Scalar>>(1e-1);
         Parameters::SetDefault<Parameters::EclNewtonRelaxedVolumeFraction<Scalar>>(0.0);
         Parameters::SetDefault<Parameters::EclNewtonSumTolerance<Scalar>>(1e-5);
+        Parameters::SetDefault<Parameters::EnableTerminalOutput>(false);
     }
 
     // inherit the constructors
