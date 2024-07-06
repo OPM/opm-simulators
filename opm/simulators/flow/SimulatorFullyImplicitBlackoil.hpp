@@ -59,47 +59,12 @@
 
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct EnableAdaptiveTimeStepping { using type = Properties::UndefinedProperty; };
-
-template <class TypeTag, class MyTypeTag>
-struct OutputExtraConvergenceInfo { using type = Properties::UndefinedProperty; };
-
-template <class TypeTag, class MyTypeTag>
-struct SaveStep { using type = Properties::UndefinedProperty; };
-
-template <class TypeTag, class MyTypeTag>
-struct LoadStep { using type = Properties::UndefinedProperty; };
-
-template <class TypeTag, class MyTypeTag>
-struct SaveFile { using type = Properties::UndefinedProperty; };
-
-template <class TypeTag, class MyTypeTag>
-struct LoadFile { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag>
-struct EnableAdaptiveTimeStepping<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr bool value = true; };
-
-template <class TypeTag>
-struct OutputExtraConvergenceInfo<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr auto* value = "none"; };
-
-template <class TypeTag>
-struct SaveStep<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr auto* value = ""; };
-
-template <class TypeTag>
-struct SaveFile<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr auto* value = ""; };
-
-template <class TypeTag>
-struct LoadFile<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr auto* value = ""; };
-
-template <class TypeTag>
-struct LoadStep<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr int value = -1; };
+struct EnableAdaptiveTimeStepping { static constexpr bool value = true; };
+struct OutputExtraConvergenceInfo { static constexpr auto* value = "none"; };
+struct SaveStep { static constexpr auto* value = ""; };
+struct SaveFile { static constexpr auto* value = ""; };
+struct LoadFile { static constexpr auto* value = ""; };
+struct LoadStep { static constexpr int value = -1; };
 
 } // namespace Opm::Parameters
 
@@ -157,10 +122,10 @@ public:
         , serializer_(*this,
                       FlowGenericVanguard::comm(),
                       simulator_.vanguard().eclState().getIOConfig(),
-                      Parameters::get<TypeTag, Parameters::SaveStep>(),
-                      Parameters::get<TypeTag, Parameters::LoadStep>(),
-                      Parameters::get<TypeTag, Parameters::SaveFile>(),
-                      Parameters::get<TypeTag, Parameters::LoadFile>())
+                      Parameters::Get<Parameters::SaveStep>(),
+                      Parameters::Get<Parameters::LoadStep>(),
+                      Parameters::Get<Parameters::SaveFile>(),
+                      Parameters::Get<Parameters::LoadFile>())
     {
         phaseUsage_ = phaseUsageFromDeck(eclState());
 
@@ -169,7 +134,7 @@ public:
         if (this->grid().comm().rank() == 0) {
             this->terminalOutput_ = Parameters::Get<Parameters::EnableTerminalOutput>();
 
-            this->startConvergenceOutputThread(Parameters::get<TypeTag, Parameters::OutputExtraConvergenceInfo>(),
+            this->startConvergenceOutputThread(Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
                                                R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))");
         }
     }
@@ -188,9 +153,9 @@ public:
 
         Parameters::Register<Parameters::EnableTerminalOutput>
             ("Print high-level information about the simulation's progress to the terminal");
-        Parameters::registerParam<TypeTag, Parameters::EnableAdaptiveTimeStepping>
+        Parameters::Register<Parameters::EnableAdaptiveTimeStepping>
             ("Use adaptive time stepping between report steps");
-        Parameters::registerParam<TypeTag, Parameters::OutputExtraConvergenceInfo>
+        Parameters::Register<Parameters::OutputExtraConvergenceInfo>
             ("Provide additional convergence output "
              "files for diagnostic purposes. "
              "\"none\" gives no extra output and "
@@ -199,25 +164,25 @@ public:
              "\"iterations\" generates an INFOITER file. "
              "Combine options with commas, e.g., "
              "\"steps,iterations\" for multiple outputs.");
-        Parameters::registerParam<TypeTag, Parameters::SaveStep>
+        Parameters::Register<Parameters::SaveStep>
             ("Save serialized state to .OPMRST file. "
              "Either a specific report step, \"all\" to save "
              "all report steps or \":x\" to save every x'th step."
              "Use negative values of \"x\" to keep only the last "
              "written step, or \"last\" to save every step, keeping "
              "only the last.");
-        Parameters::registerParam<TypeTag, Parameters::LoadStep>
+        Parameters::Register<Parameters::LoadStep>
             ("Load serialized state from .OPMRST file. "
              "Either a specific report step, or 0 to load last "
              "stored report step.");
-        Parameters::registerParam<TypeTag, Parameters::SaveFile>
+        Parameters::Register<Parameters::SaveFile>
             ("FileName for .OPMRST file used for saving serialized state. "
              "If empty, CASENAME.OPMRST is used.");
-        Parameters::hideParam<TypeTag, Parameters::SaveFile>();
-        Parameters::registerParam<TypeTag, Parameters::LoadFile>
+        Parameters::Hide<Parameters::SaveFile>();
+        Parameters::Register<Parameters::LoadFile>
             ("FileName for .OPMRST file used to load serialized state. "
              "If empty, CASENAME.OPMRST is used.");
-        Parameters::hideParam<TypeTag, Parameters::LoadFile>();
+        Parameters::Hide<Parameters::LoadFile>();
     }
 
     /// Run the simulation.
@@ -249,7 +214,7 @@ public:
         totalTimer_->start();
 
         // adaptive time stepping
-        bool enableAdaptive = Parameters::get<TypeTag, Parameters::EnableAdaptiveTimeStepping>();
+        bool enableAdaptive = Parameters::Get<Parameters::EnableAdaptiveTimeStepping>();
         bool enableTUNING = Parameters::get<TypeTag, Parameters::EnableTuning>();
         if (enableAdaptive) {
             const UnitSystem& unitSystem = this->simulator_.vanguard().eclState().getUnits();
