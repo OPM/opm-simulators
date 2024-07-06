@@ -427,11 +427,6 @@ template<class TypeTag>
 struct NumPressurePointsEquil<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr int value = ParserKeywords::EQLDIMS::DEPTH_NODES_P::defaultValue; };
 
-// The default location for the ECL output files
-template<class TypeTag>
-struct OutputDir<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr auto value = "."; };
-
 template<class TypeTag>
 struct OutputMode<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr auto value = "all"; };
