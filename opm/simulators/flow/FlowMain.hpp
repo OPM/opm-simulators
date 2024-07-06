@@ -137,7 +137,7 @@ namespace Opm {
             Parameters::Hide<Parameters::PredeterminedTimeStepsFile>();
 
             // flow also does not use the eWoms Newton method
-            Parameters::hideParam<TypeTag, Parameters::NewtonMaxError>();
+            Parameters::Hide<Parameters::NewtonMaxError<Scalar>>();
             Parameters::Hide<Parameters::NewtonTolerance<Scalar>>();
             Parameters::hideParam<TypeTag, Parameters::NewtonTargetIterations>();
             Parameters::Hide<Parameters::NewtonVerbose>();
