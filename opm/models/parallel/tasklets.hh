@@ -27,6 +27,7 @@
 #ifndef EWOMS_TASKLETS_HH
 #define EWOMS_TASKLETS_HH
 
+#include <atomic>
 #include <stdexcept>
 #include <cassert>
 #include <thread>
@@ -223,6 +224,11 @@ public:
      */
     void dispatch(std::shared_ptr<TaskletInterface> tasklet)
     {
+        if (failureFlag_.load(std::memory_order_relaxed)) {
+            std::cerr << "Failure flag of the TaskletRunner is set. Not dispatching new tasklets.\n";
+            exit(EXIT_FAILURE);
+        }
+
         if (threads_.empty()) {
             // run the tasklet immediately in synchronous mode.
             while (tasklet->referenceCount() > 0) {
@@ -232,9 +238,11 @@ public:
                 }
                 catch (const std::exception& e) {
                     std::cerr << "ERROR: Uncaught std::exception when running tasklet: " << e.what() << ". Trying to continue.\n";
+                    failureFlag_.store(true, std::memory_order_relaxed);
                 }
                 catch (...) {
                     std::cerr << "ERROR: Uncaught exception (general type) when running tasklet. Trying to continue.\n";
+                    failureFlag_.store(true, std::memory_order_relaxed);
                 }
             }
         }
@@ -280,6 +288,16 @@ public:
 
         barrierTasklet->wait();
     }
+private:
+    // Atomic flag that is set to failure if any of the tasklets run by the TaskletRunner fails.
+    // This flag is checked before new tasklets run or get dispatched and in case it is true, the
+    // thread execution will be stopped / no new tasklets will be started and the program will abort.
+    // To set the flag and load the flag, we use std::memory_order_relaxed.
+    // Atomic operations tagged memory_order_relaxed are not synchronization operations; they do not
+    // impose an order among concurrent memory accesses. They guarantee atomicity and modification order
+    // consistency. This is the right choice for the setting here, since it is enough to broadcast failure
+    // before new run or get dispatched.
+    std::atomic<bool> failureFlag_ = false;
 
 protected:
     // main function of the worker thread
@@ -295,6 +313,12 @@ protected:
     void run_()
     {
         while (true) {
+            // Check if failure flag is set
+            if (failureFlag_.load(std::memory_order_relaxed)) {
+                std::cerr << "Failure flag of the TaskletRunner is set. Exiting thread.\n";
+                exit(EXIT_FAILURE);
+            }
+
             // wait until tasklets have been pushed to the queue. first we need to lock
             // mutex for access to taskletQueue_
             std::unique_lock<std::mutex> lock(taskletQueueMutex_);
@@ -330,10 +354,12 @@ protected:
                 tasklet->run();
             }
             catch (const std::exception& e) {
-                std::cerr << "ERROR: Uncaught std::exception when running tasklet: " << e.what() << ". Trying to continue.\n";
+                std::cerr << "ERROR: Uncaught std::exception when running tasklet: " << e.what() << ".\n";
+                failureFlag_.store(true, std::memory_order_relaxed); 
             }
             catch (...) {
-                std::cerr << "ERROR: Uncaught exception when running tasklet. Trying to continue.\n";
+                std::cerr << "ERROR: Uncaught exception when running tasklet.\n";
+                failureFlag_.store(true, std::memory_order_relaxed);
             }
         }
     }
