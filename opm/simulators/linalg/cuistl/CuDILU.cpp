@@ -30,11 +30,16 @@
 #include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <vector>
+#include <config.h>
+#include <chrono>
+#include <limits>
+#include <tuple>
+
 
 namespace
 {
 std::vector<int>
-createReorderedToNatural(Opm::SparseTable<size_t> levelSets)
+createReorderedToNatural(Opm::SparseTable<size_t>& levelSets)
 {
     auto res = std::vector<int>(Opm::cuistl::detail::to_size_t(levelSets.dataSize()));
     int globCnt = 0;
@@ -49,7 +54,7 @@ createReorderedToNatural(Opm::SparseTable<size_t> levelSets)
 }
 
 std::vector<int>
-createNaturalToReordered(Opm::SparseTable<size_t> levelSets)
+createNaturalToReordered(Opm::SparseTable<size_t>& levelSets)
 {
     auto res = std::vector<int>(Opm::cuistl::detail::to_size_t(levelSets.dataSize()));
     int globCnt = 0;
@@ -66,7 +71,7 @@ createNaturalToReordered(Opm::SparseTable<size_t> levelSets)
 template <class M, class field_type, class GPUM>
 void
 createReorderedMatrix(const M& naturalMatrix,
-                      std::vector<int> reorderedToNatural,
+                      std::vector<int>& reorderedToNatural,
                       std::unique_ptr<GPUM>& reorderedGpuMat)
 {
     M reorderedMatrix(naturalMatrix.N(), naturalMatrix.N(), naturalMatrix.nonzeroes(), M::row_wise);
@@ -84,7 +89,7 @@ createReorderedMatrix(const M& naturalMatrix,
 template <class M, class field_type, class GPUM>
 void
 extractLowerAndUpperMatrices(const M& naturalMatrix,
-                             std::vector<int> reorderedToNatural,
+                             std::vector<int>& reorderedToNatural,
                              std::unique_ptr<GPUM>& lower,
                              std::unique_ptr<GPUM>& upper)
 {
@@ -119,7 +124,7 @@ namespace Opm::cuistl
 {
 
 template <class M, class X, class Y, int l>
-CuDILU<M, X, Y, l>::CuDILU(const M& A, bool split_matrix)
+CuDILU<M, X, Y, l>::CuDILU(const M& A, bool splitMatrix, bool tuneKernels)
     : m_cpuMatrix(A)
     , m_levelSets(Opm::getMatrixRowColoring(m_cpuMatrix, Opm::ColoringType::LOWER))
     , m_reorderedToNatural(createReorderedToNatural(m_levelSets))
@@ -128,7 +133,8 @@ CuDILU<M, X, Y, l>::CuDILU(const M& A, bool split_matrix)
     , m_gpuNaturalToReorder(m_naturalToReordered)
     , m_gpuReorderToNatural(m_reorderedToNatural)
     , m_gpuDInv(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
-    , m_splitMatrix(split_matrix)
+    , m_splitMatrix(splitMatrix)
+    , m_tuneThreadBlockSizes(tuneKernels)
 
 {
     // TODO: Should in some way verify that this matrix is symmetric, only do it debug mode?
@@ -156,6 +162,14 @@ CuDILU<M, X, Y, l>::CuDILU(const M& A, bool split_matrix)
             m_cpuMatrix, m_reorderedToNatural, m_gpuMatrixReordered);
     }
     computeDiagAndMoveReorderedData();
+
+    // HIP does currently not support automtically picking thread block sizes as well as CUDA
+    // So only when tuning and using hip should we do our own manual tuning
+#ifdef USE_HIP
+    if (m_tuneThreadBlockSizes){
+        tuneThreadBlockSizes();
+    }
+#endif
 }
 
 template <class M, class X, class Y, int l>
@@ -183,7 +197,8 @@ CuDILU<M, X, Y, l>::apply(X& v, const Y& d)
                     numOfRowsInLevel,
                     m_gpuDInv.data(),
                     d.data(),
-                    v.data());
+                    v.data(),
+                    m_applyThreadBlockSize);
             } else {
                 detail::computeLowerSolveLevelSet<field_type, blocksize_>(
                     m_gpuMatrixReordered->getNonZeroValues().data(),
@@ -194,7 +209,8 @@ CuDILU<M, X, Y, l>::apply(X& v, const Y& d)
                     numOfRowsInLevel,
                     m_gpuDInv.data(),
                     d.data(),
-                    v.data());
+                    v.data(),
+                    m_applyThreadBlockSize);
             }
             levelStartIdx += numOfRowsInLevel;
         }
@@ -213,7 +229,8 @@ CuDILU<M, X, Y, l>::apply(X& v, const Y& d)
                     levelStartIdx,
                     numOfRowsInLevel,
                     m_gpuDInv.data(),
-                    v.data());
+                    v.data(),
+                    m_applyThreadBlockSize);
             } else {
                 detail::computeUpperSolveLevelSet<field_type, blocksize_>(
                     m_gpuMatrixReordered->getNonZeroValues().data(),
@@ -223,7 +240,8 @@ CuDILU<M, X, Y, l>::apply(X& v, const Y& d)
                     levelStartIdx,
                     numOfRowsInLevel,
                     m_gpuDInv.data(),
-                    v.data());
+                    v.data(),
+                    m_applyThreadBlockSize);
             }
         }
     }
@@ -270,14 +288,16 @@ CuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData()
                 m_gpuMatrixReorderedUpper->getRowIndices().data(),
                 m_gpuMatrixReorderedDiag->data(),
                 m_gpuNaturalToReorder.data(),
-                m_gpuMatrixReorderedLower->N());
+                m_gpuMatrixReorderedLower->N(),
+                m_updateThreadBlockSize);
         } else {
             detail::copyMatDataToReordered<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
                                                                    m_gpuMatrix.getRowIndices().data(),
                                                                    m_gpuMatrixReordered->getNonZeroValues().data(),
                                                                    m_gpuMatrixReordered->getRowIndices().data(),
                                                                    m_gpuNaturalToReorder.data(),
-                                                                   m_gpuMatrixReordered->N());
+                                                                   m_gpuMatrixReordered->N(),
+                                                                   m_updateThreadBlockSize);
         }
 
         int levelStartIdx = 0;
@@ -296,7 +316,8 @@ CuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData()
                     m_gpuNaturalToReorder.data(),
                     levelStartIdx,
                     numOfRowsInLevel,
-                    m_gpuDInv.data());
+                    m_gpuDInv.data(),
+                    m_updateThreadBlockSize);
             } else {
                 detail::computeDiluDiagonal<field_type, blocksize_>(m_gpuMatrixReordered->getNonZeroValues().data(),
                                                                     m_gpuMatrixReordered->getRowIndices().data(),
@@ -305,11 +326,64 @@ CuDILU<M, X, Y, l>::computeDiagAndMoveReorderedData()
                                                                     m_gpuNaturalToReorder.data(),
                                                                     levelStartIdx,
                                                                     numOfRowsInLevel,
-                                                                    m_gpuDInv.data());
+                                                                    m_gpuDInv.data(),
+                                                                    m_updateThreadBlockSize);
             }
             levelStartIdx += numOfRowsInLevel;
         }
     }
+}
+
+template <class M, class X, class Y, int l>
+void
+CuDILU<M, X, Y, l>::tuneThreadBlockSizes()
+{
+    // TODO: generalize this code and put it somewhere outside of this class
+    long long bestApplyTime = std::numeric_limits<long long>::max();
+    long long bestUpdateTime = std::numeric_limits<long long>::max();
+    int bestApplyBlockSize = -1;
+    int bestUpdateBlockSize = -1;
+    int interval = 64;
+
+    //temporary buffers for the apply
+    CuVector<field_type> tmpV(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
+    CuVector<field_type> tmpD(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
+    tmpD = 1;
+
+    for (int thrBlockSize = interval; thrBlockSize <= 1024; thrBlockSize += interval){
+        // sometimes the first kernel launch kan be slower, so take the time twice
+        for (int i = 0; i < 2; ++i){
+
+            auto beforeUpdate = std::chrono::high_resolution_clock::now();
+            m_updateThreadBlockSize = thrBlockSize;
+            update();
+            std::ignore = cudaDeviceSynchronize();
+            auto afterUpdate = std::chrono::high_resolution_clock::now();
+            if (cudaSuccess == cudaGetLastError()){ // kernel launch was valid
+                long long durationInMicroSec = std::chrono::duration_cast<std::chrono::microseconds>(afterUpdate - beforeUpdate).count();
+                if (durationInMicroSec < bestUpdateTime){
+                    bestUpdateTime = durationInMicroSec;
+                    bestUpdateBlockSize = thrBlockSize;
+                }
+            }
+
+            auto beforeApply = std::chrono::high_resolution_clock::now();
+            m_applyThreadBlockSize = thrBlockSize;
+            apply(tmpV, tmpD);
+            std::ignore = cudaDeviceSynchronize();
+            auto afterApply = std::chrono::high_resolution_clock::now();
+            if (cudaSuccess == cudaGetLastError()){ // kernel launch was valid
+                long long durationInMicroSec = std::chrono::duration_cast<std::chrono::microseconds>(afterApply - beforeApply).count();
+                if (durationInMicroSec < bestApplyTime){
+                    bestApplyTime = durationInMicroSec;
+                    bestApplyBlockSize = thrBlockSize;
+                }
+            }
+        }
+    }
+
+    m_applyThreadBlockSize = bestApplyBlockSize;
+    m_updateThreadBlockSize = bestUpdateBlockSize;
 }
 
 } // namespace Opm::cuistl

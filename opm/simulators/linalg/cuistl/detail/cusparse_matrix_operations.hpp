@@ -59,7 +59,8 @@ void computeLowerSolveLevelSet(T* reorderedMat,
                                int rowsInLevelSet,
                                const T* dInv,
                                const T* d,
-                               T* v);
+                               T* v,
+                               int threadBlockSize);
 
 /**
  * @brief Perform a lower solve on certain rows in a matrix that can safely be computed in parallel
@@ -86,7 +87,8 @@ void computeLowerSolveLevelSetSplit(T* reorderedUpperMat,
                                int rowsInLevelSet,
                                const T* dInv,
                                const T* d,
-                               T* v);
+                               T* v,
+                               int threadBlockSize);
 
 /**
  * @brief Perform an upper solve on certain rows in a matrix that can safely be computed in parallel
@@ -111,7 +113,8 @@ void computeUpperSolveLevelSet(T* reorderedMat,
                                int startIdx,
                                int rowsInLevelSet,
                                const T* dInv,
-                               T* v);
+                               T* v,
+                               int threadBlockSize);
 template <class T, int blocksize>
 
 /**
@@ -136,7 +139,8 @@ void computeUpperSolveLevelSetSplit(T* reorderedUpperMat,
                                int startIdx,
                                int rowsInLevelSet,
                                const T* dInv,
-                               T* v);
+                               T* v,
+                               int threadBlockSize);
 
 /**
  * @brief Computes the ILU0 of the diagonal elements of the reordered matrix and stores it in a reordered vector
@@ -162,7 +166,8 @@ void computeDiluDiagonal(T* reorderedMat,
                          int* naturalToReordered,
                          int startIdx,
                          int rowsInLevelSet,
-                         T* dInv);
+                         T* dInv,
+                         int threadBlockSize);
 template <class T, int blocksize>
 
 /**
@@ -197,7 +202,8 @@ void computeDiluDiagonalSplit(T* reorderedLowerMat,
                          int* naturalToReordered,
                          int startIdx,
                          int rowsInLevelSet,
-                         T* dInv);
+                         T* dInv,
+                         int threadBlockSize);
 
 /**
  * @brief Reorders the elements of a matrix by copying them from one matrix to another using a permutation list
@@ -211,7 +217,7 @@ void computeDiluDiagonalSplit(T* reorderedLowerMat,
  */
 template <class T, int blocksize>
 void copyMatDataToReordered(
-    T* srcMatrix, int* srcRowIndices, T* dstMatrix, int* dstRowIndices, int* naturalToReordered, size_t numberOfRows);
+    T* srcMatrix, int* srcRowIndices, T* dstMatrix, int* dstRowIndices, int* naturalToReordered, size_t numberOfRows, int threadBlockSize);
 
 /**
  * @brief Reorders the elements of a matrix by copying them from one matrix to a split matrix using a permutation list
@@ -229,7 +235,7 @@ void copyMatDataToReordered(
  */
 template <class T, int blocksize>
 void copyMatDataToReorderedSplit(
-    T* srcMatrix, int* srcRowIndices, int* srcColumnIndices, T* dstLowerMatrix, int* dstLowerRowIndices, T* dstUpperMatrix, int* dstUpperRowIndices, T* dstDiag, int* naturalToReordered, size_t numberOfRows);
+    T* srcMatrix, int* srcRowIndices, int* srcColumnIndices, T* dstLowerMatrix, int* dstLowerRowIndices, T* dstUpperMatrix, int* dstUpperRowIndices, T* dstDiag, int* naturalToReordered, size_t numberOfRows, int threadBlockSize);
 
 } // namespace Opm::cuistl::detail
 #endif
