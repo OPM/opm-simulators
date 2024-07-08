@@ -34,7 +34,7 @@
 
 namespace Opm::cuistl
 {
-//! \brief DILU preconditioner on the GPU.
+//! \brief ILU0 preconditioner on the GPU.
 //!
 //! \tparam M The matrix type to operate on
 //! \tparam X Type of the update
@@ -84,8 +84,8 @@ public:
     //! \brief Updates the matrix data.
     void update() final;
 
-    //! \brief Compute the diagonal of the DILU, and update the data of the reordered matrix
-    void computeDiagAndMoveReorderedData();
+    //! \brief Compute LU factorization, and update the data of the reordered matrix
+    void LUFactorizeAndMoveData();
 
     //! \brief function that will experimentally tune the thread block sizes of the important cuda kernels
     void tuneThreadBlockSizes();
@@ -117,7 +117,6 @@ private:
     //! \brief The A matrix stored on the gpu, and its reordred version
     CuMat m_gpuMatrix;
     std::unique_ptr<CuMat> m_gpuReorderedLU;
-    std::unique_ptr<CuMat> m_gpuMatrixReordered;
     //! \brief If matrix splitting is enabled, then we store the lower and upper part separately
     std::unique_ptr<CuMat> m_gpuMatrixReorderedLower;
     std::unique_ptr<CuMat> m_gpuMatrixReorderedUpper;
@@ -127,7 +126,7 @@ private:
     CuVector<int> m_gpuNaturalToReorder;
     //! row conversion from reordered to natural matrix indices stored on the GPU
     CuVector<int> m_gpuReorderToNatural;
-    //! \brief Stores the inverted diagonal that we use in DILU
+    //! \brief Stores the inverted diagonal that we use in ILU0
     CuVector<field_type> m_gpuDInv;
     //! \brief Bool storing whether or not we should store matrices in a split format
     bool m_splitMatrix;

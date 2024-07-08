@@ -1,5 +1,5 @@
 /*
-  Copyright 2022-2023 SINTEF AS
+  Copyright 2024 SINTEF AS
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -21,6 +21,10 @@
 #include <cstddef>
 #include <cuda.h>
 #include <cuda_runtime.h>
+
+/*
+    This file provides some logic for handling how to choose the correct thread-block size
+*/
 namespace Opm::cuistl::detail
 {
     constexpr inline size_t getThreads([[maybe_unused]] size_t numberOfRows)

@@ -32,9 +32,9 @@
 #include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 #include <vector>
-
 #include <config.h>
 #include <chrono>
+#include <limits>
 #include <tuple>
 namespace Opm::cuistl
 {
@@ -46,7 +46,6 @@ CuILU0_OPM_Impl<M, X, Y, l>::CuILU0_OPM_Impl(const M& A, bool splitMatrix, bool 
     , m_reorderedToNatural(detail::createReorderedToNatural(m_levelSets))
     , m_naturalToReordered(detail::createNaturalToReordered(m_levelSets))
     , m_gpuMatrix(CuSparseMatrix<field_type>::fromMatrix(m_cpuMatrix, true))
-    , m_gpuMatrixReordered(nullptr)
     , m_gpuMatrixReorderedLower(nullptr)
     , m_gpuMatrixReorderedUpper(nullptr)
     , m_gpuNaturalToReorder(m_naturalToReordered)
@@ -79,7 +78,7 @@ CuILU0_OPM_Impl<M, X, Y, l>::CuILU0_OPM_Impl(const M& A, bool splitMatrix, bool 
         detail::createReorderedMatrix<M, field_type, CuSparseMatrix<field_type>>(
             m_cpuMatrix, m_reorderedToNatural, m_gpuReorderedLU);
     }
-    computeDiagAndMoveReorderedData();
+    LUFactorizeAndMoveData();
 
 #ifdef USE_HIP
     if (m_tuneThreadBlockSizes){
@@ -131,7 +130,6 @@ CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
         }
 
         levelStartIdx = m_cpuMatrix.N();
-        //  upper triangular solve: (D + U_A) v = Dy
         for (int level = m_levelSets.size() - 1; level >= 0; --level) {
             const int numOfRowsInLevel = m_levelSets[level].size();
             levelStartIdx -= numOfRowsInLevel;
@@ -181,13 +179,13 @@ CuILU0_OPM_Impl<M, X, Y, l>::update()
     OPM_TIMEBLOCK(prec_update);
     {
         m_gpuMatrix.updateNonzeroValues(m_cpuMatrix, true); // send updated matrix to the gpu
-        computeDiagAndMoveReorderedData();
+        LUFactorizeAndMoveData();
     }
 }
 
 template <class M, class X, class Y, int l>
 void
-CuILU0_OPM_Impl<M, X, Y, l>::computeDiagAndMoveReorderedData()
+CuILU0_OPM_Impl<M, X, Y, l>::LUFactorizeAndMoveData()
 {
     OPM_TIMEBLOCK(prec_update);
     {
@@ -252,8 +250,8 @@ void
 CuILU0_OPM_Impl<M, X, Y, l>::tuneThreadBlockSizes()
 {
     //TODO generalize this tuning process in a function separate of the class
-    long long bestApplyTime = __LONG_LONG_MAX__;
-    long long bestUpdateTime = __LONG_LONG_MAX__;
+    long long bestApplyTime = std::numeric_limits<long long>::max();
+    long long bestUpdateTime = std::numeric_limits<long long>::max();
     int bestApplyBlockSize = -1;
     int bestUpdateBlockSize = -1;
     int interval = 64;
