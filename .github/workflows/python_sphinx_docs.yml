@@ -36,7 +36,7 @@ jobs:
             python-version: "3.11"
         - name: Install poetry
           continue-on-error: true
-          uses: abatilo/actions-poetry@v2
+          uses: OPM/actions-poetry@master
         - name: Install python dependencies
           continue-on-error: true
           run: |
@@ -60,7 +60,7 @@ jobs:
             cp -r python/sphinx_docs/docs/_build/* python/gh-pages/
         - name: Deploy documentation
           continue-on-error: true
-          uses: JamesIves/github-pages-deploy-action@v4
+          uses: OPM/github-pages-deploy-action@dev
           with:
             branch: gh-pages
             folder: python/gh-pages
