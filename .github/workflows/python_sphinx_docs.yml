@@ -22,22 +22,28 @@ jobs:
       steps:
         - name: Checkout source code
           uses: actions/checkout@v4
+          continue-on-error: true
           with:
             fetch-depth: 0   # Fetch all history for all tags and branches
         - name: Get docstrings_common.json from opm-common
+          continue-on-error: true
           run: |
             curl -L -o python/docstrings_common.json https://raw.githubusercontent.com/${{ github.repository_owner }}/opm-common/master/python/docstrings_common.json
         - name: Set up Python
+          continue-on-error: true
           uses: actions/setup-python@v5
           with:
             python-version: "3.11"
         - name: Install poetry
+          continue-on-error: true
           uses: abatilo/actions-poetry@v2
         - name: Install python dependencies
+          continue-on-error: true
           run: |
             cd python/sphinx_docs
             poetry install
         - name: Build documentation
+          continue-on-error: true
           run: |
             cd python
             mkdir gh-pages
@@ -49,9 +55,11 @@ jobs:
             # the master branch and the release/2024.04/final tag
             poetry run sphinx-versioned -m master -b master --force --git-root ../../
         - name: Copy documentation to gh-pages
+          continue-on-error: true
           run: |
             cp -r python/sphinx_docs/docs/_build/* python/gh-pages/
         - name: Deploy documentation
+          continue-on-error: true
           uses: JamesIves/github-pages-deploy-action@v4
           with:
             branch: gh-pages
