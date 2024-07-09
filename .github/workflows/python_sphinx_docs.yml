@@ -2,7 +2,8 @@ name: Build Python Sphinx Docs and push to gh-pages
 
 on:
     push:
-        branches: master
+        branches:
+          - '**'
         paths:
           - 'python/**'
           - '.github/workflows/python_sphinx_docs.yml'
@@ -53,14 +54,28 @@ jobs:
             # Later we can add release tags to the list to get the docs for the releases
             # For example: -b "master, release/2024.04/final" will build the docs for
             # the master branch and the release/2024.04/final tag
-            poetry run sphinx-versioned -m master -b master --force --git-root ../../
+            # If this is a build for master, then the build the documentation for the master branch
+            if [ "${{ github.ref }}" == "refs/heads/master" ]; then
+              branch=master
+            else
+              branch=${{ github.ref }}
+            fi
+            poetry run sphinx-versioned -m master -b "${branch}" --force --git-root ../../
         - name: Copy documentation to gh-pages
           continue-on-error: true
           run: |
             cp -r python/sphinx_docs/docs/_build/* python/gh-pages/
-        - name: Deploy documentation
+        - name: Deploy documentation for PR merge to master or push to master
+          if: github.ref == 'refs/heads/master'
           continue-on-error: true
           uses: OPM/github-pages-deploy-action@dev
           with:
             branch: gh-pages
             folder: python/gh-pages
+        - name: Deploy documentation for PRs and other branches
+          if: github.event_name == 'push' && github.ref != 'refs/heads/master'
+          continue-on-error: true
+          uses: OPM/github-pages-deploy-action@dev
+          with:
+            branch: gh-pages
+            folder: python/gh-pages-${{ github.ref }}
