@@ -35,7 +35,9 @@ namespace Mpi {
 namespace detail {
 
 static std::size_t mpi_buffer_size(const std::size_t bufsize, const std::size_t position) {
-    assert (bufsize >= position);
+    if (bufsize < position)
+        throw std::invalid_argument("Buffer size should never be less than position!");
+
     return static_cast<int>(std::min(bufsize-position,
                                      static_cast<std::size_t>(std::numeric_limits<int>::max())));
 }
@@ -69,11 +71,10 @@ struct Packing<true,T>
     {
         // For now we do not handle the situation where a a single call to packSize/pack/unpack
         // is likely to require an MPI_Pack_size value larger than intmax
-        assert ( n*sizeof(T) <= std::numeric_limits<int>::max() );
+        if (n*sizeof(T) > std::numeric_limits<int>::max())
+            throw std::invalid_argument("packSize will be larger than max integer - this is not supported.");
         int size = 0;
         MPI_Pack_size(n, Dune::MPITraits<T>::getType(), comm, &size);
-        assert (size >= 0);
-        assert (size < std::numeric_limits<int>::max() );
         return static_cast<std::size_t>(size);
     }
 

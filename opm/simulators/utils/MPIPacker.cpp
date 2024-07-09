@@ -70,7 +70,7 @@ packSize(const std::string& data, Parallel::MPIComm comm)
     MPI_Pack_size(1, Dune::MPITraits<std::size_t>::getType(), comm, &size);
     int totalSize = size;
     MPI_Pack_size(data.size(), MPI_CHAR, comm, &size);
-    return static_cast<std::size_t>(totalSize + size);
+    return totalSize + size;
 }
 
 void Packing<false,std::string>::

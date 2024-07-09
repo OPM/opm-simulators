@@ -52,15 +52,7 @@ public:
             try {
                 this->pack(data);
                 m_comm.broadcast(&m_packSize, 1, root);
-                const int maxChunkSize = std::numeric_limits<int>::max();
-                std::size_t remainingSize = m_packSize;
-                std::size_t pos = 0;
-                while (remainingSize > maxChunkSize) {
-                    m_comm.broadcast(m_buffer.data()+pos, maxChunkSize, root);
-                    pos += maxChunkSize;
-                    remainingSize -= maxChunkSize;
-                }
-                m_comm.broadcast(m_buffer.data()+pos, static_cast<int>(remainingSize), root);
+                broadcast_chunked(root);
             } catch (...) {
                 m_packSize = std::numeric_limits<size_t>::max();
                 m_comm.broadcast(&m_packSize, 1, root);
@@ -72,15 +64,7 @@ public:
                 throw std::runtime_error("Error detected in parallel serialization");
             }
             m_buffer.resize(m_packSize);
-            const int maxChunkSize = std::numeric_limits<int>::max();
-            std::size_t remainingSize = m_packSize;
-            std::size_t pos = 0;
-            while (remainingSize > maxChunkSize) {
-                m_comm.broadcast(m_buffer.data()+pos, maxChunkSize, root);
-                pos += maxChunkSize;
-                remainingSize -= maxChunkSize;
-            }
-            m_comm.broadcast(m_buffer.data()+pos, static_cast<int>(remainingSize), root);
+            broadcast_chunked(root);
             this->unpack(data);
         }
     }
@@ -95,15 +79,7 @@ public:
             try {
                 this->pack(std::forward<Args>(args)...);
                 m_comm.broadcast(&m_packSize, 1, root);
-                const int maxChunkSize = std::numeric_limits<int>::max();
-                std::size_t remainingSize = m_packSize;
-                std::size_t pos = 0;
-                while (remainingSize > maxChunkSize) {
-                    m_comm.broadcast(m_buffer.data()+pos, maxChunkSize, root);
-                    pos += maxChunkSize;
-                    remainingSize -= maxChunkSize;
-                }
-                m_comm.broadcast(m_buffer.data()+pos, static_cast<int>(remainingSize), root);
+                broadcast_chunked(root);
             } catch (...) {
                 m_packSize = std::numeric_limits<size_t>::max();
                 m_comm.broadcast(&m_packSize, 1, root);
@@ -115,15 +91,7 @@ public:
                 throw std::runtime_error("Error detected in parallel serialization");
             }
             m_buffer.resize(m_packSize);
-            const int maxChunkSize = std::numeric_limits<int>::max();
-            std::size_t remainingSize = m_packSize;
-            std::size_t pos = 0;
-            while (remainingSize > maxChunkSize) {
-                m_comm.broadcast(m_buffer.data()+pos, maxChunkSize, root);
-                pos += maxChunkSize;
-                remainingSize -= maxChunkSize;
-            }
-            m_comm.broadcast(m_buffer.data()+pos, static_cast<int>(remainingSize), root);
+            broadcast_chunked(root);
             this->unpack(std::forward<Args>(args)...);
         }
     }
@@ -149,6 +117,18 @@ public:
     }
 
 private:
+    void broadcast_chunked(int root) {
+        const int maxChunkSize = std::numeric_limits<int>::max();
+        std::size_t remainingSize = m_packSize;
+        std::size_t pos = 0;
+        while (remainingSize > maxChunkSize) {
+            m_comm.broadcast(m_buffer.data()+pos, maxChunkSize, root);
+            pos += maxChunkSize;
+            remainingSize -= maxChunkSize;
+        }
+        m_comm.broadcast(m_buffer.data()+pos, static_cast<int>(remainingSize), root);
+    }
+
     const Mpi::Packer m_packer; //!< Packer instance
     Parallel::Communication m_comm; //!< Communicator to use
 };
