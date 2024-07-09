@@ -26,19 +26,26 @@
 
 #include <bitset>
 #include <cstddef>
+#include <limits>
 #include <string>
+
 
 namespace Opm {
 namespace Mpi {
 namespace detail {
+
+static std::size_t mpi_buffer_size(const std::size_t bufsize, const std::size_t position) {
+    return static_cast<int>(std::min(bufsize-position,
+                                     static_cast<std::size_t>(std::numeric_limits<int>::max())));
+}
 
 //! \brief Abstract struct for packing which is (partially) specialized for specific types.
 template <bool pod, class T>
 struct Packing
 {
     static std::size_t packSize(const T&, Parallel::MPIComm);
-    static void pack(const T&, std::vector<char>&, int&, Parallel::MPIComm);
-    static void unpack(T&, std::vector<char>&, int&, Parallel::MPIComm);
+    static void pack(const T&, std::vector<char>&, std::size_t&, Parallel::MPIComm);
+    static void unpack(T&, std::vector<char>&, std::size_t&, Parallel::MPIComm);
 };
 
 //! \brief Packaging for pod data.
@@ -59,6 +66,9 @@ struct Packing<true,T>
     //! \param comm The communicator to use
     static std::size_t packSize(const T*, std::size_t n, Parallel::MPIComm comm)
     {
+        // For now we do not handle the situation where a a single call to packSize/pack/unpack
+        // is likely to require an MPI_Pack_size value larger than intmax
+        assert ( n*sizeof(T) <= std::numeric_limits<int>::max() );
         int size = 0;
         MPI_Pack_size(n, Dune::MPITraits<T>::getType(), comm, &size);
         return size;
@@ -71,7 +81,7 @@ struct Packing<true,T>
     //! \param comm The communicator to use
     static void pack(const T& data,
                      std::vector<char>& buffer,
-                     int& position,
+                     std::size_t& position,
                      Parallel::MPIComm comm)
     {
         pack(&data, 1, buffer, position, comm);
@@ -86,11 +96,13 @@ struct Packing<true,T>
     static void pack(const T* data,
                      std::size_t n,
                      std::vector<char>& buffer,
-                     int& position,
+                     std::size_t& position,
                      Parallel::MPIComm comm)
     {
-        MPI_Pack(data, n, Dune::MPITraits<T>::getType(), buffer.data(),
-                 buffer.size(), &position, comm);
+        int int_position = 0;
+        MPI_Pack(data, n, Dune::MPITraits<T>::getType(), buffer.data()+position,
+                 mpi_buffer_size(buffer.size(), position), &int_position, comm);
+        position += int_position;
     }
 
     //! \brief Unpack a POD.
@@ -100,7 +112,7 @@ struct Packing<true,T>
     //! \param comm The communicator to use
     static void unpack(T& data,
                        std::vector<char>& buffer,
-                       int& position,
+                       std::size_t& position,
                        Parallel::MPIComm comm)
     {
         unpack(&data, 1, buffer, position, comm);
@@ -115,11 +127,13 @@ struct Packing<true,T>
     static void unpack(T* data,
                        std::size_t n,
                        std::vector<char>& buffer,
-                       int& position,
+                       std::size_t& position,
                        Parallel::MPIComm comm)
     {
-        MPI_Unpack(buffer.data(), buffer.size(), &position, data, n,
+        int int_position = 0;
+        MPI_Unpack(buffer.data()+position, mpi_buffer_size(buffer.size(), position), &int_position, data, n,
                    Dune::MPITraits<T>::getType(), comm);
+        position += int_position;
     }
 };
 
@@ -133,13 +147,13 @@ struct Packing<false,T>
         return 0;
     }
 
-    static void pack(const T&, std::vector<char>&, int&,
+    static void pack(const T&, std::vector<char>&, std::size_t&,
                      Parallel::MPIComm)
     {
       static_assert(!std::is_same_v<T,T>, "Packing not supported for type");
     }
 
-    static void unpack(T&, std::vector<char>&, int&,
+    static void unpack(T&, std::vector<char>&, std::size_t&,
                        Parallel::MPIComm)
     {
         static_assert(!std::is_same_v<T,T>, "Packing not supported for type");
@@ -151,8 +165,8 @@ template <std::size_t Size>
 struct Packing<false,std::bitset<Size>>
 {
     static std::size_t packSize(const std::bitset<Size>&, Opm::Parallel::MPIComm);
-    static void pack(const std::bitset<Size>&, std::vector<char>&, int&, Opm::Parallel::MPIComm);
-    static void unpack(std::bitset<Size>&, std::vector<char>&, int&, Opm::Parallel::MPIComm);
+    static void pack(const std::bitset<Size>&, std::vector<char>&, std::size_t&, Opm::Parallel::MPIComm);
+    static void unpack(std::bitset<Size>&, std::vector<char>&, std::size_t&, Opm::Parallel::MPIComm);
 };
 
 #define ADD_PACK_SPECIALIZATION(T) \
@@ -160,8 +174,8 @@ struct Packing<false,std::bitset<Size>>
     struct Packing<false,T> \
     { \
         static std::size_t packSize(const T&, Parallel::MPIComm); \
-        static void pack(const T&, std::vector<char>&, int&, Parallel::MPIComm); \
-        static void unpack(T&, std::vector<char>&, int&, Parallel::MPIComm); \
+        static void pack(const T&, std::vector<char>&, std::size_t&, Parallel::MPIComm); \
+        static void unpack(T&, std::vector<char>&, std::size_t&, Parallel::MPIComm); \
     };
 
 ADD_PACK_SPECIALIZATION(std::string)
@@ -207,7 +221,7 @@ struct Packer {
     template<class T>
     void pack(const T& data,
               std::vector<char>& buffer,
-              int& position) const
+              std::size_t& position) const
     {
         detail::Packing<std::is_pod_v<T>,T>::pack(data, buffer, position, m_comm);
     }
@@ -222,7 +236,7 @@ struct Packer {
     void pack(const T* data,
               std::size_t n,
               std::vector<char>& buffer,
-              int& position) const
+              std::size_t& position) const
     {
         static_assert(std::is_pod_v<T>, "Array packing not supported for non-pod data");
         detail::Packing<true,T>::pack(data, n, buffer, position, m_comm);
@@ -236,7 +250,7 @@ struct Packer {
     template<class T>
     void unpack(T& data,
                 std::vector<char>& buffer,
-                int& position) const
+                std::size_t& position) const
     {
         detail::Packing<std::is_pod_v<T>,T>::unpack(data, buffer, position, m_comm);
     }
@@ -251,7 +265,7 @@ struct Packer {
     void unpack(T* data,
                 std::size_t n,
                 std::vector<char>& buffer,
-                int& position) const
+                std::size_t& position) const
     {
         static_assert(std::is_pod_v<T>, "Array packing not supported for non-pod data");
         detail::Packing<true,T>::unpack(data, n, buffer, position, m_comm);
