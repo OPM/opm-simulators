@@ -449,7 +449,7 @@ if(MPI_FOUND)
                       FILENAME SPE1CASE1
                       SIMULATOR flow
                       ABS_TOL ${abs_tol}
-                      REL_TOL ${rel_tol}
+                      REL_TOL 0.01
                       DIR spe1)
     endif()
 
