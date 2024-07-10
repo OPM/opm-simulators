@@ -23,6 +23,10 @@
 #include <stdexcept>
 #include <config.h>
 
+/*
+    The LU factorization and apply step is written based on the Dune implementations
+*/
+
 namespace Opm::cuistl::detail::ILU0
 {
 namespace
@@ -33,11 +37,9 @@ namespace
         constexpr int scalarsInBlock = blocksize * blocksize;
 
         if (reorderedIdx < rowsInLevelSet + startIdx){
-        // if (reorderedIdx < rowsInLevelSet){
             int naturalIdx = reorderedToNatual[reorderedIdx];
             // for each element under the diagonal
             int endOfRowI = srcRowIndices[reorderedIdx + 1];
-            // printf("idx: %d->%d. In color [%d->%d]\n", naturalIdx, reorderedIdx, startIdx, startIdx + rowsInLevelSet);
             int ij;
             for (ij = srcRowIndices[reorderedIdx]; ij < srcRowIndices[reorderedIdx+1] && srcColumnIndices[ij] < naturalIdx; ++ij){
                 // consider the block we are looking at to be A_ij
@@ -172,10 +174,6 @@ namespace
                         ikBlockPtr = &reorderedUpperMat[ik * scalarsInBlock];
                         ikColumn = upperColIndices[ik];
                     }
-
-                    // if (threadIdx.x == 0){
-                    //     printf("ROW=%d, state: %d, col[ik]=%d, endOfRowILower: %d startOfRowIUpper: %d\n", reorderedIdx, ikState, ikColumn, endOfRowILower, startOfRowIUpper);
-                    // }
 
                     if (ikColumn == upperColIndices[jk]){
                         // A_jk = A_ij * A_jk
