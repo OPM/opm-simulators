@@ -110,7 +110,6 @@ CuILU0_OPM_Impl<M, X, Y, l>::apply(X& v, const Y& d)
                     m_gpuReorderToNatural.data(),
                     levelStartIdx,
                     numOfRowsInLevel,
-                    m_gpuMatrixReorderedDiag.value().data(),
                     d.data(),
                     v.data(),
                     m_applyThreadBlockSize);

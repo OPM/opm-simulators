@@ -124,7 +124,6 @@ void solveLowerLevelSetSplit(T* reorderedLowerMat,
                                 int* indexConversion,
                                 int startIdx,
                                 int rowsInLevelSet,
-                                const T* dInv,
                                 const T* d,
                                 T* v,
                                 int threadBlockSize);

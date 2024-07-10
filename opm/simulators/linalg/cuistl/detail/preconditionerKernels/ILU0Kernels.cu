@@ -269,7 +269,6 @@ namespace
                                                      int* indexConversion,
                                                      int startIdx,
                                                      int rowsInLevelSet,
-                                                     const T* dInv,
                                                      const T* d,
                                                      T* v)
     {
@@ -368,7 +367,6 @@ solveLowerLevelSetSplit(T* reorderedMat,
                                int* indexConversion,
                                int startIdx,
                                int rowsInLevelSet,
-                               const T* dInv,
                                const T* d,
                                T* v,
                                int thrBlockSize)
@@ -376,7 +374,7 @@ solveLowerLevelSetSplit(T* reorderedMat,
     int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(cuSolveLowerLevelSetSplit<T, blocksize>, thrBlockSize);
     int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(rowsInLevelSet, threadBlockSize);
     cuSolveLowerLevelSetSplit<T, blocksize><<<nThreadBlocks, threadBlockSize>>>(
-        reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, dInv, d, v);
+        reorderedMat, rowIndices, colIndices, indexConversion, startIdx, rowsInLevelSet, d, v);
 }
 // perform the upper solve for all rows in the same level set
 template <class T, int blocksize>
@@ -438,7 +436,7 @@ void LUFactorizationSplit(T* reorderedLowerMat,
     template void LUFactorization<T, blocksize>(T*, int*, int*, int*, int*, size_t, int, int); \
     template void LUFactorizationSplit<T, blocksize>(T*, int*, int*, T*, int*, int*, T*, int*, int*, const int, int, int); \
     template void solveUpperLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);          \
-    template void solveLowerLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, const T*, T*, int);
+    template void solveLowerLevelSetSplit<T, blocksize>(T*, int*, int*, int*, int, int, const T*, T*, int);
 
 INSTANTIATE_KERNEL_WRAPPERS(float, 1);
 INSTANTIATE_KERNEL_WRAPPERS(float, 2);
