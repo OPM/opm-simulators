@@ -35,10 +35,10 @@ struct Packing<false,boost::gregorian::date>
     static std::size_t packSize(const boost::gregorian::date& data);
 
     static void pack(const boost::gregorian::date& data,
-                     std::vector<char>& buffer, int& position);
+                     std::vector<char>& buffer, std::size_t& position);
 
     static void unpack(boost::gregorian::date& data,
-                       std::vector<char>& buffer, int& position);
+                       std::vector<char>& buffer, std::size_t& position);
 };
 
 }
