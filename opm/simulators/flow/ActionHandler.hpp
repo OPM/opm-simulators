@@ -81,9 +81,7 @@ public:
                               const TransFunc& updateTrans);
 
     std::unordered_map<std::string, Scalar>
-    fetchWellPI(int reportStep,
-                const Action::ActionX& action,
-                const std::vector<std::string>& matching_wells) const;
+    fetchWellPI(int reportStep) const;
 
     EclipseState& ecl_state_;
     Schedule& schedule_;
