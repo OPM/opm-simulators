@@ -20,7 +20,7 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_MAIN_HEADER_INCLUDEDp
+#ifndef OPM_MAIN_HEADER_INCLUDED
 #define OPM_MAIN_HEADER_INCLUDED
 
 #include <flow/flow_blackoil.hpp>
