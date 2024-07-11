@@ -84,7 +84,7 @@ namespace Opm
             dtEstimate *= decayrate_;
         }
         // increase the time step size if we are below the number of target iterations
-        else if ( iterations < target_iterations_-1 )
+        else if ( iterations < target_iterations_ )
         {
             dtEstimate *= growthrate_;
         }
