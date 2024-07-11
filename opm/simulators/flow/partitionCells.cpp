@@ -30,7 +30,7 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 #include <opm/simulators/utils/gatherDeferredLogger.hpp>
 #include <opm/simulators/utils/ParallelNLDDPartitioningZoltan.hpp>
-#include <opm/simulators/utils/SetupZoltanParams.hpp>
+#include <opm/simulators/utils/SetupPartitioningParams.hpp>
 
 #include <opm/input/eclipse/Schedule/Well/Connection.hpp>
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>

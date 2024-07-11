@@ -40,7 +40,7 @@
 #include <opm/simulators/utils/ParallelEclipseState.hpp>
 #include <opm/simulators/utils/ParallelSerialization.hpp>
 #include <opm/simulators/utils/PropsDataHandle.hpp>
-#include <opm/simulators/utils/SetupZoltanParams.hpp>
+#include <opm/simulators/utils/SetupPartitioningParams.hpp>
 
 #if HAVE_MPI
 #include <opm/simulators/utils/MPISerializer.hpp>
@@ -146,17 +146,20 @@ template<class ElementMapper, class GridView, class Scalar>
 void GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
 doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                const bool                               ownersFirst,
+               const Dune::PartitionMethod              partitionMethod,
                const bool                               serialPartitioning,
                const bool                               enableDistributedWells,
-               const double                             zoltanImbalanceTol,
+               const double                             imbalanceTol,
                const GridView&                          gridView,
                const Schedule&                          schedule,
                EclipseState&                            eclState1,
                FlowGenericVanguard::ParallelWellStruct& parallelWells,
                const int                                numJacobiBlocks)
 {
-    if (!this->zoltanParams().empty())
-        this->grid_->setZoltanParams(setupZoltanParams(this->zoltanParams()));
+    if (partitionMethod == Dune::PartitionMethod::zoltan && !this->zoltanParams().empty())
+        this->grid_->setPartitioningParams(setupZoltanParams(this->zoltanParams()));
+    if (partitionMethod == Dune::PartitionMethod::metis && !this->metisParams().empty())
+        this->grid_->setPartitioningParams(setupMetisParams(this->metisParams()));
 
     const auto mpiSize = this->grid_->comm().size();
 
@@ -196,9 +199,9 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
 
         // Distribute the grid and switch to the distributed view.
         if (mpiSize > 1) {
-            this->distributeGrid(edgeWeightsMethod, ownersFirst,
+            this->distributeGrid(edgeWeightsMethod, ownersFirst, partitionMethod,
                                  serialPartitioning, enableDistributedWells,
-                                 zoltanImbalanceTol, loadBalancerSet != 0,
+                                 imbalanceTol, loadBalancerSet != 0,
                                  faceTrans, wells,
                                  eclState1, parallelWells);
         }
@@ -214,7 +217,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
             this->cell_part_ = this->grid_->
                 zoltanPartitionWithoutScatter(&wells, faceTrans.data(),
                                               numJacobiBlocks,
-                                              zoltanImbalanceTol);
+                                              imbalanceTol);
         }
 #endif
     }
@@ -281,9 +284,10 @@ void
 GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
 distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                const bool                               ownersFirst,
+               const Dune::PartitionMethod              partitionMethod,
                const bool                               serialPartitioning,
                const bool                               enableDistributedWells,
-               const double                             zoltanImbalanceTol,
+               const double                             imbalanceTol,
                const bool                               loadBalancerSet,
                const std::vector<double>&               faceTrans,
                const std::vector<Well>&                 wells,
@@ -293,9 +297,9 @@ distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
     if (auto* eclState = dynamic_cast<ParallelEclipseState*>(&eclState1);
         eclState != nullptr)
     {
-        this->distributeGrid(edgeWeightsMethod, ownersFirst,
+        this->distributeGrid(edgeWeightsMethod, ownersFirst, partitionMethod,
                              serialPartitioning, enableDistributedWells,
-                             zoltanImbalanceTol, loadBalancerSet, faceTrans,
+                             imbalanceTol, loadBalancerSet, faceTrans,
                              wells, eclState, parallelWells);
     }
     else {
@@ -317,9 +321,10 @@ void
 GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
 distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
                const bool                               ownersFirst,
+               const Dune::PartitionMethod              partitionMethod,
                const bool                               serialPartitioning,
                const bool                               enableDistributedWells,
-               const double                             zoltanImbalanceTol,
+               const double                             imbalanceTol,
                const bool                               loadBalancerSet,
                const std::vector<double>&               faceTrans,
                const std::vector<Well>&                 wells,
@@ -340,20 +345,18 @@ distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         auto parts = isIORank
             ? (*externalLoadBalancer)(*this->grid_)
             : std::vector<int>{};
-
+        //For this case, simple partitioning is selected automatically
         parallelWells =
             std::get<1>(this->grid_->loadBalance(handle, parts, &wells, ownersFirst,
                                                  addCornerCells, overlapLayers));
     }
     else {
-        const auto useZoltan = true;
-
         parallelWells =
             std::get<1>(this->grid_->loadBalance(handle, edgeWeightsMethod,
                                                  &wells, serialPartitioning,
                                                  faceTrans.data(), ownersFirst,
                                                  addCornerCells, overlapLayers,
-                                                 useZoltan, zoltanImbalanceTol,
+                                                 partitionMethod, imbalanceTol,
                                                  enableDistributedWells));
     }
 }

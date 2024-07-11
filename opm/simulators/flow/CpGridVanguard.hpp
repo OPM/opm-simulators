@@ -227,10 +227,11 @@ public:
         }
 
         this->doLoadBalance_(this->edgeWeightsMethod(), this->ownersFirst(),
-                             this->serialPartitioning(), this->enableDistributedWells(),
-                             this->zoltanImbalanceTol(), this->gridView(),
-                             this->schedule(), this->eclState(),
-                             this->parallelWells_, this->numJacobiBlocks());
+                             this->partitionMethod(), this->serialPartitioning(),
+                             this->enableDistributedWells(), this->imbalanceTol(),
+                             this->gridView(), this->schedule(),
+                             this->eclState(), this->parallelWells_,
+                             this->numJacobiBlocks());
 #endif
 
         this->updateGridView_();
@@ -297,6 +298,10 @@ protected:
     const std::string& zoltanParams() const override
     {
         return this->zoltanParams_;
+    }
+    const std::string& metisParams() const override
+    {
+        return this->metisParams_;
     }
 #endif
 
