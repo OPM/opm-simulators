@@ -20,7 +20,7 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_MAIN_HEADER_INCLUDED
+#ifndef OPM_MAIN_HEADER_INCLUDEDp
 #define OPM_MAIN_HEADER_INCLUDED
 
 #include <flow/flow_blackoil.hpp>
@@ -715,7 +715,7 @@ private:
         // Hence we duplicate the code of setupParallelism to get the number of threads.
         static bool first_time = true;        
         const int default_threads = 2;
-        const int requested_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
+        const int requested_threads = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
         const char* env_var = getenv("OMP_NUM_THREADS");
         int omp_num_threads = -1;
         try {

@@ -388,7 +388,7 @@ namespace Opm {
             // Issue a warning if both OMP_NUM_THREADS and --threads-per-process are set,
             // but let the environment variable take precedence.
             const int default_threads = 2;
-            const int requested_threads = Parameters::get<TypeTag, Properties::ThreadsPerProcess>();
+            const int requested_threads = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
             const char* env_var = getenv("OMP_NUM_THREADS");
             int omp_num_threads = -1;
             try {
