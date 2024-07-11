@@ -18,19 +18,42 @@
 */
 
 #include <config.h>
-#include <opm/simulators/utils/SetupZoltanParams.hpp>
+#include <opm/simulators/utils/SetupPartitioningParams.hpp>
 
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#if BOOST_VERSION / 100 % 1000 > 48
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/version.hpp>
+#endif
 
 #include <filesystem>
+#include <iostream>
 
 namespace Opm
 {
+#if BOOST_VERSION / 100 % 1000 > 48
+void convertJSONToMap(const std::string& conf, std::map<std::string,std::string>& result)
+{
 
+    if ( !std::filesystem::exists(conf) ) {
+        OPM_THROW(std::invalid_argument,
+                  "JSON file " + conf + " does not exist.");
+    }
+    boost::property_tree::ptree tree;
+    try {
+        boost::property_tree::read_json(conf, tree);
+    } catch (boost::property_tree::json_parser::json_parser_error& err) {
+        OpmLog::error(err.what());
+    }
+    for (const auto& node : tree) {
+        auto value = node.second.get_value_optional<std::string>();
+        if (value)
+          result.insert_or_assign(node.first, *value);
+    }
+}
+#endif
 
 std::map<std::string,std::string> setupZoltanParams(const std::string& conf)
 {
@@ -46,21 +69,7 @@ std::map<std::string,std::string> setupZoltanParams(const std::string& conf)
         result.emplace("GRAPH_PACKAGE", "PHG");
     } else if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") {
 #if BOOST_VERSION / 100 % 1000 > 48
-        if ( !std::filesystem::exists(conf) ) {
-            OPM_THROW(std::invalid_argument,
-                      "JSON file " + conf + " does not exist.");
-        }
-        boost::property_tree::ptree tree;
-        try {
-            boost::property_tree::read_json(conf, tree);
-        } catch (boost::property_tree::json_parser::json_parser_error& err) {
-            OpmLog::error(err.what());
-        }
-        for (const auto& node : tree) {
-            auto value = node.second.get_value_optional<std::string>();
-            if (value)
-              result.insert_or_assign(node.first, *value);
-        }
+        convertJSONToMap(conf, result);
 #else
         OPM_THROW(std::invalid_argument,
                   "--zoltan-params=file.json not supported with "
@@ -75,5 +84,28 @@ std::map<std::string,std::string> setupZoltanParams(const std::string& conf)
 
     return result;
 }
+
+std::map<std::string,std::string> setupMetisParams(const std::string& conf)
+{
+    std::map<std::string,std::string> result;
+    if (conf == "default") {
+        return result;
+    } else if (conf.size() > 5 && conf.substr(conf.size() - 5, 5) == ".json") {
+#if BOOST_VERSION / 100 % 1000 > 48
+        convertJSONToMap(conf, result);
+        return result;
+#else
+        OPM_THROW(std::invalid_argument,
+                  "--metis-params=file.json not supported with "
+                  "boost version. Needs version > 1.48.");
+#endif
+    } else {
+        // No valid configuration option found.
+        OPM_THROW(std::invalid_argument,
+                  conf + " is not a valid setting for --metis-params."
+                  " Please use a json file containing the METIS parameters.");
+    }
+}
+
 
 } // namespace Opm

@@ -106,10 +106,21 @@ struct OwnerCellsFirst {
 };
 
 template<class TypeTag, class MyTypeTag>
+struct PartitionMethod {
+    using type = UndefinedProperty;
+};
+
+template<class TypeTag, class MyTypeTag>
 struct SerialPartitioning {
     using type = UndefinedProperty;
 };
 
+template<class TypeTag, class MyTypeTag>
+struct ImbalanceTol {
+    using type = UndefinedProperty;
+};
+
+// Remove this for release 2025.04
 template<class TypeTag, class MyTypeTag>
 struct ZoltanImbalanceTol {
     using type = UndefinedProperty;
@@ -117,6 +128,11 @@ struct ZoltanImbalanceTol {
 
 template<class TypeTag, class MyTypeTag>
 struct ZoltanParams {
+    using type = UndefinedProperty;
+};
+
+template<class TypeTag, class MyTypeTag>
+struct MetisParams {
     using type = UndefinedProperty;
 };
 
@@ -175,6 +191,12 @@ template<class TypeTag>
 struct OwnerCellsFirst<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr bool value = true;
 };
+
+template<class TypeTag>
+struct PartitionMethod<TypeTag, TTag::FlowBaseVanguard> {
+    static constexpr int value = 1; // 0: simple, 1: Zoltan, 2: METIS, see GridEnums.hpp
+};
+
 template<class TypeTag>
 struct SerialPartitioning<TypeTag, TTag::FlowBaseVanguard> {
     static constexpr bool value = false;
@@ -182,12 +204,22 @@ struct SerialPartitioning<TypeTag, TTag::FlowBaseVanguard> {
 
 template<class TypeTag>
 struct ZoltanImbalanceTol<TypeTag, TTag::FlowBaseVanguard> {
-    static constexpr double value = 1.1;
+    static constexpr double value = 0;
 };
 
 template<class TypeTag>
 struct ZoltanParams<TypeTag,TTag::FlowBaseVanguard> {
     static constexpr auto value = "graph";
+};
+
+template<class TypeTag>
+struct ImbalanceTol<TypeTag, TTag::FlowBaseVanguard> {
+    static constexpr double value = 1.1;
+};
+
+template<class TypeTag>
+struct MetisParams<TypeTag,TTag::FlowBaseVanguard> {
+    static constexpr auto value = "default";
 };
 
 template <class TypeTag>
@@ -280,10 +312,13 @@ public:
         Parameters::registerParam<TypeTag, Properties::OwnerCellsFirst>
             ("Order cells owned by rank before ghost/overlap cells.");
 #if HAVE_MPI
+        Parameters::registerParam<TypeTag, Properties::PartitionMethod>
+            ("Choose partitioning strategy: 0=simple, 1=Zoltan, 2=METIS.");
         Parameters::registerParam<TypeTag, Properties::SerialPartitioning>
             ("Perform partitioning for parallel runs on a single process.");
         Parameters::registerParam<TypeTag, Properties::ZoltanImbalanceTol>
-            ("Tolerable imbalance of the loadbalancing provided by Zoltan (default: 1.1).");
+            ("Tolerable imbalance of the loadbalancing provided by Zoltan. DEPRECATED: Use --imbalance-tol instead");
+        Parameters::hideParam<TypeTag, Properties::ZoltanImbalanceTol>();
         Parameters::registerParam<TypeTag, Properties::ZoltanParams>
             ("Configuration of Zoltan partitioner. "
              "Valid options are: graph, hypergraph or scotch. "
@@ -292,6 +327,15 @@ public:
              "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
              "for available Zoltan options.");
         Parameters::hideParam<TypeTag, Properties::ZoltanParams>();
+        Parameters::registerParam<TypeTag, Properties::ImbalanceTol>
+            ("Tolerable imbalance of the loadbalancing (default: 1.1).");
+
+        Parameters::registerParam<TypeTag, Properties::MetisParams>
+            ("Configuration of Metis partitioner. "
+             "You can request a configuration to be read "
+             "from a JSON file by giving the filename here, ending with '.json.' "
+             "See http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/manual.pdf"
+             "for available METIS options.");
         Parameters::registerParam<TypeTag, Properties::ExternalPartition>
             ("Name of file from which to load an externally generated "
              "partitioning of the model's active cells for MPI "
@@ -324,9 +368,15 @@ public:
 
         ownersFirst_ = Parameters::get<TypeTag, Properties::OwnerCellsFirst>();
 #if HAVE_MPI
+        partitionMethod_   = Dune::PartitionMethod(Parameters::get<TypeTag, Properties::PartitionMethod>());
         serialPartitioning_ = Parameters::get<TypeTag, Properties::SerialPartitioning>();
+        imbalanceTol_ = Parameters::get<TypeTag, Properties::ImbalanceTol>();
+
         zoltanImbalanceTol_ = Parameters::get<TypeTag, Properties::ZoltanImbalanceTol>();
         zoltanParams_ = Parameters::get<TypeTag, Properties::ZoltanParams>();
+
+        metisParams_ = Parameters::get<TypeTag, Properties::MetisParams>();
+
         externalPartitionFile_ = Parameters::get<TypeTag, Properties::ExternalPartition>();
 #endif
         enableDistributedWells_ = Parameters::get<TypeTag, Properties::AllowDistributedWells>();

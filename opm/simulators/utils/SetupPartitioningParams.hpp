@@ -17,8 +17,8 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPM_SETUP_ZOLTAN_PARAMS_HPP
-#define OPM_SETUP_ZOLTAN_PARAMS_HPP
+#ifndef OPM_SETUP_PARTITIONING_PARAMS_HPP
+#define OPM_SETUP_PARTITIONING_PARAMS_HPP
 
 #include <map>
 #include <string>
@@ -26,7 +26,8 @@
 namespace Opm {
 
 std::map<std::string,std::string> setupZoltanParams(const std::string& conf);
+std::map<std::string,std::string> setupMetisParams(const std::string& conf);
 
 } // namespace Opm
 
-#endif // OPM_SETUP_ZOLTAN_PARAMS_HPP
+#endif // OPM_SETUP_PARTITIONING_PARAMS_HPP
