@@ -1304,41 +1304,49 @@ namespace Opm
 
 
     template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
+    void StandardWell<TypeTag>::
     computeWellConnectionDensitesPressures(const Simulator& simulator,
                                            const WellState<Scalar>& well_state,
                                            const WellConnectionProps& props,
                                            DeferredLogger& deferred_logger)
     {
-        std::function<Scalar(int,int)> invB =
-        [&simulator](int cell_idx, int phase_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).fluidState().invB(phase_idx).value();
-        };
-        std::function<Scalar(int,int)> mobility =
-        [&simulator](int cell_idx, int phase_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).mobility(phase_idx).value();
-        };
-        std::function<Scalar(int)> invFac =
-        [&simulator](int cell_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).solventInverseFormationVolumeFactor().value();
-        };
-        std::function<Scalar(int)> solventMobility =
-        [&simulator](int cell_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).solventMobility().value();
+        // Cell level dynamic property call-back functions as fall-back
+        // option for calculating connection level mixture densities in
+        // stopped or zero-rate producer wells.
+        const auto prop_func = typename StdWellEval::StdWellConnections::DensityPropertyFunctions {
+            // This becomes slightly more palatable with C++20's designated
+            // initialisers.
+
+            // mobility: Phase mobilities in specified cell.
+            [&model = simulator.model()](const int               cell,
+                                         const std::vector<int>& phases,
+                                         std::vector<Scalar>&    mob)
+            {
+                const auto& iq = model.intensiveQuantities(cell, /* time_idx = */ 0);
+
+                std::transform(phases.begin(), phases.end(), mob.begin(),
+                               [&iq](const int phase) { return iq.mobility(phase).value(); });
+            },
+
+            // densityInCell: Reservoir condition phase densities in
+            // specified cell.
+            [&model = simulator.model()](const int               cell,
+                                         const std::vector<int>& phases,
+                                         std::vector<Scalar>&    rho)
+            {
+                const auto& fs = model.intensiveQuantities(cell, /* time_idx = */ 0).fluidState();
+
+                std::transform(phases.begin(), phases.end(), rho.begin(),
+                               [&fs](const int phase) { return fs.density(phase).value(); });
+            }
         };
 
-        this->connections_.computeProperties(well_state,
-                                             invB,
-                                             mobility,
-                                             invFac,
-                                             solventMobility,
-                                             props,
-                                             deferred_logger);
+        const auto stopped_or_zero_rate_target = this->
+            stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+
+        this->connections_
+            .computeProperties(stopped_or_zero_rate_target, well_state,
+                               prop_func, props, deferred_logger);
     }
 
 

@@ -66,18 +66,22 @@ public:
         std::function<Scalar(int)>     solventRefDensity{};
     };
 
+    struct DensityPropertyFunctions
+    {
+        std::function<void(int, const std::vector<int>&, std::vector<Scalar>&)> mobility{};
+        std::function<void(int, const std::vector<int>&, std::vector<Scalar>&)> densityInCell{};
+    };
+
     Properties
     computePropertiesForPressures(const WellState<Scalar>&         well_state,
                                   const PressurePropertyFunctions& propFunc) const;
 
     //! \brief Compute connection properties (densities, pressure drop, ...)
-    void computeProperties(const WellState<Scalar>& well_state,
-                           const std::function<Scalar(int,int)>& invB,
-                           const std::function<Scalar(int,int)>& mobility,
-                           const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
-                           const std::function<Scalar(int)>& solventMobility,
-                           const Properties& props,
-                           DeferredLogger& deferred_logger);
+    void computeProperties(const bool                      stop_or_zero_rate_target,
+                           const WellState<Scalar>&        well_state,
+                           const DensityPropertyFunctions& prop_func,
+                           const Properties&               props,
+                           DeferredLogger&                 deferred_logger);
 
     //! \brief Returns density for first perforation.
     Scalar rho() const
@@ -139,6 +143,8 @@ private:
     void computeDensities(const std::vector<Scalar>& perfComponentRates,
                           const Properties& props,
                           DeferredLogger& deferred_logger);
+
+    void computeDensitiesForStoppedProducer(const DensityPropertyFunctions& prop_func);
 
     std::vector<Scalar>
     calculatePerforationOutflow(const std::vector<Scalar>& perfComponentRates) const;

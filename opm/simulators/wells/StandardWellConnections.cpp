@@ -419,6 +419,44 @@ initialiseConnectionMixture(const int                  num_comp,
     }
 }
 
+template <class FluidSystem, class Indices>
+void StandardWellConnections<FluidSystem, Indices>::
+computeDensitiesForStoppedProducer(const DensityPropertyFunctions& prop_func)
+{
+    const auto np = this->well_.numPhases();
+
+    const auto modPhIx = [this, np]() {
+        auto phIx = std::vector<int>(np);
+
+        for (auto p = 0*np; p < np; ++p) {
+            phIx[p] = this->well_.flowPhaseToModelPhaseIdx(p);
+        }
+
+        return phIx;
+    }();
+
+    auto mob = std::vector<Scalar>(np);
+    auto rho = std::vector<Scalar>(np);
+
+    const auto nperf = this->well_.numPerfs();
+    for (auto perf = 0*nperf; perf < nperf; ++perf) {
+        const auto cell_idx = this->well_.cells()[perf];
+
+        prop_func.mobility     (cell_idx, modPhIx, mob);
+        prop_func.densityInCell(cell_idx, modPhIx, rho);
+
+        auto& rho_i = this->perf_densities_[perf];
+
+        auto mt = rho_i = Scalar{0};
+        for (auto p = 0*np; p < np; ++p) {
+            rho_i += mob[p] * rho[p];
+            mt    += mob[p];
+        }
+
+        rho_i /= mt;
+    }
+}
+
 template<class FluidSystem, class Indices>
 typename StandardWellConnections<FluidSystem, Indices>::Properties
 StandardWellConnections<FluidSystem,Indices>::
@@ -625,85 +663,27 @@ copyInPerforationRates(const Properties&       props,
 
 template<class FluidSystem, class Indices>
 void StandardWellConnections<FluidSystem,Indices>::
-computeProperties(const WellState<Scalar>& well_state,
-                  const std::function<Scalar(int,int)>& invB,
-                  const std::function<Scalar(int,int)>& mobility,
-                  const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
-                  const std::function<Scalar(int)>& solventMobility,
-                  const Properties& props,
-                  DeferredLogger& deferred_logger)
+computeProperties(const bool                      stopped_or_zero_rate_target,
+                  const WellState<Scalar>&        well_state,
+                  const DensityPropertyFunctions& prop_func,
+                  const Properties&               props,
+                  DeferredLogger&                 deferred_logger)
 {
-    // Compute densities
-    const int nperf = well_.numPerfs();
-    const int np = well_.numPhases();
-    const auto& ws = well_state.well(well_.indexOfWell());
-    const auto& perf_data = ws.perf_data;
-    const auto& perf_rates_state = perf_data.phase_rates;
+    // Step 1: Compute mixture densities in well-bore.  Result values stored
+    // in data member perf_densities_.
+    if (stopped_or_zero_rate_target && this->well_.isProducer()) {
+        this->computeDensitiesForStoppedProducer(prop_func);
+    }
+    else {
+        // Injector or flowing producer.
+        const auto perfRates = this->copyInPerforationRates
+            (props, well_state.well(this->well_.indexOfWell()).perf_data);
 
-    auto perfRates = this->copyInPerforationRates
-        (props, well_state.well(this->well_.indexOfWell()).perf_data);
-
-    // for producers where all perforations have zero rate we
-    // approximate the perforation mixture using the mobility ratio
-    // and weight the perforations using the well transmissibility.
-    bool all_zero = std::all_of(perfRates.begin(), perfRates.end(),
-                                [](Scalar val) { return val == 0.0; });
-    const auto& comm = well_.parallelWellInfo().communication();
-    if (comm.size() > 1)
-    {
-        all_zero =  (comm.min(all_zero ? 1 : 0) == 1);
+        this->computeDensities(perfRates, props, deferred_logger);
     }
 
-    if (all_zero && well_.isProducer()) {
-        Scalar total_tw = 0;
-        for (int perf = 0; perf < nperf; ++perf) {
-            total_tw += well_.wellIndex()[perf];
-        }
-        if (comm.size() > 1)
-        {
-            total_tw = comm.sum(total_tw);
-        }
-        // for producers where all perforations have zero rates we
-        // approximate the perforation mixture ration using the (invB * mobility) ratio,
-        // and weight the perforation rates using the well transmissibility.
-        for (int perf = 0; perf < nperf; ++perf) {
-            const int cell_idx = well_.cells()[perf];
-            const Scalar well_tw_fraction = well_.wellIndex()[perf] / total_tw;
-            Scalar total_mobility = 0.0;
-            Scalar total_invB = 0.;
-            for (int p = 0; p < np; ++p) {
-                int modelPhaseIdx = well_.flowPhaseToModelPhaseIdx(p);
-                total_mobility += invB(cell_idx, modelPhaseIdx) * mobility(cell_idx, modelPhaseIdx);
-                total_invB += invB(cell_idx, modelPhaseIdx);
-            }
-            if constexpr (Indices::enableSolvent) {
-                total_mobility += solventInverseFormationVolumeFactor(cell_idx) * solventMobility(cell_idx);
-                total_invB += solventInverseFormationVolumeFactor(cell_idx);
-            }
-            const bool non_zero_total_mobility = total_mobility > std::numeric_limits<Scalar>::min();
-            assert(total_invB > std::numeric_limits<Scalar>::min());
-            // for the perforation having zero mobility for all the phases, we use a small value to generate a small
-            // perforation rates for those perforations, at the same time, we can use the rates to recover the mixing
-            // ratios for those perforations.
-            constexpr Scalar small_value = 1.e-10;
-            for (int p = 0; p < np; ++p) {
-                const int modelPhaseIdx = well_.flowPhaseToModelPhaseIdx(p);
-                const auto mob_ratio = non_zero_total_mobility
-                                       ? mobility(cell_idx, modelPhaseIdx) / total_mobility
-                                       : small_value / total_invB;
-                perfRates[perf * well_.numComponents() + p] = well_tw_fraction * invB(cell_idx, modelPhaseIdx) * mob_ratio;
-            }
-            if constexpr (Indices::enableSolvent) {
-                const auto mob_ratio = non_zero_total_mobility
-                                        ? solventMobility(cell_idx) / total_mobility
-                                        : small_value / total_invB;
-                perfRates[perf * well_.numComponents() + Indices::contiSolventEqIdx] =
-                        well_tw_fraction * solventInverseFormationVolumeFactor(cell_idx) * mob_ratio;
-            }
-        }
-    }
-
-    this->computeDensities(perfRates, props, deferred_logger);
+    // Step 2: Use those mixture densities to calculate pressure drops along
+    // well-bore.  Result values stored in data member perf_pressure_diffs_.
     this->computePressureDelta();
 }
 
