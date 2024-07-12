@@ -76,8 +76,8 @@ namespace Opm {
                                             simulator.gridView().comm())
         , simulator_(simulator)
     {
-        this->terminal_output_ = ((simulator.gridView().comm().rank() == 0) &&
-                                   Parameters::Get<Parameters::EnableTerminalOutput>());
+        this->terminal_output_ = (simulator.gridView().comm().rank() == 0)
+            && Parameters::Get<Parameters::EnableTerminalOutput>();
 
         local_num_cells_ = simulator_.gridView().size(0);
 
@@ -96,13 +96,13 @@ namespace Opm {
         this->alternative_well_rate_init_ =
             Parameters::Get<Parameters::AlternativeWellRateInit>();
 
-        using SourceDataSpan = 
-            typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
+        using SourceDataSpan = typename
+            PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;
+
         this->wbpCalculationService_
             .localCellIndex([this](const std::size_t globalIndex)
             { return this->compressedIndexForInterior(globalIndex); })
-            .evalCellSource([this](const int                                                               localCell,
-                                   SourceDataSpan                                                          sourceTerms)
+            .evalCellSource([this](const int localCell, SourceDataSpan sourceTerms)
             {
                 using Item = typename SourceDataSpan::Item;
 
@@ -828,30 +828,33 @@ namespace Opm {
     BlackoilWellModel<TypeTag>::
     initializeWellState(const int timeStepIdx)
     {
-        std::vector<Scalar> cellPressures(this->local_num_cells_, 0.0);
-        std::vector<Scalar> cellTemperatures(this->local_num_cells_, 0.0);
-        ElementContext elemCtx(simulator_);
+        const auto pressIx = []()
+        {
+            if (Indices::oilEnabled)   { return FluidSystem::oilPhaseIdx;   }
+            if (Indices::waterEnabled) { return FluidSystem::waterPhaseIdx; }
 
-        const auto& gridView = simulator_.vanguard().gridView();
+            return FluidSystem::gasPhaseIdx;
+        }();
+
+        auto cellPressures = std::vector<Scalar>(this->local_num_cells_, Scalar{0});
+        auto cellTemperatures = std::vector<Scalar>(this->local_num_cells_, Scalar{0});
+
+        auto elemCtx = ElementContext { this->simulator_ };
+        const auto& gridView = this->simulator_.vanguard().gridView();
 
         OPM_BEGIN_PARALLEL_TRY_CATCH();
         for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
             elemCtx.updatePrimaryStencil(elem);
             elemCtx.updatePrimaryIntensiveQuantities(/*timeIdx=*/0);
 
+            const auto ix = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
             const auto& fs = elemCtx.intensiveQuantities(/*spaceIdx=*/0, /*timeIdx=*/0).fluidState();
-            // copy of get perfpressure in Standard well except for value
-            Scalar& perf_pressure = cellPressures[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)];
-            if (Indices::oilEnabled) {
-                perf_pressure = fs.pressure(FluidSystem::oilPhaseIdx).value();
-            } else if (Indices::waterEnabled) {
-                perf_pressure = fs.pressure(FluidSystem::waterPhaseIdx).value();
-            } else {
-                perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
-            }
-            cellTemperatures[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)] = fs.temperature(0).value();
+
+            cellPressures[ix] = fs.pressure(pressIx).value();
+            cellTemperatures[ix] = fs.temperature(0).value();
         }
-        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::initializeWellState() failed: ", simulator_.vanguard().grid().comm());
+        OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::initializeWellState() failed: ",
+                                   this->simulator_.vanguard().grid().comm());
 
         this->wellState().init(cellPressures, cellTemperatures, this->schedule(), this->wells_ecl_,
                                this->local_parallel_well_info_, timeStepIdx,
