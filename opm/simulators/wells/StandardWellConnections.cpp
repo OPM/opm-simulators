@@ -420,15 +420,13 @@ initialiseConnectionMixture(const int                  num_comp,
 }
 
 template<class FluidSystem, class Indices>
-void StandardWellConnections<FluidSystem,Indices>::
-computePropertiesForPressures(const WellState<Scalar>& well_state,
-                              const std::function<Scalar(int,int)>& getTemperature,
-                              const std::function<Scalar(int)>& getSaltConcentration,
-                              const std::function<int(int)>& pvtRegionIdx,
-                              const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
-                              const std::function<Scalar(int)>& solventRefDensity,
-                              Properties& props) const
+typename StandardWellConnections<FluidSystem, Indices>::Properties
+StandardWellConnections<FluidSystem,Indices>::
+computePropertiesForPressures(const WellState<Scalar>&         well_state,
+                              const PressurePropertyFunctions& prop_func) const
 {
+    auto props = Properties{};
+
     const int nperf = well_.numPerfs();
     const PhaseUsage& pu = well_.phaseUsage();
 
@@ -466,9 +464,9 @@ computePropertiesForPressures(const WellState<Scalar>& well_state,
         const int cell_idx = well_.cells()[perf];
 
         const Scalar p_avg = (perf_press[perf] + p_above[perf])/2;
-        const Scalar temperature = getTemperature(cell_idx, FluidSystem::oilPhaseIdx);
-        const Scalar saltConcentration = getSaltConcentration(cell_idx);
-        const int region_idx = pvtRegionIdx(cell_idx);
+        const Scalar temperature = prop_func.getTemperature(cell_idx, FluidSystem::oilPhaseIdx);
+        const Scalar saltConcentration = prop_func.getSaltConcentration(cell_idx);
+        const int region_idx = prop_func.pvtRegionIdx(cell_idx);
 
         if (waterPresent) {
             const unsigned waterCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
@@ -572,10 +570,15 @@ computePropertiesForPressures(const WellState<Scalar>& well_state,
 
         // We use cell values for solvent injector
         if constexpr (Indices::enableSolvent) {
-            props.b_perf[well_.numComponents() * perf + Indices::contiSolventEqIdx] = solventInverseFormationVolumeFactor(cell_idx);
-            props.surf_dens_perf[well_.numComponents() * perf + Indices::contiSolventEqIdx] = solventRefDensity(cell_idx);
+            props.b_perf[well_.numComponents() * perf + Indices::contiSolventEqIdx] =
+                prop_func.solventInverseFormationVolumeFactor(cell_idx);
+
+            props.surf_dens_perf[well_.numComponents() * perf + Indices::contiSolventEqIdx] =
+                prop_func.solventRefDensity(cell_idx);
         }
     }
+
+    return props;
 }
 
 template <class FluidSystem, class Indices>
