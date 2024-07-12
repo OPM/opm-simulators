@@ -33,13 +33,128 @@
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
 
 #include <opm/simulators/wells/ParallelWellInfo.hpp>
+#include <opm/simulators/wells/PerfData.hpp>
 #include <opm/simulators/wells/WellInterfaceIndices.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#include <algorithm>
 #include <cassert>
+#include <cmath>
+#include <functional>
 #include <limits>
 #include <numeric>
-#include <sstream>
+#include <stdexcept>
+#include <string_view>
+#include <tuple>
+#include <variant>
+#include <vector>
+
+#include <fmt/format.h>
+
+namespace {
+    // Component and phase rates/mixtures at surface conditions are linked as
+    //
+    // [ componentMixture[oilpos]   ]   [ 1     Rv     0  ] [ phaseMixture[oilpos]  ]
+    // [ componentMixture[gaspos]   ] = [ Rs     1    Rsw ] [ phaseMixture[gaspos]  ]
+    // [ componentMixture[waterpos] ]   [ 0     Rvw    1  ] [ phaseMixture[waterpos ]
+    //
+    // The reapportion*Mixture() functions calculates phase rates/mixtures
+    // in the oil/gas and gas/water systems, respectively, based on known
+    // component rates/mixtures.
+
+    template <typename Scalar, typename Properties>
+    void reapportionGasOilMixture(std::string_view                              well,
+                                  const typename std::vector<Scalar>::size_type gaspos,
+                                  const typename std::vector<Scalar>::size_type oilpos,
+                                  const typename std::vector<Scalar>::size_type perf,
+                                  const Properties&                             props,
+                                  const std::vector<Scalar>&                    componentMixture,
+                                  std::vector<Scalar>&                          phaseMixture,
+                                  Opm::DeferredLogger&                          deferred_logger)
+    {
+        const auto threshold = static_cast<Scalar>(1.0e-12);
+
+        Scalar rs {0};
+        if (!props.rsmax_perf.empty() && (componentMixture[oilpos] > threshold)) {
+            rs = std::min(componentMixture[gaspos] / componentMixture[oilpos], props.rsmax_perf[perf]);
+        }
+
+        Scalar rv {0};
+        if (!props.rvmax_perf.empty() && (componentMixture[gaspos] > threshold)) {
+            rv = std::min(componentMixture[oilpos] / componentMixture[gaspos], props.rvmax_perf[perf]);
+        }
+
+        const Scalar denom = Scalar{1} - rs*rv;
+        if (! (denom > Scalar{0})) {
+            const auto msg = fmt::format(R"(Problematic denominator value {} for well {}.
+    Connection density calculation with (Rs, Rv) = ({}, {}).
+    Proceeding as if no dissolution or vaporisation for this connection)",
+                                         denom, well, rs, rv);
+
+            deferred_logger.debug(msg);
+        }
+        else {
+            if (rs > Scalar{0}) {
+                // Subtract gas in oil from gas mixture.
+                phaseMixture[gaspos] =
+                    (componentMixture[gaspos] - componentMixture[oilpos]*rs) / denom;
+            }
+
+            if (rv > Scalar{0}) {
+                // Subtract oil in gas from oil mixture.
+                phaseMixture[oilpos] =
+                    (componentMixture[oilpos] - componentMixture[gaspos]*rv) / denom;
+            }
+        }
+    }
+
+    template <typename Scalar, typename Properties>
+    void reapportionGasWaterMixture(std::string_view                              well,
+                                    const typename std::vector<Scalar>::size_type gaspos,
+                                    const typename std::vector<Scalar>::size_type waterpos,
+                                    const typename std::vector<Scalar>::size_type perf,
+                                    const Properties&                             props,
+                                    const std::vector<Scalar>&                    componentMixture,
+                                    std::vector<Scalar>&                          phaseMixture,
+                                    Opm::DeferredLogger&                          deferred_logger)
+    {
+        const auto threshold = static_cast<Scalar>(1.0e-12);
+
+        Scalar rvw {0};
+        if (!props.rvwmax_perf.empty() && (componentMixture[gaspos] > threshold)) {
+            rvw = std::min(componentMixture[waterpos] / componentMixture[gaspos], props.rvwmax_perf[perf]);
+        }
+
+        Scalar rsw {0};
+        if (!props.rswmax_perf.empty() && (componentMixture[waterpos] > threshold)) {
+            rsw = std::min(componentMixture[gaspos] / componentMixture[waterpos], props.rswmax_perf[perf]);
+        }
+
+        const Scalar d = Scalar{1} - rsw*rvw;
+        if (! (d > Scalar{0})) {
+            const auto msg = fmt::format(R"(Problematic denominator value {} for well {}.
+    Connection density calculation with (Rsw, Rvw) = ({}, {}).
+    Proceeding as if no dissolution or vaporisation for this connection)",
+                                         d, well, rsw, rvw);
+
+            deferred_logger.debug(msg);
+        }
+        else {
+            if (rsw > Scalar{0}) {
+                // Subtract gas in water from gas mixture
+                phaseMixture[gaspos] =
+                    (componentMixture[gaspos] - componentMixture[waterpos]*rsw) / d;
+            }
+
+            if (rvw > Scalar{0}) {
+                // Subtract water in gas from water mixture
+                phaseMixture[waterpos] =
+                    (componentMixture[waterpos] - componentMixture[gaspos]*rvw) / d;
+            }
+        }
+    }
+
+} // Anonymous namespace
 
 namespace Opm
 {
@@ -95,194 +210,212 @@ computeDensities(const std::vector<Scalar>& perfComponentRates,
                  const Properties& props,
                  DeferredLogger& deferred_logger)
 {
-    // Verify that we have consistent input.
-    const int nperf = well_.numPerfs();
-    const int num_comp = well_.numComponents();
+    using Ix = typename std::vector<Scalar>::size_type;
 
-    // 1. Compute the flow (in surface volume units for each
-    //    component) exiting up the wellbore from each perforation,
-    //    taking into account flow from lower in the well, and
-    //    in/out-flow at each perforation.
-    std::vector<Scalar> q_out_perf((nperf)*num_comp, 0.0);
+    const auto activeGas   = FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx);
+    const auto activeOil   = FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx);
+    const auto activeWater = FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx);
 
-    // Step 1 depends on the order of the perforations. Hence we need to
-    // do the modifications globally.
-    // Create and get the global perforation information and do this sequentially
-    // on each process
+    // The *pos objects are unused unless the corresponding phase is active.
+    // Therefore, it's safe to have -1 (== numeric_limits<size_t>::max()) be
+    // their value in that case.
+    const auto gaspos = activeGas
+        ? static_cast<Ix>(Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx))
+        : static_cast<Ix>(-1);
 
-    const auto& factory = well_.parallelWellInfo().getGlobalPerfContainerFactory();
+    const auto oilpos = activeOil
+        ? static_cast<Ix>(Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx))
+        : static_cast<Ix>(-1);
+
+    const auto waterpos = activeWater
+        ? static_cast<Ix>(Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx))
+        : static_cast<Ix>(-1);
+
+    const int nperf    = this->well_.numPerfs();
+    const int num_comp = this->well_.numComponents();
+
+    // 1. Compute the flow (in surface volume units for each component)
+    //    exiting up the wellbore from each perforation, taking into account
+    //    flow from lower in the well, and in/out-flow at each perforation.
+    const auto q_out_perf = this->calculatePerforationOutflow(perfComponentRates);
+
+    // 2. Compute the component mixture at each perforation as the absolute
+    //    values of the surface rates divided by their sum.  Then compute
+    //    volume ratios (formation factors) for each perforation.  Finally
+    //    compute densities for the segments associated with each
+    //    perforation.
+    auto componentMixture = std::vector<Scalar>(num_comp, Scalar{0});
+    auto phaseMixture     = std::vector<Scalar>(num_comp, Scalar{0});
+
+    for (int perf = 0; perf < nperf; ++perf) {
+        this->initialiseConnectionMixture(num_comp, perf,
+                                          q_out_perf,
+                                          phaseMixture,
+                                          componentMixture);
+
+        // Initial phase mixture for this perforation is the same as the
+        // initialised component mixture, which in turn is possibly just
+        // copied from the phase mixture of the previous perforation (i.e.,
+        // "perf - 1").
+        phaseMixture = componentMixture;
+
+        // Separate components based on flowing rates.
+        if (activeGas && activeOil) {
+            reapportionGasOilMixture(this->well_.name(), gaspos, oilpos, perf,
+                                     props, componentMixture, phaseMixture,
+                                     deferred_logger);
+        }
+
+        if (activeGas && activeWater) {
+            reapportionGasWaterMixture(this->well_.name(), gaspos, waterpos, perf,
+                                       props, componentMixture, phaseMixture,
+                                       deferred_logger);
+        }
+
+        // Compute connection level mixture density as a weighted average of
+        // phase densities.
+        const auto* const rho_s = &props.surf_dens_perf[perf*num_comp + 0];
+        const auto* const b     = &props.b_perf        [perf*num_comp + 0];
+
+        auto& rho = this->perf_densities_[perf];
+
+        auto volrat = rho = Scalar{0};
+        for (auto comp = 0*num_comp; comp < num_comp; ++comp) {
+            rho    += componentMixture[comp] * rho_s[comp];
+            volrat += phaseMixture    [comp] / b    [comp];
+        }
+
+        rho /= volrat;
+    }
+}
+
+template <class FluidSystem, class Indices>
+std::vector<typename StandardWellConnections<FluidSystem, Indices>::Scalar>
+StandardWellConnections<FluidSystem, Indices>::
+calculatePerforationOutflow(const std::vector<Scalar>& perfComponentRates) const
+{
+    const int nperf    = this->well_.numPerfs();
+    const int num_comp = this->well_.numComponents();
+
+    auto q_out_perf = std::vector<Scalar>(nperf * num_comp, Scalar{0});
+
+    // Component flow rates depend on the order of the perforations.  Thus,
+    // we must use the global view of the well's perforation to get an
+    // accurate picture of the component flow rates at the perforation
+    // level.
+    const auto& factory = this->well_.parallelWellInfo()
+        .getGlobalPerfContainerFactory();
+
     auto global_q_out_perf = factory.createGlobal(q_out_perf, num_comp);
-    auto global_perf_comp_rates = factory.createGlobal(perfComponentRates, num_comp);
 
-    // TODO: investigate whether we should use the following techniques to calcuate the composition of flows in the wellbore
-    // Iterate over well perforations from bottom to top.
+    const auto global_perf_comp_rates = factory
+        .createGlobal(perfComponentRates, num_comp);
+
+    // TODO: Investigate whether we should use the following techniques to
+    // calcuate the composition of flows in the wellbore.  Iterate over well
+    // perforations from bottom to top.
     for (int perf = factory.numGlobalPerfs() - 1; perf >= 0; --perf) {
         for (int component = 0; component < num_comp; ++component) {
-            auto index = perf * num_comp + component;
-            if (perf == factory.numGlobalPerfs() - 1) {
-                // This is the bottom perforation. No flow from below.
-                global_q_out_perf[index] = 0.0;
-            } else {
-                // Set equal to flow from below.
-                global_q_out_perf[index] = global_q_out_perf[index + num_comp];
-            }
+            const auto index = perf*num_comp + component;
+            auto& q_out = global_q_out_perf[index];
+
+            // Initialise current perforation's component flow rate to that
+            // of the perforation below.  Bottom perforation has zero flow
+            // component rate.
+            q_out = (perf == factory.numGlobalPerfs() - 1)
+                ? Scalar{0}
+                : global_q_out_perf[index + num_comp];
+
             // Subtract outflow through perforation.
-            global_q_out_perf[index] -= global_perf_comp_rates[index];
+            q_out -= global_perf_comp_rates[index];
         }
     }
 
-    // Copy the data back to local view
+    // Copy the data back to local view.
     factory.copyGlobalToLocal(global_q_out_perf, q_out_perf, num_comp);
 
-    // 2. Compute the component mix at each perforation as the
-    //    absolute values of the surface rates divided by their sum.
-    //    Then compute volume ratios (formation factors) for each perforation.
-    //    Finally compute densities for the segments associated with each perforation.
-    std::vector<Scalar> mix(num_comp,0.0);
-    std::vector<Scalar> x(num_comp);
-    std::vector<Scalar> surf_dens(num_comp);
+    return q_out_perf;
+}
 
-    for (int perf = 0; perf < nperf; ++perf) {
-        // Find component mix.
-        const Scalar tot_surf_rate = std::accumulate(q_out_perf.begin() + num_comp*perf,
-                                                     q_out_perf.begin() + num_comp*(perf+1), 0.0);
-        if (tot_surf_rate != 0.0) {
-            for (int component = 0; component < num_comp; ++component) {
-                mix[component] = std::fabs(q_out_perf[perf*num_comp + component]/tot_surf_rate);
-            }
-        } else if (num_comp == 1) {
-            mix[num_comp-1] = 1.0;
-        } else {
-            std::fill(mix.begin(), mix.end(), 0.0);
-            // No flow => use well specified fractions for mix.
-            if (well_.isInjector()) {
-                switch (well_.wellEcl().injectorType()) {
-                case InjectorType::WATER:
-                    mix[FluidSystem::waterCompIdx] = 1.0;
-                    break;
-                case InjectorType::GAS:
-                    mix[FluidSystem::gasCompIdx] = 1.0;
-                    break;
-                case InjectorType::OIL:
-                    mix[FluidSystem::oilCompIdx] = 1.0;
-                    break;
-                case InjectorType::MULTI:
-                    // Not supported.
-                    // deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
-                    //                         "Multi phase injectors are not supported, requested for well " + name());
-                    break;
-                }
-            } else {
-                assert(well_.isProducer());
-                // For the frist perforation without flow we use the preferred phase to decide the mix initialization.
-                if (perf == 0) { //
-                    switch (well_.wellEcl().getPreferredPhase()) {
-                    case Phase::OIL:
-                        mix[FluidSystem::oilCompIdx] = 1.0;
-                        break;
-                    case Phase::GAS:
-                        mix[FluidSystem::gasCompIdx] = 1.0;
-                        break;
-                    case Phase::WATER:
-                        mix[FluidSystem::waterCompIdx] = 1.0;
-                        break;
-                    default:
-                        // No others supported.
-                        break;
-                    }
-                // For the rest of the perforation without flow we use mix from the above perforation.
-                } else {
-                    mix = x;
-                }
+template <class FluidSystem, class Indices>
+void StandardWellConnections<FluidSystem, Indices>::
+initialiseConnectionMixture(const int                  num_comp,
+                            const int                  perf,
+                            const std::vector<Scalar>& q_out_perf,
+                            const std::vector<Scalar>& phaseMixture,
+                            std::vector<Scalar>&       componentMixture) const
+{
+    // Find component mix.
+    const auto tot_surf_rate =
+        std::accumulate(q_out_perf.begin() + num_comp*(perf + 0),
+                        q_out_perf.begin() + num_comp*(perf + 1), Scalar{0});
 
-            }
-        }
-        // Compute volume ratio.
-        x = mix;
+    if (tot_surf_rate != Scalar{0}) {
+        const auto* const qo = &q_out_perf[perf*num_comp + 0];
 
-        // Subtract dissolved gas from oil phase and vapporized oil from gas phase and vaporized water from gas phase
-        if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)) {
-            const unsigned gaspos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            const unsigned oilpos = Indices::canonicalToActiveComponentIndex(FluidSystem::oilCompIdx);
-            Scalar rs = 0.0;
-            Scalar rv = 0.0;
-            if (!props.rsmax_perf.empty() && mix[oilpos] > 1e-12) {
-                rs = std::min(mix[gaspos] / mix[oilpos], props.rsmax_perf[perf]);
-            }
-            if (!props.rvmax_perf.empty() && mix[gaspos] > 1e-12) {
-                rv = std::min(mix[oilpos] / mix[gaspos], props.rvmax_perf[perf]);
-            }
-            const Scalar d = 1.0 - rs*rv;
-            if (d <= 0.0) {
-                std::ostringstream sstr;
-                sstr << "Problematic d value " << d << " obtained for well " << well_.name()
-                     << " during computeConnectionDensities with rs " << rs
-                     << ", rv " << rv
-                     << " obtaining d " << d
-                     << " Continue as if no dissolution (rs = 0) and vaporization (rv = 0) "
-                     << " for this connection.";
-                deferred_logger.debug(sstr.str());
-            } else {
-                if (rs > 0.0) {
-                    // Subtract gas in oil from gas mixture
-                    x[gaspos] = (mix[gaspos] - mix[oilpos]*rs)/d;
-                }
-                if (rv > 0.0) {
-                    // Subtract oil in gas from oil mixture
-                    x[oilpos] = (mix[oilpos] - mix[gaspos]*rv)/d;
-                }
-            }
-        }
-
-        if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx) && FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
-            //matrix system: (mix[oilpos] = q_os, x[oilpos] = bo*q_or, etc...)
-            //┌             ┐   ┌                ┐  ┌           ┐
-            //│mix[oilpos]  │   | 1     Rv     0 |  |x[oilpos]  |
-            //│mix[gaspos]  │ = │ Rs    1     Rsw│  │x[gaspos]  │
-            //│mix[waterpos]│   │ 0     Rvw    1 │  │x[waterpos │
-            //└             ┘   └                ┘  └           ┘
-            const unsigned waterpos = Indices::canonicalToActiveComponentIndex(FluidSystem::waterCompIdx);
-            const unsigned gaspos = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
-            Scalar rvw = 0.0;
-            if (!props.rvwmax_perf.empty() && mix[gaspos] > 1e-12) {
-                rvw = std::min(mix[waterpos] / mix[gaspos], props.rvwmax_perf[perf]);
-            }
-            Scalar rsw = 0.0;
-            if (!props.rswmax_perf.empty() && mix[waterpos] > 1e-12) {
-                rsw = std::min(mix[gaspos] / mix[waterpos], props.rswmax_perf[perf]);
-            }
-            const Scalar d = 1.0 - rsw*rvw;
-            if (d <= 0.0) {
-                std::ostringstream sstr;
-                sstr << "Problematic d value " << d << " obtained for well " << well_.name()
-                    << " during computeConnectionDensities with rsw " << rsw
-                    << ", rvw " << rvw
-                    << " obtaining d " << d
-                    << " Continue as if no dissolution (rsw = 0) and vaporization (rvw = 0) "
-                    << " for this connection.";
-                deferred_logger.debug(sstr.str());
-            } else {
-                if (rsw > 0.0) {
-                    // Subtract gas in water from gas mixture
-                    x[gaspos] = (mix[gaspos] - mix[waterpos]*rsw)/d;
-                }
-                if (rvw > 0.0) {
-                    // Subtract water in gas from water mixture
-                    x[waterpos] = (mix[waterpos] - mix[gaspos]*rvw)/d;
-                }
-            }
-        }
-
-        Scalar volrat = 0.0;
         for (int component = 0; component < num_comp; ++component) {
-            volrat += x[component] / props.b_perf[perf * num_comp + component];
+            componentMixture[component] = std::abs(qo[component] / tot_surf_rate);
         }
-        for (int component = 0; component < num_comp; ++component) {
-            surf_dens[component] = props.surf_dens_perf[perf * num_comp + component];
-        }
+    }
+    else if (num_comp == 1) {
+        componentMixture[num_comp - 1] = Scalar{1};
+    }
+    else {
+        std::fill(componentMixture.begin(), componentMixture.end(), Scalar{0});
 
-        // Compute segment density.
-        perf_densities_[perf] = std::inner_product(surf_dens.begin(), surf_dens.end(), mix.begin(), 0.0) / volrat;
+        // No flow => use fractions defined at well level for componentMixture.
+        if (this->well_.isInjector()) {
+            switch (this->well_.wellEcl().injectorType()) {
+            case InjectorType::WATER:
+                componentMixture[FluidSystem::waterCompIdx] = Scalar{1};
+                break;
+
+            case InjectorType::GAS:
+                componentMixture[FluidSystem::gasCompIdx] = Scalar{1};
+                break;
+
+            case InjectorType::OIL:
+                componentMixture[FluidSystem::oilCompIdx] = Scalar{1};
+                break;
+
+            case InjectorType::MULTI:
+                // Not supported.
+                // deferred_logger.warning("MULTI_PHASE_INJECTOR_NOT_SUPPORTED",
+                //                         "Multi phase injectors are not supported, requested for well " + name());
+                break;
+            }
+        }
+        else {
+            assert(this->well_.isProducer());
+
+            if (perf == 0) {
+                // For the first perforation without flow we use the
+                // preferred phase to decide the componentMixture initialization.
+
+                switch (this->well_.wellEcl().getPreferredPhase()) {
+                case Phase::OIL:
+                    componentMixture[FluidSystem::oilCompIdx] = Scalar{1};
+                    break;
+
+                case Phase::GAS:
+                    componentMixture[FluidSystem::gasCompIdx] = Scalar{1};
+                    break;
+
+                case Phase::WATER:
+                    componentMixture[FluidSystem::waterCompIdx] = Scalar{1};
+                    break;
+
+                default:
+                    // No others supported.
+                    break;
+                }
+            }
+            else {
+                // For the rest of the perforations without flow we use the
+                // componentMixture from the perforation above.
+                componentMixture = phaseMixture;
+            }
+        }
     }
 }
 
@@ -445,6 +578,48 @@ computePropertiesForPressures(const WellState<Scalar>& well_state,
     }
 }
 
+template <class FluidSystem, class Indices>
+std::vector<typename StandardWellConnections<FluidSystem, Indices>::Scalar>
+StandardWellConnections<FluidSystem, Indices>::
+copyInPerforationRates(const Properties&       props,
+                       const PerfData<Scalar>& perf_data) const
+{
+    auto perfRates = std::vector<Scalar>(props.b_perf.size(), Scalar{0});
+
+    const int nperf = this->well_.numPerfs();
+    const int np    = this->well_.numPhases();
+    const int nc    = this->well_.numComponents();
+
+    const auto srcIx = [this, np]() {
+        auto ix = std::vector<int>(np);
+
+        for (auto comp = 0; comp < np; ++comp) {
+            ix[comp] = this->well_.modelCompIdxToFlowCompIdx(comp);
+        }
+
+        return ix;
+    }();
+
+    for (int perf = 0; perf < nperf; ++perf) {
+        const auto* const src = &perf_data.phase_rates[perf*np + 0];
+        auto* const       dst = &perfRates            [perf*nc + 0];
+
+        for (int comp = 0; comp < np; ++comp) {
+            dst[comp] = src[srcIx[comp]];
+        }
+    }
+
+    if constexpr (Indices::enableSolvent) {
+        for (int perf = 0, ix_s = 0*nc + Indices::contiSolventEqIdx;
+             perf < nperf; ++perf, ix_s += nc)
+        {
+            perfRates[ix_s] = perf_data.solvent_rates[perf];
+        }
+    }
+
+    return perfRates;
+}
+
 template<class FluidSystem, class Indices>
 void StandardWellConnections<FluidSystem,Indices>::
 computeProperties(const WellState<Scalar>& well_state,
@@ -458,23 +633,12 @@ computeProperties(const WellState<Scalar>& well_state,
     // Compute densities
     const int nperf = well_.numPerfs();
     const int np = well_.numPhases();
-    std::vector<Scalar> perfRates(props.b_perf.size(),0.0);
     const auto& ws = well_state.well(well_.indexOfWell());
     const auto& perf_data = ws.perf_data;
     const auto& perf_rates_state = perf_data.phase_rates;
 
-    for (int perf = 0; perf < nperf; ++perf) {
-        for (int comp = 0; comp < np; ++comp) {
-            perfRates[perf * well_.numComponents() + comp] =  perf_rates_state[perf * np + well_.modelCompIdxToFlowCompIdx(comp)];
-        }
-    }
-
-    if constexpr (Indices::enableSolvent) {
-        const auto& solvent_perf_rates_state = perf_data.solvent_rates;
-        for (int perf = 0; perf < nperf; ++perf) {
-            perfRates[perf * well_.numComponents() + Indices::contiSolventEqIdx] = solvent_perf_rates_state[perf];
-        }
-    }
+    auto perfRates = this->copyInPerforationRates
+        (props, well_state.well(this->well_.indexOfWell()).perf_data);
 
     // for producers where all perforations have zero rate we
     // approximate the perforation mixture using the mobility ratio
