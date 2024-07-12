@@ -1477,10 +1477,10 @@ namespace Opm
                             const WellState<Scalar>& well_state,
                             DeferredLogger& deferred_logger) const
     {
-        // Check if well is stopped or under zero rate control, either directly or from group
-        return (this->wellIsStopped() || wellUnderZeroRateTarget(simulator,
-                                                                 well_state,
-                                                                 deferred_logger));
+        // Check if well is stopped or under zero rate control, either
+        // directly or from group.
+        return this->wellIsStopped()
+            || this->wellUnderZeroRateTarget(simulator, well_state, deferred_logger);
     }
 
     template<typename TypeTag>

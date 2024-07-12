@@ -2026,18 +2026,25 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWaterThroughput(const double dt, WellState<Scalar>& well_state) const
+    updateWaterThroughput([[maybe_unused]] const double dt,
+                          WellState<Scalar>&            well_state) const
     {
         if constexpr (Base::has_polymermw) {
-            if (this->isInjector()) {
-                auto& ws = well_state.well(this->index_of_well_);
-                auto& perf_water_throughput = ws.perf_data.water_throughput;
-                for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
-                    const Scalar perf_water_vel = this->primary_variables_.value(Bhp + 1 + perf);
-                    // we do not consider the formation damage due to water flowing from reservoir into wellbore
-                    if (perf_water_vel > 0.) {
-                        perf_water_throughput[perf] += perf_water_vel * dt;
-                    }
+            if (!this->isInjector()) {
+                return;
+            }
+
+            auto& perf_water_throughput = well_state.well(this->index_of_well_)
+                .perf_data.water_throughput;
+
+            for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+                const Scalar perf_water_vel =
+                    this->primary_variables_.value(Bhp + 1 + perf);
+
+                // we do not consider the formation damage due to water
+                // flowing from reservoir into wellbore
+                if (perf_water_vel > Scalar{0}) {
+                    perf_water_throughput[perf] += perf_water_vel * dt;
                 }
             }
         }
