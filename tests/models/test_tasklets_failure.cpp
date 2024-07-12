@@ -97,16 +97,30 @@ void execute () {
 
         // Dispatch some successful tasklets
         for (int i = 0; i < 5; ++i) {
+            runner->barrier();
+
+            if (runner->failure()) {
+                exit(EXIT_FAILURE);
+            }
             auto st = std::make_shared<SleepTasklet>(10,i);
             runner->dispatch(st);
         }
 
+        runner->barrier();
+        if (runner->failure()) {
+            exit(EXIT_FAILURE);
+        }
         // Dispatch a failing tasklet
         auto failingSleepTasklet = std::make_shared<FailingSleepTasklet>(100);
         runner->dispatch(failingSleepTasklet);
 
         // Dispatch more successful tasklets
         for (int i = 5; i < 10; ++i) {
+            runner->barrier();
+
+            if (runner->failure()) {
+                exit(EXIT_FAILURE);
+            }
             auto st = std::make_shared<SleepTasklet>(10,i);
             runner->dispatch(st);
         }

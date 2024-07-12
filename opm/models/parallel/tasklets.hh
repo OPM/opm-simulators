@@ -199,6 +199,11 @@ public:
         }
     }
 
+    bool failure() const
+    {
+        return this->failureFlag_.load(std::memory_order_relaxed);
+    }
+
     /*!
      * \brief Returns the index of the current worker thread.
      *
@@ -224,11 +229,6 @@ public:
      */
     void dispatch(std::shared_ptr<TaskletInterface> tasklet)
     {
-        if (failureFlag_.load(std::memory_order_relaxed)) {
-            std::cerr << "Failure flag of the TaskletRunner is set. Not dispatching new tasklets.\n";
-            exit(EXIT_FAILURE);
-        }
-
         if (threads_.empty()) {
             // run the tasklet immediately in synchronous mode.
             while (tasklet->referenceCount() > 0) {
@@ -313,11 +313,6 @@ protected:
     void run_()
     {
         while (true) {
-            // Check if failure flag is set
-            if (failureFlag_.load(std::memory_order_relaxed)) {
-                std::cerr << "Failure flag of the TaskletRunner is set. Exiting thread.\n";
-                exit(EXIT_FAILURE);
-            }
 
             // wait until tasklets have been pushed to the queue. first we need to lock
             // mutex for access to taskletQueue_
