@@ -43,7 +43,7 @@
 #endif
 
 #if HAVE_ROCALUTION
-#include <opm/simulators/linalg/bda/rocalutionSolverBackend.hpp>
+#include <opm/simulators/linalg/bda/rocm/rocalutionSolverBackend.hpp>
 #endif
 
 #if HAVE_ROCSPARSE
