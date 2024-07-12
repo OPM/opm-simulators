@@ -1,17 +1,22 @@
 set(PYTHON_OPM_SIMULATORS_PACKAGE_PATH ${PROJECT_BINARY_DIR}/python/opm/simulators)
 
 # Set the path to the input docstrings.json file and the output .hpp file
-set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings.json")
+set(PYTHON_DOCSTRINGS_FILE "${PROJECT_SOURCE_DIR}/python/docstrings_simulators.json")
 set(PYTHON_DOCSTRINGS_GENERATED_HPP "${PROJECT_BINARY_DIR}/python/PyBlackOilSimulatorDoc.hpp")
 #  Note: If the new find_package(Python3) is used in the top level CMakeLists.txt, the variable
 #    ${PYTHON_EXECUTABLE} is set there to ${Python3_EXECUTABLE}
 #
 # Command to run the Python script
+
+find_file(PYTHON_GENERATE_DOCSTRINGS_PY generate_docstring_hpp.py
+  PATHS ${opm-common_DIR} ${opm-common_PYTHON_COMMON_DIR}
+  PATH_SUFFIXES python NO_DEFAULT_PATH REQUIRED)
+
 add_custom_command(
     OUTPUT ${PYTHON_DOCSTRINGS_GENERATED_HPP}
     COMMAND ${CMAKE_COMMAND} -E env PYTHONPATH=${CMAKE_SOURCE_DIR}
-            ${PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/python/generate_docstring_hpp.py
-            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_DOCSTRINGS_GENERATED_HPP}
+            ${PYTHON_EXECUTABLE} ${PYTHON_GENERATE_DOCSTRINGS_PY}
+            ${PYTHON_DOCSTRINGS_FILE} ${PYTHON_DOCSTRINGS_GENERATED_HPP} PYBLACKOILSIMULATORDOC_HPP "Opm::Pybind::DocStrings"
     DEPENDS ${PYTHON_DOCSTRINGS_FILE}
     COMMENT "Generating PyBlackOilSimulatorDoc.hpp from JSON file"
 )
