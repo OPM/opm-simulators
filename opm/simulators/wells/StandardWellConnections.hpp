@@ -57,13 +57,18 @@ public:
         std::vector<Scalar> surf_dens_perf{};
     };
 
-    void computePropertiesForPressures(const WellState<Scalar>& well_state,
-                                       const std::function<Scalar(int,int)>& getTemperature,
-                                       const std::function<Scalar(int)>& getSaltConcentration,
-                                       const std::function<int(int)>& pvtRegionIdx,
-                                       const std::function<Scalar(int)>& solventInverseFormationVolumeFactor,
-                                       const std::function<Scalar(int)>& solventRefDensity,
-                                       Properties& props) const;
+    struct PressurePropertyFunctions
+    {
+        std::function<Scalar(int,int)> getTemperature{};
+        std::function<Scalar(int)>     getSaltConcentration{};
+        std::function<int(int)>        pvtRegionIdx{};
+        std::function<Scalar(int)>     solventInverseFormationVolumeFactor{};
+        std::function<Scalar(int)>     solventRefDensity{};
+    };
+
+    Properties
+    computePropertiesForPressures(const WellState<Scalar>&         well_state,
+                                  const PressurePropertyFunctions& propFunc) const;
 
     //! \brief Compute connection properties (densities, pressure drop, ...)
     void computeProperties(const WellState<Scalar>& well_state,
