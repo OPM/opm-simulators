@@ -25,7 +25,9 @@
 
 #include <opm/simulators/wells/StandardWellPrimaryVariables.hpp>
 
+#include <array>
 #include <functional>
+#include <tuple>
 #include <variant>
 #include <vector>
 
@@ -36,6 +38,7 @@ class DeferredLogger;
 enum class Phase;
 template<class FluidSystem, class Indices> class WellInterfaceIndices;
 template<class Scalar> class WellState;
+template<class Scalar> class PerfData;
 
 template<class FluidSystem, class Indices>
 class StandardWellConnections
@@ -46,12 +49,12 @@ public:
 
     struct Properties
     {
-        std::vector<Scalar> b_perf;
-        std::vector<Scalar> rsmax_perf;
-        std::vector<Scalar> rvmax_perf;
-        std::vector<Scalar> rvwmax_perf;
-        std::vector<Scalar> rswmax_perf;
-        std::vector<Scalar> surf_dens_perf;
+        std::vector<Scalar> b_perf{};
+        std::vector<Scalar> rsmax_perf{};
+        std::vector<Scalar> rvmax_perf{};
+        std::vector<Scalar> rvwmax_perf{};
+        std::vector<Scalar> rswmax_perf{};
+        std::vector<Scalar> surf_dens_perf{};
     };
 
     void computePropertiesForPressures(const WellState<Scalar>& well_state,
@@ -131,6 +134,19 @@ private:
     void computeDensities(const std::vector<Scalar>& perfComponentRates,
                           const Properties& props,
                           DeferredLogger& deferred_logger);
+
+    std::vector<Scalar>
+    calculatePerforationOutflow(const std::vector<Scalar>& perfComponentRates) const;
+
+    void initialiseConnectionMixture(const int                  num_comp,
+                                     const int                  perf,
+                                     const std::vector<Scalar>& q_out_perf,
+                                     const std::vector<Scalar>& currentMixture,
+                                     std::vector<Scalar>&       previousMixture) const;
+
+    std::vector<Scalar>
+    copyInPerforationRates(const Properties&       props,
+                           const PerfData<Scalar>& perf_data) const;
 
     const WellInterfaceIndices<FluidSystem,Indices>& well_; //!< Reference to well interface
 
