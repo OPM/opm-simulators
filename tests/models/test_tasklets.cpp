@@ -51,9 +51,8 @@ public:
     {
         assert(0 <= runner->workerThreadIndex() && runner->workerThreadIndex() < runner->numWorkerThreads());
         std::this_thread::sleep_for(std::chrono::milliseconds(mseconds_));
-        outputMutex.lock();
+        std::lock_guard<std::mutex> guard(outputMutex);
         std::cout << "Sleep tasklet " << n_ << " of " << mseconds_ << " ms completed by worker thread " << runner->workerThreadIndex() << std::endl;
-        outputMutex.unlock();
     }
 
 private:
@@ -67,9 +66,8 @@ void sleepAndPrintFunction()
 {
     int ms = 100;
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-    outputMutex.lock();
+    std::lock_guard<std::mutex> guard(outputMutex);
     std::cout << "Sleep completed by worker thread " << runner->workerThreadIndex() << std::endl;
-    outputMutex.unlock();
 }
 
 int SleepTasklet::numInstantiated_ = 0;
