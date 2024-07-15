@@ -91,8 +91,8 @@ void execute () {
     runner = std::make_unique<Opm::TaskletRunner>(numWorkers);
 
     // the master thread is not a worker thread
-    assert(runner->workerThreadIndex() < 0);
-    assert(runner->numWorkerThreads() == numWorkers);
+    BOOST_REQUIRE_LT(runner->workerThreadIndex(), 0);
+    BOOST_REQUIRE_EQUAL(runner->numWorkerThreads(), numWorkers);
 
     // Dispatch some successful tasklets
     for (int i = 0; i < 5; ++i) {
