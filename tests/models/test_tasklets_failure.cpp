@@ -87,46 +87,46 @@ private:
 };
 
 void execute () {
-        int numWorkers = 2;
-        runner = std::make_unique<Opm::TaskletRunner>(numWorkers);
+    int numWorkers = 2;
+    runner = std::make_unique<Opm::TaskletRunner>(numWorkers);
 
-        // the master thread is not a worker thread
-        assert(runner->workerThreadIndex() < 0);
-        assert(runner->numWorkerThreads() == numWorkers);
+    // the master thread is not a worker thread
+    assert(runner->workerThreadIndex() < 0);
+    assert(runner->numWorkerThreads() == numWorkers);
 
-        // Dispatch some successful tasklets
-        for (int i = 0; i < 5; ++i) {
-            runner->barrier();
-
-            if (runner->failure()) {
-                exit(EXIT_FAILURE);
-            }
-            auto st = std::make_shared<SleepTasklet>(10,i);
-            runner->dispatch(st);
-        }
-
+    // Dispatch some successful tasklets
+    for (int i = 0; i < 5; ++i) {
         runner->barrier();
+
         if (runner->failure()) {
             exit(EXIT_FAILURE);
         }
-        // Dispatch a failing tasklet
-        auto failingSleepTasklet = std::make_shared<FailingSleepTasklet>(100);
-        runner->dispatch(failingSleepTasklet);
-
-        // Dispatch more successful tasklets
-        for (int i = 5; i < 10; ++i) {
-            runner->barrier();
-
-            if (runner->failure()) {
-                exit(EXIT_FAILURE);
-            }
-            auto st = std::make_shared<SleepTasklet>(10,i);
-            runner->dispatch(st);
-        }
-
-        std::cout << "before barrier" << std::endl;
-        runner->barrier();
+        auto st = std::make_shared<SleepTasklet>(10,i);
+        runner->dispatch(st);
     }
+
+    runner->barrier();
+    if (runner->failure()) {
+        exit(EXIT_FAILURE);
+    }
+    // Dispatch a failing tasklet
+    auto failingSleepTasklet = std::make_shared<FailingSleepTasklet>(100);
+    runner->dispatch(failingSleepTasklet);
+
+    // Dispatch more successful tasklets
+    for (int i = 5; i < 10; ++i) {
+        runner->barrier();
+
+        if (runner->failure()) {
+            exit(EXIT_FAILURE);
+        }
+        auto st = std::make_shared<SleepTasklet>(10,i);
+        runner->dispatch(st);
+    }
+
+    std::cout << "before barrier" << std::endl;
+    runner->barrier();
+}
 BOOST_AUTO_TEST_SUITE(Tasklets)
 BOOST_AUTO_TEST_CASE(TASKLETS_FAILURE) {
     pid_t pid = fork(); // Create a new process, such that this child process can call exit(EXIT_FAILURE)
