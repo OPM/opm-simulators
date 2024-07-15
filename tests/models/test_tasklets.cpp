@@ -35,7 +35,8 @@
 
 std::mutex outputMutex;
 
-Opm::TaskletRunner *runner;
+// The runner is created on the heap for the assertion and outputs in the run function of the tasklets.
+std::unique_ptr<Opm::TaskletRunner> runner{};
 
 class SleepTasklet : public Opm::TaskletInterface
 {
@@ -75,7 +76,7 @@ int SleepTasklet::numInstantiated_ = 0;
 int main()
 {
     int numWorkers = 2;
-    runner = new Opm::TaskletRunner(numWorkers);
+    runner = std::make_unique<Opm::TaskletRunner>(numWorkers);
 
     // the master thread is not a worker thread
     assert(runner->workerThreadIndex() < 0);
@@ -93,8 +94,6 @@ int main()
 
     runner->dispatchFunction(sleepAndPrintFunction);
     runner->dispatchFunction(sleepAndPrintFunction, /*numInvokations=*/6);
-
-    delete runner;
 
     return 0;
 }
