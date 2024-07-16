@@ -598,19 +598,22 @@ doWriteOutput(const int                          reportStepNum,
             restartValue.addExtra(flores.name, UnitSystem::measure::rate, flores.values);
         }
     }
+    // make sure that the previous I/O request has been completed
+    // and the number of incomplete tasklets does not increase between
+    // time steps
+    this->taskletRunner_->barrier();
 
-    // first, create a tasklet to write the data for the current time
-    // step to disk
+    // check if there might have been a failure in the TaskletRunner
+    if (this->taskletRunner_->failure()) {
+        throw std::runtime_error("Failure in the TaskletRunner while writing output.");
+    }
+
+    // create a tasklet to write the data for the current time step to disk
     auto eclWriteTasklet = std::make_shared<EclWriteTasklet>(
         actionState,
         isParallel ? this->collectOnIORank_.globalWellTestState() : std::move(localWTestState),
         summaryState, udqState, *this->eclIO_,
         reportStepNum, timeStepNum, isSubStep, curTime, std::move(restartValue), doublePrecision);
-
-    // then, make sure that the previous I/O request has been completed
-    // and the number of incomplete tasklets does not increase between
-    // time steps
-    this->taskletRunner_->barrier();
 
     // finally, start a new output writing job
     this->taskletRunner_->dispatch(std::move(eclWriteTasklet));
