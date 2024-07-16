@@ -23,9 +23,10 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
+#include <boost/version.hpp>
+
 #if BOOST_VERSION / 100 % 1000 > 48
 #include <boost/property_tree/json_parser.hpp>
-#include <boost/version.hpp>
 #endif
 
 #include <filesystem>
