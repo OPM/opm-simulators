@@ -34,7 +34,7 @@
 #endif
 
 #ifdef HAVE_ROCSPARSE
-#include <opm/simulators/linalg/bda/rocsparseWellContributions.hpp>
+#include <opm/simulators/linalg/bda/rocm/rocsparseWellContributions.hpp>
 #endif
 
 namespace Opm {
