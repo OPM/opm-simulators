@@ -294,7 +294,7 @@ if(MPI_FOUND)
                                 opm/simulators/utils/ParallelEclipseState.cpp
                                 opm/simulators/utils/ParallelNLDDPartitioningZoltan.cpp
                                 opm/simulators/utils/ParallelSerialization.cpp
-                                opm/simulators/utils/SetupZoltanParams.cpp)
+                                opm/simulators/utils/SetupPartitioningParams.cpp)
   list(APPEND PUBLIC_HEADER_FILES opm/simulators/utils/MPIPacker.hpp
                                   opm/simulators/utils/MPISerializer.hpp)
 endif()

@@ -29,6 +29,8 @@
 
 #include <dune/common/parallel/communication.hh>
 
+#include <opm/common/OpmLog/OpmLog.hpp>
+
 #include <opm/grid/common/GridEnums.hpp>
 
 #include <opm/input/eclipse/Schedule/Well/WellTestState.hpp>
@@ -214,6 +216,11 @@ public:
 
 #if HAVE_MPI
     /*!
+     * \brief Parameter deciding which partition method to use
+     */
+    Dune::PartitionMethod partitionMethod() const
+    { return partitionMethod_; }
+    /*!
      * \brief Parameter that decides if partitioning for parallel runs
      *        should be performed on a single process only.
      */
@@ -221,10 +228,17 @@ public:
     { return serialPartitioning_; }
 
     /*!
-     * \brief Parameter that sets the zoltan imbalance tolarance.
+     * \brief Parameter that sets the imbalance tolarance, depending on the chosen partition method
      */
-    double zoltanImbalanceTol() const
-    { return zoltanImbalanceTol_; }
+    double imbalanceTol() const
+    {
+        if (zoltanImbalanceTolSet_) {
+            OpmLog::info("The parameter --zoltan-imbalance-tol is deprecated and has been renamed to --imbalance-tol, please adjust your calls and scripts!");
+            return zoltanImbalanceTol_;
+        } else {
+            return imbalanceTol_;
+        }
+    }
 
     const std::string& externalPartitionFile() const
     {
@@ -291,9 +305,16 @@ protected:
 
     bool ownersFirst_;
 #if HAVE_MPI
+    Dune::PartitionMethod partitionMethod_;
     bool serialPartitioning_;
+    double imbalanceTol_;
+
+    bool zoltanImbalanceTolSet_;
     double zoltanImbalanceTol_;
     std::string zoltanParams_;
+
+    std::string metisParams_;
+
     std::string externalPartitionFile_{};
 #endif
     bool enableDistributedWells_;
