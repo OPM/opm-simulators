@@ -459,6 +459,8 @@ protected:
     ScalarBuffer ppcw_;
     ScalarBuffer gasDissolutionFactor_;
     ScalarBuffer oilVaporizationFactor_;
+    ScalarBuffer gasDissolutionFactorInWater_;
+    ScalarBuffer waterVaporizationFactor_;
     ScalarBuffer bubblePointPressure_;
     ScalarBuffer dewPointPressure_;
     ScalarBuffer rockCompPorvMultiplier_;
