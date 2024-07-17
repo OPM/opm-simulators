@@ -556,8 +556,10 @@ assignToSolution(data::Solution& sol)
         DataEntry{"PRESPOTF", UnitSystem::measure::pressure,           mechPotentialPressForce_},
         DataEntry{"PRES_OVB", UnitSystem::measure::pressure,           overburdenPressure_},
         DataEntry{"RSW",      UnitSystem::measure::gas_oil_ratio,      rsw_},
+        DataEntry{"RSWSAT",   UnitSystem::measure::gas_oil_ratio,      gasDissolutionFactorInWater_},
         DataEntry{"RSWSOL",   UnitSystem::measure::gas_oil_ratio,      rswSol_},
         DataEntry{"RVW",      UnitSystem::measure::oil_gas_ratio,      rvw_},
+        DataEntry{"RVWSAT",   UnitSystem::measure::oil_gas_ratio,      waterVaporizationFactor_},
         DataEntry{"SALTP",    UnitSystem::measure::identity,           pSalt_},
         DataEntry{"SS_X",     UnitSystem::measure::identity,           extboX_},
         DataEntry{"SS_Y",     UnitSystem::measure::identity,           extboY_},
@@ -1185,6 +1187,14 @@ doAllocBuffers(const unsigned bufferSize,
     if (FluidSystem::enableVaporizedOil() && rstKeywords["RVSAT"] > 0) {
         rstKeywords["RVSAT"] = 0;
         oilVaporizationFactor_.resize(bufferSize, 0.0);
+    }
+    if (FluidSystem::enableDissolvedGasInWater() && rstKeywords["RSWSAT"] > 0) {
+        rstKeywords["RSWSAT"] = 0;
+        gasDissolutionFactorInWater_.resize(bufferSize, 0.0);
+    }
+    if (FluidSystem::enableVaporizedWater() && rstKeywords["RVWSAT"] > 0) {
+        rstKeywords["RVWSAT"] = 0;
+        waterVaporizationFactor_.resize(bufferSize, 0.0);
     }
 
     if (FluidSystem::phaseIsActive(waterPhaseIdx) && rstKeywords["BW"] > 0) {

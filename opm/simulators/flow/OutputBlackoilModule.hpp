@@ -362,6 +362,19 @@ public:
                         fs, gasPhaseIdx, pvtRegionIdx, SoMax);
                 Valgrind::CheckDefined(this->oilVaporizationFactor_[globalDofIdx]);
             }
+            if (!this->gasDissolutionFactorInWater_.empty()) {
+                Scalar SwMax = elemCtx.problem().maxWaterSaturation(globalDofIdx);
+                this->gasDissolutionFactorInWater_[globalDofIdx]
+                    = FluidSystem::template saturatedDissolutionFactor<FluidState, Scalar>(
+                        fs, waterPhaseIdx, pvtRegionIdx, SwMax);
+                Valgrind::CheckDefined(this->gasDissolutionFactorInWater_[globalDofIdx]);
+            }
+            if (!this->waterVaporizationFactor_.empty()) {
+                this->waterVaporizationFactor_[globalDofIdx]
+                    = FluidSystem::template saturatedVaporizationFactor<FluidState, Scalar>(
+                        fs, gasPhaseIdx, pvtRegionIdx);
+                Valgrind::CheckDefined(this->waterVaporizationFactor_[globalDofIdx]);
+            }
             if (!this->gasFormationVolumeFactor_.empty()) {
                 this->gasFormationVolumeFactor_[globalDofIdx] = 1.0
                     / FluidSystem::template inverseFormationVolumeFactor<FluidState, Scalar>(
