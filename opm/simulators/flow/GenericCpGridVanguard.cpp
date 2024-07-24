@@ -196,13 +196,14 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         const auto wells = ((mpiSize > 1) || partitionJacobiBlocks)
             ? schedule.getWellsatEnd()
             : std::vector<Well>{};
-
+        const auto& possibleFutureConnections = schedule.getPossibleFutureConnections();
         // Distribute the grid and switch to the distributed view.
         if (mpiSize > 1) {
             this->distributeGrid(edgeWeightsMethod, ownersFirst, partitionMethod,
                                  serialPartitioning, enableDistributedWells,
                                  imbalanceTol, loadBalancerSet != 0,
                                  faceTrans, wells,
+                                 possibleFutureConnections,
                                  eclState1, parallelWells);
         }
 
@@ -215,7 +216,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
         if (partitionJacobiBlocks) {
             this->cell_part_ = this->grid_->
-                zoltanPartitionWithoutScatter(&wells, faceTrans.data(),
+                zoltanPartitionWithoutScatter(&wells, &possibleFutureConnections, faceTrans.data(),
                                               numJacobiBlocks,
                                               imbalanceTol);
         }
@@ -282,17 +283,18 @@ extractFaceTrans(const GridView& gridView) const
 template <class ElementMapper, class GridView, class Scalar>
 void
 GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
-distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
-               const bool                               ownersFirst,
-               const Dune::PartitionMethod              partitionMethod,
-               const bool                               serialPartitioning,
-               const bool                               enableDistributedWells,
-               const double                             imbalanceTol,
-               const bool                               loadBalancerSet,
-               const std::vector<double>&               faceTrans,
-               const std::vector<Well>&                 wells,
-               EclipseState&                            eclState1,
-               FlowGenericVanguard::ParallelWellStruct& parallelWells)
+distributeGrid(const Dune::EdgeWeightMethod                                        edgeWeightsMethod,
+               const bool                                                          ownersFirst,
+               const Dune::PartitionMethod                                         partitionMethod,
+               const bool                                                          serialPartitioning,
+               const bool                                                          enableDistributedWells,
+               const double                                                        imbalanceTol,
+               const bool                                                          loadBalancerSet,
+               const std::vector<double>&                                          faceTrans,
+               const std::vector<Well>&                                            wells,
+               const std::unordered_map<std::string, std::set<std::array<int,3>>>& possibleFutureConnections,
+               EclipseState&                                                       eclState1,
+               FlowGenericVanguard::ParallelWellStruct&                            parallelWells)
 {
     if (auto* eclState = dynamic_cast<ParallelEclipseState*>(&eclState1);
         eclState != nullptr)
@@ -300,7 +302,7 @@ distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
         this->distributeGrid(edgeWeightsMethod, ownersFirst, partitionMethod,
                              serialPartitioning, enableDistributedWells,
                              imbalanceTol, loadBalancerSet, faceTrans,
-                             wells, eclState, parallelWells);
+                             wells, possibleFutureConnections, eclState, parallelWells);
     }
     else {
         const auto message = std::string {
@@ -319,17 +321,18 @@ distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
 template <class ElementMapper, class GridView, class Scalar>
 void
 GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
-distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
-               const bool                               ownersFirst,
-               const Dune::PartitionMethod              partitionMethod,
-               const bool                               serialPartitioning,
-               const bool                               enableDistributedWells,
-               const double                             imbalanceTol,
-               const bool                               loadBalancerSet,
-               const std::vector<double>&               faceTrans,
-               const std::vector<Well>&                 wells,
-               ParallelEclipseState*                    eclState,
-               FlowGenericVanguard::ParallelWellStruct& parallelWells)
+distributeGrid(const Dune::EdgeWeightMethod                                        edgeWeightsMethod,
+               const bool                                                          ownersFirst,
+               const Dune::PartitionMethod                                         partitionMethod,
+               const bool                                                          serialPartitioning,
+               const bool                                                          enableDistributedWells,
+               const double                                                        imbalanceTol,
+               const bool                                                          loadBalancerSet,
+               const std::vector<double>&                                          faceTrans,
+               const std::vector<Well>&                                            wells,
+               const std::unordered_map<std::string, std::set<std::array<int,3>>>& possibleFutureConnections,
+               ParallelEclipseState*                                               eclState,
+               FlowGenericVanguard::ParallelWellStruct&                            parallelWells)
 {
     OPM_TIMEBLOCK(gridDistribute);
     const auto isIORank = this->grid_->comm().rank() == 0;
@@ -347,13 +350,14 @@ distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
             : std::vector<int>{};
         //For this case, simple partitioning is selected automatically
         parallelWells =
-            std::get<1>(this->grid_->loadBalance(handle, parts, &wells, ownersFirst,
+            std::get<1>(this->grid_->loadBalance(handle, parts, &wells, &possibleFutureConnections, ownersFirst,
                                                  addCornerCells, overlapLayers));
     }
     else {
         parallelWells =
             std::get<1>(this->grid_->loadBalance(handle, edgeWeightsMethod,
-                                                 &wells, serialPartitioning,
+                                                 &wells, &possibleFutureConnections,
+                                                 serialPartitioning,
                                                  faceTrans.data(), ownersFirst,
                                                  addCornerCells, overlapLayers,
                                                  partitionMethod, imbalanceTol,

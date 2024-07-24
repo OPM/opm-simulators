@@ -165,29 +165,31 @@ protected:
 private:
     std::vector<double> extractFaceTrans(const GridView& gridView) const;
 
-    void distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
-                        const bool                               ownersFirst,
-                        const Dune::PartitionMethod              partitionMethod,
-                        const bool                               serialPartitioning,
-                        const bool                               enableDistributedWells,
-                        const double                             imbalanceTol,
-                        const bool                               loadBalancerSet,
-                        const std::vector<double>&               faceTrans,
-                        const std::vector<Well>&                 wells,
-                        EclipseState&                            eclState,
-                        FlowGenericVanguard::ParallelWellStruct& parallelWells);
+    void distributeGrid(const Dune::EdgeWeightMethod                                        edgeWeightsMethod,
+                        const bool                                                          ownersFirst,
+                        const Dune::PartitionMethod                                         partitionMethod,
+                        const bool                                                          serialPartitioning,
+                        const bool                                                          enableDistributedWells,
+                        const double                                                        imbalanceTol,
+                        const bool                                                          loadBalancerSet,
+                        const std::vector<double>&                                          faceTrans,
+                        const std::vector<Well>&                                            wells,
+                        const std::unordered_map<std::string, std::set<std::array<int,3>>>& possibleFutureConnections,
+                        EclipseState&                                                       eclState,
+                        FlowGenericVanguard::ParallelWellStruct&                            parallelWells);
 
-    void distributeGrid(const Dune::EdgeWeightMethod             edgeWeightsMethod,
-                        const bool                               ownersFirst,
-                        const Dune::PartitionMethod              partitionMethod,
-                        const bool                               serialPartitioning,
-                        const bool                               enableDistributedWells,
-                        const double                             imbalanceTol,
-                        const bool                               loadBalancerSet,
-                        const std::vector<double>&               faceTrans,
-                        const std::vector<Well>&                 wells,
-                        ParallelEclipseState*                    eclState,
-                        FlowGenericVanguard::ParallelWellStruct& parallelWells);
+    void distributeGrid(const Dune::EdgeWeightMethod                                        edgeWeightsMethod,
+                        const bool                                                          ownersFirst,
+                        const Dune::PartitionMethod                                         partitionMethod,
+                        const bool                                                          serialPartitioning,
+                        const bool                                                          enableDistributedWells,
+                        const double                                                        imbalanceTol,
+                        const bool                                                          loadBalancerSet,
+                        const std::vector<double>&                                          faceTrans,
+                        const std::vector<Well>&                                            wells,
+                        const std::unordered_map<std::string, std::set<std::array<int,3>>>& possibleFutureConnections,
+                        ParallelEclipseState*                                               eclState,
+                        FlowGenericVanguard::ParallelWellStruct&                            parallelWells);
 
 protected:
     virtual const std::string& zoltanParams() const = 0;
