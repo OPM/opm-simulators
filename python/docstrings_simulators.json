@@ -14,43 +14,43 @@
     },
     "advance": {
         "signature": "opm.simulators.BlackOilSimulator.advance(report_step: int) -> None",
-        "doc": "Advance the simulation to a specific report step.\n\n:param report_step: Target report step to advance to.\n:type report_step: int"
+        "doc": "Advances the simulation to a specific report step.\n\n:param report_step: Target report step to advance to.\n:type report_step: int"
     },
     "checkSimulationFinished": {
         "signature": "opm.simulators.BlackOilSimulator.check_simulation_finished() -> bool",
-        "doc": "Check if the simulation has finished.\n\n:return: True if the simulation is finished, False otherwise."
+        "doc": "Checks if the simulation has finished.\n\n:return: True if the simulation is finished, False otherwise."
     },
     "currentStep": {
         "signature": "opm.simulators.BlackOilSimulator.current_step() -> int",
-        "doc": "Get the current simulation step.\n\n:return: The current step number."
+        "doc": "Gets the current simulation step.\n\n:return: The current step number."
     },
     "getCellVolumes": {
         "signature": "opm.simulators.BlackOilSimulator.get_cell_volumes() -> NDArray[float]",
-        "doc": "Retrieve the cell volumes of the simulation grid.\n\n:return: An array of cell volumes.\n:type return: NDArray[float]"
+        "doc": "Retrieves the cell volumes of the simulation grid.\n\n:return: An array of cell volumes.\n:type return: NDArray[float]"
     },
     "getDT": {
         "signature": "opm.simulators.BlackOilSimulator.get_dt() -> float",
-        "doc": "Get the timestep size of the last completed step.\n\n:return: Timestep size in days.\n:type return: float"
+        "doc": "Gets the timestep size of the last completed step.\n\n:return: Timestep size in days.\n:type return: float"
     },
     "getFluidStateVariable": {
         "signature": "opm.simulators.BlackOilSimulator.get_fluid_state_variable(name: str) -> NDArray[float]",
-        "doc": "Retrieve a fluid state variable for the simulation grid.\n\n:param name: The name of the variable. Valid names are 'pw' (pressure water), 'pg' (pressure gas), 'po' (pressure oil), 'rho_w' (density water), 'rho_g' (density gas), 'rho_o' (density oil)'Rs' (soultion gas-oil ratio), 'Rv' (volatile gas-oil ratio), 'Sw' (water saturation), 'Sg' (gas saturation), 'So' (oil saturation), and 'T' (temperature).\n:type name: str\n\n:return: An array of fluid state variables.\n:type return: NDArray[float]"
+        "doc": "Retrieves a fluid state variable for the simulation grid.\n\n:param name: The name of the variable. Valid names are 'pw' (pressure water), 'pg' (pressure gas), 'po' (pressure oil), 'rho_w' (density water), 'rho_g' (density gas), 'rho_o' (density oil)'Rs' (soultion gas-oil ratio), 'Rv' (volatile gas-oil ratio), 'Sw' (water saturation), 'Sg' (gas saturation), 'So' (oil saturation), and 'T' (temperature).\n:type name: str\n\n:return: An array of fluid state variables.\n:type return: NDArray[float]"
     },
     "getPorosity": {
         "signature": "opm.simulators.BlackOilSimulator.get_porosity() -> NDArray[float]",
-        "doc": "Retrieve the porosity values of the simulation grid.\n\n:return: An array of porosity values.\n:type return: numpy.ndarray"
+        "doc": "Retrieves the porosity values of the simulation grid.\n\n:return: An array of porosity values.\n:type return: numpy.ndarray"
     },
     "getPrimaryVarMeaning": {
         "signature": "opm.simulators.BlackOilSimulator.get_primary_var_meaning(variable: str) -> NDArray[int]",
-        "doc": "Retrieve the primary variable meaning of the simulation grid.\n\n:param variable: The name of the variable. Valid names are 'pressure', 'water', 'gas', and 'brine'.\n:type variable: str\n\n:return: An array of primary variable meanings. See ``get_primary_variable_meaning_map()`` for more information.\n:type return: NDArray[int]"
+        "doc": "Retrieves the primary variable meaning of the simulation grid.\n\n:param variable: The name of the variable. Valid names are 'pressure', 'water', 'gas', and 'brine'.\n:type variable: str\n\n:return: An array of primary variable meanings. See ``get_primary_variable_meaning_map()`` for more information.\n:type return: NDArray[int]"
     },
     "getPrimaryVarMeaningMap": {
         "signature": "opm.simulators.BlackOilSimulator.get_primary_var_meaning_map(variable: str) -> dict[str, int]",
-        "doc": "Retrieve the primary variable meaning map for each primary variable.\n\n:param variable: The name of the variable. Valid names are 'pressure', 'water', 'gas', and 'brine'.\n:type variable: str\n\n:return: A dictionary of primary variable meanings. The keys are the primary variable meanings and the values are the corresponding integer codes. The integer codes are used to represent the primary variable meanings in the simulation grid. For variable name 'pressure', the valid keys are: 'Po', 'Pg', and 'Pw', for variable name 'water', the valid keys are: 'Sw', 'Rvw', 'Rsw', and 'Disabled', for variable name 'gas', the valid keys are: 'Sg', 'Rs', 'Rv', and 'Disabled', for variable name 'brine', the valid keys are: 'Cs', 'Sp', and 'Disabled'.\n:type return: dict[str, int]"
+        "doc": "Retrieves the primary variable meaning map for each primary variable.\n\n:param variable: The name of the variable. Valid names are 'pressure', 'water', 'gas', and 'brine'.\n:type variable: str\n\n:return: A dictionary of primary variable meanings. The keys are the primary variable meanings and the values are the corresponding integer codes. The integer codes are used to represent the primary variable meanings in the simulation grid. For variable name 'pressure', the valid keys are: 'Po', 'Pg', and 'Pw', for variable name 'water', the valid keys are: 'Sw', 'Rvw', 'Rsw', and 'Disabled', for variable name 'gas', the valid keys are: 'Sg', 'Rs', 'Rv', and 'Disabled', for variable name 'brine', the valid keys are: 'Cs', 'Sp', and 'Disabled'.\n:type return: dict[str, int]"
     },
     "getPrimaryVariable": {
         "signature": "opm.simulators.BlackOilSimulator.get_primary_variable(variable: str) -> NDArray[float]",
-        "doc": "Retrieve the primary variable's values for the simulation grid.\n\n:param variable: The name of the variable. Valid names are 'pressure', 'water', 'gas', and 'brine'.\n:type variable: str\n\n:return: An array of primary variable values. See ``get_primary_variable_meaning()`` for more information.\n:type return: NDArray[float]"
+        "doc": "Retrieves the primary variable's values for the simulation grid.\n\n:param variable: The name of the variable. Valid names are 'pressure', 'water', 'gas', and 'brine'.\n:type variable: str\n\n:return: An array of primary variable values. See ``get_primary_variable_meaning()`` for more information.\n:type return: NDArray[float]"
     },
     "run": {
         "signature": "opm.simulators.BlackOilSimulator.run() -> int",
@@ -58,26 +58,26 @@
     },
     "setPorosity": {
         "signature": "opm.simulators.BlackOilSimulator.set_porosity(array: NDArray[float]) -> None",
-        "doc": "Set the porosity values for the simulation grid.\n\n:param array: An array of porosity values to be set.\n:type array: NDArray[float]"
+        "doc": "Sets the porosity values for the simulation grid.\n\n:param array: An array of porosity values to be set.\n:type array: NDArray[float]"
     },
     "setPrimaryVariable": {
         "signature": "opm.simulators.BlackOilSimulator.set_primary_variable(variable: str, value: NDArray[float]) -> None",
-        "doc": "Set the primary variable's values for the simulation grid.\n\n:param variable: The name of the variable. Valid names are 'pressure', 'water', 'gas', and 'brine'.\n:type variable: str\n:param value: An array of primary variable values to be set. See ``get_primary_variable()`` for more information.\n:type value: NDArray[float]"
+        "doc": "Sets the primary variable's values for the simulation grid.\n\n:param variable: The name of the variable. Valid names are 'pressure', 'water', 'gas', and 'brine'.\n:type variable: str\n:param value: An array of primary variable values to be set. See ``get_primary_variable()`` for more information.\n:type value: NDArray[float]"
     },
     "setupMpi": {
         "signature": "opm.simulators.BlackOilSimulator.mpi_init(init: bool, finalize: bool) -> None",
-        "doc": "Setup MPI for parallel simulation. This method should be called before any other method.\n:param init: Whether to call ``MPI_Init()`` or not.\n:param finalize:Whether to call ``MPI_Finalize()```when the simulator object goes out of scope.\n\n:return: None"
+        "doc": "Sets MPI up for parallel simulation. This method should be called before any other method.\n:param init: Whether to call ``MPI_Init()`` or not.\n:param finalize:Whether to call ``MPI_Finalize()```when the simulator object goes out of scope.\n\n:return: None"
     },
     "step": {
         "signature": "opm.simulators.BlackOilSimulator.step() -> int",
-        "doc": "Execute the next simulation report step.\n\n:return: Result of the simulation step."
+        "doc": "Executes the next simulation report step.\n\n:return: Result of the simulation step."
     },
     "stepCleanup": {
         "signature": "opm.simulators.BlackOilSimulator.step_cleanup() -> int",
-        "doc": "Perform cleanup after the last simulation step.\n\n:return: EXIT_SUCCESS if cleanup is successful."
+        "doc": "Performs cleanup after the last simulation step.\n\n:return: EXIT_SUCCESS if cleanup is successful."
     },
     "stepInit": {
         "signature": "opm.simulators.BlackOilSimulator.step_init() -> int",
-        "doc": "Initialize the simulation before taking the first report step. This method should be called before the first call to ``step()``\n\n:return: EXIT_SUCCESS if the initialization is successful."
+        "doc": "Initializes the simulation before taking the first report step. This method should be called before the first call to ``step()``\n\n:return: EXIT_SUCCESS if the initialization is successful."
     }
 }
