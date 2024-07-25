@@ -95,12 +95,28 @@ function(add_test_compareECLFiles)
                         TESTNAME ${PARAM_CASENAME})
 endfunction()
 
+###########################################################################
+# TEST: compareSeparateECLFiles
+###########################################################################
+
+# Input:
+#   - casename: basename (no extension)
+#   - filename1 (no extension)
+#   - filename2 (no extension)
+#
+# Details:
+#   - This test class compares two separate simulations
 function(add_test_compareSeparateECLFiles)
-  set(oneValueArgs CASENAME FILENAME1 FILENAME2 DIR1 DIR2 SIMULATOR ABS_TOL REL_TOL IGNORE_EXTRA_KW DIR_PREFIX)
+  set(oneValueArgs CASENAME FILENAME1 FILENAME2 DIR1 DIR2 SIMULATOR ABS_TOL REL_TOL IGNORE_EXTRA_KW DIR_PREFIX MPI_PROCS)
   set(multiValueArgs TEST_ARGS)
   cmake_parse_arguments(PARAM "$" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
   if(NOT PARAM_PREFIX)
     set(PARAM_PREFIX compareSeparateECLFiles)
+  endif()
+  if(PARAM_MPI_PROCS)
+    set(MPI_PROCS ${PARAM_MPI_PROCS})
+  else()
+    set(MPI_PROCS 1)
   endif()
   set(RESULT_PATH ${BASE_RESULT_PATH}${PARAM_DIR_PREFIX}/${PARAM_SIMULATOR}+${PARAM_CASENAME})
   set(TEST_ARGS ${PARAM_TEST_ARGS})
@@ -112,7 +128,8 @@ function(add_test_compareSeparateECLFiles)
                   -b ${PROJECT_BINARY_DIR}/bin
                   -a ${PARAM_ABS_TOL}
                   -t ${PARAM_REL_TOL}
-                  -c ${COMPARE_ECL_COMMAND})
+                  -c ${COMPARE_ECL_COMMAND}
+                  -n ${MPI_PROCS})
   if(PARAM_IGNORE_EXTRA_KW)
     list(APPEND DRIVER_ARGS -y ${PARAM_IGNORE_EXTRA_KW})
   endif()
@@ -124,7 +141,8 @@ function(add_test_compareSeparateECLFiles)
                         DIRNAME ${PARAM_DIR}
                         FILENAME ${PARAM_FILENAME}
                         SIMULATOR ${PARAM_SIMULATOR}
-                        TESTNAME ${PARAM_CASENAME})
+                        TESTNAME ${PARAM_CASENAME}
+                        PROCESSORS ${MPI_PROCS})
 endfunction()
 
 ###########################################################################
