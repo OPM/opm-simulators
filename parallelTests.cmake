@@ -212,3 +212,27 @@ add_test_compare_parallel_simulation(CASENAME rxft
                                      REL_TOL 1.0e-3
                                      DIR rxft_smry
                                      TEST_ARGS --enable-tuning=true --linear-solver-reduction=1e-7 --tolerance-cnv=5e-6 --tolerance-mb=1e-8 --enable-drift-compensation=false)
+
+opm_set_test_driver(${PROJECT_SOURCE_DIR}/tests/run-comparison.sh "")
+
+add_test_compareSeparateECLFiles(CASENAME actionx_compdat_1_proc
+                                 DIR1 actionx
+                                 FILENAME1 COMPDAT_SHORT
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_COMPDAT_SHORT
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH
+                                 MPI_PROCS 1)
+
+add_test_compareSeparateECLFiles(CASENAME actionx_compdat_8_procs
+                                 DIR1 actionx
+                                 FILENAME1 COMPDAT_SHORT
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_COMPDAT_SHORT
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH
+                                 MPI_PROCS 8)
