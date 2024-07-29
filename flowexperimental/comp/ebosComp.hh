@@ -28,18 +28,19 @@
 #ifndef EBOSCOMP_HH
 #define EBOSCOMP_HH
 
+
+#include <opm/models/discretization/common/fvbaseproblem.hh>
+#include <opm/models/utils/start.hh>
+
+#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
+
 #include <opm/simulators/flow/FlowProblemComp.hpp>
 #include <opm/simulators/flow/FlowProblemCompProperties.hpp>
 
-#include <opm/models/utils/start.hh>
-#include <opm/models/discretization/common/fvbaseproblem.hh>
-
-#include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 
-// #include <opm/common/utility/OutputTypeTag.hpp>
 namespace Opm {
 template <class TypeTag>
 class EbosProblemComp;
@@ -72,6 +73,11 @@ struct EnableExperiments<TypeTag, TTag::EbosTypeTag> {
 struct WellModel<TypeTag, TTag::EbosTypeTag> {
     using type = BlackoilWellModel<TypeTag>;
 }; */
+
+template<class TypeTag>
+struct NewtonMethod<TypeTag, TTag::EbosTypeTag> {
+    using type = FlowExpNewtonMethod<TypeTag>;
+};
 
 // currently, ebos uses the non-multisegment well model by default to avoid
 // regressions. the --use-multisegment-well=true|false command line parameter is still
@@ -121,12 +127,6 @@ struct LinearSolverBackend<TTag::EbosTypeTag, TTag::FlowIstlSolverParams> {
     using type = ISTLSolver<TTag::EbosTypeTag>;
 };
 
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::EbosTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-1;
-};
 
 // set fraction of the pore volume where the volumetric residual may be violated during
 // strict Newton iterations
@@ -136,12 +136,6 @@ struct EclNewtonRelaxedVolumeFraction<TypeTag, TTag::EbosTypeTag> {
     static constexpr type value = 0.05;
 };
 
-// the maximum volumetric error of a cell in the relaxed region
-template<class TypeTag>
-struct EclNewtonRelaxedTolerance<TypeTag, TTag::EbosTypeTag> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e6*getPropValue<TypeTag, Properties::NewtonTolerance>();
-};
 
 // the tolerated amount of "incorrect" amount of oil per time step for the complete
 // reservoir. this is scaled by the pore volume of the reservoir, i.e., larger reservoirs
@@ -152,6 +146,12 @@ struct EclNewtonSumTolerance<TypeTag, TTag::EbosTypeTag> {
     static constexpr type value = 1e-5;
 };
 
+template<class TypeTag>
+struct EclNewtonSumToleranceExponent<TypeTag, TTag::EbosTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1./3.;
+};
+
 // make all Newton iterations strict, i.e., the volumetric Newton tolerance must be
 // always be upheld in the majority of the spatial domain. In this context, "majority"
 // means 1 - EclNewtonRelaxedVolumeFraction.
@@ -160,18 +160,17 @@ struct EclNewtonStrictIterations<TypeTag, TTag::EbosTypeTag> {
     static constexpr int value = 100;
 };
 
-// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
-// relatively often)
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, TTag::EbosTypeTag> {
-    static constexpr int value = 8;
-};
+} // namespace Opm::Properties
+
+
+
+namespace Opm::Parameters {
 
 // if openMP is available, set the default the number of threads per process for the main
 // simulation to 2 (instead of grabbing everything that is available).
 #if _OPENMP
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, TTag::EbosTypeTag> {
+struct ThreadsPerProcess<TypeTag, Properties::TTag::EbosTypeTag> {
     static constexpr int value = 2;
 };
 #endif
@@ -179,15 +178,40 @@ struct ThreadsPerProcess<TypeTag, TTag::EbosTypeTag> {
 // By default, ebos accepts the result of the time integration unconditionally if the
 // smallest time step size is reached.
 template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, TTag::EbosTypeTag> {
+struct ContinueOnConvergenceError<TypeTag, Properties::TTag::EbosTypeTag> {
     static constexpr bool value = true;
 };
+
+// the default for the allowed volumetric error for oil per second
 template<class TypeTag>
-struct LinearSolverBackend<TypeTag, TTag::EbosTypeTag> {
-    using type = ISTLSolver<TypeTag>;
+struct NewtonTolerance<TypeTag, Properties::TTag::EbosTypeTag>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-1;
 };
 
-} // namespace Opm::Properties
+// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
+// relatively often)
+template<class TypeTag>
+struct NewtonMaxIterations<TypeTag, Properties::TTag::EbosTypeTag>
+{ static constexpr int value = 8; };
+
+
+/* template<class TypeTag>
+struct LinearSolverBackend<TypeTag, TTag::EbosTypeTag> {
+    using type = ISTLSolver<TypeTag>;
+}; */
+
+} // namespace Opm::Parameters
+namespace Opm::Properties {
+// the maximum volumetric error of a cell in the relaxed region
+template<class TypeTag>
+struct EclNewtonRelaxedTolerance<TypeTag, TTag::EbosTypeTag> {
+    using type = GetPropType<TypeTag, Scalar>;
+    static constexpr type value = 1e6*Parameters::NewtonTolerance<TypeTag, TTag::EbosTypeTag>::value;
+};
+
+}
 
 namespace Opm {
 template <class TypeTag>
