@@ -706,7 +706,7 @@ namespace Opm
 
         const auto& summary_state = simulator.vanguard().summaryState();
         updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, summary_state, deferred_logger);
-        Base::calculateReservoirRates(well_state.well(this->index_of_well_));
+        Base::calculateReservoirRates(simulator.vanguard().eclState().runspec().co2Storage(), well_state.well(this->index_of_well_));
     }
 
 

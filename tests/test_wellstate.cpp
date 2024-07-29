@@ -158,6 +158,10 @@ namespace {
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
                                 100.0*Opm::unit::barsa);
 
+        const auto ctemp =
+            std::vector<double>(setup.grid.c_grid()->number_of_cells,
+                                25+Opm::unit::degCelsiusOffset);
+
         auto wells = setup.sched.getWells(timeStep);
         pinfos.resize(wells.size());
         std::vector<std::reference_wrapper<Opm::ParallelWellInfo<double>>> ppinfos;
@@ -171,7 +175,7 @@ namespace {
             ++pw;
         }
 
-        state.init(cpress, setup.sched,
+        state.init(cpress, ctemp, setup.sched,
                    wells, ppinfos,
                    timeStep, nullptr, setup.well_perf_data, setup.st);
 

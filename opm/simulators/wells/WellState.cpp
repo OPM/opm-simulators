@@ -149,6 +149,7 @@ serializationTestObject(const ParallelWellInfo<Scalar>& pinfo)
 
 template<class Scalar>
 void WellState<Scalar>::base_init(const std::vector<Scalar>& cellPressures,
+                                  const std::vector<Scalar>& cellTemperatures,
                                   const std::vector<Well>& wells_ecl,
                                   const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
                                   const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
@@ -164,7 +165,7 @@ void WellState<Scalar>::base_init(const std::vector<Scalar>& cellPressures,
             const Well& well = wells_ecl[w];
 
             // Initialize bhp(), thp(), wellRates(), temperature().
-            initSingleWell(cellPressures, well, well_perf_data[w], parallel_well_info[w], summary_state);
+            initSingleWell(cellPressures, cellTemperatures, well, well_perf_data[w], parallel_well_info[w], summary_state);
         }
     }
 }
@@ -202,12 +203,15 @@ template<class Scalar>
 void WellState<Scalar>::initSingleInjector(const Well& well,
                                            const ParallelWellInfo<Scalar>& well_info,
                                            Scalar pressure_first_connection,
+                                           Scalar temperature_first_connection,
                                            const std::vector<PerforationData<Scalar>>& well_perf_data,
                                            const SummaryState& summary_state)
 {
     const auto& pu = this->phase_usage_;
-    const Scalar temp = well.temperature();
-
+    Scalar temp = temperature_first_connection;
+    if (well.hasTemperature()) {
+        temp = well.temperature();
+    }
     auto& ws = this->wells_.add(well.name(), SingleWellState<Scalar>{well.name(),
                                                                      well_info,
                                                                      false,
@@ -228,18 +232,23 @@ void WellState<Scalar>::initSingleInjector(const Well& well,
 
 template<class Scalar>
 void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
+                                       const std::vector<Scalar>& cellTemperatures,
                                        const Well& well,
                                        const std::vector<PerforationData<Scalar>>& well_perf_data,
                                        const ParallelWellInfo<Scalar>& well_info,
                                        const SummaryState& summary_state)
 {
     Scalar pressure_first_connection = -1;
-    if (!well_perf_data.empty())
+    Scalar temperature_first_connection = -1;
+    if (!well_perf_data.empty()) {
         pressure_first_connection = cellPressures[well_perf_data[0].cell_index];
+        temperature_first_connection = cellTemperatures[well_perf_data[0].cell_index];
+    }
     pressure_first_connection = well_info.broadcastFirstPerforationValue(pressure_first_connection);
+    temperature_first_connection = well_info.broadcastFirstPerforationValue(temperature_first_connection);
 
     if (well.isInjector()) {
-        this->initSingleInjector(well, well_info, pressure_first_connection,
+        this->initSingleInjector(well, well_info, pressure_first_connection, temperature_first_connection,
                                  well_perf_data, summary_state);
     } else {
         this->initSingleProducer(well, well_info, pressure_first_connection,
@@ -249,6 +258,7 @@ void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
 
 template<class Scalar>
 void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
+                             const std::vector<Scalar>& cellTemperatures,
                              const Schedule& schedule,
                              const std::vector<Well>& wells_ecl,
                              const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
@@ -258,7 +268,7 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
                              const SummaryState& summary_state)
 {
     // call init on base class
-    this->base_init(cellPressures, wells_ecl, parallel_well_info,
+    this->base_init(cellPressures, cellTemperatures, wells_ecl, parallel_well_info,
                     well_perf_data, summary_state);
     this->global_well_info = std::make_optional<GlobalWellInfo>(schedule,
                                                                 report_step,
@@ -428,7 +438,7 @@ void WellState<Scalar>::resize(const std::vector<Well>& wells_ecl,
                                const SummaryState& summary_state)
 {
     const std::vector<Scalar> tmp(numCells, 0.0); // <- UGLY HACK to pass the size
-    init(tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state);
+    init(tmp, tmp, schedule, wells_ecl, parallel_well_info, 0, nullptr, well_perf_data, summary_state);
 
     if (handle_ms_well) {
         initWellStateMSWell(wells_ecl, nullptr);
