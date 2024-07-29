@@ -258,41 +258,6 @@ struct EnableApiTracking<TypeTag, TTag::FlowBaseProblemComp> {
     static constexpr bool value = false;
 };
 
-// The default for the end time of the simulation [s]
-//
-// By default, stop it after the universe will probably have stopped
-// to exist. (the ECL problem will finish the simulation explicitly
-// after it simulated the last episode specified in the deck.)
-template<class TypeTag>
-struct EndTime<TypeTag, TTag::FlowBaseProblemComp> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e100;
-};
-
-// The default for the initial time step size of the simulation [s].
-//
-// The chosen value means that the size of the first time step is the
-// one of the initial episode (if the length of the initial episode is
-// not millions of trillions of years, that is...)
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, TTag::FlowBaseProblemComp> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 3600*24;
-};
-
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, TTag::FlowBaseProblemComp> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-2;
-};
-
-// Disable the VTK output by default for this problem ...
-template<class TypeTag>
-struct EnableVtkOutput<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = true;
-};
-
 // ... but enable the ECL output by default
 template<class TypeTag>
 struct EnableEclOutput<TypeTag,TTag::FlowBaseProblemComp> {
@@ -389,25 +354,6 @@ struct EclOutputDoublePrecision<TypeTag, TTag::FlowBaseProblemComp> {
     static constexpr bool value = false;
 };
 
-// The default location for the ECL output files
-template<class TypeTag>
-struct OutputDir<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr auto value = ".";
-};
-
-// the cache for intensive quantities can be used for ECL problems and also yields a
-// decent speedup...
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = true;
-};
-
-// the cache for the storage term can also be used and also yields a decent speedup
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = true;
-};
-
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
 template<class TypeTag>
 struct FluxModule<TypeTag, TTag::FlowBaseProblemComp> {
@@ -501,5 +447,62 @@ struct ExplicitRockCompaction<TypeTag, TTag::FlowBaseProblemComp> {
 };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// Disable the VTK output by default for this problem ...
+template<class TypeTag>
+struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblemComp>
+{ static constexpr bool value = false; };
+
+// the cache for intensive quantities can be used for ECL problems and also yields a
+// decent speedup...
+template<class TypeTag>
+struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlowBaseProblemComp>
+{ static constexpr bool value = true; };
+
+// the cache for the storage term can also be used and also yields a decent speedup
+template<class TypeTag>
+struct EnableStorageCache<TypeTag, Properties::TTag::FlowBaseProblemComp>
+{ static constexpr bool value = true; };
+
+// The default for the end time of the simulation [s]
+//
+// By default, stop it after the universe will probably have stopped
+// to exist. (the ECL problem will finish the simulation explicitly
+// after it simulated the last episode specified in the deck.)
+template<class TypeTag>
+struct EndTime<TypeTag, Properties::TTag::FlowBaseProblemComp>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e100;
+};
+
+// The default for the initial time step size of the simulation [s].
+//
+// The chosen value means that the size of the first time step is the
+// one of the initial episode (if the length of the initial episode is
+// not millions of trillions of years, that is...)
+template<class TypeTag>
+struct InitialTimeStepSize<TypeTag, Properties::TTag::FlowBaseProblemComp>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 3600*24;
+};
+
+// the default for the allowed volumetric error for oil per second
+template<class TypeTag>
+struct NewtonTolerance<TypeTag, Properties::TTag::FlowBaseProblemComp>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-2;
+};
+
+// The default location for the ECL output files
+template<class TypeTag>
+struct OutputDir<TypeTag, Properties::TTag::FlowBaseProblemComp>
+{ static constexpr auto value = "."; };
+
+} // namespace Opm::Parameters
 
 #endif // OPM_FLOW_PROBLEM_PROPERTIES_HPP
