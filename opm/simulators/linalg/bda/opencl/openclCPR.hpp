@@ -95,7 +95,7 @@ public:
     // applies blocked ilu0
     // also applies amg for pressure component
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
-    void apply(Scalar& y, Scalar& x) {}
+    void apply(Scalar&, Scalar&) {}
 
     bool create_preconditioner(BlockedMatrix<Scalar>* mat) override;
     bool create_preconditioner(BlockedMatrix<Scalar>* mat,
