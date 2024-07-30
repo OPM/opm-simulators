@@ -53,9 +53,9 @@ void solve_transposed_3x3(const Scalar* A,
           + A[2+0*B] *A[0+1*B]*b[1] - A[2+0*B]*A[1+1*B]*b[0]) / d;
 }
 
-#define INSTANTIATE_TYPE(T)\                                 
-template void solve_transposed_3x3<T>(const T* A, const T* b, T* x);\
-template T get_absmax<T>(const T* data, const int N);
+#define INSTANTIATE_TYPE(T) \
+    template void solve_transposed_3x3<T>(const T* A, const T* b, T* x); \
+    template T get_absmax<T>(const T* data, const int N);
 
 INSTANTIATE_TYPE(double)
 
