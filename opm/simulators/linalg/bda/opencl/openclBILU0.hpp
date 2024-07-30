@@ -103,7 +103,7 @@ public:
     // via Lz = y
     // and Ux = z
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
-    void apply(Scalar& y, Scalar& x) {}
+    void apply(Scalar&, Scalar&) {}
 
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>>
     get_preconditioner_structure()
