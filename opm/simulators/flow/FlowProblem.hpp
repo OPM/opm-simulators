@@ -2896,7 +2896,7 @@ private:
     bool explicitRockCompaction_ = false;
 
     ModuleParams moduleParams_;
-    
+
 
 };
 
