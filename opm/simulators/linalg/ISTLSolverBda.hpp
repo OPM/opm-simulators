@@ -60,6 +60,7 @@ struct BdaSolverInfo
     void prepare(const Grid& grid,
                  const Dune::CartesianIndexMapper<Grid>& cartMapper,
                  const std::vector<Well>& wellsForConn,
+                 const std::unordered_map<std::string, std::set<std::array<int,3>>>& possibleFutureConnections,
                  const std::vector<int>& cellPartition,
                  const std::size_t nonzeroes,
                  const bool useWellConn);
@@ -207,6 +208,7 @@ public:
             bdaBridge_->prepare(this->simulator_.vanguard().grid(),
                                this->simulator_.vanguard().cartesianIndexMapper(),
                                this->simulator_.vanguard().schedule().getWellsatEnd(),
+                               this->simulator_.vanguard().schedule().getPossibleFutureConnections(),
                                this->simulator_.vanguard().cellPartition(),
                                this->getMatrix().nonzeroes(), this->useWellConn_);
         }

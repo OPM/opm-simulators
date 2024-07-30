@@ -78,12 +78,14 @@ void BdaSolverInfo<Matrix,Vector>::
 prepare(const Grid& grid,
         const Dune::CartesianIndexMapper<Grid>& cartMapper,
         const std::vector<Well>& wellsForConn,
+        const std::unordered_map<std::string, std::set<std::array<int,3>>>& possibleFutureConnections,
         const std::vector<int>& cellPartition,
         const std::size_t nonzeroes,
         const bool useWellConn)
 {
     if (numJacobiBlocks_ > 1) {
       detail::setWellConnections(grid, cartMapper, wellsForConn,
+                                 possibleFutureConnections,
                                  useWellConn,
                                  wellConnectionsGraph_,
                                  numJacobiBlocks_);
@@ -239,12 +241,13 @@ using BM = Dune::BCRSMatrix<MatrixBlock<Scalar,Dim,Dim>>;
 template<class Scalar, int Dim>
 using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
 
-#define INSTANTIATE_GRID(T, Dim, Grid)                   \
-    template void BdaSolverInfo<BM<T,Dim>,BV<T,Dim>>::   \
-    prepare(const Grid&,                                 \
-            const Dune::CartesianIndexMapper<Grid>&,     \
-            const std::vector<Well>&,                    \
-            const std::vector<int>&,                     \
+#define INSTANTIATE_GRID(T, Dim, Grid)                                           \
+    template void BdaSolverInfo<BM<T,Dim>,BV<T,Dim>>::                           \
+    prepare(const Grid&,                                                         \
+            const Dune::CartesianIndexMapper<Grid>&,                             \
+            const std::vector<Well>&,                                            \
+            const std::unordered_map<std::string, std::set<std::array<int,3>>>&, \
+            const std::vector<int>&,                                             \
             const std::size_t, const bool);
 using PolyHedralGrid3D = Dune::PolyhedralGrid<3, 3>;
 #if HAVE_DUNE_ALUGRID
