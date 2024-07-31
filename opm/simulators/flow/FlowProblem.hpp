@@ -314,6 +314,7 @@ public:
         enableDriftCompensation_ = Parameters::get<TypeTag, Parameters::EnableDriftCompensation>();
 
         enableEclOutput_ = Parameters::get<TypeTag, Parameters::EnableEclOutput>();
+        enableVtkOutput_ = Parameters::get<TypeTag, Parameters::EnableVtkOutput>();
 
         this->enableTuning_ = Parameters::get<TypeTag, Parameters::EnableTuning>();
         this->initialTimeStepSize_ = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
@@ -463,6 +464,11 @@ public:
         if (enableDriftCompensation_) {
             drift_.resize(this->model().numGridDof());
             drift_ = 0.0;
+        }
+
+        if (enableVtkOutput_ && eclState.getIOConfig().initOnly()) {
+            simulator.setTimeStepSize(0.0);
+            ParentType::writeOutput(true);
         }
 
         // after finishing the initialization and writing the initial solution, we move
@@ -2839,6 +2845,7 @@ private:
     AquiferModel aquiferModel_;
 
     bool enableEclOutput_;
+    bool enableVtkOutput_;
     std::unique_ptr<EclWriterType> eclWriter_;
     
 #if HAVE_DAMARIS

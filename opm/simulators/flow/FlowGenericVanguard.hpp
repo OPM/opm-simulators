@@ -284,6 +284,8 @@ protected:
     void updateOutputDir_(std::string outputDir,
                           bool enableEclCompatFile);
 
+    void updateNOSIM_(std::string_view enableDryRun);
+
     bool drsdtconEnabled() const;
 
     std::unordered_map<std::size_t, const NumericalAquiferCell*> allAquiferCells() const;
