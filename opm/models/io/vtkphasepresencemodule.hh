@@ -27,31 +27,32 @@
 #ifndef EWOMS_VTK_PHASE_PRESENCE_MODULE_HH
 #define EWOMS_VTK_PHASE_PRESENCE_MODULE_HH
 
-#include "vtkmultiwriter.hh"
-#include "baseoutputmodule.hh"
-
 #include <opm/models/discretization/common/fvbaseparameters.hh>
+
+#include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
 
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Properties {
-
-namespace TTag {
+namespace Opm::Properties::TTag {
 
 // create new type tag for the VTK primary variables output
 struct VtkPhasePresence {};
 
-} // namespace TTag
+} // namespace Opm::Properties::TTag
+
+namespace Opm::Parameters {
 
 // create the property tags needed for the primary variables module
 template<class TypeTag, class MyTypeTag>
-struct VtkWritePhasePresence { using type = UndefinedProperty; };
+struct VtkWritePhasePresence { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag>
-struct VtkWritePhasePresence<TypeTag, TTag::VtkPhasePresence> { static constexpr bool value = false; };
+struct VtkWritePhasePresence<TypeTag, Properties::TTag::VtkPhasePresence>
+{ static constexpr bool value = false; };
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
@@ -85,7 +86,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::VtkWritePhasePresence>
+        Parameters::registerParam<TypeTag, Parameters::VtkWritePhasePresence>
             ("Include the phase presence pseudo primary "
              "variable in the VTK output files");
     }
@@ -135,7 +136,7 @@ public:
 private:
     static bool phasePresenceOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWritePhasePresence>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWritePhasePresence>();
         return val;
     }
 

@@ -35,29 +35,36 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Properties {
-
-namespace TTag {
+namespace Opm::Properties::TTag {
 
 // create new type tag for the VTK primary variables output
 struct VtkPrimaryVars {};
 
-} // namespace TTag
+} // namespace Opm::Properties::TTag
+
+namespace Opm::Parameters {
 
 // create the property tags needed for the primary variables module
 template<class TypeTag, class MyTypeTag>
-struct VtkWritePrimaryVars { using type = UndefinedProperty; };
+struct VtkWritePrimaryVars { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteProcessRank { using type = UndefinedProperty; };
+struct VtkWriteProcessRank { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteDofIndex { using type = UndefinedProperty; };
+struct VtkWriteDofIndex { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag>
-struct VtkWritePrimaryVars<TypeTag, TTag::VtkPrimaryVars> { static constexpr bool value = false; };
+struct VtkWritePrimaryVars<TypeTag, Properties::TTag::VtkPrimaryVars>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct VtkWriteProcessRank<TypeTag, TTag::VtkPrimaryVars> { static constexpr bool value = false; };
+struct VtkWriteProcessRank<TypeTag, Properties::TTag::VtkPrimaryVars>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct VtkWriteDofIndex<TypeTag, TTag::VtkPrimaryVars> { static constexpr bool value = false; };
+struct VtkWriteDofIndex<TypeTag, Properties::TTag::VtkPrimaryVars>
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Properties
 
@@ -95,11 +102,11 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::VtkWritePrimaryVars>
+        Parameters::registerParam<TypeTag, Parameters::VtkWritePrimaryVars>
             ("Include the primary variables into the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteProcessRank>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteProcessRank>
             ("Include the MPI process rank into the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteDofIndex>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteDofIndex>
             ("Include the index of the degrees of freedom into the VTK output files");
     }
 
@@ -170,17 +177,17 @@ public:
 private:
     static bool primaryVarsOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWritePrimaryVars>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWritePrimaryVars>();
         return val;
     }
     static bool processRankOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteProcessRank>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteProcessRank>();
         return val;
     }
     static bool dofIndexOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteDofIndex>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteDofIndex>();
         return val;
     }
 

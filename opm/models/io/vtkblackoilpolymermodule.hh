@@ -27,57 +27,74 @@
 #ifndef EWOMS_VTK_BLACK_OIL_POLYMER_MODULE_HH
 #define EWOMS_VTK_BLACK_OIL_POLYMER_MODULE_HH
 
-#include "vtkmultiwriter.hh"
-#include "baseoutputmodule.hh"
-
 #include <dune/common/fvector.hh>
 
 #include <opm/material/densead/Math.hpp>
 
-#include <opm/models/discretization/common/fvbaseparameters.hh>
-
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
-namespace Opm::Properties {
+#include <opm/models/discretization/common/fvbaseparameters.hh>
 
-namespace TTag {
+#include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
+
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+
+namespace Opm::Properties::TTag {
 
 // create new type tag for the VTK multi-phase output
 struct VtkBlackOilPolymer {};
 
-} // namespace TTag
+} // namespace Opm::Properties::TTag
+
+namespace Opm::Parameters {
 
 // create the property tags needed for the polymer output module
 template<class TypeTag, class MyTypeTag>
-struct VtkWritePolymerConcentration { using type = UndefinedProperty; };
+struct VtkWritePolymerConcentration { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWritePolymerDeadPoreVolume { using type = UndefinedProperty; };
+struct VtkWritePolymerDeadPoreVolume { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWritePolymerAdsorption { using type = UndefinedProperty; };
+struct VtkWritePolymerAdsorption { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWritePolymerRockDensity { using type = UndefinedProperty; };
+struct VtkWritePolymerRockDensity { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWritePolymerViscosityCorrection { using type = UndefinedProperty; };
+struct VtkWritePolymerViscosityCorrection { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteWaterViscosityCorrection { using type = UndefinedProperty; };
+struct VtkWriteWaterViscosityCorrection { using type = Properties::UndefinedProperty; };
 
 // set default values for what quantities to output
 template<class TypeTag>
-struct VtkWritePolymerConcentration<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
-template<class TypeTag>
-struct VtkWritePolymerDeadPoreVolume<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
-template<class TypeTag>
-struct VtkWritePolymerViscosityCorrection<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
-template<class TypeTag>
-struct VtkWriteWaterViscosityCorrection<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
-template<class TypeTag>
-struct VtkWritePolymerRockDensity<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
-template<class TypeTag>
-struct VtkWritePolymerAdsorption<TypeTag, TTag::VtkBlackOilPolymer> { static constexpr bool value = true; };
+struct VtkWritePolymerConcentration<TypeTag, Properties::TTag::VtkBlackOilPolymer>
+{ static constexpr bool value = true; };
 
-} // namespace Opm::Properties
+template<class TypeTag>
+struct VtkWritePolymerDeadPoreVolume<TypeTag, Properties::TTag::VtkBlackOilPolymer>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct VtkWritePolymerViscosityCorrection<TypeTag, Properties::TTag::VtkBlackOilPolymer>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct VtkWriteWaterViscosityCorrection<TypeTag, Properties::TTag::VtkBlackOilPolymer>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct VtkWritePolymerRockDensity<TypeTag, Properties::TTag::VtkBlackOilPolymer>
+{ static constexpr bool value = true; };
+
+template<class TypeTag>
+struct VtkWritePolymerAdsorption<TypeTag, Properties::TTag::VtkBlackOilPolymer>
+{ static constexpr bool value = true; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
@@ -117,22 +134,22 @@ public:
         if (!enablePolymer)
             return;
 
-        Parameters::registerParam<TypeTag, Properties::VtkWritePolymerConcentration>
+        Parameters::registerParam<TypeTag, Parameters::VtkWritePolymerConcentration>
             ("Include the concentration of the polymer component in the water phase "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWritePolymerDeadPoreVolume>
+        Parameters::registerParam<TypeTag, Parameters::VtkWritePolymerDeadPoreVolume>
             ("Include the fraction of the \"dead\" pore volume "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWritePolymerRockDensity>
+        Parameters::registerParam<TypeTag, Parameters::VtkWritePolymerRockDensity>
             ("Include the amount of already adsorbed polymer component"
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWritePolymerAdsorption>
+        Parameters::registerParam<TypeTag, Parameters::VtkWritePolymerAdsorption>
             ("Include the adsorption rate of the polymer component"
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWritePolymerViscosityCorrection>
+        Parameters::registerParam<TypeTag, Parameters::VtkWritePolymerViscosityCorrection>
             ("Include the viscosity correction of the polymer component "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteWaterViscosityCorrection>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteWaterViscosityCorrection>
             ("Include the viscosity correction of the water component "
              "due to polymers in the VTK output files");
     }
@@ -239,37 +256,37 @@ public:
 private:
     static bool polymerConcentrationOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerConcentration>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWritePolymerConcentration>();
         return val;
     }
 
     static bool polymerDeadPoreVolumeOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerDeadPoreVolume>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWritePolymerDeadPoreVolume>();
         return val;
     }
 
     static bool polymerRockDensityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerRockDensity>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWritePolymerRockDensity>();
         return val;
     }
 
     static bool polymerAdsorptionOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerAdsorption>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWritePolymerAdsorption>();
         return val;
     }
 
     static bool polymerViscosityCorrectionOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerViscosityCorrection>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWritePolymerViscosityCorrection>();
         return val;
     }
 
     static bool waterViscosityCorrectionOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWritePolymerViscosityCorrection>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWritePolymerViscosityCorrection>();
         return val;
     }
 

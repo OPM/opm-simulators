@@ -174,42 +174,6 @@ struct LinearSolverAbsTolerance<TypeTag, TTag::CO2PTBaseProblem> {
     static constexpr type value = 0.;
 };
 
-// output
-template <class TypeTag>
-struct VtkWriteFilterVelocities<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr bool value = true;
-};
-
-template <class TypeTag>
-struct VtkWritePotentialGradients<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr bool value = true;
-};
-
-template <class TypeTag>
-struct VtkWriteTotalMassFractions<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr bool value = true;
-};
-
-template <class TypeTag>
-struct VtkWriteTotalMoleFractions<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr bool value = true;
-};
-
-template <class TypeTag>
-struct VtkWriteFugacityCoeffs<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr bool value = true;
-};
-
-template <class TypeTag>
-struct VtkWriteLiquidMoleFractions<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr bool value = true;
-};
-
-template <class TypeTag>
-struct VtkWriteEquilibriumConstants<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr bool value = true;
-};
-
 // this is kinds of telling the report step length
 template <class TypeTag>
 struct EpisodeLength<TypeTag, TTag::CO2PTBaseProblem> {
@@ -308,6 +272,34 @@ struct NewtonTargetIterations<TypeTag, Properties::TTag::CO2PTBaseProblem>
 template <class TypeTag>
 struct NewtonMaxIterations<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr int value = 30; };
+
+template <class TypeTag>
+struct VtkWriteEquilibriumConstants<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = true; };
+
+template <class TypeTag>
+struct VtkWriteFilterVelocities<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = true; };
+
+template <class TypeTag>
+struct VtkWriteFugacityCoeffs<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = true; };
+
+template <class TypeTag>
+struct VtkWriteLiquidMoleFractions<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = true; };
+
+template <class TypeTag>
+struct VtkWritePotentialGradients<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = true; };
+
+template <class TypeTag>
+struct VtkWriteTotalMassFractions<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = true; };
+
+template <class TypeTag>
+struct VtkWriteTotalMoleFractions<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 

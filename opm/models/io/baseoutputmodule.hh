@@ -27,24 +27,24 @@
 #ifndef EWOMS_BASE_OUTPUT_MODULE_HH
 #define EWOMS_BASE_OUTPUT_MODULE_HH
 
-#include "baseoutputwriter.hh"
-
-#include <opm/models/utils/parametersystem.hh>
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/basicproperties.hh>
-#include <opm/models/common/multiphasebaseproperties.hh>
-#include <opm/models/discretization/common/fvbaseproperties.hh>
-
-#include <dune/istl/bvector.hh>
 #include <dune/common/fvector.hh>
 
+#include <dune/istl/bvector.hh>
+
+#include <opm/models/common/multiphasebaseproperties.hh>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
+#include <opm/models/io/baseoutputwriter.hh>
+
+#include <opm/models/utils/basicproperties.hh>
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+
 #include <array>
+#include <cstdio>
 #include <sstream>
 #include <string>
-#include <string_view>
-#include <vector>
-
-#include <cstdio>
 
 namespace Opm::Properties {
 

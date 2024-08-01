@@ -129,15 +129,6 @@ public:
     using type = Opm::LiquidPhase<Scalar, Opm::NullComponent<Scalar> >;
 };
 
-// disable output of a few quantities which make sense in a
-// multi-phase but not in a single-phase context
-template<class TypeTag>
-struct VtkWriteSaturations<TypeTag, TTag::ImmiscibleSinglePhaseModel> { static constexpr bool value = false; };
-template<class TypeTag>
-struct VtkWriteMobilities<TypeTag, TTag::ImmiscibleSinglePhaseModel> { static constexpr bool value = false; };
-template<class TypeTag>
-struct VtkWriteRelativePermeabilities<TypeTag, TTag::ImmiscibleSinglePhaseModel> { static constexpr bool value = false; };
-
 /////////////////////
 // set slightly different properties for the two-phase case
 /////////////////////
@@ -173,8 +164,25 @@ public:
     using type = Opm::TwoPhaseImmiscibleFluidSystem<Scalar, WettingPhase, NonwettingPhase>;
 };
 
-
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+// disable output of a few quantities which make sense in a
+// multi-phase but not in a single-phase context
+template<class TypeTag>
+struct VtkWriteSaturations<TypeTag, Properties::TTag::ImmiscibleSinglePhaseModel>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct VtkWriteMobilities<TypeTag, Properties::TTag::ImmiscibleSinglePhaseModel>
+{ static constexpr bool value = false; };
+
+template<class TypeTag>
+struct VtkWriteRelativePermeabilities<TypeTag, Properties::TTag::ImmiscibleSinglePhaseModel>
+{ static constexpr bool value = false; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 

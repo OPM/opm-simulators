@@ -27,51 +27,65 @@
 #ifndef EWOMS_VTK_BLACK_OIL_SOLVENT_MODULE_HH
 #define EWOMS_VTK_BLACK_OIL_SOLVENT_MODULE_HH
 
-#include "vtkmultiwriter.hh"
-#include "baseoutputmodule.hh"
-
 #include <dune/common/fvector.hh>
 
 #include <opm/material/densead/Math.hpp>
 
-#include <opm/models/discretization/common/fvbaseparameters.hh>
-
-#include <opm/models/utils/propertysystem.hh>
-#include <opm/models/utils/parametersystem.hh>
 #include <opm/models/blackoil/blackoilproperties.hh>
 
-namespace Opm::Properties {
+#include <opm/models/discretization/common/fvbaseparameters.hh>
 
-namespace TTag {
+#include <opm/models/io/baseoutputmodule.hh>
+#include <opm/models/io/vtkmultiwriter.hh>
+
+#include <opm/models/utils/parametersystem.hh>
+#include <opm/models/utils/propertysystem.hh>
+
+namespace Opm::Properties::TTag {
 
 // create new type tag for the VTK multi-phase output
 struct VtkBlackOilSolvent {};
 
-} // namespace TTag
+} // namespace Opm::Properties::TTag
+
+namespace Opm::Parameters {
 
 // create the property tags needed for the solvent output module
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteSolventSaturation { using type = UndefinedProperty; };
+struct VtkWriteSolventSaturation { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteSolventRsw { using type = UndefinedProperty; };
+struct VtkWriteSolventRsw { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteSolventDensity { using type = UndefinedProperty; };
+struct VtkWriteSolventDensity { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteSolventViscosity { using type = UndefinedProperty; };
+
+struct VtkWriteSolventViscosity { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct VtkWriteSolventMobility { using type = UndefinedProperty; };
+struct VtkWriteSolventMobility { using type = Properties::UndefinedProperty; };
 
 // set default values for what quantities to output
 template<class TypeTag>
-struct VtkWriteSolventSaturation<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+struct VtkWriteSolventSaturation<TypeTag, Properties::TTag::VtkBlackOilSolvent>
+{ static constexpr bool value = true; };
+
 template<class TypeTag>
-struct VtkWriteSolventRsw<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+struct VtkWriteSolventRsw<TypeTag, Properties::TTag::VtkBlackOilSolvent>
+{ static constexpr bool value = true; };
+
 template<class TypeTag>
-struct VtkWriteSolventDensity<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+struct VtkWriteSolventDensity<TypeTag, Properties::TTag::VtkBlackOilSolvent>
+{ static constexpr bool value = true; };
+
 template<class TypeTag>
-struct VtkWriteSolventViscosity<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+struct VtkWriteSolventViscosity<TypeTag, Properties::TTag::VtkBlackOilSolvent>
+{ static constexpr bool value = true; };
+
 template<class TypeTag>
-struct VtkWriteSolventMobility<TypeTag, TTag::VtkBlackOilSolvent> { static constexpr bool value = true; };
+struct VtkWriteSolventMobility<TypeTag, Properties::TTag::VtkBlackOilSolvent>
+{ static constexpr bool value = true; };
 
 } // namespace Opm::Properties
 
@@ -113,19 +127,19 @@ public:
         if (!enableSolvent)
             return;
 
-        Parameters::registerParam<TypeTag, Properties::VtkWriteSolventSaturation>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteSolventSaturation>
             ("Include the \"saturation\" of the solvent component "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteSolventRsw>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteSolventRsw>
             ("Include the \"dissolved volume in water\" of the solvent component "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteSolventDensity>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteSolventDensity>
             ("Include the \"density\" of the solvent component "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteSolventViscosity>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteSolventViscosity>
             ("Include the \"viscosity\" of the solvent component "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Properties::VtkWriteSolventMobility>
+        Parameters::registerParam<TypeTag, Parameters::VtkWriteSolventMobility>
             ("Include the \"mobility\" of the solvent component "
              "in the VTK output files");
     }
@@ -224,31 +238,31 @@ public:
 private:
     static bool solventSaturationOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSolventSaturation>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSolventSaturation>();
         return val;
     }
 
     static bool solventRswOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSolventRsw>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSolventRsw>();
         return val;
     }
 
     static bool solventDensityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSolventDensity>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSolventDensity>();
         return val;
     }
 
     static bool solventViscosityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSolventViscosity>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSolventViscosity>();
         return val;
     }
 
     static bool solventMobilityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Properties::VtkWriteSolventMobility>();
+        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSolventMobility>();
         return val;
     }
 
@@ -258,6 +272,7 @@ private:
     ScalarBuffer solventViscosity_;
     ScalarBuffer solventMobility_;
 };
+
 } // namespace Opm
 
 #endif
