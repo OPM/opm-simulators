@@ -150,12 +150,12 @@ add_test_compare_parallel_simulation(CASENAME aquflux_02
                                      TEST_ARGS --enable-tuning=true)
 
 add_test_compare_parallel_simulation(CASENAME network_balance_01
-		                             FILENAME NETWORK-01
-		                             SIMULATOR flow
-		                             ABS_TOL 0.04
-		                             REL_TOL 0.02
-		                             DIR network
-		                             TEST_ARGS --enable-tuning=true)
+	                             FILENAME NETWORK-01
+	                             SIMULATOR flow
+	                             ABS_TOL ${abs_tol}
+	                             REL_TOL ${coarse_rel_tol_parallel}
+	                             DIR network
+	                             TEST_ARGS --enable-tuning=true --time-step-control=newtoniterationcount --time-step-control-growth-rate=3.0 --relaxed-max-pv-fraction=0.0 --tolerance-cnv=1e-3)
 
 add_test_compare_parallel_simulation(CASENAME numerical_aquifer_3d_1aqu
                                      FILENAME 3D_1AQU_3CELLS
