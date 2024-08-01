@@ -100,36 +100,36 @@ add_test_compareECLFiles(CASENAME spe1_precsalt
                          DIR spe1_precsalt)
 
 add_test_compareECLFiles(CASENAME network_balance_01
-		                 FILENAME NETWORK-01
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true)
+	                 FILENAME NETWORK-01
+	                 SIMULATOR flow
+	                 ABS_TOL ${abs_tol}
+	                 REL_TOL ${rel_tol}
+	                 DIR network
+	                 TEST_ARGS --enable-tuning=true --time-step-control=newtoniterationcount --time-step-control-growth-rate=3.0)
 
 add_test_compareECLFiles(CASENAME network_standard
-		                 FILENAME NETWORK-01_STANDARD
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true)
+	                 FILENAME NETWORK-01_STANDARD
+	                 SIMULATOR flow
+	                 ABS_TOL ${abs_tol}
+	                 REL_TOL ${rel_tol}
+	                 DIR network
+	                 TEST_ARGS --enable-tuning=true --time-step-control=newtoniterationcount --time-step-control-growth-rate=3.0)
 
 add_test_compareECLFiles(CASENAME network_01_reroute
-		                 FILENAME NETWORK-01-REROUTE
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+	                 FILENAME NETWORK-01-REROUTE
+	                 SIMULATOR flow
+	                 ABS_TOL ${abs_tol}
+	                 REL_TOL ${rel_tol}
+	                 DIR network
+	                 TEST_ARGS --enable-tuning=true --time-step-control=newtoniterationcount --time-step-control-growth-rate=3.0)
 
 add_test_compareECLFiles(CASENAME network_01_reroute_std
-		                 FILENAME NETWORK-01-REROUTE_STD
-		                 SIMULATOR flow
-		                 ABS_TOL ${abs_tol}
-		                 REL_TOL ${rel_tol}
-		                 DIR network
-		                 TEST_ARGS --enable-tuning=true --local-well-solve-control-switching=true)
+	                 FILENAME NETWORK-01-REROUTE_STD
+	                 SIMULATOR flow
+	                 ABS_TOL ${abs_tol}
+	                 REL_TOL ${rel_tol}
+	                 DIR network
+	                 TEST_ARGS --enable-tuning=true --time-step-control=newtoniterationcount --time-step-control-growth-rate=3.0)
 
 add_test_compareECLFiles(CASENAME gas_precsalt
                          FILENAME GASWATER_VAPWAT_PRECSALT
