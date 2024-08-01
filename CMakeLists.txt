@@ -515,6 +515,18 @@ opm_add_test(flow
   $<TARGET_OBJECTS:moduleVersion>
   )
 
+opm_add_test(flow_simple
+  ONLY_COMPILE
+  ALWAYS_ENABLE
+  DEFAULT_ENABLE_IF ${FLOW_DEFAULT_ENABLE_IF}
+  DEPENDS opmsimulators
+  LIBRARIES opmsimulators
+  SOURCES
+  flow/flow_simple.cpp
+  ${FLOW_TGTS}
+  $<TARGET_OBJECTS:moduleVersion>
+)
+
 opm_add_test(flow_blackoil_polyhedralgrid
   ONLY_COMPILE
   ALWAYS_ENABLE
