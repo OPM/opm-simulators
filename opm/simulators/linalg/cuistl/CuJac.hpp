@@ -103,6 +103,8 @@ private:
     CuSparseMatrix<field_type> m_gpuMatrix;
     //! \brief the diagonal of cuMatrix inverted, and then flattened to fit in a vector
     CuVector<field_type> m_diagInvFlattened;
+
+    void invertDiagonalAndFlatten();
 };
 } // end namespace Opm::cuistl
 
