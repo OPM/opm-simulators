@@ -61,7 +61,7 @@ namespace Opm::Properties {
 namespace TTag {
 
 struct FlowBaseProblemComp {
-  using InheritsFrom = std::tuple<VtkTracer, /* OutputBlackOil, */ CpGridVanguard>;
+  using InheritsFrom = std::tuple<VtkTracer>;
 };
 }
 
