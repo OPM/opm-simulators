@@ -158,9 +158,11 @@ namespace {
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
                                 100.0*Opm::unit::barsa);
 
+        const auto& unit_sytem = setup.es.getDeckUnitSystem();
+        const double temp = unit_sytem.to_si(Opm::UnitSystem::measure::temperature, 25);
         const auto ctemp =
             std::vector<double>(setup.grid.c_grid()->number_of_cells,
-                                25+Opm::unit::degCelsiusOffset);
+                                temp);
 
         auto wells = setup.sched.getWells(timeStep);
         pinfos.resize(wells.size());

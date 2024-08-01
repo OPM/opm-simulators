@@ -208,10 +208,7 @@ void WellState<Scalar>::initSingleInjector(const Well& well,
                                            const SummaryState& summary_state)
 {
     const auto& pu = this->phase_usage_;
-    Scalar temp = temperature_first_connection;
-    if (well.hasTemperature()) {
-        temp = well.temperature();
-    }
+    const Scalar temp = well.hasInjTemperature() ? well.inj_temperature() : temperature_first_connection;
     auto& ws = this->wells_.add(well.name(), SingleWellState<Scalar>{well.name(),
                                                                      well_info,
                                                                      false,
@@ -239,15 +236,17 @@ void WellState<Scalar>::initSingleWell(const std::vector<Scalar>& cellPressures,
                                        const SummaryState& summary_state)
 {
     Scalar pressure_first_connection = -1;
-    Scalar temperature_first_connection = -1;
     if (!well_perf_data.empty()) {
         pressure_first_connection = cellPressures[well_perf_data[0].cell_index];
-        temperature_first_connection = cellTemperatures[well_perf_data[0].cell_index];
     }
     pressure_first_connection = well_info.broadcastFirstPerforationValue(pressure_first_connection);
-    temperature_first_connection = well_info.broadcastFirstPerforationValue(temperature_first_connection);
 
     if (well.isInjector()) {
+        Scalar temperature_first_connection = -1;
+        if (!well_perf_data.empty()) {
+            temperature_first_connection = cellTemperatures[well_perf_data[0].cell_index];
+        }
+        temperature_first_connection = well_info.broadcastFirstPerforationValue(temperature_first_connection);
         this->initSingleInjector(well, well_info, pressure_first_connection, temperature_first_connection,
                                  well_perf_data, summary_state);
     } else {
