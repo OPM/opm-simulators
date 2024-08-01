@@ -29,6 +29,7 @@
 #define OPM_FLOW_PROBLEM_PROPERTIES_HPP
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManagerSimple.hpp>
 #include <opm/material/thermal/EclThermalLawManager.hpp>
 
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>

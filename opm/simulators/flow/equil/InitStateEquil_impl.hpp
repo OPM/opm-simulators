@@ -41,6 +41,7 @@
 #include <opm/input/eclipse/EclipseState/Tables/SaltpvdTable.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManagerSimple.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>

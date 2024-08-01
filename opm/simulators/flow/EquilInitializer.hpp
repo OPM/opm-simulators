@@ -31,6 +31,7 @@
 #include <opm/grid/common/CartesianIndexMapper.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManagerSimple.hpp>
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
