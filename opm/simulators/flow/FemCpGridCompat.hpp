@@ -34,9 +34,6 @@
 #if HAVE_DUNE_FEM
 #include <dune/common/version.hh>
 #include <dune/fem/gridpart/common/gridpart.hh>
-#if !DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
-#include <dune/fem/misc/compatibility.hh>
-#endif
 #include <dune/fem/io/streams/streams.hh>
 
 namespace Dune {

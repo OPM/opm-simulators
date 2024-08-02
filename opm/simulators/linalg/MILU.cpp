@@ -246,11 +246,7 @@ void milun_decomposition(const M& A, int n, MILU_VARIANT milu, M& ILU,
                                       isPositiveFunctor<typename M::field_type>);
         break;
     default:
-#if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
-        bilu0_decomposition( ILU );
-#else
         Dune::ILU::blockILU0Decomposition( ILU );
-#endif
         break;
     }
 }
