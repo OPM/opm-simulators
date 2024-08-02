@@ -30,19 +30,22 @@
 
 #include <opm/material/densead/Math.hpp>
 
-#include "multiphasebaseproperties.hh"
-#include "multiphasebaseproblem.hh"
-#include "multiphasebaseextensivequantities.hh"
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
+#include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
+
+#include <opm/material/thermal/NullSolidEnergyLaw.hpp>
+#include <opm/material/thermal/NullThermalConductionLaw.hpp>
 
 #include <opm/models/common/flux.hh>
+#include <opm/models/common/multiphasebaseparameters.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/common/multiphasebaseproblem.hh>
+#include <opm/models/common/multiphasebaseextensivequantities.hh>
+
 #include <opm/models/discretization/vcfv/vcfvdiscretization.hh>
+
 #include <opm/models/io/vtkmultiphasemodule.hh>
 #include <opm/models/io/vtktemperaturemodule.hh>
-
-#include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/thermal/NullThermalConductionLaw.hpp>
-#include <opm/material/thermal/NullSolidEnergyLaw.hpp>
 
 namespace Opm {
 template <class TypeTag>
@@ -134,12 +137,16 @@ template<class TypeTag>
 struct ThermalConductionLawParams<TypeTag, TTag::MultiPhaseBaseModel>
 { using type = typename GetPropType<TypeTag, Properties::ThermalConductionLaw>::Params; };
 
+} // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
 //! disable gravity by default
 template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::MultiPhaseBaseModel> { static constexpr bool value = false; };
+struct EnableGravity<TypeTag, Properties::TTag::MultiPhaseBaseModel>
+{ static constexpr bool value = false; };
 
-
-} // namespace Opm::Properties
+}
 
 namespace Opm {
 

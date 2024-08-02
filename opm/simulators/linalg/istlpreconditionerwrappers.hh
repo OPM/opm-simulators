@@ -44,13 +44,16 @@
 #ifndef EWOMS_ISTL_PRECONDITIONER_WRAPPERS_HH
 #define EWOMS_ISTL_PRECONDITIONER_WRAPPERS_HH
 
+#include <dune/common/version.hh>
+
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
-#include <opm/simulators/linalg/linalgproperties.hh>
-#include <opm/simulators/linalg/ilufirstelement.hh> //definitions needed in next header
-#include <dune/istl/preconditioners.hh>
 
-#include <dune/common/version.hh>
+#include <opm/simulators/linalg/linalgparameters.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
+
+#include <opm/simulators/linalg/ilufirstelement.hh> // definitions needed in next header
+#include <dune/istl/preconditioners.hh>
 
 namespace Opm {
 namespace Linear {
@@ -72,16 +75,16 @@ namespace Linear {
                                                                                 \
         static void registerParameters()                                        \
         {                                                                       \
-            Parameters::registerParam<TypeTag, Properties::PreconditionerOrder> \
+            Parameters::registerParam<TypeTag, Parameters::PreconditionerOrder> \
                 ("The order of the preconditioner");                            \
-            Parameters::registerParam<TypeTag, Properties::PreconditionerRelaxation> \
+            Parameters::registerParam<TypeTag, Parameters::PreconditionerRelaxation> \
                 ("The relaxation factor of the preconditioner");                \
         }                                                                       \
                                                                                 \
         void prepare(IstlMatrix& matrix)                                        \
         {                                                                       \
-            int order = Parameters::get<TypeTag, Properties::PreconditionerOrder>(); \
-            Scalar relaxationFactor = Parameters::get<TypeTag, Properties::PreconditionerRelaxation>(); \
+            int order = Parameters::get<TypeTag, Parameters::PreconditionerOrder>(); \
+            Scalar relaxationFactor = Parameters::get<TypeTag, Parameters::PreconditionerRelaxation>(); \
             seqPreCond_ = new SequentialPreconditioner(matrix, order,           \
                                                        relaxationFactor);       \
         }                                                                       \
@@ -115,14 +118,14 @@ namespace Linear {
                                                                                 \
         static void registerParameters()                                        \
         {                                                                       \
-            Parameters::registerParam<TypeTag, Properties::PreconditionerRelaxation> \
+            Parameters::registerParam<TypeTag, Parameters::PreconditionerRelaxation> \
                 ("The relaxation factor of the preconditioner");                \
         }                                                                       \
                                                                                 \
         void prepare(OverlappingMatrix& matrix)                                 \
         {                                                                       \
             Scalar relaxationFactor =                                           \
-            Parameters::get<TypeTag, Properties::PreconditionerRelaxation>();   \
+            Parameters::get<TypeTag, Parameters::PreconditionerRelaxation>();   \
             seqPreCond_ = new SequentialPreconditioner(matrix,                  \
                                                        relaxationFactor);       \
         }                                                                       \
@@ -152,7 +155,7 @@ class PreconditionerWrapperILU
     using OverlappingMatrix = GetPropType<TypeTag, Properties::OverlappingMatrix>;
     using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>;
 
-    static constexpr int order = getPropValue<TypeTag, Properties::PreconditionerOrder>();
+    static constexpr int order = getPropValue<TypeTag, Parameters::PreconditionerOrder>();
 
 public:
     using SequentialPreconditioner = Dune::SeqILU<OverlappingMatrix, OverlappingVector, OverlappingVector, order>;
@@ -162,13 +165,13 @@ public:
 
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::PreconditionerRelaxation>
+        Parameters::registerParam<TypeTag, Parameters::PreconditionerRelaxation>
             ("The relaxation factor of the preconditioner");
     }
 
     void prepare(OverlappingMatrix& matrix)
     {
-        Scalar relaxationFactor = Parameters::get<TypeTag, Properties::PreconditionerRelaxation>();
+        Scalar relaxationFactor = Parameters::get<TypeTag, Parameters::PreconditionerRelaxation>();
 
         // create the sequential preconditioner.
         seqPreCond_ = new SequentialPreconditioner(matrix, relaxationFactor);

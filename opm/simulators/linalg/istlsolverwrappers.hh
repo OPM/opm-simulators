@@ -44,11 +44,13 @@
 #ifndef EWOMS_ISTL_SOLVER_WRAPPERS_HH
 #define EWOMS_ISTL_SOLVER_WRAPPERS_HH
 
+#include <dune/istl/solvers.hh>
+
 #include <opm/models/utils/propertysystem.hh>
 #include <opm/models/utils/parametersystem.hh>
-#include <opm/simulators/linalg/linalgproperties.hh>
 
-#include <dune/istl/solvers.hh>
+#include <opm/simulators/linalg/linalgparameters.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 namespace Opm::Linear {
 
@@ -77,12 +79,12 @@ namespace Opm::Linear {
                                        ScalarProduct& parScalarProduct,            \
                                        Preconditioner& parPreCond)                 \
         {                                                                          \
-            Scalar tolerance = Parameters::get<TypeTag, Properties::LinearSolverTolerance>(); \
-            int maxIter = Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>();\
+            Scalar tolerance = Parameters::get<TypeTag, Parameters::LinearSolverTolerance>(); \
+            int maxIter = Parameters::get<TypeTag, Parameters::LinearSolverMaxIterations>();  \
                                                                                    \
             int verbosity = 0;                                                     \
             if (parOperator.overlap().myRank() == 0)                               \
-                verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>(); \
+                verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>(); \
             solver_ = std::make_shared<RawSolver>(parOperator, parScalarProduct,   \
                                                   parPreCond, tolerance, maxIter,  \
                                                   verbosity);                      \
@@ -123,7 +125,7 @@ public:
 
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::GMResRestart>
+        Parameters::registerParam<TypeTag, Parameters::GMResRestart>
             ("Number of iterations after which the GMRES linear solver is restarted");
     }
 
@@ -132,13 +134,13 @@ public:
                                    ScalarProduct& parScalarProduct,
                                    Preconditioner& parPreCond)
     {
-        Scalar tolerance = Parameters::get<TypeTag, Properties::LinearSolverTolerance>();
-        int maxIter = Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>();
+        Scalar tolerance = Parameters::get<TypeTag, Parameters::LinearSolverTolerance>();
+        int maxIter = Parameters::get<TypeTag, Parameters::LinearSolverMaxIterations>();
 
         int verbosity = 0;
         if (parOperator.overlap().myRank() == 0)
-            verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
-        int restartAfter = Parameters::get<TypeTag, Properties::GMResRestart>();
+            verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
+        int restartAfter = Parameters::get<TypeTag, Parameters::GMResRestart>();
         solver_ = std::make_shared<RawSolver>(parOperator,
                                               parScalarProduct,
                                               parPreCond,

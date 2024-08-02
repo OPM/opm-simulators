@@ -29,22 +29,26 @@
 
 #if HAVE_SUPERLU
 
-#include <opm/models/linear/istlsparsematrixbackend.hh>
-#include <opm/models/utils/parametersystem.hh>
-#include <opm/simulators/linalg/linalgproperties.hh>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/version.hh>
+#include <dune/istl/superlu.hh>
 
 #include <opm/material/common/Unused.hpp>
 
-#include <dune/istl/superlu.hh>
-#include <dune/common/fmatrix.hh>
-#include <dune/common/version.hh>
+#include <opm/models/linear/istlsparsematrixbackend.hh>
+
+#include <opm/models/utils/parametersystem.hh>
+
+#include <opm/simulators/linalg/linalgproperties.hh>
 
 namespace Opm::Properties::TTag {
+
 struct SuperLULinearSolver {};
+
 } // namespace Opm::Properties::TTag
 
-namespace Opm {
-namespace Linear {
+namespace Opm::Linear {
+
 template <class Scalar, class TypeTag, class Matrix, class Vector>
 class SuperLUSolve_;
 
@@ -69,7 +73,7 @@ public:
 
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::LinearSolverVerbosity>
+        Parameters::registerParam<TypeTag, Parameters::LinearSolverVerbosity>
             ("The verbosity level of the linear solver");
     }
 
@@ -110,7 +114,7 @@ public:
     {
         Vector bTmp(b);
 
-        int verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
+        int verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
         Dune::InverseOperatorResult result;
         Dune::SuperLU<Matrix> solver(A, verbosity > 0);
         solver.apply(x, bTmp, result);
@@ -173,9 +177,12 @@ public:
 namespace Opm::Properties {
 
 template<class TypeTag>
-struct LinearSolverVerbosity<TypeTag, TTag::SuperLULinearSolver> { static constexpr int value = 0; };
+struct LinearSolverVerbosity<TypeTag, TTag::SuperLULinearSolver>
+{ static constexpr int value = 0; };
+
 template<class TypeTag>
-struct LinearSolverBackend<TypeTag, TTag::SuperLULinearSolver> { using type = Opm::Linear::SuperLUBackend<TypeTag>; };
+struct LinearSolverBackend<TypeTag, TTag::SuperLULinearSolver>
+{ using type = Opm::Linear::SuperLUBackend<TypeTag>; };
 
 } // namespace Opm::Properties
 

@@ -128,10 +128,6 @@ struct MaterialLaw<TypeTag, TTag::FingerBaseProblem>
 template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = true; };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::FingerBaseProblem> { static constexpr bool value = true; };
-
 template<class TypeTag>
 struct InitialWaterSaturation<TypeTag, TTag::FingerBaseProblem>
 {
@@ -176,6 +172,11 @@ struct DomainSizeZ<TypeTag, Properties::TTag::FingerBaseProblem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 0.1;
 };
+
+// Enable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::FingerBaseProblem>
+{ static constexpr bool value = true; };
 
 // The default for the end time of the simulation
 template<class TypeTag>

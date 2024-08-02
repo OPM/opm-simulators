@@ -38,6 +38,7 @@
 #include <opm/material/densead/Evaluation.hpp>
 
 #include <opm/models/common/directionalmobility.hh>
+#include <opm/models/common/multiphasebaseparameters.hh>
 #include <opm/models/common/multiphasebaseproperties.hh>
 
 #include <opm/models/discretization/common/fvbaseproblem.hh>
@@ -92,7 +93,7 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::EnableGravity>
+        Parameters::registerParam<TypeTag, Parameters::EnableGravity>
             ("Use the gravity correction for the pressure gradients.");
     }
 
@@ -397,7 +398,7 @@ private:
     void init_()
     {
         gravity_ = 0.0;
-        if (Parameters::get<TypeTag, Properties::EnableGravity>())
+        if (Parameters::get<TypeTag, Parameters::EnableGravity>())
             gravity_[dimWorld-1]  = -9.81;
     }
 };

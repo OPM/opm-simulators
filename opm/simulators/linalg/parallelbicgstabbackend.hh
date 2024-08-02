@@ -27,41 +27,51 @@
 #ifndef EWOMS_PARALLEL_BICGSTAB_BACKEND_HH
 #define EWOMS_PARALLEL_BICGSTAB_BACKEND_HH
 
-#include "linalgproperties.hh"
-#include "parallelbasebackend.hh"
-#include "bicgstabsolver.hh"
-#include "combinedcriterion.hh"
-#include "istlsparsematrixadapter.hh"
+#include <opm/simulators/linalg/bicgstabsolver.hh>
+#include <opm/simulators/linalg/combinedcriterion.hh>
+#include <opm/simulators/linalg/istlsparsematrixadapter.hh>
+#include <opm/simulators/linalg/linalgparameters.hh>
+#include <opm/simulators/linalg/linalgproperties.hh>
+#include <opm/simulators/linalg/parallelbasebackend.hh>
 
 #include <memory>
 
 namespace Opm::Linear {
+
 template <class TypeTag>
 class ParallelBiCGStabSolverBackend;
+
 } // namespace Opm::Linear
 
 namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct ParallelBiCGStabLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
+
+struct ParallelBiCGStabLinearSolver
+{ using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
+
 } // end namespace TTag
 
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::ParallelBiCGStabLinearSolver>
 { using type = Opm::Linear::ParallelBiCGStabSolverBackend<TypeTag>; };
 
+} // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
 template<class TypeTag>
-struct LinearSolverMaxError<TypeTag, TTag::ParallelBiCGStabLinearSolver>
+struct LinearSolverMaxError<TypeTag, Properties::TTag::ParallelBiCGStabLinearSolver>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e7;
 };
 
-} // namespace Opm::Properties
+}
 
-namespace Opm {
-namespace Linear {
+namespace Opm::Linear {
+
 /*!
  * \ingroup Linear
  *
@@ -121,7 +131,7 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::LinearSolverMaxError>
+        Parameters::registerParam<TypeTag, Parameters::LinearSolverMaxError>
             ("The maximum residual error which the linear solver tolerates"
              " without giving up");
     }
@@ -136,24 +146,24 @@ protected:
         const auto& gridView = this->simulator_.gridView();
         using CCC = CombinedCriterion<OverlappingVector, decltype(gridView.comm())>;
 
-        Scalar linearSolverTolerance = Parameters::get<TypeTag, Properties::LinearSolverTolerance>();
-        Scalar linearSolverAbsTolerance = Parameters::get<TypeTag, Properties::LinearSolverAbsTolerance>();
+        Scalar linearSolverTolerance = Parameters::get<TypeTag, Parameters::LinearSolverTolerance>();
+        Scalar linearSolverAbsTolerance = Parameters::get<TypeTag, Parameters::LinearSolverAbsTolerance>();
         if(linearSolverAbsTolerance < 0.0)
             linearSolverAbsTolerance = this->simulator_.model().newtonMethod().tolerance() / 100.0;
 
         convCrit_.reset(new CCC(gridView.comm(),
                                 /*residualReductionTolerance=*/linearSolverTolerance,
                                 /*absoluteResidualTolerance=*/linearSolverAbsTolerance,
-                                Parameters::get<TypeTag, Properties::LinearSolverMaxError>()));
+                                Parameters::get<TypeTag, Parameters::LinearSolverMaxError>()));
 
         auto bicgstabSolver =
             std::make_shared<RawLinearSolver>(parPreCond, *convCrit_, parScalarProduct);
 
         int verbosity = 0;
         if (parOperator.overlap().myRank() == 0)
-            verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
+            verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
         bicgstabSolver->setVerbosity(verbosity);
-        bicgstabSolver->setMaxIterations(Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>());
+        bicgstabSolver->setMaxIterations(Parameters::get<TypeTag, Parameters::LinearSolverMaxIterations>());
         bicgstabSolver->setLinearOperator(&parOperator);
         bicgstabSolver->setRhs(this->overlappingb_);
 
@@ -172,6 +182,6 @@ protected:
     std::unique_ptr<ConvergenceCriterion<OverlappingVector> > convCrit_;
 };
 
-}} // namespace Linear, Opm
+} // namespace Opm::Linear
 
 #endif

@@ -130,10 +130,6 @@ public:
 };
 
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::LensBaseProblem> { static constexpr bool value = true; };
-
 // define the properties specific for the lens problem
 template<class TypeTag>
 struct LensLowerLeftX<TypeTag, TTag::LensBaseProblem>
@@ -208,6 +204,11 @@ struct DomainSizeZ<TypeTag, Properties::TTag::LensBaseProblem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1.0;
 };
+
+// Enable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::LensBaseProblem>
+{ static constexpr bool value = true; };
 
 // enable the cache for intensive quantities by default for this problem
 template<class TypeTag>

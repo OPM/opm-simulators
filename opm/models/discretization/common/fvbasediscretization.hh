@@ -28,41 +28,43 @@
 #ifndef EWOMS_FV_BASE_DISCRETIZATION_HH
 #define EWOMS_FV_BASE_DISCRETIZATION_HH
 
-#include <opm/material/densead/Math.hpp>
-
-#include "fvbaseproperties.hh"
-#include "fvbaselinearizer.hh"
-#include "fvbasefdlocallinearizer.hh"
-#include "fvbaseadlocallinearizer.hh"
-#include "fvbaselocalresidual.hh"
-#include "fvbaseelementcontext.hh"
-#include "fvbaseboundarycontext.hh"
-#include "fvbaseconstraintscontext.hh"
-#include "fvbaseconstraints.hh"
-#include "fvbasegradientcalculator.hh"
-#include "fvbasenewtonmethod.hh"
-#include "fvbaseprimaryvariables.hh"
-#include "fvbaseintensivequantities.hh"
-#include "fvbaseextensivequantities.hh"
-#include "baseauxiliarymodule.hh"
-
-#include <opm/models/parallel/gridcommhandles.hh>
-#include <opm/models/parallel/threadmanager.hh>
-#include <opm/simulators/linalg/nullborderlistmanager.hh>
-#include <opm/models/utils/simulator.hh>
-#include <opm/models/utils/alignedallocator.hh>
-#include <opm/models/utils/timer.hh>
-#include <opm/models/utils/timerguard.hh>
-#include <opm/models/io/vtkprimaryvarsmodule.hh>
-
-#include <opm/material/common/MathToolbox.hpp>
-#include <opm/material/common/Valgrind.hpp>
-
 #include <dune/common/version.hh>
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bvector.hh>
 
+#include <opm/material/common/MathToolbox.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/densead/Math.hpp>
+
+#include <opm/models/discretization/common/baseauxiliarymodule.hh>
+#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
+#include <opm/models/discretization/common/fvbaseboundarycontext.hh>
+#include <opm/models/discretization/common/fvbaseconstraints.hh>
+#include <opm/models/discretization/common/fvbaseconstraintscontext.hh>
+#include <opm/models/discretization/common/fvbaseelementcontext.hh>
+#include <opm/models/discretization/common/fvbaseextensivequantities.hh>
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
+#include <opm/models/discretization/common/fvbasegradientcalculator.hh>
+#include <opm/models/discretization/common/fvbaseintensivequantities.hh>
+#include <opm/models/discretization/common/fvbaselinearizer.hh>
+#include <opm/models/discretization/common/fvbaselocalresidual.hh>
+#include <opm/models/discretization/common/fvbasenewtonmethod.hh>
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+#include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
+
+#include <opm/models/io/vtkprimaryvarsmodule.hh>
+
+#include <opm/models/parallel/gridcommhandles.hh>
+#include <opm/models/parallel/threadmanager.hh>
+
+#include <opm/models/utils/alignedallocator.hh>
+#include <opm/models/utils/simulator.hh>
+#include <opm/models/utils/timer.hh>
+#include <opm/models/utils/timerguard.hh>
+
+#include <opm/simulators/linalg/linalgparameters.hh>
+#include <opm/simulators/linalg/nullborderlistmanager.hh>
 
 #include <algorithm>
 #include <cstddef>
@@ -86,7 +88,8 @@ namespace Opm::Properties {
 
 //! Set the default type for the time manager
 template<class TypeTag>
-struct Simulator<TypeTag, TTag::FvBaseDiscretization> { using type = ::Opm::Simulator<TypeTag>; };
+struct Simulator<TypeTag, TTag::FvBaseDiscretization>
+{ using type = ::Opm::Simulator<TypeTag>; };
 
 //! Mapper for the grid view's vertices.
 template<class TypeTag>
@@ -104,29 +107,37 @@ struct BorderListCreator<TypeTag, TTag::FvBaseDiscretization>
 {
     using DofMapper = GetPropType<TypeTag, Properties::DofMapper>;
     using GridView = GetPropType<TypeTag, Properties::GridView>;
+
 public:
     using type = Linear::NullBorderListCreator<GridView, DofMapper>;
 };
 
 template<class TypeTag>
-struct DiscLocalResidual<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseLocalResidual<TypeTag>; };
+struct DiscLocalResidual<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseLocalResidual<TypeTag>; };
 
 template<class TypeTag>
-struct DiscIntensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseIntensiveQuantities<TypeTag>; };
+struct DiscIntensiveQuantities<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseIntensiveQuantities<TypeTag>; };
+
 template<class TypeTag>
-struct DiscExtensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseExtensiveQuantities<TypeTag>; };
+struct DiscExtensiveQuantities<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseExtensiveQuantities<TypeTag>; };
 
 //! Calculates the gradient of any quantity given the index of a flux approximation point
 template<class TypeTag>
-struct GradientCalculator<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseGradientCalculator<TypeTag>; };
+struct GradientCalculator<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseGradientCalculator<TypeTag>; };
 
 /*!
  * \brief A vector of quanties, each for one equation.
  */
 template<class TypeTag>
 struct EqVector<TypeTag, TTag::FvBaseDiscretization>
-{ using type = Dune::FieldVector<GetPropType<TypeTag, Properties::Scalar>,
-                                 getPropValue<TypeTag, Properties::NumEq>()>; };
+{
+    using type = Dune::FieldVector<GetPropType<TypeTag, Properties::Scalar>,
+                                   getPropValue<TypeTag, Properties::NumEq>()>;
+};
 
 /*!
  * \brief A vector for mass/energy rates.
@@ -148,7 +159,8 @@ struct BoundaryRateVector<TypeTag, TTag::FvBaseDiscretization>
  * \brief The class which represents constraints.
  */
 template<class TypeTag>
-struct Constraints<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseConstraints<TypeTag>; };
+struct Constraints<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseConstraints<TypeTag>; };
 
 /*!
  * \brief The type for storing a residual for an element.
@@ -168,7 +180,8 @@ struct GlobalEqVector<TypeTag, TTag::FvBaseDiscretization>
  * \brief An object representing a local set of primary variables.
  */
 template<class TypeTag>
-struct PrimaryVariables<TypeTag, TTag::FvBaseDiscretization> { using type = FvBasePrimaryVariables<TypeTag>; };
+struct PrimaryVariables<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBasePrimaryVariables<TypeTag>; };
 
 /*!
  * \brief The type of a solution for the whole grid at a fixed time.
@@ -183,89 +196,85 @@ struct SolutionVector<TypeTag, TTag::FvBaseDiscretization>
  * This should almost certainly be overloaded by the model...
  */
 template<class TypeTag>
-struct IntensiveQuantities<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseIntensiveQuantities<TypeTag>; };
+struct IntensiveQuantities<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseIntensiveQuantities<TypeTag>; };
 
 /*!
  * \brief The element context
  */
 template<class TypeTag>
-struct ElementContext<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseElementContext<TypeTag>; };
+struct ElementContext<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseElementContext<TypeTag>; };
+
 template<class TypeTag>
-struct BoundaryContext<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseBoundaryContext<TypeTag>; };
+struct BoundaryContext<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseBoundaryContext<TypeTag>; };
+
 template<class TypeTag>
-struct ConstraintsContext<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseConstraintsContext<TypeTag>; };
+struct ConstraintsContext<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseConstraintsContext<TypeTag>; };
 
 /*!
  * \brief The OpenMP threads manager
  */
 template<class TypeTag>
-struct ThreadManager<TypeTag, TTag::FvBaseDiscretization> { using type = ::Opm::ThreadManager<TypeTag>; };
+struct ThreadManager<TypeTag, TTag::FvBaseDiscretization>
+{ using type = ::Opm::ThreadManager<TypeTag>; };
+
 template<class TypeTag>
-struct UseLinearizationLock<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
+struct UseLinearizationLock<TypeTag, TTag::FvBaseDiscretization>
+{ static constexpr bool value = true; };
 
 /*!
  * \brief Linearizer for the global system of equations.
  */
 template<class TypeTag>
-struct Linearizer<TypeTag, TTag::FvBaseDiscretization> { using type = FvBaseLinearizer<TypeTag>; };
+struct Linearizer<TypeTag, TTag::FvBaseDiscretization>
+{ using type = FvBaseLinearizer<TypeTag>; };
 
 //! Set the format of the VTK output to ASCII by default
 template<class TypeTag>
-struct VtkOutputFormat<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = Dune::VTK::ascii; };
+struct VtkOutputFormat<TypeTag, TTag::FvBaseDiscretization>
+{ static constexpr int value = Dune::VTK::ascii; };
 
 // disable constraints by default
 template<class TypeTag>
-struct EnableConstraints<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
-
-// if the deflection of the newton method is large, we do not need to solve the linear
-// approximation accurately. Assuming that the value for the current solution is quite
-// close to the final value, a reduction of 3 orders of magnitude in the defect should be
-// sufficient...
-template<class TypeTag>
-struct LinearSolverTolerance<TypeTag, TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-3;
-};
-
-// use default initialization based on rule-of-thumb of Newton tolerance
-template<class TypeTag>
-struct LinearSolverAbsTolerance<TypeTag, TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1.;
-};
+struct EnableConstraints<TypeTag, TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
 
 //! Set the history size of the time discretization to 2 (for implicit euler)
 template<class TypeTag>
-struct TimeDiscHistorySize<TypeTag, TTag::FvBaseDiscretization> { static constexpr int value = 2; };
+struct TimeDiscHistorySize<TypeTag, TTag::FvBaseDiscretization>
+{ static constexpr int value = 2; };
 
 //! Most models use extensive quantities for their storage term (so far, only the Stokes
 //! model does), so we disable this by default.
 template<class TypeTag>
-struct ExtensiveStorageTerm<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = false; };
+struct ExtensiveStorageTerm<TypeTag, TTag::FvBaseDiscretization>
+{ static constexpr bool value = false; };
 
 // use volumetric residuals is default
 template<class TypeTag>
-struct UseVolumetricResidual<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
+struct UseVolumetricResidual<TypeTag, TTag::FvBaseDiscretization>
+{ static constexpr bool value = true; };
 
 //! eWoms is mainly targeted at research, so experimental features are enabled by
 //! default.
 template<class TypeTag>
-struct EnableExperiments<TypeTag, TTag::FvBaseDiscretization> { static constexpr bool value = true; };
+struct EnableExperiments<TypeTag, TTag::FvBaseDiscretization>
+{ static constexpr bool value = true; };
 
 template <class TypeTag, class MyTypeTag>
-struct BaseDiscretizationType {
-    using type = UndefinedProperty;
-};
+struct BaseDiscretizationType { using type = UndefinedProperty; };
 
 #if !HAVE_DUNE_FEM
 template<class TypeTag>
-struct BaseDiscretizationType<TypeTag,TTag::FvBaseDiscretization> {
-    using type = FvBaseDiscretizationNoAdapt<TypeTag>;
-};
+struct BaseDiscretizationType<TypeTag,TTag::FvBaseDiscretization>
+{ using type = FvBaseDiscretizationNoAdapt<TypeTag>; };
+
 template<class TypeTag>
-struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization> {
+struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization>
+{
     using BaseDiscretization = FvBaseDiscretization<TypeTag>;
     using type = typename BaseDiscretization::BlockVectorWrapper;
 };
@@ -275,24 +284,12 @@ struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization> {
 
 namespace Opm::Parameters {
 
+//! By default, do not continue with a non-converged solution instead of giving up
+//! if we encounter a time step size smaller than the minimum time
+//! step size.
 template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr int value = 1; };
-
-//! Disable grid adaptation by default
-template<class TypeTag>
-struct EnableGridAdaptation<TypeTag, Properties::TTag::FvBaseDiscretization>
+struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
-
-//! By default, write the simulation output to the current working directory
-template<class TypeTag>
-struct OutputDir<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr auto value = "."; };
-
-//! Enable the VTK output by default
-template<class TypeTag>
-struct EnableVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = true; };
 
 //! By default, write the VTK output to asynchronously to disk
 //!
@@ -301,33 +298,9 @@ template<class TypeTag>
 struct EnableAsyncVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = true; };
 
-//! use an unlimited time step size by default
+//! Disable grid adaptation by default
 template<class TypeTag>
-struct MaxTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = std::numeric_limits<type>::infinity();
-};
-
-//! By default, accept any time step larger than zero
-template<class TypeTag>
-struct MinTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.0;
-};
-
-//! The maximum allowed number of timestep divisions for the
-//! Newton solver
-template<class TypeTag>
-struct MaxTimeStepDivisions<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr unsigned value = 10; };
-
-//! By default, do not continue with a non-converged solution instead of giving up
-//! if we encounter a time step size smaller than the minimum time
-//! step size.
-template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FvBaseDiscretization>
+struct EnableGridAdaptation<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
 
 //! by default, disable the intensive quantity cache. If the intensive quantities are
@@ -343,11 +316,67 @@ template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
 
+//! Enable the VTK output by default
+template<class TypeTag>
+struct EnableVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr bool value = true; };
+
 // do not use thermodynamic hints by default. If you enable this, make sure to also
 // enable the intensive quantity cache above to avoid getting an exception...
 template<class TypeTag>
 struct EnableThermodynamicHints<TypeTag, Properties::TTag::FvBaseDiscretization>
 { static constexpr bool value = false; };
+
+// use default initialization based on rule-of-thumb of Newton tolerance
+template<class TypeTag>
+struct LinearSolverAbsTolerance<TypeTag, Properties::TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = -1.;
+};
+
+// if the deflection of the newton method is large, we do not need to solve the linear
+// approximation accurately. Assuming that the value for the current solution is quite
+// close to the final value, a reduction of 3 orders of magnitude in the defect should be
+// sufficient...
+template<class TypeTag>
+struct LinearSolverTolerance<TypeTag, Properties::TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e-3;
+};
+
+//! use an unlimited time step size by default
+template<class TypeTag>
+struct MaxTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = std::numeric_limits<type>::infinity();
+};
+
+//! The maximum allowed number of timestep divisions for the
+//! Newton solver
+template<class TypeTag>
+struct MaxTimeStepDivisions<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr unsigned value = 10; };
+
+//! By default, accept any time step larger than zero
+template<class TypeTag>
+struct MinTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.0;
+};
+
+//! By default, write the simulation output to the current working directory
+template<class TypeTag>
+struct OutputDir<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr auto value = "."; };
+
+
+template<class TypeTag>
+struct ThreadsPerProcess<TypeTag, Properties::TTag::FvBaseDiscretization>
+{ static constexpr int value = 1; };
 
 } // namespace Opm::Parameters
 

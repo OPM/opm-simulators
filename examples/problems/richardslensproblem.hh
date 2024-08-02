@@ -99,13 +99,14 @@ public:
     using type = Opm::EffToAbsLaw<EffectiveLaw>;
 };
 
-// Enable gravitational acceleration
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::RichardsLensProblem> { static constexpr bool value = true; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// Enable gravitational acceleration
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::RichardsLensProblem>
+{ static constexpr bool value = true; };
 
 // The default for the end time of the simulation
 template<class TypeTag>

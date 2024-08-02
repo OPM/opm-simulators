@@ -111,13 +111,14 @@ template<class TypeTag>
 struct SolidEnergyLaw<TypeTag, TTag::ObstacleBaseProblem>
 { using type = Opm::ConstantSolidHeatCapLaw<GetPropType<TypeTag, Properties::Scalar>>; };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::ObstacleBaseProblem> { static constexpr bool value = true; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// Enable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::ObstacleBaseProblem>
+{ static constexpr bool value = true; };
 
 // The default for the end time of the simulation
 template<class TypeTag>

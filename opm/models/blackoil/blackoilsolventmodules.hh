@@ -34,6 +34,7 @@
 
 #include <opm/models/blackoil/blackoilsolventparams.hh>
 #include <opm/models/io/vtkblackoilsolventmodule.hh>
+#include <opm/models/common/multiphasebaseparameters.hh>
 #include <opm/models/common/quantitycallbacks.hh>
 
 #include <opm/material/fluidsystems/blackoilpvt/SolventPvt.hpp>
@@ -1368,7 +1369,7 @@ public:
         Valgrind::CheckDefined(solventPGrad);
 
         // correct the pressure gradients by the gravitational acceleration
-        if (Parameters::get<TypeTag, Properties::EnableGravity>()) {
+        if (Parameters::get<TypeTag, Parameters::EnableGravity>()) {
             // estimate the gravitational acceleration at a given SCV face
             // using the arithmetic mean
             const auto& gIn = elemCtx.problem().gravity(elemCtx, i, timeIdx);

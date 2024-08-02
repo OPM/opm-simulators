@@ -106,10 +106,6 @@ public:
 template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::DiffusionBaseProblem> { static constexpr bool value = true; };
 
-// Disable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::DiffusionBaseProblem> { static constexpr bool value = false; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -147,6 +143,11 @@ struct DomainSizeZ<TypeTag, Properties::TTag::DiffusionBaseProblem>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1.0;
 };
+
+// Disable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::DiffusionBaseProblem>
+{ static constexpr bool value = false; };
 
 // The default for the end time of the simulation
 template<class TypeTag>

@@ -141,10 +141,6 @@ struct PermeabilityLens<TypeTag, TTag::GroundWaterBaseProblem>
     static constexpr type value = 1e-12;
 };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::GroundWaterBaseProblem> { static constexpr bool value = true; };
-
 // Use the conjugated gradient linear solver with the default preconditioner (i.e.,
 // ILU-0) from dune-istl
 template<class TypeTag>
@@ -157,6 +153,11 @@ struct LinearSolverWrapper<TypeTag, TTag::GroundWaterBaseProblem>
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// Enable gravity
+template<class TypeTag>
+struct EnableGravity<TypeTag, Properties::TTag::GroundWaterBaseProblem>
+{ static constexpr bool value = true; };
 
 // The default for the end time of the simulation
 template<class TypeTag>

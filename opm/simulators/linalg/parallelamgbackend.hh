@@ -43,28 +43,21 @@
 #include <utility>
 
 namespace Opm::Linear {
+
 template <class TypeTag>
 class ParallelAmgBackend;
+
 } // namespace Opm::Linear
 
 namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
-struct ParallelAmgLinearSolver { using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
+
+struct ParallelAmgLinearSolver
+{ using InheritsFrom = std::tuple<ParallelBaseLinearSolver>; };
+
 } // end namespace TTag
-
-//! The target number of DOFs per processor for the parallel algebraic
-//! multi-grid solver
-template<class TypeTag>
-struct AmgCoarsenTarget<TypeTag, TTag::ParallelAmgLinearSolver> { static constexpr int value = 5000; };
-
-template<class TypeTag>
-struct LinearSolverMaxError<TypeTag, TTag::ParallelAmgLinearSolver>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e7;
-};
 
 template<class TypeTag>
 struct LinearSolverBackend<TypeTag, TTag::ParallelAmgLinearSolver>
@@ -72,8 +65,25 @@ struct LinearSolverBackend<TypeTag, TTag::ParallelAmgLinearSolver>
 
 } // namespace Opm::Properties
 
-namespace Opm {
-namespace Linear {
+namespace Opm::Parameters {
+
+//! The target number of DOFs per processor for the parallel algebraic
+//! multi-grid solver
+template<class TypeTag>
+struct AmgCoarsenTarget<TypeTag, Properties::TTag::ParallelAmgLinearSolver>
+{ static constexpr int value = 5000; };
+
+template<class TypeTag>
+struct LinearSolverMaxError<TypeTag, Properties::TTag::ParallelAmgLinearSolver>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e7;
+};
+
+}
+
+namespace Opm::Linear {
+
 /*!
  * \ingroup Linear
  *
@@ -150,10 +160,10 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::LinearSolverMaxError>
+        Parameters::registerParam<TypeTag, Parameters::LinearSolverMaxError>
             ("The maximum residual error which the linear solver tolerates "
              "without giving up");
-        Parameters::registerParam<TypeTag, Properties::AmgCoarsenTarget>
+        Parameters::registerParam<TypeTag, Parameters::AmgCoarsenTarget>
             ("The coarsening target for the agglomerations of "
              "the AMG preconditioner");
     }
@@ -193,24 +203,24 @@ protected:
         const auto& gridView = this->simulator_.gridView();
         using CCC = CombinedCriterion<OverlappingVector, decltype(gridView.comm())>;
 
-        Scalar linearSolverTolerance = Parameters::get<TypeTag, Properties::LinearSolverTolerance>();
-        Scalar linearSolverAbsTolerance = Parameters::get<TypeTag, Properties::LinearSolverAbsTolerance>();
+        Scalar linearSolverTolerance = Parameters::get<TypeTag, Parameters::LinearSolverTolerance>();
+        Scalar linearSolverAbsTolerance = Parameters::get<TypeTag, Parameters::LinearSolverAbsTolerance>();
         if(linearSolverAbsTolerance < 0.0)
             linearSolverAbsTolerance = this->simulator_.model().newtonMethod().tolerance()/100.0;
 
         convCrit_.reset(new CCC(gridView.comm(),
                                 /*residualReductionTolerance=*/linearSolverTolerance,
                                 /*absoluteResidualTolerance=*/linearSolverAbsTolerance,
-                                Parameters::get<TypeTag, Properties::LinearSolverMaxError>()));
+                                Parameters::get<TypeTag, Parameters::LinearSolverMaxError>()));
 
         auto bicgstabSolver =
             std::make_shared<RawLinearSolver>(parPreCond, *convCrit_, parScalarProduct);
 
         int verbosity = 0;
         if (parOperator.overlap().myRank() == 0)
-            verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
+            verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
         bicgstabSolver->setVerbosity(verbosity);
-        bicgstabSolver->setMaxIterations(Parameters::get<TypeTag, Properties::LinearSolverMaxIterations>());
+        bicgstabSolver->setMaxIterations(Parameters::get<TypeTag, Parameters::LinearSolverMaxIterations>());
         bicgstabSolver->setLinearOperator(&parOperator);
         bicgstabSolver->setRhs(this->overlappingb_);
 
@@ -274,7 +284,7 @@ protected:
 
         int verbosity = 0;
         if (this->simulator_.vanguard().gridView().comm().rank() == 0)
-            verbosity = Parameters::get<TypeTag, Properties::LinearSolverVerbosity>();
+            verbosity = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
 
         using SmootherArgs = typename Dune::Amg::SmootherTraits<ParallelSmoother>::Arguments;
 
@@ -289,7 +299,7 @@ protected:
         //                             Dune::Amg::FirstDiagonal>>
         using CoarsenCriterion = Dune::Amg::
             CoarsenCriterion<Dune::Amg::SymmetricCriterion<IstlMatrix, Dune::Amg::FrobeniusNorm> >;
-        int coarsenTarget = Parameters::get<TypeTag, Properties::AmgCoarsenTarget>();
+        int coarsenTarget = Parameters::get<TypeTag, Parameters::AmgCoarsenTarget>();
         CoarsenCriterion coarsenCriterion(/*maxLevel=*/15, coarsenTarget);
         coarsenCriterion.setDefaultValuesAnisotropic(GridView::dimension,
                                                      /*aggregateSizePerDim=*/3);
@@ -323,7 +333,6 @@ protected:
 #endif
 };
 
-} // namespace Linear
-} // namespace Opm
+} // namespace Opm::Linear
 
 #endif

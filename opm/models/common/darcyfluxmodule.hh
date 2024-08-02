@@ -30,18 +30,16 @@
 #ifndef EWOMS_DARCY_FLUX_MODULE_HH
 #define EWOMS_DARCY_FLUX_MODULE_HH
 
-#include "multiphasebaseproperties.hh"
-
-#include <opm/common/Exceptions.hpp>
-
-#include <opm/models/common/quantitycallbacks.hh>
-
-#include <opm/material/common/Valgrind.hpp>
-
 #include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
 
-#include <cmath>
+#include <opm/common/Exceptions.hpp>
+
+#include <opm/material/common/Valgrind.hpp>
+
+#include <opm/models/common/multiphasebaseparameters.hh>
+#include <opm/models/common/multiphasebaseproperties.hh>
+#include <opm/models/common/quantitycallbacks.hh>
 
 namespace Opm {
 
@@ -214,7 +212,7 @@ protected:
         }
 
         // correct the pressure gradients by the gravitational acceleration
-        if (Parameters::get<TypeTag, Properties::EnableGravity>()) {
+        if (Parameters::get<TypeTag, Parameters::EnableGravity>()) {
             // estimate the gravitational acceleration at a given SCV face
             // using the arithmetic mean
             const auto& gIn = elemCtx.problem().gravity(elemCtx, i, timeIdx);
@@ -364,7 +362,7 @@ protected:
         K_ = intQuantsIn.intrinsicPermeability();
 
         // correct the pressure gradients by the gravitational acceleration
-        if (Parameters::get<TypeTag, Properties::EnableGravity>()) {
+        if (Parameters::get<TypeTag, Parameters::EnableGravity>()) {
             // estimate the gravitational acceleration at a given SCV face
             // using the arithmetic mean
             const auto& gIn = elemCtx.problem().gravity(elemCtx, i, timeIdx);
