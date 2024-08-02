@@ -242,6 +242,32 @@ public:
         //     ("Use pressure from end of the last time step when evaluating rock compaction");
         // Parameters::hideParam<TypeTag, Properties::ExplicitRockCompaction>(); // Users will typically not need to modify this parameter..
 
+        BlackoilModelParameters<TypeTag>::registerParameters();
+        // Parameters::registerParam<TypeTag, Properties::EnableTerminalOutput>("Do *NOT* use!");
+        Parameters::hideParam<TypeTag, Properties::DbhpMaxRel>();
+        Parameters::hideParam<TypeTag, Properties::DwellFractionMax>();
+        Parameters::hideParam<TypeTag, Properties::MaxResidualAllowed>();
+        Parameters::hideParam<TypeTag, Properties::ToleranceMb>();
+        Parameters::hideParam<TypeTag, Properties::ToleranceMbRelaxed>();
+        Parameters::hideParam<TypeTag, Properties::ToleranceCnv>();
+        Parameters::hideParam<TypeTag, Properties::ToleranceCnvRelaxed>();
+        Parameters::hideParam<TypeTag, Properties::ToleranceWells>();
+        Parameters::hideParam<TypeTag, Properties::ToleranceWellControl>();
+        Parameters::hideParam<TypeTag, Properties::MaxWelleqIter>();
+        Parameters::hideParam<TypeTag, Properties::UseMultisegmentWell>();
+        Parameters::hideParam<TypeTag, Properties::TolerancePressureMsWells>();
+        Parameters::hideParam<TypeTag, Properties::MaxPressureChangeMsWells>();
+        Parameters::hideParam<TypeTag, Properties::MaxInnerIterMsWells>();
+        Parameters::hideParam<TypeTag, Properties::MaxNewtonIterationsWithInnerWellIterations>();
+        Parameters::hideParam<TypeTag, Properties::MaxInnerIterWells>();
+        Parameters::hideParam<TypeTag, Properties::MaxSinglePrecisionDays>();
+        Parameters::hideParam<TypeTag, Properties::MinStrictCnvIter>();
+        Parameters::hideParam<TypeTag, Properties::MinStrictMbIter>();
+        Parameters::hideParam<TypeTag, Properties::SolveWelleqInitially>();
+        Parameters::hideParam<TypeTag, Properties::UpdateEquationsScaling>();
+        Parameters::hideParam<TypeTag, Properties::UseUpdateStabilization>();
+        Parameters::hideParam<TypeTag, Properties::MatrixAddWellContributions>();
+        // Parameters::hideParam<TypeTag, Properties::EnableTerminalOutput>();
     }
 
 
@@ -754,6 +780,16 @@ public:
 
         // .. if we're not yet done, start the next episode (report step)
         simulator.startNextEpisode(schedule.stepLength(episodeIdx + 1));
+    }
+
+    void writeOutput(bool verbose = true)
+    {
+        OPM_TIMEBLOCK(problemWriteOutput);
+        // use the generic code to prepare the output fields and to
+        // write the desired VTK files.
+        if (Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() || this->simulator().episodeWillBeOver()){
+            ParentType::writeOutput(verbose);
+        }
     }
 
     /*!
