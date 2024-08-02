@@ -21,7 +21,7 @@
 #include <opm/simulators/flow/FlowProblemComp.hpp>
 #include <opm/material/constraintsolvers/PTFlash.hpp>
 #include "../FlowExpNewtonMethod.hpp"
-#include "ebosComp.hh"
+#include <opm/simulators/flow/FlowProblemComp.hpp>
 #include <opm/models/ptflash/flashmodel.hh>
 #include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
 // #include <opm/simulators/flow/Main.hpp>
@@ -91,6 +91,12 @@ namespace Opm{
 
 
 namespace Opm::Properties {
+
+    template<class TypeTag, class MyTypeTag>
+    struct EnableTerminalOutput {
+        using type = UndefinedProperty;
+    };
+
    namespace TTag {
    struct FlowExpCompProblem {
        using InheritsFrom = std::tuple<FlashModel, FlowModelParameters, CpGridVanguard,
@@ -182,7 +188,8 @@ struct LocalLinearizerSplice<TypeTag, TTag::FlowExpCompProblem>
 template <class TypeTag>
 struct Problem<TypeTag, TTag::FlowExpCompProblem>
 {
-    using type = EbosProblemComp<TypeTag>;
+    // using type = EbosProblemComp<TypeTag>;
+    using type = FlowProblemComp<TypeTag>;
 };
 
 template<class TypeTag>
@@ -256,6 +263,8 @@ template<class TypeTag>
 struct EnableMech<TypeTag, TTag::FlowExpCompProblem> {
     static constexpr bool value = false;
 };
+
+
 
 template<class TypeTag>
 struct OutputMode<TypeTag, TTag::FlowExpCompProblem> { inline static const std::string value = "all"; };
@@ -371,7 +380,12 @@ struct EnableThermalFluxBoundaries<TypeTag, TTag::FlowExpCompProblem> {
 
 } // namespace Opm::Properties
 
-
+namespace Opm::Parameters {
+    template<class TypeTag>
+    struct EnableVtkOutput<TypeTag, Properties::TTag::FlowExpCompProblem>{
+        static constexpr bool value = true;
+    };
+}
 
 
 int main(int argc, char** argv)
