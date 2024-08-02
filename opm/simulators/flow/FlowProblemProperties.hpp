@@ -238,12 +238,6 @@ struct AquiferModel<TypeTag, TTag::FlowBaseProblem> {
     using type = BaseAquiferModel<TypeTag>;
 };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr bool value = true;
-};
-
 // Enable diffusion
 template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlowBaseProblem> {
@@ -471,10 +465,10 @@ struct ExplicitRockCompaction<TypeTag, TTag::FlowBaseProblem> {
 
 namespace Opm::Parameters {
 
-// Disable the VTK output by default for this problem ...
+// Enable gravity
 template<class TypeTag>
-struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = false; };
+struct EnableGravity<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = true; };
 
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
@@ -486,6 +480,11 @@ struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlowBaseProblem>
 template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
+
+// Disable the VTK output by default for this problem ...
+template<class TypeTag>
+struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblem>
+{ static constexpr bool value = false; };
 
 // The default for the end time of the simulation [s]
 //
