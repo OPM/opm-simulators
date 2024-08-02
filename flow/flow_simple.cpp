@@ -20,7 +20,10 @@
 #include <opm/simulators/flow/Main.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManagerSimple.hpp>
 
-// make TypeTag contain the simple materiallawmanager
+// do I need these?
+#include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
+#include <opm/simulators/flow/equil/InitStateEquil.hpp>
+
 namespace Opm {
     namespace Properties {
         namespace TTag {
