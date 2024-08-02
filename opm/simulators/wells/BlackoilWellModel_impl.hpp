@@ -812,6 +812,7 @@ namespace Opm {
     initializeWellState(const int timeStepIdx)
     {
         std::vector<Scalar> cellPressures(this->local_num_cells_, 0.0);
+        std::vector<Scalar> cellTemperatures(this->local_num_cells_, 0.0);
         ElementContext elemCtx(simulator_);
 
         const auto& gridView = simulator_.vanguard().gridView();
@@ -831,10 +832,11 @@ namespace Opm {
             } else {
                 perf_pressure = fs.pressure(FluidSystem::gasPhaseIdx).value();
             }
+            cellTemperatures[elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0)] = fs.temperature(0).value();
         }
         OPM_END_PARALLEL_TRY_CATCH("BlackoilWellModel::initializeWellState() failed: ", simulator_.vanguard().grid().comm());
 
-        this->wellState().init(cellPressures, this->schedule(), this->wells_ecl_,
+        this->wellState().init(cellPressures, cellTemperatures, this->schedule(), this->wells_ecl_,
                                this->local_parallel_well_info_, timeStepIdx,
                                &this->prevWellState(), this->well_perf_data_,
                                this->summaryState());

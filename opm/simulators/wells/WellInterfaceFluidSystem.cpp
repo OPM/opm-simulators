@@ -64,12 +64,12 @@ WellInterfaceFluidSystem(const Well& well,
 template <typename FluidSystem>
 void
 WellInterfaceFluidSystem<FluidSystem>::
-calculateReservoirRates(SingleWellState<Scalar>& ws) const
+calculateReservoirRates(const bool co2store, SingleWellState<Scalar>& ws) const
 {
     const int np = this->number_of_phases_;
     const auto& pu = this->phaseUsage();
     // Calculate reservoir rates from average pressure and temperature
-    if ( !pu.has_energy || this->wellEcl().isProducer()) {
+    if ( !(co2store || pu.has_energy) || this->wellEcl().isProducer()) {
         const int fipreg = 0; // not considering the region for now
         this->rateConverter_
             .calcReservoirVoidageRates(fipreg,
@@ -99,7 +99,8 @@ calculateReservoirRates(SingleWellState<Scalar>& ws) const
         }
         return;
     }
-    // For injectors in a thermal case we convert using the well bhp and temperature
+    // For injectors in a co2 storage case or a thermal case
+    // we convert using the well bhp and temperature
     // Assume pure phases in the injector
     const Scalar saltConc = 0.0;
     Scalar rsMax = 0.0;

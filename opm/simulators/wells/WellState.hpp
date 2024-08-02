@@ -97,6 +97,7 @@ public:
     /// to give useful initial values to the bhp(), wellRates()
     /// and perfPhaseRatesORG() fields, depending on controls
     void init(const std::vector<Scalar>& cellPressures,
+              const std::vector<Scalar>& cellTemperatures,
               const Schedule& schedule,
               const std::vector<Well>& wells_ecl,
               const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
@@ -377,12 +378,14 @@ private:
     /// perfRates() field is filled with zero, and perfPress()
     /// with -1e100.
     void base_init(const std::vector<Scalar>& cellPressures,
+                   const std::vector<Scalar>& cellTemperatures,
                    const std::vector<Well>& wells_ecl,
                    const std::vector<std::reference_wrapper<ParallelWellInfo<Scalar>>>& parallel_well_info,
                    const std::vector<std::vector<PerforationData<Scalar>>>& well_perf_data,
                    const SummaryState& summary_state);
 
     void initSingleWell(const std::vector<Scalar>& cellPressures,
+                        const std::vector<Scalar>& cellTemperatures,
                         const Well& well,
                         const std::vector<PerforationData<Scalar>>& well_perf_data,
                         const ParallelWellInfo<Scalar>& well_info,
@@ -397,6 +400,7 @@ private:
     void initSingleInjector(const Well& well,
                             const ParallelWellInfo<Scalar>& well_info,
                             Scalar pressure_first_connection,
+                            Scalar temperature_first_connection,
                             const std::vector<PerforationData<Scalar>>& well_perf_data,
                             const SummaryState& summary_state);
 };

@@ -706,7 +706,7 @@ namespace Opm
 
         const auto& summary_state = simulator.vanguard().summaryState();
         updateWellStateFromPrimaryVariables(stop_or_zero_rate_target, well_state, summary_state, deferred_logger);
-        Base::calculateReservoirRates(well_state.well(this->index_of_well_));
+        Base::calculateReservoirRates(simulator.vanguard().eclState().runspec().co2Storage(), well_state.well(this->index_of_well_));
     }
 
 
@@ -2587,7 +2587,7 @@ namespace Opm
             if (this->isInjector() && cq_s[activeCompIdx] > 0.0){
                 // only handles single phase injection now
                 assert(this->well_ecl_.injectorType() != InjectorType::MULTI);
-                fs.setTemperature(this->well_ecl_.temperature());
+                fs.setTemperature(this->well_ecl_.inj_temperature());
                 typedef typename std::decay<decltype(fs)>::type::Scalar FsScalar;
                 typename FluidSystem::template ParameterCache<FsScalar> paramCache;
                 const unsigned pvtRegionIdx = intQuants.pvtRegionIndex();
