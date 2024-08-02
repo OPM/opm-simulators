@@ -99,6 +99,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/Transmissibility.cpp
   opm/simulators/flow/ValidationFunctions.cpp
   opm/simulators/flow/equil/EquilibrationHelpers.cpp
+  opm/simulators/flow/equil/EquilibrationHelpersSimple.cpp
   opm/simulators/flow/equil/InitStateEquil.cpp
   opm/simulators/linalg/ExtractParallelGridInformationToISTL.cpp
   opm/simulators/linalg/FlexibleSolver1.cpp
