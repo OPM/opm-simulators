@@ -393,7 +393,7 @@ struct RestartWritingInterval<TypeTag, TTag::FlowBaseProblem> {
 // as default if experimental mode is enabled.
 template<class TypeTag>
 struct EnableDriftCompensation<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr bool value = true;
+    static constexpr bool value = false;
 };
 
 // By default, we enable the debugging checks if we're compiled in debug mode

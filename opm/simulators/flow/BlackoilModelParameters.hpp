@@ -268,7 +268,7 @@ struct RelaxedMaxPvFraction<TypeTag, TTag::FlowModelParameters> {
 template<class TypeTag>
 struct ToleranceMb<TypeTag, TTag::FlowModelParameters> {
     using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e-6;
+    static constexpr type value = 1e-7;
 };
 template<class TypeTag>
 struct ToleranceMbRelaxed<TypeTag, TTag::FlowModelParameters> {
@@ -310,7 +310,7 @@ struct MaxSinglePrecisionDays<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct MinStrictCnvIter<TypeTag, TTag::FlowModelParameters> {
-    static constexpr int value = 0;
+    static constexpr int value = -1;
 };
 template<class TypeTag>
 struct MinStrictMbIter<TypeTag, TTag::FlowModelParameters> {
@@ -407,11 +407,11 @@ struct UseAverageDensityMsWells<TypeTag, TTag::FlowModelParameters> {
 };
 template<class TypeTag>
 struct LocalWellSolveControlSwitching<TypeTag, TTag::FlowModelParameters> {
-    static constexpr bool value = false;
+    static constexpr bool value = true;
 };
 template<class TypeTag>
 struct UseImplicitIpr<TypeTag, TTag::FlowModelParameters> {
-    static constexpr bool value = false;
+    static constexpr bool value = true;
 };
 
 // Network solver parameters
