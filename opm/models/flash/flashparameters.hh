@@ -22,41 +22,22 @@
 */
 /*!
  * \file
+ * \ingroup FlashModel
  *
- * \brief test for the compositional PVS VCVF discretization
+ * \brief Declares the parameters for the compositional
+ *        multi-phase model based on flash calculations.
  */
-#include "config.h"
+#ifndef EWOMS_FLASH_PARAMETERS_HH
+#define EWOMS_FLASH_PARAMETERS_HH
 
-#include <opm/models/io/dgfvanguard.hh>
-#include <opm/models/utils/start.hh>
-#include <opm/models/pvs/pvsmodel.hh>
-#include <opm/simulators/linalg/parallelbicgstabbackend.hh>
-
-#include "problems/outflowproblem.hh"
-
-namespace Opm::Properties {
-
-// Create new type tags
-namespace TTag {
-
-struct OutflowProblem
-{ using InheritsFrom = std::tuple<OutflowBaseProblem, PvsModel>; };
-
-} // end namespace TTag
-
-} // namespace Opm::Properties
+#include <opm/models/utils/propertysystem.hh>
 
 namespace Opm::Parameters {
 
-// Verbosity of the PVS model (0=silent, 1=medium, 2=chatty)
-template<class TypeTag>
-struct PvsVerbosity<TypeTag, Properties::TTag::OutflowProblem>
-{ static constexpr int value = 1; };
+//! The maximum accepted error of the flash solver
+template<class TypeTag, class MyTypeTag>
+struct FlashTolerance { using type = Properties::UndefinedProperty; };
 
-}
+} // namespace Opm::Parameters
 
-int main(int argc, char **argv)
-{
-    using ProblemTypeTag = Opm::Properties::TTag::OutflowProblem;
-    return Opm::start<ProblemTypeTag>(argc, argv);
-}
+#endif

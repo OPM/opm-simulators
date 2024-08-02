@@ -28,17 +28,20 @@
 #ifndef OPM_FLASH_INTENSIVE_QUANTITIES_HH
 #define OPM_FLASH_INTENSIVE_QUANTITIES_HH
 
-#include "flashproperties.hh"
-#include "flashindices.hh"
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+
+#include <opm/material/Constants.hpp>
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
 
 #include <opm/models/common/energymodule.hh>
 #include <opm/models/common/diffusionmodule.hh>
 
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/common/Valgrind.hpp>
+#include <opm/models/flash/flashproperties.hh>
 
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/models/ptflash/flashindices.hh>
+#include <opm/models/ptflash/flashparameters.hh>
 
 namespace Opm {
 
@@ -107,9 +110,9 @@ public:
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const auto& problem = elemCtx.problem();
 
-        const Scalar flashTolerance = Parameters::get<TypeTag, Properties::FlashTolerance>();
-        const int flashVerbosity = Parameters::get<TypeTag, Properties::FlashVerbosity>();
-        const std::string flashTwoPhaseMethod = Parameters::get<TypeTag, Properties::FlashTwoPhaseMethod>();
+        const Scalar flashTolerance = Parameters::get<TypeTag, Parameters::FlashTolerance>();
+        const int flashVerbosity = Parameters::get<TypeTag, Parameters::FlashVerbosity>();
+        const std::string flashTwoPhaseMethod = Parameters::get<TypeTag, Parameters::FlashTwoPhaseMethod>();
 
         // extract the total molar densities of the components
         ComponentVector z(0.);

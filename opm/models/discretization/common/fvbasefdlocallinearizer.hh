@@ -59,8 +59,6 @@ struct FiniteDifferenceLocalLinearizer {};
 } // namespace TTag
 
 template<class TypeTag, class MyTypeTag>
-struct NumericDifferenceMethod { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
 struct BaseEpsilon { using type = UndefinedProperty; };
 
 // set the properties to be spliced in
@@ -72,16 +70,6 @@ template<class TypeTag>
 struct Evaluation<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
 { using type = GetPropType<TypeTag, Properties::Scalar>; };
 
-/*!
- * \brief Specify which kind of method should be used to numerically
- * calculate the partial derivatives of the residual.
- *
- * -1 means backward differences, 0 means central differences, 1 means
- * forward differences. By default we use central differences.
- */
-template<class TypeTag>
-struct NumericDifferenceMethod<TypeTag, TTag::FiniteDifferenceLocalLinearizer> { static constexpr int value = +1; };
-
 //! The base epsilon value for finite difference calculations
 template<class TypeTag>
 struct BaseEpsilon<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
@@ -91,6 +79,24 @@ struct BaseEpsilon<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
 };
 
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+template<class TypeTag, class MyTypeTag>
+struct NumericDifferenceMethod { using type = Properties::UndefinedProperty; };
+
+/*!
+ * \brief Specify which kind of method should be used to numerically
+ * calculate the partial derivatives of the residual.
+ *
+ * -1 means backward differences, 0 means central differences, 1 means
+ * forward differences. By default we use forward differences.
+ */
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, Properties::TTag::FiniteDifferenceLocalLinearizer>
+{ static constexpr int value = +1; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -182,7 +188,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::NumericDifferenceMethod>
+        Parameters::registerParam<TypeTag, Parameters::NumericDifferenceMethod>
             ("The method used for numeric differentiation (-1: backward "
              "differences, 0: central differences, 1: forward differences)");
     }
@@ -335,7 +341,10 @@ protected:
      * \brief Returns the numeric difference method which is applied.
      */
     static int numericDifferenceMethod_()
-    { return Parameters::get<TypeTag, Properties::NumericDifferenceMethod>(); }
+    {
+        static int diff = Parameters::get<TypeTag, Parameters::NumericDifferenceMethod>();
+        return diff;
+    }
 
     /*!
      * \brief Resize all internal attributes to the size of the

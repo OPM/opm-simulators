@@ -28,7 +28,8 @@
 #ifndef EWOMS_BLACK_OIL_NEWTON_METHOD_HH
 #define EWOMS_BLACK_OIL_NEWTON_METHOD_HH
 
-#include "blackoilproperties.hh"
+#include <opm/models/blackoil/blackoilnewtonmethodparameters.hh>
+#include <opm/models/blackoil/blackoilproperties.hh>
 
 #include <opm/common/Exceptions.hpp>
 
@@ -41,91 +42,85 @@ namespace Opm::Properties {
 template <class TypeTag, class MyTypeTag>
 struct DiscNewtonMethod;
 
-template<class TypeTag, class MyTypeTag>
-struct DpMaxRel { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct DsMax { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct PriVarOscilationThreshold { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct ProjectSaturations { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct MaxTemperatureChange { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct TemperatureMax { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct TemperatureMin { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct PressureMax { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct PressureMin { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct MaximumWaterSaturation { using type = UndefinedProperty; };
-template<class TypeTag, class MyTypeTag>
-struct WaterOnlyThreshold { using type = UndefinedProperty; };
+} // namespace Opm::Properties
+
+namespace Opm:: Parameters {
+
 template<class TypeTag>
-struct DpMaxRel<TypeTag, TTag::NewtonMethod>
+struct DpMaxRel<TypeTag, Properties::TTag::NewtonMethod>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 0.3;
 };
+
 template<class TypeTag>
-struct DsMax<TypeTag, TTag::NewtonMethod>
+struct DsMax<TypeTag, Properties::TTag::NewtonMethod>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 0.2;
 };
+
 template<class TypeTag>
-struct PriVarOscilationThreshold<TypeTag, TTag::NewtonMethod>
+struct PriVarOscilationThreshold<TypeTag, Properties::TTag::NewtonMethod>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e-5;
 };
+
 template<class TypeTag>
-struct ProjectSaturations<TypeTag, TTag::NewtonMethod> { static constexpr bool value = false; };
+struct ProjectSaturations<TypeTag, Properties::TTag::NewtonMethod>
+{ static constexpr bool value = false; };
+
 template<class TypeTag>
-struct MaxTemperatureChange<TypeTag, TTag::NewtonMethod>
+struct MaxTemperatureChange<TypeTag, Properties::TTag::NewtonMethod>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 5; //Kelvin
 };
+
 template<class TypeTag>
-struct TemperatureMax<TypeTag, TTag::NewtonMethod>
+struct TemperatureMax<TypeTag, Properties::TTag::NewtonMethod>
 {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e9; //Kelvin
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e9; // Kelvin
 };
+
 template<class TypeTag>
-struct TemperatureMin<TypeTag, TTag::NewtonMethod>
+struct TemperatureMin<TypeTag, Properties::TTag::NewtonMethod>
 {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.0; //Kelvin
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.0; // Kelvin
 };
+
 template<class TypeTag>
-struct PressureMax<TypeTag, TTag::NewtonMethod>
+struct PressureMax<TypeTag, Properties::TTag::NewtonMethod>
 {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 1e99; //Kelvin
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1e99; // Kelvin
 };
+
 template<class TypeTag>
-struct PressureMin<TypeTag, TTag::NewtonMethod>
+struct PressureMin<TypeTag, Properties::TTag::NewtonMethod>
 {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = -1e99; //Kelvin
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = -1e99; // Kelvin
 };
+
 template<class TypeTag>
-struct MaximumWaterSaturation<TypeTag, TTag::NewtonMethod>
+struct MaximumWaterSaturation<TypeTag, Properties::TTag::NewtonMethod>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1.0;
 };
+
 template<class TypeTag>
-struct WaterOnlyThreshold<TypeTag, TTag::NewtonMethod>
+struct WaterOnlyThreshold<TypeTag, Properties::TTag::NewtonMethod>
 {
-    using type = GetPropType<TypeTag, Scalar>;
+    using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1.0;
 };
-} // namespace Opm::Properties
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -155,17 +150,17 @@ class BlackOilNewtonMethod : public GetPropType<TypeTag, Properties::DiscNewtonM
 public:
     BlackOilNewtonMethod(Simulator& simulator) : ParentType(simulator)
     {
-        priVarOscilationThreshold_ = Parameters::get<TypeTag, Properties::PriVarOscilationThreshold>();
-        dpMaxRel_ = Parameters::get<TypeTag, Properties::DpMaxRel>();
-        dsMax_ = Parameters::get<TypeTag, Properties::DsMax>();
-        projectSaturations_ = Parameters::get<TypeTag, Properties::ProjectSaturations>();
-        maxTempChange_ = Parameters::get<TypeTag, Properties::MaxTemperatureChange>();
-        tempMax_ = Parameters::get<TypeTag, Properties::TemperatureMax>();
-        tempMin_ = Parameters::get<TypeTag, Properties::TemperatureMin>();
-        pressMax_ = Parameters::get<TypeTag, Properties::PressureMax>();
-        pressMin_ = Parameters::get<TypeTag, Properties::PressureMin>();
-        waterSaturationMax_ = Parameters::get<TypeTag, Properties::MaximumWaterSaturation>();
-        waterOnlyThreshold_ = Parameters::get<TypeTag, Properties::WaterOnlyThreshold>();
+        priVarOscilationThreshold_ = Parameters::get<TypeTag, Parameters::PriVarOscilationThreshold>();
+        dpMaxRel_ = Parameters::get<TypeTag, Parameters::DpMaxRel>();
+        dsMax_ = Parameters::get<TypeTag, Parameters::DsMax>();
+        projectSaturations_ = Parameters::get<TypeTag, Parameters::ProjectSaturations>();
+        maxTempChange_ = Parameters::get<TypeTag, Parameters::MaxTemperatureChange>();
+        tempMax_ = Parameters::get<TypeTag, Parameters::TemperatureMax>();
+        tempMin_ = Parameters::get<TypeTag, Parameters::TemperatureMin>();
+        pressMax_ = Parameters::get<TypeTag, Parameters::PressureMax>();
+        pressMin_ = Parameters::get<TypeTag, Parameters::PressureMin>();
+        waterSaturationMax_ = Parameters::get<TypeTag, Parameters::MaximumWaterSaturation>();
+        waterOnlyThreshold_ = Parameters::get<TypeTag, Parameters::WaterOnlyThreshold>();
     }
 
     /*!
@@ -186,28 +181,28 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::DpMaxRel>
+        Parameters::registerParam<TypeTag, Parameters::DpMaxRel>
             ("Maximum relative change of pressure in a single iteration");
-        Parameters::registerParam<TypeTag, Properties::DsMax>
+        Parameters::registerParam<TypeTag, Parameters::DsMax>
             ("Maximum absolute change of any saturation in a single iteration");
-        Parameters::registerParam<TypeTag, Properties::PriVarOscilationThreshold>
+        Parameters::registerParam<TypeTag, Parameters::PriVarOscilationThreshold>
             ("The threshold value for the primary variable switching conditions "
              "after its meaning has switched to hinder oscilations");
-        Parameters::registerParam<TypeTag, Properties::ProjectSaturations>
+        Parameters::registerParam<TypeTag, Parameters::ProjectSaturations>
             ("Option for doing saturation projection");
-        Parameters::registerParam<TypeTag, Properties::MaxTemperatureChange>
+        Parameters::registerParam<TypeTag, Parameters::MaxTemperatureChange>
             ("Maximum absolute change of temperature in a single iteration");
-        Parameters::registerParam<TypeTag, Properties::TemperatureMax>
+        Parameters::registerParam<TypeTag, Parameters::TemperatureMax>
             ("Maximum absolute temperature");
-        Parameters::registerParam<TypeTag, Properties::TemperatureMin>
+        Parameters::registerParam<TypeTag, Parameters::TemperatureMin>
             ("Minimum absolute temperature");
-        Parameters::registerParam<TypeTag, Properties::PressureMax>
+        Parameters::registerParam<TypeTag, Parameters::PressureMax>
             ("Maximum absolute pressure");
-        Parameters::registerParam<TypeTag, Properties::PressureMin>
+        Parameters::registerParam<TypeTag, Parameters::PressureMin>
             ("Minimum absolute pressure");
-        Parameters::registerParam<TypeTag, Properties::MaximumWaterSaturation>
+        Parameters::registerParam<TypeTag, Parameters::MaximumWaterSaturation>
             ("Maximum water saturation");
-        Parameters::registerParam<TypeTag, Properties::WaterOnlyThreshold>
+        Parameters::registerParam<TypeTag, Parameters::WaterOnlyThreshold>
             ("Cells with water saturation above or equal is considered one-phase water only");
     }
 

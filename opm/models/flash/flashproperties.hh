@@ -30,19 +30,13 @@
 #ifndef EWOMS_FLASH_PROPERTIES_HH
 #define EWOMS_FLASH_PROPERTIES_HH
 
-#include <opm/models/common/multiphasebaseproperties.hh>
-#include <opm/models/io/vtkcompositionmodule.hh>
-#include <opm/models/io/vtkenergymodule.hh>
-#include <opm/models/io/vtkdiffusionmodule.hh>
+#include <opm/models/utils/propertysystem.hh>
 
 namespace Opm::Properties {
 
 //! The type of the flash constraint solver
 template<class TypeTag, class MyTypeTag>
 struct FlashSolver { using type = UndefinedProperty; };
-//! The maximum accepted error of the flash solver
-template<class TypeTag, class MyTypeTag>
-struct FlashTolerance { using type = UndefinedProperty; };
 
 } // namespace Opm::Properties
 

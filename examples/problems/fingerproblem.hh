@@ -124,10 +124,6 @@ struct MaterialLaw<TypeTag, TTag::FingerBaseProblem>
     using type = ParkerLenhard;
 };
 
-// Use forward differences instead of central differences
-template<class TypeTag>
-struct NumericDifferenceMethod<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = +1; };
-
 // Enable constraints
 template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = true; };
@@ -201,6 +197,11 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::FingerBaseProblem>
 template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::FingerBaseProblem>
 { static constexpr bool value = false; };
+
+// Use forward differences instead of central differences
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, Properties::TTag::FingerBaseProblem>
+{ static constexpr int value = +1; };
 
 } // namespace Opm::Parameters
 

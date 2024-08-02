@@ -74,10 +74,6 @@ struct FluidSystem<TypeTag, TTag::InfiltrationBaseProblem>
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::InfiltrationBaseProblem> { static constexpr bool value = true; };
 
-// -1 backward differences, 0: central differences, +1: forward differences
-template<class TypeTag>
-struct NumericDifferenceMethod<TypeTag, TTag::InfiltrationBaseProblem> { static constexpr int value = 1; };
-
 // Set the material Law
 template<class TypeTag>
 struct MaterialLaw<TypeTag, TTag::InfiltrationBaseProblem>
@@ -125,6 +121,11 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::InfiltrationBaseProblem>
 template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::InfiltrationBaseProblem>
 { static constexpr bool value = false; };
+
+// -1 backward differences, 0: central differences, +1: forward differences
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, Properties::TTag::InfiltrationBaseProblem>
+{ static constexpr int value = 1; };
 
 } // namespace Opm::Parameters
 

@@ -24,46 +24,36 @@
 #ifndef EWOMS_BLACK_OIL_PRIMARY_VARIABLES_HH
 #define EWOMS_BLACK_OIL_PRIMARY_VARIABLES_HH
 
-#include "blackoilproperties.hh"
-#include "blackoilsolventmodules.hh"
-#include "blackoilextbomodules.hh"
-#include "blackoilpolymermodules.hh"
-#include "blackoilenergymodules.hh"
-#include "blackoilfoammodules.hh"
-#include "blackoilbrinemodules.hh"
-#include "blackoilmicpmodules.hh"
+#include <dune/common/fvector.hh>
+
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/constraintsolvers/NcpFlash.hpp>
+#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+#include <opm/material/fluidstates/SimpleModularFluidState.hpp>
+
+#include <opm/models/blackoil/blackoilbrinemodules.hh>
+#include <opm/models/blackoil/blackoilenergymodules.hh>
+#include <opm/models/blackoil/blackoilextbomodules.hh>
+#include <opm/models/blackoil/blackoilfoammodules.hh>
+#include <opm/models/blackoil/blackoilmicpmodules.hh>
+#include <opm/models/blackoil/blackoilpolymermodules.hh>
+#include <opm/models/blackoil/blackoilproperties.hh>
+#include <opm/models/blackoil/blackoilsolventmodules.hh>
 
 #include <opm/models/discretization/common/fvbaseprimaryvariables.hh>
 
-#include <dune/common/fvector.hh>
+namespace Opm::Parameters {
 
-#include <opm/material/constraintsolvers/NcpFlash.hpp>
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/fluidstates/SimpleModularFluidState.hpp>
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-#include <opm/material/common/Valgrind.hpp>
+template<class TypeTag, class MyTypeTag>
+struct PressureScale {
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 1.0;
+};
 
-namespace Opm::Properties {
-    template<class TypeTag, class MyTypeTag>
-    struct PressureScale {
-        using type = GetPropType<TypeTag, Scalar>;
-        static constexpr type value = 1.0;
-    };
-}
-
+} // namespace Opm::Parameters
 
 namespace Opm {
-template <class TypeTag, bool enableSolvent>
-class BlackOilSolventModule;
-
-template <class TypeTag, bool enableExtbo>
-class BlackOilExtboModule;
-
-template <class TypeTag, bool enablePolymer>
-class BlackOilPolymerModule;
-
-template <class TypeTag, bool enableBrine>
-class BlackOilBrineModule;
 
 /*!
  * \ingroup BlackOilModel
@@ -147,6 +137,7 @@ public:
         Pg, // gas pressure
         Pw, // water pressure
     };
+
     enum class GasMeaning {
         Sg, // gas saturation
         Rs, // dissolved gas in oil
@@ -212,12 +203,12 @@ public:
     static void init()
     {
         // TODO: these parameters have undocumented non-trivial dependencies
-        pressureScale_ = Parameters::get<TypeTag, Properties::PressureScale>();
+        pressureScale_ = Parameters::get<TypeTag, Parameters::PressureScale>();
     }
 
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Properties::PressureScale>
+        Parameters::registerParam<TypeTag, Parameters::PressureScale>
             ("Scaling of pressure primary variable");
     }
 
@@ -1157,7 +1148,6 @@ private:
     Scalar pcFactor_;
     static inline Scalar pressureScale_ = 1.0;
 };
-
 
 } // namespace Opm
 

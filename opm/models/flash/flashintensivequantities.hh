@@ -28,17 +28,18 @@
 #ifndef EWOMS_FLASH_INTENSIVE_QUANTITIES_HH
 #define EWOMS_FLASH_INTENSIVE_QUANTITIES_HH
 
-#include "flashproperties.hh"
-#include "flashindices.hh"
-
-#include <opm/models/common/energymodule.hh>
-#include <opm/models/common/diffusionmodule.hh>
-
-#include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/common/Valgrind.hpp>
-
-#include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+
+#include <opm/material/common/Valgrind.hpp>
+#include <opm/material/fluidstates/CompositionalFluidState.hpp>
+
+#include <opm/models/common/diffusionmodule.hh>
+#include <opm/models/common/energymodule.hh>
+
+#include <opm/models/flash/flashindices.hh>
+#include <opm/models/flash/flashparameters.hh>
+#include <opm/models/flash/flashproperties.hh>
 
 namespace Opm {
 
@@ -106,7 +107,7 @@ public:
 
         const auto& priVars = elemCtx.primaryVars(dofIdx, timeIdx);
         const auto& problem = elemCtx.problem();
-        Scalar flashTolerance = Parameters::get<TypeTag, Properties::FlashTolerance>();
+        Scalar flashTolerance = Parameters::get<TypeTag, Parameters::FlashTolerance>();
 
         // extract the total molar densities of the components
         ComponentVector cTotal;

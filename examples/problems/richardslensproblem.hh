@@ -103,10 +103,6 @@ public:
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::RichardsLensProblem> { static constexpr bool value = true; };
 
-// Use central differences to approximate the Jacobian matrix
-template<class TypeTag>
-struct NumericDifferenceMethod<TypeTag, TTag::RichardsLensProblem> { static constexpr int value = 0; };
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -146,6 +142,11 @@ struct NewtonTargetIterations<TypeTag, Properties::TTag::RichardsLensProblem>
 template<class TypeTag>
 struct NewtonMaxIterations<TypeTag, Properties::TTag::RichardsLensProblem>
 { static constexpr int value = 28; };
+
+// Use central differences to approximate the Jacobian matrix
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, Properties::TTag::RichardsLensProblem>
+{ static constexpr int value = 0; };
 
 } // namespace Opm::Parameters
 

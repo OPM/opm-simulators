@@ -119,10 +119,6 @@ struct FluidSystem<TypeTag, TTag::WaterAirBaseProblem>
 template<class TypeTag>
 struct EnableGravity<TypeTag, TTag::WaterAirBaseProblem> { static constexpr bool value = true; };
 
-// Use forward differences instead of central differences
-template<class TypeTag>
-struct NumericDifferenceMethod<TypeTag, TTag::WaterAirBaseProblem> { static constexpr int value = +1; };
-
 // Use the restarted GMRES linear solver with the ILU-2 preconditioner from dune-istl
 template<class TypeTag>
 struct LinearSolverSplice<TypeTag, TTag::WaterAirBaseProblem>
@@ -167,6 +163,11 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::WaterAirBaseProblem>
 template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::WaterAirBaseProblem>
 { static constexpr bool value = false; };
+
+// Use forward differences instead of central differences
+template<class TypeTag>
+struct NumericDifferenceMethod<TypeTag, Properties::TTag::WaterAirBaseProblem>
+{ static constexpr int value = +1; };
 
 } // namespace Opm::Parameters
 
