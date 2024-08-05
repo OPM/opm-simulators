@@ -365,8 +365,9 @@ INSTANTIATE_TYPE(double)
 INSTANTIATE_TYPE(float)
 #endif
 
-// TODO: investigating whether and why we need the following
-// The current MixingRateControls is based on Blackoil, the following one may not make sense anyway
+// FlowGenericProblem requires the following specialization
+// TODO: Ideally, FlowGenericProblem can be more generic so that both compositional and blackoil simulation
+// can use it.
 template class MixingRateControls<GenericOilGasFluidSystem<double, 3>>;
 
 } // namespace Opm
