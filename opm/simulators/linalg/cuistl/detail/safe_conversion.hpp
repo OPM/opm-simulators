@@ -26,6 +26,7 @@
 #include <limits>
 #include <opm/common/ErrorMacros.hpp>
 #include <type_traits>
+#include <cuda_runtime.h>
 
 
 /**
@@ -81,7 +82,7 @@ to_int(std::size_t s)
  * @throw std::invalid_argument if i is negative.
  * @todo This can be done for more generic types, but then it is probably wise to wait for C++20's cmp-functions
  */
-inline std::size_t
+__host__ __device__ inline std::size_t
 to_size_t(int i)
 {
     static_assert(
@@ -95,10 +96,13 @@ to_size_t(int i)
         sizeof(int) <= sizeof(std::size_t),
         "Weird architecture or my understanding of the standard is flawed. Better have a look at this function.");
 
-
+#if defined(__CUDA_ARCH__) || defined(__HIP_DEVICE_COMPILE__)
+    assert(i >= int(0));
+#else
     if (i < int(0)) {
         OPM_THROW(std::invalid_argument, fmt::format("Trying to convert the negative number {} to size_t.", i));
     }
+#endif
 
     return std::size_t(i);
 }
