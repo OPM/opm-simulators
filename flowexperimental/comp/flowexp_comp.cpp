@@ -99,8 +99,7 @@ namespace Opm::Properties {
 
    namespace TTag {
    struct FlowExpCompProblem {
-       using InheritsFrom = std::tuple<FlashModel, FlowModelParameters, CpGridVanguard,
-                                       EclTimeSteppingParameters, FlowBaseProblemComp>;
+       using InheritsFrom = std::tuple<FlashModel, FlowModelParameters, EclTimeSteppingParameters, FlowBaseProblemComp>;
    };
    }
 #if 0
