@@ -125,7 +125,7 @@ public:
     __host__ __device__ T& front()
     {
 #ifndef NDEBUG
-    assertHasElements();
+        assertHasElements();
 #endif
     return m_dataOnDevice[0];
     }
@@ -136,7 +136,7 @@ public:
     __host__ __device__ T& back()
     {
 #ifndef NDEBUG
-    assertHasElements();
+        assertHasElements();
 #endif
     return m_dataOnDevice[m_numberOfElements-1];
     }
@@ -147,7 +147,7 @@ public:
     __host__ __device__ T front() const
     {
 #ifndef NDEBUG
-    assertHasElements();
+        assertHasElements();
 #endif
     return m_dataOnDevice[0];
     }
@@ -158,7 +158,7 @@ public:
     __host__ __device__ T back() const
     {
 #ifndef NDEBUG
-    assertHasElements();
+        assertHasElements();
 #endif
     return m_dataOnDevice[m_numberOfElements-1];
     }

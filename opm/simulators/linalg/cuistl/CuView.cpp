@@ -28,7 +28,7 @@ namespace Opm::cuistl
 
 template <class T>
 CuView<T>::CuView(std::vector<T>& data)
-    : CuView(data.data(), detail::to_int(data.size()))
+    : CuView(data.data(), data.size())
 {
 }
 
@@ -36,7 +36,7 @@ template <typename T>
 std::vector<T>
 CuView<T>::asStdVector() const
 {
-    std::vector<T> temporary(detail::to_size_t(m_numberOfElements));
+    std::vector<T> temporary(m_numberOfElements);
     copyToHost(temporary);
     return temporary;
 }
@@ -58,7 +58,7 @@ template <class T>
 void
 CuView<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
-    assertSameSize(detail::to_int(numberOfElements));
+    assertSameSize(numberOfElements);
     OPM_CUDA_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
 }
 

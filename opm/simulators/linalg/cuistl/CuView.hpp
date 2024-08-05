@@ -67,7 +67,7 @@ public:
      */
     __host__ __device__ T& operator[](size_t idx){
 #ifndef NDEBUG
-    assertInRange(idx);
+        assertInRange(idx);
 #endif
     return m_dataPtr[idx];
     }
@@ -79,7 +79,7 @@ public:
      */
     __host__ __device__ T operator[](size_t idx) const {
 #ifndef NDEBUG
-    assertInRange(idx);
+        assertInRange(idx);
 #endif
     return m_dataPtr[idx];
     }

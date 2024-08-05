@@ -40,7 +40,7 @@ CuBuffer<T>::CuBuffer(const size_t numberOfElements)
     if (numberOfElements < 1) {
         OPM_THROW(std::invalid_argument, "Setting a CuBuffer size to a non-positive number is not allowed");
     }
-    OPM_CUDA_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * detail::to_size_t(m_numberOfElements)));
+    OPM_CUDA_SAFE_CALL(cudaMalloc(&m_dataOnDevice, sizeof(T) * m_numberOfElements));
 }
 
 template <class T>
@@ -49,7 +49,7 @@ CuBuffer<T>::CuBuffer(const T* dataOnHost, const size_t numberOfElements)
 {
 
     OPM_CUDA_SAFE_CALL(cudaMemcpy(
-        m_dataOnDevice, dataOnHost, detail::to_size_t(m_numberOfElements) * sizeof(T), cudaMemcpyHostToDevice));
+        m_dataOnDevice, dataOnHost, m_numberOfElements * sizeof(T), cudaMemcpyHostToDevice));
 }
 
 template <class T>
@@ -60,7 +60,7 @@ CuBuffer<T>::CuBuffer(const CuBuffer<T>& other)
     assertSameSize(other);
     OPM_CUDA_SAFE_CALL(cudaMemcpy(m_dataOnDevice,
                                   other.m_dataOnDevice,
-                                  detail::to_size_t(m_numberOfElements) * sizeof(T),
+                                  m_numberOfElements * sizeof(T),
                                   cudaMemcpyDeviceToDevice));
 }
 
@@ -74,7 +74,7 @@ template <typename T>
 typename CuBuffer<T>::size_type
 CuBuffer<T>::size() const
 {
-    return detail::to_size_t(m_numberOfElements);
+    return m_numberOfElements;
 }
 
 template <typename T>
@@ -109,7 +109,7 @@ template <typename T>
 std::vector<T>
 CuBuffer<T>::asStdVector() const
 {
-    std::vector<T> temporary(detail::to_size_t(m_numberOfElements));
+    std::vector<T> temporary(m_numberOfElements);
     copyToHost(temporary);
     return temporary;
 }
