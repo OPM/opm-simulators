@@ -116,11 +116,11 @@ std::vector<char *> ReservoirCouplingMaster::getSlaveArgv(
     std::string &log_filename
 ) {
     // Calculate the size of the slave_argv vector like this:
-    // - We will not use the first argument, as it is the program name
-    // - We will replace the data file name in argv with the data_file path
-    // - We insert as first argument --slave-log-file=<slave_name>.log
-    // - We will also add the argument "--slave=true" to the argv
-    // - And we will add a nullptr at the end of the argv
+    // - We will not use the first argument in argv, as it is the program name
+    // - Replace the data file name in argv with the data_file path
+    // - Insert as first argument --slave-log-file=<slave_name>.log
+    // - Also add the argument "--slave=true" to the argv
+    // - Add a nullptr at the end of the argv
     // So the size of the slave_argv vector will be argc + 2
     //
     // Assume: All parameters will be on the form --parameter=value (as a string without spaces)
@@ -133,7 +133,7 @@ std::vector<char *> ReservoirCouplingMaster::getSlaveArgv(
     log_filename = "--slave-log-file=" + slave_name + ".log";
     slave_argv[0] = const_cast<char*>(log_filename.c_str());
     for (int i = 1; i < argc; i++) {
-        // Check if the argument starts with "--", if not it will be a positional argument
+        // Check if the argument starts with "--", if not, we will assume it is a positional argument
         //   and we will replace it with the data file path
         if (std::string(argv[i]).substr(0, 2) == "--") {
             slave_argv[i] = argv[i];
@@ -141,7 +141,7 @@ std::vector<char *> ReservoirCouplingMaster::getSlaveArgv(
             slave_argv[i] = const_cast<char*>(data_file.c_str());
         }
     }
-    slave_argv[argc] = const_cast<char*>("--slave=true");
+    slave_argv[argc] = "--slave=true";
     slave_argv[argc+1] = nullptr;
     return slave_argv;
 }
