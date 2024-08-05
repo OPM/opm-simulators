@@ -711,23 +711,33 @@ private:
 
 #ifdef _OPENMP
         // This function is called before the parallel OpenMP stuff gets initialized.
-        // That initialization happends after the deck is read and we want this message.
+        // That initialization happens after the deck is read and we want this message.
         // Hence we duplicate the code of setupParallelism to get the number of threads.
         static bool first_time = true;        
         const int default_threads = 2;
         const int requested_threads = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
+        threads = requested_threads > 0 ? requested_threads : default_threads;
+
         const char* env_var = getenv("OMP_NUM_THREADS");
         int omp_num_threads = -1;
         try {
-            omp_num_threads = std::stoi(env_var ? env_var : "");
-            if (first_time && requested_threads > 0 && FlowGenericVanguard::comm().rank()==0) {
-                std::cout << "Warning: Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument." << std::endl;
+            if (env_var) {
+                omp_num_threads = std::stoi(env_var);
             }
-        } catch (const std::invalid_argument& e) {
-            omp_num_threads = requested_threads > 0 ? requested_threads : default_threads;
+        } catch (const std::invalid_argument&) {
+            // Do nothing if an invalid_argument exception is caught
         }
-        threads = omp_num_threads;
-        first_time = false;        
+
+        // Set threads to omp_num_threads if it was successfully parsed and is positive
+        if (omp_num_threads > 0) {
+            if (first_time && FlowGenericVanguard::comm().rank() == 0 && requested_threads > 0) {
+                std::cout << "Warning: Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument."
+                          << std::endl;
+            }
+            threads = omp_num_threads;
+        }
+
+        first_time = false;
 #else
         threads = 1;
 #endif
