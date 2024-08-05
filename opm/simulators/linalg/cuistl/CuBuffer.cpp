@@ -86,13 +86,13 @@ CuBuffer<T>::resize(size_t newSize)
     }
     // Allocate memory for the new buffer
     T* tmpBuffer = nullptr;
-    OPM_CUDA_SAFE_CALL(cudaMalloc(&tmpBuffer, sizeof(T) * detail::to_size_t(newSize)));
+    OPM_CUDA_SAFE_CALL(cudaMalloc(&tmpBuffer, sizeof(T) * newSize));
 
     // Move the data from the old to the new buffer with truncation
     size_t sizeOfMove = std::min({m_numberOfElements, newSize});
     OPM_CUDA_SAFE_CALL(cudaMemcpy(tmpBuffer,
                                   m_dataOnDevice,
-                                  detail::to_size_t(sizeOfMove) * sizeof(T),
+                                  sizeOfMove * sizeof(T),
                                   cudaMemcpyDeviceToDevice));
 
     // free the old buffer
