@@ -283,18 +283,18 @@ extractFaceTrans(const GridView& gridView) const
 template <class ElementMapper, class GridView, class Scalar>
 void
 GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
-distributeGrid(const Dune::EdgeWeightMethod                                        edgeWeightsMethod,
-               const bool                                                          ownersFirst,
-               const Dune::PartitionMethod                                         partitionMethod,
-               const bool                                                          serialPartitioning,
-               const bool                                                          enableDistributedWells,
-               const double                                                        imbalanceTol,
-               const bool                                                          loadBalancerSet,
-               const std::vector<double>&                                          faceTrans,
-               const std::vector<Well>&                                            wells,
-               const std::unordered_map<std::string, std::set<std::array<int,3>>>& possibleFutureConnections,
-               EclipseState&                                                       eclState1,
-               FlowGenericVanguard::ParallelWellStruct&                            parallelWells)
+distributeGrid(const Dune::EdgeWeightMethod                          edgeWeightsMethod,
+               const bool                                            ownersFirst,
+               const Dune::PartitionMethod                           partitionMethod,
+               const bool                                            serialPartitioning,
+               const bool                                            enableDistributedWells,
+               const double                                          imbalanceTol,
+               const bool                                            loadBalancerSet,
+               const std::vector<double>&                            faceTrans,
+               const std::vector<Well>&                              wells,
+               const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
+               EclipseState&                                         eclState1,
+               FlowGenericVanguard::ParallelWellStruct&              parallelWells)
 {
     if (auto* eclState = dynamic_cast<ParallelEclipseState*>(&eclState1);
         eclState != nullptr)
@@ -321,18 +321,18 @@ distributeGrid(const Dune::EdgeWeightMethod                                     
 template <class ElementMapper, class GridView, class Scalar>
 void
 GenericCpGridVanguard<ElementMapper, GridView, Scalar>::
-distributeGrid(const Dune::EdgeWeightMethod                                        edgeWeightsMethod,
-               const bool                                                          ownersFirst,
-               const Dune::PartitionMethod                                         partitionMethod,
-               const bool                                                          serialPartitioning,
-               const bool                                                          enableDistributedWells,
-               const double                                                        imbalanceTol,
-               const bool                                                          loadBalancerSet,
-               const std::vector<double>&                                          faceTrans,
-               const std::vector<Well>&                                            wells,
-               const std::unordered_map<std::string, std::set<std::array<int,3>>>& possibleFutureConnections,
-               ParallelEclipseState*                                               eclState,
-               FlowGenericVanguard::ParallelWellStruct&                            parallelWells)
+distributeGrid(const Dune::EdgeWeightMethod                          edgeWeightsMethod,
+               const bool                                            ownersFirst,
+               const Dune::PartitionMethod                           partitionMethod,
+               const bool                                            serialPartitioning,
+               const bool                                            enableDistributedWells,
+               const double                                          imbalanceTol,
+               const bool                                            loadBalancerSet,
+               const std::vector<double>&                            faceTrans,
+               const std::vector<Well>&                              wells,
+               const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
+               ParallelEclipseState*                                 eclState,
+               FlowGenericVanguard::ParallelWellStruct&              parallelWells)
 {
     OPM_TIMEBLOCK(gridDistribute);
     const auto isIORank = this->grid_->comm().rank() == 0;
