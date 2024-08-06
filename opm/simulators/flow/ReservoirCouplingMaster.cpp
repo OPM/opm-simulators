@@ -141,7 +141,7 @@ std::vector<char *> ReservoirCouplingMaster::getSlaveArgv(
             slave_argv[i] = const_cast<char*>(data_file.c_str());
         }
     }
-    slave_argv[argc] = "--slave=true";
+    slave_argv[argc] = const_cast<char *>("--slave=true");
     slave_argv[argc+1] = nullptr;
     return slave_argv;
 }
