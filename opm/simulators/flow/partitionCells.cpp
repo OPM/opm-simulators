@@ -252,7 +252,9 @@ ZoltanPartitioner::connectElements(const GridView&                              
 {
     auto g2l = std::unordered_map<int, int>{};
 
-    for (const auto& element : elements(grid_view, Dune::Partitions::interior)) {
+    // For Dune::Partitions::interior, even more global indices are not found in the connectWells functions,
+    // yet the std::invalid_argument at the end of connectWells is not thrown...
+    for (const auto& element : elements(grid_view, Dune::Partitions::all)) {
         {
             const auto c = zoltan_ctrl.index(element);
             g2l.insert_or_assign(zoltan_ctrl.local_to_global(c), c);
@@ -312,6 +314,7 @@ void ZoltanPartitioner::connectWells(const Comm                                 
                 for (auto& global_index : possibleFutureConnectionSetIt->second) {
                     auto locPos = g2l.find(global_index);
                     if (locPos == g2l.end()) {
+                        std::cout << "on rank " << comm.rank() << ", well " << well.name() << ": looking for global_index: " << global_index << " - not found (possibleFutureConnections)" << std::endl;
                         ++otherProc;
                         continue;
                     }
