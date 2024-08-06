@@ -244,7 +244,7 @@ struct EnableDiffusion<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = true;
 };
 
-// Enable dispersion
+// Disable dispersion
 template<class TypeTag>
 struct EnableDispersion<TypeTag, TTag::FlowBaseProblem> {
     static constexpr bool value = false;
