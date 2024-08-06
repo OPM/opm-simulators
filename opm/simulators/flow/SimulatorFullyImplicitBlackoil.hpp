@@ -222,7 +222,7 @@ public:
     // NOTE: The argc and argv will be used when launching a slave process
     void init(SimulatorTimer &timer, int argc, char** argv)
     {
-        auto slave_mode = Parameters::get<TypeTag, Properties::Slave>();
+        auto slave_mode = Parameters::get<TypeTag, Parameters::Slave>();
         if (slave_mode) {
             this->reservoirCouplingSlave_ =
                 std::make_unique<ReservoirCouplingSlave>(
@@ -235,16 +235,14 @@ public:
             // For now, we require that SLAVES and GRUPMAST are defined at the first
             //  schedule step, so it is enough to check the first step. See the
             //  keyword handlers in opm-common for more information.
-            if (!this->schedule()[0].rescoup.empty()) {
-                auto master_mode = this->schedule()[0].rescoup().masterMode();
-                if (master_mode) {
-                    this->reservoirCouplingMaster_ =
-                        std::make_unique<ReservoirCouplingMaster>(
-                            FlowGenericVanguard::comm(),
-                            this->schedule()
-                        );
-                    this->reservoirCouplingMaster_->spawnSlaveProcesses(argc, argv);
-                }
+            auto master_mode = this->schedule()[0].rescoup().masterMode();
+            if (master_mode) {
+                this->reservoirCouplingMaster_ =
+                    std::make_unique<ReservoirCouplingMaster>(
+                        FlowGenericVanguard::comm(),
+                        this->schedule()
+                    );
+                this->reservoirCouplingMaster_->spawnSlaveProcesses(argc, argv);
             }
         }
         simulator_.setEpisodeIndex(-1);
