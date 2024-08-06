@@ -299,6 +299,7 @@ void ZoltanPartitioner::connectWells(const Comm                                 
         for (const auto& conn : well.getConnections()) {
             auto locPos = g2l.find(conn.global_index());
             if (locPos == g2l.end()) {
+                std::cout << "on rank " << comm.rank() << ", well " << well.name() << ": looking for global_index: " << conn.global_index() << " - not found" << std::endl;
                 ++otherProc;
                 continue;
             }
