@@ -248,3 +248,15 @@ add_test_compareSeparateECLFiles(CASENAME actionx_compdat_nldd_1_proc
                                  IGNORE_EXTRA_KW BOTH
                                  MPI_PROCS 1
                                  TEST_ARGS --nonlinear-solver=nldd --matrix-add-well-contributions=true)
+
+add_test_compareSeparateECLFiles(CASENAME actionx_compdat_nldd_8_procs
+                                 DIR1 actionx
+                                 FILENAME1 COMPDAT_SHORT
+                                 DIR2 actionx
+                                 FILENAME2 ACTIONX_COMPDAT_SHORT
+                                 SIMULATOR flow
+                                 ABS_TOL ${abs_tol}
+                                 REL_TOL ${rel_tol}
+                                 IGNORE_EXTRA_KW BOTH
+                                 MPI_PROCS 2
+                                 TEST_ARGS --nonlinear-solver=nldd --matrix-add-well-contributions=true)
