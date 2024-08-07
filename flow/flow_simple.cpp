@@ -39,11 +39,12 @@ namespace Opm {
         };
 
 
+        // Skipping for now
         // SPE11C requires dispersion
-        template<class TypeTag>
-        struct EnableDispersion<TypeTag, TTag::EclFlowProblemTest> {
-            static constexpr bool value = true;
-        };
+        // template<class TypeTag>
+        // struct EnableDispersion<TypeTag, TTag::EclFlowProblemTest> {
+        //     static constexpr bool value = true;
+        // };
 
         template<class TypeTag>
         struct MaterialLaw<TypeTag, TTag::EclFlowProblemTest>
