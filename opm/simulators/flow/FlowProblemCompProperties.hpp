@@ -178,6 +178,30 @@ struct GridView<TypeTag, TTag::FlowBaseProblemComp>
     using type = typename GetPropType<TypeTag, Properties::Grid>::LeafGridView;
 };
 
+// Set the material law for fluid fluxes
+template<class TypeTag>
+struct MaterialLaw<TypeTag, TTag::FlowBaseProblemComp>
+{
+private:
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+    using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
+
+    // TODO: We should be able to use FluidSystem here and using Indices to handle the active phases
+//    using Traits = ThreePhaseMaterialTraits<Scalar,
+//                                            /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+//                                            /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+//                                            /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
+    using Traits = ThreePhaseMaterialTraits<Scalar,
+                                            /*wettingPhaseIdx=*/ 0,
+                                            /*nonWettingPhaseIdx=*/ 1,
+                                            /*gasPhaseIdx=*/ 2>;
+
+public:
+    using EclMaterialLawManager = ::Opm::EclMaterialLawManager<Traits>;
+
+    using type = typename EclMaterialLawManager::MaterialLaw;
+};
+
 // Set the material law for energy storage in rock
 template<class TypeTag>
 struct SolidEnergyLaw<TypeTag, TTag::FlowBaseProblemComp>
@@ -232,7 +256,7 @@ struct AquiferModel<TypeTag, TTag::FlowBaseProblemComp> {
 // Enable diffusion
 template<class TypeTag>
 struct EnableDiffusion<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = true;
+    static constexpr bool value = false;
 };
 
 // Enable dispersion
@@ -355,10 +379,18 @@ struct EclOutputDoublePrecision<TypeTag, TTag::FlowBaseProblemComp> {
 };
 
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
-template<class TypeTag>
+// NewTranFluxModule is not ready to use
+/* template<class TypeTag>
 struct FluxModule<TypeTag, TTag::FlowBaseProblemComp> {
-    using type = NewTranFluxModule<TypeTag>;
-};
+    // using type = NewTranFluxModule<TypeTag>;
+    using type = DarcyFluxModule<TypeTag>;
+}; */
+
+// Use the dummy gradient calculator in order not to do unnecessary work.
+//template<class TypeTag>
+//struct GradientCalculator<TypeTag, TTag::FlowBaseProblemComp> {
+//using type = DummyGradientCalculator<TypeTag>;
+//};
 
 // The frequency of writing restart (*.ers) files. This is the number of time steps
 // between writing restart files
