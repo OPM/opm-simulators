@@ -55,12 +55,6 @@ struct FluidSystem;
 
 namespace Opm {
 
-#if __GNUC__ || __clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-#endif
-
 /*!
  * \brief The base class for writer modules.
  *
@@ -162,17 +156,7 @@ protected:
     void resizeScalarBuffer_(ScalarBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
-        buffer.resize(n);
+        buffer.resize(this->getBufferSize(bufferType));
         std::fill(buffer.begin(), buffer.end(), 0.0);
     }
 
@@ -182,17 +166,7 @@ protected:
     void resizeTensorBuffer_(TensorBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
-        buffer.resize(n);
+        buffer.resize(this->getBufferSize(bufferType));
         Tensor nullMatrix(dimWorld, dimWorld, 0.0);
         std::fill(buffer.begin(), buffer.end(), nullMatrix);
     }
@@ -200,17 +174,7 @@ protected:
     void resizeVectorBuffer_(VectorBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
-        buffer.resize(n);
+        buffer.resize(this->getBufferSize(bufferType));
         Vector zerovector(dimWorld,0.0);
         zerovector = 0.0;
         std::fill(buffer.begin(), buffer.end(), zerovector);
@@ -223,16 +187,7 @@ protected:
     void resizeEqBuffer_(EqBuffer& buffer,
                          BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
+        const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numEq; ++i) {
             buffer[i].resize(n);
             std::fill(buffer[i].begin(), buffer[i].end(), 0.0);
@@ -246,16 +201,7 @@ protected:
     void resizePhaseBuffer_(PhaseBuffer& buffer,
                             BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
+        const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numPhases; ++i) {
             buffer[i].resize(n);
             std::fill(buffer[i].begin(), buffer[i].end(), 0.0);
@@ -269,16 +215,7 @@ protected:
     void resizeComponentBuffer_(ComponentBuffer& buffer,
                                 BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
+        const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numComponents; ++i) {
             buffer[i].resize(n);
             std::fill(buffer[i].begin(), buffer[i].end(), 0.0);
@@ -292,16 +229,7 @@ protected:
     void resizePhaseComponentBuffer_(PhaseComponentBuffer& buffer,
                                      BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
+        const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numPhases; ++i) {
             for (unsigned j = 0; j < numComponents; ++j) {
                 buffer[i][j].resize(n);
@@ -318,14 +246,18 @@ protected:
                              ScalarBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        if (bufferType == DofBuffer)
+        switch (bufferType) {
+        case DofBuffer:
             DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer, name);
-        else if (bufferType == VertexBuffer)
+            break;
+        case VertexBuffer:
             attachScalarVertexData_(baseWriter, buffer, name);
-        else if (bufferType == ElementBuffer)
+            break;
+        case ElementBuffer:
             attachScalarElementData_(baseWriter, buffer, name);
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            break;
+        default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+        }
     }
 
     /*!
@@ -336,14 +268,18 @@ protected:
                              VectorBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        if (bufferType == DofBuffer)
+        switch (bufferType) {
+        case DofBuffer:
             DiscBaseOutputModule::attachVectorDofData_(baseWriter, buffer, name);
-        else if (bufferType == VertexBuffer)
+            break;
+        case VertexBuffer:
             attachVectorVertexData_(baseWriter, buffer, name);
-        else if (bufferType == ElementBuffer)
+            break;
+        case ElementBuffer:
             attachVectorElementData_(baseWriter, buffer, name);
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            break;
+        default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+        }
     }
 
     /*!
@@ -354,14 +290,18 @@ protected:
                              TensorBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        if (bufferType == DofBuffer)
+        switch (bufferType) {
+        case DofBuffer:
             DiscBaseOutputModule::attachTensorDofData_(baseWriter, buffer, name);
-        else if (bufferType == VertexBuffer)
+            break;
+        case VertexBuffer:
             attachTensorVertexData_(baseWriter, buffer, name);
-        else if (bufferType == ElementBuffer)
+            break;
+        case ElementBuffer:
             attachTensorElementData_(baseWriter, buffer, name);
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            break;
+        default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+        }
     }
 
     /*!
@@ -377,14 +317,7 @@ protected:
             std::string eqName = simulator_.model().primaryVarName(i);
             snprintf(name, 512, pattern, eqName.c_str());
 
-            if (bufferType == DofBuffer)
-                DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i], name);
-            else if (bufferType == VertexBuffer)
-                attachScalarVertexData_(baseWriter, buffer[i], name);
-            else if (bufferType == ElementBuffer)
-                attachScalarElementData_(baseWriter, buffer[i], name);
-            else
-                throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            this->commitScalarBuffer_(baseWriter, name, buffer[i], bufferType);
         }
     }
 
@@ -402,14 +335,7 @@ protected:
             oss << i;
             snprintf(name, 512, pattern, oss.str().c_str());
 
-            if (bufferType == DofBuffer)
-                DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i], name);
-            else if (bufferType == VertexBuffer)
-                attachScalarVertexData_(baseWriter, buffer[i], name);
-            else if (bufferType == ElementBuffer)
-                attachScalarElementData_(baseWriter, buffer[i], name);
-            else
-                throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            this->commitScalarBuffer(baseWriter, name, buffer[i], bufferType);
         }
     }
 
@@ -425,14 +351,7 @@ protected:
         for (unsigned i = 0; i < numPhases; ++i) {
             snprintf(name, 512, pattern, FluidSystem::phaseName(i).data());
 
-            if (bufferType == DofBuffer)
-                DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i], name);
-            else if (bufferType == VertexBuffer)
-                attachScalarVertexData_(baseWriter, buffer[i], name);
-            else if (bufferType == ElementBuffer)
-                attachScalarElementData_(baseWriter, buffer[i], name);
-            else
-                throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            this->commitScalarBuffer_(baseWriter, name, buffer[i], bufferType);
         }
     }
 
@@ -448,14 +367,7 @@ protected:
         for (unsigned i = 0; i < numComponents; ++i) {
             snprintf(name, 512, pattern, FluidSystem::componentName(i).data());
 
-            if (bufferType == DofBuffer)
-                DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i], name);
-            else if (bufferType == VertexBuffer)
-                attachScalarVertexData_(baseWriter, buffer[i], name);
-            else if (bufferType == ElementBuffer)
-                attachScalarElementData_(baseWriter, buffer[i], name);
-            else
-                throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            this->commitScalarBuffer_(baseWriter, name, buffer[i], bufferType);
         }
     }
 
@@ -474,14 +386,7 @@ protected:
                          FluidSystem::phaseName(i).data(),
                          FluidSystem::componentName(j).data());
 
-                if (bufferType == DofBuffer)
-                    DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i][j], name);
-                else if (bufferType == VertexBuffer)
-                    attachScalarVertexData_(baseWriter, buffer[i][j], name);
-                else if (bufferType == ElementBuffer)
-                    attachScalarElementData_(baseWriter, buffer[i][j], name);
-                else
-                    throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+                this->commitScalarBuffer_(baseWriter, name, buffer[i][j], bufferType);
             }
         }
     }
@@ -516,12 +421,18 @@ protected:
                                  const char *name)
     { baseWriter.attachTensorVertexData(buffer, name); }
 
+    std::size_t getBufferSize(BufferType bufferType) const
+    {
+        switch (bufferType) {
+        case VertexBuffer:  return simulator_.gridView().size(dim);
+        case ElementBuffer: return simulator_.gridView().size(0);
+        case DofBuffer:     return simulator_.model().numGridDof();
+        default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+        }
+    }
+
     const Simulator& simulator_;
 };
-
-#if __GNUC__ || __clang__
-#pragma GCC diagnostic pop
-#endif
 
 } // namespace Opm
 
