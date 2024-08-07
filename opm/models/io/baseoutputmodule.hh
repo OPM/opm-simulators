@@ -252,14 +252,18 @@ protected:
                              ScalarBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        if (bufferType == DofBuffer)
+        switch (bufferType) {
+        case DofBuffer:
             DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer, name);
-        else if (bufferType == VertexBuffer)
+            break;
+        case VertexBuffer:
             attachScalarVertexData_(baseWriter, buffer, name);
-        else if (bufferType == ElementBuffer)
+            break;
+        case ElementBuffer:
             attachScalarElementData_(baseWriter, buffer, name);
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            break;
+        default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+        }
     }
 
     /*!
@@ -270,14 +274,18 @@ protected:
                              VectorBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        if (bufferType == DofBuffer)
+        switch (bufferType) {
+        case DofBuffer:
             DiscBaseOutputModule::attachVectorDofData_(baseWriter, buffer, name);
-        else if (bufferType == VertexBuffer)
+            break;
+        case VertexBuffer:
             attachVectorVertexData_(baseWriter, buffer, name);
-        else if (bufferType == ElementBuffer)
+            break;
+        case ElementBuffer:
             attachVectorElementData_(baseWriter, buffer, name);
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            break;
+        default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+        }
     }
 
     /*!
@@ -288,14 +296,18 @@ protected:
                              TensorBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        if (bufferType == DofBuffer)
+        switch (bufferType) {
+        case DofBuffer:
             DiscBaseOutputModule::attachTensorDofData_(baseWriter, buffer, name);
-        else if (bufferType == VertexBuffer)
+            break;
+        case VertexBuffer:
             attachTensorVertexData_(baseWriter, buffer, name);
-        else if (bufferType == ElementBuffer)
+            break;
+        case ElementBuffer:
             attachTensorElementData_(baseWriter, buffer, name);
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            break;
+        default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+        }
     }
 
     /*!
