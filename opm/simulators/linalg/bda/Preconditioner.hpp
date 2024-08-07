@@ -24,6 +24,8 @@
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 #endif
 
+#include <memory>
+
 namespace Opm::Accelerator {
 
 enum PreconditionerType {
