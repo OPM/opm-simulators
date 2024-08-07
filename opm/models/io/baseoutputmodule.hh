@@ -55,12 +55,6 @@ struct FluidSystem;
 
 namespace Opm {
 
-#if __GNUC__ || __clang__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas"
-#pragma GCC diagnostic ignored "-Wformat-nonliteral"
-#endif
-
 /*!
  * \brief The base class for writer modules.
  *
@@ -439,10 +433,6 @@ protected:
 
     const Simulator& simulator_;
 };
-
-#if __GNUC__ || __clang__
-#pragma GCC diagnostic pop
-#endif
 
 } // namespace Opm
 
