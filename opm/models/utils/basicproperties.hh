@@ -219,11 +219,6 @@ template<class TypeTag>
 struct PrintParameters<TypeTag, Properties::TTag::NumericModel>
 { static constexpr int value = 2; };
 
-//! By default, print the properties on startup
-template<class TypeTag>
-struct PrintProperties<TypeTag, Properties::TTag::NumericModel>
-{ static constexpr int value = 2; };
-
 //! The default value for the simulation's restart time
 template<class TypeTag>
 struct RestartTime<TypeTag, Properties::TTag::NumericModel>

@@ -268,17 +268,6 @@ auto getPropName()
 #pragma clang diagnostic pop
 #endif
 
-namespace Properties {
-template <class TypeTag>
-void printValues(std::ostream& os)
-{
-    os <<
-    "The eWoms property system was compiled with the macro\n"
-    "NO_PROPERTY_INTROSPECTION defined.\n"
-    "No diagnostic messages this time, sorry.\n";
-}
-}
-
 } // end namespace Opm
 
 #endif
