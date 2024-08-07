@@ -240,24 +240,13 @@ namespace Opm {
                     return EXIT_FAILURE;
                 }
 
-                // deal with --print-properties and --print-parameters and unknown parameters.
-
-                bool doExit = false;
-
-                if (Parameters::get<TypeTag, Parameters::PrintProperties>() == 1) {
-                    doExit = true;
-                    if (mpiRank == 0)
-                        Properties::printValues<TypeTag>(std::cout);
-                }
-
+                // deal with --print-parameters and unknown parameters.
                 if (Parameters::get<TypeTag, Parameters::PrintParameters>() == 1) {
-                    doExit = true;
-                    if (mpiRank == 0)
+                    if (mpiRank == 0) {
                         Parameters::printValues<TypeTag>();
-                }
-
-                if (doExit)
+                    }
                     return -1;
+                }
             }
 
             return status;
