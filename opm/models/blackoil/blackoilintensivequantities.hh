@@ -38,7 +38,6 @@
 #include "blackoildiffusionmodule.hh"
 #include "blackoildispersionmodule.hh"
 #include "blackoilmicpmodules.hh"
-#include "blackoilconvectivemixingmodule.hh"
 
 #include <opm/common/TimingMacros.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -107,7 +106,6 @@ class BlackOilIntensiveQuantities
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
-    enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
     enum { numPhases = getPropValue<TypeTag, Properties::NumPhases>() };
     enum { numComponents = getPropValue<TypeTag, Properties::NumComponents>() };
@@ -133,7 +131,6 @@ class BlackOilIntensiveQuantities
 
     using DirectionalMobilityPtr = Opm::Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
-    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
 
 
 public:
@@ -406,13 +403,10 @@ public:
             rho = fluidState_.invB(waterPhaseIdx);
             rho *= FluidSystem::referenceDensity(waterPhaseIdx, pvtRegionIdx);
             if (FluidSystem::enableDissolvedGasInWater()) {
-                bool ConvectiveMixingActive = ConvectiveMixingModule::active(elemCtx);
-				if(!ConvectiveMixingActive) {
-                    rho +=
-                        fluidState_.invB(waterPhaseIdx) *
-                        fluidState_.Rsw() *
-                        FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
-                }
+                rho +=
+                    fluidState_.invB(waterPhaseIdx) *
+                    fluidState_.Rsw() *
+                    FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
             }
             fluidState_.setDensity(waterPhaseIdx, rho);
         }
@@ -439,13 +433,10 @@ public:
             rho = fluidState_.invB(oilPhaseIdx);
             rho *= FluidSystem::referenceDensity(oilPhaseIdx, pvtRegionIdx);
             if (FluidSystem::enableDissolvedGas()) {
-                bool ConvectiveMixingActive = ConvectiveMixingModule::active(elemCtx);
-				if(!ConvectiveMixingActive) {
-                    rho +=
-                        fluidState_.invB(oilPhaseIdx) *
-                        fluidState_.Rs() *
-                        FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
-                }
+                rho +=
+                    fluidState_.invB(oilPhaseIdx) *
+                    fluidState_.Rs() *
+                    FluidSystem::referenceDensity(gasPhaseIdx, pvtRegionIdx);
             }
             fluidState_.setDensity(oilPhaseIdx, rho);
         }

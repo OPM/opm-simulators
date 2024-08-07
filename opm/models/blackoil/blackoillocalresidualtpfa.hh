@@ -364,7 +364,8 @@ public:
                                                              globalIndexIn,
                                                              globalIndexEx,
                                                              distZg,
-                                                             thpres);
+                                                             thpres,
+                                                             moduleParams);
 
 
 
@@ -423,6 +424,19 @@ public:
         static_assert(!enablePolymer, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
+        // deal with convective mixing
+        if constexpr(enableConvectiveMixing) {
+            ConvectiveMixingModule::addConvectiveMixingFlux(flux,
+                                                            intQuantsIn,
+                                                            intQuantsEx,
+                                                            globalIndexIn,
+                                                            globalIndexEx,
+                                                            nbInfo.dZg,
+                                                            nbInfo.trans,
+                                                            nbInfo.faceArea,
+                                                            moduleParams.convectiveMixingModuleParam);
+        }
+        
         // deal with energy (if present)
         if constexpr(enableEnergy){
             const Scalar inAlpha = nbInfo.inAlpha;
@@ -457,18 +471,7 @@ public:
         static_assert(!enableBrine, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
-        // deal with convective mixing
-        if constexpr(enableConvectiveMixing){
-            ConvectiveMixingModule::addConvectiveMixingFlux(flux,
-                                                            intQuantsIn,
-                                                            intQuantsEx,
-                                                            globalIndexIn,
-                                                            globalIndexEx,
-                                                            nbInfo.dZg,
-                                                            nbInfo.trans,
-                                                            nbInfo.faceArea,
-                                                            moduleParams.convectiveMixingModuleParam);
-        }
+
 
         // deal with diffusion (if present). opm-models expects per area flux (added in the tmpdiffusivity).
         if constexpr(enableDiffusion){
