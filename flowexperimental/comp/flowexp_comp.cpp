@@ -99,7 +99,7 @@ namespace Opm::Properties {
 
    namespace TTag {
    struct FlowExpCompProblem {
-       using InheritsFrom = std::tuple<FlashModel, FlowModelParameters, EclTimeSteppingParameters, FlowBaseProblemComp>;
+       using InheritsFrom = std::tuple<FlowModelParameters, FlowBaseProblemComp, FlashModel, EclTimeSteppingParameters>;
    };
    }
 #if 0
@@ -109,7 +109,7 @@ namespace Opm::Properties {
     };
 #endif
 
-#if 1
+#if 0
     template<class TypeTag>
     struct MaterialLaw<TypeTag, TTag::FlowExpCompProblem>
     {
