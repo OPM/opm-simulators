@@ -20,14 +20,14 @@
 #ifndef OPM_OPENCLBILU0_HPP
 #define OPM_OPENCLBILU0_HPP
 
-#include <mutex>
-
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
 #include <opm/simulators/linalg/bda/opencl/opencl.hpp>
 #include <opm/simulators/linalg/bda/opencl/openclPreconditioner.hpp>
 #include <opm/simulators/linalg/bda/opencl/ChowPatelIlu.hpp>
 
+#include <memory>
+#include <mutex>
 
 namespace Opm::Accelerator {
 
@@ -103,7 +103,7 @@ public:
     // via Lz = y
     // and Ux = z
     void apply(const cl::Buffer& y, cl::Buffer& x) override;
-    void apply(Scalar&, Scalar&) {}
+    void apply(Scalar&, Scalar&) override {}
 
     std::tuple<std::vector<int>, std::vector<int>, std::vector<int>>
     get_preconditioner_structure()
