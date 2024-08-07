@@ -25,13 +25,22 @@
 #include <bitset>
 #include <cstdint>
 #include <ctime>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 
 
-namespace Opm {
-namespace Mpi {
-namespace detail {
+namespace Opm::Mpi::detail {
+
+std::size_t mpi_buffer_size(const std::size_t bufsize, const std::size_t position)
+{
+    if (bufsize < position) {
+        throw std::invalid_argument("Buffer size should never be less than position!");
+    }
+
+    return std::min(bufsize - position,
+                    static_cast<std::size_t>(std::numeric_limits<int>::max()));
+}
 
 template<std::size_t Size>
 std::size_t Packing<false,std::bitset<Size>>::
@@ -139,6 +148,4 @@ template struct Packing<false,std::bitset<10>>;
 constexpr int NumFip = static_cast<int>(FIPConfig::OutputField::NUM_FIP_REPORT);
 template struct Packing<false,std::bitset<NumFip>>;
 
-} // end namespace detail
-} // end namespace Mpi
-} // end namespace Opm
+} // end namespace Opm::Mpi::detail

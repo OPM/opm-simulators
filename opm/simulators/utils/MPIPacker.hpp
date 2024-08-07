@@ -30,17 +30,11 @@
 #include <string>
 
 
-namespace Opm {
-namespace Mpi {
+namespace Opm::Mpi {
+
 namespace detail {
 
-static std::size_t mpi_buffer_size(const std::size_t bufsize, const std::size_t position) {
-    if (bufsize < position)
-        throw std::invalid_argument("Buffer size should never be less than position!");
-
-    return static_cast<int>(std::min(bufsize-position,
-                                     static_cast<std::size_t>(std::numeric_limits<int>::max())));
-}
+std::size_t mpi_buffer_size(const std::size_t bufsize, const std::size_t position);
 
 //! \brief Abstract struct for packing which is (partially) specialized for specific types.
 template <bool pod, class T>
@@ -190,7 +184,8 @@ ADD_PACK_SPECIALIZATION(time_point)
 }
 
 //! \brief Struct handling packing of serialization for MPI communication.
-struct Packer {
+struct Packer
+{
     //! \brief Constructor.
     //! \param comm The communicator to use
     Packer(Parallel::Communication comm)
@@ -279,7 +274,6 @@ private:
     Parallel::Communication m_comm; //!< Communicator to use
 };
 
-} // end namespace Mpi
-} // end namespace Opm
+} // end namespace Opm::Mpi
 
 #endif // MPI_PACKER_HPP
