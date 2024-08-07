@@ -1,6 +1,6 @@
 /*
   Copyright 2018 SINTEF Digital, Mathematics and Cybernetics.
-  Copyright 2018 Equinor.
+  Copyright 2018, 2024 Equinor.
 
   This file is part of the Open Porous Media project (OPM).
 
@@ -62,6 +62,10 @@ namespace Opm
         public:
             enum struct Type { Invalid, MassBalance, Cnv };
 
+            // Default constructor needed for object serialisation.  Don't
+            // use this for anything else.
+            ReservoirFailure() = default;
+
             ReservoirFailure(Type t, Severity s, int phase)
                 : type_(t), severity_(s), phase_(phase)
             {}
@@ -70,15 +74,29 @@ namespace Opm
             Severity severity() const { return severity_; }
             int phase() const { return phase_; }
 
+            template <typename Serializer>
+            void serializeOp(Serializer& serializer)
+            {
+                serializer(this->type_);
+                serializer(this->severity_);
+                serializer(this->phase_);
+            }
+
         private:
-            Type type_;
-            Severity severity_;
-            int phase_;
+            // Note to maintainers: If you change this list of data members,
+            // then please update serializeOp() accordingly.
+            Type type_ { Type::Invalid };
+            Severity severity_ { Severity::None };
+            int phase_ { -1 };
         };
 
         class ReservoirConvergenceMetric
         {
         public:
+            // Default constructor needed for object serialisation.  Don't
+            // use this for anything else.
+            ReservoirConvergenceMetric() = default;
+
             ReservoirConvergenceMetric(ReservoirFailure::Type t, int phase, double value)
                 : type_(t), phase_(phase), value_(value)
             {}
@@ -87,10 +105,20 @@ namespace Opm
             int phase() const { return phase_; }
             double value() const { return value_; }
 
+            template <typename Serializer>
+            void serializeOp(Serializer& serializer)
+            {
+                serializer(this->type_);
+                serializer(this->phase_);
+                serializer(this->value_);
+            }
+
         private:
-            ReservoirFailure::Type type_;
-            int phase_;
-            double value_;
+            // Note to maintainers: If you change this list of data members,
+            // then please update serializeOp() accordingly.
+            ReservoirFailure::Type type_ { ReservoirFailure::Type::Invalid };
+            int phase_ { -1 };
+            double value_ { 0.0 };
         };
 
         class WellFailure
@@ -107,6 +135,10 @@ namespace Opm
                 WrongFlowDirection,
             };
 
+            // Default constructor needed for object serialisation.  Don't
+            // use this for anything else.
+            WellFailure() = default;
+
             WellFailure(Type t, Severity s, int phase, const std::string& well_name)
                 : type_(t), severity_(s), phase_(phase), well_name_(well_name)
             {}
@@ -116,11 +148,22 @@ namespace Opm
             int phase() const { return phase_; }
             const std::string& wellName() const { return well_name_; }
 
+            template <typename Serializer>
+            void serializeOp(Serializer& serializer)
+            {
+                serializer(this->type_);
+                serializer(this->severity_);
+                serializer(this->phase_);
+                serializer(this->well_name_);
+            }
+
         private:
-            Type type_;
-            Severity severity_;
-            int phase_;
-            std::string well_name_;
+            // Note to maintainers: If you change this list of data members,
+            // then please update serializeOp() accordingly.
+            Type type_ { Type::Invalid };
+            Severity severity_ { Severity::None };
+            int phase_ { -1 };
+            std::string well_name_ {};
         };
 
         // ----------- Mutating member functions -----------
@@ -264,8 +307,23 @@ namespace Opm
             return s;
         }
 
+        template <typename Serializer>
+        void serializeOp(Serializer& serializer)
+        {
+            serializer(this->reportTime_);
+            serializer(this->status_);
+            serializer(this->res_failures_);
+            serializer(this->well_failures_);
+            serializer(this->res_convergence_);
+            serializer(this->wellGroupTargetsViolated_);
+            serializer(this->cnvPvSplit_);
+            serializer(this->eligiblePoreVolume_);
+        }
+
     private:
         // ----------- Member variables -----------
+        // Note to maintainers: If you change this list of data members,
+        // then please update serializeOp() accordingly.
         double reportTime_;
         Status status_;
         std::vector<ReservoirFailure> res_failures_;

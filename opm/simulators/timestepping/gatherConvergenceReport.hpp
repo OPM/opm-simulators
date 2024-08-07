@@ -30,9 +30,10 @@ namespace Opm
 
     /// Create a global convergence report combining local
     /// (per-process) reports.
-    ConvergenceReport gatherConvergenceReport(const ConvergenceReport& local_report, Parallel::Communication communicator);
+    ConvergenceReport
+    gatherConvergenceReport(const ConvergenceReport& local_report,
+                            Parallel::Communication  communicator);
 
 } // namespace Opm
-
 
 #endif // OPM_GATHERCONVERGENCEREPORT_HEADER_INCLUDED
