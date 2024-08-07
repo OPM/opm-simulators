@@ -323,14 +323,7 @@ protected:
             std::string eqName = simulator_.model().primaryVarName(i);
             snprintf(name, 512, pattern, eqName.c_str());
 
-            if (bufferType == DofBuffer)
-                DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i], name);
-            else if (bufferType == VertexBuffer)
-                attachScalarVertexData_(baseWriter, buffer[i], name);
-            else if (bufferType == ElementBuffer)
-                attachScalarElementData_(baseWriter, buffer[i], name);
-            else
-                throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            this->commitScalarBuffer_(baseWriter, name, buffer[i], bufferType);
         }
     }
 
@@ -348,14 +341,7 @@ protected:
             oss << i;
             snprintf(name, 512, pattern, oss.str().c_str());
 
-            if (bufferType == DofBuffer)
-                DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i], name);
-            else if (bufferType == VertexBuffer)
-                attachScalarVertexData_(baseWriter, buffer[i], name);
-            else if (bufferType == ElementBuffer)
-                attachScalarElementData_(baseWriter, buffer[i], name);
-            else
-                throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            this->commitScalarBuffer(baseWriter, name, buffer[i], bufferType);
         }
     }
 
@@ -371,14 +357,7 @@ protected:
         for (unsigned i = 0; i < numPhases; ++i) {
             snprintf(name, 512, pattern, FluidSystem::phaseName(i).data());
 
-            if (bufferType == DofBuffer)
-                DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i], name);
-            else if (bufferType == VertexBuffer)
-                attachScalarVertexData_(baseWriter, buffer[i], name);
-            else if (bufferType == ElementBuffer)
-                attachScalarElementData_(baseWriter, buffer[i], name);
-            else
-                throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            this->commitScalarBuffer_(baseWriter, name, buffer[i], bufferType);
         }
     }
 
@@ -394,14 +373,7 @@ protected:
         for (unsigned i = 0; i < numComponents; ++i) {
             snprintf(name, 512, pattern, FluidSystem::componentName(i).data());
 
-            if (bufferType == DofBuffer)
-                DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i], name);
-            else if (bufferType == VertexBuffer)
-                attachScalarVertexData_(baseWriter, buffer[i], name);
-            else if (bufferType == ElementBuffer)
-                attachScalarElementData_(baseWriter, buffer[i], name);
-            else
-                throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+            this->commitScalarBuffer_(baseWriter, name, buffer[i], bufferType);
         }
     }
 
@@ -420,14 +392,7 @@ protected:
                          FluidSystem::phaseName(i).data(),
                          FluidSystem::componentName(j).data());
 
-                if (bufferType == DofBuffer)
-                    DiscBaseOutputModule::attachScalarDofData_(baseWriter, buffer[i][j], name);
-                else if (bufferType == VertexBuffer)
-                    attachScalarVertexData_(baseWriter, buffer[i][j], name);
-                else if (bufferType == ElementBuffer)
-                    attachScalarElementData_(baseWriter, buffer[i][j], name);
-                else
-                    throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+                this->commitScalarBuffer_(baseWriter, name, buffer[i][j], bufferType);
             }
         }
     }
