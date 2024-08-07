@@ -18,14 +18,17 @@
 */
 #ifndef OPM_CUVIEW_HEADER_HPP
 #define OPM_CUVIEW_HEADER_HPP
+
 #include <dune/common/fvector.hh>
-#include <dune/istl/bvector.hh>
-#include <exception>
-#include <fmt/core.h>
+
 #include <opm/common/ErrorMacros.hpp>
+
 #include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
+
+#include <stdexcept>
 #include <vector>
-#include <string>
+
+#include <fmt/core.h>
 
 // TODO: remove this line and instead include gpuDecorators.hpp from OPM common when it gets added
 #if defined(__CUDA_ARCH__) || (defined(__HIP_DEVICE_COMPILE__) && __HIP_DEVICE_COMPILE__ > 0)
@@ -33,8 +36,6 @@
 #else
 #define OPM_IS_INSIDE_DEVICE_FUNCTION_TEMPORARY 0
 #endif
-
-
 
 namespace Opm::cuistl
 {
@@ -61,7 +62,7 @@ public:
     /**
      * @brief Default constructor that will initialize cublas and allocate 0 bytes of memory
      */
-    __host__ __device__ explicit CuView() = default;
+    explicit CuView() = default;
 
     //TODO: we probably dont need anything like this or is it useful to have views also be able to handle things on CPU?
     /// @brief constructor based on std::vectors, this will make a view on the CPU
@@ -110,7 +111,7 @@ public:
     /**
      * @brief ~CuView calls cudaFree
      */
-    __host__ __device__ ~CuView() = default;
+    ~CuView() = default;
 
     /**
      * @return the raw pointer to the GPU data
@@ -410,4 +411,5 @@ private:
 };
 
 } // namespace Opm::cuistl
+
 #endif
