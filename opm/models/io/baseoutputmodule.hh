@@ -162,17 +162,7 @@ protected:
     void resizeScalarBuffer_(ScalarBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
-        buffer.resize(n);
+        buffer.resize(this->getBufferSize(bufferType));
         std::fill(buffer.begin(), buffer.end(), 0.0);
     }
 
@@ -182,17 +172,7 @@ protected:
     void resizeTensorBuffer_(TensorBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
-        buffer.resize(n);
+        buffer.resize(this->getBufferSize(bufferType));
         Tensor nullMatrix(dimWorld, dimWorld, 0.0);
         std::fill(buffer.begin(), buffer.end(), nullMatrix);
     }
@@ -200,17 +180,7 @@ protected:
     void resizeVectorBuffer_(VectorBuffer& buffer,
                              BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
-        buffer.resize(n);
+        buffer.resize(this->getBufferSize(bufferType));
         Vector zerovector(dimWorld,0.0);
         zerovector = 0.0;
         std::fill(buffer.begin(), buffer.end(), zerovector);
@@ -223,16 +193,7 @@ protected:
     void resizeEqBuffer_(EqBuffer& buffer,
                          BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
+        const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numEq; ++i) {
             buffer[i].resize(n);
             std::fill(buffer[i].begin(), buffer[i].end(), 0.0);
@@ -246,16 +207,7 @@ protected:
     void resizePhaseBuffer_(PhaseBuffer& buffer,
                             BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
+        const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numPhases; ++i) {
             buffer[i].resize(n);
             std::fill(buffer[i].begin(), buffer[i].end(), 0.0);
@@ -269,16 +221,7 @@ protected:
     void resizeComponentBuffer_(ComponentBuffer& buffer,
                                 BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
+        const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numComponents; ++i) {
             buffer[i].resize(n);
             std::fill(buffer[i].begin(), buffer[i].end(), 0.0);
@@ -292,16 +235,7 @@ protected:
     void resizePhaseComponentBuffer_(PhaseComponentBuffer& buffer,
                                      BufferType bufferType = DofBuffer)
     {
-        size_t n;
-        if (bufferType == VertexBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(dim));
-        else if (bufferType == ElementBuffer)
-            n = static_cast<size_t>(simulator_.gridView().size(0));
-        else if (bufferType == DofBuffer)
-            n = simulator_.model().numGridDof();
-        else
-            throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
-
+        const std::size_t n = this->getBufferSize(bufferType);
         for (unsigned i = 0; i < numPhases; ++i) {
             for (unsigned j = 0; j < numComponents; ++j) {
                 buffer[i][j].resize(n);
@@ -515,6 +449,16 @@ protected:
                                  TensorBuffer& buffer,
                                  const char *name)
     { baseWriter.attachTensorVertexData(buffer, name); }
+
+    std::size_t getBufferSize(BufferType bufferType) const
+    {
+        switch (bufferType) {
+        case VertexBuffer:  return simulator_.gridView().size(dim);
+        case ElementBuffer: return simulator_.gridView().size(0);
+        case DofBuffer:     return simulator_.model().numGridDof();
+        default: throw std::logic_error("bufferType must be one of Dof, Vertex or Element");
+        }
+    }
 
     const Simulator& simulator_;
 };
