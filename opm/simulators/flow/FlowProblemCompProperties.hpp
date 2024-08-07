@@ -228,11 +228,6 @@ struct AquiferModel<TypeTag, TTag::FlowBaseProblemComp> {
     using type = BaseAquiferModel<TypeTag>;
 };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = true;
-};
 
 // Enable diffusion
 template<class TypeTag>
@@ -333,6 +328,11 @@ struct DamarisLogLevel<TypeTag, TTag::FlowBaseProblemComp> {
 // Specify the dask file jason file that specifies the Dask scheduler etc.
 template<class TypeTag>
 struct DamarisDaskFile<TypeTag, TTag::FlowBaseProblemComp> {
+    static constexpr auto value = "";
+};
+// Specify the the exact variables to be passed through to Damaris (must exist in the XML file / intiDamarisXmlFile.cpp)
+template<class TypeTag>
+struct DamarisLimitVariables<TypeTag, TTag::FlowBaseProblemComp> {
     static constexpr auto value = "";
 };
 #endif
@@ -450,10 +450,10 @@ struct ExplicitRockCompaction<TypeTag, TTag::FlowBaseProblemComp> {
 
 namespace Opm::Parameters {
 
-// Disable the VTK output by default for this problem ...
+// Enable gravity
 template<class TypeTag>
-struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblemComp>
-{ static constexpr bool value = false; };
+struct EnableGravity<TypeTag, Properties::TTag::FlowBaseProblemComp>
+{ static constexpr bool value = true; };
 
 // the cache for intensive quantities can be used for ECL problems and also yields a
 // decent speedup...
@@ -465,6 +465,11 @@ struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlowBaseProblemCo
 template<class TypeTag>
 struct EnableStorageCache<TypeTag, Properties::TTag::FlowBaseProblemComp>
 { static constexpr bool value = true; };
+
+// Disable the VTK output by default for this problem ...
+template<class TypeTag>
+struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblemComp>
+{ static constexpr bool value = false; };
 
 // The default for the end time of the simulation [s]
 //
