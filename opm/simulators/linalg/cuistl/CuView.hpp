@@ -386,10 +386,10 @@ private:
     {
 #if OPM_IS_INSIDE_DEVICE_FUNCTION_TEMPORARY
         // TODO: find a better way to handle exceptions in kernels, this will possibly be printed many times
-        assert(m_numberOfElements > 0 && "View have 0 elements");
+        assert(m_numberOfElements > 0 && "View has 0 elements");
 #else
         if (m_numberOfElements <= 0) {
-            OPM_THROW(std::invalid_argument, "View have 0 elements");
+            OPM_THROW(std::invalid_argument, "View has 0 elements");
         }
 #endif
     }
