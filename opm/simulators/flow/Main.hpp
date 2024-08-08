@@ -77,6 +77,7 @@
 #endif
 
 #include <cassert>
+#include <charconv>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -713,28 +714,28 @@ private:
         // This function is called before the parallel OpenMP stuff gets initialized.
         // That initialization happens after the deck is read and we want this message.
         // Hence we duplicate the code of setupParallelism to get the number of threads.
-        static bool first_time = true;        
-        const int default_threads = 2;
+        static bool first_time = true;
+        constexpr int default_threads = 2;
         const int requested_threads = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
         threads = requested_threads > 0 ? requested_threads : default_threads;
 
         const char* env_var = getenv("OMP_NUM_THREADS");
-        int omp_num_threads = -1;
-        try {
-            if (env_var) {
-                omp_num_threads = std::stoi(env_var);
+        if (env_var) {
+            int omp_num_threads = -1;
+            auto result = std::from_chars(env_var, env_var + std::strlen(env_var), omp_num_threads);
+            const bool can_output = first_time && FlowGenericVanguard::comm().rank() == 0;
+            if (result.ec == std::errc() && omp_num_threads > 0) {
+                // Set threads to omp_num_threads if it was successfully parsed and is positive
+                threads = omp_num_threads;
+                if (can_output && requested_threads > 0) {
+                    std::cout << "Warning: Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument."
+                              << std::endl;
+                }
+            } else {
+                if (can_output) {
+                    std::cout << ("Warning: Invalid value for OMP_NUM_THREADS environment variable.") << std::endl;
+                }
             }
-        } catch (const std::invalid_argument&) {
-            // Do nothing if an invalid_argument exception is caught
-        }
-
-        // Set threads to omp_num_threads if it was successfully parsed and is positive
-        if (omp_num_threads > 0) {
-            if (first_time && FlowGenericVanguard::comm().rank() == 0 && requested_threads > 0) {
-                std::cout << "Warning: Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument."
-                          << std::endl;
-            }
-            threads = omp_num_threads;
         }
 
         first_time = false;

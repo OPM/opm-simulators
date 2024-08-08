@@ -38,6 +38,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #endif
 
+#include <charconv>
 #include <cstddef>
 #include <memory>
 
@@ -376,28 +377,26 @@ namespace Opm {
             // OMP_NUM_THREADS is set or command line --threads-per-process used.
             // Issue a warning if both OMP_NUM_THREADS and --threads-per-process are set,
             // but let the environment variable take precedence.
-            const int default_threads = 2;
+            constexpr int default_threads = 2;
             const int requested_threads = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
             int threads = requested_threads > 0 ? requested_threads : default_threads;
 
             const char* env_var = getenv("OMP_NUM_THREADS");
-            int omp_num_threads = -1;
-            try {
-                if (env_var) {
-                    omp_num_threads = std::stoi(env_var);
+            if (env_var) {
+                int omp_num_threads = -1;
+                auto result = std::from_chars(env_var, env_var + std::strlen(env_var), omp_num_threads);
+                if (result.ec == std::errc() && omp_num_threads > 0) {
+                    // Set threads to omp_num_threads if it was successfully parsed and is positive
+                    threads = omp_num_threads;
+                    // Warning in 'Main.hpp', where this code is duplicated
+                    // if (requested_threads > 0) {
+                    //     OpmLog::warning("Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument.");
+                    // }
+                } else {
+                    OpmLog::warning("Invalid value for OMP_NUM_THREADS environment variable.");
                 }
-            } catch (const std::invalid_argument& e) {
-                // Do nothing if an invalid_argument exception is caught
             }
 
-            // Set threads to omp_num_threads if it was successfully parsed and is positive
-            if (omp_num_threads > 0) {
-                threads = omp_num_threads;
-                // Warning in 'Main.hpp', where this code is duplicated
-                // if (requested_threads > 0) {
-                //     OpmLog::warning("Environment variable OMP_NUM_THREADS takes precedence over the --threads-per-process cmdline argument.");
-                // }
-            }
             // We are not limiting this to the number of processes
             // reported by OpenMP as on some hardware (and some OpenMPI
             // versions) this will be 1 when run with mpirun
