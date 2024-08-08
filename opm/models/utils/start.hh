@@ -80,9 +80,6 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
 
     Parameters::registerParam<TypeTag, Parameters::ParameterFile>
         ("An .ini file which contains a set of run-time parameters");
-    Parameters::registerParam<TypeTag, Parameters::PrintProperties>
-        ("Print the values of the compile time properties at "
-         "the start of the simulation");
     Parameters::registerParam<TypeTag, Parameters::PrintParameters>
         ("Print the values of the run-time parameters at the "
          "start of the simulation");
@@ -375,13 +372,6 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
                 // always print the list of specified but unused parameters
                 if (Parameters::printUnused<TypeTag>())
                     std::cout << endParametersSeparator;
-        }
-
-        // print the properties if requested
-        int printProps = Parameters::get<TypeTag, Parameters::PrintProperties>();
-        if (printProps && myRank == 0) {
-            if (printProps == 1 || !isatty(fileno(stdout)))
-                Properties::printValues<TypeTag>(std::cout);
         }
 
         // instantiate and run the concrete problem. make sure to
