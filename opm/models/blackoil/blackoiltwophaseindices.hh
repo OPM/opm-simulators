@@ -37,55 +37,64 @@ namespace Opm {
  *
  * \brief The primary variable and equation indices for the black-oil model.
  */
-template <unsigned numSolventsV, unsigned numExtbosV, unsigned numPolymersV, unsigned numEnergyV, bool enableFoam, bool enableBrine, unsigned PVOffset, unsigned disabledCanonicalCompIdx, unsigned numMICPsV>
+template<unsigned numSolventsV,
+         unsigned numExtbosV,
+         unsigned numPolymersV,
+         unsigned numEnergyV,
+         bool enableFoam,
+         bool enableBrine,
+         unsigned PVOffset,
+         unsigned disabledCanonicalCompIdx,
+         unsigned numMICPsV>
 struct BlackOilTwoPhaseIndices
 {
     //! Is phase enabled or not
-    static const bool oilEnabled = (disabledCanonicalCompIdx != 0);
-    static const bool waterEnabled = (disabledCanonicalCompIdx != 1);
-    static const bool gasEnabled = (disabledCanonicalCompIdx != 2);
+    static constexpr bool oilEnabled = disabledCanonicalCompIdx != 0;
+    static constexpr bool waterEnabled = disabledCanonicalCompIdx != 1;
+    static constexpr bool gasEnabled = disabledCanonicalCompIdx != 2;
 
     //! Are solvents involved?
-    static const bool enableSolvent = numSolventsV > 0;
+    static constexpr bool enableSolvent = numSolventsV > 0;
 
     //! Is extbo invoked?
-    static const bool enableExtbo = numExtbosV > 0;
+    static constexpr bool enableExtbo = numExtbosV > 0;
 
     //! Are polymers involved?
-    static const bool enablePolymer = numPolymersV > 0;
+    static constexpr bool enablePolymer = numPolymersV > 0;
 
     //! Shall energy be conserved?
-    static const bool enableEnergy = numEnergyV > 0;
+    static constexpr bool enableEnergy = numEnergyV > 0;
 
     //! Is MICP involved?
-    static const bool enableMICP = numMICPsV > 0;
+    static constexpr bool enableMICP = numMICPsV > 0;
 
     //! Number of solvent components to be considered
-    static const int numSolvents = enableSolvent ? numSolventsV : 0;
+    static constexpr int numSolvents = enableSolvent ? numSolventsV : 0;
 
     //! Number of components to be considered for extbo
-    static const int numExtbos = enableExtbo ? numExtbosV : 0;
+    static constexpr int numExtbos = enableExtbo ? numExtbosV : 0;
 
     //! Number of polymer components to be considered
-    static const int numPolymers = enablePolymer ? numPolymersV : 0;
+    static constexpr int numPolymers = enablePolymer ? numPolymersV : 0;
 
     //! Number of energy equations to be considered
-    static const int numEnergy = enableEnergy ? numEnergyV : 0;
+    static constexpr int numEnergy = enableEnergy ? numEnergyV : 0;
 
     //! Number of foam equations to be considered
-    static const int numFoam = enableFoam? 1 : 0;
+    static constexpr int numFoam = enableFoam? 1 : 0;
 
     //! Number of salt equations to be considered
-    static const int numBrine = enableBrine? 1 : 0;
+    static constexpr int numBrine = enableBrine? 1 : 0;
 
     //! The number of fluid phases
-    static const int numPhases = 2;
+    static constexpr int numPhases = 2;
 
     //! Number of MICP components to be considered
-    static const int numMICPs = enableMICP ? numMICPsV : 0;
+    static constexpr int numMICPs = enableMICP ? numMICPsV : 0;
 
     //! The number of equations
-    static const int numEq = numPhases + numSolvents + numExtbos + numPolymers + numEnergy + numFoam + numBrine + numMICPs;
+    static constexpr int numEq = numPhases + numSolvents + numExtbos + numPolymers +
+                                 numEnergy + numFoam + numBrine + numMICPs;
 
     //////////////////////////////
     // Primary variable indices
@@ -99,7 +108,7 @@ struct BlackOilTwoPhaseIndices
      *
      * \note For two-phase gas-oil models this is disabled.
      */
-    static const int waterSwitchIdx  = waterEnabled ? PVOffset + 0 : -10000;
+    static constexpr int waterSwitchIdx  = waterEnabled ? PVOffset + 0 : -10000;
 
     /*!
      * \brief Index of the switching variable which determines the pressure
@@ -107,7 +116,7 @@ struct BlackOilTwoPhaseIndices
      * Depending on the phases present, this variable is either interpreted as the
      * pressure of the oil phase, gas phase (if no oil) or water phase (if only water)
      */
-    static const int pressureSwitchIdx  = waterEnabled ? PVOffset + 1 : PVOffset + 0;
+    static constexpr int pressureSwitchIdx  = waterEnabled ? PVOffset + 1 : PVOffset + 0;
 
     /*!
      * \brief Index of the switching variable which determines the composition of the
@@ -115,54 +124,54 @@ struct BlackOilTwoPhaseIndices
      *
      * \note For two-phase water oil and water gas models this is disabled.
      */
-    static const int compositionSwitchIdx = (gasEnabled && oilEnabled) ? PVOffset + 1 : -10000;
+    static constexpr int compositionSwitchIdx = (gasEnabled && oilEnabled) ? PVOffset + 1 : -10000;
 
     //! Index of the primary variable for the first solvent
-    static const int solventSaturationIdx =
+    static constexpr int solventSaturationIdx =
         enableSolvent ? PVOffset + numPhases : -1000;
 
     //! Index of the primary variable for the first extbo component
-    static const int zFractionIdx =
+    static constexpr int zFractionIdx =
         enableExtbo ? PVOffset + numPhases + numSolvents : -1000;
 
     //! Index of the primary variable for the first polymer
-    static const int polymerConcentrationIdx =
+    static constexpr int polymerConcentrationIdx =
         enablePolymer ? PVOffset + numPhases + numSolvents : -1000;
 
     //! Index of the primary variable for the second polymer primary variable (molecular weight)
-    static const int polymerMoleWeightIdx =
+    static constexpr int polymerMoleWeightIdx =
         numPolymers > 1 ? polymerConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the first MICP component
-    static const int microbialConcentrationIdx =
+    static constexpr int microbialConcentrationIdx =
         enableMICP ? PVOffset + numPhases + numSolvents : -1000;
 
     //! Index of the primary variable for the second MICP component
-    static const int oxygenConcentrationIdx =
+    static constexpr int oxygenConcentrationIdx =
         numMICPs > 1 ? microbialConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the third MICP component
-    static const int ureaConcentrationIdx =
+    static constexpr int ureaConcentrationIdx =
         numMICPs > 2 ? oxygenConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the fourth MICP component
-    static const int biofilmConcentrationIdx =
+    static constexpr int biofilmConcentrationIdx =
         numMICPs > 3 ? ureaConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the fifth MICP component
-    static const int calciteConcentrationIdx =
+    static constexpr int calciteConcentrationIdx =
         numMICPs > 4 ? biofilmConcentrationIdx + 1 : -1000;
 
     //! Index of the primary variable for the foam
-    static const int foamConcentrationIdx =
+    static constexpr int foamConcentrationIdx =
         enableFoam ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs : -1000;
 
     //! Index of the primary variable for the salt
-    static const int saltConcentrationIdx =
+    static constexpr int saltConcentrationIdx =
         enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs + numFoam : -1000;
 
     //! Index of the primary variable for temperature
-    static const int temperatureIdx  =
+    static constexpr int temperatureIdx  =
         enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numMICPs + numFoam + numBrine : - 1000;
 
     //////////////////////
@@ -173,7 +182,7 @@ struct BlackOilTwoPhaseIndices
     static unsigned canonicalToActiveComponentIndex(unsigned compIdx)
     {
         // assumes canonical oil = 0, water = 1, gas = 2;
-        if(!gasEnabled) {
+        if (!gasEnabled) {
             assert(compIdx != 2);
             // oil = 0, water = 1
             return compIdx;
@@ -185,15 +194,16 @@ struct BlackOilTwoPhaseIndices
             assert(!oilEnabled);
             assert(compIdx != 0);
         }
+
         // water = 0, gas = 1;
-        return compIdx-1;
+        return compIdx - 1;
     }
 
     static unsigned activeToCanonicalComponentIndex(unsigned compIdx)
     {
         // assumes canonical oil = 0, water = 1, gas = 2;
         assert(compIdx < 2);
-        if(!gasEnabled) {
+        if (!gasEnabled) {
             // oil = 0, water = 1
             return compIdx;
         } else if (!waterEnabled) {
@@ -202,60 +212,61 @@ struct BlackOilTwoPhaseIndices
         } else {
             assert(!oilEnabled);
         }
+
         // water = 0, gas = 1;
-        return compIdx+1;
+        return compIdx + 1;
     }
 
     //! Index of the continuity equation of the first phase
-    static const int conti0EqIdx = PVOffset + 0;
+    static constexpr int conti0EqIdx = PVOffset + 0;
     // one continuity equation follows
 
     //! Index of the continuity equation for the first solvent component
-    static const int contiSolventEqIdx =
+    static constexpr int contiSolventEqIdx =
         enableSolvent ? PVOffset + numPhases : -1000;
 
     //! Index of the continuity equation for the first extbo component
-    static const int contiZfracEqIdx =
+    static constexpr int contiZfracEqIdx =
         enableExtbo ? PVOffset + numPhases + numSolvents : -1000;
 
     //! Index of the continuity equation for the first polymer component
-    static const int contiPolymerEqIdx =
+    static constexpr int contiPolymerEqIdx =
         enablePolymer ? PVOffset + numPhases + numSolvents : -1000;
 
     //! Index of the continuity equation for the second polymer component (molecular weight)
-    static const int contiPolymerMWEqIdx =
+    static constexpr int contiPolymerMWEqIdx =
         numPolymers > 1 ? contiPolymerEqIdx + 1 : -1000;
 
     //! Index of the continuity equation for the first MICP component
-    static const int contiMicrobialEqIdx =
+    static constexpr int contiMicrobialEqIdx =
         enableMICP ? PVOffset + numPhases + numSolvents : -1000;
 
     //! Index of the continuity equation for the second MICP component
-    static const int contiOxygenEqIdx =
+    static constexpr int contiOxygenEqIdx =
         numMICPs > 1 ? contiMicrobialEqIdx + 1 : -1000;
 
     //! Index of the continuity equation for the third MICP component
-    static const int contiUreaEqIdx =
+    static constexpr int contiUreaEqIdx =
         numMICPs > 2 ? contiOxygenEqIdx + 1 : -1000;
 
     //! Index of the continuity equation for the fourth MICP component
-    static const int contiBiofilmEqIdx =
+    static constexpr int contiBiofilmEqIdx =
         numMICPs > 3 ? contiUreaEqIdx + 1 : -1000;
 
     //! Index of the continuity equation for the fifth MICP component
-    static const int contiCalciteEqIdx =
+    static constexpr int contiCalciteEqIdx =
         numMICPs > 4 ? contiBiofilmEqIdx + 1 : -1000;
 
     //! Index of the continuity equation for the foam component
-    static const int contiFoamEqIdx =
+    static constexpr int contiFoamEqIdx =
         enableFoam ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs : -1000;
 
     //! Index of the continuity equation for the salt component
-    static const int contiBrineEqIdx =
+    static constexpr int contiBrineEqIdx =
         enableBrine ? PVOffset + numPhases + numSolvents + numPolymers + numMICPs + numFoam : -1000;
 
     //! Index of the continuity equation for energy
-    static const int contiEnergyEqIdx =
+    static constexpr int contiEnergyEqIdx =
         enableEnergy ? PVOffset + numPhases + numSolvents + numExtbos + numPolymers + numMICPs + numFoam + numBrine: -1000;
 };
 
