@@ -60,7 +60,7 @@ struct BdaSolverInfo
     void prepare(const Grid& grid,
                  const Dune::CartesianIndexMapper<Grid>& cartMapper,
                  const std::vector<Well>& wellsForConn,
-                 const std::unordered_map<std::string, std::set<std::array<int,3>>>& possibleFutureConnections,
+                 const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
                  const std::vector<int>& cellPartition,
                  const std::size_t nonzeroes,
                  const bool useWellConn);

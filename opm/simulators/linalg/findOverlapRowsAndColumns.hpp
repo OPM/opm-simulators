@@ -46,7 +46,7 @@ namespace detail
     /// \param useWellConn Boolean that is true when UseWellContribusion is true
     /// \param wellGraph Cell IDs of well cells stored in a graph.
     template<class Grid, class CartMapper, class W>
-    void setWellConnections(const Grid& grid, const CartMapper& cartMapper, const W& wells, const std::unordered_map<std::string, std::set<std::array<int,3>>>& possibleFutureConnections, bool useWellConn, std::vector<std::set<int>>& wellGraph, int numJacobiBlocks)
+    void setWellConnections(const Grid& grid, const CartMapper& cartMapper, const W& wells, const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections, bool useWellConn, std::vector<std::set<int>>& wellGraph, int numJacobiBlocks)
     {
         if ( grid.comm().size() > 1 || numJacobiBlocks > 1)
         {
@@ -62,7 +62,7 @@ namespace detail
                     cart[ cartMapper.cartesianIndex( i ) ] = i;
 
                 Dune::cpgrid::WellConnections well_indices;
-                well_indices.init(wells, &possibleFutureConnections, cpgdim, cart);
+                well_indices.init(wells, possibleFutureConnections, cpgdim, cart);
 
                 for (auto& well : well_indices)
                 {

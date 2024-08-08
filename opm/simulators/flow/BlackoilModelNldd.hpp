@@ -953,9 +953,10 @@ private:
             ? param.num_local_domains_
             : num_cells / default_cells_per_domain;
 
+        const auto& possibleFutureConnectionSet = this->model_.simulator().vanguard().schedule().getPossibleFutureConnections();
         return ::Opm::partitionCells(param.local_domain_partition_method_,
                                      num_domains,
-                                     grid.leafGridView(), wells, zoltan_ctrl);
+                                     grid.leafGridView(), wells, possibleFutureConnectionSet, zoltan_ctrl);
     }
 
     std::vector<int> reconstitutePartitionVector() const
