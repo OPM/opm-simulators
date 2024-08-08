@@ -21,6 +21,7 @@
 #define OPM_ASPINPARTITION_HEADER_INCLUDED
 
 #include <functional>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -88,11 +89,12 @@ struct ZoltanPartitioningControl
 ///    on current rank.
 template <class GridView, class Element>
 std::pair<std::vector<int>, int>
-partitionCells(const std::string&                        method,
-               const int                                 num_local_domains,
-               const GridView&                           grid_view,
-               const std::vector<Well>&                  wells,
-               const ZoltanPartitioningControl<Element>& zoltan_ctrl);
+partitionCells(const std::string&                                    method,
+               const int                                             num_local_domains,
+               const GridView&                                       grid_view,
+               const std::vector<Well>&                              wells,
+               const std::unordered_map<std::string, std::set<int>>* possibleFutureConnections,
+               const ZoltanPartitioningControl<Element>&             zoltan_ctrl);
 
 /// Read a partitioning from file, assumed to contain one number per cell, its partition number.
 /// \return pair containing a partition vector (partition number for each cell), and the number of partitions.
