@@ -216,7 +216,7 @@ doLoadBalance_(const Dune::EdgeWeightMethod             edgeWeightsMethod,
 #if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
         if (partitionJacobiBlocks) {
             this->cell_part_ = this->grid_->
-                zoltanPartitionWithoutScatter(&wells, &possibleFutureConnections, faceTrans.data(),
+                zoltanPartitionWithoutScatter(&wells, possibleFutureConnections, faceTrans.data(),
                                               numJacobiBlocks,
                                               imbalanceTol);
         }
@@ -350,13 +350,13 @@ distributeGrid(const Dune::EdgeWeightMethod                          edgeWeights
             : std::vector<int>{};
         //For this case, simple partitioning is selected automatically
         parallelWells =
-            std::get<1>(this->grid_->loadBalance(handle, parts, &wells, &possibleFutureConnections, ownersFirst,
+            std::get<1>(this->grid_->loadBalance(handle, parts, &wells, possibleFutureConnections, ownersFirst,
                                                  addCornerCells, overlapLayers));
     }
     else {
         parallelWells =
             std::get<1>(this->grid_->loadBalance(handle, edgeWeightsMethod,
-                                                 &wells, &possibleFutureConnections,
+                                                 &wells, possibleFutureConnections,
                                                  serialPartitioning,
                                                  faceTrans.data(), ownersFirst,
                                                  addCornerCells, overlapLayers,

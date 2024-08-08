@@ -62,7 +62,7 @@ namespace detail
                     cart[ cartMapper.cartesianIndex( i ) ] = i;
 
                 Dune::cpgrid::WellConnections well_indices;
-                well_indices.init(wells, &possibleFutureConnections, cpgdim, cart);
+                well_indices.init(wells, possibleFutureConnections, cpgdim, cart);
 
                 for (auto& well : well_indices)
                 {

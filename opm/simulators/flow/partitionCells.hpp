@@ -93,7 +93,7 @@ partitionCells(const std::string&                                    method,
                const int                                             num_local_domains,
                const GridView&                                       grid_view,
                const std::vector<Well>&                              wells,
-               const std::unordered_map<std::string, std::set<int>>* possibleFutureConnections,
+               const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
                const ZoltanPartitioningControl<Element>&             zoltan_ctrl);
 
 /// Read a partitioning from file, assumed to contain one number per cell, its partition number.
