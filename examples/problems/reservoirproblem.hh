@@ -45,7 +45,12 @@
 #include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
 
 #include <opm/models/blackoil/blackoilproperties.hh>
+
+#include <opm/models/discretization/common/fvbaseproperties.hh>
+
 #include <opm/models/nonlinear/newtonmethodparameters.hh>
+
+#include <opm/models/utils/basicproperties.hh>
 
 #include <string>
 #include <vector>
@@ -64,16 +69,6 @@ namespace TTag {
 struct ReservoirBaseProblem {};
 
 } // namespace TTag
-
-// Maximum depth of the reservoir
-template<class TypeTag, class MyTypeTag>
-struct MaxDepth { using type = UndefinedProperty; };
-// The temperature inside the reservoir
-template<class TypeTag, class MyTypeTag>
-struct Temperature { using type = UndefinedProperty; };
-// The width of producer/injector wells as a fraction of the width of the spatial domain
-template<class TypeTag, class MyTypeTag>
-struct WellWidth { using type = UndefinedProperty; };
 
 // Set the grid type
 template<class TypeTag>
@@ -105,28 +100,6 @@ public:
 template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::ReservoirBaseProblem> { static constexpr bool value = true; };
 
-// set the defaults for some problem specific properties
-template<class TypeTag>
-struct MaxDepth<TypeTag, TTag::ReservoirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 2500;
-};
-template<class TypeTag>
-struct Temperature<TypeTag, TTag::ReservoirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 293.15;
-};
-
-// The width of producer/injector wells as a fraction of the width of the spatial domain
-template<class TypeTag>
-struct WellWidth<TypeTag, TTag::ReservoirBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.01;
-};
-
 /*!
  * \brief Explicitly set the fluid system to the black-oil fluid system
  *
@@ -148,6 +121,18 @@ public:
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// Maximum depth of the reservoir
+template<class TypeTag, class MyTypeTag>
+struct MaxDepth { using type = Properties::UndefinedProperty; };
+
+// The temperature inside the reservoir
+template<class TypeTag, class MyTypeTag>
+struct Temperature { using type = Properties::UndefinedProperty; };
+
+// The width of producer/injector wells as a fraction of the width of the spatial domain
+template<class TypeTag, class MyTypeTag>
+struct WellWidth { using type = Properties::UndefinedProperty; };
 
 // Enable gravity
 template<class TypeTag>
@@ -178,6 +163,14 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::ReservoirBaseProblem>
     static constexpr type value = 100e3;
 };
 
+// set the defaults for some problem specific properties
+template<class TypeTag>
+struct MaxDepth<TypeTag, Properties::TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 2500;
+};
+
 // Write the Newton convergence behavior to disk?
 template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::ReservoirBaseProblem>
@@ -189,6 +182,21 @@ struct NewtonTolerance<TypeTag, Properties::TTag::ReservoirBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e-6;
+};
+
+template<class TypeTag>
+struct Temperature<TypeTag, Properties::TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 293.15;
+};
+
+// The width of producer/injector wells as a fraction of the width of the spatial domain
+template<class TypeTag>
+struct WellWidth<TypeTag, Properties::TTag::ReservoirBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.01;
 };
 
 } // namespace Opm::Parameters
@@ -270,9 +278,9 @@ public:
     {
         ParentType::finishInit();
 
-        temperature_ = Parameters::get<TypeTag, Properties::Temperature>();
-        maxDepth_ = Parameters::get<TypeTag, Properties::MaxDepth>();
-        wellWidth_ = Parameters::get<TypeTag, Properties::WellWidth>();
+        temperature_ = Parameters::get<TypeTag, Parameters::Temperature>();
+        maxDepth_ = Parameters::get<TypeTag, Parameters::MaxDepth>();
+        wellWidth_ = Parameters::get<TypeTag, Parameters::WellWidth>();
 
         std::vector<std::pair<Scalar, Scalar> > Bo = {
             { 101353, 1.062 },
@@ -434,11 +442,11 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::Temperature>
+        Parameters::registerParam<TypeTag, Parameters::Temperature>
             ("The temperature [K] in the reservoir");
-        Parameters::registerParam<TypeTag, Properties::MaxDepth>
+        Parameters::registerParam<TypeTag, Parameters::MaxDepth>
             ("The maximum depth [m] of the reservoir");
-        Parameters::registerParam<TypeTag, Properties::WellWidth>
+        Parameters::registerParam<TypeTag, Parameters::WellWidth>
             ("The width of producer/injector wells as a fraction of the width"
              " of the spatial domain");
     }

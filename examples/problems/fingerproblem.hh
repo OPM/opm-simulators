@@ -79,10 +79,6 @@ struct Grid<TypeTag, TTag::FingerBaseProblem>
                              Dune::nonconforming>; };
 #endif
 
-// declare the properties used by the finger problem
-template<class TypeTag, class MyTypeTag>
-struct InitialWaterSaturation { using type = UndefinedProperty; };
-
 // Set the problem property
 template<class TypeTag>
 struct Problem<TypeTag, TTag::FingerBaseProblem> { using type = Opm::FingerProblem<TypeTag>; };
@@ -128,16 +124,12 @@ struct MaterialLaw<TypeTag, TTag::FingerBaseProblem>
 template<class TypeTag>
 struct EnableConstraints<TypeTag, TTag::FingerBaseProblem> { static constexpr int value = true; };
 
-template<class TypeTag>
-struct InitialWaterSaturation<TypeTag, TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.01;
-};
-
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template<class TypeTag, class MyTypeTag>
+struct InitialWaterSaturation { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag>
 struct CellsX<TypeTag, Properties::TTag::FingerBaseProblem>
@@ -192,6 +184,13 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::FingerBaseProblem>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 10;
+};
+
+template<class TypeTag>
+struct InitialWaterSaturation<TypeTag, Properties::TTag::FingerBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.01;
 };
 
 // Write the solutions of individual newton iterations?
@@ -319,7 +318,7 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::InitialWaterSaturation>
+        Parameters::registerParam<TypeTag, Parameters::InitialWaterSaturation>
             ("The initial saturation in the domain [] of the wetting phase");
     }
 
@@ -572,7 +571,7 @@ private:
         auto& fs = initialFluidState_;
         fs.setPressure(wettingPhaseIdx, /*pressure=*/1e5);
 
-        Scalar Sw = Parameters::get<TypeTag, Properties::InitialWaterSaturation>();
+        Scalar Sw = Parameters::get<TypeTag, Parameters::InitialWaterSaturation>();
         fs.setSaturation(wettingPhaseIdx, Sw);
         fs.setSaturation(nonWettingPhaseIdx, 1 - Sw);
 

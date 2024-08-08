@@ -67,16 +67,6 @@ struct CO2PTBaseProblem {};
 } // end namespace TTag
 
 template <class TypeTag, class MyTypeTag>
-struct Temperature { using type = UndefinedProperty; };
-template <class TypeTag, class MyTypeTag>
-struct SimulationName { using type = UndefinedProperty; };
-template <class TypeTag, class MyTypeTag>
-struct EpisodeLength { using type = UndefinedProperty;};
-
-template <class TypeTag, class MyTypeTag>
-struct Initialpressure { using type = UndefinedProperty;};
-
-template <class TypeTag, class MyTypeTag>
 struct NumComp { using type = UndefinedProperty; };
 
 template <class TypeTag>
@@ -139,31 +129,6 @@ public:
      using type = EffMaterialLaw;
 };
 
-// set the defaults for the problem specific properties
- template <class TypeTag>
- struct Temperature<TypeTag, TTag::CO2PTBaseProblem> {
-     using type = GetPropType<TypeTag, Scalar>;
-     static constexpr type value = 423.25;//TODO
- };
-
-template <class TypeTag>
-struct Initialpressure<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 75.e5;
-};
-
-template <class TypeTag>
-struct SimulationName<TypeTag, TTag::CO2PTBaseProblem> {
-    static constexpr auto value = "co2_ptflash";
-};
-
-// this is kinds of telling the report step length
-template <class TypeTag>
-struct EpisodeLength<TypeTag, TTag::CO2PTBaseProblem> {
-    using type = GetPropType<TypeTag, Scalar>;
-    static constexpr type value = 0.1 * 60. * 60.;
-};
-
 // mesh grid
 template <class TypeTag>
 struct Vanguard<TypeTag, TTag::CO2PTBaseProblem> {
@@ -178,6 +143,18 @@ struct EnableEnergy<TypeTag, TTag::CO2PTBaseProblem> {
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+template <class TypeTag, class MyTypeTag>
+struct Temperature { using type = Properties::UndefinedProperty; };
+
+template <class TypeTag, class MyTypeTag>
+struct SimulationName { using type = Properties::UndefinedProperty; };
+
+template <class TypeTag, class MyTypeTag>
+struct EpisodeLength { using type = Properties::UndefinedProperty;};
+
+template <class TypeTag, class MyTypeTag>
+struct Initialpressure { using type = Properties::UndefinedProperty;};
 
 template<class TypeTag>
 struct CellsX<TypeTag, Properties::TTag::CO2PTBaseProblem>
@@ -230,6 +207,21 @@ struct EndTime<TypeTag, Properties::TTag::CO2PTBaseProblem>
     static constexpr type value = 60. * 60.;
 };
 
+// this is kinds of telling the report step length
+template <class TypeTag>
+struct EpisodeLength<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 0.1 * 60. * 60.;
+};
+
+template <class TypeTag>
+struct Initialpressure<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+    using type = GetPropType<TypeTag, Properties::Scalar>;
+    static constexpr type value = 75.e5;
+};
+
 // convergence control
 template <class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::CO2PTBaseProblem>
@@ -274,6 +266,18 @@ struct NewtonTargetIterations<TypeTag, Properties::TTag::CO2PTBaseProblem>
 template <class TypeTag>
 struct NewtonMaxIterations<TypeTag, Properties::TTag::CO2PTBaseProblem>
 { static constexpr int value = 30; };
+
+template <class TypeTag>
+struct SimulationName<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{ static constexpr auto value = "co2_ptflash"; };
+
+// set the defaults for the problem specific properties
+ template <class TypeTag>
+ struct Temperature<TypeTag, Properties::TTag::CO2PTBaseProblem>
+{
+     using type = GetPropType<TypeTag, Properties::Scalar>;
+     static constexpr type value = 423.25; // TODO
+ };
 
 template <class TypeTag>
 struct VtkWriteEquilibriumConstants<TypeTag, Properties::TTag::CO2PTBaseProblem>
@@ -357,7 +361,7 @@ public:
     explicit CO2PTProblem(Simulator& simulator)
         : ParentType(simulator)
     {
-        const Scalar epi_len = Parameters::get<TypeTag, Properties::EpisodeLength>();
+        const Scalar epi_len = Parameters::get<TypeTag, Parameters::EpisodeLength>();
         simulator.setEpisodeLength(epi_len);
         FluidSystem::init();
         using CompParm = typename FluidSystem::ComponentParam;
@@ -375,7 +379,7 @@ public:
 
     void initPetrophysics()
     {
-        temperature_ = Parameters::get<TypeTag, Properties::Temperature>();
+        temperature_ = Parameters::get<TypeTag, Parameters::Temperature>();
         K_ = this->toDimMatrix_(9.869232667160131e-14);
 
         porosity_ = 0.1;
@@ -383,7 +387,9 @@ public:
 
     template <class Context>
     const DimVector&
-    gravity([[maybe_unused]]const Context& context, [[maybe_unused]] unsigned spaceIdx, [[maybe_unused]] unsigned timeIdx) const
+    gravity([[maybe_unused]]const Context& context,
+            [[maybe_unused]] unsigned spaceIdx,
+            [[maybe_unused]] unsigned timeIdx) const
     {
         return gravity();
     }
@@ -410,13 +416,13 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::Temperature>
+        Parameters::registerParam<TypeTag, Parameters::Temperature>
             ("The temperature [K] in the reservoir");
-        Parameters::registerParam<TypeTag, Properties::Initialpressure>
+        Parameters::registerParam<TypeTag, Parameters::Initialpressure>
             ("The initial pressure [Pa s] in the reservoir");
-        Parameters::registerParam<TypeTag, Properties::SimulationName>
+        Parameters::registerParam<TypeTag, Parameters::SimulationName>
             ("The name of the simulation used for the output files");
-        Parameters::registerParam<TypeTag, Properties::EpisodeLength>
+        Parameters::registerParam<TypeTag, Parameters::EpisodeLength>
             ("Time interval [s] for episode length");
     }
 
@@ -426,7 +432,7 @@ public:
     std::string name() const
     {
         std::ostringstream oss;
-        oss << Parameters::get<TypeTag, Properties::SimulationName>();
+        oss << Parameters::get<TypeTag, Parameters::SimulationName>();
         return oss.str();
     }
 
@@ -435,7 +441,7 @@ public:
     // the old one.
     void endEpisode()
     {
-        Scalar epi_len = Parameters::get<TypeTag, Properties::EpisodeLength>();
+        Scalar epi_len = Parameters::get<TypeTag, Parameters::EpisodeLength>();
         this->simulator().startNextEpisode(epi_len);
     }
 
@@ -577,7 +583,7 @@ private:
         sat[0] = 1.0;
         sat[1] = 1.0 - sat[0];
 
-        Scalar p0 = Parameters::get<TypeTag, Properties::Initialpressure>();
+        Scalar p0 = Parameters::get<TypeTag, Parameters::Initialpressure>();
 
         //\Note, for an AD variable, if we multiply it with 2, the derivative will also be scalced with 2,
         //\Note, so we should not do it.
@@ -630,6 +636,7 @@ private:
     MaterialLawParams mat_;
     DimVector gravity_;
 };
+
 } // namespace Opm
 
 #endif
