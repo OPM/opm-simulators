@@ -40,7 +40,7 @@ TEST_TYPE="$1"
 if test "$2" != "-e"; then
   echo "Expects second option to be -e"
 fi
-TEST_NAME="$3"
+TEST_BINARY="$3"
 TEST_ARGS="${@:5:100}"
 
 # make sure we have at least 2 parameters
@@ -49,27 +49,6 @@ if test "$#" -lt 2; then
     echo
     usage
     exit 1
-fi
-
-if test "$TEST_TYPE" != "--spe1"; then
-    # find the binary in the its folder
-    TEST_BINARY=$(find . -type f -perm -0111 -name "$TEST_NAME")
-    NUM_BINARIES=$(echo "$TEST_BINARY" | wc -w | tr -d '[:space:]')
-
-    if test "$NUM_BINARIES" != "1"; then
-        echo "No binary file found or binary file is non-unique (is: $TEST_BINARY)"
-        echo
-        usage
-        exit 1
-    fi
-
-    # make sure the binary is of the test is present
-    if ! test -x "$TEST_BINARY"; then
-        echo "$TEST_NAME does not exist or is not executable"
-        echo
-        usage
-    exit 1
-    fi
 fi
 
 #run the test
