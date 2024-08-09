@@ -122,7 +122,6 @@ namespace Opm {
             Parameters::registerParam<TypeTag, Properties::EnableLoggingFalloutWarning>
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
-
             Simulator::registerParameters();
 
             // register the base parameters
@@ -478,7 +477,7 @@ namespace Opm {
         // Callback that will be called from runSimulatorInitOrRun_().
         int runSimulatorRunCallback_()
         {
-            SimulatorReport report = simulator_->run(*simtimer_);
+            SimulatorReport report = simulator_->run(*simtimer_, this->argc_, this->argv_);
             runSimulatorAfterSim_(report);
             return report.success.exit_status;
         }
@@ -486,7 +485,7 @@ namespace Opm {
         // Callback that will be called from runSimulatorInitOrRun_().
         int runSimulatorInitCallback_()
         {
-            simulator_->init(*simtimer_);
+            simulator_->init(*simtimer_, this->argc_, this->argv_);
             return EXIT_SUCCESS;
         }
 
