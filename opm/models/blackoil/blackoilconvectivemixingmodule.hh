@@ -333,15 +333,20 @@ public:
             }
 
             const auto& up = (upIdx == interiorDofIdx) ? intQuantsIn : intQuantsEx;
+            const auto& rssat_up = (upIdx == interiorDofIdx) ? rssat_in : rssat_ex;
             unsigned globalUpIndex = (upIdx == interiorDofIdx) ? globalIndexIn : globalIndexEx;
             const auto& Rsup =  (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx)) ?
                                 up.fluidState().Rsw() :
                                 up.fluidState().Rs();
+
             const Evaluation& transMult = up.rockCompTransMultiplier();
             const auto& invB = up.fluidState().invB(liquidPhaseIdx);
             const auto& visc = up.fluidState().viscosity(liquidPhaseIdx);
-            // what will be the flux when muliplied with trans_mob
-            const auto convectiveFlux = -trans*transMult*info.Xhi_[up.pvtRegionIndex()]*invB*pressure_difference_convective_mixing*Rsup/(visc*faceArea);
+
+            // We restrict the convective mixing mass flux to rssat * Psi.
+            const Evaluation RsupRestricted = Opm::min(Rsup, rssat_up*info.Psi_[up.pvtRegionIndex()]);
+
+            const auto convectiveFlux = -trans*transMult*info.Xhi_[up.pvtRegionIndex()]*invB*pressure_difference_convective_mixing*RsupRestricted/(visc*faceArea);
             unsigned activeGasCompIdx = Indices::canonicalToActiveComponentIndex(FluidSystem::gasCompIdx);
             if (globalUpIndex == globalIndexIn)
                 flux[conti0EqIdx + activeGasCompIdx] += convectiveFlux;
