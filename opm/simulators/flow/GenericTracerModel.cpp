@@ -29,9 +29,6 @@
 #if HAVE_DUNE_FEM
 #include <dune/common/version.hh>
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
-#if !DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
-#include <dune/fem/gridpart/common/gridpart2gridview.hh>
-#endif
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #endif // HAVE_DUNE_FEM
 
@@ -45,7 +42,6 @@ template class GenericTracerModel<Dune::CpGrid,
                                   double>;
 
 #if HAVE_DUNE_FEM
-#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
 using GV = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
                                            (Dune::PartitionIteratorType)4,
                                            false>;
@@ -55,24 +51,6 @@ template class GenericTracerModel<Dune::CpGrid,
                                   EcfvStencil<double, GV, false, false>,
                                   BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
                                   double>;
-#else
-template class GenericTracerModel<Dune::CpGrid,
-                                  Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,
-                                  Dune::MultipleCodimMultipleGeomTypeMapper<Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>,
-                                  EcfvStencil<double,Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>,false,false>,
-                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
-                                  double>;
-template class GenericTracerModel<Dune::CpGrid,
-                                  Dune::Fem::GridPart2GridViewImpl<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, (Dune::PartitionIteratorType)4, false> >,
-                                  Dune::MultipleCodimMultipleGeomTypeMapper<
-                                     Dune::Fem::GridPart2GridViewImpl<
-                                         Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false> > >,
-                                  EcfvStencil<double, Dune::Fem::GridPart2GridViewImpl<
-                                                               Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false> >,
-                                                   false, false>,
-                                  BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>,
-                                  double>;
-#endif
 #endif // HAVE_DUNE_FEM
 
 } // namespace Opm

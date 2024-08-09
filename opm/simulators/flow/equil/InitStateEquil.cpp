@@ -29,9 +29,6 @@
 #if HAVE_DUNE_FEM
 #include <dune/common/version.hh>
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
-#if !DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
-#include <dune/fem/gridpart/common/gridpart2gridview.hh>
-#endif
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #endif
 
@@ -68,17 +65,9 @@ using Mapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
 INSTANTIATE_COMP(double, GridView, Mapper)
 
 #if HAVE_DUNE_FEM
-#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
 using GridViewFem = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
                                                    (Dune::PartitionIteratorType)4,
                                                     false>;
-#else
-using GridViewFem = Dune::Fem::GridPart2GridViewImpl<
-                                        Dune::Fem::AdaptiveLeafGridPart<
-                                            Dune::CpGrid,
-                                            Dune::PartitionIteratorType(4),
-                                            false>>;
-#endif
 using MapperFem = Dune::MultipleCodimMultipleGeomTypeMapper<GridViewFem>;
 
 INSTANTIATE_COMP(double, GridViewFem, MapperFem)

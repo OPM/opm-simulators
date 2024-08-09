@@ -89,11 +89,7 @@ void test_milu0(M& A)
 
     // Test that (LU)^-1Ae=e
     A.mv(e, x1);
-#if DUNE_VERSION_GTE(DUNE_ISTL, 2, 8)
     Dune::ILU::blockILUBacksolve(ILU, x2, x1);
-#else
-    bilu_backsolve(ILU, x2, x1);
-#endif
     diff = x2;
     diff -= e;
 

@@ -29,9 +29,6 @@
 #if HAVE_DUNE_FEM
 #include <dune/common/version.hh>
 #include <dune/fem/gridpart/adaptiveleafgridpart.hh>
-#if !DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
-#include <dune/fem/gridpart/common/gridpart2gridview.hh>
-#endif
 #include <opm/simulators/flow/FemCpGridCompat.hpp>
 #endif // HAVE_DUNE_FEM
 
@@ -42,25 +39,12 @@ template class CollectDataOnIORank<Dune::CpGrid,
                                    Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>>;
 
 #if HAVE_DUNE_FEM
-#if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
 using GV = Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid,
                                            (Dune::PartitionIteratorType)4,
                                            false>;
 template class CollectDataOnIORank<Dune::CpGrid,
                                    Dune::CpGrid,
                                    GV>;
-#else
-template class CollectDataOnIORank<Dune::CpGrid,
-                                   Dune::CpGrid,
-                                   Dune::GridView<Dune::Fem::GridPart2GridViewTraits<Dune::Fem::AdaptiveLeafGridPart<Dune::CpGrid, Dune::PartitionIteratorType(4), false>>>>;
-template class CollectDataOnIORank<Dune::CpGrid,
-                                   Dune::CpGrid,
-                                   Dune::Fem::GridPart2GridViewImpl<
-                                       Dune::Fem::AdaptiveLeafGridPart<
-                                           Dune::CpGrid,
-                                           Dune::PartitionIteratorType(4),
-                                           false> > >;
-#endif
 #endif // HAVE_DUNE_FEM
 
 } // end namespace Opm

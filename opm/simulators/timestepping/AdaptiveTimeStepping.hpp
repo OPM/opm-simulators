@@ -4,11 +4,7 @@
 #define OPM_ADAPTIVE_TIME_STEPPING_HPP
 
 #include <dune/common/version.hh>
-#if DUNE_VERSION_NEWER(DUNE_ISTL, 2, 8)
 #include <dune/istl/istlexception.hh>
-#else
-#include <dune/istl/ilu.hh>
-#endif
 
 #include <opm/common/Exceptions.hpp>
 #include <opm/common/ErrorMacros.hpp>
