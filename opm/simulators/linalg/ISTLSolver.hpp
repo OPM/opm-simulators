@@ -495,40 +495,45 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
             if (!flexibleSolver_[activeSolverNum_].solver_) {
                 return true;
             }
-            if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 0) {
-                // Always recreate solver.
-                return true;
-            }
-            if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 1) {
-                // Recreate solver on the first iteration of every timestep.
-                const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
-                return newton_iteration == 0;
-            }
-            if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 2) {
-                // Recreate solver if the last solve used more than 10 iterations.
-                return this->iterations() > 10;
-            }
-            if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 3) {
-                // Recreate solver if the last solve used more than 10 iterations.
-                return false;
-            }
-            if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 4) {
-                // Recreate solver every 'step' solve calls.
-                const int step = this->parameters_[activeSolverNum_].cpr_reuse_interval_;
-                const bool create = ((solveCount_ % step) == 0);
-                return create;
+            // For CPR/AMG based preconditioners we have the option to recreate the linear solver
+            auto linsolver = this->parameters_[activeSolverNum_].linsolver_;
+            if (linsolver == "cpr" || linsolver == "cprw" || linsolver == "cpr"||
+                linsolver == "cpr_quasiimpes" || linsolver == "cpr_trueimpes" ||
+                linsolver == "cpr_trueimpesanalytic" || linsolver == "amg" ||
+                linsolver == "hybrid") {
+                if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 0) {
+                    // Always recreate solver.
+                    return true;
+                }
+                if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 1) {
+                    // Recreate solver on the first iteration of every timestep.
+                    const int newton_iteration = this->simulator_.model().newtonMethod().numIterations();
+                    return newton_iteration == 0;
+                }
+                if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 2) {
+                    // Recreate solver if the last solve used more than 10 iterations.
+                    return this->iterations() > 10;
+                }
+                if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 3) {
+                    // Never recreate the solver
+                    return false;
+                }
+                if (this->parameters_[activeSolverNum_].cpr_reuse_setup_ == 4) {
+                    // Recreate solver every 'step' solve calls.
+                    const int step = this->parameters_[activeSolverNum_].cpr_reuse_interval_;
+                    const bool create = ((solveCount_ % step) == 0);
+                    return create;
+                }
+                // If here, we have an invalid parameter.
+                const bool on_io_rank = (simulator_.gridView().comm().rank() == 0);
+                std::string msg = "Invalid value: " + std::to_string(this->parameters_[activeSolverNum_].cpr_reuse_setup_)
+                    + " for --cpr-reuse-setup parameter, run with --help to see allowed values.";
+                if (on_io_rank) {
+                    OpmLog::error(msg);
+                }
+                throw std::runtime_error(msg);
             }
 
-            // If here, we have an invalid parameter.
-            const bool on_io_rank = (simulator_.gridView().comm().rank() == 0);
-            std::string msg = "Invalid value: " + std::to_string(this->parameters_[activeSolverNum_].cpr_reuse_setup_)
-                + " for --cpr-reuse-setup parameter, run with --help to see allowed values.";
-            if (on_io_rank) {
-                OpmLog::error(msg);
-            }
-            throw std::runtime_error(msg);
-
-            // Never reached.
             return false;
         }
 
