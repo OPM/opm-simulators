@@ -152,6 +152,7 @@ public:
     {
         int exitCode = EXIT_SUCCESS;
         if (initialize_<Properties::TTag::FlowEarlyBird>(exitCode)) {
+            Parameters::reset();
             if (isSimulationRank_) {
                 return this->dispatchDynamic_();
             }
@@ -408,7 +409,7 @@ private:
                             getNumThreads<PreTypeTag>(),
                             Opm::moduleVersionName());
             std::ostringstream str;
-            Parameters::printValues<PreTypeTag>(str);
+            Parameters::printValues(str);
             cmdline_params = str.str();
         }
 

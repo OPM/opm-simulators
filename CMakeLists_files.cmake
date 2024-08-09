@@ -330,6 +330,7 @@ list (APPEND TEST_SOURCE_FILES
   tests/test_multmatrixtransposed.cpp
   tests/test_norne_pvt.cpp
   tests/test_outputdir.cpp
+  tests/test_parametersystem.cpp
   tests/test_parallel_wbp_sourcevalues.cpp
   tests/test_parallelwellinfo.cpp
   tests/test_partitionCells.cpp
@@ -461,6 +462,7 @@ list (APPEND TEST_DATA_FILES
   tests/include/test1_20x30x10.grdecl
   tests/include/well_vfp.ecl
   tests/test10.partition
+  tests/parametersystem.ini
   )
 
 

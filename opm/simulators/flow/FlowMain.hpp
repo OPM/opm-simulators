@@ -90,8 +90,7 @@ namespace Opm {
         // Read the command line parameters. Throws an exception if something goes wrong.
         static int setupParameters_(int argc, char** argv, Parallel::Communication comm)
         {
-            using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-            if (!ParamsMeta::registrationOpen()) {
+            if (!Parameters::MetaData::registrationOpen()) {
                 // We have already successfully run setupParameters_().
                 // For the dynamically chosen runs (as from the main flow
                 // executable) we must run this function again with the
@@ -192,7 +191,7 @@ namespace Opm {
             // hide average density option
             Parameters::hideParam<TypeTag, Parameters::UseAverageDensityMsWells>();
 
-            Parameters::endParamRegistration<TypeTag>();
+            Parameters::endRegistration();
 
             int mpiRank = comm.rank();
 
@@ -204,7 +203,7 @@ namespace Opm {
 
                 int unknownKeyWords = 0;
                 if (mpiRank == 0) {
-                    unknownKeyWords = Parameters::printUnused<TypeTag>(std::cerr);
+                    unknownKeyWords = Parameters::printUnused(std::cerr);
                 }
                 int globalUnknownKeyWords = comm.sum(unknownKeyWords);
                 unknownKeyWords = globalUnknownKeyWords;
@@ -229,7 +228,7 @@ namespace Opm {
                 // deal with --print-parameters and unknown parameters.
                 if (Parameters::get<TypeTag, Parameters::PrintParameters>() == 1) {
                     if (mpiRank == 0) {
-                        Parameters::printValues<TypeTag>();
+                        Parameters::printValues();
                     }
                     return -1;
                 }
@@ -489,7 +488,7 @@ namespace Opm {
 
                 // This allows a user to catch typos and misunderstandings in the
                 // use of simulator parameters.
-                if (Parameters::printUnused<TypeTag>(oss)) {
+                if (Parameters::printUnused(oss)) {
                     std::cout << "-----------------   Unrecognized parameters:   -----------------\n";
                     std::cout << oss.str();
                     std::cout << "----------------------------------------------------------------" << std::endl;

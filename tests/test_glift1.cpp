@@ -85,10 +85,14 @@ initSimulator(const char *filename)
         filename_arg.c_str()
     };
 
+    Parameters::reset();
+    registerAllParameters_<TypeTag>(false);
     registerEclTimeSteppingParameters<TypeTag>();
     BlackoilModelParameters<TypeTag>::registerParameters();
     Parameters::registerParam<TypeTag, Parameters::EnableTerminalOutput>("Do *NOT* use!");
-    setupParameters_<TypeTag>(/*argc=*/sizeof(argv)/sizeof(argv[0]), argv, /*registerParams=*/true);
+    Parameters::endRegistration();
+    setupParameters_<TypeTag>(/*argc=*/sizeof(argv) / sizeof(argv[0]),
+                              argv, /*registerParams=*/false);
 
     FlowGenericVanguard::readDeck(filename);
     return std::make_unique<Simulator>();
@@ -97,18 +101,18 @@ initSimulator(const char *filename)
 
 namespace {
 
-struct GliftFixture {
-    GliftFixture() {
-    int argc = boost::unit_test::framework::master_test_suite().argc;
-    char** argv = boost::unit_test::framework::master_test_suite().argv;
-#if HAVE_DUNE_FEM
-    Dune::Fem::MPIManager::initialize(argc, argv);
-#else
-    Dune::MPIHelper::instance(argc, argv);
+struct GliftFixture
+{
+    GliftFixture()
+    {
+        int argc = boost::unit_test::framework::master_test_suite().argc;
+        char** argv = boost::unit_test::framework::master_test_suite().argv;
+    #if HAVE_DUNE_FEM
+        Dune::Fem::MPIManager::initialize(argc, argv);
+    #else
+        Dune::MPIHelper::instance(argc, argv);
 #endif
         Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
-        using TypeTag = Opm::Properties::TTag::FlowProblem;
-        Opm::registerAllParameters_<TypeTag>();
     }
 };
 

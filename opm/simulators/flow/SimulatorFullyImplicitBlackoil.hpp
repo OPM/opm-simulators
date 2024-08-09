@@ -501,7 +501,7 @@ protected:
     std::array<std::string,5> getHeader() const override
     {
         std::ostringstream str;
-        Parameters::printValues<TypeTag>(str);
+        Parameters::printValues(str);
         return {"OPM Flow",
                 moduleVersion(),
                 compileTimestamp(),
