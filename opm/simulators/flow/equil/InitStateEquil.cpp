@@ -39,16 +39,20 @@ namespace Opm {
 
 template<class Scalar>
 using MatLaw = EclMaterialLawManager<ThreePhaseMaterialTraits<Scalar,0,1,2>>;
+template<class Scalar>
+using MatLawSimple = EclMaterialLawManagerSimple<ThreePhaseMaterialTraits<Scalar,0,1,2>>;
 
 namespace EQUIL {
 namespace DeckDependent {
 
-#define INSTANTIATE_COMP(T, GridView, Mapper) \
+#define INSTANTIATE_COMP_CLASS(T, GridView, Mapper) \
     template class InitialStateComputer<BlackOilFluidSystem<T>, \
                                         Dune::CpGrid, \
                                         GridView, \
                                         Mapper, \
-                                        Dune::CartesianIndexMapper<Dune::CpGrid>>; \
+                                        Dune::CartesianIndexMapper<Dune::CpGrid>>;
+
+#define INSTANTIATE_COMP(T, GridView, Mapper, MatLaw) \
     template InitialStateComputer<BlackOilFluidSystem<T>, \
                                   Dune::CpGrid, \
                                   GridView, \
@@ -65,7 +69,9 @@ namespace DeckDependent {
 
 using GridView = Dune::GridView<Dune::DefaultLeafGridViewTraits<Dune::CpGrid>>;
 using Mapper = Dune::MultipleCodimMultipleGeomTypeMapper<GridView>;
-INSTANTIATE_COMP(double, GridView, Mapper)
+INSTANTIATE_COMP_CLASS(double, GridView, Mapper)
+INSTANTIATE_COMP(double, GridView, Mapper, MatLaw)
+INSTANTIATE_COMP(double, GridView, Mapper, MatLawSimple)
 
 #if HAVE_DUNE_FEM
 #if DUNE_VERSION_GTE(DUNE_FEM, 2, 9)
@@ -81,7 +87,9 @@ using GridViewFem = Dune::Fem::GridPart2GridViewImpl<
 #endif
 using MapperFem = Dune::MultipleCodimMultipleGeomTypeMapper<GridViewFem>;
 
-INSTANTIATE_COMP(double, GridViewFem, MapperFem)
+INSTANTIATE_COMP_CLASS(double, GridViewFem, MapperFem)
+INSTANTIATE_COMP(double, GridViewFem, MapperFem, MatLaw)
+INSTANTIATE_COMP(double, GridViewFem, MapperFem, MatLawSimple)
 
 #endif // HAVE_DUNE_FEM
 

@@ -31,6 +31,7 @@
 #include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManagerSimple.hpp>
 #include <opm/material/thermal/EclThermalLawManager.hpp>
 
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>

@@ -44,6 +44,7 @@
 #include <opm/material/common/Valgrind.hpp>
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManagerSimple.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 #include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>

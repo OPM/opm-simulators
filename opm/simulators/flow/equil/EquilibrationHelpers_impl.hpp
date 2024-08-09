@@ -26,6 +26,7 @@
 #include <opm/common/utility/numeric/RootFinders.hpp>
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
+#include <opm/material/fluidmatrixinteractions/EclMaterialLawManagerSimple.hpp>
 #include <opm/material/fluidstates/SimpleModularFluidState.hpp>
 #include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
 
