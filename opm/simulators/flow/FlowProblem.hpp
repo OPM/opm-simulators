@@ -57,7 +57,9 @@
 #include <opm/models/common/directionalmobility.hh>
 #include <opm/models/utils/pffgridvector.hh>
 #include <opm/models/blackoil/blackoilmodel.hh>
+#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
 
 #include <opm/output/eclipse/EclipseIO.hpp>
 
@@ -143,6 +145,7 @@ class FlowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
+    enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
     enum { enableThermalFluxBoundaries = getPropValue<TypeTag, Properties::EnableThermalFluxBoundaries>() };
     enum { enableApiTracking = getPropValue<TypeTag, Properties::EnableApiTracking>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
@@ -180,6 +183,8 @@ class FlowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
     using MICPModule = BlackOilMICPModule<TypeTag>;
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
+    using ModuleParams = typename BlackOilLocalResidualTPFA<TypeTag>::ModuleParams;
 
     using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
 
@@ -589,6 +594,8 @@ public:
                 FluidSystem::setVapPars(0.0, 0.0);
             }
         }
+
+        ConvectiveMixingModule::beginEpisode(simulator.vanguard().eclState(), simulator.vanguard().schedule(), episodeIdx, moduleParams_.convectiveMixingModuleParam);
     }
 
     /*!
@@ -1855,6 +1862,10 @@ public:
         eclWriter_->mutableOutputModule().setCnvData(data);
     }
 
+    const ModuleParams& moduleParams() const {
+         return moduleParams_;
+    }
+
     template<class Serializer>
     void serializeOp(Serializer& serializer)
     {
@@ -1952,6 +1963,7 @@ protected:
 
             return true;
     }
+
 
     bool updateMaxOilSaturation_()
     {
@@ -2597,7 +2609,6 @@ protected:
         return this->rockCompTransMultVal_[dofIdx];
     }
 
-
 private:
     struct PffDofData_
     {
@@ -2883,6 +2894,10 @@ private:
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
     bool explicitRockCompaction_ = false;
+
+    ModuleParams moduleParams_;
+
+
 };
 
 } // namespace Opm

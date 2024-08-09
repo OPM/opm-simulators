@@ -198,6 +198,11 @@ template<class TypeTag>
 struct EnableDispersion<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
+// Enable Convective Mixing
+template<class TypeTag>
+struct EnableConvectiveMixing<TypeTag, TTag::FlowBaseProblem>
+{ static constexpr bool value = true; };
+
 // disable API tracking
 template<class TypeTag>
 struct EnableApiTracking<TypeTag, TTag::FlowBaseProblem>
