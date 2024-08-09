@@ -267,12 +267,13 @@ namespace Opm
                              WellState<Scalar>& well_state,
                              DeferredLogger& deferred_logger);
 
-        // calculate the properties for the well connections
-        // to calulate the pressure difference between well connections.
         using WellConnectionProps = typename StdWellEval::StdWellConnections::Properties;
-        void computePropertiesForWellConnectionPressures(const Simulator& simulator,
-                                                         const WellState<Scalar>& well_state,
-                                                         WellConnectionProps& props) const;
+
+        // Compute connection level PVT properties needed to calulate the
+        // pressure difference between well connections.
+        WellConnectionProps
+        computePropertiesForWellConnectionPressures(const Simulator& simulator,
+                                                    const WellState<Scalar>& well_state) const;
 
         void computeWellConnectionDensitesPressures(const Simulator& simulator,
                                                     const WellState<Scalar>& well_state,

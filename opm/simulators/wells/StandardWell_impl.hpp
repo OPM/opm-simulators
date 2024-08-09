@@ -1133,45 +1133,50 @@ namespace Opm
 
 
     template<typename TypeTag>
-    void
+    typename StandardWell<TypeTag>::WellConnectionProps
     StandardWell<TypeTag>::
-    computePropertiesForWellConnectionPressures(const Simulator& simulator,
-                                                const WellState<Scalar>& well_state,
-                                                WellConnectionProps& props) const
+    computePropertiesForWellConnectionPressures(const Simulator&         simulator,
+                                                const WellState<Scalar>& well_state) const
     {
-        std::function<Scalar(int,int)> getTemperature =
-        [&simulator](int cell_idx, int phase_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).fluidState().temperature(phase_idx).value();
-        };
-        std::function<Scalar(int)> getSaltConcentration =
-        [&simulator](int cell_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).fluidState().saltConcentration().value();
-        };
-        std::function<int(int)> getPvtRegionIdx =
-        [&simulator](int cell_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).fluidState().pvtRegionIndex();
-        };
-        std::function<Scalar(int)> getInvFac =
-        [&simulator](int cell_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).solventInverseFormationVolumeFactor().value();
-        };
-        std::function<Scalar(int)> getSolventDensity =
-        [&simulator](int cell_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).solventRefDensity();
+        auto prop_func = typename StdWellEval::StdWellConnections::PressurePropertyFunctions {
+            // getTemperature
+            [&model = simulator.model()](int cell_idx, int phase_idx)
+            {
+                return model.intensiveQuantities(cell_idx, /* time_idx = */ 0)
+                    .fluidState().temperature(phase_idx).value();
+            },
+
+            // getSaltConcentration
+            [&model = simulator.model()](int cell_idx)
+            {
+                return model.intensiveQuantities(cell_idx, /* time_idx = */ 0)
+                    .fluidState().saltConcentration().value();
+            },
+
+            // getPvtRegionIdx
+            [&model = simulator.model()](int cell_idx)
+            {
+                return model.intensiveQuantities(cell_idx, /* time_idx = */ 0)
+                    .fluidState().pvtRegionIndex();
+            }
         };
 
-        this->connections_.computePropertiesForPressures(well_state,
-                                                         getTemperature,
-                                                         getSaltConcentration,
-                                                         getPvtRegionIdx,
-                                                         getInvFac,
-                                                         getSolventDensity,
-                                                         props);
+        if constexpr (Indices::enableSolvent) {
+            prop_func.solventInverseFormationVolumeFactor =
+                [&model = simulator.model()](int cell_idx)
+            {
+                return model.intensiveQuantities(cell_idx, /* time_idx = */ 0)
+                    .solventInverseFormationVolumeFactor().value();
+            };
+
+            prop_func.solventRefDensity = [&model = simulator.model()](int cell_idx)
+            {
+                return model.intensiveQuantities(cell_idx, /* time_idx = */ 0)
+                    .solventRefDensity();
+            };
+        }
+
+        return this->connections_.computePropertiesForPressures(well_state, prop_func);
     }
 
 
@@ -1299,41 +1304,49 @@ namespace Opm
 
 
     template<typename TypeTag>
-    void
-    StandardWell<TypeTag>::
+    void StandardWell<TypeTag>::
     computeWellConnectionDensitesPressures(const Simulator& simulator,
                                            const WellState<Scalar>& well_state,
                                            const WellConnectionProps& props,
                                            DeferredLogger& deferred_logger)
     {
-        std::function<Scalar(int,int)> invB =
-        [&simulator](int cell_idx, int phase_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).fluidState().invB(phase_idx).value();
-        };
-        std::function<Scalar(int,int)> mobility =
-        [&simulator](int cell_idx, int phase_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).mobility(phase_idx).value();
-        };
-        std::function<Scalar(int)> invFac =
-        [&simulator](int cell_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).solventInverseFormationVolumeFactor().value();
-        };
-        std::function<Scalar(int)> solventMobility =
-        [&simulator](int cell_idx)
-        {
-            return simulator.model().intensiveQuantities(cell_idx, 0).solventMobility().value();
+        // Cell level dynamic property call-back functions as fall-back
+        // option for calculating connection level mixture densities in
+        // stopped or zero-rate producer wells.
+        const auto prop_func = typename StdWellEval::StdWellConnections::DensityPropertyFunctions {
+            // This becomes slightly more palatable with C++20's designated
+            // initialisers.
+
+            // mobility: Phase mobilities in specified cell.
+            [&model = simulator.model()](const int               cell,
+                                         const std::vector<int>& phases,
+                                         std::vector<Scalar>&    mob)
+            {
+                const auto& iq = model.intensiveQuantities(cell, /* time_idx = */ 0);
+
+                std::transform(phases.begin(), phases.end(), mob.begin(),
+                               [&iq](const int phase) { return iq.mobility(phase).value(); });
+            },
+
+            // densityInCell: Reservoir condition phase densities in
+            // specified cell.
+            [&model = simulator.model()](const int               cell,
+                                         const std::vector<int>& phases,
+                                         std::vector<Scalar>&    rho)
+            {
+                const auto& fs = model.intensiveQuantities(cell, /* time_idx = */ 0).fluidState();
+
+                std::transform(phases.begin(), phases.end(), rho.begin(),
+                               [&fs](const int phase) { return fs.density(phase).value(); });
+            }
         };
 
-        this->connections_.computeProperties(well_state,
-                                             invB,
-                                             mobility,
-                                             invFac,
-                                             solventMobility,
-                                             props,
-                                             deferred_logger);
+        const auto stopped_or_zero_rate_target = this->
+            stoppedOrZeroRateTarget(simulator, well_state, deferred_logger);
+
+        this->connections_
+            .computeProperties(stopped_or_zero_rate_target, well_state,
+                               prop_func, props, deferred_logger);
     }
 
 
@@ -1347,11 +1360,9 @@ namespace Opm
                                    const WellState<Scalar>& well_state,
                                    DeferredLogger& deferred_logger)
     {
-         // 1. Compute properties required by computePressureDelta().
-         //    Note that some of the complexity of this part is due to the function
-         //    taking std::vector<Scalar> arguments, and not Eigen objects.
-         WellConnectionProps props;
-         computePropertiesForWellConnectionPressures(simulator, well_state, props);
+         const auto props = computePropertiesForWellConnectionPressures
+             (simulator, well_state);
+
          computeWellConnectionDensitesPressures(simulator, well_state,
                                                 props, deferred_logger);
     }
@@ -2026,18 +2037,25 @@ namespace Opm
     template<typename TypeTag>
     void
     StandardWell<TypeTag>::
-    updateWaterThroughput(const double dt, WellState<Scalar>& well_state) const
+    updateWaterThroughput([[maybe_unused]] const double dt,
+                          WellState<Scalar>&            well_state) const
     {
         if constexpr (Base::has_polymermw) {
-            if (this->isInjector()) {
-                auto& ws = well_state.well(this->index_of_well_);
-                auto& perf_water_throughput = ws.perf_data.water_throughput;
-                for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
-                    const Scalar perf_water_vel = this->primary_variables_.value(Bhp + 1 + perf);
-                    // we do not consider the formation damage due to water flowing from reservoir into wellbore
-                    if (perf_water_vel > 0.) {
-                        perf_water_throughput[perf] += perf_water_vel * dt;
-                    }
+            if (!this->isInjector()) {
+                return;
+            }
+
+            auto& perf_water_throughput = well_state.well(this->index_of_well_)
+                .perf_data.water_throughput;
+
+            for (int perf = 0; perf < this->number_of_perforations_; ++perf) {
+                const Scalar perf_water_vel =
+                    this->primary_variables_.value(Bhp + 1 + perf);
+
+                // we do not consider the formation damage due to water
+                // flowing from reservoir into wellbore
+                if (perf_water_vel > Scalar{0}) {
+                    perf_water_throughput[perf] += perf_water_vel * dt;
                 }
             }
         }
