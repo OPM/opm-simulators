@@ -68,11 +68,6 @@
 
 namespace Opm::Properties {
 
-template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, TTag::FlowBaseProblem> {
-    static constexpr bool value = true;
-};
-
 namespace TTag {
 
 
@@ -100,7 +95,17 @@ template<class TypeTag>
 struct EnableVapwat<TypeTag, TTag::TestEquilVapwatTypeTag> {
     static constexpr bool value = true;
 };
+
 } // namespace Opm::Properties
+
+namespace Opm::Parameters {
+
+template<class TypeTag>
+struct EnableTerminalOutput<TypeTag, Properties::TTag::FlowBaseProblem> {
+    static constexpr bool value = true;
+};
+
+} // namespace Opm::Parameters
 
 template <class TypeTag>
 std::unique_ptr<Opm::GetPropType<TypeTag, Opm::Properties::Simulator>>
@@ -237,7 +242,7 @@ struct EquilFixture {
         BlackoilModelParameters<TypeTag>::registerParameters();
         AdaptiveTimeStepping<TypeTag>::registerParameters();
         Parameters::registerParam<TypeTag,
-                                  Properties::EnableTerminalOutput>("Dummy added for the well model to compile.");
+                                  Parameters::EnableTerminalOutput>("Dummy added for the well model to compile.");
         registerAllParameters_<TypeTag>();
     }
 

@@ -77,7 +77,7 @@ namespace Opm {
         , simulator_(simulator)
     {
         this->terminal_output_ = ((simulator.gridView().comm().rank() == 0) &&
-                                   Parameters::get<TypeTag, Properties::EnableTerminalOutput>());
+                                   Parameters::get<TypeTag, Parameters::EnableTerminalOutput>());
 
         local_num_cells_ = simulator_.gridView().size(0);
 
@@ -94,7 +94,7 @@ namespace Opm {
         }
 
         this->alternative_well_rate_init_ =
-            Parameters::get<TypeTag, Properties::AlternativeWellRateInit>();
+            Parameters::get<TypeTag, Parameters::AlternativeWellRateInit>();
 
         using SourceDataSpan = 
             typename PAvgDynamicSourceData<Scalar>::template SourceDataSpan<Scalar>;

@@ -42,37 +42,32 @@
 #include <cstddef>
 #include <memory>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
 template<class TypeTag, class MyTypeTag>
-struct EnableDryRun {
-    using type = UndefinedProperty;
-};
+struct EnableDryRun { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct OutputInterval {
-    using type = UndefinedProperty;
-};
+struct OutputInterval { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
-struct EnableLoggingFalloutWarning {
-    using type = UndefinedProperty;
-};
+struct EnableLoggingFalloutWarning { using type = Properties::UndefinedProperty; };
 
 // TODO: enumeration parameters. we use strings for now.
 template<class TypeTag>
-struct EnableDryRun<TypeTag, TTag::FlowProblem> {
-    static constexpr auto value = "auto";
-};
+struct EnableDryRun<TypeTag, Properties::TTag::FlowProblem>
+{ static constexpr auto value = "auto"; };
+
 // Do not merge parallel output files or warn about them
 template<class TypeTag>
-struct EnableLoggingFalloutWarning<TypeTag, TTag::FlowProblem> {
-    static constexpr bool value = false;
-};
-template<class TypeTag>
-struct OutputInterval<TypeTag, TTag::FlowProblem> {
-    static constexpr int value = 1;
-};
+struct EnableLoggingFalloutWarning<TypeTag, Properties::TTag::FlowProblem>
+{ static constexpr bool value = false; };
 
-} // namespace Opm::Properties
+template<class TypeTag>
+struct OutputInterval<TypeTag, Properties::TTag::FlowProblem>
+{ static constexpr int value = 1; };
+
+} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -115,11 +110,11 @@ namespace Opm {
                 return EXIT_SUCCESS;
             }
             // register the flow specific parameters
-            Parameters::registerParam<TypeTag, Properties::EnableDryRun>
+            Parameters::registerParam<TypeTag, Parameters::EnableDryRun>
                 ("Specify if the simulation ought to be actually run, or just pretended to be");
-            Parameters::registerParam<TypeTag, Properties::OutputInterval>
+            Parameters::registerParam<TypeTag, Parameters::OutputInterval>
                 ("Specify the number of report steps between two consecutive writes of restart data");
-            Parameters::registerParam<TypeTag, Properties::EnableLoggingFalloutWarning>
+            Parameters::registerParam<TypeTag, Parameters::EnableLoggingFalloutWarning>
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
 
@@ -160,7 +155,7 @@ namespace Opm {
 
             // the default eWoms checkpoint/restart mechanism does not work with flow
             Parameters::hideParam<TypeTag, Parameters::RestartTime>();
-            Parameters::hideParam<TypeTag, Properties::RestartWritingInterval>();
+            Parameters::hideParam<TypeTag, Parameters::RestartWritingInterval>();
             // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
             //if(not(Parameters::get<TypeTag,Properties::EnableVtkOutput>())){
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteOilFormationVolumeFactor>();
@@ -184,7 +179,7 @@ namespace Opm {
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteGasFormationVolumeFactor>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteGasSaturationPressure>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteIntrinsicPermeabilities>();
-                Parameters::hideParam<TypeTag, Properties::VtkWriteTracerConcentration>();
+                Parameters::hideParam<TypeTag, Parameters::VtkWriteTracerConcentration>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteExtrusionFactor>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteFilterVelocities>();
                 Parameters::hideParam<TypeTag, Parameters::VtkWriteDensities>();
@@ -205,7 +200,7 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Parameters::VtkWriteEffectiveDiffusionCoefficients>();
             
             // hide average density option
-            Parameters::hideParam<TypeTag, Properties::UseAverageDensityMsWells>();
+            Parameters::hideParam<TypeTag, Parameters::UseAverageDensityMsWells>();
 
             Parameters::endParamRegistration<TypeTag>();
 
@@ -417,8 +412,8 @@ namespace Opm {
             }
 
             detail::mergeParallelLogFiles(eclState().getIOConfig().getOutputDir(),
-                                          Parameters::get<TypeTag, Properties::EclDeckFileName>(),
-                                          Parameters::get<TypeTag, Properties::EnableLoggingFalloutWarning>());
+                                          Parameters::get<TypeTag, Parameters::EclDeckFileName>(),
+                                          Parameters::get<TypeTag, Parameters::EnableLoggingFalloutWarning>());
         }
 
         void setupModelSimulator()
@@ -429,7 +424,7 @@ namespace Opm {
 
             try {
                 // Possible to force initialization only behavior (NOSIM).
-                const std::string& dryRunString = Parameters::get<TypeTag, Properties::EnableDryRun>();
+                const std::string& dryRunString = Parameters::get<TypeTag, Parameters::EnableDryRun>();
                 if (dryRunString != "" && dryRunString != "auto") {
                     bool yesno;
                     if (dryRunString == "true"
@@ -507,7 +502,7 @@ namespace Opm {
             printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report, simulator_->model().localAccumulatedReports());
 
             detail::handleExtraConvergenceOutput(report,
-                                                 Parameters::get<TypeTag, Properties::OutputExtraConvergenceInfo>(),
+                                                 Parameters::get<TypeTag, Parameters::OutputExtraConvergenceInfo>(),
                                                  R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
                                                  eclState().getIOConfig().getOutputDir(),
                                                  eclState().getIOConfig().getBaseName());

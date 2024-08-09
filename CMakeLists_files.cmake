@@ -494,6 +494,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowGenericVanguard.hpp
   opm/simulators/flow/FlowMain.hpp
   opm/simulators/flow/FlowProblem.hpp
+  opm/simulators/flow/FlowProblemParameters.hpp
   opm/simulators/flow/FlowProblemProperties.hpp
   opm/simulators/flow/FlowUtils.hpp
   opm/simulators/flow/FlowsData.hpp
@@ -715,7 +716,7 @@ if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
   list (APPEND PUBLIC_HEADER_FILES
     opm/simulators/utils/DamarisKeywords.hpp
     opm/simulators/utils/DamarisOutputModule.hpp
-    opm/simulators/flow/DamarisProperties.hpp
+    opm/simulators/flow/DamarisParameters.hpp
     opm/simulators/flow/DamarisWriter.hpp
     opm/simulators/utils/DamarisVar.hpp
     opm/simulators/utils/GridDataOutput.hpp

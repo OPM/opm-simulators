@@ -336,12 +336,12 @@ private:
             outputDir = eclipseState_->getIOConfig().getOutputDir();
         }
         else {
-            deckFilename = Parameters::get<PreTypeTag, Properties::EclDeckFileName>();
+            deckFilename = Parameters::get<PreTypeTag, Parameters::EclDeckFileName>();
             outputDir = Parameters::get<PreTypeTag, Parameters::OutputDir>();
         }
 
 #if HAVE_DAMARIS
-        enableDamarisOutput_ = Parameters::get<PreTypeTag, Properties::EnableDamarisOutput>();
+        enableDamarisOutput_ = Parameters::get<PreTypeTag, Parameters::EnableDamarisOutput>();
         
         // Reset to false as we cannot use Damaris if there is only one rank.
         if ((enableDamarisOutput_ == true) && (FlowGenericVanguard::comm().size() == 1)) {
@@ -377,7 +377,7 @@ private:
         int mpiRank = FlowGenericVanguard::comm().rank();
         outputCout_ = false;
         if (mpiRank == 0)
-            outputCout_ = Parameters::get<PreTypeTag, Properties::EnableTerminalOutput>();
+            outputCout_ = Parameters::get<PreTypeTag, Parameters::EnableTerminalOutput>();
 
         if (deckFilename.empty()) {
             if (mpiRank == 0) {
@@ -416,13 +416,13 @@ private:
         try {
             this->readDeck(deckFilename,
                            outputDir,
-                           Parameters::get<PreTypeTag, Properties::OutputMode>(),
-                           !Parameters::get<PreTypeTag, Properties::SchedRestart>(),
-                           Parameters::get<PreTypeTag, Properties::EnableLoggingFalloutWarning>(),
-                           Parameters::get<PreTypeTag, Properties::ParsingStrictness>(),
-                           Parameters::get<PreTypeTag, Properties::InputSkipMode>(),
+                           Parameters::get<PreTypeTag, Parameters::OutputMode>(),
+                           !Parameters::get<PreTypeTag, Parameters::SchedRestart>(),
+                           Parameters::get<PreTypeTag, Parameters::EnableLoggingFalloutWarning>(),
+                           Parameters::get<PreTypeTag, Parameters::ParsingStrictness>(),
+                           Parameters::get<PreTypeTag, Parameters::InputSkipMode>(),
                            getNumThreads<PreTypeTag>(),
-                           Parameters::get<PreTypeTag, Properties::EclOutputInterval>(),
+                           Parameters::get<PreTypeTag, Parameters::EclOutputInterval>(),
                            cmdline_params,
                            Opm::moduleVersion(),
                            Opm::compileTimestamp());

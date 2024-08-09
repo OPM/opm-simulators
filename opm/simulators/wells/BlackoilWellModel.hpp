@@ -78,14 +78,12 @@
 
 #include <opm/simulators/utils/DeferredLogger.hpp>
 
-namespace Opm::Properties {
+namespace Opm::Parameters {
 
 template<class TypeTag, class MyTypeTag>
-struct EnableTerminalOutput {
-    using type = UndefinedProperty;
-};
+struct EnableTerminalOutput { using type = Properties::UndefinedProperty; };
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm {
 
