@@ -73,6 +73,10 @@ template<class TypeTag>
 struct EclDeckFileName<TypeTag, Properties::TTag::FlowBaseVanguard>
 { static constexpr auto value = ""; };
 
+// TODO: enumeration parameters. we use strings for now.
+template<class TypeTag, class MyTypeTag>
+struct EnableDryRun { using type = Properties::UndefinedProperty; };
+
 template<class TypeTag, class MyTypeTag>
 struct EnableOpmRstFile { using type = Properties::UndefinedProperty; };
 
@@ -138,6 +142,11 @@ struct IgnoreKeywords<TypeTag, Properties::TTag::FlowBaseVanguard>
 template<class TypeTag>
 struct EclOutputInterval<TypeTag, Properties::TTag::FlowBaseVanguard>
 { static constexpr int value = -1; };
+
+// TODO: enumeration parameters. we use strings for now.
+template<class TypeTag>
+struct EnableDryRun<TypeTag, Properties::TTag::FlowBaseVanguard>
+{ static constexpr auto value = "auto"; };
 
 template<class TypeTag>
 struct EnableOpmRstFile<TypeTag, Properties::TTag::FlowBaseVanguard>
@@ -242,6 +251,8 @@ public:
             ("The name of the file which contains the ECL deck to be simulated");
         Parameters::registerParam<TypeTag, Parameters::EclOutputInterval>
             ("The number of report steps that ought to be skipped between two writes of ECL results");
+        Parameters::registerParam<TypeTag, Parameters::EnableDryRun>
+            ("Specify if the simulation ought to be actually run, or just pretended to be");
         Parameters::registerParam<TypeTag, Parameters::EnableOpmRstFile>
             ("Include OPM-specific keywords in the ECL restart file to "
              "enable restart of OPM simulators from these files");
@@ -543,6 +554,8 @@ protected:
         std::string outputDir = Parameters::get<TypeTag, Parameters::OutputDir>();
         bool enableEclCompatFile = !Parameters::get<TypeTag, Parameters::EnableOpmRstFile>();
         asImp_().updateOutputDir_(outputDir, enableEclCompatFile);
+        const std::string& dryRunString = Parameters::get<TypeTag, Parameters::EnableDryRun>();
+        asImp_().updateNOSIM_(dryRunString);
         asImp_().finalizeInit_();
     }
 

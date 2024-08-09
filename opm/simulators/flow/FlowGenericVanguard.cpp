@@ -175,6 +175,34 @@ std::string FlowGenericVanguard::canonicalDeckPath(const std::string& caseName)
     throw std::invalid_argument("Cannot find input case '"+caseName+"'");
 }
 
+void FlowGenericVanguard::updateNOSIM_(std::string_view dryRunString)
+{
+    try {
+        // Possible to force initialization only behavior (NOSIM).
+        if (dryRunString != "" && dryRunString != "auto") {
+            bool enableDryRun;
+            if (dryRunString == "true"
+                || dryRunString == "t"
+                || dryRunString == "1")
+                enableDryRun = true;
+            else if (dryRunString == "false"
+                        || dryRunString == "f"
+                        || dryRunString == "0")
+                enableDryRun = false;
+            else
+                throw std::invalid_argument("Invalid value for parameter EnableDryRun: '"
+                                            + std::string(dryRunString) + "'");
+            auto& ioConfig = eclState().getIOConfig();
+            ioConfig.overrideNOSIM(enableDryRun);
+        }
+    }
+    catch (const std::invalid_argument& e) {
+        std::cerr << "Failed to create valid EclipseState object" << std::endl;
+        std::cerr << "Exception caught: " << e.what() << std::endl;
+        throw;
+    }
+}
+
 void FlowGenericVanguard::updateOutputDir_(std::string outputDir,
                                            bool enableEclCompatFile)
 {

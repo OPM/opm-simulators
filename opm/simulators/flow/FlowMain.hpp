@@ -45,18 +45,10 @@
 namespace Opm::Parameters {
 
 template<class TypeTag, class MyTypeTag>
-struct EnableDryRun { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
 struct OutputInterval { using type = Properties::UndefinedProperty; };
 
 template<class TypeTag, class MyTypeTag>
 struct EnableLoggingFalloutWarning { using type = Properties::UndefinedProperty; };
-
-// TODO: enumeration parameters. we use strings for now.
-template<class TypeTag>
-struct EnableDryRun<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr auto value = "auto"; };
 
 // Do not merge parallel output files or warn about them
 template<class TypeTag>
@@ -110,8 +102,6 @@ namespace Opm {
                 return EXIT_SUCCESS;
             }
             // register the flow specific parameters
-            Parameters::registerParam<TypeTag, Parameters::EnableDryRun>
-                ("Specify if the simulation ought to be actually run, or just pretended to be");
             Parameters::registerParam<TypeTag, Parameters::OutputInterval>
                 ("Specify the number of report steps between two consecutive writes of restart data");
             Parameters::registerParam<TypeTag, Parameters::EnableLoggingFalloutWarning>
@@ -421,32 +411,6 @@ namespace Opm {
             modelSimulator_ = std::make_unique<ModelSimulator>(FlowGenericVanguard::comm(), /*verbose=*/false);
             modelSimulator_->executionTimer().start();
             modelSimulator_->model().applyInitialSolution();
-
-            try {
-                // Possible to force initialization only behavior (NOSIM).
-                const std::string& dryRunString = Parameters::get<TypeTag, Parameters::EnableDryRun>();
-                if (dryRunString != "" && dryRunString != "auto") {
-                    bool yesno;
-                    if (dryRunString == "true"
-                        || dryRunString == "t"
-                        || dryRunString == "1")
-                        yesno = true;
-                    else if (dryRunString == "false"
-                             || dryRunString == "f"
-                             || dryRunString == "0")
-                        yesno = false;
-                    else
-                        throw std::invalid_argument("Invalid value for parameter EnableDryRun: '"
-                                                    +dryRunString+"'");
-                    auto& ioConfig = eclState().getIOConfig();
-                    ioConfig.overrideNOSIM(yesno);
-                }
-            }
-            catch (const std::invalid_argument& e) {
-                std::cerr << "Failed to create valid EclipseState object" << std::endl;
-                std::cerr << "Exception caught: " << e.what() << std::endl;
-                throw;
-            }
         }
 
         const EclipseState& eclState() const
