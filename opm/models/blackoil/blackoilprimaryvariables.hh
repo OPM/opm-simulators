@@ -705,7 +705,8 @@ public:
                                                                                    pw,
                                                                                    saltConcentration);
                     setPrimaryVarsMeaningWater(WaterMeaning::Rsw);
-                    (*this)[Indices::waterSwitchIdx] = rswSat; //primary variable becomes Rsw
+                    Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
+                    (*this)[Indices::waterSwitchIdx] = min(rswSat, rswMax); //primary variable becomes Rsw
                     setPrimaryVarsMeaningPressure(PressureMeaning::Pw);
                     this->setScaledPressure_(pw);
                     changed = true;
@@ -749,7 +750,8 @@ public:
                                                                                    saltConcentration);
 
                 Scalar rsw = (*this)[Indices::waterSwitchIdx];
-                if (rsw > rswSat) {
+                Scalar rswMax = problem.maxGasDissolutionFactor(/*timeIdx=*/0, globalDofIdx);
+                if (rsw > min(rswSat, rswMax)) {
                     // the gas phase appears, i.e., switch the primary variables to WaterMeaning::Sw
                     setPrimaryVarsMeaningWater(WaterMeaning::Sw);
                     (*this)[Indices::waterSwitchIdx] = 1.0; // hydrocarbon water saturation

@@ -190,6 +190,9 @@ public:
         Scalar RsMax = FluidSystem::enableDissolvedGas()
             ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
             : 0.0;
+        Scalar RswMax = FluidSystem::enableDissolvedGasInWater()
+            ? problem.maxGasDissolutionFactor(timeIdx, globalSpaceIdx)
+            : 0.0;
 
         asImp_().updateTemperature_(elemCtx, dofIdx, timeIdx);
 
@@ -301,7 +304,6 @@ public:
             SoMax = max(fluidState_.saturation(oilPhaseIdx),
                         problem.maxOilSaturation(globalSpaceIdx));
         }
-
         // take the meaning of the switching primary variable into account for the gas
         // and oil phase compositions
         if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rs) {
@@ -310,16 +312,15 @@ public:
         } else {
             if (FluidSystem::enableDissolvedGas()) { // Add So > 0? i.e. if only water set rs = 0)
                 const Evaluation& RsSat = enableExtbo ? asImp_().rs() :
-                    FluidSystem::saturatedDissolutionFactor(fluidState_,
-                                                            oilPhaseIdx,
-                                                            pvtRegionIdx,
-                                                            SoMax);
+                FluidSystem::saturatedDissolutionFactor(fluidState_,
+                                                        oilPhaseIdx,
+                                                        pvtRegionIdx,
+                                                        SoMax);
                 fluidState_.setRs(min(RsMax, RsSat));
             }
             else if constexpr (compositionSwitchEnabled)
                 fluidState_.setRs(0.0);
         }
-
         if (priVars.primaryVarsMeaningGas() == PrimaryVariables::GasMeaning::Rv) {
             const auto& Rv = priVars.makeEvaluation(Indices::compositionSwitchIdx, timeIdx);
             fluidState_.setRv(Rv);
@@ -356,7 +357,7 @@ public:
                 const Evaluation& RswSat = FluidSystem::saturatedDissolutionFactor(fluidState_,
                                                             waterPhaseIdx,
                                                             pvtRegionIdx);
-                fluidState_.setRsw(RswSat);
+                fluidState_.setRsw(min(RswMax, RswSat));
             }
         }
 

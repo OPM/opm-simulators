@@ -36,6 +36,7 @@
 #include "blackoilfoammodules.hh"
 #include "blackoilbrinemodules.hh"
 #include "blackoildiffusionmodule.hh"
+#include "blackoilconvectivemixingmodule.hh"
 #include "blackoildispersionmodule.hh"
 #include "blackoilmicpmodules.hh"
 #include <opm/material/fluidstates/BlackOilFluidState.hpp>
@@ -94,6 +95,7 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     static constexpr bool enableBrine = getPropValue<TypeTag, Properties::EnableBrine>();
     static constexpr bool enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>();
     static constexpr bool enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>();
+    static constexpr bool enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>();
     static constexpr bool enableMICP = getPropValue<TypeTag, Properties::EnableMICP>();
 
     using SolventModule = BlackOilSolventModule<TypeTag>;
@@ -103,6 +105,9 @@ class BlackOilLocalResidualTPFA : public GetPropType<TypeTag, Properties::DiscLo
     using FoamModule = BlackOilFoamModule<TypeTag>;
     using BrineModule = BlackOilBrineModule<TypeTag>;
     using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
+    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
+    using ConvectiveMixingModuleParam = typename ConvectiveMixingModule::ConvectiveMixingModuleParam;
+
     using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
     using MICPModule = BlackOilMICPModule<TypeTag>;
 
@@ -124,6 +129,11 @@ public:
         double diffusivity;
         double dispersivity;
     };
+
+    struct ModuleParams {
+        ConvectiveMixingModuleParam convectiveMixingModuleParam;
+    };
+
     /*!
      * \copydoc FvBaseLocalResidual::computeStorage
      */
@@ -227,7 +237,8 @@ public:
                             const unsigned globalIndexEx,
                             const IntensiveQuantities& intQuantsIn,
                             const IntensiveQuantities& intQuantsEx,
-                            const ResidualNBInfo& nbInfo)
+                            const ResidualNBInfo& nbInfo,
+                            const ModuleParams& moduleParams)
     {
         OPM_TIMEBLOCK_LOCAL(computeFlux);
         flux = 0.0;
@@ -239,7 +250,8 @@ public:
                          intQuantsEx,
                          globalIndexIn,
                          globalIndexEx,
-                         nbInfo);
+                         nbInfo,
+                         moduleParams);
     }
 
     // This function demonstrates compatibility with the ElementContext-based interface.
@@ -306,7 +318,8 @@ public:
                          intQuantsEx,
                          globalIndexIn,
                          globalIndexEx,
-                         res_nbinfo);
+                         res_nbinfo,
+                         problem.moduleParams());
     }
 
     static void calculateFluxes_(RateVector& flux,
@@ -315,7 +328,8 @@ public:
                                  const IntensiveQuantities& intQuantsEx,
                                  const unsigned& globalIndexIn,
                                  const unsigned& globalIndexEx,
-                                 const ResidualNBInfo& nbInfo)
+                                 const ResidualNBInfo& nbInfo,
+                                 const ModuleParams& moduleParams)
     {
         OPM_TIMEBLOCK_LOCAL(calculateFluxes);
         const Scalar Vin = nbInfo.Vin;
@@ -350,7 +364,8 @@ public:
                                                              globalIndexIn,
                                                              globalIndexEx,
                                                              distZg,
-                                                             thpres);
+                                                             thpres,
+                                                             moduleParams);
 
 
 
@@ -409,6 +424,19 @@ public:
         static_assert(!enablePolymer, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // PolymerModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
 
+        // deal with convective mixing
+        if constexpr(enableConvectiveMixing) {
+            ConvectiveMixingModule::addConvectiveMixingFlux(flux,
+                                                            intQuantsIn,
+                                                            intQuantsEx,
+                                                            globalIndexIn,
+                                                            globalIndexEx,
+                                                            nbInfo.dZg,
+                                                            nbInfo.trans,
+                                                            nbInfo.faceArea,
+                                                            moduleParams.convectiveMixingModuleParam);
+        }
+        
         // deal with energy (if present)
         if constexpr(enableEnergy){
             const Scalar inAlpha = nbInfo.inAlpha;
@@ -442,6 +470,8 @@ public:
         // deal with salt (if present)
         static_assert(!enableBrine, "Relevant computeFlux() method must be implemented for this module before enabling.");
         // BrineModule::computeFlux(flux, elemCtx, scvfIdx, timeIdx);
+
+
 
         // deal with diffusion (if present). opm-models expects per area flux (added in the tmpdiffusivity).
         if constexpr(enableDiffusion){

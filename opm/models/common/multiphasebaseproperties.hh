@@ -80,6 +80,9 @@ struct EnableDiffusion { using type = UndefinedProperty; };
 //! Enable dispersive fluxes?
 template<class TypeTag, class MyTypeTag>
 struct EnableDispersion { using type = UndefinedProperty; };
+//! Enable convective mixing?
+template<class TypeTag, class MyTypeTag>
+struct EnableConvectiveMixing { using type = UndefinedProperty; };
 
 } // namespace Opm::Properties
 
