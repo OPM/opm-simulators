@@ -33,6 +33,7 @@
 #include <functional>
 #include <iomanip>
 #include <iterator>
+#include <limits>
 #include <mutex>
 #include <numeric>
 #include <optional>
@@ -57,8 +58,13 @@ namespace {
             "ReportStep"s,
             "TimeStep"s,
             "Time"s,
-            "CnvErrPvFrac"s,
             "Iteration"s,
+            "CnvPvFracConv"s,
+            "CnvPvFracRelax"s,
+            "CnvPvFracUnconv"s,
+            "CnvCellCntConv"s,
+            "CnvCellCntRelax"s,
+            "CnvCellCntUnconv"s,
         };
     }
 
@@ -135,6 +141,78 @@ namespace {
         return { minColSize, headerSize };
     }
 
+    void writeTimeColumns(std::ostream&                                           os,
+                          const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
+                          const std::string::size_type                            firstColSize,
+                          const int                                               iter,
+                          const Opm::ConvergenceReport&                           report,
+                          const Opm::ConvergenceReportQueue::OutputRequest&       request)
+    {
+        os << std::setw(firstColSize)          << request.reportStep  << ' '
+           << std::setw(firstColSize)          << request.currentStep << ' '
+           << std::setprecision(4)             << std::setw(firstColSize)
+           << convertTime(report.reportTime()) << ' '
+           << std::setw(firstColSize)          << iter;
+    }
+
+    void writeCnvPvSplit(std::ostream&                        os,
+                         const std::vector<double>::size_type expectedNumValues,
+                         const std::string::size_type         firstColSize,
+                         const Opm::ConvergenceReport&        report)
+    {
+        const auto& [splitPv, cellCnt] = report.cnvPvSplit();
+
+        if (splitPv.size() == expectedNumValues) {
+            for (const auto& pv : splitPv) {
+                os << ' ' << std::setprecision(4) << std::setw(firstColSize)
+                   << pv / report.eligiblePoreVolume();
+            }
+        }
+        else {
+            constexpr auto val = std::numeric_limits<double>::has_quiet_NaN
+                ? std::numeric_limits<double>::quiet_NaN()
+                : -1.0;
+
+            for (auto i = 0*expectedNumValues; i < expectedNumValues; ++i) {
+                os << ' ' << std::setprecision(4) << std::setw(firstColSize) << val;
+            }
+        }
+
+        if (cellCnt.size() == expectedNumValues) {
+            for (const auto& cnt : cellCnt) {
+                os << ' ' << std::setw(firstColSize) << cnt;
+            }
+        }
+        else {
+            for (auto i = 0*expectedNumValues; i < expectedNumValues; ++i) {
+                os << ' ' << std::setw(firstColSize) << -1;
+            }
+        }
+    }
+
+    void writeReservoirConvergence(std::ostream&                 os,
+                                   const std::string::size_type  colSize,
+                                   const Opm::ConvergenceReport& report)
+    {
+        for (const auto& metric : report.reservoirConvergence()) {
+            os << std::setprecision(4) << std::setw(colSize) << metric.value();
+        }
+    }
+
+    void writeWellConvergence(std::ostream&                 os,
+                              const std::string::size_type  colSize,
+                              const Opm::ConvergenceReport& report)
+    {
+        os << std::right << std::setw(colSize)
+           << (report.wellFailed() ? "FAIL" : "CONV");
+
+        if (report.wellFailed()) {
+            for (const auto& wf : report.wellFailures()) {
+                os << ' ' << to_string(wf);
+            }
+        }
+    }
+
     void writeConvergenceRequest(std::ostream&                                           os,
                                  const Opm::ConvergenceOutputThread::ConvertToTimeUnits& convertTime,
                                  const std::string::size_type                            firstColSize,
@@ -143,28 +221,16 @@ namespace {
     {
         os.setf(std::ios_base::scientific);
 
+        const auto expectNumCnvSplit = std::vector<double>::size_type{3};
+
         auto iter = 0;
         for (const auto& report : request.reports) {
-            os << std::setw(firstColSize)          << request.reportStep  << ' '
-               << std::setw(firstColSize)          << request.currentStep << ' '
-               << std::setprecision(4)             << std::setw(firstColSize)
-               << convertTime(report.reportTime()) << ' '
-               << std::setprecision(4)             << std::setw(firstColSize)
-               << report.cnvViolatedPvFraction()   << ' '
-               << std::setw(firstColSize)          << iter;
+            writeTimeColumns(os, convertTime, firstColSize, iter, report, request);
 
-            for (const auto& metric : report.reservoirConvergence()) {
-                os << std::setprecision(4) << std::setw(colSize) << metric.value();
-            }
+            writeCnvPvSplit(os, expectNumCnvSplit, firstColSize, report);
 
-            os << std::right << std::setw(colSize)
-               << (report.wellFailed() ? "FAIL" : "CONV");
-
-            if (report.wellFailed()) {
-                for (const auto& wf : report.wellFailures()) {
-                    os << ' ' << to_string(wf);
-                }
-            }
+            writeReservoirConvergence(os, colSize, report);
+            writeWellConvergence(os, colSize, report);
 
             os << '\n';
 
