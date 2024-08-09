@@ -62,8 +62,8 @@ init(const int num_cells,
     // B D] x_well]      res_well]
     // set the size of the matrices
     duneD_.setSize(1, 1, 1);
-    duneB_.setSize(1, num_cells, numPerfs);
-    duneC_.setSize(1, num_cells, numPerfs);
+    duneB_.setSize(1, numPerfs, numPerfs);
+    duneC_.setSize(1, numPerfs, numPerfs);
 
     for (auto row = duneD_.createbegin(),
               end = duneD_.createend(); row != end; ++row) {
@@ -76,29 +76,25 @@ init(const int num_cells,
     for (auto row = duneB_.createbegin(),
               end = duneB_.createend(); row != end; ++row) {
         for (int perf = 0 ; perf < numPerfs; ++perf) {
-            const int cell_idx = cells[perf];
-            row.insert(cell_idx);
+            row.insert(perf);
         }
     }
 
     for (int perf = 0 ; perf < numPerfs; ++perf) {
-        const int cell_idx = cells[perf];
         // the block size is run-time determined now
-        duneB_[0][cell_idx].resize(numWellEq, numEq);
+        duneB_[0][perf].resize(numWellEq, numEq);
     }
 
          // make the C^T matrix
     for (auto row = duneC_.createbegin(),
               end = duneC_.createend(); row != end; ++row) {
         for (int perf = 0; perf < numPerfs; ++perf) {
-            const int cell_idx = cells[perf];
-            row.insert(cell_idx);
+            row.insert(perf);
         }
     }
 
     for (int perf = 0; perf < numPerfs; ++perf) {
-        const int cell_idx = cells[perf];
-        duneC_[0][cell_idx].resize(numWellEq, numEq);
+        duneC_[0][perf].resize(numWellEq, numEq);
     }
 
     resWell_.resize(1);
