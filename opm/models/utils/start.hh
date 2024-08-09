@@ -88,7 +88,7 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
     ThreadManager::registerParameters();
 
     if (finalizeRegistration) {
-        Parameters::endParamRegistration<TypeTag>();
+        Parameters::endRegistration();
     }
 }
 
@@ -129,10 +129,10 @@ static inline int setupParameters_(int argc,
     if (myRank == 0 && handleHelp)
         helpPreamble = Problem::helpPreamble(argc, argv);
     std::string s =
-        Parameters::parseCommandLineOptions<TypeTag>(argc,
-                                                     argv,
-                                                     helpPreamble,
-                                                     positionalParamCallback);
+        Parameters::parseCommandLineOptions(argc,
+                                            argv,
+                                            helpPreamble,
+                                            positionalParamCallback);
     if (!s.empty())
     {
         int status = 1;
@@ -161,13 +161,13 @@ static inline int setupParameters_(int argc,
             if (myRank == 0) {
                 oss << "Parameter file \"" << paramFileName
                     << "\" does not exist or is not readable.";
-                Parameters::printUsage<TypeTag>(argv[0], oss.str());
+                Parameters::printUsage(argv[0], oss.str());
             }
             return /*status=*/1;
         }
 
         // read the parameter file.
-        Parameters::parseParameterFile<TypeTag>(paramFileName, /*overwrite=*/false);
+        Parameters::parseParameterFile(paramFileName, /*overwrite=*/false);
     }
 
     // make sure that no unknown parameters are encountered
@@ -177,7 +177,7 @@ static inline int setupParameters_(int argc,
     ParamList usedParams;
     ParamList unusedParams;
 
-    Parameters::getLists<TypeTag>(usedParams, unusedParams);
+    Parameters::getLists(usedParams, unusedParams);
     if (!allowUnused && !unusedParams.empty()) {
         if (myRank == 0) {
             if (unusedParams.size() == 1)
@@ -318,17 +318,17 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         Scalar endTime = Parameters::get<TypeTag, Parameters::EndTime>();
         if (endTime < -1e50) {
             if (myRank == 0)
-                Parameters::printUsage<TypeTag>(argv[0],
-                                                "Mandatory parameter '--end-time' not specified!");
+                Parameters::printUsage(argv[0],
+                                       "Mandatory parameter '--end-time' not specified!");
             return 1;
         }
 
         Scalar initialTimeStepSize = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
         if (initialTimeStepSize < -1e50) {
             if (myRank == 0)
-                Parameters::printUsage<TypeTag>(argv[0],
-                                                "Mandatory parameter '--initial-time-step-size' "
-                                                "not specified!");
+                Parameters::printUsage(argv[0],
+                                       "Mandatory parameter '--initial-time-step-size' "
+                                       "not specified!");
             return 1;
         }
 
@@ -357,20 +357,20 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
             if (printParams) {
                 bool printSeparator = false;
                 if (printParams == 1 || !isatty(fileno(stdout))) {
-                    Parameters::printValues<TypeTag>();
+                    Parameters::printValues();
                     printSeparator = true;
                 }
                 else
                     // always print the list of specified but unused parameters
                     printSeparator =
                         printSeparator ||
-                        Parameters::printUnused<TypeTag>();
+                        Parameters::printUnused();
                 if (printSeparator)
                     std::cout << endParametersSeparator;
             }
             else
                 // always print the list of specified but unused parameters
-                if (Parameters::printUnused<TypeTag>())
+                if (Parameters::printUnused())
                     std::cout << endParametersSeparator;
         }
 

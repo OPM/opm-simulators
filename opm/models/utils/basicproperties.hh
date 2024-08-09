@@ -56,11 +56,13 @@ namespace Opm::Properties {
 
 // Create new type tags
 namespace TTag {
+
 //! Type tag for all models.
-struct NumericModel { using InheritsFrom = std::tuple<ParameterSystem>; };
+struct NumericModel {};
 
 //! Type tag for all fully coupled models.
 struct ImplicitModel { using InheritsFrom = std::tuple<NumericModel>; };
+
 } // end namespace TTag
 
 ///////////////////////////////////
