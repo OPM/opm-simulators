@@ -130,7 +130,7 @@ std::vector<char *> ReservoirCouplingMaster::getSlaveArgv(
     //   must ensure that these buffers are not deallocated before the slave_argv has
     //   been used.
     std::vector<char *> slave_argv(argc + 2);
-    log_filename = "--slave-log-file=" + slave_name + ".log";
+    log_filename = "--slave-log-file=" + slave_name;  // .log extension will be added by the slave process
     slave_argv[0] = const_cast<char*>(log_filename.c_str());
     for (int i = 1; i < argc; i++) {
         // Check if the argument starts with "--", if not, we will assume it is a positional argument
