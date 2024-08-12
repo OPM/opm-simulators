@@ -247,6 +247,7 @@ public:
                         this->schedule()
                     );
                 this->reservoirCouplingMaster_->spawnSlaveProcesses(argc, argv);
+                this->reservoirCouplingMaster_->receiveSimulationStartDateFromSlaves();
             }
         }
 #endif

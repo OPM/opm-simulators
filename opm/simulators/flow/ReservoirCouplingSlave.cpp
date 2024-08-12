@@ -38,17 +38,30 @@ ReservoirCouplingSlave::ReservoirCouplingSlave(
 ) :
     comm_{comm},
     schedule_{schedule}
-{ }
-void ReservoirCouplingSlave::sendSimulationStartDateToMasterProcess() {
-    // TODO: Implement this function next
+{
+    this->slave_master_comm_ = MPI_Comm_Ptr(new MPI_Comm(MPI_COMM_NULL));
+    MPI_Comm_get_parent(this->slave_master_comm_.get());
+    if (*(this->slave_master_comm_) == MPI_COMM_NULL) {
+        OPM_THROW(std::runtime_error, "Slave process is not spawned by a master process");
+    }
+}
 
-    //this->slave_master_comm_ = MPI_Comm_Ptr(new MPI_Comm(MPI_COMM_NULL));
-    //MPI_Comm_get_parent(this->slave_master_comm_.get());
-    //if (*(this->slave_master_comm_) == MPI_COMM_NULL) {
-    //    OPM_THROW(std::runtime_error, "Slave process is not spawned by a master process");
-    //}
-    //MPI_Send(&start_date, 1, MPI_INT, 0, 0, parentcomm);
-    OpmLog::info("Sent simulation start date to master process");
+void ReservoirCouplingSlave::sendSimulationStartDateToMasterProcess() {
+
+    if (this->comm_.rank() == 0) {
+        // Ensure that std::time_t is of type long since we are sending it over MPI with MPI_LONG
+        static_assert(std::is_same<std::time_t, long>::value, "std::time_t is not of type long");
+        std::time_t start_date = this->schedule_.getStartTime();
+        MPI_Send(
+            &start_date,
+            /*count=*/1,
+            /*datatype=*/MPI_LONG,
+            /*dest_rank=*/0,
+            /*tag=*/static_cast<int>(MessageTag::SimulationStartDate),
+            *this->slave_master_comm_
+        );
+        OpmLog::info("Sent simulation start date to master process from rank 0");
+   }
 }
 
 } // namespace Opm

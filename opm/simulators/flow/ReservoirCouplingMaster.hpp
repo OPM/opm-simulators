@@ -34,12 +34,13 @@ namespace Opm {
 
 class ReservoirCouplingMaster {
 public:
+    using MPI_Comm_Ptr = ReservoirCoupling::MPI_Comm_Ptr;
+    using MessageTag = ReservoirCoupling::MessageTag;
 
     ReservoirCouplingMaster(const Parallel::Communication &comm, const Schedule &schedule);
 
     void spawnSlaveProcesses(int argc, char **argv);
-
-    using MPI_Comm_Ptr = ReservoirCoupling::MPI_Comm_Ptr;
+    void receiveSimulationStartDateFromSlaves();
 
 private:
     std::vector<char *> getSlaveArgv(
@@ -52,9 +53,10 @@ private:
 
     const Parallel::Communication &comm_;
     const Schedule& schedule_;
-    // MPI communicators for the slave processes
-    std::vector<MPI_Comm_Ptr> master_slave_comm_;
+    std::size_t num_slaves_ = 0;  // Initially zero, will be updated in spawnSlaveProcesses()
+    std::vector<MPI_Comm_Ptr> master_slave_comm_; // MPI communicators for the slave processes
     std::vector<std::string> slave_names_;
+    std::vector<std::time_t> slave_start_dates_;
 };
 
 } // namespace Opm
