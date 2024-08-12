@@ -200,6 +200,7 @@ template<class TypeTag>
 struct WellModel<TypeTag, TTag::FlowExpCompProblem> {
     using type = EmptyModel<TypeTag>;
 };
+
 template<class TypeTag>
 struct TracerModelDef<TypeTag, TTag::FlowExpCompProblem> {
     using type = EmptyModel<TypeTag>;
@@ -261,7 +262,7 @@ struct EnableMech<TypeTag, TTag::FlowExpCompProblem> {
 
 
 
-template<class TypeTag>
+/* template<class TypeTag>
 struct OutputMode<TypeTag, TTag::FlowExpCompProblem> { inline static const std::string value = "all"; };
 
 template<class TypeTag>
@@ -271,7 +272,7 @@ template<class TypeTag>
 struct EnableDriftCompensation<TypeTag, TTag::FlowExpCompProblem> { static constexpr bool value = false; };
 
 template<class TypeTag>
-struct NumPressurePointsEquil<TypeTag, TTag::FlowExpCompProblem> { static constexpr int value = 100; };
+struct NumPressurePointsEquil<TypeTag, TTag::FlowExpCompProblem> { static constexpr int value = 100; }; */
 
 // template<class TypeTag>
 // struct ExpliciteRockCompaction<TypeTag, TTag::FlowExpCompProblem> { static constexpr bool value = false; };
