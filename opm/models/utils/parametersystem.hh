@@ -923,6 +923,11 @@ auto Get(bool errorIfNotRegistered)
     else if constexpr (std::is_same_v<ParamType, bool>) {
         defaultValue = defVal == "1";
     }
+#if HAVE_QUAD
+    else if constexpr (std::is_same_v<ParamType, quad>) {
+        defaultValue = std::strtold(defVal.data(), nullptr);
+    }
+#endif
     else {
         std::from_chars(defVal.data(), defVal.data() + defVal.size(), defaultValue);
     }
