@@ -79,7 +79,10 @@ public:
     {};
 
     #if HAVE_ECL_INPUT
-    static void beginEpisode(const EclipseState& eclState, const Schedule& schedule, const int episodeIdx, ConvectiveMixingModuleParam& info)
+    static void beginEpisode(const EclipseState&,
+                             const Schedule&,
+                             const int,
+                             ConvectiveMixingModuleParam&)
     {}
     #endif
 
