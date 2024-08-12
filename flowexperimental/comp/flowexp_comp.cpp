@@ -255,10 +255,6 @@ public:
     using type = Opm::GenericOilGasFluidSystem<Scalar, num_comp>;
 };
 template<class TypeTag>
-struct EnableWriteAllSolutions<TypeTag, TTag::FlowExpCompProblem>{
-    static constexpr bool value = false;
-};
-template<class TypeTag>
 struct EnableMech<TypeTag, TTag::FlowExpCompProblem> {
     static constexpr bool value = false;
 };
@@ -279,9 +275,6 @@ struct NumPressurePointsEquil<TypeTag, TTag::FlowExpCompProblem> { static conste
 
 // template<class TypeTag>
 // struct ExpliciteRockCompaction<TypeTag, TTag::FlowExpCompProblem> { static constexpr bool value = false; };
-
-template<class TypeTag>
-struct EnableEclOutput<TypeTag, TTag::FlowExpCompProblem> { static constexpr bool value = false; };
 template<class TypeTag>
 struct EnableTerminalOutput<TypeTag, TTag::FlowExpCompProblem> { static constexpr bool value = false; };
 
@@ -325,11 +318,6 @@ struct EnablePolymerMW<TypeTag, TTag::FlowExpCompProblem> {
 
 template<class TypeTag>
 struct EnablePolymer<TypeTag, TTag::FlowExpCompProblem> {
-    static constexpr bool value = false;
-};
-
-template<class TypeTag>
-struct EclOutputDoublePrecision<TypeTag, TTag::FlowExpCompProblem> {
     static constexpr bool value = false;
 };
 
@@ -383,6 +371,21 @@ namespace Opm::Parameters {
     template<class TypeTag>
     struct EnableVtkOutput<TypeTag, Properties::TTag::FlowExpCompProblem>{
         static constexpr bool value = true;
+    };
+
+    template<class TypeTag>
+    struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowExpCompProblem>{
+        static constexpr bool value = false;
+    };
+
+    template<class TypeTag>
+    struct EclOutputDoublePrecision<TypeTag, Properties::TTag::FlowExpCompProblem> {
+        static constexpr bool value = false;
+    };
+
+    template<class TypeTag>
+    struct EnableEclOutput<TypeTag, Properties::TTag::FlowExpCompProblem> {
+        static constexpr bool value = false;
     };
 }
 
