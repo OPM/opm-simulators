@@ -145,8 +145,8 @@ public:
     ~Main();
 
     void setArgvArgc_(const std::string& filename);
-    void handleReservoirCouplingSlaveStdoutStderr_();
-
+    void maybeSaveReservoirCouplingSlaveLogFilename_();
+    void maybeRedirectReservoirCouplingSlaveOutput_();
     void initMPI();
 
     int runDynamic()
@@ -765,6 +765,7 @@ private:
     // To demonstrate run with non_world_comm
     bool test_split_comm_ = false;
     bool isSimulationRank_ = true;
+    std::string reservoirCouplingSlaveOutputFilename_{};
 #if HAVE_DAMARIS
     bool enableDamarisOutput_ = false;
 #endif

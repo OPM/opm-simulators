@@ -18,6 +18,7 @@
 */
 
 #include <config.h>
+#include <opm/simulators/flow/ReservoirCoupling.hpp>
 #include <opm/simulators/flow/ReservoirCouplingSlave.hpp>
 
 #include <opm/input/eclipse/Schedule/ResCoup/ReservoirCouplingInfo.hpp>
@@ -46,6 +47,7 @@ void ReservoirCouplingSlave::sendSimulationStartDateToMasterProcess() {
     //if (*(this->slave_master_comm_) == MPI_COMM_NULL) {
     //    OPM_THROW(std::runtime_error, "Slave process is not spawned by a master process");
     //}
+    //MPI_Send(&start_date, 1, MPI_INT, 0, 0, parentcomm);
     OpmLog::info("Sent simulation start date to master process");
 }
 
