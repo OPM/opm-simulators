@@ -21,6 +21,7 @@
 #define OPM_RESERVOIR_COUPLING_MASTER_HPP
 
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <opm/simulators/flow/ReservoirCoupling.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
@@ -36,19 +37,9 @@ public:
 
     ReservoirCouplingMaster(const Parallel::Communication &comm, const Schedule &schedule);
 
-    // Custom deleter for MPI_Comm
-    struct MPI_Comm_Deleter {
-        void operator()(MPI_Comm* comm) const {
-            if (*comm != MPI_COMM_NULL) {
-                MPI_Comm_free(comm);
-            }
-            delete comm;
-        }
-    };
-    using MPI_Comm_Ptr = std::unique_ptr<MPI_Comm, MPI_Comm_Deleter>;
-
     void spawnSlaveProcesses(int argc, char **argv);
 
+    using MPI_Comm_Ptr = ReservoirCoupling::MPI_Comm_Ptr;
 
 private:
     std::vector<char *> getSlaveArgv(

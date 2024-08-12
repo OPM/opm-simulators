@@ -222,7 +222,7 @@ public:
     // NOTE: The argc and argv will be used when launching a slave process
     void init(SimulatorTimer &timer, int argc, char** argv)
     {
-        auto slave_mode = Parameters::get<TypeTag, Parameters::Slave>();
+        auto slave_mode = Parameters::Get<Parameters::Slave>();
         if (slave_mode) {
             this->reservoirCouplingSlave_ =
                 std::make_unique<ReservoirCouplingSlave>(
