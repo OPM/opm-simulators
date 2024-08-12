@@ -48,6 +48,10 @@
 #include <fcntl.h>  // for open()
 #include <unistd.h> // for dup2(), close()
 
+#include <iostream>
+#include <fcntl.h>  // for open()
+#include <unistd.h> // for dup2(), close()
+
 namespace Opm {
 
 Main::Main(int argc, char** argv, bool ownMPI)
