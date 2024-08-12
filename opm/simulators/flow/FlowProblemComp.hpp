@@ -215,17 +215,17 @@ public:
 
         VtkTracerModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Properties::EnableWriteAllSolutions>
+        Parameters::registerParam<TypeTag, Parameters::EnableWriteAllSolutions>
            ("Write all solutions to disk instead of only the ones for the "
             "report steps");
-        Parameters::registerParam<TypeTag, Properties::EnableEclOutput>
+        Parameters::registerParam<TypeTag, Parameters::EnableEclOutput>
             ("Write binary output which is compatible with the commercial "
              "Eclipse simulator");
 #if HAVE_DAMARIS
-        Parameters::registerParam<TypeTag, Properties::EnableDamarisOutput>
+        Parameters::registerParam<TypeTag, Parameters::EnableDamarisOutput>
             ("Write a specific variable using Damaris in a separate core");
 #endif
-        Parameters::registerParam<TypeTag, Properties::EclOutputDoublePrecision>
+        Parameters::registerParam<TypeTag, Parameters::EclOutputDoublePrecision>
             ("Tell the output writer to use double precision. Useful for 'perfect' restarts");
         Parameters::registerParam<TypeTag, Properties::RestartWritingInterval>
             ("The frequencies of which time steps are serialized to disk");
@@ -244,30 +244,30 @@ public:
 
         BlackoilModelParameters<TypeTag>::registerParameters();
         // Parameters::registerParam<TypeTag, Properties::EnableTerminalOutput>("Do *NOT* use!");
-        Parameters::hideParam<TypeTag, Properties::DbhpMaxRel>();
-        Parameters::hideParam<TypeTag, Properties::DwellFractionMax>();
-        Parameters::hideParam<TypeTag, Properties::MaxResidualAllowed>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceMb>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceMbRelaxed>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceCnv>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceCnvRelaxed>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceWells>();
-        Parameters::hideParam<TypeTag, Properties::ToleranceWellControl>();
-        Parameters::hideParam<TypeTag, Properties::MaxWelleqIter>();
-        Parameters::hideParam<TypeTag, Properties::UseMultisegmentWell>();
-        Parameters::hideParam<TypeTag, Properties::TolerancePressureMsWells>();
-        Parameters::hideParam<TypeTag, Properties::MaxPressureChangeMsWells>();
-        Parameters::hideParam<TypeTag, Properties::MaxInnerIterMsWells>();
-        Parameters::hideParam<TypeTag, Properties::MaxNewtonIterationsWithInnerWellIterations>();
-        Parameters::hideParam<TypeTag, Properties::MaxInnerIterWells>();
-        Parameters::hideParam<TypeTag, Properties::MaxSinglePrecisionDays>();
-        Parameters::hideParam<TypeTag, Properties::MinStrictCnvIter>();
-        Parameters::hideParam<TypeTag, Properties::MinStrictMbIter>();
-        Parameters::hideParam<TypeTag, Properties::SolveWelleqInitially>();
-        Parameters::hideParam<TypeTag, Properties::UpdateEquationsScaling>();
-        Parameters::hideParam<TypeTag, Properties::UseUpdateStabilization>();
-        Parameters::hideParam<TypeTag, Properties::MatrixAddWellContributions>();
-        // Parameters::hideParam<TypeTag, Properties::EnableTerminalOutput>();
+        Parameters::hideParam<TypeTag, Parameters::DbhpMaxRel>();
+        Parameters::hideParam<TypeTag, Parameters::DwellFractionMax>();
+        Parameters::hideParam<TypeTag, Parameters::MaxResidualAllowed>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceMb>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceMbRelaxed>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceCnv>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceCnvRelaxed>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceWells>();
+        Parameters::hideParam<TypeTag, Parameters::ToleranceWellControl>();
+        Parameters::hideParam<TypeTag, Parameters::MaxWelleqIter>();
+        Parameters::hideParam<TypeTag, Parameters::UseMultisegmentWell>();
+        Parameters::hideParam<TypeTag, Parameters::TolerancePressureMsWells>();
+        Parameters::hideParam<TypeTag, Parameters::MaxPressureChangeMsWells>();
+        Parameters::hideParam<TypeTag, Parameters::MaxInnerIterMsWells>();
+        Parameters::hideParam<TypeTag, Parameters::MaxNewtonIterationsWithInnerWellIterations>();
+        Parameters::hideParam<TypeTag, Parameters::MaxInnerIterWells>();
+        Parameters::hideParam<TypeTag, Parameters::MaxSinglePrecisionDays>();
+        Parameters::hideParam<TypeTag, Parameters::MinStrictCnvIter>();
+        Parameters::hideParam<TypeTag, Parameters::MinStrictMbIter>();
+        Parameters::hideParam<TypeTag, Parameters::SolveWelleqInitially>();
+        Parameters::hideParam<TypeTag, Parameters::UpdateEquationsScaling>();
+        Parameters::hideParam<TypeTag, Parameters::UseUpdateStabilization>();
+        Parameters::hideParam<TypeTag, Parameters::MatrixAddWellContributions>();
+        // Parameters::hideParam<TypeTag, Parameters::EnableTerminalOutput>();
     }
 
 
@@ -281,9 +281,7 @@ public:
                                          int paramIdx,
                                          int)
     {
-        using ParamsMeta = GetProp<TypeTag, Properties::ParameterMetaData>;
-        Dune::ParameterTree& tree = ParamsMeta::tree();
-        return eclPositionalParameter(tree,
+        return eclPositionalParameter(Parameters::MetaData::tree(),
                                       seenParams,
                                       errorMsg,
                                       argv,
@@ -335,15 +333,15 @@ public:
 #if HAVE_DAMARIS
         // create Damaris writer
         // damarisWriter_ = std::make_unique<DamarisWriterType>(simulator);
-        enableDamarisOutput_ = Parameters::get<TypeTag, Properties::EnableDamarisOutput>();
+        enableDamarisOutput_ = Parameters::get<TypeTag, Parameters::EnableDamarisOutput>();
 #endif
-        enableDriftCompensation_ = Parameters::get<TypeTag, Properties::EnableDriftCompensation>();
+        enableDriftCompensation_ = Parameters::get<TypeTag, Parameters::EnableDriftCompensation>();
 
-        enableEclOutput_ = Parameters::get<TypeTag, Properties::EnableEclOutput>();
+        enableEclOutput_ = Parameters::get<TypeTag, Parameters::EnableEclOutput>();
 
-        this->enableTuning_ = Parameters::get<TypeTag, Properties::EnableTuning>();
+        this->enableTuning_ = Parameters::get<TypeTag, Parameters::EnableTuning>();
         this->initialTimeStepSize_ = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
-        this->maxTimeStepAfterWellEvent_ = Parameters::get<TypeTag, Properties::TimeStepAfterEventInDays>() * 24 * 60 * 60;
+        this->maxTimeStepAfterWellEvent_ = Parameters::get<TypeTag, Parameters::TimeStepAfterEventInDays>() * 24 * 60 * 60;
 
         // The value N for this parameter is defined in the following order of presedence:
         // 1. Command line value (--num-pressure-points-equil=N)
@@ -787,7 +785,7 @@ public:
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
-        if (Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() || this->simulator().episodeWillBeOver()){
+        if (Parameters::get<TypeTag, Parameters::EnableWriteAllSolutions>() || this->simulator().episodeWillBeOver()){
             ParentType::writeOutput(verbose);
         }
     }
@@ -801,12 +799,12 @@ public:
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
-        if (Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() ||
+        if (Parameters::get<TypeTag, Parameters::EnableWriteAllSolutions>() ||
             this->simulator().episodeWillBeOver()) {
             ParentType::writeOutput(verbose);
         }
 
-        bool isSubStep = !Parameters::get<TypeTag, Properties::EnableWriteAllSolutions>() &&
+        bool isSubStep = !Parameters::get<TypeTag, Parameters::EnableWriteAllSolutions>() &&
                          !this->simulator().episodeWillBeOver();
         
         data::Solution localCellData = {};
@@ -2744,7 +2742,7 @@ private:
             int episodeIdx = simulator.episodeIndex();
 
             // first thing in the morning, limit the time step size to the maximum size
-            Scalar maxTimeStepSize = Parameters::get<TypeTag, Properties::SolverMaxTimeStepInDays>() * 24 * 60 * 60;
+            Scalar maxTimeStepSize = Parameters::get<TypeTag, Parameters::SolverMaxTimeStepInDays>() * 24 * 60 * 60;
             int reportStepIdx = std::max(episodeIdx, 0);
             if (this->enableTuning_) {
                 const auto& tuning = schedule[reportStepIdx].tuning();

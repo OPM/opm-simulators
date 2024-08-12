@@ -40,6 +40,7 @@
 #include <opm/simulators/flow/CpGridVanguard.hpp>
 #include <opm/simulators/flow/DummyGradientCalculator.hpp>
 #include <opm/simulators/flow/EclWriter.hpp>
+#include <opm/simulators/flow/FlowProblemParameters.hpp>
 #include <opm/simulators/flow/FIBlackoilModel.hpp>
 #include <opm/simulators/flow/NewTranFluxModule.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
@@ -61,9 +62,15 @@ namespace Opm::Properties {
 namespace TTag {
 
 struct FlowBaseProblemComp {
-  using InheritsFrom = std::tuple<VtkTracer, CpGridVanguard>;
+    using InheritsFrom = std::tuple<VtkTracer, CpGridVanguard>;
 };
+
 }
+
+// The class which deals with ECL aquifers
+template<class TypeTag, class MyTypeTag>
+struct AquiferModel { using type = UndefinedProperty; };
+
 
 // The class which deals with wells
 template<class TypeTag, class MyTypeTag>
@@ -112,11 +119,7 @@ struct EnableApiTracking {
     using type = UndefinedProperty;
 };
 
-// The class which deals with ECL aquifers
-template<class TypeTag, class MyTypeTag>
-struct AquiferModel {
-    using type = UndefinedProperty;
-};
+
 
 template<class TypeTag, class MyTypeTag>
 struct OutputMode {
@@ -265,118 +268,14 @@ struct EnableDispersion<TypeTag, TTag::FlowBaseProblemComp> {
     static constexpr bool value = false;
 };
 
-// only write the solutions for the report steps to disk
-template<class TypeTag>
-struct EnableWriteAllSolutions<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = true;
-};
-
 // disable API tracking
 template<class TypeTag>
 struct EnableApiTracking<TypeTag, TTag::FlowBaseProblemComp> {
     static constexpr bool value = false;
 };
 
-// ... but enable the ECL output by default
-template<class TypeTag>
-struct EnableEclOutput<TypeTag,TTag::FlowBaseProblemComp> {
-    static constexpr bool value = true;
-};
-#ifdef HAVE_DAMARIS
-//! Disable the Damaris HDF5 output by default
-template<class TypeTag>
-struct EnableDamarisOutput<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = false;
-};
-// If Damaris is available, write specific variable output in parallel
-template<class TypeTag>
-struct DamarisOutputHdfCollective<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = true;
-};
-// Save the reservoir model mesh data to the HDF5 file (even if field data HDF5 output is disabled)
-template<class TypeTag>
-struct DamarisSaveMeshToHdf<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = false;
-};
-// Save the simulation fields (currently only PRESSURE) variables to HDF5 file
-template<class TypeTag>
-struct DamarisSaveToHdf<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = true;
-};
-// Specify path and filename of a Python script to run on each end of iteration output
-template<class TypeTag>
-struct DamarisPythonScript<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr auto value = "";
-};
-// Specifiy a Paraview Catalyst in situ visualisation script (if Paraview is enabled in Damaris)
-template<class TypeTag>
-struct DamarisPythonParaviewScript<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr auto value = "";
-};
-// Specify a unique name for the Damaris simulation (used as prefix to HDF5 filenames)
-template<class TypeTag>
-struct DamarisSimName<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr auto value = "";
-};
-// Specify the number of Damaris cores (dc) to create (per-node). Must divide into the remaining ranks
-// equally, e.g. mpirun -np 16 ... -> (if running on one node)
-// The following are allowed:
-// 1 dc + 15 sim ranks
-// or 2 dc + 14 sim
-// or 4 dc + 12 sim
-// *not* 3 dc + 13 sim ranks
-template<class TypeTag>
-struct DamarisDedicatedCores<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr int value = 1;
-};
-// Specify the number of Damaris nodes to create
-template<class TypeTag>
-struct DamarisDedicatedNodes<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr int value = 0;
-};
-// Specify a name for the Damaris shared memory file (a unique name will be created by default)
-template<class TypeTag>
-struct DamarisSharedMemoryName<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr auto value = "" ;  // default name is empty, will make unique if needed in DamarisKeywords()
-};
-// Specify the shared memory file size
-template<class TypeTag>
-struct DamarisSharedMemorySizeBytes<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr long value = 536870912;  // 512 MB
-};
-// Specify the Damaris log level - if set to debug then log is flushed regularly
-template<class TypeTag>
-struct DamarisLogLevel<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr auto value = "info";
-};
-// Specify the dask file jason file that specifies the Dask scheduler etc.
-template<class TypeTag>
-struct DamarisDaskFile<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr auto value = "";
-};
-// Specify the the exact variables to be passed through to Damaris (must exist in the XML file / intiDamarisXmlFile.cpp)
-template<class TypeTag>
-struct DamarisLimitVariables<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr auto value = "";
-};
-#endif
-// If available, write the ECL output in a non-blocking manner
-template<class TypeTag>
-struct EnableAsyncEclOutput<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = true;
-};
 
-// Write ESMRY file for fast loading of summary data
-template<class TypeTag>
-struct EnableEsmry<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = false;
-};
 
-// By default, use single precision for the ECL formated results
-template<class TypeTag>
-struct EclOutputDoublePrecision<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = false;
-};
 
 // Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
 // NewTranFluxModule is not ready to use
@@ -397,14 +296,6 @@ struct FluxModule<TypeTag, TTag::FlowBaseProblemComp> {
 template<class TypeTag>
 struct RestartWritingInterval<TypeTag, TTag::FlowBaseProblemComp> {
     static constexpr int value = 0xffffff; // disable
-};
-
-// Drift compensation is an experimental feature, i.e., systematic errors in the
-// conservation quantities are only compensated for
-// as default if experimental mode is enabled.
-template<class TypeTag>
-struct EnableDriftCompensation<TypeTag, TTag::FlowBaseProblemComp> {
-    static constexpr bool value = true;
 };
 
 // By default, we enable the debugging checks if we're compiled in debug mode
@@ -481,6 +372,121 @@ struct ExplicitRockCompaction<TypeTag, TTag::FlowBaseProblemComp> {
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
+
+// only write the solutions for the report steps to disk
+template<class TypeTag>
+struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowBaseProblemComp> {
+    static constexpr bool value = true;
+};
+
+// Drift compensation is an experimental feature, i.e., systematic errors in the
+// conservation quantities are only compensated for
+// as default if experimental mode is enabled.
+template<class TypeTag>
+struct EnableDriftCompensation<TypeTag, Properties::TTag::FlowBaseProblemComp> {
+    static constexpr bool value = true;
+};
+
+// ... but enable the ECL output by default
+template<class TypeTag>
+struct EnableEclOutput<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr bool value = true;
+};
+#ifdef HAVE_DAMARIS
+//! Disable the Damaris HDF5 output by default
+template<class TypeTag>
+struct EnableDamarisOutput<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr bool value = false;
+};
+// If Damaris is available, write specific variable output in parallel
+template<class TypeTag>
+struct DamarisOutputHdfCollective<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr bool value = true;
+};
+// Save the reservoir model mesh data to the HDF5 file (even if field data HDF5 output is disabled)
+template<class TypeTag>
+struct DamarisSaveMeshToHdf<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr bool value = false;
+};
+// Save the simulation fields (currently only PRESSURE) variables to HDF5 file
+template<class TypeTag>
+struct DamarisSaveToHdf<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr bool value = true;
+};
+// Specify path and filename of a Python script to run on each end of iteration output
+template<class TypeTag>
+struct DamarisPythonScript<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr auto value = "";
+};
+// Specifiy a Paraview Catalyst in situ visualisation script (if Paraview is enabled in Damaris)
+template<class TypeTag>
+struct DamarisPythonParaviewScript<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr auto value = "";
+};
+// Specify a unique name for the Damaris simulation (used as prefix to HDF5 filenames)
+template<class TypeTag>
+struct DamarisSimName<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr auto value = "";
+};
+// Specify the number of Damaris cores (dc) to create (per-node). Must divide into the remaining ranks
+// equally, e.g. mpirun -np 16 ... -> (if running on one node)
+// The following are allowed:
+// 1 dc + 15 sim ranks
+// or 2 dc + 14 sim
+// or 4 dc + 12 sim
+// *not* 3 dc + 13 sim ranks
+template<class TypeTag>
+struct DamarisDedicatedCores<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr int value = 1;
+};
+// Specify the number of Damaris nodes to create
+template<class TypeTag>
+struct DamarisDedicatedNodes<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr int value = 0;
+};
+// Specify a name for the Damaris shared memory file (a unique name will be created by default)
+template<class TypeTag>
+struct DamarisSharedMemoryName<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr auto value = "" ;  // default name is empty, will make unique if needed in DamarisKeywords()
+};
+// Specify the shared memory file size
+template<class TypeTag>
+struct DamarisSharedMemorySizeBytes<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr long value = 536870912;  // 512 MB
+};
+// Specify the Damaris log level - if set to debug then log is flushed regularly
+template<class TypeTag>
+struct DamarisLogLevel<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr auto value = "info";
+};
+// Specify the dask file jason file that specifies the Dask scheduler etc.
+template<class TypeTag>
+struct DamarisDaskFile<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr auto value = "";
+};
+// Specify the the exact variables to be passed through to Damaris (must exist in the XML file / intiDamarisXmlFile.cpp)
+template<class TypeTag>
+struct DamarisLimitVariables<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr auto value = "";
+};
+#endif
+// If available, write the ECL output in a non-blocking manner
+template<class TypeTag>
+struct EnableAsyncEclOutput<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr bool value = true;
+};
+
+// Write ESMRY file for fast loading of summary data
+template<class TypeTag>
+struct EnableEsmry<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr bool value = false;
+};
+
+// By default, use single precision for the ECL formated results
+template<class TypeTag>
+struct EclOutputDoublePrecision<TypeTag,Properties::TTag::FlowBaseProblemComp> {
+    static constexpr bool value = false;
+};
 
 // Enable gravity
 template<class TypeTag>
