@@ -131,40 +131,6 @@ namespace Opm::Parameters {
 template<class TypeTag, class MyTypeTag>
 struct InitialWaterSaturation { using type = Properties::UndefinedProperty; };
 
-template<class TypeTag>
-struct CellsX<TypeTag, Properties::TTag::FingerBaseProblem>
-{ static constexpr unsigned value = 20; };
-
-template<class TypeTag>
-struct CellsY<TypeTag, Properties::TTag::FingerBaseProblem>
-{ static constexpr unsigned value = 70; };
-
-template<class TypeTag>
-struct CellsZ<TypeTag, Properties::TTag::FingerBaseProblem>
-{ static constexpr unsigned value = 1; };
-
-// define the properties specific for the finger problem
-template<class TypeTag>
-struct DomainSizeX<TypeTag, Properties::TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.1;
-};
-
-template<class TypeTag>
-struct DomainSizeY<TypeTag, Properties::TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.3;
-};
-
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, Properties::TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.1;
-};
-
 // Enable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::FingerBaseProblem>
@@ -197,11 +163,6 @@ struct InitialWaterSaturation<TypeTag, Properties::TTag::FingerBaseProblem>
 template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::FingerBaseProblem>
 { static constexpr bool value = false; };
-
-// Use forward differences instead of central differences
-template<class TypeTag>
-struct NumericDifferenceMethod<TypeTag, Properties::TTag::FingerBaseProblem>
-{ static constexpr int value = +1; };
 
 } // namespace Opm::Parameters
 
@@ -320,6 +281,21 @@ public:
 
         Parameters::registerParam<TypeTag, Parameters::InitialWaterSaturation>
             ("The initial saturation in the domain [] of the wetting phase");
+
+        Parameters::SetDefault<Parameters::CellsX>(20);
+        Parameters::SetDefault<Parameters::DomainSizeX<Scalar>>(0.1);
+
+        if constexpr (dim > 1) {
+            Parameters::SetDefault<Parameters::CellsY>(70);
+            Parameters::SetDefault<Parameters::DomainSizeY<Scalar>>(0.3);
+        }
+        if constexpr (dim == 3) {
+            Parameters::SetDefault<Parameters::CellsZ>(1);
+            Parameters::SetDefault<Parameters::DomainSizeZ<Scalar>>(0.1);
+        }
+
+        // Use forward differences
+        Parameters::SetDefault<Parameters::NumericDifferenceMethod>(+1);
     }
 
     /*!

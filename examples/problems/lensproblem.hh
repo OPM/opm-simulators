@@ -138,39 +138,6 @@ struct LensUpperRightY { using type = Properties::UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct LensUpperRightZ { using type = Properties::UndefinedProperty; };
 
-template<class TypeTag>
-struct CellsX<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr unsigned value = 48; };
-
-template<class TypeTag>
-struct CellsY<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr unsigned value = 32; };
-
-template<class TypeTag>
-struct CellsZ<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr unsigned value = 16; };
-
-template<class TypeTag>
-struct DomainSizeX<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 6.0;
-};
-
-template<class TypeTag>
-struct DomainSizeY<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 4.0;
-};
-
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
 // Enable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::LensBaseProblem>
@@ -261,7 +228,7 @@ namespace Opm {
  *        water saturated medium.
  *
  * The domain is sized 6m times 4m and features a rectangular lens
- * with low permeablility which spans from (1 m , 2 m) to (4 m, 3 m)
+ * with low permeablility which spans from (1m, 2m) to (4m, 3m)
  * and is surrounded by a medium with higher permability. Note that
  * this problem is discretized using only two dimensions, so from the
  * point of view of the model, the depth of the domain is implicitly
@@ -343,7 +310,7 @@ public:
         lensUpperRight_[0] = Parameters::get<TypeTag, Parameters::LensUpperRightX>();
         lensUpperRight_[1] = Parameters::get<TypeTag, Parameters::LensUpperRightY>();
 
-        if (dimWorld == 3) {
+        if constexpr (dim == 3) {
             lensLowerLeft_[2] = Parameters::get<TypeTag, Parameters::LensLowerLeftZ>();
             lensUpperRight_[2] = Parameters::get<TypeTag, Parameters::LensUpperRightZ>();
         }
@@ -388,11 +355,28 @@ public:
         Parameters::registerParam<TypeTag, Parameters::LensUpperRightY>
             ("The y-coordinate of the lens' upper-right corner [m].");
 
-        if (dimWorld == 3) {
+        if constexpr (dim == 3) {
             Parameters::registerParam<TypeTag, Parameters::LensLowerLeftZ>
                 ("The z-coordinate of the lens' lower-left corner [m].");
             Parameters::registerParam<TypeTag, Parameters::LensUpperRightZ>
                 ("The z-coordinate of the lens' upper-right corner [m].");
+        }
+
+        Parameters::SetDefault<Parameters::CellsX>(48);
+        Parameters::SetDefault<Parameters::CellsY>(32);
+        Parameters::SetDefault<Parameters::DomainSizeX<Scalar>>(6.0);
+        Parameters::SetDefault<Parameters::DomainSizeY<Scalar>>(4.0);
+
+        if constexpr (dim == 3) {
+            Parameters::SetDefault<Parameters::CellsZ>(16);
+            Parameters::SetDefault<Parameters::DomainSizeZ<Scalar>>(1.0);
+        }
+
+        // Use forward differences
+        using LLS = GetPropType<TypeTag, Properties::LocalLinearizerSplice>;
+        constexpr bool useFD = std::is_same_v<LLS, Properties::TTag::FiniteDifferenceLocalLinearizer>;
+        if constexpr (useFD) {
+            Parameters::SetDefault<Parameters::NumericDifferenceMethod>(+1);
         }
     }
 
@@ -402,20 +386,21 @@ public:
     static std::string briefDescription()
     {
         std::string thermal = "isothermal";
-        bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
-        if (enableEnergy)
+        constexpr bool enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>();
+        if constexpr (enableEnergy)
             thermal = "non-isothermal";
 
         std::string deriv = "finite difference";
         using LLS = GetPropType<TypeTag, Properties::LocalLinearizerSplice>;
-        bool useAutoDiff = std::is_same<LLS, Properties::TTag::AutoDiffLocalLinearizer>::value;
-        if (useAutoDiff)
+        constexpr bool useAutoDiff = std::is_same_v<LLS, Properties::TTag::AutoDiffLocalLinearizer>;
+        if constexpr (useAutoDiff) {
             deriv = "automatic differentiation";
+        }
 
         std::string disc = "vertex centered finite volume";
         using D = GetPropType<TypeTag, Properties::Discretization>;
-        bool useEcfv = std::is_same<D, Opm::EcfvDiscretization<TypeTag>>::value;
-        if (useEcfv)
+        constexpr bool useEcfv = std::is_same<D, Opm::EcfvDiscretization<TypeTag>>::value;
+        if constexpr (useEcfv)
             disc = "element centered finite volume";
 
         return std::string("")+
@@ -490,10 +475,10 @@ public:
     {
         using LLS = GetPropType<TypeTag, Properties::LocalLinearizerSplice>;
 
-        bool useAutoDiff = std::is_same<LLS, Properties::TTag::AutoDiffLocalLinearizer>::value;
+        constexpr bool useAutoDiff = std::is_same_v<LLS, Properties::TTag::AutoDiffLocalLinearizer>;
 
         using FM = GetPropType<TypeTag, Properties::FluxModule>;
-        bool useTrans = std::is_same<FM, Opm::TransFluxModule<TypeTag>>::value;
+        constexpr bool useTrans = std::is_same_v<FM, Opm::TransFluxModule<TypeTag>>;
 
         std::ostringstream oss;
         oss << "lens_" << Model::name()

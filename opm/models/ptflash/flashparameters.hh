@@ -32,17 +32,13 @@
 
 #include <opm/models/flash/flashparameters.hh>
 
-#include <opm/models/utils/propertysystem.hh>
-
 namespace Opm::Parameters {
 
 //! Two-phase flash method
-template<class TypeTag, class MyTypeTag>
-struct FlashTwoPhaseMethod { using type = Properties::UndefinedProperty; };
+struct FlashTwoPhaseMethod { static constexpr auto value = "ssi"; };
 
 //! The verbosity level of the flash solver
-template<class TypeTag, class MyTypeTag>
-struct FlashVerbosity { using type = Properties::UndefinedProperty; };
+struct FlashVerbosity { static constexpr int value = 0; };
 
 } // namespace Opm::Parameters
 

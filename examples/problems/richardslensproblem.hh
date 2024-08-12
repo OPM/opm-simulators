@@ -116,11 +116,6 @@ struct EndTime<TypeTag, Properties::TTag::RichardsLensProblem>
     static constexpr type value = 3000;
 };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, Properties::TTag::RichardsLensProblem>
-{ static constexpr auto value = "./data/richardslens_24x16.dgf"; };
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::RichardsLensProblem>
@@ -143,11 +138,6 @@ struct NewtonTargetIterations<TypeTag, Properties::TTag::RichardsLensProblem>
 template<class TypeTag>
 struct NewtonMaxIterations<TypeTag, Properties::TTag::RichardsLensProblem>
 { static constexpr int value = 28; };
-
-// Use central differences to approximate the Jacobian matrix
-template<class TypeTag>
-struct NumericDifferenceMethod<TypeTag, Properties::TTag::RichardsLensProblem>
-{ static constexpr int value = 0; };
 
 } // namespace Opm::Parameters
 
@@ -264,6 +254,23 @@ public:
                 const auto& dofPos = stencil.subControlVolume(dofIdx).center();
                 dofIsInLens_[globalDofIdx] = isInLens_(dofPos);
             }
+        }
+    }
+
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::registerParameters
+     */
+    static void registerParameters()
+    {
+        ParentType::registerParameters();
+
+        Parameters::SetDefault<Parameters::GridFile>("./data/richardslens_24x16.dgf");
+
+        // Use central differences to approximate the Jacobian matrix
+        using LLS = GetPropType<TypeTag, Properties::LocalLinearizerSplice>;
+        constexpr bool useFD = std::is_same_v<LLS, Properties::TTag::FiniteDifferenceLocalLinearizer>;
+        if constexpr (useFD) {
+            Parameters::SetDefault<Parameters::NumericDifferenceMethod>(0);
         }
     }
 

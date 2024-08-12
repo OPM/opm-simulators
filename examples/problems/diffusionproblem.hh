@@ -110,40 +110,6 @@ struct EnableDiffusion<TypeTag, TTag::DiffusionBaseProblem> { static constexpr b
 
 namespace Opm::Parameters {
 
-template<class TypeTag>
-struct CellsX<TypeTag, Properties::TTag::DiffusionBaseProblem>
-{ static constexpr unsigned value = 250; };
-
-template<class TypeTag>
-struct CellsY<TypeTag, Properties::TTag::DiffusionBaseProblem>
-{ static constexpr unsigned value = 1; };
-
-template<class TypeTag>
-struct CellsZ<TypeTag, Properties::TTag::DiffusionBaseProblem>
-{ static constexpr unsigned value = 1; };
-
-// define the properties specific for the diffusion problem
-template<class TypeTag>
-struct DomainSizeX<TypeTag, Properties::TTag::DiffusionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
-template<class TypeTag>
-struct DomainSizeY<TypeTag, Properties::TTag::DiffusionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
-template<class TypeTag>
-struct DomainSizeZ<TypeTag, Properties::TTag::DiffusionBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
 // Disable gravity
 template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::DiffusionBaseProblem>
@@ -243,6 +209,24 @@ public:
         K_ = this->toDimMatrix_(1e-12); // [m^2]
 
         setupInitialFluidStates_();
+    }
+
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::registerParameters
+     */
+    static void registerParameters()
+    {
+        ParentType::registerParameters();
+
+        Parameters::SetDefault<Parameters::CellsX>(250);
+
+        if constexpr (dim > 1) {
+            Parameters::SetDefault<Parameters::CellsY>(1);
+        }
+
+        if constexpr (dim == 3) {
+            Parameters::SetDefault<Parameters::CellsZ>(1);
+        }
     }
 
     /*!

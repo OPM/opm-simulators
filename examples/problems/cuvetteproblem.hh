@@ -129,11 +129,6 @@ struct EndTime<TypeTag, Properties::TTag::CuvetteBaseProblem>
     static constexpr type value = 180;
 };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, Properties::TTag::CuvetteBaseProblem>
-{ static constexpr auto value = "./data/cuvette_11x4.dgf"; };
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::CuvetteBaseProblem>
@@ -307,6 +302,16 @@ public:
         solidEnergyLawParams_.finalize();
 
         initInjectFluidState_();
+    }
+
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::registerParameters
+     */
+    static void registerParameters()
+    {
+        ParentType::registerParameters();
+
+        Parameters::SetDefault<Parameters::GridFile>("./data/cuvette_11x4.dgf");
     }
 
     /*!

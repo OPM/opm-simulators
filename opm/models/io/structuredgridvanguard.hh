@@ -100,7 +100,7 @@ class StructuredGridVanguard : public BaseVanguard<TypeTag>
 
     using GridPointer = std::unique_ptr<Grid>;
 
-    static const int dim = Grid::dimension;
+    static constexpr int dim = Grid::dimension;
 
 public:
     /*!
@@ -108,23 +108,23 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::GridGlobalRefinements>
+        Parameters::Register<Parameters::GridGlobalRefinements>
             ("The number of global refinements of the grid "
              "executed after it was loaded");
-        Parameters::registerParam<TypeTag, Parameters::DomainSizeX>
+        Parameters::Register<Parameters::DomainSizeX<Scalar>>
             ("The size of the domain in x direction");
-        Parameters::registerParam<TypeTag, Parameters::CellsX>
+        Parameters::Register<Parameters::CellsX>
             ("The number of intervalls in x direction");
         if (dim > 1) {
-            Parameters::registerParam<TypeTag, Parameters::DomainSizeY>
+            Parameters::Register<Parameters::DomainSizeY<Scalar>>
                 ("The size of the domain in y direction");
-            Parameters::registerParam<TypeTag, Parameters::CellsY>
+            Parameters::Register<Parameters::CellsY>
                 ("The number of intervalls in y direction");
         }
-        if (dim > 2) {
-            Parameters::registerParam<TypeTag, Parameters::DomainSizeZ>
+        if constexpr (dim > 2) {
+            Parameters::Register<Parameters::DomainSizeZ<Scalar>>
                 ("The size of the domain in z direction");
-            Parameters::registerParam<TypeTag, Parameters::CellsZ>
+            Parameters::Register<Parameters::CellsZ>
                 ("The number of intervalls in z direction");
         }
     }
@@ -141,14 +141,14 @@ public:
         Dune::FieldVector<GridScalar, dim> upperRight;
         Dune::FieldVector<GridScalar, dim> lowerLeft( 0 );
 
-        upperRight[0] = Parameters::get<TypeTag, Parameters::DomainSizeX>();
-        upperRight[1] = Parameters::get<TypeTag, Parameters::DomainSizeY>();
+        upperRight[0] = Parameters::Get<Parameters::DomainSizeX<Scalar>>();
+        upperRight[1] = Parameters::Get<Parameters::DomainSizeY<Scalar>>();
 
-        cellRes[0] = Parameters::get<TypeTag, Parameters::CellsX>();
-        cellRes[1] = Parameters::get<TypeTag, Parameters::CellsY>();
-        if (dim == 3) {
-            upperRight[2] = Parameters::get<TypeTag, Parameters::DomainSizeZ>();
-            cellRes[2] = Parameters::get<TypeTag, Parameters::CellsZ>();
+        cellRes[0] = Parameters::Get<Parameters::CellsX>();
+        cellRes[1] = Parameters::Get<Parameters::CellsY>();
+        if constexpr (dim == 3) {
+            upperRight[2] = Parameters::Get<Parameters::DomainSizeZ<Scalar>>();
+            cellRes[2] = Parameters::Get<Parameters::CellsZ>();
         }
 
         std::stringstream dgffile;
@@ -167,7 +167,7 @@ public:
         // use DGF parser to create a grid from interval block
         gridPtr_.reset( Dune::GridPtr< Grid >( dgffile ).release() );
 
-        unsigned numRefinements = Parameters::get<TypeTag, Parameters::GridGlobalRefinements>();
+        unsigned numRefinements = Parameters::Get<Parameters::GridGlobalRefinements>();
         gridPtr_->globalRefine(static_cast<int>(numRefinements));
 
         this->finalizeInit_();

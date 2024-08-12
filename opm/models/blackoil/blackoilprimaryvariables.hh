@@ -45,11 +45,8 @@
 
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct PressureScale {
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
+template<class Scalar>
+struct PressureScale { static constexpr Scalar value = 1.0; };
 
 } // namespace Opm::Parameters
 
@@ -203,12 +200,12 @@ public:
     static void init()
     {
         // TODO: these parameters have undocumented non-trivial dependencies
-        pressureScale_ = Parameters::get<TypeTag, Parameters::PressureScale>();
+        pressureScale_ = Parameters::Get<Parameters::PressureScale<Scalar>>();
     }
 
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::PressureScale>
+        Parameters::Register<Parameters::PressureScale<Scalar>>
             ("Scaling of pressure primary variable");
     }
 

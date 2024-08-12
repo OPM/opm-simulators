@@ -187,17 +187,6 @@ struct EndTime<TypeTag, Properties::TTag::NumericModel>
     static constexpr type value = -1e35;
 };
 
-//! Set a value for the GridFile property
-template<class TypeTag>
-struct GridFile<TypeTag, Properties::TTag::NumericModel>
-{ static constexpr auto value = ""; };
-
-//! Set the number of refinement levels of the grid to 0. This does not belong
-//! here, strictly speaking.
-template<class TypeTag>
-struct GridGlobalRefinements<TypeTag, Properties::TTag::NumericModel>
-{ static constexpr unsigned value = 0; };
-
 //! The default value for the simulation's initial time step size
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::NumericModel>
@@ -205,11 +194,6 @@ struct InitialTimeStepSize<TypeTag, Properties::TTag::NumericModel>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = -1e35;
 };
-
-//! Set a value for the ParameterFile property
-template<class TypeTag>
-struct ParameterFile<TypeTag, Properties::TTag::NumericModel>
-{ static constexpr auto value = ""; };
 
 //! By default, do not force any time steps
 template<class TypeTag>

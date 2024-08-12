@@ -101,8 +101,7 @@ struct ParamInfo
         return other.paramName == paramName
                && other.paramTypeName == paramTypeName
                && other.typeTagName == typeTagName
-               && other.usageString == usageString
-               && other.compileTimeValue == compileTimeValue;
+               && other.usageString == usageString;
     }
 };
 
@@ -924,6 +923,11 @@ auto Get(bool errorIfNotRegistered)
     else if constexpr (std::is_same_v<ParamType, bool>) {
         defaultValue = defVal == "1";
     }
+#if HAVE_QUAD
+    else if constexpr (std::is_same_v<ParamType, quad>) {
+        defaultValue = std::strtold(defVal.data(), nullptr);
+    }
+#endif
     else {
 #ifdef _LIBCPP_VERSION // If this macro is defined, clang's libc++ is used
         // For floating point types, libc++ (the llvm/clang library implementation)

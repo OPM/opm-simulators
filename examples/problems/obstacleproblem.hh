@@ -128,11 +128,6 @@ struct EndTime<TypeTag, Properties::TTag::ObstacleBaseProblem>
     static constexpr type value = 1e4;
 };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, Properties::TTag::ObstacleBaseProblem>
-{ static constexpr auto value = "./data/obstacle_24x16.dgf"; };
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::ObstacleBaseProblem>
@@ -277,6 +272,16 @@ public:
         solidEnergyLawParams_.finalize();
 
         initFluidStates_();
+    }
+
+    /*!
+     * \copydoc FvBaseMultiPhaseProblem::registerParameters
+     */
+    static void registerParameters()
+    {
+        ParentType::registerParameters();
+
+        Parameters::SetDefault<Parameters::GridFile>("./data/obstacle_24x16.dgf");
     }
 
     /*!

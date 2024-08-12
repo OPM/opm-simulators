@@ -156,24 +156,6 @@ template<class TypeTag>
 struct EnableThermodynamicHints<TypeTag, Properties::TTag::FlashModel>
 { static constexpr bool value = true; };
 
-//! Let the flash solver choose its tolerance by default
-template<class TypeTag>
-struct FlashTolerance<TypeTag, Properties::TTag::FlashModel>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.e-12;
-};
-
-// Flash two-phase method
-template<class TypeTag>
-struct FlashTwoPhaseMethod<TypeTag, Properties::TTag::FlashModel>
-{ static constexpr auto value = "ssi"; };
-
-// Flash solver verbosity
-template<class TypeTag>
-struct FlashVerbosity<TypeTag, Properties::TTag::FlashModel>
-{ static constexpr int value = 0; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -261,14 +243,16 @@ public:
         if (enableEnergy)
             Opm::VtkEnergyModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::FlashTolerance>
+        Parameters::Register<Parameters::FlashTolerance<Scalar>>
             ("The maximum tolerance for the flash solver to "
              "consider the solution converged");
-        Parameters::registerParam<TypeTag, Parameters::FlashVerbosity>
+        Parameters::Register<Parameters::FlashVerbosity>
             ("Flash solver verbosity level");
-        Parameters::registerParam<TypeTag, Parameters::FlashTwoPhaseMethod>
+        Parameters::Register<Parameters::FlashTwoPhaseMethod>
             ("Method for solving vapor-liquid composition. Available options include: "
              "ssi, newton, ssi+newton");
+
+        Parameters::SetDefault<Parameters::FlashTolerance<Scalar>>(1e-12);
     }
 
     /*!

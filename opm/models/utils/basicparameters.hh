@@ -33,46 +33,37 @@
 namespace Opm::Parameters {
 
 //! grid resolution
-template<class TypeTag, class MyTypeTag>
-struct CellsX { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct CellsY { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct CellsZ { using type = Properties::UndefinedProperty; };
+struct CellsX { static constexpr unsigned value = 1; };
+struct CellsY { static constexpr unsigned value = 1; };
+struct CellsZ { static constexpr unsigned value = 1; };
 
 //! domain size
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeX { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct DomainSizeX { static constexpr Scalar value = 1.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeY { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct DomainSizeY { static constexpr Scalar value = 1.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct DomainSizeZ { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct DomainSizeZ { static constexpr Scalar value = 1.0; };
 
 //! The default value for the simulation's end time
 template<class TypeTag, class MyTypeTag>
 struct EndTime { using type = Properties::UndefinedProperty; };
 
-//! name of the grid file
-template<class TypeTag, class MyTypeTag>
-struct GridFile { using type = Properties::UndefinedProperty; };
+//! Name of the grid file
+struct GridFile { static constexpr auto value = ""; };
 
 //! Property which tells the Vanguard how often the grid should be refined
 //! after creation.
-template<class TypeTag, class MyTypeTag>
-struct GridGlobalRefinements { using type = Properties::UndefinedProperty; };
+struct GridGlobalRefinements { static constexpr unsigned value = 0; };
 
 //! The default value for the simulation's initial time step size
 template<class TypeTag, class MyTypeTag>
 struct InitialTimeStepSize { using type = Properties::UndefinedProperty; };
 
-//! Property provides the name of the file from which the additional runtime
-//! parameters should to be loaded from
-template<class TypeTag, class MyTypeTag>
-struct ParameterFile { using type = Properties::UndefinedProperty; };
+//! Set a value for the ParameterFile property
+struct ParameterFile { static constexpr auto value = ""; };
 
 //! The name of the file with a number of forced time step lengths
 template<class TypeTag, class MyTypeTag>

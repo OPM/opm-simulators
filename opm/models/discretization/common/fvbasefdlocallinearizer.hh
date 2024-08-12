@@ -82,9 +82,6 @@ struct BaseEpsilon<TypeTag, TTag::FiniteDifferenceLocalLinearizer>
 
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct NumericDifferenceMethod { using type = Properties::UndefinedProperty; };
-
 /*!
  * \brief Specify which kind of method should be used to numerically
  * calculate the partial derivatives of the residual.
@@ -92,9 +89,7 @@ struct NumericDifferenceMethod { using type = Properties::UndefinedProperty; };
  * -1 means backward differences, 0 means central differences, 1 means
  * forward differences. By default we use forward differences.
  */
-template<class TypeTag>
-struct NumericDifferenceMethod<TypeTag, Properties::TTag::FiniteDifferenceLocalLinearizer>
-{ static constexpr int value = +1; };
+struct NumericDifferenceMethod { static constexpr int value = +1; };
 
 } // namespace Opm::Parameters
 
@@ -188,7 +183,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::NumericDifferenceMethod>
+        Parameters::Register<Parameters::NumericDifferenceMethod>
             ("The method used for numeric differentiation (-1: backward "
              "differences, 0: central differences, 1: forward differences)");
     }
@@ -342,7 +337,7 @@ protected:
      */
     static int numericDifferenceMethod_()
     {
-        static int diff = Parameters::get<TypeTag, Parameters::NumericDifferenceMethod>();
+        static int diff = Parameters::Get<Parameters::NumericDifferenceMethod>();
         return diff;
     }
 

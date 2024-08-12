@@ -125,11 +125,6 @@ struct EndTime<TypeTag, Properties::TTag::GroundWaterBaseProblem>
     static constexpr type value = 1;
 };
 
-// The default DGF file to load
-template<class TypeTag>
-struct GridFile<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{ static constexpr auto value = "./data/groundwater_2d.dgf"; };
-
 // The default for the initial time step size of the simulation
 template<class TypeTag>
 struct InitialTimeStepSize<TypeTag, Properties::TTag::GroundWaterBaseProblem>
@@ -306,6 +301,8 @@ public:
             ("The intrinsic permeability [m^2] of the ambient material.");
         Parameters::registerParam<TypeTag, Parameters::PermeabilityLens>
             ("The intrinsic permeability [m^2] of the lens.");
+
+        Parameters::SetDefault<Parameters::GridFile>("./data/groundwater_2d.dgf");
     }
 
     /*!
