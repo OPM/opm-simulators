@@ -50,6 +50,37 @@ ReservoirCouplingMaster::ReservoirCouplingMaster(
 // Public methods
 // ------------------
 
+void ReservoirCouplingMaster::receiveSimulationStartDateFromSlaves() {
+    this->slave_start_dates_.resize(this->num_slaves_);
+    if (this->comm_.rank() == 0) {
+        // Ensure that std::time_t is of type long since we are sending it over MPI with MPI_LONG
+        static_assert(std::is_same<std::time_t, long>::value, "std::time_t is not of type long");
+        for (unsigned int i = 0; i < this->master_slave_comm_.size(); i++) {
+            std::time_t start_date;
+            int result = MPI_Recv(
+                &start_date,
+                /*count=*/1,
+                /*datatype=*/MPI_LONG,
+                /*source_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::SimulationStartDate),
+                *this->master_slave_comm_[i].get(),
+                MPI_STATUS_IGNORE
+            );
+            if (result != MPI_SUCCESS) {
+                OPM_THROW(std::runtime_error, "Failed to receive simulation start date from slave process");
+            }
+            this->slave_start_dates_[i] = start_date;
+            OpmLog::info(
+                fmt::format(
+                    "Received simulation start date from slave process with name: {}. "
+                    "Start date: {}", this->slave_names_[i], start_date
+                )
+            );
+        }
+    }
+    this->comm_.broadcast(this->slave_start_dates_.data(), this->num_slaves_, /*emitter_rank=*/0);
+}
+
 // NOTE: This functions is executed for all ranks, but only rank 0 will spawn
 //   the slave processes
 void ReservoirCouplingMaster::spawnSlaveProcesses(int argc, char **argv) {
@@ -101,6 +132,7 @@ void ReservoirCouplingMaster::spawnSlaveProcesses(int argc, char **argv) {
         );
         this->master_slave_comm_.push_back(std::move(master_slave_comm));
         this->slave_names_.push_back(slave_name);
+        this->num_slaves_++;
     }
 }
 

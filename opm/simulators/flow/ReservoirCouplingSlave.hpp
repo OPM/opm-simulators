@@ -20,7 +20,7 @@
 #ifndef OPM_RESERVOIR_COUPLING_SLAVE_HPP
 #define OPM_RESERVOIR_COUPLING_SLAVE_HPP
 
-#include <opm/simulators/flow/ReservoirCouplingMaster.hpp>
+#include <opm/simulators/flow/ReservoirCoupling.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
@@ -33,7 +33,8 @@ namespace Opm {
 
 class ReservoirCouplingSlave {
 public:
-    using MPI_Comm_Ptr = ReservoirCouplingMaster::MPI_Comm_Ptr;
+    using MPI_Comm_Ptr = ReservoirCoupling::MPI_Comm_Ptr;
+    using MessageTag = ReservoirCoupling::MessageTag;
 
     ReservoirCouplingSlave(const Parallel::Communication &comm, const Schedule &schedule);
     void sendSimulationStartDateToMasterProcess();
