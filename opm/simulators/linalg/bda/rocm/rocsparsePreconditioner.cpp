@@ -68,8 +68,9 @@ set_context(rocsparse_handle handle_,
 
 template <class Scalar, unsigned int block_size>
 void rocsparsePreconditioner<Scalar, block_size>::
-setJacMat(BlockedMatrix<Scalar> jacMat) {
-    this->jacMat = std::make_shared<BlockedMatrix<Scalar>>(jacMat);
+setJacMat(const BlockedMatrix<Scalar>& jMat)
+{
+    this->jacMat = std::make_shared<BlockedMatrix<Scalar>>(jMat);
 }
 
 #define INSTANTIATE_TYPE(T)                  \
