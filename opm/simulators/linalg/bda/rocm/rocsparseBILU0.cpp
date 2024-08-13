@@ -92,8 +92,8 @@ analyze_matrix(BlockedMatrix<Scalar> *mat) {
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseBILU0<Scalar, block_size>::
-analyze_matrix(BlockedMatrix<Scalar> *mat, 
-               BlockedMatrix<Scalar> *jacMat) 
+analyze_matrix(BlockedMatrix<Scalar>*,
+               BlockedMatrix<Scalar>*)
 {
     std::size_t d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
     Timer t;
@@ -163,8 +163,8 @@ create_preconditioner(BlockedMatrix<Scalar> *mat) {
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseBILU0<Scalar, block_size>::
-create_preconditioner(BlockedMatrix<Scalar> *mat, 
-                      BlockedMatrix<Scalar> *jacMat) 
+create_preconditioner(BlockedMatrix<Scalar>*,
+                      BlockedMatrix<Scalar>*)
 {
     Timer t;
     bool result = true;
