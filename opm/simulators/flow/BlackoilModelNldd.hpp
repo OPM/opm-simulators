@@ -945,6 +945,9 @@ private:
         const auto wells = need_wells
             ? this->model_.simulator().vanguard().schedule().getWellsatEnd()
             : std::vector<Well>{};
+        const auto& possibleFutureConnectionSet = need_wells
+            ? this->model_.simulator().vanguard().schedule().getPossibleFutureConnections()
+            : std::unordered_map<std::string, std::set<int>> {};
 
         // If defaulted parameter for number of domains, choose a reasonable default.
         constexpr int default_cells_per_domain = 1000;
@@ -953,7 +956,6 @@ private:
             ? param.num_local_domains_
             : num_cells / default_cells_per_domain;
 
-        const auto& possibleFutureConnectionSet = this->model_.simulator().vanguard().schedule().getPossibleFutureConnections();
         return ::Opm::partitionCells(param.local_domain_partition_method_,
                                      num_domains,
                                      grid.leafGridView(), wells, possibleFutureConnectionSet, zoltan_ctrl);
