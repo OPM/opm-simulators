@@ -20,9 +20,6 @@
 #ifndef OPM_ROCSPARSEBILU0_HPP
 #define OPM_ROCSPARSEBILU0_HPP
 
-#include <mutex>
-#include <vector>
-
 #include <opm/simulators/linalg/bda/BlockedMatrix.hpp>
 
 #include <opm/simulators/linalg/bda/rocm/rocsparsePreconditioner.hpp>
