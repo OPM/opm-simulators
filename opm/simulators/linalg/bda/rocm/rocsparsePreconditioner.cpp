@@ -38,10 +38,10 @@ create(PreconditionerType type,
         return std::make_unique<Opm::Accelerator::rocsparseBILU0<Scalar, block_size> >(verbosity);
     case PreconditionerType::CPR:
         return std::make_unique<Opm::Accelerator::rocsparseCPR<Scalar, block_size> >(verbosity);
+    default:
+        OPM_THROW(std::logic_error,
+                  "Invalid preconditioner type " + std::to_string(static_cast<int>(type)));
     }
-
-    OPM_THROW(std::logic_error,
-              "Invalid preconditioner type " + std::to_string(static_cast<int>(type)));   
 }
 
 template <class Scalar, unsigned int block_size>

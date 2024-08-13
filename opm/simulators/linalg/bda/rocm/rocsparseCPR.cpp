@@ -223,8 +223,6 @@ amg_cycle_gpu(const int level,
     RocmMatrix<Scalar> *A = &d_Amatrices[level];
     RocmMatrix<Scalar> *R = &d_Rmatrices[level];
     int Ncur = A->Nb;
-    Scalar zero = 0.0;
-    Scalar one = 1.0;
     
     rocsparse_mat_info spmv_info;
     rocsparse_mat_descr descr_R;
