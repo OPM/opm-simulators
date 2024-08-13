@@ -62,6 +62,10 @@
 #include <opm/simulators/wells/WellInterfaceGeneric.hpp>
 #include <opm/simulators/wells/WellState.hpp>
 
+#if HAVE_MPI
+#include <opm/simulators/utils/MPISerializer.hpp>
+#endif
+
 #include <algorithm>
 #include <cassert>
 #include <functional>
@@ -1735,11 +1739,26 @@ getMaxWellConnections() const
     schedule_wells.erase(std::remove_if(schedule_wells.begin(), schedule_wells.end(), not_on_process_), schedule_wells.end());
     wells.reserve(schedule_wells.size());
 
+    auto possibleFutureConnections = schedule().getPossibleFutureConnections();
+#if HAVE_MPI
+    // Communicate Map to other processes, since it is only available on rank 0
+    Parallel::MpiSerializer ser(comm_);
+    ser.broadcast(possibleFutureConnections);
+#endif
     // initialize the additional cell connections introduced by wells.
     for (const auto& well : schedule_wells)
     {
         std::vector<int> compressed_well_perforations = this->getCellsForConnections(well);
 
+        const auto possibleFutureConnectionSetIt = possibleFutureConnections.find(well.name());
+        if (possibleFutureConnectionSetIt != possibleFutureConnections.end()) {
+            for (auto& global_index : possibleFutureConnectionSetIt->second) {
+                int compressed_idx = compressedIndexForInterior(global_index);
+                if (compressed_idx >= 0) { // Ignore connections in inactive/remote cells.
+                    compressed_well_perforations.push_back(compressed_idx);
+                }
+            }
+        }
         // also include wells with no perforations in case
         std::sort(compressed_well_perforations.begin(),
                   compressed_well_perforations.end());
