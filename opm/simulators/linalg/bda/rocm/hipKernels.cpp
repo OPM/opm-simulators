@@ -304,12 +304,12 @@ init(int verbosity_)
 
 template<class Scalar>
 void HipKernels<Scalar>::
-vmul(const Scalar alpha,
-     Scalar* in1,
-     Scalar* in2,
-     Scalar* out,
-     int N,
-     hipStream_t stream)
+vmul([[maybe_unused]] const Scalar alpha,
+     [[maybe_unused]] Scalar* in1,
+     [[maybe_unused]] Scalar* in2,
+     [[maybe_unused]] Scalar* out,
+     [[maybe_unused]] int N,
+     [[maybe_unused]] hipStream_t stream)
 {
     Timer t_vmul;
 #ifdef __HIP__
@@ -333,11 +333,11 @@ vmul(const Scalar alpha,
 
 template<class Scalar>
 void HipKernels<Scalar>::
-full_to_pressure_restriction(const Scalar* fine_y,
-                             Scalar* weights,
-                             Scalar* coarse_y,
-                             int Nb,
-                             hipStream_t stream)
+full_to_pressure_restriction([[maybe_unused]] const Scalar* fine_y,
+                             [[maybe_unused]] Scalar* weights,
+                             [[maybe_unused]] Scalar* coarse_y,
+                             [[maybe_unused]] int Nb,
+                             [[maybe_unused]] hipStream_t stream)
 {
     Timer t;
 #ifdef __HIP__
@@ -361,11 +361,11 @@ full_to_pressure_restriction(const Scalar* fine_y,
 
 template<class Scalar>
 void HipKernels<Scalar>::
-add_coarse_pressure_correction(Scalar* coarse_x,
-                               Scalar* fine_x,
-                               int pressure_idx,
-                               int Nb,
-                               hipStream_t stream)
+add_coarse_pressure_correction([[maybe_unused]] Scalar* coarse_x,
+                               [[maybe_unused]] Scalar* fine_x,
+                               [[maybe_unused]] int pressure_idx,
+                               [[maybe_unused]] int Nb,
+                               [[maybe_unused]] hipStream_t stream)
 {
     Timer t;
 #ifdef __HIP__
@@ -389,11 +389,11 @@ add_coarse_pressure_correction(Scalar* coarse_x,
 
 template<class Scalar>
 void HipKernels<Scalar>::
-prolongate_vector(const Scalar* in,
-                  Scalar* out,
-                  const int* cols,
-                  int N,
-                  hipStream_t stream)
+prolongate_vector([[maybe_unused]] const Scalar* in,
+                  [[maybe_unused]] Scalar* out,
+                  [[maybe_unused]] const int* cols,
+                  [[maybe_unused]] int N,
+                  [[maybe_unused]] hipStream_t stream)
 {
     Timer t;
     
@@ -419,15 +419,15 @@ prolongate_vector(const Scalar* in,
 
 template<class Scalar>
 void HipKernels<Scalar>::
-residual(Scalar* vals,
-         int* cols,
-         int* rows,
-         Scalar* x,
-         const Scalar* rhs,
-         Scalar* out,
-         int Nb,
-         unsigned int block_size,
-         hipStream_t stream)
+residual([[maybe_unused]] Scalar* vals,
+         [[maybe_unused]] int* cols,
+         [[maybe_unused]] int* rows,
+         [[maybe_unused]] Scalar* x,
+         [[maybe_unused]] const Scalar* rhs,
+         [[maybe_unused]] Scalar* out,
+         [[maybe_unused]] int Nb,
+         [[maybe_unused]] unsigned int block_size,
+         [[maybe_unused]] hipStream_t stream)
 {
     Timer t_residual;
 
@@ -458,14 +458,14 @@ residual(Scalar* vals,
 
 template<class Scalar>
 void HipKernels<Scalar>::
-spmv(Scalar* vals,
-     int* cols,
-     int* rows,
-     Scalar* x,
-     Scalar* y,
-     int Nb,
-     unsigned int block_size,
-     hipStream_t stream)
+spmv([[maybe_unused]] Scalar* vals,
+     [[maybe_unused]] int* cols,
+     [[maybe_unused]] int* rows,
+     [[maybe_unused]] Scalar* x,
+     [[maybe_unused]] Scalar* y,
+     [[maybe_unused]] int Nb,
+     [[maybe_unused]] unsigned int block_size,
+     [[maybe_unused]] hipStream_t stream)
 {//NOTE: block_size not used since I use this kernel only for block sizes 1, other uses use rocsparse!
     Timer t_spmv;
 #ifdef __HIP__
