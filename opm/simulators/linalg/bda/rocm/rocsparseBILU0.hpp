@@ -67,17 +67,17 @@ public:
     bool initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
                     std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                     rocsparse_int *d_Arows,
-                    rocsparse_int *d_Acols);
+                    rocsparse_int *d_Acols) override;
 
     /// Analysis, extract parallelism if specified
     /// \param[in] mat     matrix A
-    bool analyze_matrix(BlockedMatrix<Scalar> *mat);
+    bool analyze_matrix(BlockedMatrix<Scalar> *mat) override;
     
     /// Analysis, extract parallelism if specified
     /// \param[in] mat     matrix A
     /// \param[in] jacMat  matrix for preconditioner, analyze this as well
     bool analyze_matrix(BlockedMatrix<Scalar> *mat,
-                        BlockedMatrix<Scalar> *jacMat);
+                        BlockedMatrix<Scalar> *jacMat) override;
 
     /// ILU decomposition
     /// \param[in] mat     matrix A to decompose
@@ -99,13 +99,12 @@ public:
 
 #if HAVE_OPENCL
     // apply preconditioner, x = prec(y)
-    void apply(const cl::Buffer& y,
-               cl::Buffer& x) {}
+    void apply(const cl::Buffer&, cl::Buffer&) override {}
 #endif
 
     /// Copy matrix A values to GPU
     /// \param[in]  mVals  Input values
-    void copy_system_to_gpu(Scalar *mVals);
+    void copy_system_to_gpu(Scalar *mVals) override;
 
     /// Reassign pointers, in case the addresses of the Dune variables have changed --> TODO: check when/if we need this method
 //     /// \param[in]  vals  New values
@@ -114,7 +113,7 @@ public:
     
     /// Update GPU values after a new assembly is done
     /// \param[in] b     New b vector
-    void update_system_on_gpu(Scalar *b);
+    void update_system_on_gpu(Scalar *b) override;
 };
 } // namespace Opm
 
