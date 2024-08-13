@@ -28,8 +28,6 @@
 #ifndef EWOMS_BASIC_PARAMETERS_HH
 #define EWOMS_BASIC_PARAMETERS_HH
 
-#include <opm/models/utils/propertysystem.hh>
-
 namespace Opm::Parameters {
 
 //! grid resolution
@@ -48,8 +46,8 @@ template<class Scalar>
 struct DomainSizeZ { static constexpr Scalar value = 1.0; };
 
 //! The default value for the simulation's end time
-template<class TypeTag, class MyTypeTag>
-struct EndTime { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct EndTime { static constexpr Scalar value = -1e35; };
 
 //! Name of the grid file
 struct GridFile { static constexpr auto value = ""; };
@@ -59,15 +57,14 @@ struct GridFile { static constexpr auto value = ""; };
 struct GridGlobalRefinements { static constexpr unsigned value = 0; };
 
 //! The default value for the simulation's initial time step size
-template<class TypeTag, class MyTypeTag>
-struct InitialTimeStepSize { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct InitialTimeStepSize { static constexpr Scalar value = -1e35; };
 
 //! Set a value for the ParameterFile property
 struct ParameterFile { static constexpr auto value = ""; };
 
-//! The name of the file with a number of forced time step lengths
-template<class TypeTag, class MyTypeTag>
-struct PredeterminedTimeStepsFile { using type = Properties::UndefinedProperty; };
+//! By default, do not force any time steps
+struct PredeterminedTimeStepsFile { static constexpr auto value = ""; };
 
 /*!
  * \brief Print all parameters on startup?
@@ -75,12 +72,11 @@ struct PredeterminedTimeStepsFile { using type = Properties::UndefinedProperty; 
  * 0 means 'no', 1 means 'yes', 2 means 'print only to logfiles'. The
  * default is 2.
  */
-template<class TypeTag, class MyTypeTag>
-struct PrintParameters { using type = Properties::UndefinedProperty; };
+struct PrintParameters { static constexpr int value = 2; };
 
 //! The default value for the simulation's restart time
-template<class TypeTag, class MyTypeTag>
-struct RestartTime { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct RestartTime { static constexpr Scalar value = -1e35; };
 
 } // namespace Opm:Parameters
 

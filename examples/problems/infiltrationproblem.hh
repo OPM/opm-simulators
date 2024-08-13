@@ -97,22 +97,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::InfiltrationBaseProblem>
 { static constexpr bool value = true; };
 
-// The default for the end time of the simulation
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::InfiltrationBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 6e3;
-};
-
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::InfiltrationBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 60;
-};
-
 // Write newton convergence?
 template<class TypeTag>
 struct NewtonWriteConvergence<TypeTag, Properties::TTag::InfiltrationBaseProblem>
@@ -243,6 +227,8 @@ public:
 
         Parameters::SetDefault<Parameters::GridFile>("./data/infiltration_50x3.dgf");
         Parameters::SetDefault<Parameters::NumericDifferenceMethod>(1);
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(6e3);
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(60.0);
     }
 
     /*!

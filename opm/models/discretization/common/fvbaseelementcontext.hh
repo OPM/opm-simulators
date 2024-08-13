@@ -97,7 +97,7 @@ public:
     {
         // remember the simulator object
         simulatorPtr_ = &simulator;
-        enableStorageCache_ = Parameters::get<TypeTag, Parameters::EnableStorageCache>();
+        enableStorageCache_ = Parameters::Get<Parameters::EnableStorageCache>();
         stashedDofIdx_ = -1;
         focusDofIdx_ = -1;
     }

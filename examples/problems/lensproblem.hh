@@ -143,32 +143,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::LensBaseProblem>
 { static constexpr bool value = true; };
 
-// enable the cache for intensive quantities by default for this problem
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr bool value = true; };
-
-// enable the storage cache by default for this problem
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr bool value = true; };
-
-// The default for the end time of the simulation
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 30e3;
-};
-
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 250;
-};
-
 // define the properties specific for the lens problem
 template<class TypeTag>
 struct LensLowerLeftX<TypeTag, Properties::TTag::LensBaseProblem>
@@ -378,6 +352,11 @@ public:
         if constexpr (useFD) {
             Parameters::SetDefault<Parameters::NumericDifferenceMethod>(+1);
         }
+
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(30e3);
+        Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
+        Parameters::SetDefault<Parameters::EnableStorageCache>(true);
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250.0);
     }
 
     /*!

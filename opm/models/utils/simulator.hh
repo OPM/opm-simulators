@@ -129,11 +129,11 @@ public:
         timeStepIdx_ = 0;
         startTime_ = 0.0;
         time_ = 0.0;
-        endTime_ = Parameters::get<TypeTag, Parameters::EndTime>();
-        timeStepSize_ = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
+        endTime_ = Parameters::Get<Parameters::EndTime<Scalar>>();
+        timeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
         assert(timeStepSize_ > 0);
         const std::string& predetTimeStepFile =
-            Parameters::get<TypeTag, Parameters::PredeterminedTimeStepsFile>();
+            Parameters::Get<Parameters::PredeterminedTimeStepsFile>();
         if (!predetTimeStepFile.empty()) {
             std::ifstream is(predetTimeStepFile);
             while (!is.eof()) {
@@ -254,13 +254,13 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::EndTime>
+        Parameters::Register<Parameters::EndTime<Scalar>>
             ("The simulation time at which the simulation is finished [s]");
-        Parameters::registerParam<TypeTag, Parameters::InitialTimeStepSize>
+        Parameters::Register<Parameters::InitialTimeStepSize<Scalar>>
             ("The size of the initial time step [s]");
-        Parameters::registerParam<TypeTag, Parameters::RestartTime>
+        Parameters::Register<Parameters::RestartTime<Scalar>>
             ("The simulation time at which a restart should be attempted [s]");
-        Parameters::registerParam<TypeTag, Parameters::PredeterminedTimeStepsFile>
+        Parameters::Register<Parameters::PredeterminedTimeStepsFile>
             ("A file with a list of predetermined time step sizes (one "
              "time step per line)");
 
@@ -649,7 +649,7 @@ public:
         TimerGuard writeTimerGuard(writeTimer_);
 
         setupTimer_.start();
-        Scalar restartTime = Parameters::get<TypeTag, Parameters::RestartTime>();
+        Scalar restartTime = Parameters::Get<Parameters::RestartTime<Scalar>>();
         if (restartTime > -1e30) {
             // try to restart a previous simulation
             time_ = restartTime;

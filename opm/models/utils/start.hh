@@ -80,12 +80,12 @@ static inline void registerAllParameters_(bool finalizeRegistration = true)
 
     Parameters::Register<Parameters::ParameterFile>
         ("An .ini file which contains a set of run-time parameters");
-    Parameters::registerParam<TypeTag, Parameters::PrintParameters>
+    Parameters::Register<Parameters::PrintParameters>
         ("Print the values of the run-time parameters at the "
          "start of the simulation");
 
-    Simulator::registerParameters();
     ThreadManager::registerParameters();
+    Simulator::registerParameters();
 
     if (finalizeRegistration) {
         Parameters::endRegistration();
@@ -315,7 +315,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
 #endif
 
         // read the initial time step and the end time
-        Scalar endTime = Parameters::get<TypeTag, Parameters::EndTime>();
+        Scalar endTime = Parameters::Get<Parameters::EndTime<Scalar>>();
         if (endTime < -1e50) {
             if (myRank == 0)
                 Parameters::printUsage(argv[0],
@@ -323,7 +323,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
             return 1;
         }
 
-        Scalar initialTimeStepSize = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
+        Scalar initialTimeStepSize = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
         if (initialTimeStepSize < -1e50) {
             if (myRank == 0)
                 Parameters::printUsage(argv[0],
@@ -351,7 +351,7 @@ static inline int start(int argc, char **argv,  bool registerParams=true)
         }
 
         // print the parameters if requested
-        int printParams = Parameters::get<TypeTag, Parameters::PrintParameters>();
+        int printParams = Parameters::Get<Parameters::PrintParameters>();
         if (myRank == 0) {
             std::string endParametersSeparator("# [end of parameters]\n");
             if (printParams) {

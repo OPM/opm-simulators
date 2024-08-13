@@ -120,22 +120,6 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::ObstacleBaseProblem>
 { static constexpr bool value = true; };
 
-// The default for the end time of the simulation
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::ObstacleBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e4;
-};
-
-// The default for the initial time step size of the simulation
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::ObstacleBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 250;
-};
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -282,6 +266,8 @@ public:
         ParentType::registerParameters();
 
         Parameters::SetDefault<Parameters::GridFile>("./data/obstacle_24x16.dgf");
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(1e4);
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250);
     }
 
     /*!

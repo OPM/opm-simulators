@@ -141,23 +141,6 @@ struct EnableEnergy<TypeTag, TTag::FlashModel>
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// The updates of intensive quantities tend to be _very_ expensive for this
-// model, so let's try to minimize the number of required ones
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlashModel>
-{ static constexpr bool value = true; };
-
-// since thermodynamic hints are basically free if the cache for intensive quantities is
-// enabled, and this model usually shows quite a performance improvment if they are
-// enabled, let's enable them by default.
-template<class TypeTag>
-struct EnableThermodynamicHints<TypeTag, Properties::TTag::FlashModel>
-{ static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 
 /*!
@@ -253,6 +236,12 @@ public:
              "ssi, newton, ssi+newton");
 
         Parameters::SetDefault<Parameters::FlashTolerance<Scalar>>(1e-12);
+        Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
+
+        // since thermodynamic hints are basically free if the cache for intensive quantities is
+        // enabled, and this model usually shows quite a performance improvment if they are
+        // enabled, let's enable them by default.
+        Parameters::SetDefault<Parameters::EnableThermodynamicHints>(true);
     }
 
     /*!

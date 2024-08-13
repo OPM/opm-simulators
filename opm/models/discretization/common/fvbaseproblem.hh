@@ -147,7 +147,7 @@ public:
             // asynchonous VTK output currently does not work in conjunction with grid
             // adaptivity because the async-IO code assumes that the grid stays
             // constant. complain about that case.
-            bool enableGridAdaptation = Parameters::get<TypeTag, Parameters::EnableGridAdaptation>();
+            bool enableGridAdaptation = Parameters::Get<Parameters::EnableGridAdaptation>();
             if (asyncVtkOutput && enableGridAdaptation)
                 throw std::runtime_error("Asynchronous VTK output currently cannot be used "
                                          "at the same time as grid adaptivity");
@@ -169,16 +169,16 @@ public:
     static void registerParameters()
     {
         Model::registerParameters();
-        Parameters::registerParam<TypeTag, Parameters::MaxTimeStepSize>
+        Parameters::Register<Parameters::MaxTimeStepSize<Scalar>>
             ("The maximum size to which all time steps are limited to [s]");
-        Parameters::registerParam<TypeTag, Parameters::MinTimeStepSize>
+        Parameters::Register<Parameters::MinTimeStepSize<Scalar>>
             ("The minimum size to which all time steps are limited to [s]");
-        Parameters::registerParam<TypeTag, Parameters::MaxTimeStepDivisions>
+        Parameters::Register<Parameters::MaxTimeStepDivisions>
             ("The maximum number of divisions by two of the timestep size "
              "before the simulation bails out");
         Parameters::Register<Parameters::EnableAsyncVtkOutput>
             ("Dispatch a separate thread to write the VTK output");
-        Parameters::registerParam<TypeTag, Parameters::ContinueOnConvergenceError>
+        Parameters::Register<Parameters::ContinueOnConvergenceError>
             ("Continue with a non-converged solution instead of giving up "
              "if we encounter a time step size smaller than the minimum time "
              "step size.");
@@ -204,7 +204,7 @@ public:
      */
     std::string outputDir() const
     {
-        std::string outputDir = Parameters::get<TypeTag, Parameters::OutputDir>();
+        std::string outputDir = Parameters::Get<Parameters::OutputDir>();
 
         if (outputDir.empty())
             outputDir = ".";
@@ -560,14 +560,14 @@ public:
      * \brief Returns the minimum allowable size of a time step.
      */
     Scalar minTimeStepSize() const
-    { return Parameters::get<TypeTag, Parameters::MinTimeStepSize>(); }
+    { return Parameters::Get<Parameters::MinTimeStepSize<Scalar>>(); }
 
     /*!
      * \brief Returns the maximum number of subsequent failures for the time integration
      *        before giving up.
      */
     unsigned maxTimeIntegrationFailures() const
-    { return Parameters::get<TypeTag, Parameters::MaxTimeStepDivisions>(); }
+    { return Parameters::Get<Parameters::MaxTimeStepDivisions>(); }
 
     /*!
      * \brief Returns if we should continue with a non-converged solution instead of
@@ -575,7 +575,7 @@ public:
      *        step size.
      */
     bool continueOnConvergenceError() const
-    { return Parameters::get<TypeTag, Parameters::ContinueOnConvergenceError>(); }
+    { return Parameters::Get<Parameters::ContinueOnConvergenceError>(); }
 
     /*!
      * \brief Impose the next time step size to be used externally.
@@ -593,7 +593,7 @@ public:
         if (nextTimeStepSize_ > 0.0)
             return nextTimeStepSize_;
 
-        Scalar dtNext = std::min(Parameters::get<TypeTag, Parameters::MaxTimeStepSize>(),
+        Scalar dtNext = std::min(Parameters::Get<Parameters::MaxTimeStepSize<Scalar>>(),
                                  newtonMethod().suggestTimeStepSize(simulator().timeStepSize()));
 
         if (dtNext < simulator().maxTimeStepSize()
@@ -812,7 +812,7 @@ protected:
 
 private:
     bool enableVtkOutput_() const
-    { return Parameters::get<TypeTag, Parameters::EnableVtkOutput>(); }
+    { return Parameters::Get<Parameters::EnableVtkOutput>(); }
 
     //! Returns the implementation of the problem (i.e. static polymorphism)
     Implementation& asImp_()

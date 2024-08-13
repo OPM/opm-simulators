@@ -150,8 +150,9 @@ public:
      */
     void allocBuffers()
     {
-        if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
+        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
             return;
+        }
 
         if (!enableSolvent)
             return;
@@ -174,8 +175,9 @@ public:
      */
     void processElement(const ElementContext& elemCtx)
     {
-        if (!Parameters::get<TypeTag, Parameters::EnableVtkOutput>())
+        if (!Parameters::Get<Parameters::EnableVtkOutput>()) {
             return;
+        }
 
         if (!enableSolvent)
             return;

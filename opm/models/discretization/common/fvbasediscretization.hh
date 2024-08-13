@@ -284,42 +284,6 @@ struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization>
 
 namespace Opm::Parameters {
 
-//! By default, do not continue with a non-converged solution instead of giving up
-//! if we encounter a time step size smaller than the minimum time
-//! step size.
-template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = false; };
-
-//! Disable grid adaptation by default
-template<class TypeTag>
-struct EnableGridAdaptation<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = false; };
-
-//! by default, disable the intensive quantity cache. If the intensive quantities are
-//! relatively cheap to calculate, the cache basically does not yield any performance
-//! impact because of the intensive quantity cache will cause additional pressure on the
-//! CPU caches...
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = false; };
-
-// disable caching the storage term by default
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = false; };
-
-//! Enable the VTK output by default
-template<class TypeTag>
-struct EnableVtkOutput<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = true; };
-
-// do not use thermodynamic hints by default. If you enable this, make sure to also
-// enable the intensive quantity cache above to avoid getting an exception...
-template<class TypeTag>
-struct EnableThermodynamicHints<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr bool value = false; };
-
 // use default initialization based on rule-of-thumb of Newton tolerance
 template<class TypeTag>
 struct LinearSolverAbsTolerance<TypeTag, Properties::TTag::FvBaseDiscretization>
@@ -338,38 +302,6 @@ struct LinearSolverTolerance<TypeTag, Properties::TTag::FvBaseDiscretization>
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1e-3;
 };
-
-//! use an unlimited time step size by default
-template<class TypeTag>
-struct MaxTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = std::numeric_limits<type>::infinity();
-};
-
-//! The maximum allowed number of timestep divisions for the
-//! Newton solver
-template<class TypeTag>
-struct MaxTimeStepDivisions<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr unsigned value = 10; };
-
-//! By default, accept any time step larger than zero
-template<class TypeTag>
-struct MinTimeStepSize<TypeTag, Properties::TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.0;
-};
-
-//! By default, write the simulation output to the current working directory
-template<class TypeTag>
-struct OutputDir<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr auto value = "."; };
-
-
-template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, Properties::TTag::FvBaseDiscretization>
-{ static constexpr int value = 1; };
 
 } // namespace Opm::Parameters
 
@@ -489,18 +421,16 @@ public:
         , newtonMethod_(simulator)
         , localLinearizer_(ThreadManager::maxThreads())
         , linearizer_(new Linearizer())
-        , enableGridAdaptation_(Parameters::get<TypeTag, Parameters::EnableGridAdaptation>() )
-        , enableIntensiveQuantityCache_(Parameters::get<TypeTag, Parameters::EnableIntensiveQuantityCache>())
-        , enableStorageCache_(Parameters::get<TypeTag, Parameters::EnableStorageCache>())
-        , enableThermodynamicHints_(Parameters::get<TypeTag, Parameters::EnableThermodynamicHints>())
+        , enableGridAdaptation_(Parameters::Get<Parameters::EnableGridAdaptation>() )
+        , enableIntensiveQuantityCache_(Parameters::Get<Parameters::EnableIntensiveQuantityCache>())
+        , enableStorageCache_(Parameters::Get<Parameters::EnableStorageCache>())
+        , enableThermodynamicHints_(Parameters::Get<Parameters::EnableThermodynamicHints>())
     {
         bool isEcfv = std::is_same<Discretization, EcfvDiscretization<TypeTag> >::value;
         if (enableGridAdaptation_ && !isEcfv)
             throw std::invalid_argument("Grid adaptation currently only works for the "
                                         "element-centered finite volume discretization (is: "
                                         +Dune::className<Discretization>()+")");
-
-        enableStorageCache_ = Parameters::get<TypeTag, Parameters::EnableStorageCache>();
 
         PrimaryVariables::init();
         size_t numDof = asImp_().numGridDof();
@@ -546,17 +476,17 @@ public:
         // register runtime parameters of the output modules
         VtkPrimaryVarsModule<TypeTag>::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::EnableGridAdaptation>
+        Parameters::Register<Parameters::EnableGridAdaptation>
             ("Enable adaptive grid refinement/coarsening");
-        Parameters::registerParam<TypeTag, Parameters::EnableVtkOutput>
+        Parameters::Register<Parameters::EnableVtkOutput>
             ("Global switch for turning on writing VTK files");
-        Parameters::registerParam<TypeTag, Parameters::EnableThermodynamicHints>
+        Parameters::Register<Parameters::EnableThermodynamicHints>
             ("Enable thermodynamic hints");
-        Parameters::registerParam<TypeTag, Parameters::EnableIntensiveQuantityCache>
+        Parameters::Register<Parameters::EnableIntensiveQuantityCache>
             ("Turn on caching of intensive quantities");
-        Parameters::registerParam<TypeTag, Parameters::EnableStorageCache>
+        Parameters::Register<Parameters::EnableStorageCache>
             ("Store previous storage terms and avoid re-calculating them.");
-        Parameters::registerParam<TypeTag, Parameters::OutputDir>
+        Parameters::Register<Parameters::OutputDir>
             ("The directory to which result files are written");
     }
 

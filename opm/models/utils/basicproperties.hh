@@ -177,42 +177,4 @@ struct Vanguard<TypeTag, TTag::NumericModel>
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-//! The default value for the simulation's end time
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::NumericModel>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = -1e35;
-};
-
-//! The default value for the simulation's initial time step size
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::NumericModel>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = -1e35;
-};
-
-//! By default, do not force any time steps
-template<class TypeTag>
-struct PredeterminedTimeStepsFile<TypeTag, Properties::TTag::NumericModel>
-{ static constexpr auto value = ""; };
-
-//! By default, print the values of the run-time parameters on startup
-template<class TypeTag>
-struct PrintParameters<TypeTag, Properties::TTag::NumericModel>
-{ static constexpr int value = 2; };
-
-//! The default value for the simulation's restart time
-template<class TypeTag>
-struct RestartTime<TypeTag, Properties::TTag::NumericModel>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = -1e35;
-};
-
-} // namespace Opm::Parameters
-
 #endif

@@ -30,12 +30,16 @@
 #ifndef EWOMS_FV_BASE_PARAMETERS_HH
 #define EWOMS_FV_BASE_PARAMETERS_HH
 
-#include <opm/models/utils/propertysystem.hh>
+#include <limits>
 
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct ThreadsPerProcess { using type = Properties::UndefinedProperty; };
+/*!
+ * \brief Continue with a non-converged solution instead of giving up
+ *        if we encounter a time step size smaller than the minimum time
+ *        step size.
+ */
+struct ContinueOnConvergenceError { static constexpr bool value = false; };
 
 /*!
  * \brief Determines if the VTK output is written to disk asynchronously
@@ -54,54 +58,7 @@ struct EnableAsyncVtkOutput { static constexpr bool value = true; };
  * Currently grid adaptation requires the presence of the dune-FEM module. If it is not
  * available and grid adaptation is enabled, an exception is thrown.
  */
-template<class TypeTag, class MyTypeTag>
-struct EnableGridAdaptation { using type = Properties::UndefinedProperty; };
-
-/*!
- * \brief The directory to which simulation output ought to be written to.
- */
-template<class TypeTag, class MyTypeTag>
-struct OutputDir { using type = Properties::UndefinedProperty; };
-
-/*!
- * \brief Global switch to enable or disable the writing of VTK output files
- *
- * If writing VTK files is disabled, then the WriteVtk$FOO options do
- * not have any effect...
- */
-template<class TypeTag, class MyTypeTag>
-struct EnableVtkOutput { using type = Properties::UndefinedProperty; };
-
-/*!
- * \brief Specify the maximum size of a time integration [s].
- *
- * The default is to not limit the step size.
- */
-template<class TypeTag, class MyTypeTag>
-struct MaxTimeStepSize { using type = Properties::UndefinedProperty; };
-
-/*!
- * \brief Specify the minimal size of a time integration [s].
- *
- * The default is to not limit the step size.
- */
-template<class TypeTag, class MyTypeTag>
-struct MinTimeStepSize { using type = Properties::UndefinedProperty; };
-
-/*!
- * \brief The maximum allowed number of timestep divisions for the
- *        Newton solver.
- */
-template<class TypeTag, class MyTypeTag>
-struct MaxTimeStepDivisions { using type = Properties::UndefinedProperty; };
-
-/*!
- * \brief Continue with a non-converged solution instead of giving up
- *        if we encounter a time step size smaller than the minimum time
- *        step size.
- */
-template<class TypeTag, class MyTypeTag>
-struct ContinueOnConvergenceError { using type = Properties::UndefinedProperty; };
+struct EnableGridAdaptation { static constexpr bool value = false; };
 
 /*!
  * \brief Specify whether all intensive quantities for the grid should be
@@ -112,8 +69,7 @@ struct ContinueOnConvergenceError { using type = Properties::UndefinedProperty; 
  * may cause the simulation to exhibit worse cache coherence behavior
  * which eats some of the computational benefits again.
  */
-template<class TypeTag, class MyTypeTag>
-struct EnableIntensiveQuantityCache { using type = Properties::UndefinedProperty; };
+struct EnableIntensiveQuantityCache { static constexpr bool value = false; };
 
 /*!
  * \brief Specify whether the storage terms for previous solutions should be cached.
@@ -121,8 +77,7 @@ struct EnableIntensiveQuantityCache { using type = Properties::UndefinedProperty
  * This potentially reduces the CPU time, but comes at the cost of higher memory
  * consumption.
  */
-template<class TypeTag, class MyTypeTag>
-struct EnableStorageCache { using type = Properties::UndefinedProperty; };
+struct EnableStorageCache { static constexpr bool value = false; };
 
 /*!
  * \brief Specify whether to use the already calculated solutions as
@@ -132,8 +87,45 @@ struct EnableStorageCache { using type = Properties::UndefinedProperty; };
  * very expensive (e.g. for non-linear fugacity functions where the
  * solver converges faster).
  */
-template<class TypeTag, class MyTypeTag>
-struct EnableThermodynamicHints { using type = Properties::UndefinedProperty; };
+struct EnableThermodynamicHints { static constexpr bool value = false; };
+
+/*!
+ * \brief Global switch to enable or disable the writing of VTK output files
+ *
+ * If writing VTK files is disabled, then the WriteVtk$FOO options do
+ * not have any effect...
+ */
+struct EnableVtkOutput { static constexpr bool value = true; };
+
+/*!
+ * \brief Specify the maximum size of a time integration [s].
+ *
+ * The default is to not limit the step size.
+ */
+template<class Scalar>
+struct MaxTimeStepSize { static constexpr Scalar value = std::numeric_limits<Scalar>::infinity(); };
+
+/*!
+ * \brief The maximum allowed number of timestep divisions for the
+ *        Newton solver.
+ */
+struct MaxTimeStepDivisions { static constexpr unsigned value = 10; };
+
+/*!
+ * \brief Specify the minimal size of a time integration [s].
+ *
+ * The default is to not limit the step size.
+ */
+template<class Scalar>
+struct MinTimeStepSize { static constexpr Scalar value = 0.0; };
+
+/*!
+ * \brief The directory to which simulation output ought to be written to.
+ */
+struct OutputDir { static constexpr auto value = ""; };
+
+//! \brief Number of threads per process.
+struct ThreadsPerProcess { static constexpr int value = 1; };
 
 } // namespace Opm::Parameters
 
