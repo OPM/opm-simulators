@@ -95,14 +95,14 @@ analyze_matrix(BlockedMatrix<Scalar> *mat_) {
 template <class Scalar, unsigned int block_size>
 bool rocsparseCPR<Scalar, block_size>::
 analyze_matrix(BlockedMatrix<Scalar> *mat_,
-               BlockedMatrix<Scalar> *jacMat)
+               BlockedMatrix<Scalar> *jacMat_)
 {
     this->Nb = mat_->Nb;
     this->nnzb = mat_->nnzbs;
     this->N = Nb * block_size;
     this->nnz = nnzb * block_size * block_size;
 
-    bool success = bilu0->analyze_matrix(mat_, jacMat);
+    bool success = bilu0->analyze_matrix(mat_, jacMat_);
     this->mat = mat_;
 
     return success;
@@ -111,10 +111,10 @@ analyze_matrix(BlockedMatrix<Scalar> *mat_,
 template <class Scalar, unsigned int block_size>
 bool rocsparseCPR<Scalar, block_size>::
 create_preconditioner(BlockedMatrix<Scalar> *mat_,
-                      BlockedMatrix<Scalar> *jacMat)
+                      BlockedMatrix<Scalar> *jacMat_)
 {
     Dune::Timer t_bilu0;
-    bool result = bilu0->create_preconditioner(mat_, jacMat);
+    bool result = bilu0->create_preconditioner(mat_, jacMat_);
     if (verbosity >= 3) {
         std::ostringstream out;
         out << "rocsparseCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";

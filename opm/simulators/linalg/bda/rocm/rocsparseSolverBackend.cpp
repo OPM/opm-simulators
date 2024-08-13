@@ -98,11 +98,11 @@ rocsparseSolverBackend(int verbosity_, int maxit_, Scalar tolerance_,
     ROCSPARSE_CHECK(rocsparse_set_stream(handle, stream));
     ROCBLAS_CHECK(rocblas_set_stream(blas_handle, stream));
     
-    using PreconditionerType = typename Opm::Accelerator::PreconditionerType;
+    using PCType = typename Opm::Accelerator::PreconditionerType;
     if (use_cpr) {
-        prec = rocsparsePreconditioner<Scalar, block_size>::create(PreconditionerType::CPR, verbosity);
+        prec = rocsparsePreconditioner<Scalar, block_size>::create(PCType::CPR, verbosity);
     } else {
-        prec = rocsparsePreconditioner<Scalar, block_size>::create(PreconditionerType::BILU0, verbosity);
+        prec = rocsparsePreconditioner<Scalar, block_size>::create(PCType::BILU0, verbosity);
     }
     
     prec->set_context(handle, dir, operation, stream);
