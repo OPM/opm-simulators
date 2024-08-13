@@ -273,7 +273,7 @@ apply(Scalar& y, Scalar& x) {
     }
 }
 
-#define INSTANCE_TYPE(T)                \
+#define INSTANTIATE_TYPE(T)             \
     template class rocsparseBILU0<T,1>; \
     template class rocsparseBILU0<T,2>; \
     template class rocsparseBILU0<T,3>; \
@@ -281,5 +281,6 @@ apply(Scalar& y, Scalar& x) {
     template class rocsparseBILU0<T,5>; \
     template class rocsparseBILU0<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
 } // namespace Opm

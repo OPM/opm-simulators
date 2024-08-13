@@ -322,7 +322,7 @@ apply(Scalar& y,
     }
 }
 
-#define INSTANCE_TYPE(T)                \
+#define INSTANTIATE_TYPE(T)           \
     template class rocsparseCPR<T,1>; \
     template class rocsparseCPR<T,2>; \
     template class rocsparseCPR<T,3>; \
@@ -330,7 +330,6 @@ apply(Scalar& y,
     template class rocsparseCPR<T,5>; \
     template class rocsparseCPR<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
 } // namespace Opm
-
-
