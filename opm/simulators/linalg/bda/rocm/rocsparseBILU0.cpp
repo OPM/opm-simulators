@@ -92,8 +92,8 @@ analyze_matrix(BlockedMatrix<Scalar> *mat) {
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseBILU0<Scalar, block_size>::
-analyze_matrix(BlockedMatrix<Scalar> *mat, 
-               BlockedMatrix<Scalar> *jacMat) 
+analyze_matrix(BlockedMatrix<Scalar>*,
+               BlockedMatrix<Scalar>*)
 {
     std::size_t d_bufferSize_M, d_bufferSize_L, d_bufferSize_U, d_bufferSize;
     Timer t;
@@ -163,8 +163,8 @@ create_preconditioner(BlockedMatrix<Scalar> *mat) {
 
 template <class Scalar, unsigned int block_size>
 bool rocsparseBILU0<Scalar, block_size>::
-create_preconditioner(BlockedMatrix<Scalar> *mat, 
-                      BlockedMatrix<Scalar> *jacMat) 
+create_preconditioner(BlockedMatrix<Scalar>*,
+                      BlockedMatrix<Scalar>*)
 {
     Timer t;
     bool result = true;
@@ -253,7 +253,6 @@ update_system_on_gpu(Scalar *d_Avals) {
 template <class Scalar, unsigned int block_size>
 void rocsparseBILU0<Scalar, block_size>::
 apply(Scalar& y, Scalar& x) {
-    Scalar zero = 0.0;
     Scalar one  = 1.0;
 
     Timer t_apply;
@@ -274,7 +273,7 @@ apply(Scalar& y, Scalar& x) {
     }
 }
 
-#define INSTANCE_TYPE(T)                \
+#define INSTANTIATE_TYPE(T)             \
     template class rocsparseBILU0<T,1>; \
     template class rocsparseBILU0<T,2>; \
     template class rocsparseBILU0<T,3>; \
@@ -282,5 +281,6 @@ apply(Scalar& y, Scalar& x) {
     template class rocsparseBILU0<T,5>; \
     template class rocsparseBILU0<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
 } // namespace Opm

@@ -85,28 +85,28 @@ public:
     bool initialize(std::shared_ptr<BlockedMatrix<Scalar>> matrix,
                     std::shared_ptr<BlockedMatrix<Scalar>> jacMatrix,
                     rocsparse_int *d_Arows,
-                    rocsparse_int *d_Acols);
+                    rocsparse_int *d_Acols) override;
     
 
     /// Analysis, extract parallelism if specified
     /// \param[in] mat     matrix A
-    bool analyze_matrix(BlockedMatrix<Scalar> *mat);
+    bool analyze_matrix(BlockedMatrix<Scalar> *mat) override;
     
     /// Analysis, extract parallelism if specified
     /// \param[in] mat     matrix A
     /// \param[in] jacMat  matrix for preconditioner, analyze this as well
     bool analyze_matrix(BlockedMatrix<Scalar> *mat,
-                        BlockedMatrix<Scalar> *jacMat);
+                        BlockedMatrix<Scalar> *jacMat) override;
 
     /// Create AMG preconditioner and perform ILU decomposition
     /// \param[in] mat     matrix A
-    bool create_preconditioner(BlockedMatrix<Scalar> *mat);
+    bool create_preconditioner(BlockedMatrix<Scalar> *mat) override;
     
     /// Create AMG preconditioner and perform ILU decomposition
     /// \param[in] mat     matrix A
     /// \param[in] jacMat  matrix for preconditioner, decompose this one if used
     bool create_preconditioner(BlockedMatrix<Scalar> *mat,
-                               BlockedMatrix<Scalar> *jacMat);
+                               BlockedMatrix<Scalar> *jacMat) override;
     
     /// Apply preconditioner, x = prec(y)
     /// applies blocked ilu0
@@ -118,13 +118,12 @@ public:
     
 #if HAVE_OPENCL
     // apply preconditioner, x = prec(y)
-    void apply(const cl::Buffer& y,
-               cl::Buffer& x) {}
+    void apply(const cl::Buffer&, cl::Buffer&) override {}
 #endif
     
     /// Copy matrix A values to GPU
     /// \param[in]  mVals  Input values
-    void copy_system_to_gpu(Scalar *b);
+    void copy_system_to_gpu(Scalar *b) override;
 
     /// Reassign pointers, in case the addresses of the Dune variables have changed --> TODO: check when/if we need this method
     /// \param[in] vals           array of nonzeroes, each block is stored row-wise and contiguous, contains nnz values
@@ -133,7 +132,7 @@ public:
 
     /// Update linear system to GPU
     /// \param[in] b              input vector, contains N values
-    void update_system_on_gpu(Scalar *b);
+    void update_system_on_gpu(Scalar *b) override;
 };
 
 } // namespace Opm

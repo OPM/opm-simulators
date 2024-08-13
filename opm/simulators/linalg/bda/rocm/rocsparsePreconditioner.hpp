@@ -84,7 +84,7 @@ public:
                      rocsparse_operation operation,
                      hipStream_t stream);
     
-    void setJacMat(BlockedMatrix<Scalar> jacMat);
+    void setJacMat(const BlockedMatrix<Scalar>& jacMat);
 };
 } //namespace Opm
 

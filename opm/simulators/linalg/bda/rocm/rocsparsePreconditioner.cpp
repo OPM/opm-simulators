@@ -38,38 +38,39 @@ create(PreconditionerType type,
         return std::make_unique<Opm::Accelerator::rocsparseBILU0<Scalar, block_size> >(verbosity);
     case PreconditionerType::CPR:
         return std::make_unique<Opm::Accelerator::rocsparseCPR<Scalar, block_size> >(verbosity);
+    default:
+        OPM_THROW(std::logic_error,
+                  "Invalid preconditioner type " + std::to_string(static_cast<int>(type)));
     }
-
-    OPM_THROW(std::logic_error,
-              "Invalid preconditioner type " + std::to_string(static_cast<int>(type)));   
 }
 
 template <class Scalar, unsigned int block_size>
 void rocsparsePreconditioner<Scalar, block_size>::
-set_matrix_analysis(rocsparse_mat_descr descr_L,
-                    rocsparse_mat_descr descr_U)
+set_matrix_analysis(rocsparse_mat_descr desc_L,
+                    rocsparse_mat_descr desc_U)
 {
-    descr_L = descr_L;
-    descr_U = descr_U;
+    descr_L = desc_L;
+    descr_U = desc_U;
 }
 
 template <class Scalar, unsigned int block_size>
 void rocsparsePreconditioner<Scalar, block_size>::
-set_context(rocsparse_handle handle,
-            rocsparse_direction dir,
-            rocsparse_operation operation,
-            hipStream_t stream)
+set_context(rocsparse_handle handle_,
+            rocsparse_direction dir_,
+            rocsparse_operation operation_,
+            hipStream_t stream_)
 {
-    this->handle = handle;
-    this->dir = dir;
-    this->operation = operation;
-    this->stream = stream;
+    this->handle = handle_;
+    this->dir = dir_;
+    this->operation = operation_;
+    this->stream = stream_;
 }
 
 template <class Scalar, unsigned int block_size>
 void rocsparsePreconditioner<Scalar, block_size>::
-setJacMat(BlockedMatrix<Scalar> jacMat) {
-    this->jacMat = std::make_shared<BlockedMatrix<Scalar>>(jacMat);
+setJacMat(const BlockedMatrix<Scalar>& jMat)
+{
+    this->jacMat = std::make_shared<BlockedMatrix<Scalar>>(jMat);
 }
 
 #define INSTANTIATE_TYPE(T)                  \

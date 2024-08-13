@@ -95,14 +95,14 @@ analyze_matrix(BlockedMatrix<Scalar> *mat_) {
 template <class Scalar, unsigned int block_size>
 bool rocsparseCPR<Scalar, block_size>::
 analyze_matrix(BlockedMatrix<Scalar> *mat_,
-               BlockedMatrix<Scalar> *jacMat)
+               BlockedMatrix<Scalar> *jacMat_)
 {
     this->Nb = mat_->Nb;
     this->nnzb = mat_->nnzbs;
     this->N = Nb * block_size;
     this->nnz = nnzb * block_size * block_size;
 
-    bool success = bilu0->analyze_matrix(mat_, jacMat);
+    bool success = bilu0->analyze_matrix(mat_, jacMat_);
     this->mat = mat_;
 
     return success;
@@ -111,10 +111,10 @@ analyze_matrix(BlockedMatrix<Scalar> *mat_,
 template <class Scalar, unsigned int block_size>
 bool rocsparseCPR<Scalar, block_size>::
 create_preconditioner(BlockedMatrix<Scalar> *mat_,
-                      BlockedMatrix<Scalar> *jacMat)
+                      BlockedMatrix<Scalar> *jacMat_)
 {
     Dune::Timer t_bilu0;
-    bool result = bilu0->create_preconditioner(mat_, jacMat);
+    bool result = bilu0->create_preconditioner(mat_, jacMat_);
     if (verbosity >= 3) {
         std::ostringstream out;
         out << "rocsparseCPR create_preconditioner bilu0(): " << t_bilu0.stop() << " s";
@@ -223,8 +223,6 @@ amg_cycle_gpu(const int level,
     RocmMatrix<Scalar> *A = &d_Amatrices[level];
     RocmMatrix<Scalar> *R = &d_Rmatrices[level];
     int Ncur = A->Nb;
-    Scalar zero = 0.0;
-    Scalar one = 1.0;
     
     rocsparse_mat_info spmv_info;
     rocsparse_mat_descr descr_R;
@@ -324,7 +322,7 @@ apply(Scalar& y,
     }
 }
 
-#define INSTANCE_TYPE(T)                \
+#define INSTANTIATE_TYPE(T)           \
     template class rocsparseCPR<T,1>; \
     template class rocsparseCPR<T,2>; \
     template class rocsparseCPR<T,3>; \
@@ -332,7 +330,6 @@ apply(Scalar& y,
     template class rocsparseCPR<T,5>; \
     template class rocsparseCPR<T,6>;
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
+
 } // namespace Opm
-
-
