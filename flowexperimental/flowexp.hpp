@@ -122,20 +122,6 @@ struct LinearSolverBackend<TypeTag, TTag::FlowExpTypeTag> {
 
 namespace Opm::Parameters {
 
-// if openMP is available, set the default the number of threads per process for the main
-// simulation to 2 (instead of grabbing everything that is available).
-#if _OPENMP
-template<class TypeTag>
-struct ThreadsPerProcess<TypeTag, Properties::TTag::FlowExpTypeTag>
-{ static constexpr int value = 2; };
-#endif
-
-// By default, flowexp accepts the result of the time integration unconditionally if the
-// smallest time step size is reached.
-template<class TypeTag>
-struct ContinueOnConvergenceError<TypeTag, Properties::TTag::FlowExpTypeTag>
-{ static constexpr bool value = true; };
-
 template<class TypeTag>
 struct EnableTerminalOutput<TypeTag, Properties::TTag::FlowExpTypeTag>
 { static constexpr bool value = false; };
@@ -230,6 +216,16 @@ public:
         Parameters::hideParam<TypeTag, Parameters::UseUpdateStabilization>();
         Parameters::hideParam<TypeTag, Parameters::MatrixAddWellContributions>();
         Parameters::hideParam<TypeTag, Parameters::EnableTerminalOutput>();
+
+        // if openMP is available, set the default the number of threads per process for the main
+        // simulation to 2 (instead of grabbing everything that is available).
+#if _OPENMP
+        Parameters::SetDefault<Parameters::ThreadsPerProcess>(2);
+#endif
+
+        // By default, flowexp accepts the result of the time integration unconditionally if the
+        // smallest time step size is reached.
+        Parameters::SetDefault<Parameters::ContinueOnConvergenceError>(true);
     }
 
     // inherit the constructors

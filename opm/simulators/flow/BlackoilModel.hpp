@@ -150,10 +150,6 @@ template<class TypeTag>
 struct EnableDebuggingChecks<TypeTag, Properties::TTag::FlowProblem>
 { static constexpr bool value = false; };
 
-template<class TypeTag>
-struct OutputDir<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr auto value = ""; };
-
 }
 
 namespace Opm {

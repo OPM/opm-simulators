@@ -247,6 +247,22 @@ public:
         Parameters::registerParam<TypeTag, Parameters::ExplicitRockCompaction>
             ("Use pressure from end of the last time step when evaluating rock compaction");
         Parameters::hideParam<TypeTag, Parameters::ExplicitRockCompaction>(); // Users will typically not need to modify this parameter..
+
+        // By default, stop it after the universe will probably have stopped
+        // to exist. (the ECL problem will finish the simulation explicitly
+        // after it simulated the last episode specified in the deck.)
+        Parameters::SetDefault<Parameters::EndTime<Scalar>>(1e100);
+        // The chosen value means that the size of the first time step is the
+        // one of the initial episode (if the length of the initial episode is
+        // not millions of trillions of years, that is...)
+        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(3600*24);
+        // Disable the VTK output by default for this problem ...
+        Parameters::SetDefault<Parameters::EnableVtkOutput>(false);
+        // the cache for intensive quantities can be used for ECL problems and also yields a
+        // decent speedup...
+        Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
+        // the cache for the storage term can also be used and also yields a decent speedup
+        Parameters::SetDefault<Parameters::EnableStorageCache>(true);
     }
 
 
@@ -317,10 +333,10 @@ public:
         enableDriftCompensation_ = Parameters::get<TypeTag, Parameters::EnableDriftCompensation>();
 
         enableEclOutput_ = Parameters::get<TypeTag, Parameters::EnableEclOutput>();
-        enableVtkOutput_ = Parameters::get<TypeTag, Parameters::EnableVtkOutput>();
+        enableVtkOutput_ = Parameters::Get<Parameters::EnableVtkOutput>();
 
         this->enableTuning_ = Parameters::get<TypeTag, Parameters::EnableTuning>();
-        this->initialTimeStepSize_ = Parameters::get<TypeTag, Parameters::InitialTimeStepSize>();
+        this->initialTimeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
         this->maxTimeStepAfterWellEvent_ = Parameters::get<TypeTag, Parameters::TimeStepAfterEventInDays>() * 24 * 60 * 60;
 
         // The value N for this parameter is defined in the following order of presedence:

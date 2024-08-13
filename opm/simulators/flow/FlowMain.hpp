@@ -107,6 +107,7 @@ namespace Opm {
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
 
+            ThreadManager<TypeTag>::registerParameters();
             Simulator::registerParameters();
 
             // register the base parameters
@@ -114,26 +115,26 @@ namespace Opm {
 
             // hide the parameters unused by flow. TODO: this is a pain to maintain
             Parameters::hideParam<TypeTag, Parameters::EnableGravity>();
-            Parameters::hideParam<TypeTag, Parameters::EnableGridAdaptation>();
+            Parameters::Hide<Parameters::EnableGridAdaptation>();
 
             // this parameter is actually used in eWoms, but the flow well model
             // hard-codes the assumption that the intensive quantities cache is enabled,
             // so flow crashes. Let's hide the parameter for that reason.
-            Parameters::hideParam<TypeTag, Parameters::EnableIntensiveQuantityCache>();
+            Parameters::Hide<Parameters::EnableIntensiveQuantityCache>();
 
             // thermodynamic hints are not implemented/required by the eWoms blackoil
             // model
-            Parameters::hideParam<TypeTag, Parameters::EnableThermodynamicHints>();
+            Parameters::Hide<Parameters::EnableThermodynamicHints>();
 
             // in flow only the deck file determines the end time of the simulation
-            Parameters::hideParam<TypeTag, Parameters::EndTime>();
+            Parameters::Hide<Parameters::EndTime<Scalar>>();
 
             // time stepping is not done by the eWoms code in flow
-            Parameters::hideParam<TypeTag, Parameters::InitialTimeStepSize>();
-            Parameters::hideParam<TypeTag, Parameters::MaxTimeStepDivisions>();
-            Parameters::hideParam<TypeTag, Parameters::MaxTimeStepSize>();
-            Parameters::hideParam<TypeTag, Parameters::MinTimeStepSize>();
-            Parameters::hideParam<TypeTag, Parameters::PredeterminedTimeStepsFile>();
+            Parameters::Hide<Parameters::InitialTimeStepSize<Scalar>>();
+            Parameters::Hide<Parameters::MaxTimeStepDivisions>();
+            Parameters::Hide<Parameters::MaxTimeStepSize<Scalar>>();
+            Parameters::Hide<Parameters::MinTimeStepSize<Scalar>>();
+            Parameters::Hide<Parameters::PredeterminedTimeStepsFile>();
 
             // flow also does not use the eWoms Newton method
             Parameters::hideParam<TypeTag, Parameters::NewtonMaxError>();
@@ -143,7 +144,7 @@ namespace Opm {
             Parameters::hideParam<TypeTag, Parameters::NewtonWriteConvergence>();
 
             // the default eWoms checkpoint/restart mechanism does not work with flow
-            Parameters::hideParam<TypeTag, Parameters::RestartTime>();
+            Parameters::Hide<Parameters::RestartTime<Scalar>>();
             Parameters::hideParam<TypeTag, Parameters::RestartWritingInterval>();
             // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
             //if(not(Parameters::get<TypeTag,Properties::EnableVtkOutput>())){
@@ -226,7 +227,7 @@ namespace Opm {
                 }
 
                 // deal with --print-parameters and unknown parameters.
-                if (Parameters::get<TypeTag, Parameters::PrintParameters>() == 1) {
+                if (Parameters::Get<Parameters::PrintParameters>() == 1) {
                     if (mpiRank == 0) {
                         Parameters::printValues();
                     }
@@ -362,7 +363,7 @@ namespace Opm {
             // Issue a warning if both OMP_NUM_THREADS and --threads-per-process are set,
             // but let the environment variable take precedence.
             constexpr int default_threads = 2;
-            const int requested_threads = Parameters::get<TypeTag, Parameters::ThreadsPerProcess>();
+            const int requested_threads = Parameters::Get<Parameters::ThreadsPerProcess>();
             int threads = requested_threads > 0 ? requested_threads : default_threads;
 
             const char* env_var = getenv("OMP_NUM_THREADS");

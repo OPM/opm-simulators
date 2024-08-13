@@ -388,55 +388,15 @@ template<class TypeTag>
 struct EnableGravity<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
 
-// the cache for intensive quantities can be used for ECL problems and also yields a
-// decent speedup...
-template<class TypeTag>
-struct EnableIntensiveQuantityCache<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
-
-// the cache for the storage term can also be used and also yields a decent speedup
-template<class TypeTag>
-struct EnableStorageCache<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
-
-// Disable the VTK output by default for this problem ...
-template<class TypeTag>
-struct EnableVtkOutput<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = false; };
-
 // only write the solutions for the report steps to disk
 template<class TypeTag>
 struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
-// The default for the end time of the simulation [s]
-//
-// By default, stop it after the universe will probably have stopped
-// to exist. (the ECL problem will finish the simulation explicitly
-// after it simulated the last episode specified in the deck.)
-template<class TypeTag>
-struct EndTime<TypeTag, Properties::TTag::FlowBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e100;
-};
-
 // By default, use implicit pressure in rock compaction
 template<class TypeTag>
 struct ExplicitRockCompaction<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
-
-// The default for the initial time step size of the simulation [s].
-//
-// The chosen value means that the size of the first time step is the
-// one of the initial episode (if the length of the initial episode is
-// not millions of trillions of years, that is...)
-template<class TypeTag>
-struct InitialTimeStepSize<TypeTag, Properties::TTag::FlowBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 3600*24;
-};
 
 // the default for the allowed volumetric error for oil per second
 template<class TypeTag>
@@ -450,11 +410,6 @@ struct NewtonTolerance<TypeTag, Properties::TTag::FlowBaseProblem>
 template<class TypeTag>
 struct NumPressurePointsEquil<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr int value = ParserKeywords::EQLDIMS::DEPTH_NODES_P::defaultValue; };
-
-// The default location for the ECL output files
-template<class TypeTag>
-struct OutputDir<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr auto value = "."; };
 
 template<class TypeTag>
 struct OutputMode<TypeTag, Properties::TTag::FlowBaseProblem>
