@@ -139,7 +139,7 @@ add_test_compare_parallel_simulation(CASENAME aquflux_01
                                      ABS_TOL ${abs_tol}
                                      REL_TOL 0.04
                                      DIR aquifers
-                                     TEST_ARGS --enable-tuning=true --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0)
+                                     TEST_ARGS --enable-tuning=true --enable-drift-compensation=false --relaxed-max-pv-fraction=0.0 --tolerance-cnv=1.0e-3)
 
 add_test_compare_parallel_simulation(CASENAME aquflux_02
                                      FILENAME AQUFLUX-02
