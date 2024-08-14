@@ -140,7 +140,7 @@ std::string EclString(const Opm::Inplace::Phase phase)
         return "GKMO";
 
     case Opm::Inplace::Phase::CO2MassInGasPhaseMaximumTrapped:
-        return "GMIM";
+        return "GMTR";
 
     case Opm::Inplace::Phase::CO2MassInGasPhaseMaximumUnTrapped:
         return "GMMO";
