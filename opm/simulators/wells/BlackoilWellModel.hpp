@@ -98,8 +98,6 @@ template<class Scalar> class WellContributions;
         {
         public:
             // ---------      Types      ---------
-            using ModelParameters = BlackoilModelParameters<TypeTag>;
-
             using Grid = GetPropType<TypeTag, Properties::Grid>;
             using EquilGrid = GetPropType<TypeTag, Properties::EquilGrid>;
             using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
@@ -117,6 +115,9 @@ template<class Scalar> class WellContributions;
                 typename BlackoilWellModelGeneric<Scalar>::GLiftWellStateMap;
             using GLiftEclWells = typename GasLiftGroupInfo<Scalar>::GLiftEclWells;
             using GLiftSyncGroups = typename GasLiftSingleWellGeneric<Scalar>::GLiftSyncGroups;
+
+            using ModelParameters = BlackoilModelParameters<Scalar>;
+
             constexpr static std::size_t pressureVarIndex = GetPropType<TypeTag, Properties::Indices>::pressureSwitchIdx;
             typedef typename BaseAuxiliaryModule<TypeTag>::NeighborSet NeighborSet;
 

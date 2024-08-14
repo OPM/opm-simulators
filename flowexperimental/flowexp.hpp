@@ -124,6 +124,7 @@ struct LinearSolverBackend<TypeTag, TTag::FlowExpTypeTag> {
 } // namespace Opm::Properties
 
 namespace Opm {
+
 template <class TypeTag>
 class FlowExpProblem : public FlowProblem<TypeTag> //, public FvBaseProblem<TypeTag>
 {
@@ -150,7 +151,7 @@ public:
     {
         ParentType::registerParameters();
 
-        BlackoilModelParameters<TypeTag>::registerParameters();
+        BlackoilModelParameters<double>::registerParameters();
         Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
         Parameters::Hide<Parameters::DbhpMaxRel<Scalar>>();
         Parameters::Hide<Parameters::DwellFractionMax<Scalar>>();
@@ -204,6 +205,7 @@ public:
     // inherit the constructors
     using ParentType::FlowProblem;
 };
+
 }
 
 #endif

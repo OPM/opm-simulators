@@ -74,8 +74,6 @@ class WellInterface : public WellInterfaceIndices<GetPropType<TypeTag, Propertie
     using Base = WellInterfaceIndices<GetPropType<TypeTag, Properties::FluidSystem>,
                                       GetPropType<TypeTag, Properties::Indices>>;
 public:
-    using ModelParameters = BlackoilModelParameters<TypeTag>;
-
     using Grid = GetPropType<TypeTag, Properties::Grid>;
     using Simulator = GetPropType<TypeTag, Properties::Simulator>;
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -104,6 +102,8 @@ public:
     using WellInterfaceFluidSystem<FluidSystem>::Gas;
     using WellInterfaceFluidSystem<FluidSystem>::Oil;
     using WellInterfaceFluidSystem<FluidSystem>::Water;
+
+    using ModelParameters = BlackoilModelParameters<Scalar>;
 
     static constexpr bool has_solvent = getPropValue<TypeTag, Properties::EnableSolvent>();
     static constexpr bool has_zFraction = getPropValue<TypeTag, Properties::EnableExtbo>();
