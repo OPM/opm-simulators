@@ -101,30 +101,6 @@ public:
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// Enable gravitational acceleration
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::RichardsLensProblem>
-{ static constexpr bool value = true; };
-
-// Do not write the intermediate results of the newton method
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::RichardsLensProblem>
-{ static constexpr bool value = false; };
-
-// Set the "desireable" number of newton iterations of a time step
-template<class TypeTag>
-struct NewtonTargetIterations<TypeTag, Properties::TTag::RichardsLensProblem>
-{ static constexpr int value = 18; };
-
-// Set the maximum number of newton iterations of a time step
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, Properties::TTag::RichardsLensProblem>
-{ static constexpr int value = 28; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 
 /*!
@@ -259,6 +235,9 @@ public:
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(3000.0);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(100.0);
+        Parameters::SetDefault<Parameters::NewtonMaxIterations>(28);
+        Parameters::SetDefault<Parameters::NewtonTargetIterations>(18);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!

@@ -28,27 +28,33 @@
 #ifndef EWOMS_LENS_PROBLEM_HH
 #define EWOMS_LENS_PROBLEM_HH
 
-#include <opm/models/io/structuredgridvanguard.hh>
-#include <opm/models/immiscible/immiscibleproperties.hh>
-#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
-#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
-#include <opm/models/common/transfluxmodule.hh>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+
+#include <opm/material/components/Dnapl.hpp>
+#include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
 #include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
 #include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-#include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
-#include <opm/material/components/SimpleH2O.hpp>
-#include <opm/material/components/Dnapl.hpp>
+#include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
 
-#include <dune/common/version.hh>
-#include <dune/common/fvector.hh>
-#include <dune/common/fmatrix.hh>
+#include <opm/models/common/multiphasebaseparameters.hh>
+#include <opm/models/common/transfluxmodule.hh>
 
+#include <opm/models/discretization/common/fvbaseadlocallinearizer.hh>
+#include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
+
+#include <opm/models/immiscible/immiscibleproperties.hh>
+
+#include <opm/models/io/structuredgridvanguard.hh>
+#include <opm/models/io/vtkmultiphasemodule.hh>
+
+#include <iostream>
 #include <sstream>
 #include <string>
-#include <iostream>
 
 namespace Opm {
 template <class TypeTag>
@@ -119,77 +125,24 @@ public:
 
 namespace Opm::Parameters {
 
-// declare the properties specific for the lens problem
-template<class TypeTag, class MyTypeTag>
-struct LensLowerLeftX { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct LensLowerLeftY { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct LensLowerLeftZ { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct LensUpperRightX { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct LensUpperRightY { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct LensUpperRightZ { using type = Properties::UndefinedProperty; };
-
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr bool value = true; };
-
 // define the properties specific for the lens problem
-template<class TypeTag>
-struct LensLowerLeftX<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
+template<class Scalar>
+struct LensLowerLeftX { static constexpr Scalar value = 1.0; };
 
-template<class TypeTag>
-struct LensLowerLeftY<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 2.0;
-};
+template<class Scalar>
+struct LensLowerLeftY { static constexpr Scalar value = 2.0;  };
 
-template<class TypeTag>
-struct LensLowerLeftZ<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.0;
-};
+template<class Scalar>
+struct LensLowerLeftZ { static constexpr Scalar value = 0.0; };
 
-template<class TypeTag>
-struct LensUpperRightX<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 4.0;
-};
+template<class Scalar>
+struct LensUpperRightX { static constexpr Scalar value = 4.0; };
 
-template<class TypeTag>
-struct LensUpperRightY<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 3.0;
-};
+template<class Scalar>
+struct LensUpperRightY { static constexpr Scalar value = 3.0; };
 
-template<class TypeTag>
-struct LensUpperRightZ<TypeTag, Properties::TTag::LensBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
-// Write the solutions of individual newton iterations?
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::LensBaseProblem>
-{ static constexpr bool value = false; };
+template<class Scalar>
+struct LensUpperRightZ { static constexpr Scalar value = 1.0; };
 
 } // namespace Opm::Parameters
 
@@ -279,14 +232,14 @@ public:
         FluidSystem::init();
 
         temperature_ = 273.15 + 20; // -> 20°C
-        lensLowerLeft_[0] = Parameters::get<TypeTag, Parameters::LensLowerLeftX>();
-        lensLowerLeft_[1] = Parameters::get<TypeTag, Parameters::LensLowerLeftY>();
-        lensUpperRight_[0] = Parameters::get<TypeTag, Parameters::LensUpperRightX>();
-        lensUpperRight_[1] = Parameters::get<TypeTag, Parameters::LensUpperRightY>();
+        lensLowerLeft_[0] = Parameters::Get<Parameters::LensLowerLeftX<Scalar>>();
+        lensLowerLeft_[1] = Parameters::Get<Parameters::LensLowerLeftY<Scalar>>();
+        lensUpperRight_[0] = Parameters::Get<Parameters::LensUpperRightX<Scalar>>();
+        lensUpperRight_[1] = Parameters::Get<Parameters::LensUpperRightY<Scalar>>();
 
         if constexpr (dim == 3) {
-            lensLowerLeft_[2] = Parameters::get<TypeTag, Parameters::LensLowerLeftZ>();
-            lensUpperRight_[2] = Parameters::get<TypeTag, Parameters::LensUpperRightZ>();
+            lensLowerLeft_[2] = Parameters::Get<Parameters::LensLowerLeftZ<Scalar>>();
+            lensUpperRight_[2] = Parameters::Get<Parameters::LensUpperRightZ<Scalar>>();
         }
 
         // residual saturations
@@ -320,19 +273,19 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::LensLowerLeftX>
+        Parameters::Register<Parameters::LensLowerLeftX<Scalar>>
             ("The x-coordinate of the lens' lower-left corner [m].");
-        Parameters::registerParam<TypeTag, Parameters::LensLowerLeftY>
+        Parameters::Register<Parameters::LensLowerLeftY<Scalar>>
             ("The y-coordinate of the lens' lower-left corner [m].");
-        Parameters::registerParam<TypeTag, Parameters::LensUpperRightX>
+        Parameters::Register<Parameters::LensUpperRightX<Scalar>>
             ("The x-coordinate of the lens' upper-right corner [m].");
-        Parameters::registerParam<TypeTag, Parameters::LensUpperRightY>
+        Parameters::Register<Parameters::LensUpperRightY<Scalar>>
             ("The y-coordinate of the lens' upper-right corner [m].");
 
         if constexpr (dim == 3) {
-            Parameters::registerParam<TypeTag, Parameters::LensLowerLeftZ>
+            Parameters::Register<Parameters::LensLowerLeftZ<Scalar>>
                 ("The z-coordinate of the lens' lower-left corner [m].");
-            Parameters::registerParam<TypeTag, Parameters::LensUpperRightZ>
+            Parameters::Register<Parameters::LensUpperRightZ<Scalar>>
                 ("The z-coordinate of the lens' upper-right corner [m].");
         }
 
@@ -357,6 +310,8 @@ public:
         Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
         Parameters::SetDefault<Parameters::EnableStorageCache>(true);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250.0);
+        Parameters::SetDefault<Parameters::VtkWriteIntrinsicPermeabilities>(true);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!

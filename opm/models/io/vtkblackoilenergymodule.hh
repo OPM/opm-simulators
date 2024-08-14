@@ -41,44 +41,13 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Properties::TTag {
-
-// create new type tag for the VTK multi-phase output
-struct VtkBlackOilEnergy {};
-
-} // namespace Opm::Properties::TTag
-
 namespace Opm::Parameters {
 
-// create the property tags needed for the energy module
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteRockInternalEnergy { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteTotalThermalConductivity { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteFluidInternalEnergies { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteFluidEnthalpies { using type = Properties::UndefinedProperty; };
-
 // set default values for what quantities to output
-template<class TypeTag>
-struct VtkWriteRockInternalEnergy<TypeTag, Properties::TTag::VtkBlackOilEnergy>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct VtkWriteTotalThermalConductivity<TypeTag, Properties::TTag::VtkBlackOilEnergy>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct VtkWriteFluidInternalEnergies<TypeTag, Properties::TTag::VtkBlackOilEnergy>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct VtkWriteFluidEnthalpies<TypeTag, Properties::TTag::VtkBlackOilEnergy>
-{ static constexpr bool value = true; };
+struct VtkWriteRockInternalEnergy { static constexpr bool value = true; };
+struct VtkWriteTotalThermalConductivity { static constexpr bool value = true; };
+struct VtkWriteFluidInternalEnergies { static constexpr bool value = true; };
+struct VtkWriteFluidEnthalpies { static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 
@@ -123,15 +92,15 @@ public:
         if (!enableEnergy)
             return;
 
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteRockInternalEnergy>
+        Parameters::Register<Parameters::VtkWriteRockInternalEnergy>
             ("Include the volumetric internal energy of rock "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteTotalThermalConductivity>
+        Parameters::Register<Parameters::VtkWriteTotalThermalConductivity>
             ("Include the total thermal conductivity of the medium and the fluids "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteFluidInternalEnergies>
+        Parameters::Register<Parameters::VtkWriteFluidInternalEnergies>
             ("Include the internal energies of the fluids in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteFluidEnthalpies>
+        Parameters::Register<Parameters::VtkWriteFluidEnthalpies>
             ("Include the enthalpies of the fluids in the VTK output files");
     }
 
@@ -225,25 +194,25 @@ public:
 private:
     static bool rockInternalEnergyOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteRockInternalEnergy>();
+        static bool val = Parameters::Get<Parameters::VtkWriteRockInternalEnergy>();
         return val;
     }
 
     static bool totalThermalConductivityOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteTotalThermalConductivity>();
+        static bool val = Parameters::Get<Parameters::VtkWriteTotalThermalConductivity>();
         return val;
     }
 
     static bool fluidInternalEnergiesOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFluidInternalEnergies>();
+        static bool val = Parameters::Get<Parameters::VtkWriteFluidInternalEnergies>();
         return val;
     }
 
     static bool fluidEnthalpiesOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteFluidEnthalpies>();
+        static bool val = Parameters::Get<Parameters::VtkWriteFluidEnthalpies>();
         return val;
     }
 

@@ -158,15 +158,6 @@ struct EnableConstraints<TypeTag, TTag::FractureProblem> { static constexpr bool
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// Disable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::FractureProblem>
-{ static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 /*!
  * \ingroup TestProblems

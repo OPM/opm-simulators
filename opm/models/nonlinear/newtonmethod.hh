@@ -79,42 +79,6 @@ struct NewtonConvergenceWriter<TypeTag, TTag::NewtonMethod> { using type = NullC
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-template<class TypeTag>
-struct NewtonVerbose<TypeTag, Properties::TTag::NewtonMethod>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::NewtonMethod>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, Properties::TTag::NewtonMethod>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-8;
-};
-
-// set the abortion tolerance to some very large value. if not
-// overwritten at run-time this basically disables abortions
-template<class TypeTag>
-struct NewtonMaxError<TypeTag, Properties::TTag::NewtonMethod>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e100;
-};
-
-template<class TypeTag>
-struct NewtonTargetIterations<TypeTag, Properties::TTag::NewtonMethod>
-{ static constexpr int value = 10; };
-
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, Properties::TTag::NewtonMethod>
-{ static constexpr int value = 20; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 /*!
  * \ingroup Newton
@@ -154,7 +118,7 @@ public:
     {
         lastError_ = 1e100;
         error_ = 1e100;
-        tolerance_ = Parameters::get<TypeTag, Parameters::NewtonTolerance>();
+        tolerance_ = Parameters::Get<Parameters::NewtonTolerance<Scalar>>();
 
         numIterations_ = 0;
     }
@@ -166,20 +130,20 @@ public:
     {
         LinearSolverBackend::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::NewtonVerbose>
+        Parameters::Register<Parameters::NewtonVerbose>
             ("Specify whether the Newton method should inform "
              "the user about its progress or not");
-        Parameters::registerParam<TypeTag, Parameters::NewtonWriteConvergence>
+        Parameters::Register<Parameters::NewtonWriteConvergence>
             ("Write the convergence behaviour of the Newton "
              "method to a VTK file");
-        Parameters::registerParam<TypeTag, Parameters::NewtonTargetIterations>
+        Parameters::Register<Parameters::NewtonTargetIterations>
             ("The 'optimum' number of Newton iterations per time step");
-        Parameters::registerParam<TypeTag, Parameters::NewtonMaxIterations>
+        Parameters::Register<Parameters::NewtonMaxIterations>
             ("The maximum number of Newton iterations per time step");
-        Parameters::registerParam<TypeTag, Parameters::NewtonTolerance>
+        Parameters::Register<Parameters::NewtonTolerance<Scalar>>
             ("The maximum raw error tolerated by the Newton"
              "method for considering a solution to be converged");
-        Parameters::registerParam<TypeTag, Parameters::NewtonMaxError>
+        Parameters::Register<Parameters::NewtonMaxError<Scalar>>
             ("The maximum error tolerated by the Newton "
              "method to which does not cause an abort");
     }
@@ -544,7 +508,7 @@ protected:
      */
     bool verbose_() const
     {
-        return Parameters::get<TypeTag, Parameters::NewtonVerbose>() && (comm_.rank() == 0);
+        return Parameters::Get<Parameters::NewtonVerbose>() && (comm_.rank() == 0);
     }
 
     /*!
@@ -557,8 +521,9 @@ protected:
     {
         numIterations_ = 0;
 
-        if (Parameters::get<TypeTag, Parameters::NewtonWriteConvergence>())
+        if (Parameters::Get<Parameters::NewtonWriteConvergence>()) {
             convergenceWriter_.beginTimeStep();
+        }
     }
 
     /*!
@@ -609,7 +574,7 @@ protected:
     {
         const auto& constraintsMap = model().linearizer().constraintsMap();
         lastError_ = error_;
-        Scalar newtonMaxError = Parameters::get<TypeTag, Parameters::NewtonMaxError>();
+        Scalar newtonMaxError = Parameters::Get<Parameters::NewtonMaxError<Scalar>>();
 
         // calculate the error as the maximum weighted tolerance of
         // the solution's residual
@@ -774,7 +739,7 @@ protected:
     void writeConvergence_(const SolutionVector& currentSolution,
                            const GlobalEqVector& solutionUpdate)
     {
-        if (Parameters::get<TypeTag, Parameters::NewtonWriteConvergence>()) {
+        if (Parameters::Get<Parameters::NewtonWriteConvergence>()) {
             convergenceWriter_.beginIteration();
             convergenceWriter_.writeFields(currentSolution, solutionUpdate);
             convergenceWriter_.endIteration();
@@ -846,8 +811,9 @@ protected:
      */
     void end_()
     {
-        if (Parameters::get<TypeTag, Parameters::NewtonWriteConvergence>())
+        if (Parameters::Get<Parameters::NewtonWriteConvergence>()) {
             convergenceWriter_.endTimeStep();
+        }
     }
 
     /*!
@@ -868,10 +834,10 @@ protected:
 
     // optimal number of iterations we want to achieve
     int targetIterations_() const
-    { return Parameters::get<TypeTag, Parameters::NewtonTargetIterations>(); }
+    { return Parameters::Get<Parameters::NewtonTargetIterations>(); }
     // maximum number of iterations we do before giving up
     int maxIterations_() const
-    { return Parameters::get<TypeTag, Parameters::NewtonMaxIterations>(); }
+    { return Parameters::Get<Parameters::NewtonMaxIterations>(); }
 
     static bool enableConstraints_()
     { return getPropValue<TypeTag, Properties::EnableConstraints>(); }

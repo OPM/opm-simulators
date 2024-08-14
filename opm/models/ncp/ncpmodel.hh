@@ -69,10 +69,7 @@ namespace TTag {
 /*!
  * \brief Define the type tag for the compositional NCP model.
  */
-struct NcpModel { using InheritsFrom = std::tuple<VtkDiffusion,
-                                                  VtkEnergy,
-                                                  VtkComposition,
-                                                  MultiPhaseBaseModel>; };
+struct NcpModel { using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
 } // namespace TTag
 
 //! Use the Ncp local jacobian operator for the compositional NCP model

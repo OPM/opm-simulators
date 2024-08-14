@@ -108,15 +108,6 @@ struct EnableDiffusion<TypeTag, TTag::DiffusionBaseProblem> { static constexpr b
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// Disable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::DiffusionBaseProblem>
-{ static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 /*!
  * \ingroup TestProblems

@@ -45,6 +45,8 @@
 #include <opm/material/thermal/ConstantSolidHeatCapLaw.hpp>
 #include <opm/material/thermal/SomertonThermalConductionLaw.hpp>
 
+#include <opm/models/common/multiphasebaseparameters.hh>
+
 #include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
 
 #include <opm/models/pvs/pvsproperties.hh>
@@ -132,20 +134,6 @@ struct PreconditionerWrapper<TypeTag, TTag::WaterAirBaseProblem>
 { using type = Opm::Linear::PreconditionerWrapperILU<TypeTag>; };
 
 } // namespace Opm::Properties
-
-namespace Opm::Parameters {
-
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::WaterAirBaseProblem>
-{ static constexpr bool value = true; };
-
-// Write newton convergence
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::WaterAirBaseProblem>
-{ static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 /*!
@@ -303,6 +291,8 @@ public:
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(1.0 * 365 * 24 * 60 * 60);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(250.0);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
+        Parameters::SetDefault<Parameters::PreconditionerOrder>(2);
     }
 
     /*!

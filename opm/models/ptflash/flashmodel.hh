@@ -35,13 +35,13 @@
 #include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
 #include <opm/material/fluidmatrixinteractions/NullMaterial.hpp>
 
-#include <opm/models/common/multiphasebasemodel.hh>
 #include <opm/models/common/energymodule.hh>
+#include <opm/models/common/multiphasebasemodel.hh>
 
-#include <opm/models/flash/flashratevector.hh>
 #include <opm/models/flash/flashboundaryratevector.hh>
 #include <opm/models/flash/flashextensivequantities.hh>
 #include <opm/models/flash/flashproperties.hh>
+#include <opm/models/flash/flashratevector.hh>
 
 #include <opm/models/io/vtkcompositionmodule.hh>
 #include <opm/models/io/vtkdiffusionmodule.hh>
@@ -69,11 +69,7 @@ namespace Opm::Properties {
 
 namespace TTag {
 //! The type tag for the isothermal single phase problems
-struct FlashModel { using InheritsFrom = std::tuple<VtkDiffusion,
-                                                    VtkEnergy,
-                                                    VtkComposition,
-                                                    VtkPTFlash,
-                                                    MultiPhaseBaseModel>; };
+struct FlashModel { using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
 } // namespace TTag
 
 //! Use the FlashLocalResidual function for the flash model

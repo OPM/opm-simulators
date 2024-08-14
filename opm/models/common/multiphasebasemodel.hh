@@ -57,7 +57,9 @@ namespace Opm::Properties {
 //! The generic type tag for problems using the immiscible multi-phase model
 // Create new type tags
 namespace TTag {
-struct MultiPhaseBaseModel { using InheritsFrom = std::tuple<VtkTemperature, VtkMultiPhase>; };
+
+struct MultiPhaseBaseModel {};
+
 } // end namespace TTag
 
 //! Specify the splices of the MultiPhaseBaseModel type tag
@@ -138,15 +140,6 @@ struct ThermalConductionLawParams<TypeTag, TTag::MultiPhaseBaseModel>
 { using type = typename GetPropType<TypeTag, Properties::ThermalConductionLaw>::Params; };
 
 } // namespace Opm::Properties
-
-namespace Opm::Parameters {
-
-//! disable gravity by default
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::MultiPhaseBaseModel>
-{ static constexpr bool value = false; };
-
-}
 
 namespace Opm {
 

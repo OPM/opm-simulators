@@ -282,29 +282,6 @@ struct DiscreteFunction<TypeTag, TTag::FvBaseDiscretization>
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// use default initialization based on rule-of-thumb of Newton tolerance
-template<class TypeTag>
-struct LinearSolverAbsTolerance<TypeTag, Properties::TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = -1.;
-};
-
-// if the deflection of the newton method is large, we do not need to solve the linear
-// approximation accurately. Assuming that the value for the current solution is quite
-// close to the final value, a reduction of 3 orders of magnitude in the defect should be
-// sufficient...
-template<class TypeTag>
-struct LinearSolverTolerance<TypeTag, Properties::TTag::FvBaseDiscretization>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-3;
-};
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 
 /*!

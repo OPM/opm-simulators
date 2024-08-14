@@ -28,32 +28,38 @@
 #ifndef EWOMS_FINGER_PROBLEM_HH
 #define EWOMS_FINGER_PROBLEM_HH
 
-#include <opm/models/io/structuredgridvanguard.hh>
-
-#include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
-#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
-#include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
-#include <opm/material/fluidmatrixinteractions/ParkerLenhard.hpp>
-#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
-
-#include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
-#include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
-#include <opm/material/components/SimpleH2O.hpp>
-#include <opm/material/components/Air.hpp>
-
-#include <opm/models/immiscible/immiscibleproperties.hh>
-#include <opm/models/discretization/common/restrictprolong.hh>
-
 #if HAVE_DUNE_ALUGRID
 #include <dune/alugrid/grid.hh>
 #endif
 
-#include <dune/common/version.hh>
-#include <dune/common/fvector.hh>
 #include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+
 #include <dune/grid/utility/persistentcontainer.hh>
 
-#include <vector>
+#include <opm/material/components/Air.hpp>
+#include <opm/material/components/SimpleH2O.hpp>
+
+#include <opm/material/fluidmatrixinteractions/EffToAbsLaw.hpp>
+#include <opm/material/fluidmatrixinteractions/LinearMaterial.hpp>
+#include <opm/material/fluidmatrixinteractions/MaterialTraits.hpp>
+#include <opm/material/fluidmatrixinteractions/ParkerLenhard.hpp>
+#include <opm/material/fluidmatrixinteractions/RegularizedVanGenuchten.hpp>
+
+#include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
+
+#include <opm/material/fluidsystems/TwoPhaseImmiscibleFluidSystem.hpp>
+
+#include <opm/models/common/multiphasebaseparameters.hh>
+
+#include <opm/models/discretization/common/fvbasefdlocallinearizer.hh>
+#include <opm/models/discretization/common/restrictprolong.hh>
+
+#include <opm/models/immiscible/immiscibleproperties.hh>
+
+#include <opm/models/io/structuredgridvanguard.hh>
+
 #include <string>
 
 namespace Opm {
@@ -128,25 +134,8 @@ struct EnableConstraints<TypeTag, TTag::FingerBaseProblem> { static constexpr in
 
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct InitialWaterSaturation { using type = Properties::UndefinedProperty; };
-
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::FingerBaseProblem>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct InitialWaterSaturation<TypeTag, Properties::TTag::FingerBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.01;
-};
-
-// Write the solutions of individual newton iterations?
-template<class TypeTag>
-struct NewtonWriteConvergence<TypeTag, Properties::TTag::FingerBaseProblem>
-{ static constexpr bool value = false; };
+template<class Scalar>
+struct InitialWaterSaturation { static constexpr Scalar value = 0.01;  };
 
 } // namespace Opm::Parameters
 
@@ -263,7 +252,7 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::InitialWaterSaturation>
+        Parameters::Register<Parameters::InitialWaterSaturation<Scalar>>
             ("The initial saturation in the domain [] of the wetting phase");
 
         Parameters::SetDefault<Parameters::CellsX>(20);
@@ -283,6 +272,7 @@ public:
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(215);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(10);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!
@@ -534,7 +524,7 @@ private:
         auto& fs = initialFluidState_;
         fs.setPressure(wettingPhaseIdx, /*pressure=*/1e5);
 
-        Scalar Sw = Parameters::get<TypeTag, Parameters::InitialWaterSaturation>();
+        Scalar Sw = Parameters::Get<Parameters::InitialWaterSaturation<Scalar>>();
         fs.setSaturation(wettingPhaseIdx, Sw);
         fs.setSaturation(nonWettingPhaseIdx, 1 - Sw);
 

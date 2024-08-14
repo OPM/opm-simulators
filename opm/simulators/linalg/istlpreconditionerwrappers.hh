@@ -75,16 +75,16 @@ namespace Linear {
                                                                                 \
         static void registerParameters()                                        \
         {                                                                       \
-            Parameters::registerParam<TypeTag, Parameters::PreconditionerOrder> \
+            Parameters::Register<Parameters::PreconditionerOrder>               \
                 ("The order of the preconditioner");                            \
-            Parameters::registerParam<TypeTag, Parameters::PreconditionerRelaxation> \
+            Parameters::Register<Parameters::PreconditionerRelaxation<Scalar>>  \
                 ("The relaxation factor of the preconditioner");                \
         }                                                                       \
                                                                                 \
         void prepare(IstlMatrix& matrix)                                        \
         {                                                                       \
-            int order = Parameters::get<TypeTag, Parameters::PreconditionerOrder>(); \
-            Scalar relaxationFactor = Parameters::get<TypeTag, Parameters::PreconditionerRelaxation>(); \
+            int order = Parameters::Get<Parameters::PreconditionerOrder>();     \
+            Scalar relaxationFactor = Parameters::Get<Parameters::PreconditionerRelaxation<Scalar>>(); \
             seqPreCond_ = new SequentialPreconditioner(matrix, order,           \
                                                        relaxationFactor);       \
         }                                                                       \
@@ -118,14 +118,14 @@ namespace Linear {
                                                                                 \
         static void registerParameters()                                        \
         {                                                                       \
-            Parameters::registerParam<TypeTag, Parameters::PreconditionerRelaxation> \
+            Parameters::Register<Parameters::PreconditionerRelaxation<Scalar>>  \
                 ("The relaxation factor of the preconditioner");                \
         }                                                                       \
                                                                                 \
         void prepare(OverlappingMatrix& matrix)                                 \
         {                                                                       \
             Scalar relaxationFactor =                                           \
-            Parameters::get<TypeTag, Parameters::PreconditionerRelaxation>();   \
+                Parameters::Get<Parameters::PreconditionerRelaxation<Scalar>>();\
             seqPreCond_ = new SequentialPreconditioner(matrix,                  \
                                                        relaxationFactor);       \
         }                                                                       \
@@ -155,7 +155,7 @@ class PreconditionerWrapperILU
     using OverlappingMatrix = GetPropType<TypeTag, Properties::OverlappingMatrix>;
     using OverlappingVector = GetPropType<TypeTag, Properties::OverlappingVector>;
 
-    static constexpr int order = getPropValue<TypeTag, Parameters::PreconditionerOrder>();
+    static constexpr int order = 0;
 
 public:
     using SequentialPreconditioner = Dune::SeqILU<OverlappingMatrix, OverlappingVector, OverlappingVector, order>;
@@ -165,13 +165,15 @@ public:
 
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::PreconditionerRelaxation>
+        Parameters::Register<Parameters::PreconditionerRelaxation<Scalar>>
             ("The relaxation factor of the preconditioner");
+        Parameters::Register<Parameters::PreconditionerOrder>
+            ("The order of the preconditioner");
     }
 
     void prepare(OverlappingMatrix& matrix)
     {
-        Scalar relaxationFactor = Parameters::get<TypeTag, Parameters::PreconditionerRelaxation>();
+        Scalar relaxationFactor = Parameters::Get<Parameters::PreconditionerRelaxation<Scalar>>();
 
         // create the sequential preconditioner.
         seqPreCond_ = new SequentialPreconditioner(matrix, relaxationFactor);

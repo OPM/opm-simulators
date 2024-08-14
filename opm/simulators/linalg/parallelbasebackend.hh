@@ -152,15 +152,15 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::LinearSolverTolerance>
+        Parameters::Register<Parameters::LinearSolverTolerance<Scalar>>
             ("The maximum allowed error between of the linear solver");
-        Parameters::registerParam<TypeTag, Parameters::LinearSolverAbsTolerance>
+        Parameters::Register<Parameters::LinearSolverAbsTolerance<Scalar>>
             ("The maximum accepted error of the norm of the residual");
-        Parameters::registerParam<TypeTag, Parameters::LinearSolverOverlapSize>
+        Parameters::Register<Parameters::LinearSolverOverlapSize>
             ("The size of the algebraic overlap for the linear solver");
-        Parameters::registerParam<TypeTag, Parameters::LinearSolverMaxIterations>
+        Parameters::Register<Parameters::LinearSolverMaxIterations>
             ("The maximum number of iterations of the linear solver");
-        Parameters::registerParam<TypeTag, Parameters::LinearSolverVerbosity>
+        Parameters::Register<Parameters::LinearSolverVerbosity>
             ("The verbosity level of the linear solver");
 
         PreconditionerWrapper::registerParameters();
@@ -195,7 +195,7 @@ public:
                                             simulator_.model().dofMapper());
 
         // create the overlapping Jacobian matrix
-        unsigned overlapSize = Parameters::get<TypeTag, Parameters::LinearSolverOverlapSize>();
+        unsigned overlapSize = Parameters::Get<Parameters::LinearSolverOverlapSize>();
         overlappingMatrix_ = new OverlappingMatrix(M.istlMatrix(),
                                                    borderListCreator.borderList(),
                                                    borderListCreator.blackList(),
@@ -443,37 +443,5 @@ struct PreconditionerWrapper<TypeTag, TTag::ParallelBaseLinearSolver>
 { using type = Opm::Linear::PreconditionerWrapperILU<TypeTag>; };
 
 } // namespace Opm::Properties
-
-namespace Opm::Parameters {
-
-//! set the default number of maximum iterations for the linear solver
-template<class TypeTag>
-struct LinearSolverMaxIterations<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
-{ static constexpr int value = 1000; };
-
-//! set the default overlap size to 2
-template<class TypeTag>
-struct LinearSolverOverlapSize<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
-{ static constexpr unsigned value = 2; };
-
-//! make the linear solver shut up by default
-template<class TypeTag>
-struct LinearSolverVerbosity<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
-{ static constexpr int value = 0; };
-
-//! set the preconditioner order to 0 by default
-template<class TypeTag>
-struct PreconditionerOrder<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
-{ static constexpr int value = 0; };
-
-//! set the preconditioner relaxation parameter to 1.0 by default
-template<class TypeTag>
-struct PreconditionerRelaxation<TypeTag, Properties::TTag::ParallelBaseLinearSolver>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
-} // namespace Opm::Parameters
 
 #endif

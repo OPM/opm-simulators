@@ -41,93 +41,20 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Properties::TTag {
-
-// create new type tag for the VTK multi-phase output
-struct VtkBlackOil {};
-
-} // namespace Opm::Properties::TTag
-
 namespace Opm::Parameters {
 
-// create the property tags needed for the multi phase module
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteGasDissolutionFactor { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteOilVaporizationFactor { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteOilFormationVolumeFactor { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteGasFormationVolumeFactor { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteWaterFormationVolumeFactor { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteOilSaturationPressure { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteGasSaturationPressure { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteSaturationRatios { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteSaturatedOilGasDissolutionFactor { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteSaturatedGasOilVaporizationFactor { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWritePrimaryVarsMeaning { using type = Properties::UndefinedProperty; };
-
 // set default values for what quantities to output
-template<class TypeTag>
-struct VtkWriteGasDissolutionFactor<TypeTag, Properties::TTag::VtkBlackOil>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWriteOilVaporizationFactor<TypeTag, Properties::TTag::VtkBlackOil>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWriteOilFormationVolumeFactor<TypeTag, Properties::TTag::VtkBlackOil>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWriteGasFormationVolumeFactor<TypeTag, Properties::TTag::VtkBlackOil>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWriteWaterFormationVolumeFactor<TypeTag, Properties::TTag::VtkBlackOil>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWriteOilSaturationPressure<TypeTag, Properties::TTag::VtkBlackOil>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWriteGasSaturationPressure<TypeTag, Properties::TTag::VtkBlackOil>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWriteSaturationRatios<TypeTag, Properties::TTag::VtkBlackOil>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWriteSaturatedOilGasDissolutionFactor<TypeTag, Properties::TTag::VtkBlackOil>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWriteSaturatedGasOilVaporizationFactor<TypeTag, Properties::TTag::VtkBlackOil>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWritePrimaryVarsMeaning<TypeTag, Properties::TTag::VtkBlackOil>
-{ static constexpr bool value = false; };
+struct VtkWriteGasDissolutionFactor { static constexpr bool value = false; };
+struct VtkWriteOilVaporizationFactor { static constexpr bool value = false; };
+struct VtkWriteOilFormationVolumeFactor { static constexpr bool value = false; };
+struct VtkWriteGasFormationVolumeFactor { static constexpr bool value = false; };
+struct VtkWriteWaterFormationVolumeFactor { static constexpr bool value = false; };
+struct VtkWriteOilSaturationPressure { static constexpr bool value = false; };
+struct VtkWriteGasSaturationPressure { static constexpr bool value = false; };
+struct VtkWriteSaturationRatios { static constexpr bool value = false; };
+struct VtkWriteSaturatedOilGasDissolutionFactor { static constexpr bool value = false; };
+struct VtkWriteSaturatedGasOilVaporizationFactor { static constexpr bool value = false; };
+struct VtkWritePrimaryVarsMeaning { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
@@ -174,36 +101,36 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteGasDissolutionFactor>
+        Parameters::Register<Parameters::VtkWriteGasDissolutionFactor>
             ("Include the gas dissolution factor (R_s) of the observed oil "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteOilVaporizationFactor>
+        Parameters::Register<Parameters::VtkWriteOilVaporizationFactor>
             ("Include the oil vaporization factor (R_v) of the observed gas "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteOilFormationVolumeFactor>
+        Parameters::Register<Parameters::VtkWriteOilFormationVolumeFactor>
             ("Include the oil formation volume factor (B_o) in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteGasFormationVolumeFactor>
+        Parameters::Register<Parameters::VtkWriteGasFormationVolumeFactor>
             ("Include the gas formation volume factor (B_g) in the "
              "VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteWaterFormationVolumeFactor>
+        Parameters::Register<Parameters::VtkWriteWaterFormationVolumeFactor>
             ("Include the water formation volume factor (B_w) in the "
              "VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteOilSaturationPressure>
+        Parameters::Register<Parameters::VtkWriteOilSaturationPressure>
             ("Include the saturation pressure of oil (p_o,sat) in the "
              "VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteGasSaturationPressure>
+        Parameters::Register<Parameters::VtkWriteGasSaturationPressure>
             ("Include the saturation pressure of gas (p_g,sat) in the "
              "VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteSaturatedOilGasDissolutionFactor>
+        Parameters::Register<Parameters::VtkWriteSaturatedOilGasDissolutionFactor>
             ("Include the gas dissolution factor (R_s,sat) of gas saturated "
              "oil in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteSaturatedGasOilVaporizationFactor>
+        Parameters::Register<Parameters::VtkWriteSaturatedGasOilVaporizationFactor>
             ("Include the oil vaporization factor (R_v,sat) of oil saturated "
              "gas in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteSaturationRatios>
+        Parameters::Register<Parameters::VtkWriteSaturationRatios>
             ("Write the ratio of the actually and maximum dissolved component of "
              "the mixtures");
-        Parameters::registerParam<TypeTag, Parameters::VtkWritePrimaryVarsMeaning>
+        Parameters::Register<Parameters::VtkWritePrimaryVarsMeaning>
             ("Include how the primary variables should be interpreted to the "
              "VTK output files");
     }
@@ -378,67 +305,67 @@ public:
 private:
     static bool gasDissolutionFactorOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteGasDissolutionFactor>();
+        static bool val = Parameters::Get<Parameters::VtkWriteGasDissolutionFactor>();
         return val;
     }
 
     static bool oilVaporizationFactorOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteOilVaporizationFactor>();
+        static bool val = Parameters::Get<Parameters::VtkWriteOilVaporizationFactor>();
         return val;
     }
 
     static bool oilFormationVolumeFactorOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteOilFormationVolumeFactor>();
+        static bool val = Parameters::Get<Parameters::VtkWriteOilFormationVolumeFactor>();
         return val;
     }
 
     static bool gasFormationVolumeFactorOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteGasFormationVolumeFactor>();
+        static bool val = Parameters::Get<Parameters::VtkWriteGasFormationVolumeFactor>();
         return val;
     }
 
     static bool waterFormationVolumeFactorOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteWaterFormationVolumeFactor>();
+        static bool val = Parameters::Get<Parameters::VtkWriteWaterFormationVolumeFactor>();
         return val;
     }
 
     static bool oilSaturationPressureOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteOilSaturationPressure>();
+        static bool val = Parameters::Get<Parameters::VtkWriteOilSaturationPressure>();
         return val;
     }
 
     static bool gasSaturationPressureOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteGasSaturationPressure>();
+        static bool val = Parameters::Get<Parameters::VtkWriteGasSaturationPressure>();
         return val;
     }
 
     static bool saturatedOilGasDissolutionFactorOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSaturatedOilGasDissolutionFactor>();
+        static bool val = Parameters::Get<Parameters::VtkWriteSaturatedOilGasDissolutionFactor>();
         return val;
     }
 
     static bool saturatedGasOilVaporizationFactorOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSaturatedGasOilVaporizationFactor>();
+        static bool val = Parameters::Get<Parameters::VtkWriteSaturatedGasOilVaporizationFactor>();
         return val;
     }
 
     static bool saturationRatiosOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteSaturationRatios>();
+        static bool val = Parameters::Get<Parameters::VtkWriteSaturationRatios>();
         return val;
     }
 
     static bool primaryVarsMeaningOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWritePrimaryVarsMeaning>();
+        static bool val = Parameters::Get<Parameters::VtkWritePrimaryVarsMeaning>();
         return val;
     }
 

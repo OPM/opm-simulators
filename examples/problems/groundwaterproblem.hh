@@ -28,19 +28,22 @@
 #ifndef EWOMS_GROUND_WATER_PROBLEM_HH
 #define EWOMS_GROUND_WATER_PROBLEM_HH
 
-#include <opm/models/immiscible/immiscibleproperties.hh>
-#include <opm/simulators/linalg/parallelistlbackend.hh>
+#include <dune/common/fmatrix.hh>
+#include <dune/common/fvector.hh>
+#include <dune/common/version.hh>
+
+#include <dune/grid/yaspgrid.hh>
+#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
 
 #include <opm/material/components/SimpleH2O.hpp>
 #include <opm/material/fluidstates/ImmiscibleFluidState.hpp>
 #include <opm/material/fluidsystems/LiquidPhase.hpp>
 
-#include <dune/grid/yaspgrid.hh>
-#include <dune/grid/io/file/dgfparser/dgfyasp.hh>
+#include <opm/models/common/multiphasebaseparameters.hh>
 
-#include <dune/common/version.hh>
-#include <dune/common/fmatrix.hh>
-#include <dune/common/fvector.hh>
+#include <opm/models/immiscible/immiscibleproperties.hh>
+
+#include <opm/simulators/linalg/parallelistlbackend.hh>
 
 #include <sstream>
 #include <string>
@@ -88,90 +91,29 @@ struct LinearSolverWrapper<TypeTag, TTag::GroundWaterBaseProblem>
 
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct LensLowerLeftX { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LensLowerLeftX { static constexpr Scalar value = 0.25; };
 
-template<class TypeTag, class MyTypeTag>
-struct LensLowerLeftY { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LensLowerLeftY { static constexpr Scalar value = 0.25; };
 
-template<class TypeTag, class MyTypeTag>
-struct LensLowerLeftZ { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LensLowerLeftZ { static constexpr Scalar value = 0.25; };
 
-template<class TypeTag, class MyTypeTag>
-struct LensUpperRightX { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LensUpperRightX { static constexpr Scalar value = 0.75; };
 
-template<class TypeTag, class MyTypeTag>
-struct LensUpperRightY { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LensUpperRightY { static constexpr Scalar value = 0.75; };
 
-template<class TypeTag, class MyTypeTag>
-struct LensUpperRightZ { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LensUpperRightZ { static constexpr Scalar value = 0.75; };
 
-template<class TypeTag, class MyTypeTag>
-struct Permeability { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct Permeability { static constexpr Scalar value = 1e-10; };
 
-template<class TypeTag, class MyTypeTag>
-struct PermeabilityLens { using type = Properties::UndefinedProperty; };
-
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct LensLowerLeftX<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.25;
-};
-
-template<class TypeTag>
-struct LensLowerLeftY<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.25;
-};
-
-template<class TypeTag>
-struct LensLowerLeftZ<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.25;
-};
-
-template<class TypeTag>
-struct LensUpperRightX<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.75;
-};
-
-template<class TypeTag>
-struct LensUpperRightY<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.75;
-};
-
-template<class TypeTag>
-struct LensUpperRightZ<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.75;
-};
-
-template<class TypeTag>
-struct Permeability<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-10;
-};
-
-template<class TypeTag>
-struct PermeabilityLens<TypeTag, Properties::TTag::GroundWaterBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-12;
-};
+template<class Scalar>
+struct PermeabilityLens { static constexpr Scalar value = 1e-12; };
 
 } // namespace Opm::Parameters
 
@@ -239,20 +181,20 @@ public:
 
         eps_ = 1.0e-3;
 
-        lensLowerLeft_[0] = Parameters::get<TypeTag, Parameters::LensLowerLeftX>();
+        lensLowerLeft_[0] = Parameters::Get<Parameters::LensLowerLeftX<Scalar>>();
         if (dim > 1)
-            lensLowerLeft_[1] = Parameters::get<TypeTag, Parameters::LensLowerLeftY>();
+            lensLowerLeft_[1] = Parameters::Get<Parameters::LensLowerLeftY<Scalar>>();
         if (dim > 2)
-            lensLowerLeft_[2] = Parameters::get<TypeTag, Parameters::LensLowerLeftY>();
+            lensLowerLeft_[2] = Parameters::Get<Parameters::LensLowerLeftY<Scalar>>();
 
-        lensUpperRight_[0] = Parameters::get<TypeTag, Parameters::LensUpperRightX>();
+        lensUpperRight_[0] = Parameters::Get<Parameters::LensUpperRightX<Scalar>>();
         if (dim > 1)
-            lensUpperRight_[1] = Parameters::get<TypeTag, Parameters::LensUpperRightY>();
+            lensUpperRight_[1] = Parameters::Get<Parameters::LensUpperRightY<Scalar>>();
         if (dim > 2)
-            lensUpperRight_[2] = Parameters::get<TypeTag, Parameters::LensUpperRightY>();
+            lensUpperRight_[2] = Parameters::Get<Parameters::LensUpperRightY<Scalar>>();
 
-        intrinsicPerm_ = this->toDimMatrix_(Parameters::get<TypeTag, Parameters::Permeability>());
-        intrinsicPermLens_ = this->toDimMatrix_(Parameters::get<TypeTag, Parameters::PermeabilityLens>());
+        intrinsicPerm_ = this->toDimMatrix_(Parameters::Get<Parameters::Permeability<Scalar>>());
+        intrinsicPermLens_ = this->toDimMatrix_(Parameters::Get<Parameters::PermeabilityLens<Scalar>>());
     }
 
     /*!
@@ -262,33 +204,34 @@ public:
     {
         ParentType::registerParameters();
 
-        Parameters::registerParam<TypeTag, Parameters::LensLowerLeftX>
+        Parameters::Register<Parameters::LensLowerLeftX<Scalar>>
             ("The x-coordinate of the lens' lower-left corner [m].");
-        Parameters::registerParam<TypeTag, Parameters::LensUpperRightX>
+        Parameters::Register<Parameters::LensUpperRightX<Scalar>>
             ("The x-coordinate of the lens' upper-right corner [m].");
 
         if (dimWorld > 1) {
-            Parameters::registerParam<TypeTag, Parameters::LensLowerLeftY>
+            Parameters::Register<Parameters::LensLowerLeftY<Scalar>>
                 ("The y-coordinate of the lens' lower-left corner [m].");
-            Parameters::registerParam<TypeTag, Parameters::LensUpperRightY>
+            Parameters::Register<Parameters::LensUpperRightY<Scalar>>
                 ("The y-coordinate of the lens' upper-right corner [m].");
         }
 
         if (dimWorld > 2) {
-            Parameters::registerParam<TypeTag, Parameters::LensLowerLeftZ>
+            Parameters::Register<Parameters::LensLowerLeftZ<Scalar>>
                 ("The z-coordinate of the lens' lower-left corner [m].");
-            Parameters::registerParam<TypeTag, Parameters::LensUpperRightZ>
+            Parameters::Register<Parameters::LensUpperRightZ<Scalar>>
                 ("The z-coordinate of the lens' upper-right corner [m].");
         }
 
-        Parameters::registerParam<TypeTag, Parameters::Permeability>
+        Parameters::Register<Parameters::Permeability<Scalar>>
             ("The intrinsic permeability [m^2] of the ambient material.");
-        Parameters::registerParam<TypeTag, Parameters::PermeabilityLens>
+        Parameters::Register<Parameters::PermeabilityLens<Scalar>>
             ("The intrinsic permeability [m^2] of the lens.");
 
         Parameters::SetDefault<Parameters::GridFile>("./data/groundwater_2d.dgf");
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(1.0);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(1.0);
+        Parameters::SetDefault<Parameters::EnableGravity>(true);
     }
 
     /*!

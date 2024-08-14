@@ -121,20 +121,6 @@ public:
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// Disable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
-{ static constexpr bool value = false; };
-
-// Write out the filter velocities for this problem
-template<class TypeTag>
-struct VtkWriteFilterVelocities<TypeTag, Properties::TTag::PowerInjectionBaseProblem>
-{ static constexpr bool value = true; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 /*!
  * \ingroup TestProblems
@@ -241,6 +227,7 @@ public:
 
         Parameters::SetDefault<Parameters::EndTime<Scalar>>(100.0);
         Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(1e-3);
+        Parameters::SetDefault<Parameters::VtkWriteFilterVelocities>(true);
     }
 
     /*!

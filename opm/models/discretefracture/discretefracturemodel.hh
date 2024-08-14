@@ -53,7 +53,7 @@ namespace Opm::Properties {
 // Create new type tags
 namespace TTag {
 //! The generic type tag for problems using the immiscible multi-phase model
-struct DiscreteFractureModel { using InheritsFrom = std::tuple<VtkDiscreteFracture, ImmiscibleTwoPhaseModel>; };
+struct DiscreteFractureModel { using InheritsFrom = std::tuple<ImmiscibleTwoPhaseModel>; };
 } // end namespace TTag
 
 //! The class for the model

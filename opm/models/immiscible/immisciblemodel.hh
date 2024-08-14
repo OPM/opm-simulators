@@ -60,7 +60,7 @@ namespace Opm::Properties {
 // Create new type tags
 namespace TTag {
 //! The generic type tag for problems using the immiscible multi-phase model
-struct ImmiscibleModel { using InheritsFrom = std::tuple<VtkEnergy, MultiPhaseBaseModel>; };
+struct ImmiscibleModel { using InheritsFrom = std::tuple<MultiPhaseBaseModel>; };
 
 //! The type tag for single-phase immiscible problems
 struct ImmiscibleSinglePhaseModel { using InheritsFrom = std::tuple<ImmiscibleModel>; };
@@ -166,24 +166,6 @@ public:
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-// disable output of a few quantities which make sense in a
-// multi-phase but not in a single-phase context
-template<class TypeTag>
-struct VtkWriteSaturations<TypeTag, Properties::TTag::ImmiscibleSinglePhaseModel>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWriteMobilities<TypeTag, Properties::TTag::ImmiscibleSinglePhaseModel>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct VtkWriteRelativePermeabilities<TypeTag, Properties::TTag::ImmiscibleSinglePhaseModel>
-{ static constexpr bool value = false; };
-
-} // namespace Opm::Parameters
-
 namespace Opm {
 
 /*!
@@ -257,6 +239,10 @@ public:
 
         if (enableEnergy)
             Opm::VtkEnergyModule<TypeTag>::registerParameters();
+
+        Parameters::SetDefault<Parameters::VtkWriteSaturations>(false);
+        Parameters::SetDefault<Parameters::VtkWriteMobilities>(false);
+        Parameters::SetDefault<Parameters::VtkWriteRelativePermeabilities>(false);
     }
 
     /*!

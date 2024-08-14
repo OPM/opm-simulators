@@ -41,51 +41,14 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Properties::TTag {
-
-// create new type tag for the VTK multi-phase output
-struct VtkBlackOilMICP {};
-
-} // namespace Opm::Properties::TTag
-
 namespace Opm::Parameters {
 
-// create the property tags needed for the MICP output module
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteMicrobialConcentration { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteOxygenConcentration { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteUreaConcentration { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteBiofilmConcentration { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct VtkWriteCalciteConcentration { using type = Properties::UndefinedProperty; };
-
 // set default values for what quantities to output
-template<class TypeTag>
-struct VtkWriteMicrobialConcentration<TypeTag, Properties::TTag::VtkBlackOilMICP>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct VtkWriteOxygenConcentration<TypeTag, Properties::TTag::VtkBlackOilMICP>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct VtkWriteUreaConcentration<TypeTag, Properties::TTag::VtkBlackOilMICP>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct VtkWriteBiofilmConcentration<TypeTag, Properties::TTag::VtkBlackOilMICP>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct VtkWriteCalciteConcentration<TypeTag, Properties::TTag::VtkBlackOilMICP>
-{ static constexpr bool value = true; };
+struct VtkWriteMicrobialConcentration { static constexpr bool value = true; };
+struct VtkWriteOxygenConcentration { static constexpr bool value = true; };
+struct VtkWriteUreaConcentration { static constexpr bool value = true; };
+struct VtkWriteBiofilmConcentration { static constexpr bool value = true; };
+struct VtkWriteCalciteConcentration { static constexpr bool value = true; };
 
 } // namespace Opm::Parameters
 
@@ -127,18 +90,18 @@ public:
         if (!enableMICP)
             return;
 
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteMicrobialConcentration>
+        Parameters::Register<Parameters::VtkWriteMicrobialConcentration>
             ("Include the concentration of the microbial component in the water phase "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteOxygenConcentration>
+        Parameters::Register<Parameters::VtkWriteOxygenConcentration>
             ("Include the concentration of the oxygen component in the water phase "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteUreaConcentration>
+        Parameters::Register<Parameters::VtkWriteUreaConcentration>
             ("Include the concentration of the urea component in the water phase "
              "in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteBiofilmConcentration>
+        Parameters::Register<Parameters::VtkWriteBiofilmConcentration>
             ("Include the biofilm volume fraction in the VTK output files");
-        Parameters::registerParam<TypeTag, Parameters::VtkWriteCalciteConcentration>
+        Parameters::Register<Parameters::VtkWriteCalciteConcentration>
             ("Include the calcite volume fraction in the VTK output files");
     }
 
@@ -239,31 +202,31 @@ public:
 private:
     static bool microbialConcentrationOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteMicrobialConcentration>();
+        static bool val = Parameters::Get<Parameters::VtkWriteMicrobialConcentration>();
         return val;
     }
 
     static bool oxygenConcentrationOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteOxygenConcentration>();
+        static bool val = Parameters::Get<Parameters::VtkWriteOxygenConcentration>();
         return val;
     }
 
     static bool ureaConcentrationOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteUreaConcentration>();
+        static bool val = Parameters::Get<Parameters::VtkWriteUreaConcentration>();
         return val;
     }
 
     static bool biofilmConcentrationOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteBiofilmConcentration>();
+        static bool val = Parameters::Get<Parameters::VtkWriteBiofilmConcentration>();
         return val;
     }
 
     static bool calciteConcentrationOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWriteCalciteConcentration>();
+        static bool val = Parameters::Get<Parameters::VtkWriteCalciteConcentration>();
         return val;
     }
 

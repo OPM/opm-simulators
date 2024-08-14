@@ -23,32 +23,15 @@
 #ifndef EWOMS_NEWTON_METHOD_PARAMETERS_HH
 #define EWOMS_NEWTON_METHOD_PARAMETERS_HH
 
-#include <opm/models/utils/propertysystem.hh>
-
 namespace Opm::Parameters {
-
-//! Specifies whether the Newton method should print messages or not
-template<class TypeTag, class MyTypeTag>
-struct NewtonVerbose { using type = Properties::UndefinedProperty; };
-
-//! Specifies whether the convergence rate and the global residual
-//! gets written out to disk for every Newton iteration
-template<class TypeTag, class MyTypeTag>
-struct NewtonWriteConvergence { using type = Properties::UndefinedProperty; };
-
-/*!
- * \brief The value for the error below which convergence is declared
- *
- * This value can (and for the porous media models will) be changed to account for grid
- * scaling and other effects.
- */
-template<class TypeTag, class MyTypeTag>
-struct NewtonTolerance { using type = Properties::UndefinedProperty; };
 
 //! The maximum error which may occur in a simulation before the
 //! Newton method for the time step is aborted
-template<class TypeTag, class MyTypeTag>
-struct NewtonMaxError { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct NewtonMaxError { static constexpr Scalar value = 1e100; };
+
+//! Number of maximum iterations for the Newton method.
+struct NewtonMaxIterations { static constexpr int value = 20; };
 
 /*!
  * \brief The number of iterations at which the Newton method
@@ -58,12 +41,23 @@ struct NewtonMaxError { using type = Properties::UndefinedProperty; };
  * is to scale the last time-step size by the deviation of the
  * number of iterations used from the target steps.
  */
-template<class TypeTag, class MyTypeTag>
-struct NewtonTargetIterations { using type = Properties::UndefinedProperty; };
+struct NewtonTargetIterations { static constexpr int value = 10; };
 
-//! Number of maximum iterations for the Newton method.
-template<class TypeTag, class MyTypeTag>
-struct NewtonMaxIterations { using type = Properties::UndefinedProperty; };
+/*!
+ * \brief The value for the error below which convergence is declared
+ *
+ * This value can (and for the porous media models will) be changed to account for grid
+ * scaling and other effects.
+ */
+template<class Scalar>
+struct NewtonTolerance { static constexpr Scalar value = 1e-8; };
+
+//! Specifies whether the Newton method should print messages or not
+struct NewtonVerbose { static constexpr bool value = true; };
+
+//! Specifies whether the convergence rate and the global residual
+//! gets written out to disk for every Newton iteration
+struct NewtonWriteConvergence { static constexpr bool value = false; };
 
 } // end namespace Opm::Parameters
 

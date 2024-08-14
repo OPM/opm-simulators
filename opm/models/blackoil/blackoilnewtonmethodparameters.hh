@@ -28,42 +28,39 @@
 #ifndef EWOMS_BLACK_OIL_NEWTON_METHOD_PARAMETERS_HH
 #define EWOMS_BLACK_OIL_NEWTON_METHOD_PARAMETERS_HH
 
-#include <opm/models/utils/propertysystem.hh>
-
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct DpMaxRel { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct DpMaxRel { static constexpr Scalar value = 0.3; };
 
-template<class TypeTag, class MyTypeTag>
-struct DsMax { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct DsMax { static constexpr Scalar value = 0.2; };
 
-template<class TypeTag, class MyTypeTag>
-struct PriVarOscilationThreshold { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct PriVarOscilationThreshold { static constexpr Scalar value = 1e-5; };
 
-template<class TypeTag, class MyTypeTag>
-struct ProjectSaturations { using type = Properties::UndefinedProperty; };
+struct ProjectSaturations { static constexpr bool value = false; };
 
-template<class TypeTag, class MyTypeTag>
-struct MaxTemperatureChange { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct MaxTemperatureChange { static constexpr Scalar value = 5.0; }; // Kelvin
 
-template<class TypeTag, class MyTypeTag>
-struct TemperatureMax { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct TemperatureMax { static constexpr Scalar value = 1e9; }; // Kelvin
 
-template<class TypeTag, class MyTypeTag>
-struct TemperatureMin { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct TemperatureMin { static constexpr Scalar value = 0.0; }; // Kelvin
 
-template<class TypeTag, class MyTypeTag>
-struct PressureMax { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct PressureMax { static constexpr Scalar value = 1e99; };
 
-template<class TypeTag, class MyTypeTag>
-struct PressureMin { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct PressureMin { static constexpr Scalar value = -1e99; };
 
-template<class TypeTag, class MyTypeTag>
-struct MaximumWaterSaturation { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct MaximumWaterSaturation { static constexpr Scalar value = 1.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct WaterOnlyThreshold { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct WaterOnlyThreshold { static constexpr Scalar value = 1.0; };
 
 } // namespace Opm::Parameters
 

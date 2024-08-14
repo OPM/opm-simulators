@@ -35,22 +35,9 @@
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/models/utils/propertysystem.hh>
 
-namespace Opm::Properties::TTag {
-
-// create new type tag for the VTK primary variables output
-struct VtkPhasePresence {};
-
-} // namespace Opm::Properties::TTag
-
 namespace Opm::Parameters {
 
-// create the property tags needed for the primary variables module
-template<class TypeTag, class MyTypeTag>
-struct VtkWritePhasePresence { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag>
-struct VtkWritePhasePresence<TypeTag, Properties::TTag::VtkPhasePresence>
-{ static constexpr bool value = false; };
+struct VtkWritePhasePresence { static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
@@ -86,7 +73,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::VtkWritePhasePresence>
+        Parameters::Register<Parameters::VtkWritePhasePresence>
             ("Include the phase presence pseudo primary "
              "variable in the VTK output files");
     }
@@ -137,7 +124,7 @@ public:
 private:
     static bool phasePresenceOutput_()
     {
-        static bool val = Parameters::get<TypeTag, Parameters::VtkWritePhasePresence>();
+        static bool val = Parameters::Get<Parameters::VtkWritePhasePresence>();
         return val;
     }
 
