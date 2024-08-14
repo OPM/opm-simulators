@@ -144,7 +144,7 @@ public:
 
     struct ConvectiveMixingModuleParam
     {
-        bool active_{false};
+        std::vector<bool> active_;
         std::vector<Scalar> Xhi_;
         std::vector<Scalar> Psi_;
     };
@@ -155,17 +155,17 @@ public:
         // check that Xhi and Psi didn't change
         std::size_t numRegions = eclState.runspec().tabdims().getNumPVTTables();
         const auto& control = schedule[episodeIdx].oilvap();
-        info.active_ = control.drsdtConvective();
-        if (!info.active_) {
-            return;
-        }
-        if (info.Xhi_.empty()) {
+        if (info.active_.empty()) {
+            info.active_.resize(numRegions);
             info.Xhi_.resize(numRegions);
             info.Psi_.resize(numRegions);
         }
         for (size_t i = 0; i < numRegions; ++i ) {
-            info.Xhi_[i] = control.getMaxDRSDT(i);
-            info.Psi_[i] = control.getPsi(i);
+            info.active_[i] = control.drsdtConvective(i);
+            if (control.drsdtConvective(i)) {
+                info.Xhi_[i] = control.getMaxDRSDT(i);
+                info.Psi_[i] = control.getPsi(i);
+            }
         }
     }
     #endif
@@ -175,8 +175,11 @@ public:
                                  const IntensiveQuantities& intQuantsEx,
                                  const unsigned phaseIdx,
                                  const ConvectiveMixingModuleParam& info) {
-
-        if (!info.active_) {
+        
+        if (info.active_.empty()) {
+            return;
+        }
+        if (!info.active_[ intQuantsIn.pvtRegionIndex()] || !info.active_[ intQuantsEx.pvtRegionIndex()]) {
             return;
         }
 
@@ -269,7 +272,11 @@ public:
                                         const Scalar faceArea,
                                         const ConvectiveMixingModuleParam& info)
     {
-        if (!info.active_) {
+        if (info.active_.empty()) {
+            return;
+        }
+
+        if (!info.active_[ intQuantsIn.pvtRegionIndex()] || !info.active_[ intQuantsEx.pvtRegionIndex()]) {
             return;
         }
 
