@@ -369,10 +369,6 @@ struct EnableThermalFluxBoundaries<TypeTag, TTag::FlowExpCompProblem> {
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
-    template<class TypeTag>
-    struct EnableVtkOutput<TypeTag, Properties::TTag::FlowExpCompProblem>{
-        static constexpr bool value = true;
-    };
 
     template<class TypeTag>
     struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowExpCompProblem>{
