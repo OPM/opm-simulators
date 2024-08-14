@@ -27,14 +27,36 @@
 namespace Opm {
     namespace Properties {
         namespace TTag {
-            struct EclFlowProblemTest {
+            struct FlowSimpleProblem {
                 using InheritsFrom = std::tuple<FlowProblem>;
             };
         }
 
+        template<class TypeTag>
+        struct Indices<TypeTag, TTag::FlowSimpleProblem>
+        {
+        private:
+            // it is unfortunately not possible to simply use 'TypeTag' here because this leads
+            // to cyclic definitions of some properties. if this happens the compiler error
+            // messages unfortunately are *really* confusing and not really helpful.
+            using BaseTypeTag = TTag::FlowProblem;
+            using FluidSystem = GetPropType<BaseTypeTag, Properties::FluidSystem>;
+
+        public:
+            using type = BlackOilTwoPhaseIndices<getPropValue<TypeTag, Properties::EnableSolvent>(),
+                                                getPropValue<TypeTag, Properties::EnableExtbo>(),
+                                                getPropValue<TypeTag, Properties::EnablePolymer>(),
+                                                getPropValue<TypeTag, Properties::EnableEnergy>(),
+                                                getPropValue<TypeTag, Properties::EnableFoam>(),
+                                                getPropValue<TypeTag, Properties::EnableBrine>(),
+                                                /*PVOffset=*/0,
+                                                /*disabledCompIdx=*/FluidSystem::oilCompIdx,
+                                                getPropValue<TypeTag, Properties::EnableMICP>()>;
+        };
+
         // SPE11C requires thermal/energy
         template<class TypeTag>
-        struct EnableEnergy<TypeTag, TTag::EclFlowProblemTest> {
+        struct EnableEnergy<TypeTag, TTag::FlowSimpleProblem> {
             static constexpr bool value = true;
         };
 
@@ -42,12 +64,12 @@ namespace Opm {
         // Skipping for now
         // SPE11C requires dispersion
         // template<class TypeTag>
-        // struct EnableDispersion<TypeTag, TTag::EclFlowProblemTest> {
+        // struct EnableDispersion<TypeTag, TTag::FlowSimpleProblem> {
         //     static constexpr bool value = true;
         // };
 
         template<class TypeTag>
-        struct MaterialLaw<TypeTag, TTag::EclFlowProblemTest>
+        struct MaterialLaw<TypeTag, TTag::FlowSimpleProblem>
         {
         private:
             using Scalar = GetPropType<TypeTag, Properties::Scalar>;
@@ -68,7 +90,7 @@ namespace Opm {
 
 int main(int argc, char** argv)
 {
-    using TypeTag = Opm::Properties::TTag::EclFlowProblemTest;
+    using TypeTag = Opm::Properties::TTag::FlowSimpleProblem;
     auto mainObject = Opm::Main(argc, argv);
     return mainObject.runStatic<TypeTag>();
 //    return Opm::start<TypeTag>(argc, argv);
