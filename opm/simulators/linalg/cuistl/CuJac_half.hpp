@@ -43,7 +43,7 @@ namespace Opm::cuistl
 //! \note We assume X and Y are both CuVector<real_type>, but we leave them as template
 //! arguments in case of future additions.
 template <class M, class X, class Y, int l = 1>
-class CuJac : public Dune::PreconditionerWithUpdate<X, Y>
+class CuJac_half : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
     //! \brief The matrix type the preconditioner is for.
@@ -61,7 +61,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    CuJac(const M& A, field_type w);
+    CuJac_half(const M& A, field_type w);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.

@@ -16,27 +16,13 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <cuda.h>
-#include <cuda_runtime.h>
-#include <cusparse.h>
 #include <dune/common/fmatrix.hh>
-#include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
-#include <dune/istl/bvector.hh>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/cuistl/CuJac.hpp>
+#include <opm/simulators/linalg/cuistl/CuJac_half.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
-#include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
-#include <opm/simulators/linalg/cuistl/detail/CuBlasHandle.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cublas_wrapper.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cusparse_constants.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
-#include <opm/simulators/linalg/cuistl/detail/cusparse_wrapper.hpp>
-#include <opm/simulators/linalg/cuistl/detail/fix_zero_diagonal.hpp>
-#include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
+#include <opm/simulators/linalg/cuistl/detail/preconditionerKernels/JacKernels.hpp>
 #include <opm/simulators/linalg/cuistl/detail/vector_operations.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
 
@@ -44,7 +30,7 @@ namespace Opm::cuistl
 {
 
 template <class M, class X, class Y, int l>
-CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
+CuJac_half<M, X, Y, l>::CuJac_half(const M& A, field_type w)
     : m_cpuMatrix(A)
     , m_relaxationFactor(w)
     , m_gpuMatrix(CuSparseMatrix<field_type>::fromMatrix(A))
@@ -67,7 +53,7 @@ CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
                              A.nonzeroes()));
 
     // Compute the inverted diagonal of A and store it in a vector format in m_diagInvFlattened
-    detail::invertDiagonalAndFlatten<field_type, matrix_type::block_type::cols>(m_gpuMatrix.getNonZeroValues().data(),
+    detail::JAC::invertDiagonalAndFlatten<field_type, matrix_type::block_type::cols>(m_gpuMatrix.getNonZeroValues().data(),
                                                                                 m_gpuMatrix.getRowIndices().data(),
                                                                                 m_gpuMatrix.getColumnIndices().data(),
                                                                                 m_gpuMatrix.N(),
@@ -76,13 +62,13 @@ CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
+CuJac_half<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
 {
 }
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::apply(X& v, const Y& d)
+CuJac_half<M, X, Y, l>::apply(X& v, const Y& d)
 {
     // Jacobi preconditioner: x_{n+1} = x_n + w * (D^-1 * (b - Ax_n) )
     // Working with defect d and update v it we only need to set v = w*(D^-1)*d
@@ -95,23 +81,23 @@ CuJac<M, X, Y, l>::apply(X& v, const Y& d)
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::post([[maybe_unused]] X& x)
+CuJac_half<M, X, Y, l>::post([[maybe_unused]] X& x)
 {
 }
 
 template <class M, class X, class Y, int l>
 Dune::SolverCategory::Category
-CuJac<M, X, Y, l>::category() const
+CuJac_half<M, X, Y, l>::category() const
 {
     return Dune::SolverCategory::sequential;
 }
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::update()
+CuJac_half<M, X, Y, l>::update()
 {
     m_gpuMatrix.updateNonzeroValues(m_cpuMatrix);
-    detail::invertDiagonalAndFlatten<field_type, matrix_type::block_type::cols>(m_gpuMatrix.getNonZeroValues().data(),
+    detail::JAC::invertDiagonalAndFlatten<field_type, matrix_type::block_type::cols>(m_gpuMatrix.getNonZeroValues().data(),
                                                                                 m_gpuMatrix.getRowIndices().data(),
                                                                                 m_gpuMatrix.getColumnIndices().data(),
                                                                                 m_gpuMatrix.N(),
@@ -119,24 +105,24 @@ CuJac<M, X, Y, l>::update()
 }
 
 } // namespace Opm::cuistl
-#define INSTANTIATE_CUJAC_DUNE(realtype, blockdim)                                                                     \
-    template class ::Opm::cuistl::CuJac<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,             \
+#define INSTANTIATE_CUJAC_half_DUNE(realtype, blockdim)                                                                     \
+    template class ::Opm::cuistl::CuJac_half<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,             \
                                         ::Opm::cuistl::CuVector<realtype>,                                             \
                                         ::Opm::cuistl::CuVector<realtype>>;                                            \
-    template class ::Opm::cuistl::CuJac<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,              \
+    template class ::Opm::cuistl::CuJac_half<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,              \
                                         ::Opm::cuistl::CuVector<realtype>,                                             \
                                         ::Opm::cuistl::CuVector<realtype>>
 
-INSTANTIATE_CUJAC_DUNE(double, 1);
-INSTANTIATE_CUJAC_DUNE(double, 2);
-INSTANTIATE_CUJAC_DUNE(double, 3);
-INSTANTIATE_CUJAC_DUNE(double, 4);
-INSTANTIATE_CUJAC_DUNE(double, 5);
-INSTANTIATE_CUJAC_DUNE(double, 6);
+INSTANTIATE_CUJAC_half_DUNE(double, 1);
+INSTANTIATE_CUJAC_half_DUNE(double, 2);
+INSTANTIATE_CUJAC_half_DUNE(double, 3);
+INSTANTIATE_CUJAC_half_DUNE(double, 4);
+INSTANTIATE_CUJAC_half_DUNE(double, 5);
+INSTANTIATE_CUJAC_half_DUNE(double, 6);
 
-INSTANTIATE_CUJAC_DUNE(float, 1);
-INSTANTIATE_CUJAC_DUNE(float, 2);
-INSTANTIATE_CUJAC_DUNE(float, 3);
-INSTANTIATE_CUJAC_DUNE(float, 4);
-INSTANTIATE_CUJAC_DUNE(float, 5);
-INSTANTIATE_CUJAC_DUNE(float, 6);
+INSTANTIATE_CUJAC_half_DUNE(float, 1);
+INSTANTIATE_CUJAC_half_DUNE(float, 2);
+INSTANTIATE_CUJAC_half_DUNE(float, 3);
+INSTANTIATE_CUJAC_half_DUNE(float, 4);
+INSTANTIATE_CUJAC_half_DUNE(float, 5);
+INSTANTIATE_CUJAC_half_DUNE(float, 6);
