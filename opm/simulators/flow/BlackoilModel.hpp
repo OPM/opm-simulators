@@ -142,15 +142,11 @@ template<class TypeTag>
 struct LinearSolverSplice<TypeTag, TTag::FlowProblem>
 { using type = TTag::FlowIstlSolver; };
 
-} // namespace Opm::Properties
-
-namespace Opm::Parameters {
-
 template<class TypeTag>
-struct EnableDebuggingChecks<TypeTag, Properties::TTag::FlowProblem>
+struct EnableDebuggingChecks<TypeTag, TTag::FlowProblem>
 { static constexpr bool value = false; };
 
-}
+} // namespace Opm::Properties
 
 namespace Opm {
 

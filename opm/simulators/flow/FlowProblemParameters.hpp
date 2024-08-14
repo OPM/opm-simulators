@@ -32,12 +32,6 @@
 
 namespace Opm::Parameters {
 
-// Enable the additional checks even if compiled in debug mode (i.e., with the NDEBUG
-// macro undefined). Next to a slightly better performance, this also eliminates some
-// print statements in debug mode.
-template<class TypeTag, class MyTypeTag>
-struct EnableDebuggingChecks { using type = Properties::UndefinedProperty; };
-
 // Enable partial compensation of systematic mass losses via the source term of the next time
 // step
 template<class TypeTag, class MyTypeTag>

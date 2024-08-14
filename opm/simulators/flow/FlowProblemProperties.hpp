@@ -76,6 +76,12 @@ struct AquiferModel { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct EnableApiTracking { using type = UndefinedProperty; };
 
+// Enable the additional checks even if compiled in debug mode (i.e., with the NDEBUG
+// macro undefined). Next to a slightly better performance, this also eliminates some
+// print statements in debug mode.
+template<class TypeTag, class MyTypeTag>
+struct EnableDebuggingChecks { using type = Properties::UndefinedProperty; };
+
 // if thermal flux boundaries are enabled an effort is made to preserve the initial
 // thermal gradient specified via the TEMPVD keyword
 template<class TypeTag, class MyTypeTag>
@@ -264,6 +270,11 @@ template<class TypeTag>
 struct EnableExperiments<TypeTag, TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
+// By default, we enable the debugging checks if we're compiled in debug mode
+template<class TypeTag>
+struct EnableDebuggingChecks<TypeTag, TTag::FlowBaseProblem>
+{ static constexpr bool value = true; };
+
 } // namespace Opm::Properties
 
 namespace Opm::Parameters {
@@ -276,11 +287,6 @@ struct EclOutputDoublePrecision<TypeTag, Properties::TTag::FlowBaseProblem>
 // If available, write the ECL output in a non-blocking manner
 template<class TypeTag>
 struct EnableAsyncEclOutput<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
-
-// By default, we enable the debugging checks if we're compiled in debug mode
-template<class TypeTag>
-struct EnableDebuggingChecks<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = true; };
 
 // Drift compensation is an experimental feature, i.e., systematic errors in the

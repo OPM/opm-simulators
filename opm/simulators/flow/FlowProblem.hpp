@@ -679,7 +679,7 @@ public:
         OPM_TIMEBLOCK(endTimeStep);
 
 #ifndef NDEBUG
-        if constexpr (getPropValue<TypeTag, Parameters::EnableDebuggingChecks>()) {
+        if constexpr (getPropValue<TypeTag, Properties::EnableDebuggingChecks>()) {
             // in debug mode, we don't care about performance, so we check
             // if the model does the right thing (i.e., the mass change
             // inside the whole reservoir must be equivalent to the fluxes
