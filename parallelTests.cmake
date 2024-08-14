@@ -247,4 +247,4 @@ add_test_compareSeparateECLFiles(CASENAME actionx_compdat_nldd_1_proc
                                  REL_TOL ${rel_tol}
                                  IGNORE_EXTRA_KW BOTH
                                  MPI_PROCS 1
-                                 TEST_ARGS --nonlinear-solver=nldd --matrix-add-well-contributions=true)
+                                 TEST_ARGS --nonlinear-solver=nldd --matrix-add-well-contributions=true --linear-solver=ilu0)
