@@ -106,6 +106,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeStepping.cpp
   opm/simulators/timestepping/ConvergenceReport.cpp
+  opm/simulators/timestepping/EclTimeSteppingParams.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimerInterface.cpp
