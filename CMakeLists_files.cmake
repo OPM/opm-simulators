@@ -192,6 +192,7 @@ endif()
 
 if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
   list (APPEND MAIN_SOURCE_FILES
+    opm/simulators/flow/DamarisParameters.cpp
     opm/simulators/flow/DamarisWriter.cpp
     opm/simulators/utils/DamarisKeywords.cpp
     opm/simulators/utils/DamarisOutputModule.cpp

@@ -50,4 +50,11 @@ struct DamarisLimitVariables  { static constexpr auto value = ""; };
 
 } // namespace Opm::Parameters
 
+namespace Opm {
+
+//! \brief Register damaris runtime parameters.
+void registerDamarisParameters();
+
+}
+
 #endif // OPM_DAMARIS_PARAMETERS_HPP
