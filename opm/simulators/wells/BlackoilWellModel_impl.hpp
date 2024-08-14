@@ -194,8 +194,14 @@ namespace Opm {
 
         // Create cartesian to compressed mapping
         const auto& schedule_wells = this->schedule().getWellsatEnd();
-        const auto& possibleFutureConnections = this->schedule().getPossibleFutureConnections();
+        auto possibleFutureConnections = this->schedule().getPossibleFutureConnections();
 
+#if HAVE_MPI
+        // Communicate Map to other processes, since it is only available on rank 0
+        const auto& comm = this->simulator_.vanguard().grid().comm();
+        Parallel::MpiSerializer ser(comm);
+        ser.broadcast(possibleFutureConnections);
+#endif
         // initialize the additional cell connections introduced by wells.
         for (const auto& well : schedule_wells)
         {

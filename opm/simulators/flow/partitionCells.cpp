@@ -37,6 +37,10 @@
 #include <opm/input/eclipse/Schedule/Well/WellConnections.hpp>
 #endif // HAVE_MPI && HAVE_ZOLTAN
 
+#if HAVE_MPI
+#include <opm/simulators/utils/MPISerializer.hpp>
+#endif
+
 #include <opm/grid/CpGrid.hpp>
 #include <opm/grid/polyhedralgrid.hh>
 
@@ -179,10 +183,10 @@ private:
     /// \param[in] g2l Mapping from globally unique cell IDs to local,
     ///   on-rank active cell IDs.  Return value from \c connectElements().
     template <typename Comm>
-    void connectWells(const Comm                                            comm,
-                      const std::vector<Opm::Well>&                         wells,
-                      const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
-                      const std::unordered_map<int, int>&                   g2l);
+    void connectWells(const Comm                                     comm,
+                      const std::vector<Opm::Well>&                  wells,
+                      std::unordered_map<std::string, std::set<int>> possibleFutureConnections,
+                      const std::unordered_map<int, int>&            g2l);
 };
 
 // Note: "grid_view.size(0)" is intentional here.  It is not an error.  The
@@ -285,12 +289,16 @@ ZoltanPartitioner::connectElements(const GridView&                              
 }
 
 template <typename Comm>
-void ZoltanPartitioner::connectWells(const Comm                                            comm,
-                                     const std::vector<Opm::Well>&                         wells,
-                                     const std::unordered_map<std::string, std::set<int>>& possibleFutureConnections,
-                                     const std::unordered_map<int, int>&                   g2l)
+void ZoltanPartitioner::connectWells(const Comm                                     comm,
+                                     const std::vector<Opm::Well>&                  wells,
+                                     std::unordered_map<std::string, std::set<int>> possibleFutureConnections,
+                                     const std::unordered_map<int, int>&            g2l)
 {
     auto distributedWells = 0;
+
+    // Communicate Map to other processes, since it is only available on rank 0
+    Opm::Parallel::MpiSerializer ser(comm);
+    ser.broadcast(possibleFutureConnections);
 
     for (const auto& well : wells) {
         auto cellIx = std::vector<int>{};
