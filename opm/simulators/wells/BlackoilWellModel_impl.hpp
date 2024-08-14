@@ -46,16 +46,20 @@
 #include <opm/simulators/wells/TargetCalculator.hpp>
 
 #include <opm/simulators/utils/DeferredLoggingErrorHelpers.hpp>
-#include <opm/simulators/wells/WellGroupHelpers.hpp>
-#include <opm/simulators/wells/TargetCalculator.hpp>
 #include <opm/simulators/utils/MPIPacker.hpp>
 #include <opm/simulators/utils/phaseUsageFromDeck.hpp>
+<<<<<<< HEAD
 #include <opm/simulators/wells/WellBhpThpCalculator.hpp>
 #include <opm/simulators/wells/WellGroupControls.hpp>
 #include <opm/input/eclipse/Schedule/Group/Group.hpp>//pjpe not needed?
 
 #if COMPILE_GPU_BRIDGE
 #include <opm/simulators/linalg/gpubridge/WellContributions.hpp>
+=======
+
+#if COMPILE_BDA_BRIDGE
+#include <opm/simulators/linalg/bda/WellContributions.hpp>
+>>>>>>> 914ef4d8a (rebasing)
 #endif
 
 #if HAVE_MPI
@@ -1297,63 +1301,6 @@ namespace Opm {
         return {more_network_update, well_group_control_changed};
     }
 
-    template <typename TypeTag>
-    double
-    BlackoilWellModel<TypeTag>::
-    computeWellGroupTarget(DeferredLogger& local_deferredLogger)
-    {
-        double target;
-        const int reportStepIdx = this->simulator_.episodeIndex();
-        const auto& network = this->schedule()[reportStepIdx].network();
-        const auto& balance = this->schedule()[reportStepIdx].network_balance();
-        const double thp_tolerance = balance.thp_tolerance();
-
-        auto& well_state = this->wellState();
-        auto& group_state = this->groupState();
-
-        for (const std::string& nodeName : network.node_names()) {
-            const bool has_choke = network.node(nodeName).as_choke();
-            if (nodeName=="B1") {
-                const auto& summary_state = this->simulator_.vanguard().summaryState();
-                const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
-                const auto ctrl = group.productionControls(summary_state);
-                // const auto cmode = ctrl.cmode;
-                const auto cmode = ctrl.cmode;
-                const auto pu = this->phase_usage_;
-                //TODO: Auto choke combined with RESV control is not supported
-                std::vector<double> resv_coeff(pu.num_phases, 1.0);
-                double gratTargetFromSales = 0.0; 
-                if (group_state.has_grat_sales_target(group.name()))
-                    gratTargetFromSales = group_state.grat_sales_target(group.name());
-
-                WGHelpers::TargetCalculator tcalc(cmode, pu, resv_coeff,
-                                                         gratTargetFromSales, nodeName, group_state,
-                                                         group.has_gpmaint_control(cmode));
-                // const double orig_target = tcalc.groupTarget(ctrl, local_deferredLogger);
-                
-                //PJPE: conversion factor res<-> surface rates TODO: to be calculated 
-                // rateConverter(0, well_.pvtRegionIdx(), group.name(), resv_coeff); // FIPNUM region 0 here, 
-                double efficiencyFactor = 1.0;
-                // const Group& parentGroup = this->schedule().getGroup(group.parent(), reportStepIdx);
-                const GuideRate* guideRate = &this->guideRate_;
-                target = WellGroupControls<Scalar>::getAutoChokeGroupProductionTargetRate(nodeName,
-                                                 group,
-                                                 well_state,
-                                                 group_state,
-                                                 this->schedule(),
-                                                 summary_state,
-                                                 resv_coeff,
-                                                 efficiencyFactor,
-                                                 reportStepIdx,
-                                                 pu,
-                                                 guideRate,
-                                                 local_deferredLogger);
-                std::cout << "target:" << target << std::endl;
-                
-            }
-        }
-        return target;
-    }
     // This function is to be used for well groups in an extended network that act as a subsea manifold
     // The wells of such group should have a common THP and total phase rate(s) obeying (if possible)
     // the well group constraint set by GCONPROD
@@ -1366,7 +1313,6 @@ namespace Opm {
         const auto& network = this->schedule()[reportStepIdx].network();
         const auto& balance = this->schedule()[reportStepIdx].network_balance();
         const Scalar thp_tolerance = balance.thp_tolerance();
-
 
         if (!network.active()) {
             return;
@@ -1381,11 +1327,8 @@ namespace Opm {
                 const auto& summary_state = this->simulator_.vanguard().summaryState();
                 const Group& group = this->schedule().getGroup(nodeName, reportStepIdx);
                 const auto ctrl = group.productionControls(summary_state);
-                const auto cmode = Opm::Group::ProductionCMode::ORAT; //ctrl.cmode; Fix this
-                // const double orig_target_test = computeWellGroupTarget(local_deferredLogger);
-                
+                const auto cmode = ctrl.cmode;
                 const auto pu = this->phase_usage_;
-
                 //TODO: Auto choke combined with RESV control is not supported
                 std::vector<Scalar> resv_coeff(pu.num_phases, 1.0);
                 Scalar gratTargetFromSales = 0.0;
@@ -1416,40 +1359,6 @@ namespace Opm {
                     return (group_rate - orig_target)/orig_target;
                 };
 
-                double min_thp, max_thp;
-                std::array<double, 2> range_initial;
-                //Find an initial bracket
-                if (!this->well_group_thp_calc_.has_value()){
-                    // Retrieve the terminal pressure of the associated root of the manifold group
-                    std::string node_name =  nodeName;
-                    while (!network.node(node_name).terminal_pressure().has_value()) {
-                        auto branch = network.uptree_branch(node_name).value();
-                        node_name = branch.uptree_node();
-                    }
-
-                    min_thp = network.node(node_name).terminal_pressure().value();
-<<<<<<< HEAD
-<<<<<<< HEAD
-                    std::optional<double> approximate_solution0;
-                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp, local_deferredLogger);
-=======
-                    WellBhpThpCalculator::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
->>>>>>> 0f419efa8 (added temporary output)
-=======
-                    std::optional<double> approximate_solution0;
-                    WellBhpThpCalculator<double>::bruteForceBracketCommonTHP(mismatch, min_thp, max_thp);
->>>>>>> d158e07ef (mainly rebasing)
-
-                     // Narrow down the bracket
-                    double low1, high1;
-                    std::array<double, 2> range = {0.9*min_thp, 1.1*max_thp};
-                    std::optional<double> appr_sol;
-                    WellBhpThpCalculator<double>::bruteForceBracketCommonTHP(mismatch, range, low1, high1, appr_sol, 0.0, local_deferredLogger);
-                    min_thp = low1;
-                    max_thp = high1;
-                    range_initial = {min_thp, max_thp};
-                }
-
                 const auto upbranch = network.uptree_branch(nodeName);
                 const auto it = this->node_pressures_.find((*upbranch).uptree_node());
                 const Scalar nodal_pressure = it->second;
@@ -1460,7 +1369,6 @@ namespace Opm {
                     autochoke_thp = this->well_group_thp_calc_.at(nodeName);
                 }
 
-<<<<<<< HEAD
                 //Find an initial bracket
                 std::array<Scalar, 2> range_initial;
                 if (!autochoke_thp.has_value()){
@@ -1493,13 +1401,6 @@ namespace Opm {
                     const Scalar tolerance1 = thp_tolerance;
                     local_deferredLogger.debug("Using brute force search to bracket the group THP");
                     const bool finding_bracket = WellBhpThpCalculator<Scalar>::bruteForceBracketCommonTHP(mismatch, range, low, high, approximate_solution, tolerance1, local_deferredLogger);
-=======
-                    double low, high;
-                    std::optional<double> approximate_solution;
-                    const double tolerance1 = thp_tolerance;
-                    local_deferredLogger.debug("Using brute force search to bracket the common THP");
-                    const bool finding_bracket = WellBhpThpCalculator<double>::bruteForceBracketCommonTHP(mismatch, range, low, high, approximate_solution, tolerance1, local_deferredLogger);
->>>>>>> d158e07ef (mainly rebasing)
 
                     if (approximate_solution.has_value()) {
                         autochoke_thp = *approximate_solution;
@@ -1528,7 +1429,6 @@ namespace Opm {
                 for (auto& well : this->well_container_) {
                     std::string well_name = well->name();
                     if (group.hasWell(well_name)) {
-
                         well->setDynamicThpLimit(well_group_thp);
                     }
                 }
@@ -2291,7 +2191,6 @@ namespace Opm {
         bool more_network_update = false;
         if (this->shouldBalanceNetwork(episodeIdx, iterationIdx) || mandatory_network_balance) {
             const double dt = this->simulator_.timeStepSize();
-            // const double target = computeWellGroupTarget(dt, deferred_logger);
             // Calculate common THP for subsea manifold well group (item 3 of NODEPROP set to YES)
             computeWellGroupThp(dt, deferred_logger);
             const auto local_network_imbalance = this->updateNetworkPressures(episodeIdx);

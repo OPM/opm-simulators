@@ -118,7 +118,6 @@ public:
             const Well& well, 
             const SummaryState& summary_state) const;
 
-
   //! \brief Find limits using brute-force solver.
   static bool bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
                                 const std::array<Scalar, 2>& range,
@@ -130,24 +129,6 @@ public:
   //! \brief Find limits using brute-force solver.
   static bool bruteForceBracketCommonTHP(const std::function<Scalar(const Scalar)>& eq,
                                 Scalar& min_thp, Scalar& max_thp);
-
-  //! \brief Find limits using brute-force solver.
-  static bool bruteForceBracket(const std::function<double(const double)>& eq,
-                                const std::array<double, 2>& range,
-                                double& low, double& high,
-                                DeferredLogger& deferred_logger);
-
-  //! \brief Find limits using brute-force solver.
-  static bool bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
-                                const std::array<double, 2>& range,
-                                double& low, double& high,
-                                std::optional<double>& approximate_solution,
-                                const double& limit,
-                                DeferredLogger& deferred_logger);
-
-  //! \brief Find limits using brute-force solver.
-  static bool bruteForceBracketCommonTHP(const std::function<double(const double)>& eq,
-                                double& min_thp, double& max_thp);
 
 private:
     //! \brief Compute BHP from THP limit for an injector - implementation.
@@ -185,15 +166,12 @@ private:
                        std::optional<Scalar>& approximate_solution,
                        DeferredLogger& deferred_logger) const;
 
-<<<<<<< HEAD
  //! \brief Find limits using brute-force solver.
   static bool bruteForceBracket(const std::function<Scalar(const Scalar)>& eq,
                                 const std::array<Scalar, 2>& range,
                                 Scalar& low, Scalar& high,
                                 DeferredLogger& deferred_logger);
 
-=======
->>>>>>> d158e07ef (mainly rebasing)
 
     Scalar findThpFromBhpIteratively(const std::function<Scalar(const Scalar, const Scalar)>& thp_func,
                                      const Scalar bhp,
