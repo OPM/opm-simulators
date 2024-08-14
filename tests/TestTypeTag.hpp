@@ -106,20 +106,6 @@ template<class TypeTag>
 struct MatrixAddWellContributions<TypeTag, Properties::TTag::TestTypeTag>
 { static constexpr bool value = true; };
 
-// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
-// relatively often)
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, Properties::TTag::TestTypeTag>
-{ static constexpr int value = 8; };
-
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, Properties::TTag::TestTypeTag>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-1;
-};
-
 // currently, ebos uses the non-multisegment well model by default to avoid
 // regressions. the --use-multisegment-well=true|false command line parameter is still
 // available in ebos, but hidden from view.

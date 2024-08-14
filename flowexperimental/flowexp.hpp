@@ -126,28 +126,13 @@ template<class TypeTag>
 struct EnableTerminalOutput<TypeTag, Properties::TTag::FlowExpTypeTag>
 { static constexpr bool value = false; };
 
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, Properties::TTag::FlowExpTypeTag>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-1;
-};
-
-// set the maximum number of Newton iterations to 8 so that we fail quickly (albeit
-// relatively often)
-template<class TypeTag>
-struct NewtonMaxIterations<TypeTag, Properties::TTag::FlowExpTypeTag>
-{ static constexpr int value = 8; };
-
 // the maximum volumetric error of a cell in the relaxed region
 template<class TypeTag>
 struct EclNewtonRelaxedTolerance<TypeTag, Properties::TTag::FlowExpTypeTag>
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr auto baseValue =
-        Parameters::NewtonTolerance<TypeTag,
-                                    Properties::TTag::FlowExpTypeTag>::value;
+        Parameters::NewtonTolerance<type>::value;
     static constexpr type value = 1e6 * baseValue;
 };
 
@@ -171,6 +156,8 @@ class FlowExpProblem : public FlowProblem<TypeTag> //, public FvBaseProblem<Type
 {
     typedef FlowProblem<TypeTag> ParentType;
     using BaseType = ParentType; // GetPropType<TypeTag, Properties::BaseProblem>;
+    using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+
 public:
     void writeOutput(bool verbose = true)
     {
@@ -226,6 +213,9 @@ public:
         // By default, flowexp accepts the result of the time integration unconditionally if the
         // smallest time step size is reached.
         Parameters::SetDefault<Parameters::ContinueOnConvergenceError>(true);
+
+        Parameters::SetDefault<Parameters::NewtonMaxIterations>(8);
+        Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-2);
     }
 
     // inherit the constructors

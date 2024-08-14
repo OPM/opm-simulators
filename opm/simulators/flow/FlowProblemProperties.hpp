@@ -383,11 +383,6 @@ template<class TypeTag>
 struct EnableEsmry<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
 
-// Enable gravity
-template<class TypeTag>
-struct EnableGravity<TypeTag, Properties::TTag::FlowBaseProblem>
-{ static constexpr bool value = true; };
-
 // only write the solutions for the report steps to disk
 template<class TypeTag>
 struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowBaseProblem>
@@ -397,14 +392,6 @@ struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowBaseProblem>
 template<class TypeTag>
 struct ExplicitRockCompaction<TypeTag, Properties::TTag::FlowBaseProblem>
 { static constexpr bool value = false; };
-
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, Properties::TTag::FlowBaseProblem>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-2;
-};
 
 // Parameterize equilibration accuracy
 template<class TypeTag>

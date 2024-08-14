@@ -82,7 +82,7 @@ struct EclNewtonRelaxedTolerance<TypeTag, Properties::TTag::FlowExpProblemBlackO
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr auto baseValue =
-        Parameters::NewtonTolerance<TypeTag, Properties::TTag::FlowExpProblemBlackOil>::value;
+        Parameters::NewtonTolerance<type>::value;
     static constexpr type value = 10 * baseValue;
 };
 
@@ -107,14 +107,6 @@ struct EclNewtonSumToleranceExponent<TypeTag, Properties::TTag::FlowExpProblemBl
 {
     using type = GetPropType<TypeTag, Properties::Scalar>;
     static constexpr type value = 1.0 / 3.0;;
-};
-
-// the default for the allowed volumetric error for oil per second
-template<class TypeTag>
-struct NewtonTolerance<TypeTag, Properties::TTag::FlowExpProblemBlackOil>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-2;
 };
 
 template<class TypeTag>

@@ -212,10 +212,6 @@ template<class TypeTag>
 struct OpenclIluParallel<TypeTag, Properties::TTag::FlowIstlSolverParams>
 {  static constexpr bool value = true; }; // note: false should only be used in debug
 
-template<class TypeTag>
-struct LinearSolverVerbosity<TypeTag, Properties::TTag::FlowIstlSolverParams>
-{ static constexpr int value = 0; };
-
 } // namespace Opm::Parameters
 
 namespace Opm {
@@ -253,7 +249,7 @@ struct FlowLinearSolverParameters
         relaxed_linear_solver_reduction_ = Parameters::get<TypeTag, Parameters::RelaxedLinearSolverReduction>();
         linear_solver_maxiter_ = Parameters::get<TypeTag, Parameters::LinearSolverMaxIter>();
         linear_solver_restart_ = Parameters::get<TypeTag, Parameters::LinearSolverRestart>();
-        linear_solver_verbosity_ = Parameters::get<TypeTag, Parameters::LinearSolverVerbosity>();
+        linear_solver_verbosity_ = Parameters::Get<Parameters::LinearSolverVerbosity>();
         ilu_relaxation_ = Parameters::get<TypeTag, Parameters::IluRelaxation>();
         ilu_fillin_level_ = Parameters::get<TypeTag, Parameters::IluFillinLevel>();
         ilu_milu_ = convertString2Milu(Parameters::get<TypeTag, Parameters::MiluVariant>());
@@ -291,7 +287,7 @@ struct FlowLinearSolverParameters
             ("The maximum number of iterations of the linear solver");
         Parameters::registerParam<TypeTag, Parameters::LinearSolverRestart>
             ("The number of iterations after which GMRES is restarted");
-        Parameters::registerParam<TypeTag, Parameters::LinearSolverVerbosity>
+        Parameters::Register<Parameters::LinearSolverVerbosity>
             ("The verbosity level of the linear solver (0: off, 2: all)");
         Parameters::registerParam<TypeTag, Parameters::IluRelaxation>
             ("The relaxation factor of the linear solver's ILU preconditioner");
@@ -349,6 +345,8 @@ struct FlowLinearSolverParameters
              "to determine valid platform IDs");
         Parameters::registerParam<TypeTag, Parameters::OpenclIluParallel>
             ("Parallelize ILU decomposition and application on GPU");
+
+        Parameters::SetDefault<Parameters::LinearSolverVerbosity>(0);
     }
 
     FlowLinearSolverParameters() { reset(); }
