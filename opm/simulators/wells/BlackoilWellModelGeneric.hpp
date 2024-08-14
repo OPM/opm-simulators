@@ -440,6 +440,8 @@ protected:
     using MswTracerRates = std::map<std::tuple<std::string, std::string, std::size_t>, Scalar>;
     void assignMswTracerRates(data::Wells& wsrpt,
                               const MswTracerRates& mswTracerRates) const;
+    void assignMassGasRate(data::Wells& wsrpt,
+                           const Scalar& gasDensity) const;
 
     Schedule& schedule_;
     const SummaryState& summaryState_;
