@@ -146,7 +146,7 @@ struct UseMultisegmentWell<TypeTag, Properties::TTag::FlowExpTypeTag>
 // set some properties that are only required by the well model
 template<class TypeTag>
 struct MatrixAddWellContributions<TypeTag, Properties::TTag::FlowExpTypeTag>
-{ static constexpr bool value = true; };
+{ static constexpr bool value = false; };
 
 } // namespace Opm::Parameters
 
