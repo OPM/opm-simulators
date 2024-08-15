@@ -81,5 +81,13 @@ void weightedDiagMV(const T* squareBlockVector,
                     T relaxationFactor,
                     const T* srcVec,
                     T* dstVec);
+
+template <class T>
+void mixedPrecisionWeightedDiagMV(const __half* squareBlockVector,
+                    const size_t numberOfRows,
+                    const size_t blocksize,
+                    T relaxationFactor,
+                    const T* srcVec,
+                    T* dstVec);
 } // namespace Opm::cuistl::detail
 #endif
