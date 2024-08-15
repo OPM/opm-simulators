@@ -37,9 +37,9 @@ __device__ __forceinline__ void
 invBlockOutOfPlace(const T* __restrict__ srcBlock, T* __restrict__ dstBlock)
 {
     if (blocksize == 1) {
-        dstBlock[0] = 1.0 / (srcBlock[0]);
+        dstBlock[0] = T(1.0) / (srcBlock[0]);
     } else if (blocksize == 2) {
-        T detInv = 1.0 / (srcBlock[0] * srcBlock[3] - srcBlock[1] * srcBlock[2]);
+        T detInv = T(1.0) / (srcBlock[0] * srcBlock[3] - srcBlock[1] * srcBlock[2]);
         dstBlock[0] = srcBlock[3] * detInv;
         dstBlock[1] = -srcBlock[1] * detInv;
         dstBlock[2] = -srcBlock[2] * detInv;
@@ -53,7 +53,7 @@ invBlockOutOfPlace(const T* __restrict__ srcBlock, T* __restrict__ dstBlock)
         T t12 = srcBlock[1] * srcBlock[6];
         T t14 = srcBlock[2] * srcBlock[6];
 
-        T t17 = 1.0
+        T t17 = T(1.0)
             / (t4 * srcBlock[8] - t6 * srcBlock[7] - t8 * srcBlock[8] + t10 * srcBlock[7] + t12 * srcBlock[5]
                - t14 * srcBlock[4]); // t17 is 1/determinant
 
@@ -75,9 +75,9 @@ __device__ __forceinline__ void
 invBlockInPlace(T* __restrict__ block)
 {
     if (blocksize == 1) {
-        block[0] = 1.0 / (block[0]);
+        block[0] = T(1.0) / (block[0]);
     } else if (blocksize == 2) {
-        T detInv = 1.0 / (block[0] * block[3] - block[1] * block[2]);
+        T detInv = T(1.0) / (block[0] * block[3] - block[1] * block[2]);
 
         T temp = block[0];
         block[0] = block[3] * detInv;

@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <config.h>
+#include <cuda_fp16.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp>
@@ -72,30 +73,6 @@ namespace
         }
     }
 
-    // Mixed precision version of apply where we have stored the inverse of the diagonal elements in half precision
-    template <class T, int blocksize>
-    __global__ void mixedPrecisionWeightedDiagMV(
-        const __half* squareBlockVector, const size_t numberOfElements, const __half w, const T* globalSrcVec, T* globalDstVec)
-    {
-        const auto globalIndex = blockDim.x * blockIdx.x + threadIdx.x;
-
-        if (globalIndex < numberOfElements) {
-            const float* localBlock = (squareBlockVector + (blocksize * blocksize * globalIndex));
-            const float* localSrcVec = (globalSrcVec + (blocksize * globalIndex));
-            float* localDstVec = (globalDstVec + (blocksize * globalIndex));
-
-            for (int i = 0; i < blocksize; ++i) {
-                __half rowResult = 0.0;
-                for (int j = 0; j < blocksize; ++j) {
-                    // MV is now conversion of result vec to half and do float computations in half precision
-                    rowResult += localBlock[i * blocksize + j] * __double2half(localSrcVec[j]);
-                }
-                // convert result back to float
-                localDstVec[i] = __half2float(rowResult * w);
-            }
-        }
-    }
-
     template <class T>
     __global__ void
     elementWiseMultiplyKernel(const T* a, const T* b, T* buffer, size_t numberOfElements, const int* indices)
@@ -141,6 +118,7 @@ setVectorValue(T* deviceData, size_t numberOfElements, const T& value)
 template void setVectorValue(double*, size_t, const double&);
 template void setVectorValue(float*, size_t, const float&);
 template void setVectorValue(int*, size_t, const int&);
+template void setVectorValue(__half*, size_t, const __half&);
 
 template <class T>
 void
@@ -239,51 +217,8 @@ weightedDiagMV(const T* squareBlockVector,
     }
 }
 
-template <class T>
-void
-mixedPrecisionWeightedDiagMV(const __half* squareBlockVector,
-               const size_t numberOfElements,
-               const size_t blocksize,
-               T* relaxationFactor,
-               const T* srcVec,
-               T* dstVec)
-{
-    __half halfRelaxationFactor;
-    if constexpr (std::is_same_v<T, float>){
-        halfRelaxationFactor = __float2half(relaxationFactor);
-    }
-    else{
-        halfRelaxationFactor = __double2half(relaxationFactor);
-    }
-
-    switch (blocksize) {
-    case 1: {
-        int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(mixedPrecisionWeightedDiagMV<T, 1>);
-        int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
-        mixedPrecisionWeightedDiagMV<T, 1>
-            <<<nThreadBlocks, threadBlockSize>>>(squareBlockVector, numberOfElements, halfRelaxationFactor, srcVec, dstVec);
-    } break;
-    case 2: {
-        int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(mixedPrecisionWeightedDiagMV<T, 2>);
-        int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
-        mixedPrecisionWeightedDiagMV<T, 2>
-            <<<nThreadBlocks, threadBlockSize>>>(squareBlockVector, numberOfElements, halfRelaxationFactor, srcVec, dstVec);
-    } break;
-    case 3: {
-        int threadBlockSize = ::Opm::cuistl::detail::getCudaRecomendedThreadBlockSize(mixedPrecisionWeightedDiagMV<T, 3>);
-        int nThreadBlocks = ::Opm::cuistl::detail::getNumberOfBlocks(numberOfElements, threadBlockSize);
-        mixedPrecisionWeightedDiagMV<T, 3>
-            <<<nThreadBlocks, threadBlockSize>>>(squareBlockVector, numberOfElements, halfRelaxationFactor, srcVec, dstVec);
-    } break;
-    default:
-        OPM_THROW(std::invalid_argument, "blockvector Hadamard product not implemented for blocksize>3");
-        break;
-    }
-}
-
 template void weightedDiagMV(const double*, const size_t, const size_t, double, const double*, double*);
 template void weightedDiagMV(const float*, const size_t, const size_t, float, const float*, float*);
-template void mixedPrecisionWeightedDiagMV(const __half*, const size_t, const size_t, float, const float*, float*);
-template void mixedPrecisionWeightedDiagMV(const __half*, const size_t, const size_t, double, const double*, double*);
+template void weightedDiagMV(const __half*, const size_t, const size_t, __half, const __half*, __half*);
 
 } // namespace Opm::cuistl::detail

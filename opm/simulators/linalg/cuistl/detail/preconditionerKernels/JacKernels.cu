@@ -22,6 +22,7 @@
 #include <opm/simulators/linalg/cuistl/detail/gpuThreadUtils.hpp>
 #include <opm/simulators/linalg/cuistl/detail/preconditionerKernels/JacKernels.hpp>
 #include <stdexcept>
+#include <cuda_fp16.h>
 
 namespace Opm::cuistl::detail::JAC
 {
@@ -84,5 +85,11 @@ INSTANTIATE_KERNEL_WRAPPERS(double, 3);
 INSTANTIATE_KERNEL_WRAPPERS(double, 4);
 INSTANTIATE_KERNEL_WRAPPERS(double, 5);
 INSTANTIATE_KERNEL_WRAPPERS(double, 6);
+INSTANTIATE_KERNEL_WRAPPERS(__half, 1);
+INSTANTIATE_KERNEL_WRAPPERS(__half, 2);
+INSTANTIATE_KERNEL_WRAPPERS(__half, 3);
+INSTANTIATE_KERNEL_WRAPPERS(__half, 4);
+INSTANTIATE_KERNEL_WRAPPERS(__half, 5);
+INSTANTIATE_KERNEL_WRAPPERS(__half, 6);
 
 } // namespace Opm::cuistl::detail::JAC

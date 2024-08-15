@@ -17,6 +17,7 @@
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <cuda.h>
+#include <cuda_fp16.h>
 #include <dune/common/fmatrix.hh>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bcrsmatrix.hh>
@@ -207,27 +208,34 @@ CuSparseMatrix<T>::mv(const CuVector<T>& x, CuVector<T>& y) const
             std::invalid_argument,
             "CuSparseMatrix<T>::usmv and CuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
     }
-    const auto nonzeroValues = getNonZeroValues().data();
 
-    auto rowIndices = getRowIndices().data();
-    auto columnIndices = getColumnIndices().data();
-    T alpha = 1.0;
-    T beta = 0.0;
-    OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
-                                                 detail::CUSPARSE_MATRIX_ORDER,
-                                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                                 m_numberOfRows,
-                                                 m_numberOfRows,
-                                                 m_numberOfNonzeroBlocks,
-                                                 &alpha,
-                                                 m_matrixDescription->get(),
-                                                 nonzeroValues,
-                                                 rowIndices,
-                                                 columnIndices,
-                                                 blockSize(),
-                                                 x.data(),
-                                                 &beta,
-                                                 y.data()));
+
+    if constexpr (std::is_same_v<__half, T>){
+        OPM_THROW(std::runtime_error, "cusparseMV not supported for half precision");
+    }
+    else{
+        const auto nonzeroValues = getNonZeroValues().data();
+
+        auto rowIndices = getRowIndices().data();
+        auto columnIndices = getColumnIndices().data();
+        T alpha = 1.0;
+        T beta = 0.0;
+        OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
+                                                    detail::CUSPARSE_MATRIX_ORDER,
+                                                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                                    m_numberOfRows,
+                                                    m_numberOfRows,
+                                                    m_numberOfNonzeroBlocks,
+                                                    &alpha,
+                                                    m_matrixDescription->get(),
+                                                    nonzeroValues,
+                                                    rowIndices,
+                                                    columnIndices,
+                                                    blockSize(),
+                                                    x.data(),
+                                                    &beta,
+                                                    y.data()));
+    }
 }
 
 template <typename T>
@@ -242,27 +250,33 @@ CuSparseMatrix<T>::umv(const CuVector<T>& x, CuVector<T>& y) const
             "CuSparseMatrix<T>::usmv and CuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
     }
 
-    const auto nonzeroValues = getNonZeroValues().data();
+    if constexpr (std::is_same_v<__half, T>){
+        OPM_THROW(std::runtime_error, "cusparseMV not supported for half precision");
+    }
+    else{
 
-    auto rowIndices = getRowIndices().data();
-    auto columnIndices = getColumnIndices().data();
-    T alpha = 1.0;
-    T beta = 1.0;
-    OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
-                                                 detail::CUSPARSE_MATRIX_ORDER,
-                                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                                 m_numberOfRows,
-                                                 m_numberOfRows,
-                                                 m_numberOfNonzeroBlocks,
-                                                 &alpha,
-                                                 m_matrixDescription->get(),
-                                                 nonzeroValues,
-                                                 rowIndices,
-                                                 columnIndices,
-                                                 m_blockSize,
-                                                 x.data(),
-                                                 &beta,
-                                                 y.data()));
+        const auto nonzeroValues = getNonZeroValues().data();
+
+        auto rowIndices = getRowIndices().data();
+        auto columnIndices = getColumnIndices().data();
+        T alpha = 1.0;
+        T beta = 1.0;
+        OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
+                                                    detail::CUSPARSE_MATRIX_ORDER,
+                                                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                                    m_numberOfRows,
+                                                    m_numberOfRows,
+                                                    m_numberOfNonzeroBlocks,
+                                                    &alpha,
+                                                    m_matrixDescription->get(),
+                                                    nonzeroValues,
+                                                    rowIndices,
+                                                    columnIndices,
+                                                    m_blockSize,
+                                                    x.data(),
+                                                    &beta,
+                                                    y.data()));
+    }
 }
 
 template <typename T>
@@ -276,29 +290,36 @@ CuSparseMatrix<T>::usmv(T alpha, const CuVector<T>& x, CuVector<T>& y) const
             std::invalid_argument,
             "CuSparseMatrix<T>::usmv and CuSparseMatrix<T>::mv are only implemented for block sizes greater than 1.");
     }
-    const auto numberOfRows = N();
-    const auto numberOfNonzeroBlocks = nonzeroes();
-    const auto nonzeroValues = getNonZeroValues().data();
 
-    auto rowIndices = getRowIndices().data();
-    auto columnIndices = getColumnIndices().data();
+    if constexpr (std::is_same_v<__half, T>){
+        OPM_THROW(std::runtime_error, "cusparseMV not supported for half precision");
+    }
+    else{
 
-    T beta = 1.0;
-    OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
-                                                 detail::CUSPARSE_MATRIX_ORDER,
-                                                 CUSPARSE_OPERATION_NON_TRANSPOSE,
-                                                 numberOfRows,
-                                                 numberOfRows,
-                                                 numberOfNonzeroBlocks,
-                                                 &alpha,
-                                                 m_matrixDescription->get(),
-                                                 nonzeroValues,
-                                                 rowIndices,
-                                                 columnIndices,
-                                                 blockSize(),
-                                                 x.data(),
-                                                 &beta,
-                                                 y.data()));
+        const auto numberOfRows = N();
+        const auto numberOfNonzeroBlocks = nonzeroes();
+        const auto nonzeroValues = getNonZeroValues().data();
+
+        auto rowIndices = getRowIndices().data();
+        auto columnIndices = getColumnIndices().data();
+
+        T beta = 1.0;
+        OPM_CUSPARSE_SAFE_CALL(detail::cusparseBsrmv(m_cusparseHandle.get(),
+                                                    detail::CUSPARSE_MATRIX_ORDER,
+                                                    CUSPARSE_OPERATION_NON_TRANSPOSE,
+                                                    numberOfRows,
+                                                    numberOfRows,
+                                                    numberOfNonzeroBlocks,
+                                                    &alpha,
+                                                    m_matrixDescription->get(),
+                                                    nonzeroValues,
+                                                    rowIndices,
+                                                    columnIndices,
+                                                    blockSize(),
+                                                    x.data(),
+                                                    &beta,
+                                                    y.data()));
+    }
 }
 
 template <class T>
@@ -342,5 +363,12 @@ INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 3);
 INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 4);
 INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 5);
 INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(float, 6);
+
+INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(__half, 1);
+INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(__half, 2);
+INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(__half, 3);
+INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(__half, 4);
+INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(__half, 5);
+INSTANTIATE_CUSPARSE_DUNE_MATRIX_CONSTRUCTION_FUNTIONS(__half, 6);
 
 } // namespace Opm::cuistl

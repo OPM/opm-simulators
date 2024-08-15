@@ -368,13 +368,18 @@ public:
     // Slow method that creates a string representation of a CuVector for debug purposes
     std::string toDebugString()
     {
-        std::vector<T> v = asStdVector();
-        std::string res = "";
-        for (T element : v){
-            res += std::to_string(element) + " ";
+        if constexpr (std::is_same_v<__half, T>){
+            OPM_THROW(std::runtime_error, "Printing is not supported for half precision");
         }
-        res += std::to_string(v[v.size()-1]);
-        return res;
+        else{
+            std::vector<T> v = asStdVector();
+            std::string res = "";
+            for (T element : v){
+                res += std::to_string(element) + " ";
+            }
+            res += std::to_string(v[v.size()-1]);
+            return res;
+        }
     }
 
 private:

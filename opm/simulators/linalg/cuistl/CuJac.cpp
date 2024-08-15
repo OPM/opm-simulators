@@ -19,6 +19,7 @@
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <fmt/core.h>
+#include <cuda_fp16.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/CuJac.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
@@ -130,3 +131,10 @@ INSTANTIATE_CUJAC_DUNE(float, 3);
 INSTANTIATE_CUJAC_DUNE(float, 4);
 INSTANTIATE_CUJAC_DUNE(float, 5);
 INSTANTIATE_CUJAC_DUNE(float, 6);
+
+INSTANTIATE_CUJAC_DUNE(__half, 1);
+INSTANTIATE_CUJAC_DUNE(__half, 2);
+INSTANTIATE_CUJAC_DUNE(__half, 3);
+INSTANTIATE_CUJAC_DUNE(__half, 4);
+INSTANTIATE_CUJAC_DUNE(__half, 5);
+INSTANTIATE_CUJAC_DUNE(__half, 6);
