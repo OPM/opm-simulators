@@ -40,6 +40,10 @@ void handleExtraConvergenceOutput(SimulatorReport& report,
                                   std::string_view output_dir,
                                   std::string_view base_name);
 
+//! \brief Hides unused runtime parameters.
+template<class Scalar>
+void hideUnusedParameters();
+
 } // namespace Opm::detail
 
 #endif // OPM_FLOW_UTILS_HEADER_INCLUDED
