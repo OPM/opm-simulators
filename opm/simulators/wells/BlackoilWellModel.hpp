@@ -283,7 +283,12 @@ template<class Scalar> class WellContributions;
 
                 this->assignWellTargets(wsrpt);
                 this->assignShutConnections(wsrpt, this->reportStepIndex());
-
+                // only used to compute gas injection mass rates for CO2STORE runs
+                // The gas reference density is thus the same for all pvt regions
+                // We therefore for simplicity use 0 here 
+                if (eclState().runspec().co2Storage()) {
+                    this->assignMassGasRate(wsrpt, FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, 0));
+                }
                 return wsrpt;
             }
 
