@@ -220,52 +220,7 @@ public:
 #endif
 
         VtkTracerModule<TypeTag>::registerParameters();
-
-        Parameters::Register<Parameters::EnableWriteAllSolutions>
-           ("Write all solutions to disk instead of only the ones for the "
-            "report steps");
-        Parameters::Register<Parameters::EnableEclOutput>
-            ("Write binary output which is compatible with the commercial "
-             "Eclipse simulator");
-#if HAVE_DAMARIS
-        Parameters::Register<Parameters::EnableDamarisOutput>
-            ("Write a specific variable using Damaris in a separate core");
-#endif
-        Parameters::Register<Parameters::EclOutputDoublePrecision>
-            ("Tell the output writer to use double precision. Useful for 'perfect' restarts");
-        Parameters::Register<Parameters::RestartWritingInterval>
-            ("The frequencies of which time steps are serialized to disk");
-        Parameters::Register<Parameters::EnableDriftCompensation>
-            ("Enable partial compensation of systematic mass losses via "
-             "the source term of the next time step");
-        Parameters::Register<Parameters::OutputMode>
-            ("Specify which messages are going to be printed. "
-             "Valid values are: none, log, all (default)");
-        Parameters::Register<Parameters::NumPressurePointsEquil>
-            ("Number of pressure points (in each direction) in tables used for equilibration");
-        Parameters::Hide<Parameters::NumPressurePointsEquil>(); // Users will typically not need to modify this parameter..
-        Parameters::Register<Parameters::ExplicitRockCompaction>
-            ("Use pressure from end of the last time step when evaluating rock compaction");
-        Parameters::Hide<Parameters::ExplicitRockCompaction>(); // Users will typically not need to modify this parameter..
-
-        // By default, stop it after the universe will probably have stopped
-        // to exist. (the ECL problem will finish the simulation explicitly
-        // after it simulated the last episode specified in the deck.)
-        Parameters::SetDefault<Parameters::EndTime<Scalar>>(1e100);
-        // The chosen value means that the size of the first time step is the
-        // one of the initial episode (if the length of the initial episode is
-        // not millions of trillions of years, that is...)
-        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(3600*24);
-        // Disable the VTK output by default for this problem ...
-        Parameters::SetDefault<Parameters::EnableVtkOutput>(false);
-        // the cache for intensive quantities can be used for ECL problems and also yields a
-        // decent speedup...
-        Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
-        // the cache for the storage term can also be used and also yields a decent speedup
-        Parameters::SetDefault<Parameters::EnableStorageCache>(true);
-        // the default for the allowed volumetric error for oil per second
-        Parameters::SetDefault<Parameters::NewtonTolerance<Scalar>>(1e-2);
-        Parameters::SetDefault<Parameters::EnableGravity>(true);
+        registerFlowProblemParameters<Scalar>();
     }
 
 

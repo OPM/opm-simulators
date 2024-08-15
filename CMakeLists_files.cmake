@@ -64,6 +64,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/FlowGenericProblem.cpp
   opm/simulators/flow/FlowGenericVanguard.cpp
+  opm/simulators/flow/FlowProblemParameters.cpp
   opm/simulators/flow/FlowUtils.cpp
   opm/simulators/flow/GenericCpGridVanguard.cpp
   opm/simulators/flow/GenericOutputBlackoilModule.cpp
