@@ -424,7 +424,9 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
         }
     }
 
-    updateWellsDefaultALQ(wells_ecl, summary_state);
+    // ALQ state needs to be defined for all wells, otherwise alqstate.packSize() will be different
+    // on each process, and the comm.sum call in communicateGroupRates will fail.
+    updateWellsDefaultALQ(schedule.getWells(report_step), summary_state);
 }
 
 template<class Scalar>
