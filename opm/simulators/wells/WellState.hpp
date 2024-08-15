@@ -227,8 +227,9 @@ public:
     // reset current_alq and update default_alq. ALQ is used for
     // constant lift gas injection and for gas lift optimization
     // (THP controlled wells).
-    void updateWellsDefaultALQ(const std::vector<Well>& wells_ecl,
-                               const SummaryState& summary_state);
+    void updateWellsDefaultALQ(const Schedule& schedule,
+                              const int report_step,
+                              const SummaryState& summary_state);
 
     int wellNameToGlobalIdx(const std::string& name)
     {

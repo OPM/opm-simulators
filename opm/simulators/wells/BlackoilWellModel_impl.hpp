@@ -451,7 +451,7 @@ namespace Opm {
         this->updateAndCommunicateGroupData(reportStepIdx,
                                             simulator_.model().newtonMethod().numIterations());
 
-        this->wellState().updateWellsDefaultALQ(this->wells_ecl_, this->summaryState());
+        this->wellState().updateWellsDefaultALQ(this->schedule(), reportStepIdx, this->summaryState());
         this->wellState().gliftTimeStepInit();
 
         const double simulationTime = simulator_.time();
