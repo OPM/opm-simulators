@@ -511,11 +511,7 @@ update()
                 break;
             default:
                 if (interiorSize_ == A_->N())
-#if DUNE_VERSION_LT(DUNE_GRID, 2, 8)
-                    bilu0_decomposition( *ILU_ );
-#else
                     Dune::ILU::blockILU0Decomposition( *ILU_ );
-#endif
                 else
                     detail::ghost_last_bilu0_decomposition(*ILU_, interiorSize_);
                 break;
