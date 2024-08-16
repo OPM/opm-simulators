@@ -424,7 +424,7 @@ void WellState<Scalar>::init(const std::vector<Scalar>& cellPressures,
         }
     }
 
-    updateWellsDefaultALQ(wells_ecl, summary_state);
+    updateWellsDefaultALQ(schedule, report_step, summary_state);
 }
 
 template<class Scalar>
@@ -1028,19 +1028,19 @@ bool WellState<Scalar>::wellIsOwned(const std::string& wellName) const
     return wellIsOwned(well_index.value(), wellName);
 }
 
-template<class Scalar>
-void WellState<Scalar>::
-updateWellsDefaultALQ(const std::vector<Well>& wells_ecl,
-                      const SummaryState& summary_state)
+template <typename Scalar>
+void WellState<Scalar>::updateWellsDefaultALQ(const Schedule& schedule,
+                                              const int report_step,
+                                              const SummaryState& summary_state)
 {
-    const int nw = wells_ecl.size();
-    for (int i = 0; i<nw; i++) {
-        const Well &well = wells_ecl[i];
-        if (well.isProducer()) {
-            // NOTE: This is the value set in item 12 of WCONPROD, or with WELTARG
-            auto alq = well.alq_value(summary_state);
-            this->alq_state.update_default(well.name(), alq);
+    const auto wells = schedule.wellNames(report_step);
+    for (const auto& wname : wells) {
+        const auto& well = schedule.getWell(wname, report_step);
+        if (! well.isProducer()) {
+            continue;
         }
+        const auto alq = well.alq_value(summary_state);
+        this->alq_state.update_default(wname, alq);
     }
 }
 
