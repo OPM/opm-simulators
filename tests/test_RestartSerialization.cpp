@@ -62,7 +62,7 @@
 namespace Opm::Properties {
     namespace TTag {
     struct TestRestartTypeTag {
-            using InheritsFrom = std::tuple<TestTypeTag, FlowTimeSteppingParameters>;
+            using InheritsFrom = std::tuple<TestTypeTag>;
         };
     }
 
@@ -514,7 +514,7 @@ struct AquiferFixture {
         Opm::ThreadManager<TT>::registerParameters();
         AdaptiveTimeStepping<TT>::registerParameters();
         BlackoilModelParameters<TT>::registerParameters();
-        Parameters::registerParam<TT, Parameters::EnableTerminalOutput>("Do *NOT* use!");
+        Parameters::Register<Parameters::EnableTerminalOutput>("Do *NOT* use!");
         setupParameters_<TT>(2, argv, /*registerParams=*/true);
         Opm::FlowGenericVanguard::setCommunication(std::make_unique<Opm::Parallel::Communication>());
     }

@@ -105,58 +105,58 @@ class DamarisWriter : public EclGenericWriter<GetPropType<TypeTag, Properties::G
 public:
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::DamarisOutputHdfCollective>
+        Parameters::Register<Parameters::DamarisOutputHdfCollective>
             ("Write output via Damaris using parallel HDF5 to "
              "get single file and dataset per timestep instead "
              "of one per Damaris core with multiple datasets.");
-        Parameters::registerParam<TypeTag, Parameters::DamarisSaveToHdf>
+        Parameters::Register<Parameters::DamarisSaveToHdf>
             ("Set to false to prevent output to HDF5. "
              "Uses collective output by default or "
              "set --enable-damaris-collective=false to"
              "use file per core (file per Damaris server).");
-        Parameters::registerParam<TypeTag, Parameters::DamarisSaveMeshToHdf>
+        Parameters::Register<Parameters::DamarisSaveMeshToHdf>
             ("Saves the mesh data to the HDF5 file (1st iteration only). "
              "Will set  --damaris-output-hdf-collective to false "
              "so will use file per core (file per Damaris server) output "
             "(global sizes and offset values  of mesh variables are not being provided as yet).");
-        Parameters::registerParam<TypeTag, Parameters::DamarisPythonScript>
+        Parameters::Register<Parameters::DamarisPythonScript>
             ("Set to the path and filename of a Python script to run on "
              "Damaris server resources with access to OPM flow data.");
-        Parameters::registerParam<TypeTag, Parameters::DamarisPythonParaviewScript>
+        Parameters::Register<Parameters::DamarisPythonParaviewScript>
             ("Set to the path and filename of a Paraview Python script "
              "to run on Paraview Catalyst (1 or 2) on Damaris server "
              "resources with access to OPM flow data.");
-        Parameters::registerParam<TypeTag, Parameters::DamarisSimName>
+        Parameters::Register<Parameters::DamarisSimName>
             ("The name of the simulation to be used by Damaris. "
              "If empty (the default) then Damaris uses \"opm-sim-<random-number>\". "
              "This name is used for the Damaris HDF5 file name prefix. "
              "Make unique if writing to the same output directory.");
-        Parameters::registerParam<TypeTag, Parameters::DamarisLogLevel>
+        Parameters::Register<Parameters::DamarisLogLevel>
             ("The log level for the Damaris logging system (boost log based). "
              "Levels are: [trace, debug, info, warning, error, fatal]. "
              "Currently debug and info are useful. ");
-        Parameters::registerParam<TypeTag, Parameters::DamarisDaskFile>
+        Parameters::Register<Parameters::DamarisDaskFile>
             ("The name of a Dask json configuration file (if using Dask for processing).");
-        Parameters::registerParam<TypeTag, Parameters::DamarisDedicatedCores>
+        Parameters::Register<Parameters::DamarisDedicatedCores>
             ("Set the number of dedicated cores (MPI processes) "
              "that should be used for Damaris processing (per node). "
              "Must divide evenly into the number of simulation ranks (client ranks).");
-        Parameters::registerParam<TypeTag, Parameters::DamarisDedicatedNodes>
+        Parameters::Register<Parameters::DamarisDedicatedNodes>
             ("Set the number of dedicated nodes (full nodes) "
              "that should be used for Damaris processing (per simulation). "
              "Must divide evenly into the number of simulation nodes.");
-        Parameters::registerParam<TypeTag, Parameters::DamarisSharedMemorySizeBytes>
+        Parameters::Register<Parameters::DamarisSharedMemorySizeBytes>
             ("Set the size of the shared memory buffer used for IPC "
              "between the simulation and the Damaris resources. "
              "Needs to hold all the variables published, possibly over "
              "multiple simulation iterations.");
-        Parameters::registerParam<TypeTag, Parameters::DamarisSharedMemoryName>
+        Parameters::Register<Parameters::DamarisSharedMemoryName>
             ("The name of the shared memory area to be used by Damaris for the current. "
              "If empty (the default) then Damaris uses \"opm-damaris-<random-string>\". "
              "This name should be unique if multiple simulations are running on "
              "the same node/server as it is used for the Damaris shmem name and by "
              "the Python Dask library to locate sections of variables.");
-        Parameters::registerParam<TypeTag, Parameters::DamarisLimitVariables>
+        Parameters::Register<Parameters::DamarisLimitVariables>
             ("A comma separated list of variable names that a user wants to pass "
              "through via DamarisOutput::DamarisWriter::writeOutput)() to the "
              "damaris_write() call. This can be used to limit the number of "
@@ -351,7 +351,8 @@ private:
 
     static bool enableDamarisOutput_()
     {
-        return Parameters::get<TypeTag, Parameters::EnableDamarisOutput>();
+        static bool enable = Parameters::Get<Parameters::EnableDamarisOutput>();
+        return enable;
     }
 
     void setGlobalIndexForDamaris () 

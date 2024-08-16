@@ -337,12 +337,12 @@ private:
             outputDir = eclipseState_->getIOConfig().getOutputDir();
         }
         else {
-            deckFilename = Parameters::get<PreTypeTag, Parameters::EclDeckFileName>();
+            deckFilename = Parameters::Get<Parameters::EclDeckFileName>();
             outputDir = Parameters::Get<Parameters::OutputDir>();
         }
 
 #if HAVE_DAMARIS
-        enableDamarisOutput_ = Parameters::get<PreTypeTag, Parameters::EnableDamarisOutput>();
+        enableDamarisOutput_ = Parameters::Get<Parameters::EnableDamarisOutput>();
         
         // Reset to false as we cannot use Damaris if there is only one rank.
         if ((enableDamarisOutput_ == true) && (FlowGenericVanguard::comm().size() == 1)) {
@@ -378,7 +378,7 @@ private:
         int mpiRank = FlowGenericVanguard::comm().rank();
         outputCout_ = false;
         if (mpiRank == 0)
-            outputCout_ = Parameters::get<PreTypeTag, Parameters::EnableTerminalOutput>();
+            outputCout_ = Parameters::Get<Parameters::EnableTerminalOutput>();
 
         if (deckFilename.empty()) {
             if (mpiRank == 0) {
@@ -406,7 +406,7 @@ private:
         std::string cmdline_params;
         if (outputCout_) {
             printFlowBanner(FlowGenericVanguard::comm().size(),
-                            getNumThreads<PreTypeTag>(),
+                            getNumThreads(),
                             Opm::moduleVersionName());
             std::ostringstream str;
             Parameters::printValues(str);
@@ -417,13 +417,13 @@ private:
         try {
             this->readDeck(deckFilename,
                            outputDir,
-                           Parameters::get<PreTypeTag, Parameters::OutputMode>(),
-                           !Parameters::get<PreTypeTag, Parameters::SchedRestart>(),
-                           Parameters::get<PreTypeTag, Parameters::EnableLoggingFalloutWarning>(),
-                           Parameters::get<PreTypeTag, Parameters::ParsingStrictness>(),
-                           Parameters::get<PreTypeTag, Parameters::InputSkipMode>(),
-                           getNumThreads<PreTypeTag>(),
-                           Parameters::get<PreTypeTag, Parameters::EclOutputInterval>(),
+                           Parameters::Get<Parameters::OutputMode>(),
+                           !Parameters::Get<Parameters::SchedRestart>(),
+                           Parameters::Get<Parameters::EnableLoggingFalloutWarning>(),
+                           Parameters::Get<Parameters::ParsingStrictness>(),
+                           Parameters::Get<Parameters::InputSkipMode>(),
+                           getNumThreads(),
+                           Parameters::Get<Parameters::EclOutputInterval>(),
                            cmdline_params,
                            Opm::moduleVersion(),
                            Opm::compileTimestamp());
@@ -705,7 +705,6 @@ private:
 
     void setupVanguard();
 
-    template<class TypeTag>
     static int getNumThreads()
     {
 

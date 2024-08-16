@@ -28,35 +28,27 @@
 #ifndef OPM_FLOW_PROBLEM_PARAMETERS_HPP
 #define OPM_FLOW_PROBLEM_PARAMETERS_HPP
 
-#include <opm/models/utils/propertysystem.hh>
+#include <opm/input/eclipse/Parser/ParserKeywords/E.hpp>
 
 namespace Opm::Parameters {
 
-// Enable the additional checks even if compiled in debug mode (i.e., with the NDEBUG
-// macro undefined). Next to a slightly better performance, this also eliminates some
-// print statements in debug mode.
-template<class TypeTag, class MyTypeTag>
-struct EnableDebuggingChecks { using type = Properties::UndefinedProperty; };
 
-// Enable partial compensation of systematic mass losses via the source term of the next time
-// step
-template<class TypeTag, class MyTypeTag>
-struct EnableDriftCompensation { using type = Properties::UndefinedProperty; };
+// Enable partial compensation of systematic mass losses via
+// the source term of the next time step
+struct EnableDriftCompensation { static constexpr bool value = false; };
 
 // implicit or explicit pressure in rock compaction
-template<class TypeTag, class MyTypeTag>
-struct ExplicitRockCompaction { using type = Properties::UndefinedProperty; };
+struct ExplicitRockCompaction { static constexpr bool value = false; };
 
 // Parameterize equilibration accuracy
-template<class TypeTag, class MyTypeTag>
-struct NumPressurePointsEquil { using type = Properties::UndefinedProperty; };
+struct NumPressurePointsEquil
+{ static constexpr int value = ParserKeywords::EQLDIMS::DEPTH_NODES_P::defaultValue; };
 
-template<class TypeTag, class MyTypeTag>
-struct OutputMode { using type = Properties::UndefinedProperty; };
+struct OutputMode { static constexpr auto value = "all"; };
 
-// The number of time steps skipped between writing two consequtive restart files
-template<class TypeTag, class MyTypeTag>
-struct RestartWritingInterval { using type = Properties::UndefinedProperty; };
+// The frequency of writing restart (*.ers) files. This is the number of time steps
+// between writing restart files
+struct RestartWritingInterval { static constexpr int value = 0xffffff; }; // disable
 
 } // namespace Opm::Parameters
 

@@ -72,10 +72,12 @@ namespace TTag {
 
 
 struct TestEquilTypeTag {
-    using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters, FlowBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowBaseProblem,
+                                    BlackOilModel>;
 };
 struct TestEquilVapwatTypeTag {
-    using InheritsFrom = std::tuple<FlowModelParameters, FlowBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowBaseProblem,
+                                    BlackOilModel>;
 };
 }
 
@@ -97,15 +99,6 @@ struct EnableVapwat<TypeTag, TTag::TestEquilVapwatTypeTag> {
 };
 
 } // namespace Opm::Properties
-
-namespace Opm::Parameters {
-
-template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, Properties::TTag::FlowBaseProblem> {
-    static constexpr bool value = true;
-};
-
-} // namespace Opm::Parameters
 
 template <class TypeTag>
 std::unique_ptr<Opm::GetPropType<TypeTag, Opm::Properties::Simulator>>
@@ -242,8 +235,7 @@ struct EquilFixture {
         Opm::ThreadManager<TypeTag>::registerParameters();
         BlackoilModelParameters<TypeTag>::registerParameters();
         AdaptiveTimeStepping<TypeTag>::registerParameters();
-        Parameters::registerParam<TypeTag,
-                                  Parameters::EnableTerminalOutput>("Dummy added for the well model to compile.");
+        Parameters::Register<Parameters::EnableTerminalOutput>("Dummy added for the well model to compile.");
         registerAllParameters_<TypeTag>();
     }
 

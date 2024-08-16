@@ -74,11 +74,11 @@
 namespace Opm::Properties {
 
 namespace TTag {
-struct FlowProblem {
-    using InheritsFrom = std::tuple<FlowTimeSteppingParameters, FlowModelParameters,
-                                    FlowNonLinearSolver, FlowBaseProblem, BlackOilModel>;
-};
+
+struct FlowProblem { using InheritsFrom = std::tuple<FlowBaseProblem, BlackOilModel>; };
+
 }
+
 // default in flow is to formulate the equations in surface volumes
 template<class TypeTag>
 struct BlackoilConserveSurfaceVolume<TypeTag, TTag::FlowProblem>
@@ -142,15 +142,11 @@ template<class TypeTag>
 struct LinearSolverSplice<TypeTag, TTag::FlowProblem>
 { using type = TTag::FlowIstlSolver; };
 
-} // namespace Opm::Properties
-
-namespace Opm::Parameters {
-
 template<class TypeTag>
-struct EnableDebuggingChecks<TypeTag, Properties::TTag::FlowProblem>
+struct EnableDebuggingChecks<TypeTag, TTag::FlowProblem>
 { static constexpr bool value = false; };
 
-}
+} // namespace Opm::Properties
 
 namespace Opm {
 
@@ -1314,6 +1310,7 @@ namespace Opm {
     public:
         std::vector<bool> wasSwitched_;
     };
+
 } // namespace Opm
 
 #endif // OPM_BLACKOILMODEL_HEADER_INCLUDED

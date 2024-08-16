@@ -160,7 +160,7 @@ public:
             // only. This must be addressed before going parallel.
             const auto& eclState = model_.simulator().vanguard().eclState();
             FlowLinearSolverParameters loc_param;
-            loc_param.template init<TypeTag>(eclState.getSimulationConfig().useCPR());
+            loc_param.init(eclState.getSimulationConfig().useCPR());
             // Override solver type with umfpack if small domain.
             // Otherwise hardcode to ILU0
             if (domains_[index].cells.size() < 200) {

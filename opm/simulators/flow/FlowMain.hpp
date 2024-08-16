@@ -44,20 +44,10 @@
 
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct OutputInterval { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct EnableLoggingFalloutWarning { using type = Properties::UndefinedProperty; };
-
 // Do not merge parallel output files or warn about them
-template<class TypeTag>
-struct EnableLoggingFalloutWarning<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr bool value = false; };
+struct EnableLoggingFalloutWarning { static constexpr bool value = false; };
 
-template<class TypeTag>
-struct OutputInterval<TypeTag, Properties::TTag::FlowProblem>
-{ static constexpr int value = 1; };
+struct OutputInterval { static constexpr int value = 1; };
 
 } // namespace Opm::Parameters
 
@@ -101,9 +91,9 @@ namespace Opm {
                 return EXIT_SUCCESS;
             }
             // register the flow specific parameters
-            Parameters::registerParam<TypeTag, Parameters::OutputInterval>
+            Parameters::Register<Parameters::OutputInterval>
                 ("Specify the number of report steps between two consecutive writes of restart data");
-            Parameters::registerParam<TypeTag, Parameters::EnableLoggingFalloutWarning>
+            Parameters::Register<Parameters::EnableLoggingFalloutWarning>
                 ("Developer option to see whether logging was on non-root processors. "
                  "In that case it will be appended to the *.DBG or *.PRT files");
 
@@ -145,9 +135,9 @@ namespace Opm {
 
             // the default eWoms checkpoint/restart mechanism does not work with flow
             Parameters::Hide<Parameters::RestartTime<Scalar>>();
-            Parameters::hideParam<TypeTag, Parameters::RestartWritingInterval>();
+            Parameters::Hide<Parameters::RestartWritingInterval>();
             // hide all vtk related it is not currently possible to do this dependet on if the vtk writing is used
-            //if(not(Parameters::get<TypeTag,Properties::EnableVtkOutput>())){
+            //if(not(Parameters::Get<Parameters::EnableVtkOutput>())){
                 Parameters::Hide<Parameters::VtkWriteOilFormationVolumeFactor>();
                 Parameters::Hide<Parameters::VtkWriteOilSaturationPressure>();
                 Parameters::Hide<Parameters::VtkWriteOilVaporizationFactor>();
@@ -169,7 +159,7 @@ namespace Opm {
                 Parameters::Hide<Parameters::VtkWriteGasFormationVolumeFactor>();
                 Parameters::Hide<Parameters::VtkWriteGasSaturationPressure>();
                 Parameters::Hide<Parameters::VtkWriteIntrinsicPermeabilities>();
-                Parameters::hideParam<TypeTag, Parameters::VtkWriteTracerConcentration>();
+                Parameters::Hide<Parameters::VtkWriteTracerConcentration>();
                 Parameters::Hide<Parameters::VtkWriteExtrusionFactor>();
                 Parameters::Hide<Parameters::VtkWriteFilterVelocities>();
                 Parameters::Hide<Parameters::VtkWriteDensities>();
@@ -190,7 +180,7 @@ namespace Opm {
             Parameters::Hide<Parameters::VtkWriteEffectiveDiffusionCoefficients>();
             
             // hide average density option
-            Parameters::hideParam<TypeTag, Parameters::UseAverageDensityMsWells>();
+            Parameters::Hide<Parameters::UseAverageDensityMsWells>();
 
             Parameters::endRegistration();
 
@@ -402,8 +392,8 @@ namespace Opm {
             }
 
             detail::mergeParallelLogFiles(eclState().getIOConfig().getOutputDir(),
-                                          Parameters::get<TypeTag, Parameters::EclDeckFileName>(),
-                                          Parameters::get<TypeTag, Parameters::EnableLoggingFalloutWarning>());
+                                          Parameters::Get<Parameters::EclDeckFileName>(),
+                                          Parameters::Get<Parameters::EnableLoggingFalloutWarning>());
         }
 
         void setupModelSimulator()
@@ -466,7 +456,7 @@ namespace Opm {
             printFlowTrailer(mpi_size_, threads, total_setup_time_, deck_read_time_, report, simulator_->model().localAccumulatedReports());
 
             detail::handleExtraConvergenceOutput(report,
-                                                 Parameters::get<TypeTag, Parameters::OutputExtraConvergenceInfo>(),
+                                                 Parameters::Get<Parameters::OutputExtraConvergenceInfo>(),
                                                  R"(OutputExtraConvergenceInfo (--output-extra-convergence-info))",
                                                  eclState().getIOConfig().getOutputDir(),
                                                  eclState().getIOConfig().getBaseName());

@@ -25,7 +25,6 @@
 
 #include <opm/models/utils/basicproperties.hh>
 #include <opm/models/utils/parametersystem.hh>
-#include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/SubDomain.hpp>
 
@@ -33,427 +32,106 @@
 #include <stdexcept>
 #include <string>
 
-namespace Opm::Properties::TTag {
-
-struct FlowModelParameters {};
-
-}
-
 namespace Opm::Parameters {
 
-template<class TypeTag, class MyTypeTag>
-struct EclDeckFileName { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct DbhpMaxRel { static constexpr Scalar value = 1.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct DbhpMaxRel { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct DwellFractionMax { static constexpr Scalar value = 0.2; };
 
-template<class TypeTag, class MyTypeTag>
-struct DwellFractionMax { using type = Properties::UndefinedProperty; };
+struct EclDeckFileName { static constexpr auto value = ""; };
 
-template<class TypeTag, class MyTypeTag>
-struct MaxResidualAllowed { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct MaxResidualAllowed { static constexpr Scalar value = 1e7; };
 
-template<class TypeTag, class MyTypeTag>
-struct RelaxedMaxPvFraction { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct RelaxedMaxPvFraction { static constexpr Scalar value = 0.03; };
 
-template<class TypeTag, class MyTypeTag>
-struct ToleranceMb { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct ToleranceMb { static constexpr Scalar value = 1e-7; };
 
-template<class TypeTag, class MyTypeTag>
-struct ToleranceMbRelaxed { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct ToleranceMbRelaxed { static constexpr Scalar value = 1e-6; };
 
-template<class TypeTag, class MyTypeTag>
-struct ToleranceCnv { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct ToleranceCnv { static constexpr Scalar value = 1e-2; };
 
-template<class TypeTag, class MyTypeTag>
-struct ToleranceCnvRelaxed { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct ToleranceCnvRelaxed { static constexpr Scalar value = 1.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct ToleranceWells { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct ToleranceWells { static constexpr Scalar value = 1e-4; };
 
-template<class TypeTag, class MyTypeTag>
-struct ToleranceWellControl { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct ToleranceWellControl { static constexpr Scalar value = 1e-7; };
 
-template<class TypeTag, class MyTypeTag>
-struct MaxWelleqIter { using type = Properties::UndefinedProperty; };
+struct MaxWelleqIter { static constexpr int value = 30; };
 
-template<class TypeTag, class MyTypeTag>
-struct UseMultisegmentWell { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct MaxSinglePrecisionDays { static constexpr Scalar value = 20.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct MaxSinglePrecisionDays { using type = Properties::UndefinedProperty; };
+struct MinStrictCnvIter { static constexpr int value = -1; };
+struct MinStrictMbIter { static constexpr int value = -1; };
+struct SolveWelleqInitially { static constexpr bool value = true; };
+struct UpdateEquationsScaling { static constexpr bool value = false; };
+struct UseUpdateStabilization { static constexpr bool value = true; };
+struct MatrixAddWellContributions { static constexpr bool value = false; };
 
-template<class TypeTag, class MyTypeTag>
-struct MinStrictCnvIter { using type = Properties::UndefinedProperty; };
+struct UseMultisegmentWell { static constexpr bool value = true; };
 
-template<class TypeTag, class MyTypeTag>
-struct MinStrictMbIter { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct TolerancePressureMsWells { static constexpr Scalar value = 0.01*1e5; };
 
-template<class TypeTag, class MyTypeTag>
-struct SolveWelleqInitially { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct MaxPressureChangeMsWells { static constexpr Scalar value = 10*1e5; };
 
-template<class TypeTag, class MyTypeTag>
-struct UpdateEquationsScaling { using type = Properties::UndefinedProperty; };
+struct MaxNewtonIterationsWithInnerWellIterations { static constexpr int value = 8; };
+struct MaxInnerIterMsWells { static constexpr int value = 100; };
+struct MaxInnerIterWells { static constexpr int value = 50; };
+struct ShutUnsolvableWells { static constexpr bool value = true; };
+struct AlternativeWellRateInit { static constexpr bool value = true; };
+struct StrictOuterIterWells { static constexpr int value = 6; };
+struct StrictInnerIterWells { static constexpr int value = 40; };
 
-template<class TypeTag, class MyTypeTag>
-struct UseUpdateStabilization { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct RegularizationFactorWells { static constexpr Scalar value = 100.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct MatrixAddWellContributions { using type = Properties::UndefinedProperty; };
+struct EnableWellOperabilityCheck { static constexpr bool value = true; };
+struct EnableWellOperabilityCheckIter { static constexpr bool value = false; };
+struct DebugEmitCellPartition { static constexpr bool value = false; };
 
-template<class TypeTag, class MyTypeTag>
-struct EnableWellOperabilityCheck { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct RelaxedWellFlowTol { static constexpr Scalar value = 1e-3; };
 
-template<class TypeTag, class MyTypeTag>
-struct EnableWellOperabilityCheckIter { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct RelaxedPressureTolMsw { static constexpr Scalar value = 1e4; };
 
-template<class TypeTag, class MyTypeTag>
-struct DebugEmitCellPartition { using type = Properties::UndefinedProperty; };
-
-// parameters for multisegment wells
-template<class TypeTag, class MyTypeTag>
-struct TolerancePressureMsWells { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct MaxPressureChangeMsWells { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct MaxInnerIterMsWells { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct StrictInnerIterWells { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct RelaxedWellFlowTol { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct StrictOuterIterWells { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct RelaxedPressureTolMsw { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct RegularizationFactorWells { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct MaxNewtonIterationsWithInnerWellIterations { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct ShutUnsolvableWells { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct MaxInnerIterWells { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct AlternativeWellRateInit { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct MaximumNumberOfWellSwitches { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct UseAverageDensityMsWells { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct LocalWellSolveControlSwitching { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct UseImplicitIpr { using type = Properties::UndefinedProperty; };
+struct MaximumNumberOfWellSwitches { static constexpr int value = 3; };
+struct UseAverageDensityMsWells { static constexpr bool value = false; };
+struct LocalWellSolveControlSwitching { static constexpr bool value = true; };
+struct UseImplicitIpr { static constexpr bool value = true; };
 
 // Network solver parameters
-template<class TypeTag, class MyTypeTag>
-struct NetworkMaxStrictIterations { using type = Properties::UndefinedProperty; };
+struct NetworkMaxStrictIterations { static constexpr int value = 100; };
+struct NetworkMaxIterations { static constexpr int value = 200; };
+struct NonlinearSolver { static constexpr auto value = "newton"; };
+struct LocalSolveApproach { static constexpr auto value = "gauss-seidel"; };
+struct MaxLocalSolveIterations { static constexpr int value = 20; };
 
-template<class TypeTag, class MyTypeTag>
-struct NetworkMaxIterations { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LocalToleranceScalingMb { static constexpr Scalar value = 1.0; };
 
-template<class TypeTag, class MyTypeTag>
-struct NonlinearSolver { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LocalToleranceScalingCnv { static constexpr Scalar value = 0.1; };
+struct NlddNumInitialNewtonIter { static constexpr int value = 1; };
+struct NumLocalDomains { static constexpr int value = 0; };
 
-template<class TypeTag, class MyTypeTag>
-struct LocalSolveApproach { using type = Properties::UndefinedProperty; };
+template<class Scalar>
+struct LocalDomainsPartitioningImbalance { static constexpr Scalar value = 1.03; };
 
-template<class TypeTag, class MyTypeTag>
-struct MaxLocalSolveIterations { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct LocalToleranceScalingMb { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct LocalToleranceScalingCnv { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct NlddNumInitialNewtonIter { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct NumLocalDomains { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct LocalDomainsPartitioningImbalance { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct LocalDomainsPartitioningMethod { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag, class MyTypeTag>
-struct LocalDomainsOrderingMeasure { using type = Properties::UndefinedProperty; };
-
-template<class TypeTag>
-struct DbhpMaxRel<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
-template<class TypeTag>
-struct DwellFractionMax<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.2;
-};
-
-template<class TypeTag>
-struct MaxResidualAllowed<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e7;
-};
-
-template<class TypeTag>
-struct RelaxedMaxPvFraction<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.03;
-};
-
-template<class TypeTag>
-struct ToleranceMb<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-7;
-};
-
-template<class TypeTag>
-struct ToleranceMbRelaxed<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-6;
-};
-
-template<class TypeTag>
-struct ToleranceCnv<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-2;
-};
-
-template<class TypeTag>
-struct ToleranceCnvRelaxed<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1;
-};
-
-template<class TypeTag>
-struct ToleranceWells<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-4;
-};
-
-template<class TypeTag>
-struct ToleranceWellControl<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-7;
-};
-
-template<class TypeTag>
-struct MaxWelleqIter<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 30; };
-
-template<class TypeTag>
-struct UseMultisegmentWell<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct MaxSinglePrecisionDays<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 20.0;
-};
-
-template<class TypeTag>
-struct MinStrictCnvIter<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = -1; };
-
-template<class TypeTag>
-struct MinStrictMbIter<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = -1; };
-
-template<class TypeTag>
-struct SolveWelleqInitially<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct UpdateEquationsScaling<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct UseUpdateStabilization<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct MatrixAddWellContributions<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct TolerancePressureMsWells<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.01*1e5;
-};
-
-template<class TypeTag>
-struct MaxPressureChangeMsWells<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 10*1e5;
-};
-
-template<class TypeTag>
-struct MaxNewtonIterationsWithInnerWellIterations<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 8; };
-
-template<class TypeTag>
-struct MaxInnerIterMsWells<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 100; };
-
-template<class TypeTag>
-struct MaxInnerIterWells<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 50; };
-
-template<class TypeTag>
-struct ShutUnsolvableWells<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct AlternativeWellRateInit<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct StrictOuterIterWells<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 6; };
-
-template<class TypeTag>
-struct StrictInnerIterWells<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 40; };
-
-template<class TypeTag>
-struct RegularizationFactorWells<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 100;
-};
-
-template<class TypeTag>
-struct EnableWellOperabilityCheck<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct EnableWellOperabilityCheckIter<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct DebugEmitCellPartition<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct RelaxedWellFlowTol<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1e-3;
-};
-
-template<class TypeTag>
-struct RelaxedPressureTolMsw<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0e4;
-};
-
-template<class TypeTag>
-struct MaximumNumberOfWellSwitches<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 3; };
-
-template<class TypeTag>
-struct UseAverageDensityMsWells<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = false; };
-
-template<class TypeTag>
-struct LocalWellSolveControlSwitching<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = true; };
-
-template<class TypeTag>
-struct UseImplicitIpr<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr bool value = true; };
-
-// Network solver parameters
-template<class TypeTag>
-struct NetworkMaxStrictIterations<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 100; };
-
-template<class TypeTag>
-struct NetworkMaxIterations<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 200; };
-
-template<class TypeTag>
-struct NonlinearSolver<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr auto value = "newton"; };
-
-template<class TypeTag>
-struct LocalSolveApproach<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr auto value = "gauss-seidel"; };
-
-template<class TypeTag>
-struct MaxLocalSolveIterations<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 20; };
-
-template<class TypeTag>
-struct LocalToleranceScalingMb<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 1.0;
-};
-
-template<class TypeTag>
-struct LocalToleranceScalingCnv<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr type value = 0.1;
-};
-
-template<class TypeTag>
-struct NlddNumInitialNewtonIter<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 1;
-};
-
-template<class TypeTag>
-struct NumLocalDomains<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr int value = 0; };
-
-template<class TypeTag>
-struct LocalDomainsPartitioningImbalance<TypeTag, Properties::TTag::FlowModelParameters>
-{
-    using type = GetPropType<TypeTag, Properties::Scalar>;
-    static constexpr auto value = type{1.03};
-};
-
-template<class TypeTag>
-struct LocalDomainsPartitioningMethod<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr auto value = "zoltan"; };
-
-template<class TypeTag>
-struct LocalDomainsOrderingMeasure<TypeTag, Properties::TTag::FlowModelParameters>
-{ static constexpr auto value = "maxpressure"; };
+struct LocalDomainsPartitioningMethod { static constexpr auto value = "zoltan"; };
+struct LocalDomainsOrderingMeasure { static constexpr auto value = "maxpressure"; };
 
 } // namespace Opm::Parameters
 
@@ -600,44 +278,44 @@ public:
     /// Construct from user parameters or defaults.
     BlackoilModelParameters()
     {
-        dbhp_max_rel_=  Parameters::get<TypeTag, Parameters::DbhpMaxRel>();
-        dwell_fraction_max_ = Parameters::get<TypeTag, Parameters::DwellFractionMax>();
-        max_residual_allowed_ = Parameters::get<TypeTag, Parameters::MaxResidualAllowed>();
-        relaxed_max_pv_fraction_ = Parameters::get<TypeTag, Parameters::RelaxedMaxPvFraction>();
-        tolerance_mb_ = Parameters::get<TypeTag, Parameters::ToleranceMb>();
-        tolerance_mb_relaxed_ = std::max(tolerance_mb_, Parameters::get<TypeTag, Parameters::ToleranceMbRelaxed>());
-        tolerance_cnv_ = Parameters::get<TypeTag, Parameters::ToleranceCnv>();
-        tolerance_cnv_relaxed_ = std::max(tolerance_cnv_, Parameters::get<TypeTag, Parameters::ToleranceCnvRelaxed>());
-        tolerance_wells_ = Parameters::get<TypeTag, Parameters::ToleranceWells>();
-        tolerance_well_control_ = Parameters::get<TypeTag, Parameters::ToleranceWellControl>();
-        max_welleq_iter_ = Parameters::get<TypeTag, Parameters::MaxWelleqIter>();
-        use_multisegment_well_ = Parameters::get<TypeTag, Parameters::UseMultisegmentWell>();
-        tolerance_pressure_ms_wells_ = Parameters::get<TypeTag, Parameters::TolerancePressureMsWells>();
-        relaxed_tolerance_flow_well_ = Parameters::get<TypeTag, Parameters::RelaxedWellFlowTol>();
-        relaxed_tolerance_pressure_ms_well_ = Parameters::get<TypeTag, Parameters::RelaxedPressureTolMsw>();
-        max_pressure_change_ms_wells_ = Parameters::get<TypeTag, Parameters::MaxPressureChangeMsWells>();
-        max_inner_iter_ms_wells_ = Parameters::get<TypeTag, Parameters::MaxInnerIterMsWells>();
-        strict_inner_iter_wells_ = Parameters::get<TypeTag, Parameters::StrictInnerIterWells>();
-        strict_outer_iter_wells_ = Parameters::get<TypeTag, Parameters::StrictOuterIterWells>();
-        regularization_factor_wells_ = Parameters::get<TypeTag, Parameters::RegularizationFactorWells>();
-        max_niter_inner_well_iter_ = Parameters::get<TypeTag, Parameters::MaxNewtonIterationsWithInnerWellIterations>();
-        shut_unsolvable_wells_ = Parameters::get<TypeTag, Parameters::ShutUnsolvableWells>();
-        max_inner_iter_wells_ = Parameters::get<TypeTag, Parameters::MaxInnerIterWells>();
-        maxSinglePrecisionTimeStep_ = Parameters::get<TypeTag, Parameters::MaxSinglePrecisionDays>() * 24 * 60 * 60;
-        min_strict_cnv_iter_ = Parameters::get<TypeTag, Parameters::MinStrictCnvIter>();
-        min_strict_mb_iter_ = Parameters::get<TypeTag, Parameters::MinStrictMbIter>();
-        solve_welleq_initially_ = Parameters::get<TypeTag, Parameters::SolveWelleqInitially>();
-        update_equations_scaling_ = Parameters::get<TypeTag, Parameters::UpdateEquationsScaling>();
-        use_update_stabilization_ = Parameters::get<TypeTag, Parameters::UseUpdateStabilization>();
-        matrix_add_well_contributions_ = Parameters::get<TypeTag, Parameters::MatrixAddWellContributions>();
-        check_well_operability_ = Parameters::get<TypeTag, Parameters::EnableWellOperabilityCheck>();
-        check_well_operability_iter_ = Parameters::get<TypeTag, Parameters::EnableWellOperabilityCheckIter>();
-        max_number_of_well_switches_ = Parameters::get<TypeTag, Parameters::MaximumNumberOfWellSwitches>();
-        use_average_density_ms_wells_ = Parameters::get<TypeTag, Parameters::UseAverageDensityMsWells>();
-        local_well_solver_control_switching_ = Parameters::get<TypeTag, Parameters::LocalWellSolveControlSwitching>();
-        use_implicit_ipr_ = Parameters::get<TypeTag, Parameters::UseImplicitIpr>();
-        nonlinear_solver_ = Parameters::get<TypeTag, Parameters::NonlinearSolver>();
-        const auto approach = Parameters::get<TypeTag, Parameters::LocalSolveApproach>();
+        dbhp_max_rel_ = Parameters::Get<Parameters::DbhpMaxRel<Scalar>>();
+        dwell_fraction_max_ = Parameters::Get<Parameters::DwellFractionMax<Scalar>>();
+        max_residual_allowed_ = Parameters::Get<Parameters::MaxResidualAllowed<Scalar>>();
+        relaxed_max_pv_fraction_ = Parameters::Get<Parameters::RelaxedMaxPvFraction<Scalar>>();
+        tolerance_mb_ = Parameters::Get<Parameters::ToleranceMb<Scalar>>();
+        tolerance_mb_relaxed_ = std::max(tolerance_mb_, Parameters::Get<Parameters::ToleranceMbRelaxed<Scalar>>());
+        tolerance_cnv_ = Parameters::Get<Parameters::ToleranceCnv<Scalar>>();
+        tolerance_cnv_relaxed_ = std::max(tolerance_cnv_, Parameters::Get<Parameters::ToleranceCnvRelaxed<Scalar>>());
+        tolerance_wells_ = Parameters::Get<Parameters::ToleranceWells<Scalar>>();
+        tolerance_well_control_ = Parameters::Get<Parameters::ToleranceWellControl<Scalar>>();
+        max_welleq_iter_ = Parameters::Get<Parameters::MaxWelleqIter>();
+        use_multisegment_well_ = Parameters::Get<Parameters::UseMultisegmentWell>();
+        tolerance_pressure_ms_wells_ = Parameters::Get<Parameters::TolerancePressureMsWells<Scalar>>();
+        relaxed_tolerance_flow_well_ = Parameters::Get<Parameters::RelaxedWellFlowTol<Scalar>>();
+        relaxed_tolerance_pressure_ms_well_ = Parameters::Get<Parameters::RelaxedPressureTolMsw<Scalar>>();
+        max_pressure_change_ms_wells_ = Parameters::Get<Parameters::MaxPressureChangeMsWells<Scalar>>();
+        max_inner_iter_ms_wells_ = Parameters::Get<Parameters::MaxInnerIterMsWells>();
+        strict_inner_iter_wells_ = Parameters::Get<Parameters::StrictInnerIterWells>();
+        strict_outer_iter_wells_ = Parameters::Get<Parameters::StrictOuterIterWells>();
+        regularization_factor_wells_ = Parameters::Get<Parameters::RegularizationFactorWells<Scalar>>();
+        max_niter_inner_well_iter_ = Parameters::Get<Parameters::MaxNewtonIterationsWithInnerWellIterations>();
+        shut_unsolvable_wells_ = Parameters::Get<Parameters::ShutUnsolvableWells>();
+        max_inner_iter_wells_ = Parameters::Get<Parameters::MaxInnerIterWells>();
+        maxSinglePrecisionTimeStep_ = Parameters::Get<Parameters::MaxSinglePrecisionDays<Scalar>>() * 24 * 60 * 60;
+        min_strict_cnv_iter_ = Parameters::Get<Parameters::MinStrictCnvIter>();
+        min_strict_mb_iter_ = Parameters::Get<Parameters::MinStrictMbIter>();
+        solve_welleq_initially_ = Parameters::Get<Parameters::SolveWelleqInitially>();
+        update_equations_scaling_ = Parameters::Get<Parameters::UpdateEquationsScaling>();
+        use_update_stabilization_ = Parameters::Get<Parameters::UseUpdateStabilization>();
+        matrix_add_well_contributions_ = Parameters::Get<Parameters::MatrixAddWellContributions>();
+        check_well_operability_ = Parameters::Get<Parameters::EnableWellOperabilityCheck>();
+        check_well_operability_iter_ = Parameters::Get<Parameters::EnableWellOperabilityCheckIter>();
+        max_number_of_well_switches_ = Parameters::Get<Parameters::MaximumNumberOfWellSwitches>();
+        use_average_density_ms_wells_ = Parameters::Get<Parameters::UseAverageDensityMsWells>();
+        local_well_solver_control_switching_ = Parameters::Get<Parameters::LocalWellSolveControlSwitching>();
+        use_implicit_ipr_ = Parameters::Get<Parameters::UseImplicitIpr>();
+        nonlinear_solver_ = Parameters::Get<Parameters::NonlinearSolver>();
+        const auto approach = Parameters::Get<Parameters::LocalSolveApproach>();
         if (approach == "jacobi") {
             local_solve_approach_ = DomainSolveApproach::Jacobi;
         } else if (approach == "gauss-seidel") {
@@ -646,143 +324,143 @@ public:
             throw std::runtime_error("Invalid domain solver approach '" + approach + "' specified.");
         }
 
-        max_local_solve_iterations_ = Parameters::get<TypeTag, Parameters::MaxLocalSolveIterations>();
-        local_tolerance_scaling_mb_ = Parameters::get<TypeTag, Parameters::LocalToleranceScalingMb>();
-        local_tolerance_scaling_cnv_ = Parameters::get<TypeTag, Parameters::LocalToleranceScalingCnv>();
-        nldd_num_initial_newton_iter_ = Parameters::get<TypeTag, Parameters::NlddNumInitialNewtonIter>();
-        num_local_domains_ = Parameters::get<TypeTag, Parameters::NumLocalDomains>();
-        local_domain_partition_imbalance_ = std::max(Scalar{1.0}, Parameters::get<TypeTag, Parameters::LocalDomainsPartitioningImbalance>());
-        local_domain_partition_method_ = Parameters::get<TypeTag, Parameters::LocalDomainsPartitioningMethod>();
-        deck_file_name_ = Parameters::get<TypeTag, Parameters::EclDeckFileName>();
-        network_max_strict_iterations_ = Parameters::get<TypeTag, Parameters::NetworkMaxStrictIterations>();
-        network_max_iterations_ = Parameters::get<TypeTag, Parameters::NetworkMaxIterations>();
-        local_domain_ordering_ = domainOrderingMeasureFromString(Parameters::get<TypeTag, Parameters::LocalDomainsOrderingMeasure>());
-        write_partitions_ = Parameters::get<TypeTag, Parameters::DebugEmitCellPartition>();
+        max_local_solve_iterations_ = Parameters::Get<Parameters::MaxLocalSolveIterations>();
+        local_tolerance_scaling_mb_ = Parameters::Get<Parameters::LocalToleranceScalingMb<Scalar>>();
+        local_tolerance_scaling_cnv_ = Parameters::Get<Parameters::LocalToleranceScalingCnv<Scalar>>();
+        nldd_num_initial_newton_iter_ = Parameters::Get<Parameters::NlddNumInitialNewtonIter>();
+        num_local_domains_ = Parameters::Get<Parameters::NumLocalDomains>();
+        local_domain_partition_imbalance_ = std::max(Scalar{1.0}, Parameters::Get<Parameters::LocalDomainsPartitioningImbalance<Scalar>>());
+        local_domain_partition_method_ = Parameters::Get<Parameters::LocalDomainsPartitioningMethod>();
+        deck_file_name_ = Parameters::Get<Parameters::EclDeckFileName>();
+        network_max_strict_iterations_ = Parameters::Get<Parameters::NetworkMaxStrictIterations>();
+        network_max_iterations_ = Parameters::Get<Parameters::NetworkMaxIterations>();
+        local_domain_ordering_ = domainOrderingMeasureFromString(Parameters::Get<Parameters::LocalDomainsOrderingMeasure>());
+        write_partitions_ = Parameters::Get<Parameters::DebugEmitCellPartition>();
     }
 
     static void registerParameters()
     {
-        Parameters::registerParam<TypeTag, Parameters::DbhpMaxRel>
+        Parameters::Register<Parameters::DbhpMaxRel<Scalar>>
             ("Maximum relative change of the bottom-hole pressure in a single iteration");
-        Parameters::registerParam<TypeTag, Parameters::DwellFractionMax>
+        Parameters::Register<Parameters::DwellFractionMax<Scalar>>
             ("Maximum absolute change of a well's volume fraction in a single iteration");
-        Parameters::registerParam<TypeTag, Parameters::MaxResidualAllowed>
+        Parameters::Register<Parameters::MaxResidualAllowed<Scalar>>
             ("Absolute maximum tolerated for residuals without cutting the time step size");
-        Parameters::registerParam<TypeTag, Parameters::RelaxedMaxPvFraction>
+        Parameters::Register<Parameters::RelaxedMaxPvFraction<Scalar>>
             ("The fraction of the pore volume of the reservoir "
              "where the volumetric error (CNV) may be voilated "
              "during strict Newton iterations.");
-        Parameters::registerParam<TypeTag, Parameters::ToleranceMb>
+        Parameters::Register<Parameters::ToleranceMb<Scalar>>
             ("Tolerated mass balance error relative to total mass present");
-        Parameters::registerParam<TypeTag, Parameters::ToleranceMbRelaxed>
+        Parameters::Register<Parameters::ToleranceMbRelaxed<Scalar>>
             ("Relaxed tolerated mass balance error that applies for iterations "
              "after the iterations with the strict tolerance");
-        Parameters::registerParam<TypeTag, Parameters::ToleranceCnv>
+        Parameters::Register<Parameters::ToleranceCnv<Scalar>>
             ("Local convergence tolerance (Maximum of local saturation errors)");
-        Parameters::registerParam<TypeTag, Parameters::ToleranceCnvRelaxed>
+        Parameters::Register<Parameters::ToleranceCnvRelaxed<Scalar>>
             ("Relaxed local convergence tolerance that applies for iterations "
              "after the iterations with the strict tolerance");
-        Parameters::registerParam<TypeTag, Parameters::ToleranceWells>
+        Parameters::Register<Parameters::ToleranceWells<Scalar>>
             ("Well convergence tolerance");
-        Parameters::registerParam<TypeTag, Parameters::ToleranceWellControl>
+        Parameters::Register<Parameters::ToleranceWellControl<Scalar>>
             ("Tolerance for the well control equations");
-        Parameters::registerParam<TypeTag, Parameters::MaxWelleqIter>
+        Parameters::Register<Parameters::MaxWelleqIter>
             ("Maximum number of iterations to determine solution the well equations");
-        Parameters::registerParam<TypeTag, Parameters::UseMultisegmentWell>
+        Parameters::Register<Parameters::UseMultisegmentWell>
             ("Use the well model for multi-segment wells instead of the "
              "one for single-segment wells");
-        Parameters::registerParam<TypeTag, Parameters::TolerancePressureMsWells>
+        Parameters::Register<Parameters::TolerancePressureMsWells<Scalar>>
             ("Tolerance for the pressure equations for multi-segment wells");
-        Parameters::registerParam<TypeTag, Parameters::RelaxedWellFlowTol>
+        Parameters::Register<Parameters::RelaxedWellFlowTol<Scalar>>
             ("Relaxed tolerance for the well flow residual");
-        Parameters::registerParam<TypeTag, Parameters::RelaxedPressureTolMsw>
+        Parameters::Register<Parameters::RelaxedPressureTolMsw<Scalar>>
             ("Relaxed tolerance for the MSW pressure solution");
-        Parameters::registerParam<TypeTag, Parameters::MaxPressureChangeMsWells>
+        Parameters::Register<Parameters::MaxPressureChangeMsWells<Scalar>>
             ("Maximum relative pressure change for a single iteration "
              "of the multi-segment well model");
-        Parameters::registerParam<TypeTag, Parameters::MaxInnerIterMsWells>
+        Parameters::Register<Parameters::MaxInnerIterMsWells>
             ("Maximum number of inner iterations for multi-segment wells");
-        Parameters::registerParam<TypeTag, Parameters::StrictInnerIterWells>
+        Parameters::Register<Parameters::StrictInnerIterWells>
             ("Number of inner well iterations with strict tolerance");
-        Parameters::registerParam<TypeTag, Parameters::StrictOuterIterWells>
+        Parameters::Register<Parameters::StrictOuterIterWells>
             ("Number of newton iterations for which wells are checked with strict tolerance");
-        Parameters::registerParam<TypeTag, Parameters::MaxNewtonIterationsWithInnerWellIterations>
+        Parameters::Register<Parameters::MaxNewtonIterationsWithInnerWellIterations>
             ("Maximum newton iterations with inner well iterations");
-        Parameters::registerParam<TypeTag, Parameters::ShutUnsolvableWells>
+        Parameters::Register<Parameters::ShutUnsolvableWells>
             ("Shut unsolvable wells");
-        Parameters::registerParam<TypeTag, Parameters::MaxInnerIterWells>
+        Parameters::Register<Parameters::MaxInnerIterWells>
             ("Maximum number of inner iterations for standard wells");
-        Parameters::registerParam<TypeTag, Parameters::AlternativeWellRateInit>
+        Parameters::Register<Parameters::AlternativeWellRateInit>
             ("Use alternative well rate initialization procedure");
-        Parameters::registerParam<TypeTag, Parameters::RegularizationFactorWells>
+        Parameters::Register<Parameters::RegularizationFactorWells<Scalar>>
             ("Regularization factor for wells");
-        Parameters::registerParam<TypeTag, Parameters::MaxSinglePrecisionDays>
+        Parameters::Register<Parameters::MaxSinglePrecisionDays<Scalar>>
             ("Maximum time step size where single precision floating point "
              "arithmetic can be used solving for the linear systems of equations");
-        Parameters::registerParam<TypeTag, Parameters::MinStrictCnvIter>
+        Parameters::Register<Parameters::MinStrictCnvIter>
             ("Minimum number of Newton iterations before relaxed tolerances "
              "can be used for the CNV convergence criterion");
-        Parameters::registerParam<TypeTag, Parameters::MinStrictMbIter>
+        Parameters::Register<Parameters::MinStrictMbIter>
             ("Minimum number of Newton iterations before relaxed tolerances "
              "can be used for the MB convergence criterion. "
              "Default -1 means that the relaxed tolerance is used when maximum "
              "number of Newton iterations are reached.");
-        Parameters::registerParam<TypeTag, Parameters::SolveWelleqInitially>
+        Parameters::Register<Parameters::SolveWelleqInitially>
             ("Fully solve the well equations before each iteration of the reservoir model");
-        Parameters::registerParam<TypeTag, Parameters::UpdateEquationsScaling>
+        Parameters::Register<Parameters::UpdateEquationsScaling>
             ("Update scaling factors for mass balance equations during the run");
-        Parameters::registerParam<TypeTag, Parameters::UseUpdateStabilization>
+        Parameters::Register<Parameters::UseUpdateStabilization>
             ("Try to detect and correct oscillations or stagnation during the Newton method");
-        Parameters::registerParam<TypeTag, Parameters::MatrixAddWellContributions>
+        Parameters::Register<Parameters::MatrixAddWellContributions>
             ("Explicitly specify the influences of wells between cells in "
              "the Jacobian and preconditioner matrices");
-        Parameters::registerParam<TypeTag, Parameters::EnableWellOperabilityCheck>
+        Parameters::Register<Parameters::EnableWellOperabilityCheck>
             ("Enable the well operability checking");
-        Parameters::registerParam<TypeTag, Parameters::EnableWellOperabilityCheckIter>
+        Parameters::Register<Parameters::EnableWellOperabilityCheckIter>
             ("Enable the well operability checking during iterations");
-        Parameters::registerParam<TypeTag, Parameters::MaximumNumberOfWellSwitches>
+        Parameters::Register<Parameters::MaximumNumberOfWellSwitches>
             ("Maximum number of times a well can switch to the same control");
-        Parameters::registerParam<TypeTag, Parameters::UseAverageDensityMsWells>
+        Parameters::Register<Parameters::UseAverageDensityMsWells>
             ("Approximate segment densitities by averaging over segment and its outlet");
-        Parameters::registerParam<TypeTag, Parameters::LocalWellSolveControlSwitching>
+        Parameters::Register<Parameters::LocalWellSolveControlSwitching>
             ("Allow control switching during local well solutions");
-        Parameters::registerParam<TypeTag, Parameters::UseImplicitIpr>
+        Parameters::Register<Parameters::UseImplicitIpr>
             ("Compute implict IPR for stability checks and stable solution search");
-        Parameters::registerParam<TypeTag, Parameters::NetworkMaxStrictIterations>
+        Parameters::Register<Parameters::NetworkMaxStrictIterations>
             ("Maximum iterations in network solver before relaxing tolerance");
-        Parameters::registerParam<TypeTag, Parameters::NetworkMaxIterations>
+        Parameters::Register<Parameters::NetworkMaxIterations>
             ("Maximum number of iterations in the network solver before giving up");
-        Parameters::registerParam<TypeTag, Parameters::NonlinearSolver>
+        Parameters::Register<Parameters::NonlinearSolver>
             ("Choose nonlinear solver. Valid choices are newton or nldd.");
-        Parameters::registerParam<TypeTag, Parameters::LocalSolveApproach>
+        Parameters::Register<Parameters::LocalSolveApproach>
             ("Choose local solve approach. Valid choices are jacobi and gauss-seidel");
-        Parameters::registerParam<TypeTag, Parameters::MaxLocalSolveIterations>
+        Parameters::Register<Parameters::MaxLocalSolveIterations>
             ("Max iterations for local solves with NLDD nonlinear solver.");
-        Parameters::registerParam<TypeTag, Parameters::LocalToleranceScalingMb>
+        Parameters::Register<Parameters::LocalToleranceScalingMb<Scalar>>
             ("Set lower than 1.0 to use stricter convergence tolerance for local solves.");
-        Parameters::registerParam<TypeTag, Parameters::LocalToleranceScalingCnv>
+        Parameters::Register<Parameters::LocalToleranceScalingCnv<Scalar>>
             ("Set lower than 1.0 to use stricter convergence tolerance for local solves.");
-        Parameters::registerParam<TypeTag, Parameters::NlddNumInitialNewtonIter>
+        Parameters::Register<Parameters::NlddNumInitialNewtonIter>
             ("Number of initial global Newton iterations when running the NLDD nonlinear solver.");
-        Parameters::registerParam<TypeTag, Parameters::NumLocalDomains>
+        Parameters::Register<Parameters::NumLocalDomains>
             ("Number of local domains for NLDD nonlinear solver.");
-        Parameters::registerParam<TypeTag, Parameters::LocalDomainsPartitioningImbalance>
+        Parameters::Register<Parameters::LocalDomainsPartitioningImbalance<Scalar>>
             ("Subdomain partitioning imbalance tolerance. 1.03 is 3 percent imbalance.");
-        Parameters::registerParam<TypeTag, Parameters::LocalDomainsPartitioningMethod>
+        Parameters::Register<Parameters::LocalDomainsPartitioningMethod>
             ("Subdomain partitioning method. Allowed values are "
              "'zoltan', "
              "'simple', "
              "and the name of a partition file ending with '.partition'.");
-        Parameters::registerParam<TypeTag, Parameters::LocalDomainsOrderingMeasure>
+        Parameters::Register<Parameters::LocalDomainsOrderingMeasure>
             ("Subdomain ordering measure. Allowed values are "
              "'maxpressure', "
              "'averagepressure' "
              "and  'residual'.");
-        Parameters::registerParam<TypeTag, Parameters::DebugEmitCellPartition>
+        Parameters::Register<Parameters::DebugEmitCellPartition>
             ("Whether or not to emit cell partitions as a debugging aid.");
 
 
-        Parameters::hideParam<TypeTag, Parameters::DebugEmitCellPartition>();
+        Parameters::Hide<Parameters::DebugEmitCellPartition>();
 
         // if openMP is available, determine the number threads per process automatically.
 #if _OPENMP
