@@ -30,6 +30,9 @@
 #include <opm/simulators/linalg/cuistl/detail/cusparse_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/detail/preconditioner_should_call_post_pre.hpp>
 
+#include <cmath>
+#include <type_traits>
+#include <algorithm>
 
 namespace Opm::cuistl
 {
@@ -142,13 +145,28 @@ public:
                 convertedV[i][j] = field_type_to(v[i][j]);
             }
         }
+        field_type_to max = field_type_to(0.0);
+        field_type_to min = field_type_to(0.0);
         YTo convertedD(d.N());
         for (size_t i = 0; i < d.N(); ++i) {
             for (size_t j = 0; j < block_type::dimension; ++j) {
                 convertedD[i][j] = field_type_to(d[i][j]);
+
+                max = std::max(max, convertedD[i][j]);
+                min = std::min(min, convertedD[i][j]);
+
+                // hopefully this will catch NaN or Inf for half precision
+
+                // if constexpr (std::is_same_v<__half, field_type_to>) {
+                //     assert(convertedD[i][j] >= field_type_to(-65504));
+                //     assert(convertedD[i][j] <= field_type_to(65504));
+                //     assert(__hisinf(convertedD[i][j]) == 0); // returns 1 if value is inf, and -1 if value is -inf
+                //     // assert(convertedD[i][j] != -std::numeric_limits<std::float16_t>::infinity);
+                // }
             }
         }
-
+        // if (max > field_type_to(100.0) || min < field_type_to(-100.0))
+        //     printf("max: %f, min: %f\n", max, min);
         m_underlyingPreconditioner->apply(convertedV, convertedD);
 
         for (size_t i = 0; i < v.N(); ++i) {
@@ -217,16 +235,24 @@ private:
             }
         }
 
+        field_type_to max = field_type_to(0.0);
+        field_type_to min = field_type_to(0.0);
+
         for (auto row = m_matrix.begin(); row != m_matrix.end(); ++row) {
             for (auto column = row->begin(); column != row->end(); ++column) {
                 for (size_t i = 0; i < block_type::dimension; ++i) {
                     for (size_t j = 0; j < block_type::dimension; ++j) {
                         matrixBuilder[row.index()][column.index()][i][j]
                             = field_type_to(m_matrix[row.index()][column.index()][i][j]);
+
+                        max = std::max(max, field_type_to(m_matrix[row.index()][column.index()][i][j]));
+                        min = std::min(min, field_type_to(m_matrix[row.index()][column.index()][i][j]));
                     }
                 }
             }
         }
+        if (max > field_type_to(1000.0) || min < field_type_to(-1000.0))
+            printf("matrix: max: %f, min: %f\n", max, min);
 
         return matrixBuilder;
     }
