@@ -32,8 +32,6 @@
 #ifndef OPM_PARAMETER_SYSTEM_HH
 #define OPM_PARAMETER_SYSTEM_HH
 
-#include <opm/models/utils/propertysystem.hh>
-
 #if HAVE_QUAD
 #include <opm/material/common/quad.hpp>
 #endif // HAVE_QUAD
@@ -93,7 +91,7 @@ struct ParamInfo
     std::string paramTypeName;
     std::string typeTagName;
     std::string usageString;
-    std::string compileTimeValue;
+    std::string defaultValue;
     bool isHidden;
 
     bool operator==(const ParamInfo& other) const
@@ -104,24 +102,6 @@ struct ParamInfo
                && other.usageString == usageString;
     }
 };
-
-/*!
- * \ingroup Parameter
- *
- * \brief Retrieve a runtime parameter.
- *
- * The default value is specified via the property system.
- *
- * Example:
- *
- * \code
- * // Retrieves value UpwindWeight, default
- * // is taken from the property UpwindWeight
- * ::Opm::Parameters::get<TypeTag, Properties::UpwindWeight>();
- * \endcode
- */
-template <class TypeTag, template<class,class> class Property>
-auto get(bool errorIfNotRegistered = true);
 
 /*!
  * \ingroup Parameter
@@ -164,18 +144,6 @@ public:
     virtual ~ParamRegFinalizerBase_()
     {}
     virtual void retrieve() = 0;
-};
-
-template <class TypeTag, template<class,class> class Property>
-class ParamRegFinalizerTT_ : public ParamRegFinalizerBase_
-{
-public:
-    void retrieve() override
-    {
-        // retrieve the parameter once to make sure that its value does
-        // not contain a syntax error.
-        std::ignore = get<TypeTag, Property>(/*errorIfNotRegistered=*/true);
-    }
 };
 
 template <class Param>
@@ -381,18 +349,18 @@ inline void printParamUsage_(std::ostream& os, const ParamInfo& paramInfo)
             paramMessage += '.';
         paramMessage += " Default: ";
         if (paramInfo.paramTypeName == "bool") {
-            if (paramInfo.compileTimeValue == "0")
+            if (paramInfo.defaultValue == "0")
                 paramMessage += "false";
             else
                 paramMessage += "true";
         }
         else if (isString) {
             paramMessage += "\"";
-            paramMessage += paramInfo.compileTimeValue;
+            paramMessage += paramInfo.defaultValue;
             paramMessage += "\"";
         }
         else
-            paramMessage += paramInfo.compileTimeValue;
+            paramMessage += paramInfo.defaultValue;
     }
 
     paramMessage = breakLines_(paramMessage, /*indent=*/52, ttyWidth);
@@ -428,7 +396,7 @@ inline void printParamList_(std::ostream& os,
 
     for (const auto& key : keyList) {
         const auto& paramInfo = MetaData::registry().at(key);
-        const std::string& defaultValue = paramInfo.compileTimeValue;
+        const std::string& defaultValue = paramInfo.defaultValue;
         std::string value = defaultValue;
         if (tree.hasKey(key))
             value = tree.get(key, "");
@@ -868,35 +836,6 @@ inline bool printUnused(std::ostream& os = std::cout)
     return false;
 }
 
-template <class TypeTag, template<class,class> class Param>
-auto get(bool errorIfNotRegistered)
-{
-    const std::string paramName = getPropName<TypeTag, Param>();
-    const auto defaultValue = getPropValue<TypeTag, Param>();
-    using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
-                                                        const char* const>, std::string,
-                                         std::remove_const_t<decltype(defaultValue)>>;
-    if (errorIfNotRegistered) {
-        if (MetaData::registrationOpen())
-            throw std::runtime_error("Parameters can only retrieved after _all_ of them have "
-                                     "been registered.");
-
-        if (MetaData::registry().find(paramName) == MetaData::registry().end()) {
-            throw std::runtime_error("Accessing parameter " + paramName
-                                     +" without prior registration is not allowed.");
-        }
-    }
-
-    // prefix the parameter name by the model's GroupName. E.g. If
-    // the model specifies its group name to be 'Stokes', in an
-    // INI file this would result in something like:
-    //
-    // [Stokes]
-    // NewtonWriteConvergence = true
-    // retrieve actual parameter from the parameter tree
-    return MetaData::tree().template get<ParamType>(paramName, defaultValue);
-}
-
 template <class Param>
 auto Get(bool errorIfNotRegistered)
 {
@@ -917,7 +856,7 @@ auto Get(bool errorIfNotRegistered)
                                          std::remove_const_t<decltype(Param::value)>>;
     ParamType defaultValue = Param::value;
 
-    const std::string& defVal = MetaData::mutableRegistry()[paramName].compileTimeValue;
+    const std::string& defVal = MetaData::mutableRegistry()[paramName].defaultValue;
     if constexpr (std::is_same_v<ParamType, std::string>) {
         defaultValue = defVal;
     }
@@ -958,7 +897,7 @@ auto SetDefault(decltype(Param::value) new_value)
     }
     std::ostringstream oss;
     oss << new_value;
-    MetaData::mutableRegistry()[paramName].compileTimeValue = oss.str();
+    MetaData::mutableRegistry()[paramName].defaultValue = oss.str();
 }
 
 /*!
@@ -1005,32 +944,6 @@ inline void reset()
  *
  * If the parameter in question has not been registered, this throws an exception.
  */
-template <class TypeTag, template<class, class> class Param>
-bool isSet(bool errorIfNotRegistered = true)
-{
-    const std::string paramName = getPropName<TypeTag,Param>();
-
-    if (errorIfNotRegistered) {
-        if (MetaData::registrationOpen()) {
-            throw std::runtime_error("Parameters can only checked after _all_ of them have "
-                                     "been registered.");
-        }
-
-        if (MetaData::registry().find(paramName) == MetaData::registry().end())
-            throw std::runtime_error("Accessing parameter " + std::string(paramName) +
-                                     " without prior registration is not allowed.");
-    }
-
-    // check whether the parameter is in the parameter tree
-    return MetaData::tree().hasKey(paramName);
-}
-
-/*!
- * \brief Returns true if a parameter has been specified at runtime, false
- *        otherwise.
- *
- * If the parameter in question has not been registered, this throws an exception.
- */
 template <class Param>
 bool IsSet(bool errorIfNotRegistered = true)
 {
@@ -1064,62 +977,7 @@ bool IsSet(bool errorIfNotRegistered = true)
  * \code
  * // Registers a run-time parameter "UpwindWeight"
  *    and the description "Relative weight of the upwind node."
- * registerParam<TypeTag,UpwindWeight>("Relative weight of the upwind node.");
- * \endcode
- */
-template <class TypeTag, template<class,class> class Param>
-void registerParam(const char* usageString)
-{
-    const std::string paramName = getPropName<TypeTag,Param>();
-    if (!MetaData::registrationOpen()) {
-        throw std::logic_error("Parameter registration was already closed before "
-                               "the parameter '" + paramName + "' was registered.");
-    }
-
-    const auto defaultValue = getPropValue<TypeTag, Param>();
-    using ParamType = std::conditional_t<std::is_same_v<decltype(defaultValue),
-                                                        const char* const>, std::string,
-                                         std::remove_const_t<decltype(defaultValue)>>;
-    MetaData::registrationFinalizers().push_back(
-        std::make_unique<ParamRegFinalizerTT_<TypeTag, Param>>());
-
-    ParamInfo paramInfo;
-    paramInfo.paramName = paramName;
-    paramInfo.paramTypeName = Dune::className<ParamType>();
-    std::string tmp = Dune::className<TypeTag>();
-    tmp.replace(0, strlen("Opm::Properties::TTag::"), "");
-    paramInfo.usageString = usageString;
-    std::ostringstream oss;
-    oss << defaultValue;
-    paramInfo.compileTimeValue = oss.str();
-    paramInfo.isHidden = false;
-    if (MetaData::registry().find(paramName) != MetaData::registry().end()) {
-        // allow to register a parameter twice, but only if the
-        // parameter name, type and usage string are exactly the same.
-        if (MetaData::registry().at(paramName) == paramInfo) {
-            return;
-        }
-        throw std::logic_error("Parameter " + paramName
-                               +" registered twice with non-matching characteristics.");
-    }
-
-    MetaData::mutableRegistry()[paramName] = paramInfo;
-}
-
-/*!
- * \ingroup Parameter
- *
- * \brief Register a run-time parameter.
- *
- * In OPM, parameters can only be used after they have been
- * registered.
- *
- * Example:
- *
- * \code
- * // Registers a run-time parameter "UpwindWeight"
- *    and the description "Relative weight of the upwind node."
- * registerParam<TypeTag,UpwindWeight>("Relative weight of the upwind node.");
+ * Register<UpwindWeight>("Relative weight of the upwind node.");
  * \endcode
  */
 template <class Param>
@@ -1144,7 +1002,7 @@ void Register(const char* usageString)
     paramInfo.usageString = usageString;
     std::ostringstream oss;
     oss << defaultValue;
-    paramInfo.compileTimeValue = oss.str();
+    paramInfo.defaultValue = oss.str();
     paramInfo.isHidden = false;
     if (MetaData::registry().find(paramName) != MetaData::registry().end()) {
         // allow to register a parameter twice, but only if the
@@ -1159,29 +1017,6 @@ void Register(const char* usageString)
     MetaData::mutableRegistry()[paramName] = paramInfo;
 }
 
-/*!
- * \brief Indicate that a given parameter should not be mentioned in the help message
- *
- * This allows to deal with unused parameters
- */
-template <class TypeTag, template<class,class> class Param>
-void hideParam()
-{
-    const std::string paramName = getPropName<TypeTag,Param>();
-    if (!MetaData::registrationOpen()) {
-        throw std::logic_error("Parameter '" +paramName + "' declared as hidden"
-                               " when parameter registration was already closed.");
-    }
-
-    auto paramInfoIt = MetaData::mutableRegistry().find(paramName);
-    if (paramInfoIt == MetaData::mutableRegistry().end()) {
-        throw std::logic_error("Tried to declare unknown parameter '"
-                               + paramName + "' hidden.");
-    }
-
-    auto& paramInfo = paramInfoIt->second;
-    paramInfo.isHidden = true;
-}
 
 /*!
  * \brief Indicate that a given parameter should not be mentioned in the help message
