@@ -182,7 +182,7 @@ struct ScaleLinearSystem<TypeTag, Properties::TTag::FlowIstlSolverParams>
 
 template<class TypeTag>
 struct LinearSolver<TypeTag, Properties::TTag::FlowIstlSolverParams>
-{ static constexpr auto value = "ilu0"; };
+{ static constexpr auto value = "cprw"; };
 
 template<class TypeTag>
 struct LinearSolverPrintJsonDefinition<TypeTag, Properties::TTag::FlowIstlSolverParams>
@@ -367,7 +367,7 @@ struct FlowLinearSolverParameters
         newton_use_gmres_         = false;
         ignoreConvergenceFailure_ = false;
         scale_linear_system_      = false;
-        linsolver_                = "ilu0";
+        linsolver_                = "cprw";
         linear_solver_print_json_definition_ = true;
         cpr_reuse_setup_          = 4;
         cpr_reuse_interval_       = 30;
