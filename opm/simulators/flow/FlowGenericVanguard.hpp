@@ -45,6 +45,42 @@
 #include <utility>
 #include <vector>
 
+namespace Opm::Parameters {
+
+struct AllowDistributedWells { static constexpr bool value = false; };
+struct EclOutputInterval { static constexpr int value = -1; };
+struct EdgeWeightsMethod  { static constexpr int value = 1; };
+struct EnableDryRun { static constexpr auto value = "auto"; };
+struct EnableOpmRstFile { static constexpr bool value = false; };
+struct ExternalPartition { static constexpr auto* value = ""; };
+
+template<class Scalar>
+struct ImbalanceTol { static constexpr Scalar value = 1.1; };
+
+struct IgnoreKeywords { static constexpr auto value = ""; };
+struct InputSkipMode { static constexpr auto value = "100"; };
+struct MetisParams { static constexpr auto value = "default"; };
+
+#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
+struct NumJacobiBlocks { static constexpr int value = 0; };
+#endif
+
+struct OwnerCellsFirst { static constexpr bool value = true; };
+struct ParsingStrictness { static constexpr auto value = "normal"; };
+
+ // 0: simple, 1: Zoltan, 2: METIS, see GridEnums.hpp
+struct PartitionMethod { static constexpr int value = 1; };
+
+struct SchedRestart{ static constexpr bool value = false; };
+struct SerialPartitioning{ static constexpr bool value = false; };
+
+template<class Scalar>
+struct ZoltanImbalanceTol { static constexpr Scalar value = 1.1; };
+
+struct ZoltanParams { static constexpr auto value = "graph"; };
+
+} // namespace Opm::Parameters
+
 namespace Opm {
 
 namespace Action { class State; }
@@ -291,6 +327,9 @@ protected:
     std::unordered_map<std::size_t, const NumericalAquiferCell*> allAquiferCells() const;
 
     void init();
+
+    template<class Scalar>
+    static void registerParameters_();
 
     double setupTime_;
 

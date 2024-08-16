@@ -57,12 +57,14 @@ endmacro()
 list (APPEND MAIN_SOURCE_FILES
   opm/simulators/flow/ActionHandler.cpp
   opm/simulators/flow/Banners.cpp
+  opm/simulators/flow/BlackoilModelParameters.cpp
   opm/simulators/flow/CollectDataOnIORank.cpp
   opm/simulators/flow/ConvergenceOutputConfiguration.cpp
   opm/simulators/flow/EclGenericWriter.cpp
   opm/simulators/flow/ExtraConvergenceOutputThread.cpp
   opm/simulators/flow/FlowGenericProblem.cpp
   opm/simulators/flow/FlowGenericVanguard.cpp
+  opm/simulators/flow/FlowProblemParameters.cpp
   opm/simulators/flow/FlowUtils.cpp
   opm/simulators/flow/GenericCpGridVanguard.cpp
   opm/simulators/flow/GenericOutputBlackoilModule.cpp
@@ -91,6 +93,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/linalg/FlexibleSolver4.cpp
   opm/simulators/linalg/FlexibleSolver5.cpp
   opm/simulators/linalg/FlexibleSolver6.cpp
+  opm/simulators/linalg/FlowLinearSolverParameters.cpp
   opm/simulators/linalg/ISTLSolver.cpp
   opm/simulators/linalg/MILU.cpp
   opm/simulators/linalg/ParallelIstlInformation.cpp
@@ -106,6 +109,7 @@ list (APPEND MAIN_SOURCE_FILES
   opm/simulators/timestepping/AdaptiveSimulatorTimer.cpp
   opm/simulators/timestepping/AdaptiveTimeStepping.cpp
   opm/simulators/timestepping/ConvergenceReport.cpp
+  opm/simulators/timestepping/EclTimeSteppingParams.cpp
   opm/simulators/timestepping/SimulatorReport.cpp
   opm/simulators/timestepping/SimulatorTimer.cpp
   opm/simulators/timestepping/SimulatorTimerInterface.cpp
@@ -190,6 +194,7 @@ endif()
 
 if (Damaris_FOUND AND MPI_FOUND AND USE_DAMARIS_LIB)
   list (APPEND MAIN_SOURCE_FILES
+    opm/simulators/flow/DamarisParameters.cpp
     opm/simulators/flow/DamarisWriter.cpp
     opm/simulators/utils/DamarisKeywords.cpp
     opm/simulators/utils/DamarisOutputModule.cpp

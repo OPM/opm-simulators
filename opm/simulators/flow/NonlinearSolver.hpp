@@ -72,6 +72,9 @@ template <class BVector, class Scalar>
 void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
                               const Scalar omega, NonlinearRelaxType relaxType);
 
+template<class Scalar>
+void registerNonlinearParameters();
+
 }
 
     /// A nonlinear solver class suitable for general fully-implicit models,
@@ -115,16 +118,7 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
 
             static void registerParameters()
             {
-                Parameters::Register<Parameters::NewtonMaxRelax<Scalar>>
-                    ("The maximum relaxation factor of a Newton iteration");
-                Parameters::Register<Parameters::NewtonMaxIterations>
-                    ("The maximum number of Newton iterations per time step");
-                Parameters::Register<Parameters::NewtonMinIterations>
-                    ("The minimum number of Newton iterations per time step");
-                Parameters::Register<Parameters::NewtonRelaxationType>
-                    ("The type of relaxation used by Newton method");
-
-                Parameters::SetDefault<Parameters::NewtonMaxIterations>(20);
+                detail::registerNonlinearParameters<Scalar>();
             }
 
             void reset()

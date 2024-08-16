@@ -161,8 +161,6 @@ namespace Opm {
     {
     public:
         // ---------  Types and enums  ---------
-        using ModelParameters = BlackoilModelParameters<TypeTag>;
-
         using Simulator = GetPropType<TypeTag, Properties::Simulator>;
         using Grid = GetPropType<TypeTag, Properties::Grid>;
         using ElementContext = GetPropType<TypeTag, Properties::ElementContext>;
@@ -175,6 +173,7 @@ namespace Opm {
         using MaterialLaw = GetPropType<TypeTag, Properties::MaterialLaw>;
         using MaterialLawParams = GetPropType<TypeTag, Properties::MaterialLawParams>;
         using Scalar = GetPropType<TypeTag, Properties::Scalar>;
+        using ModelParameters = BlackoilModelParameters<Scalar>;
 
         static constexpr int numEq = Indices::numEq;
         static constexpr int contiSolventEqIdx = Indices::contiSolventEqIdx;

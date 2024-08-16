@@ -23,9 +23,6 @@
 #ifndef OPM_ECL_TIMESTEPPING_PARAMS_HPP
 #define OPM_ECL_TIMESTEPPING_PARAMS_HPP
 
-#include <opm/models/utils/basicproperties.hh>
-#include <opm/models/utils/propertysystem.hh>
-
 namespace Opm::Parameters {
 
 struct EnableTuning { static constexpr bool value = false; };
@@ -47,31 +44,12 @@ struct SolverRestartFactor { static constexpr Scalar value = 0.33; };
 template<class Scalar>
 struct TimeStepAfterEventInDays { static constexpr Scalar value = -1.0; };
 
-} // namespace Opm::Properties
+} // namespace Opm::Parameters
 
 namespace Opm {
 
 template<class Scalar>
-void registerEclTimeSteppingParameters()
-{
-    Parameters::Register<Parameters::EnableTuning>
-        ("Honor some aspects of the TUNING keyword.");
-    Parameters::Register<Parameters::SolverGrowthFactor<Scalar>>
-        ("The factor time steps are elongated after a successful substep");
-    Parameters::Register<Parameters::SolverMaxGrowth<Scalar>>
-        ("The maximum factor time steps are elongated after a report step");
-    Parameters::Register<Parameters::SolverMaxTimeStepInDays<Scalar>>
-        ("The maximum size of a time step in days");
-    Parameters::Register<Parameters::SolverMinTimeStep<Scalar>>
-        ("The minimum size of a time step in days for field and "
-         "metric and hours for lab. If a step cannot converge without "
-         "getting cut below this step size the simulator will stop");
-    Parameters::Register<Parameters::SolverRestartFactor<Scalar>>
-        ("The factor time steps are elongated after restarts");
-    Parameters::Register<Parameters::TimeStepAfterEventInDays<Scalar>>
-        ("Time step size of the first time step after an event "
-         "occurs during the simulation in days");
-}
+void registerEclTimeSteppingParameters();
 
 } // namespace Opm
 

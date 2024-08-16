@@ -28,7 +28,6 @@
 
 #include <opm/simulators/linalg/linalgparameters.hh>
 #include <opm/simulators/linalg/linalgproperties.hh>
-#include <opm/models/utils/parametersystem.hh>
 
 namespace Opm {
 
@@ -113,139 +112,14 @@ struct FlowLinearSolverParameters
     int opencl_platform_id_;
     bool opencl_ilu_parallel_;
 
-    void init(bool cprRequestedInDataFile)
-    {
-        // TODO: these parameters have undocumented non-trivial dependencies
-        linear_solver_reduction_ = Parameters::Get<Parameters::LinearSolverReduction>();
-        relaxed_linear_solver_reduction_ = Parameters::Get<Parameters::RelaxedLinearSolverReduction>();
-        linear_solver_maxiter_ = Parameters::Get<Parameters::LinearSolverMaxIter>();
-        linear_solver_restart_ = Parameters::Get<Parameters::LinearSolverRestart>();
-        linear_solver_verbosity_ = Parameters::Get<Parameters::LinearSolverVerbosity>();
-        ilu_relaxation_ = Parameters::Get<Parameters::IluRelaxation>();
-        ilu_fillin_level_ = Parameters::Get<Parameters::IluFillinLevel>();
-        ilu_milu_ = convertString2Milu(Parameters::Get<Parameters::MiluVariant>());
-        ilu_redblack_ = Parameters::Get<Parameters::IluRedblack>();
-        ilu_reorder_sphere_ = Parameters::Get<Parameters::IluReorderSpheres>();
-        newton_use_gmres_ = Parameters::Get<Parameters::UseGmres>();
-        ignoreConvergenceFailure_ = Parameters::Get<Parameters::LinearSolverIgnoreConvergenceFailure>();
-        scale_linear_system_ = Parameters::Get<Parameters::ScaleLinearSystem>();
-        linsolver_ = Parameters::Get<Parameters::LinearSolver>();
-        linear_solver_print_json_definition_ = Parameters::Get<Parameters::LinearSolverPrintJsonDefinition>();
-        cpr_reuse_setup_  = Parameters::Get<Parameters::CprReuseSetup>();
-        cpr_reuse_interval_  = Parameters::Get<Parameters::CprReuseInterval>();
-
-        if (!Parameters::IsSet<Parameters::LinearSolver>() && cprRequestedInDataFile) {
-            linsolver_ = "cpr";
-        } else {
-            linsolver_ = Parameters::Get<Parameters::LinearSolver>();
-        }
-
-        accelerator_mode_ = Parameters::Get<Parameters::AcceleratorMode>();
-        bda_device_id_ = Parameters::Get<Parameters::BdaDeviceId>();
-        opencl_platform_id_ = Parameters::Get<Parameters::OpenclPlatformId>();
-        opencl_ilu_parallel_ = Parameters::Get<Parameters::OpenclIluParallel>();
-    }
-
-    static void registerParameters()
-    {
-        Parameters::Register<Parameters::LinearSolverReduction>
-            ("The minimum reduction of the residual which the linear solver must achieve");
-        Parameters::Register<Parameters::RelaxedLinearSolverReduction>
-            ("The minimum reduction of the residual which the linear solver need to "
-             "achieve for the solution to be accepted");
-        Parameters::Register<Parameters::LinearSolverMaxIter>
-            ("The maximum number of iterations of the linear solver");
-        Parameters::Register<Parameters::LinearSolverRestart>
-            ("The number of iterations after which GMRES is restarted");
-        Parameters::Register<Parameters::LinearSolverVerbosity>
-            ("The verbosity level of the linear solver (0: off, 2: all)");
-        Parameters::Register<Parameters::IluRelaxation>
-            ("The relaxation factor of the linear solver's ILU preconditioner");
-        Parameters::Register<Parameters::IluFillinLevel>
-            ("The fill-in level of the linear solver's ILU preconditioner");
-        Parameters::Register<Parameters::MiluVariant>
-            ("Specify which variant of the modified-ILU preconditioner ought to be used. "
-             "Possible variants are: ILU (default, plain ILU), "
-             "MILU_1 (lump diagonal with dropped row entries), "
-             "MILU_2 (lump diagonal with the sum of the absolute values of the dropped row entries), "
-             "MILU_3 (if diagonal is positive add sum of dropped row entries, otherwise subtract them), "
-             "MILU_4 (if diagonal is positive add sum of dropped row entries, otherwise do nothing");
-        Parameters::Register<Parameters::IluRedblack>
-            ("Use red-black partitioning for the ILU preconditioner");
-        Parameters::Register<Parameters::IluReorderSpheres>
-            ("Whether to reorder the entries of the matrix in the red-black "
-             "ILU preconditioner in spheres starting at an edge. "
-             "If false the original ordering is preserved in each color. "
-             "Otherwise why try to ensure D4 ordering (in a 2D structured grid, "
-             "the diagonal elements are consecutive).");
-        Parameters::Register<Parameters::UseGmres>
-            ("Use GMRES as the linear solver");
-        Parameters::Register<Parameters::LinearSolverIgnoreConvergenceFailure>
-            ("Continue with the simulation like nothing happened "
-             "after the linear solver did not converge");
-        Parameters::Register<Parameters::ScaleLinearSystem>
-            ("Scale linear system according to equation scale and primary variable types");
-        Parameters::Register<Parameters::LinearSolver>
-            ("Configuration of solver. Valid options are: ilu0 (default), "
-             "dilu, cprw, cpr (an alias for cprw), cpr_quasiimpes, "
-             "cpr_trueimpes, cpr_trueimpesanalytic, amg or hybrid (experimental). "
-             "Alternatively, you can request a configuration to be read from a "
-             "JSON file by giving the filename here, ending with '.json.'");
-        Parameters::Register<Parameters::LinearSolverPrintJsonDefinition>
-            ("Write the JSON definition of the linear solver setup to the DBG file.");
-        Parameters::Register<Parameters::CprReuseSetup>
-            ("Reuse preconditioner setup. Valid options are "
-             "0: recreate the preconditioner for every linear solve, "
-             "1: recreate once every timestep, "
-             "2: recreate if last linear solve took more than 10 iterations, "
-             "3: never recreate, "
-             "4: recreated every CprReuseInterval");
-        Parameters::Register<Parameters::CprReuseInterval>
-            ("Reuse preconditioner interval. Used when CprReuseSetup is set to 4, "
-             "then the preconditioner will be fully recreated instead of reused "
-             "every N linear solve, where N is this parameter.");
-        Parameters::Register<Parameters::AcceleratorMode>
-            ("Choose a linear solver, usage: "
-             "'--accelerator-mode=[none|cusparse|opencl|amgcl|rocalution|rocsparse]'");
-        Parameters::Register<Parameters::BdaDeviceId>
-            ("Choose device ID for cusparseSolver or openclSolver, "
-             "use 'nvidia-smi' or 'clinfo' to determine valid IDs");
-        Parameters::Register<Parameters::OpenclPlatformId>
-            ("Choose platform ID for openclSolver, use 'clinfo' "
-             "to determine valid platform IDs");
-        Parameters::Register<Parameters::OpenclIluParallel>
-            ("Parallelize ILU decomposition and application on GPU");
-
-        Parameters::SetDefault<Parameters::LinearSolverVerbosity>(0);
-    }
-
     FlowLinearSolverParameters() { reset(); }
 
+    void init(bool cprRequestedInDataFile);
+
+    static void registerParameters();
+
     // set default values
-    void reset()
-    {
-        relaxed_linear_solver_reduction_ = 1e-2;
-        linear_solver_reduction_  = 1e-2;
-        linear_solver_maxiter_    = 200;
-        linear_solver_restart_    = 40;
-        linear_solver_verbosity_  = 0;
-        ilu_relaxation_           = 0.9;
-        ilu_fillin_level_         = 0;
-        ilu_milu_                 = MILU_VARIANT::ILU;
-        ilu_redblack_             = false;
-        ilu_reorder_sphere_       = false;
-        newton_use_gmres_         = false;
-        ignoreConvergenceFailure_ = false;
-        scale_linear_system_      = false;
-        linsolver_                = "cprw";
-        linear_solver_print_json_definition_ = true;
-        cpr_reuse_setup_          = 4;
-        cpr_reuse_interval_       = 30;
-        accelerator_mode_         = "none";
-        bda_device_id_            = 0;
-        opencl_platform_id_       = 0;
-        opencl_ilu_parallel_      = true;
-    }
+    void reset();
 };
 
 } // namespace Opm

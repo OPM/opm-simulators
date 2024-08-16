@@ -36,6 +36,7 @@
 #include <opm/input/eclipse/EclipseState/Aquifer/NumericalAquifer/NumericalAquiferCell.hpp>
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
 
+#include <opm/models/discretization/common/fvbaseparameters.hh>
 #include <opm/models/discretization/common/fvbaseproperties.hh>
 #include <opm/models/io/basevanguard.hh>
 #include <opm/models/utils/parametersystem.hh>
@@ -68,42 +69,6 @@ template<class TypeTag, class MyTypeTag>
 struct EquilGrid { using type = UndefinedProperty; };
 
 } // namespace Opm::Properties
-
-namespace Opm::Parameters {
-
-struct AllowDistributedWells { static constexpr bool value = false; };
-struct EclOutputInterval { static constexpr int value = -1; };
-struct EdgeWeightsMethod  { static constexpr int value = 1; };
-struct EnableDryRun { static constexpr auto value = "auto"; };
-struct EnableOpmRstFile { static constexpr bool value = false; };
-struct ExternalPartition { static constexpr auto* value = ""; };
-
-template<class Scalar>
-struct ImbalanceTol { static constexpr Scalar value = 1.1; };
-
-struct IgnoreKeywords { static constexpr auto value = ""; };
-struct InputSkipMode { static constexpr auto value = "100"; };
-struct MetisParams { static constexpr auto value = "default"; };
-
-#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
-struct NumJacobiBlocks { static constexpr int value = 0; };
-#endif
-
-struct OwnerCellsFirst { static constexpr bool value = true; };
-struct ParsingStrictness { static constexpr auto value = "normal"; };
-
- // 0: simple, 1: Zoltan, 2: METIS, see GridEnums.hpp
-struct PartitionMethod { static constexpr int value = 1; };
-
-struct SchedRestart{ static constexpr bool value = false; };
-struct SerialPartitioning{ static constexpr bool value = false; };
-
-template<class Scalar>
-struct ZoltanImbalanceTol { static constexpr Scalar value = 1.1; };
-
-struct ZoltanParams { static constexpr auto value = "graph"; };
-
-} // namespace Opm::Parameters
 
 namespace Opm {
 
@@ -140,77 +105,7 @@ public:
      */
     static void registerParameters()
     {
-        Parameters::Register<Parameters::EclDeckFileName>
-            ("The name of the file which contains the ECL deck to be simulated");
-        Parameters::Register<Parameters::EclOutputInterval>
-            ("The number of report steps that ought to be skipped between two writes of ECL results");
-        Parameters::Register<Parameters::EnableDryRun>
-            ("Specify if the simulation ought to be actually run, or just pretended to be");
-        Parameters::Register<Parameters::EnableOpmRstFile>
-            ("Include OPM-specific keywords in the ECL restart file to "
-             "enable restart of OPM simulators from these files");
-        Parameters::Register<Parameters::IgnoreKeywords>
-            ("List of Eclipse keywords which should be ignored. As a ':' separated string.");
-        Parameters::Register<Parameters::ParsingStrictness>
-            ("Set strictness of parsing process. Available options are "
-             "normal (stop for critical errors), "
-             "high (stop for all errors) and "
-             "low (as normal, except do not stop due to unsupported "
-             "keywords even if marked critical");
-        Parameters::Register<Parameters::InputSkipMode>
-            ("Set compatibility mode for the SKIP100/SKIP300 keywords. Options are "
-             "100 (skip SKIP100..ENDSKIP, keep SKIP300..ENDSKIP) [default], "
-             "300 (skip SKIP300..ENDSKIP, keep SKIP100..ENDSKIP) and "
-             "all (skip both SKIP100..ENDSKIP and SKIP300..ENDSKIP) ");
-        Parameters::Register<Parameters::SchedRestart>
-            ("When restarting: should we try to initialize wells and "
-             "groups from historical SCHEDULE section.");
-        Parameters::Register<Parameters::EdgeWeightsMethod>
-            ("Choose edge-weighing strategy: 0=uniform, 1=trans, 2=log(trans).");
-
-#if HAVE_OPENCL || HAVE_ROCSPARSE || HAVE_CUDA
-        Parameters::Register<Parameters::NumJacobiBlocks>
-            ("Number of blocks to be created for the Block-Jacobi preconditioner.");
-#endif
-
-        Parameters::Register<Parameters::OwnerCellsFirst>
-            ("Order cells owned by rank before ghost/overlap cells.");
-#if HAVE_MPI
-        Parameters::Register<Parameters::PartitionMethod>
-            ("Choose partitioning strategy: 0=simple, 1=Zoltan, 2=METIS.");
-        Parameters::Register<Parameters::SerialPartitioning>
-            ("Perform partitioning for parallel runs on a single process.");
-        Parameters::Register<Parameters::ZoltanImbalanceTol<Scalar>>
-            ("Tolerable imbalance of the loadbalancing provided by Zoltan. DEPRECATED: Use --imbalance-tol instead");
-        Parameters::Hide<Parameters::ZoltanImbalanceTol<Scalar>>();
-        Parameters::Register<Parameters::ZoltanParams>
-            ("Configuration of Zoltan partitioner. "
-             "Valid options are: graph, hypergraph or scotch. "
-             "Alternatively, you can request a configuration to be read "
-             "from a JSON file by giving the filename here, ending with '.json.' "
-             "See https://sandialabs.github.io/Zoltan/ug_html/ug.html "
-             "for available Zoltan options.");
-        Parameters::Hide<Parameters::ZoltanParams>();
-        Parameters::Register<Parameters::ImbalanceTol<Scalar>>
-            ("Tolerable imbalance of the loadbalancing (default: 1.1).");
-        Parameters::Register<Parameters::MetisParams>
-            ("Configuration of Metis partitioner. "
-             "You can request a configuration to be read "
-             "from a JSON file by giving the filename here, ending with '.json.' "
-             "See http://glaros.dtc.umn.edu/gkhome/fetch/sw/metis/manual.pdf"
-             "for available METIS options.");
-        Parameters::Register<Parameters::ExternalPartition>
-            ("Name of file from which to load an externally generated "
-             "partitioning of the model's active cells for MPI "
-             "distribution purposes. If empty, the built-in partitioning "
-             "method will be employed.");
-        Parameters::Hide<Parameters::ExternalPartition>();
-#endif
-        Parameters::Register<Parameters::AllowDistributedWells>
-            ("Allow the perforations of a well to be distributed to interior of multiple processes");
-        // register here for the use in the tests without BlackoilModelParameters
-        Parameters::Register<Parameters::UseMultisegmentWell>
-            ("Use the well model for multi-segment wells instead of the one for single-segment wells");
+        FlowGenericVanguard::registerParameters_<Scalar>();
     }
 
     /*!

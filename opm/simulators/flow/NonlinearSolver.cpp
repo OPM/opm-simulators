@@ -28,8 +28,7 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace Opm {
-namespace detail {
+namespace Opm::detail {
 
 template<class Scalar>
 void detectOscillations(const std::vector<std::vector<Scalar>>& residualHistory,
@@ -106,25 +105,40 @@ void stabilizeNonlinearUpdate(BVector& dx, BVector& dxOld,
     return;
 }
 
+template<class Scalar>
+void registerNonlinearParameters()
+{
+    Parameters::Register<Parameters::NewtonMaxRelax<Scalar>>
+        ("The maximum relaxation factor of a Newton iteration");
+    Parameters::Register<Parameters::NewtonMaxIterations>
+        ("The maximum number of Newton iterations per time step");
+    Parameters::Register<Parameters::NewtonMinIterations>
+        ("The minimum number of Newton iterations per time step");
+    Parameters::Register<Parameters::NewtonRelaxationType>
+        ("The type of relaxation used by Newton method");
+
+    Parameters::SetDefault<Parameters::NewtonMaxIterations>(20);
+}
+
 template<class Scalar, int Size>
 using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Size>>;
 
-#define INSTANCE(T,Size) \
+#define INSTANTIATE(T,Size) \
     template void stabilizeNonlinearUpdate<BV<T,Size>,T>(BV<T,Size>&, BV<T,Size>&, \
                                                          const T, NonlinearRelaxType);
 
-#define INSTANCE_TYPE(T) \
+#define INSTANTIATE_TYPE(T) \
     template void detectOscillations(const std::vector<std::vector<T>>&, \
                                      const int, const int, const T, const int, \
                                      bool&, bool&); \
-    INSTANCE(T,1) \
-    INSTANCE(T,2) \
-    INSTANCE(T,3) \
-    INSTANCE(T,4) \
-    INSTANCE(T,5) \
-    INSTANCE(T,6)
+    template void registerNonlinearParameters<T>(); \
+    INSTANTIATE(T,1) \
+    INSTANTIATE(T,2) \
+    INSTANTIATE(T,3) \
+    INSTANTIATE(T,4) \
+    INSTANTIATE(T,5) \
+    INSTANTIATE(T,6)
 
-INSTANCE_TYPE(double)
+INSTANTIATE_TYPE(double)
 
-} // namespace detail
-} // namespace Opm
+} // namespace Opm::detail

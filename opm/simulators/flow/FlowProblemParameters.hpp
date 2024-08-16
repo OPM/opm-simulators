@@ -32,7 +32,6 @@
 
 namespace Opm::Parameters {
 
-
 // Enable partial compensation of systematic mass losses via
 // the source term of the next time step
 struct EnableDriftCompensation { static constexpr bool value = false; };
@@ -51,5 +50,12 @@ struct OutputMode { static constexpr auto value = "all"; };
 struct RestartWritingInterval { static constexpr int value = 0xffffff; }; // disable
 
 } // namespace Opm::Parameters
+
+namespace Opm {
+
+template<class Scalar>
+void registerFlowProblemParameters();
+
+}
 
 #endif // OPM_FLOW_PROBLEM_PARAMETERS_HPP
