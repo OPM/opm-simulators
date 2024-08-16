@@ -41,8 +41,8 @@
 #include <dune/common/classname.hh>
 #include <dune/common/parametertree.hh>
 
-#include <cstdlib>
 #include <charconv>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <list>
@@ -916,6 +916,7 @@ auto Get(bool errorIfNotRegistered)
                                                         const char* const>, std::string,
                                          std::remove_const_t<decltype(Param::value)>>;
     ParamType defaultValue = Param::value;
+
     const std::string& defVal = MetaData::mutableRegistry()[paramName].compileTimeValue;
     if constexpr (std::is_same_v<ParamType, std::string>) {
         defaultValue = defVal;
@@ -928,19 +929,13 @@ auto Get(bool errorIfNotRegistered)
         defaultValue = std::strtold(defVal.data(), nullptr);
     }
 #endif
+#if !HAVE_FLOATING_POINT_FROM_CHARS
+    else if constexpr (std::is_floating_point_v<ParamType>) {
+        defaultValue = std::strtod(defVal.c_str(), nullptr);
+    }
+#endif // !HAVE_FLOATING_POINT_FROM_CHARS
     else {
-#ifdef _LIBCPP_VERSION // If this macro is defined, clang's libc++ is used
-        // For floating point types, libc++ (the llvm/clang library implementation)
-        // does not yet (as of clang 15) offer an implementation of std::from_chars().
-        if constexpr (std::is_integral_v<ParamType>) {
-            std::from_chars(defVal.data(), defVal.data() + defVal.size(), defaultValue);
-        } else {
-            // Floating point workaround.
-            defaultValue = std::strtod(defVal.c_str(), nullptr);
-        }
-#else
         std::from_chars(defVal.data(), defVal.data() + defVal.size(), defaultValue);
-#endif
     }
 
     // prefix the parameter name by the model's GroupName. E.g. If
