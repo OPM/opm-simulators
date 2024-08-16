@@ -627,6 +627,22 @@ struct StandardPreconditioners<Operator, Dune::Amg::SequentialInformation> {
             return std::make_shared<cuistl::PreconditionerAdapter<V, V, CUILU0>>(std::make_shared<CUILU0>(op.getmat(), split_matrix, tune_gpu_kernels));
         });
 
+        F::addCreator("OPMCUILU0Float", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
+            const bool split_matrix = prm.get<bool>("split_matrix", true);
+            const bool tune_gpu_kernels = prm.get<bool>("tune_gpu_kernels", true);
+            using ToScalarType = float;
+            using block_type = typename V::block_type;
+            using VTo = Dune::BlockVector<Dune::FieldVector<ToScalarType, block_type::dimension>>;
+            using matrix_type_to = typename Dune::BCRSMatrix<Dune::FieldMatrix<ToScalarType, block_type::dimension, block_type::dimension>>;
+            using ILU0_t = typename cuistl::OpmCuILU0<matrix_type_to, cuistl::CuVector<ToScalarType>, cuistl::CuVector<ToScalarType>>;
+            using Adapter = typename cuistl::PreconditionerAdapter<VTo, VTo, ILU0_t>;
+            using Converter = typename cuistl::PreconditionerConvertFieldTypeAdapter<Adapter, M, V, V>;
+            auto converted = std::make_shared<Converter>(op.getmat());
+            auto adapted = std::make_shared<Adapter>(std::make_shared<ILU0_t>(converted->getConvertedMatrix(), split_matrix, tune_gpu_kernels));
+            converted->setUnderlyingPreconditioner(adapted);
+            return converted;
+        });
+
         F::addCreator("CUJacFloat", [](const O& op, const P& prm, const std::function<V()>&, std::size_t) {
             const double w = prm.get<double>("relaxation", 1.0);
             using ToScalarType = float;
