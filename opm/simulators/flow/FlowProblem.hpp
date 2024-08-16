@@ -545,7 +545,7 @@ public:
             this->model().linearizer().updateDiscretizationParameters();
         }
 
-        bool tuningEvent = this->beginEpisode_(enableExperiments, this->episodeIndex());
+        bool tuningEvent = this->beginEpisode_(this->model().numGridDof(), enableExperiments, this->episodeIndex());
 
         // set up the wells for the next episode.
         wellModel_.beginEpisode();

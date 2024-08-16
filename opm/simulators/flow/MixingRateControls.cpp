@@ -97,20 +97,19 @@ template<class FluidSystem>
 void MixingRateControls<FluidSystem>::
 init(std::size_t numDof, int episodeIdx, const unsigned ntpvt)
 {
-    // deal with DRSDT
-    //TODO We may want to only allocate these properties only if active.
-    //But since they may be activated at later time we need some more
-    //intrastructure to handle it
-
-        maxDRv_.resize(ntpvt, 1e30);
-        lastRv_.resize(numDof, 0.0);
+    // allocate DRSDT related vectors
+    if (this->drsdtActive(episodeIdx) && maxDRs_.empty()) {
         maxDRs_.resize(ntpvt, 1e30);
         dRsDtOnlyFreeGas_.resize(ntpvt, false);
         lastRs_.resize(numDof, 0.0);
+    }
+    if (this->drvdtActive(episodeIdx && maxDRv_.empty())) {
+        lastRv_.resize(numDof, 0.0);
         maxDRv_.resize(ntpvt, 1e30);
-        if (this->drsdtConvective(episodeIdx)) {
-            convectiveDrs_.resize(numDof, 1.0);
-        }
+    }
+    if (this->drsdtConvective(episodeIdx) && convectiveDrs_.empty()) {
+        convectiveDrs_.resize(numDof, 1.0);
+    }
 }
 
 template<class FluidSystem>
@@ -170,14 +169,14 @@ updateExplicitQuantities(const int episodeIdx,
     const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
     // DRSDT is enabled
     for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRs_.size(); ++pvtRegionIdx) {
-        if (this->drsdtActive(episodeIdx, pvtRegionIdx)) {
+        if (oilVaporizationControl.drsdtActive(pvtRegionIdx)) {
             maxDRs_[pvtRegionIdx] = oilVaporizationControl.getMaxDRSDT(pvtRegionIdx) * timeStepSize;
         }
     }
 
     // DRVDT is enabled
     for (std::size_t pvtRegionIdx = 0; pvtRegionIdx < maxDRv_.size(); ++pvtRegionIdx) {
-        if (this->drvdtActive(episodeIdx, pvtRegionIdx)) {
+        if (oilVaporizationControl.drvdtActive(pvtRegionIdx)) {
             maxDRv_[pvtRegionIdx] = oilVaporizationControl.getMaxDRVDT(pvtRegionIdx) * timeStepSize;
         }
     }
@@ -249,7 +248,7 @@ maxGasDissolutionFactor(const unsigned timeIdx,
                         const int episodeIdx,
                         const int pvtRegionIdx) const
 {
-    if (!this->drsdtActive(episodeIdx, pvtRegionIdx) || maxDRs_[pvtRegionIdx] < 0.0) {
+    if (!this->drsdtActive(episodeIdx, pvtRegionIdx)) {
         return std::numeric_limits<Scalar>::max() / 2.0;
     }
 
@@ -275,7 +274,7 @@ maxOilVaporizationFactor(const unsigned timeIdx,
                          const int episodeIdx,
                          const int pvtRegionIdx) const
 {
-    if (!this->drvdtActive(episodeIdx, pvtRegionIdx) || maxDRv_[pvtRegionIdx] < 0.0) {
+    if (!this->drvdtActive(episodeIdx, pvtRegionIdx)) {
         return std::numeric_limits<Scalar>::max() / 2.0;
     }
 

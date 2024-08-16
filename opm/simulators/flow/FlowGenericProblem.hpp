@@ -308,7 +308,8 @@ protected:
     bool shouldWriteRestartFile() const
     { return false; }
 
-    bool beginEpisode_(bool enableExperiments,
+    bool beginEpisode_(std::size_t numDof,
+                       bool enableExperiments,
                        int episodeIdx);
     void beginTimeStep_(bool enableExperiments,
                         int episodeIdx,

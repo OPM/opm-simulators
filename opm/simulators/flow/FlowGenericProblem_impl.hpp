@@ -418,7 +418,8 @@ vapparsActive(int episodeIdx) const
 
 template<class GridView, class FluidSystem>
 bool FlowGenericProblem<GridView,FluidSystem>::
-beginEpisode_(bool enableExperiments,
+beginEpisode_(std::size_t numDof,
+              bool enableExperiments,
               int episodeIdx)
 {
     if (enableExperiments && gridView_.comm().rank() == 0 && episodeIdx >= 0) {
@@ -437,6 +438,10 @@ beginEpisode_(bool enableExperiments,
                   << "\n ";
         OpmLog::info(ss.str());
     }
+
+    this->mixControls_.init(numDof,
+                        episodeIdx,
+                        eclState_.runspec().tabdims().getNumPVTTables());
 
     const auto& events = schedule_[episodeIdx].events();
 
