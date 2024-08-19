@@ -23,6 +23,7 @@
 #include <opm/simulators/flow/ReservoirCoupling.hpp>
 #include <opm/input/eclipse/Schedule/Schedule.hpp>
 #include <opm/simulators/utils/ParallelCommunication.hpp>
+#include <opm/simulators/timestepping/SimulatorTimer.hpp>
 #include <opm/common/OpmLog/OpmLog.hpp>
 
 #include <mpi.h>
@@ -36,15 +37,19 @@ public:
     using MPI_Comm_Ptr = ReservoirCoupling::MPI_Comm_Ptr;
     using MessageTag = ReservoirCoupling::MessageTag;
 
-    ReservoirCouplingSlave(const Parallel::Communication &comm, const Schedule &schedule);
+    ReservoirCouplingSlave(
+        const Parallel::Communication &comm, const Schedule &schedule, const SimulatorTimer &timer
+    );
     void sendSimulationStartDateToMasterProcess();
+    void sendNextReportDateToMasterProcess();
+    double receiveNextTimeStepFromMaster();
 
 private:
     const Parallel::Communication &comm_;
     const Schedule& schedule_;
+    const SimulatorTimer &timer_;
     // MPI parent communicator for a slave process
     MPI_Comm_Ptr slave_master_comm_{nullptr};
-
 };
 
 } // namespace Opm
