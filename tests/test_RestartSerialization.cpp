@@ -246,8 +246,24 @@ BOOST_AUTO_TEST_CASE(FlowGenericProblem)
     decltype(data_out) data_in(eclState, schedule, gridView);
     ser.unpack(data_in);
     const size_t pos2 = ser.position();
-    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for EclGenericProblem");
-    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized EclGenericProblem differ");
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for FlowGenericProblem");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized FlowGenericProblem differ");
+}
+
+BOOST_AUTO_TEST_CASE(MixingRateControls)
+{
+    Opm::Schedule schedule;
+    using FS = Opm::BlackOilFluidSystem<double, Opm::BlackOilDefaultIndexTraits>;
+    auto data_out = Opm::MixingRateControls<FS>::serializationTestObject(schedule);
+    Opm::Serialization::MemPacker packer;
+    Opm::Serializer ser(packer);
+    ser.pack(data_out);
+    const size_t pos1 = ser.position();
+    decltype(data_out) data_in(schedule);
+    ser.unpack(data_in);
+    const size_t pos2 = ser.position();
+    BOOST_CHECK_MESSAGE(pos1 == pos2, "Packed size differ from unpack size for MixingRateControls");
+    BOOST_CHECK_MESSAGE(data_out == data_in, "Deserialized MixingRateControls differ");
 }
 
 #if HAVE_DUNE_FEM
