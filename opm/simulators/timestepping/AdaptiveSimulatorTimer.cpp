@@ -36,25 +36,28 @@
 namespace Opm
 {
     AdaptiveSimulatorTimer::
-    AdaptiveSimulatorTimer( const SimulatorTimerInterface& timer,
-                            const double lastStepTaken,
-                            const double maxTimeStep )
-        : start_date_time_( std::make_shared<boost::posix_time::ptime>(timer.startDateTime()) )
-        , start_time_( timer.simulationTimeElapsed() )
-        , total_time_( start_time_ + timer.currentStepLength() )
-        , report_step_( timer.reportStepNum() )
-        , max_time_step_( maxTimeStep )
-        , current_time_( start_time_ )
-        , dt_( 0.0 )
-        , current_step_( 0 )
-        , steps_()
-        , lastStepFailed_( false )
+    AdaptiveSimulatorTimer( const boost::posix_time::ptime simulation_start_time,
+                            const double step_length,
+                            const double elapsed_time,
+                            const double last_step_taken,
+                            const int report_step,
+                            const double max_time_step )
+        : start_date_time_{ std::make_shared<boost::posix_time::ptime>(simulation_start_time) }
+        , start_time_{ elapsed_time }
+        , total_time_{ start_time_ + step_length }
+        , report_step_{ report_step }
+        , max_time_step_{ max_time_step }
+        , current_time_{ start_time_ }
+        , dt_{ 0.0 }
+        , current_step_{ 0 }
+        , steps_{}
+        , last_step_failed_{ false }
     {
         // reserve memory for sub steps
         steps_.reserve( 10 );
 
         // set appropriate value for dt_
-        provideTimeStepEstimate( lastStepTaken );
+        provideTimeStepEstimate( last_step_taken );
     }
 
     bool AdaptiveSimulatorTimer::initialStep () const
