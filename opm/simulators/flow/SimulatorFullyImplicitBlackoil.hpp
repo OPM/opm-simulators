@@ -227,11 +227,12 @@ public:
     {
 #if HAVE_MPI
         auto slave_mode = Parameters::Get<Parameters::Slave>();
+        FlowGenericVanguard::comm().barrier();
         if (slave_mode) {
             this->reservoirCouplingSlave_ =
                 std::make_unique<ReservoirCouplingSlave>(
                     FlowGenericVanguard::comm(),
-                    this->schedule()
+                    this->schedule(), timer
                 );
             this->reservoirCouplingSlave_->sendSimulationStartDateToMasterProcess();
         }
@@ -273,7 +274,14 @@ public:
             else {
                 adaptiveTimeStepping_ = std::make_unique<TimeStepper>(unitSystem, max_next_tstep, terminalOutput_);
             }
-
+#if HAVE_MPI
+            if (slave_mode) {
+                adaptiveTimeStepping_->setReservoirCouplingSlave(this->reservoirCouplingSlave_.get());
+            }
+            else if (this->schedule()[0].rescoup().masterMode()) {
+                adaptiveTimeStepping_->setReservoirCouplingMaster(this->reservoirCouplingMaster_.get());
+            }
+#endif
             if (isRestart()) {
                 // For restarts the simulator may have gotten some information
                 // about the next timestep size from the OPMEXTRA field

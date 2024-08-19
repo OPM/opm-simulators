@@ -44,41 +44,133 @@ ReservoirCouplingMaster::ReservoirCouplingMaster(
 ) :
     comm_{comm},
     schedule_{schedule}
-{ }
+{
+    this->start_date_ = this->schedule_.getStartTime();
+}
 
 // ------------------
 // Public methods
 // ------------------
 
+double ReservoirCouplingMaster::maybeChopSubStep(
+        double suggested_timestep_original, double elapsed_time
+) const
+{
+    // Check if the suggested timestep needs to be adjusted based on the slave processes'
+    // next report step, or if the slave process has not started yet: the start of a slave process.
+    double start_date = static_cast<double>(this->start_date_);
+    TimePoint step_start_date{start_date + elapsed_time};
+    TimePoint step_end_date{step_start_date + suggested_timestep_original};
+    TimePoint suggested_timestep{suggested_timestep_original};
+    for (unsigned int i = 0; i < this->num_slaves_; i++) {
+        double slave_start_date = static_cast<double>(this->slave_start_dates_[i]);
+        TimePoint slave_next_report_date{this->slave_next_report_time_offsets_[i] + slave_start_date};
+        if (slave_start_date > step_end_date) {
+            // The slave process has not started yet, and will not start during this timestep
+            continue;
+        }
+        TimePoint slave_elapsed_time;
+        if (slave_start_date <= step_start_date) {
+            // The slave process has already started, and will continue during this timestep
+            if (slave_next_report_date > step_end_date) {
+                // The slave process will not report during this timestep
+                continue;
+            }
+            // The slave process will report during this timestep
+            slave_elapsed_time = slave_next_report_date - step_start_date;
+        }
+        else {
+            // The slave process will start during the timestep, but not at the beginning
+            slave_elapsed_time = slave_start_date - step_start_date;
+        }
+        suggested_timestep = slave_elapsed_time;
+        step_end_date = step_start_date + suggested_timestep;
+    }
+    return suggested_timestep.getTime();
+}
+
+void ReservoirCouplingMaster::sendNextTimeStepToSlaves(double timestep) {
+    if (this->comm_.rank() == 0) {
+        for (unsigned int i = 0; i < this->master_slave_comm_.size(); i++) {
+            MPI_Send(
+                &timestep,
+                /*count=*/1,
+                /*datatype=*/MPI_DOUBLE,
+                /*dest_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::SlaveNextTimeStep),
+                *this->master_slave_comm_[i].get()
+            );
+            OpmLog::info(fmt::format(
+                "Sent next time step {} from master process rank 0 to slave process "
+                "rank 0 with name: {}", timestep, this->slave_names_[i])
+            );
+        }
+   }
+}
+
+void ReservoirCouplingMaster::receiveNextReportDateFromSlaves() {
+    if (this->comm_.rank() == 0) {
+        for (unsigned int i = 0; i < this->master_slave_comm_.size(); i++) {
+            double slave_next_report_time_offset; // Elapsed time from the beginning of the simulation
+            int result = MPI_Recv(
+                &slave_next_report_time_offset,
+                /*count=*/1,
+                /*datatype=*/MPI_DOUBLE,
+                /*source_rank=*/0,
+                /*tag=*/static_cast<int>(MessageTag::SlaveNextReportDate),
+                *this->master_slave_comm_[i].get(),
+                MPI_STATUS_IGNORE
+            );
+            if (result != MPI_SUCCESS) {
+                OPM_THROW(std::runtime_error, "Failed to receive next report date from slave process");
+            }
+            this->slave_next_report_time_offsets_[i] = slave_next_report_time_offset;
+            OpmLog::info(
+                fmt::format(
+                    "Received simulation slave next report date from slave process with name: {}. "
+                    "Next report date: {}", this->slave_names_[i], slave_next_report_time_offset
+                )
+            );
+        }
+    }
+    this->comm_.broadcast(
+        this->slave_next_report_time_offsets_.data(), this->num_slaves_, /*emitter_rank=*/0
+    );
+    OpmLog::info("Broadcasted slave next report dates to all ranks");
+}
+
 void ReservoirCouplingMaster::receiveSimulationStartDateFromSlaves() {
-    this->slave_start_dates_.resize(this->num_slaves_);
     if (this->comm_.rank() == 0) {
         // Ensure that std::time_t is of type long since we are sending it over MPI with MPI_LONG
         static_assert(std::is_same<std::time_t, long>::value, "std::time_t is not of type long");
         for (unsigned int i = 0; i < this->master_slave_comm_.size(); i++) {
-            std::time_t start_date;
+            std::time_t slave_start_date;
             int result = MPI_Recv(
-                &start_date,
+                &slave_start_date,
                 /*count=*/1,
                 /*datatype=*/MPI_LONG,
                 /*source_rank=*/0,
-                /*tag=*/static_cast<int>(MessageTag::SimulationStartDate),
+                /*tag=*/static_cast<int>(MessageTag::SlaveSimulationStartDate),
                 *this->master_slave_comm_[i].get(),
                 MPI_STATUS_IGNORE
             );
             if (result != MPI_SUCCESS) {
                 OPM_THROW(std::runtime_error, "Failed to receive simulation start date from slave process");
             }
-            this->slave_start_dates_[i] = start_date;
+            if (slave_start_date < this->start_date_) {
+                OPM_THROW(std::runtime_error, "Slave process start date is before master process start date");
+            }
+            this->slave_start_dates_[i] = slave_start_date;
             OpmLog::info(
                 fmt::format(
                     "Received simulation start date from slave process with name: {}. "
-                    "Start date: {}", this->slave_names_[i], start_date
+                    "Start date: {}", this->slave_names_[i], slave_start_date
                 )
             );
         }
     }
     this->comm_.broadcast(this->slave_start_dates_.data(), this->num_slaves_, /*emitter_rank=*/0);
+    OpmLog::info("Broadcasted slave start dates to all ranks");
 }
 
 // NOTE: This functions is executed for all ranks, but only rank 0 will spawn
@@ -91,8 +183,8 @@ void ReservoirCouplingMaster::spawnSlaveProcesses(int argc, char **argv) {
         const auto& data_file_name = slave.dataFilename();
         const auto& directory_path = slave.directoryPath();
         // Concatenate the directory path and the data file name to get the full path
-        std::filesystem::path dir_path(directory_path);
-        std::filesystem::path data_file(data_file_name);
+        std::filesystem::path dir_path{directory_path};
+        std::filesystem::path data_file{data_file_name};
         std::filesystem::path full_path = dir_path / data_file;
         std::string log_filename; // the getSlaveArgv() function will set this
         std::vector<char *> slave_argv = getSlaveArgv(
@@ -134,6 +226,8 @@ void ReservoirCouplingMaster::spawnSlaveProcesses(int argc, char **argv) {
         this->slave_names_.push_back(slave_name);
         this->num_slaves_++;
     }
+    this->slave_start_dates_.resize(this->num_slaves_);
+    this->slave_next_report_time_offsets_.resize(this->num_slaves_);
 }
 
 // ------------------
