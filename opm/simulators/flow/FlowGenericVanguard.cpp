@@ -447,15 +447,15 @@ void FlowGenericVanguard::registerParameters_()
          "distribution purposes. If empty, the built-in partitioning "
          "method will be employed.");
     Parameters::Hide<Parameters::ExternalPartition>();
+
+    Parameters::Hide<Parameters::ZoltanImbalanceTol<Scalar>>();
+    Parameters::Hide<Parameters::ZoltanParams>();
 #endif
     Parameters::Register<Parameters::AllowDistributedWells>
         ("Allow the perforations of a well to be distributed to interior of multiple processes");
     // register here for the use in the tests without BlackoilModelParameters
     Parameters::Register<Parameters::UseMultisegmentWell>
         ("Use the well model for multi-segment wells instead of the one for single-segment wells");
-
-    Parameters::Hide<Parameters::ZoltanImbalanceTol<Scalar>>();
-    Parameters::Hide<Parameters::ZoltanParams>();
 }
 
 template void FlowGenericVanguard::registerParameters_<double>();
