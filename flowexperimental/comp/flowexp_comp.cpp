@@ -99,7 +99,7 @@ namespace Opm::Properties {
 
    namespace TTag {
    struct FlowExpCompProblem {
-       using InheritsFrom = std::tuple<FlowModelParameters, FlowBaseProblemComp, FlashModel, EclTimeSteppingParameters>;
+       using InheritsFrom = std::tuple<FlowBaseProblemComp, FlashModel>;
    };
    }
 #if 0
@@ -260,27 +260,6 @@ struct EnableMech<TypeTag, TTag::FlowExpCompProblem> {
     static constexpr bool value = false;
 };
 
-
-
-/* template<class TypeTag>
-struct OutputMode<TypeTag, TTag::FlowExpCompProblem> { inline static const std::string value = "all"; };
-
-template<class TypeTag>
-struct RestartWritingInterval<TypeTag, TTag::FlowExpCompProblem> { static constexpr int value = 10; };
-
-template<class TypeTag>
-struct EnableDriftCompensation<TypeTag, TTag::FlowExpCompProblem> { static constexpr bool value = false; };
-
-template<class TypeTag>
-struct NumPressurePointsEquil<TypeTag, TTag::FlowExpCompProblem> { static constexpr int value = 100; }; */
-
-// template<class TypeTag>
-// struct ExpliciteRockCompaction<TypeTag, TTag::FlowExpCompProblem> { static constexpr bool value = false; };
-template<class TypeTag>
-struct EnableTerminalOutput<TypeTag, TTag::FlowExpCompProblem> { static constexpr bool value = false; };
-
-
-
 template<class TypeTag>
 struct EnableDisgasInWater<TypeTag, TTag::FlowExpCompProblem> { static constexpr bool value = false; };
 
@@ -368,29 +347,11 @@ struct EnableThermalFluxBoundaries<TypeTag, TTag::FlowExpCompProblem> {
 
 } // namespace Opm::Properties
 
-namespace Opm::Parameters {
-
-    template<class TypeTag>
-    struct EnableWriteAllSolutions<TypeTag, Properties::TTag::FlowExpCompProblem>{
-        static constexpr bool value = false;
-    };
-
-    template<class TypeTag>
-    struct EclOutputDoublePrecision<TypeTag, Properties::TTag::FlowExpCompProblem> {
-        static constexpr bool value = false;
-    };
-
-    template<class TypeTag>
-    struct EnableEclOutput<TypeTag, Properties::TTag::FlowExpCompProblem> {
-        static constexpr bool value = false;
-    };
-}
-
 
 int main(int argc, char** argv)
 {
     //using TypeTag = Opm::Properties::TTag::EclFlowProblemEbos;
     using TypeTag = Opm::Properties::TTag::FlowExpCompProblem;
-    Opm::registerEclTimeSteppingParameters<TypeTag>();
+    Opm::registerEclTimeSteppingParameters<double>();
     return Opm::start<TypeTag>(argc, argv);
 }
