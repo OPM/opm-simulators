@@ -476,7 +476,7 @@ const KeywordValidation::UnsupportedKeywords& unsupportedKeywords()
         {"PERMXY", {true, std::nullopt}},
         {"PERMYZ", {true, std::nullopt}},
         {"PERMZX", {true, std::nullopt}},
-        {"PETGRID", {true, std::nullopt}},
+        {"PETGRID", {true, std::string{"OPM Flow cannot read GSG format grid input, re-export case from Petrel using GRDECL instead."}}},
         {"PICOND", {true, std::nullopt}},
         {"PIMULTAB", {true, std::nullopt}},
         {"PINCHNUM", {true, std::nullopt}},
