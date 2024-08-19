@@ -222,50 +222,7 @@ public:
 // #endif
 
         VtkTracerModule<TypeTag>::registerParameters();
-
-        Parameters::registerParam<TypeTag, Parameters::EnableWriteAllSolutions>
-           ("Write all solutions to disk instead of only the ones for the "
-            "report steps");
-        Parameters::registerParam<TypeTag, Parameters::EnableEclOutput>
-            ("Write binary output which is compatible with the commercial "
-             "Eclipse simulator");
-#if HAVE_DAMARIS
-        Parameters::registerParam<TypeTag, Parameters::EnableDamarisOutput>
-            ("Write a specific variable using Damaris in a separate core");
-#endif
-        Parameters::registerParam<TypeTag, Parameters::EclOutputDoublePrecision>
-            ("Tell the output writer to use double precision. Useful for 'perfect' restarts");
-        Parameters::registerParam<TypeTag, Parameters::RestartWritingInterval>
-            ("The frequencies of which time steps are serialized to disk");
-        Parameters::registerParam<TypeTag, Parameters::EnableDriftCompensation>
-            ("Enable partial compensation of systematic mass losses via "
-             "the source term of the next time step");
-        Parameters::registerParam<TypeTag, Parameters::OutputMode>
-            ("Specify which messages are going to be printed. "
-             "Valid values are: none, log, all (default)");
-        Parameters::registerParam<TypeTag, Parameters::NumPressurePointsEquil>
-            ("Number of pressure points (in each direction) in tables used for equilibration");
-        Parameters::hideParam<TypeTag, Parameters::NumPressurePointsEquil>(); // Users will typically not need to modify this parameter..
-	// TODO: do we need to hide them?
-        Parameters::registerParam<TypeTag, Parameters::ExplicitRockCompaction>
-            ("Use pressure from end of the last time step when evaluating rock compaction");
-        Parameters::hideParam<TypeTag, Parameters::ExplicitRockCompaction>(); // Users will typically not need to modify this parameter..
-
-        // By default, stop it after the universe will probably have stopped
-        // to exist. (the ECL problem will finish the simulation explicitly
-        // after it simulated the last episode specified in the deck.)
-        Parameters::SetDefault<Parameters::EndTime<Scalar>>(1e100);
-        // The chosen value means that the size of the first time step is the
-        // one of the initial episode (if the length of the initial episode is
-        // not millions of trillions of years, that is...)
-        Parameters::SetDefault<Parameters::InitialTimeStepSize<Scalar>>(3600*24);
-        // Disable the VTK output by default for this problem ...
-        Parameters::SetDefault<Parameters::EnableVtkOutput>(false);
-        // the cache for intensive quantities can be used for ECL problems and also yields a
-        // decent speedup...
-        Parameters::SetDefault<Parameters::EnableIntensiveQuantityCache>(true);
-        // the cache for the storage term can also be used and also yields a decent speedup
-        Parameters::SetDefault<Parameters::EnableStorageCache>(true);
+        registerFlowProblemParameters<Scalar>();
     }
 
 
@@ -331,29 +288,29 @@ public:
 #if HAVE_DAMARIS
         // create Damaris writer
         // damarisWriter_ = std::make_unique<DamarisWriterType>(simulator);
-        // enableDamarisOutput_ = Parameters::get<TypeTag, Parameters::EnableDamarisOutput>();
+        // enableDamarisOutput_ = Parameters::Get<Parameters::EnableDamarisOutput>();
 #endif
-        enableDriftCompensation_ = Parameters::get<TypeTag, Parameters::EnableDriftCompensation>();
+        enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>();
 
-        enableEclOutput_ = Parameters::get<TypeTag, Parameters::EnableEclOutput>();
+        enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
         enableVtkOutput_ = Parameters::Get<Parameters::EnableVtkOutput>();
 
-        this->enableTuning_ = Parameters::get<TypeTag, Parameters::EnableTuning>();
+        this->enableTuning_ = Parameters::Get<Parameters::EnableTuning>();
         this->initialTimeStepSize_ = Parameters::Get<Parameters::InitialTimeStepSize<Scalar>>();
-        this->maxTimeStepAfterWellEvent_ = Parameters::get<TypeTag, Parameters::TimeStepAfterEventInDays>() * 24 * 60 * 60;
+        this->maxTimeStepAfterWellEvent_ = Parameters::Get<Parameters::TimeStepAfterEventInDays<Scalar>>() * 24 * 60 * 60;
 
         // The value N for this parameter is defined in the following order of presedence:
         // 1. Command line value (--num-pressure-points-equil=N)
         // 2. EQLDIMS item 2
         // Default value is defined in opm-common/src/opm/input/eclipse/share/keywords/000_Eclipse100/E/EQLDIMS
-        if (Parameters::isSet<TypeTag, Parameters::NumPressurePointsEquil>())
+        if (Parameters::IsSet<Parameters::NumPressurePointsEquil>())
         {
-            this->numPressurePointsEquil_ = Parameters::get<TypeTag, Parameters::NumPressurePointsEquil>();
+            this->numPressurePointsEquil_ = Parameters::Get<Parameters::NumPressurePointsEquil>();
         } else {
             this->numPressurePointsEquil_ = simulator.vanguard().eclState().getTableManager().getEqldims().getNumDepthNodesP();
         }
 
-        explicitRockCompaction_ = Parameters::get<TypeTag, Parameters::ExplicitRockCompaction>();
+        explicitRockCompaction_ = Parameters::Get<Parameters::ExplicitRockCompaction>();
 
 
         RelpermDiagnostics relpermDiagnostics;
@@ -420,7 +377,7 @@ public:
         // disables gravity, else the standard value of the gravity constant at sea level
         // on earth is used
         this->gravity_ = 0.0;
-        if (Parameters::get<TypeTag, Parameters::EnableGravity>())
+        if (Parameters::Get<Parameters::EnableGravity>())
             this->gravity_[dim - 1] = 9.80665;
         if (!eclState.getInitConfig().hasGravity())
             this->gravity_[dim - 1] = 0.0;
@@ -689,7 +646,7 @@ public:
         OPM_TIMEBLOCK(endTimeStep);
 
 #ifndef NDEBUG
-        if constexpr (getPropValue<TypeTag, Parameters::EnableDebuggingChecks>()) {
+        if constexpr (getPropValue<TypeTag, Properties::EnableDebuggingChecks>()) {
             // in debug mode, we don't care about performance, so we check
             // if the model does the right thing (i.e., the mass change
             // inside the whole reservoir must be equivalent to the fluxes
@@ -824,7 +781,7 @@ public:
         OPM_TIMEBLOCK(problemWriteOutput);
         // use the generic code to prepare the output fields and to
         // write the desired VTK files.
-        if (Parameters::get<TypeTag, Parameters::EnableWriteAllSolutions>() ||
+        if (Parameters::Get<Parameters::EnableWriteAllSolutions>() ||
             this->simulator().episodeWillBeOver()) {
             ParentType::writeOutput(verbose);
         }
@@ -2930,7 +2887,7 @@ private:
             int episodeIdx = simulator.episodeIndex();
 
             // first thing in the morning, limit the time step size to the maximum size
-            Scalar maxTimeStepSize = Parameters::get<TypeTag, Parameters::SolverMaxTimeStepInDays>() * 24 * 60 * 60;
+            Scalar maxTimeStepSize = Parameters::Get<Parameters::SolverMaxTimeStepInDays<Scalar>>() * 24 * 60 * 60;
             int reportStepIdx = std::max(episodeIdx, 0);
             if (this->enableTuning_) {
                 const auto& tuning = schedule[reportStepIdx].tuning();
