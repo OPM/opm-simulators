@@ -53,7 +53,7 @@ template<class Scalar>
 struct ToleranceCnvRelaxed { static constexpr Scalar value = 1.0; };
 
 template<class Scalar>
-struct ToleranceWells { static constexpr Scalar value = 1e-4; };
+struct ToleranceWells { static constexpr Scalar value = 1e-8; };
 
 template<class Scalar>
 struct ToleranceWellControl { static constexpr Scalar value = 1e-7; };
