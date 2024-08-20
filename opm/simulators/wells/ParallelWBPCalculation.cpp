@@ -375,3 +375,7 @@ makeEvaluationSources(const WellID well) const
 }
 
 template class Opm::ParallelWBPCalculation<double>;
+
+#if FLOW_INSTANTIATE_FLOAT
+template class Opm::ParallelWBPCalculation<float>;
+#endif
