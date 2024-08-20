@@ -32,7 +32,6 @@
 #include <opm/material/common/UniformXTabulated2DFunction.hpp>
 #include <opm/material/common/Tabulated1DFunction.hpp>
 
-#include <opm/simulators/flow/MixingRateControls.hpp>
 #include <opm/simulators/flow/SolutionContainers.hpp>
 
 #include <array>
@@ -289,7 +288,6 @@ public:
         serializer(solventSaturation_);
         serializer(solventRsw_);
         serializer(micp_);
-        serializer(mixControls_);
     }
 
 protected:
@@ -363,8 +361,6 @@ protected:
     std::vector<Scalar> solventSaturation_;
     std::vector<Scalar> solventRsw_;
     MICPSolutionContainer<Scalar> micp_;
-
-    MixingRateControls<FluidSystem> mixControls_;
 
     // time stepping parameters
     bool enableTuning_;

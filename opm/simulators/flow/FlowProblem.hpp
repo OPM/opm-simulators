@@ -73,6 +73,7 @@
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 #include <opm/simulators/flow/FlowProblemProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
+#include <opm/simulators/flow/MixingRateControls.hpp>
 #include <opm/simulators/flow/NewTranFluxModule.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
@@ -262,6 +263,7 @@ public:
         , aquiferModel_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
+        , mixControls_(simulator.vanguard().schedule())
         , actionHandler_(simulator.vanguard().eclState(),
                          simulator.vanguard().schedule(),
                          simulator.vanguard().actionState(),
@@ -582,19 +584,20 @@ public:
     void beginTimeStep()
     {
         OPM_TIMEBLOCK(beginTimeStep);
-        int episodeIdx = this->episodeIndex();
+        const int episodeIdx = this->episodeIndex();
+        const int timeStepSize = this->simulator().timeStepSize();
 
         this->beginTimeStep_(enableExperiments,
                              episodeIdx,
                              this->simulator().timeStepIndex(),
                              this->simulator().startTime(),
                              this->simulator().time(),
-                             this->simulator().timeStepSize(),
+                             timeStepSize,
                              this->simulator().endTime());
 
         // update maximum water saturation and minimum pressure
         // used when ROCKCOMP is activated
-        asImp_().updateExplicitQuantities_();
+        asImp_().updateExplicitQuantities_(episodeIdx, timeStepSize);
 
         if (nonTrivialBoundaryConditions()) {
             this->model().linearizer().updateBoundaryConditionData();
@@ -1850,14 +1853,21 @@ public:
         serializer(wellModel_);
         serializer(aquiferModel_);
         serializer(tracerModel_);
+        serializer(mixControls_);
         serializer(*materialLawManager_);
         serializer(*eclWriter_);
+    }
+
+    Scalar drsdtcon(unsigned elemIdx, int episodeIdx) const
+    {
+        return this->mixControls_.drsdtcon(elemIdx, episodeIdx,
+                                           this->pvtRegionIndex(elemIdx));
     }
 private:
     Implementation& asImp_()
     { return *static_cast<Implementation *>(this); }
 protected:
-    void updateExplicitQuantities_()
+    void updateExplicitQuantities_(int episodeIdx, int timeStepSize)
     {
         OPM_TIMEBLOCK(updateExplicitQuantities);
         const bool invalidateFromMaxWaterSat = updateMaxWaterSaturation_();
@@ -1883,6 +1893,7 @@ protected:
             updateMaxPolymerAdsorption_();
 
         updateRockCompTransMultVal_();
+        mixControls_.updateExplicitQuantities(episodeIdx, timeStepSize);
     }
 
     template<class UpdateFunc>
@@ -2836,6 +2847,7 @@ private:
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
+    MixingRateControls<FluidSystem> mixControls_;
 
     ActionHandler<Scalar> actionHandler_;
 
