@@ -80,6 +80,7 @@ struct EnableApiTracking { using type = UndefinedProperty; };
 // print statements in debug mode.
 template<class TypeTag, class MyTypeTag>
 struct EnableDebuggingChecks { using type = Properties::UndefinedProperty; };
+
 // if thermal flux boundaries are enabled an effort is made to preserve the initial
 // thermal gradient specified via the TEMPVD keyword
 template<class TypeTag, class MyTypeTag>
@@ -286,6 +287,7 @@ struct EnableThermalFluxBoundaries<TypeTag, TTag::FlowBaseProblemComp>
 template<class TypeTag>
 struct EnableExperiments<TypeTag, TTag::FlowBaseProblemComp>
 { static constexpr bool value = false; };
+
 // By default, we enable the debugging checks if we're compiled in debug mode
 template<class TypeTag>
 struct EnableDebuggingChecks<TypeTag, TTag::FlowBaseProblemComp>
