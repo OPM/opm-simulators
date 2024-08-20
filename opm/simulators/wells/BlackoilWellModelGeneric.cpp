@@ -1690,7 +1690,7 @@ assignMassGasRate(data::Wells& wsrpt,
     using rt = data::Rates::opt;
     for (auto& wrpt : wsrpt) {
         auto& well_rates = wrpt.second.rates;
-        const auto w_mass_rate = well_rates.get(rt::gas) * gasDensity;
+        const auto w_mass_rate = well_rates.get(rt::gas, 0.0) * gasDensity;
         well_rates.set(rt::mass_gas, w_mass_rate);
     }
 }
