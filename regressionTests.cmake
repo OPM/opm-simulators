@@ -1495,6 +1495,12 @@ if(dune-alugrid_FOUND AND BUILD_FLOW_ALU_GRID)
                            SIMULATOR flow_blackoil_alugrid
                            ABS_TOL ${abs_tol}
                            REL_TOL ${coarse_rel_tol}
-                           DIR spe1)
+                           DIR spe1
+                           TEST_ARGS --linear-solver=ilu0
+                                     --tolerance-mb=1e-6
+                                     --min-strict-cnv-iter=0
+                                     --local-well-solve-control-switching=false
+                                     --use-implicit-ipr=false
+                                     --enable-drift-compensation=true)
 endif()
 
