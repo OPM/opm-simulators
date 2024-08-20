@@ -79,7 +79,7 @@ OpmCuILU0<M, X, Y, l>::OpmCuILU0(const M& A, bool splitMatrix, bool tuneKernels)
         m_gpuReorderedLU = detail::createReorderedMatrix<M, field_type, CuSparseMatrix<field_type>>(
             m_cpuMatrix, m_reorderedToNatural);
     }
-    LUFactorizeAndMoveData();
+    LUFactorizeAndMoveData(m_moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
 
     if (m_tuneThreadBlockSizes) {
         tuneThreadBlockSizes();
@@ -98,59 +98,66 @@ OpmCuILU0<M, X, Y, l>::apply(X& v, const Y& d)
 {
     OPM_TIMEBLOCK(prec_apply);
     {
-        int levelStartIdx = 0;
-        for (int level = 0; level < m_levelSets.size(); ++level) {
-            const int numOfRowsInLevel = m_levelSets[level].size();
-            if (m_splitMatrix) {
-                detail::ILU0::solveLowerLevelSetSplit<field_type, blocksize_>(
-                    m_gpuMatrixReorderedLower->getNonZeroValues().data(),
-                    m_gpuMatrixReorderedLower->getRowIndices().data(),
-                    m_gpuMatrixReorderedLower->getColumnIndices().data(),
-                    m_gpuReorderToNatural.data(),
-                    levelStartIdx,
-                    numOfRowsInLevel,
-                    d.data(),
-                    v.data(),
-                    m_lowerSolveThreadBlockSize);
-            } else {
-                detail::ILU0::solveLowerLevelSet<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
-                                                                         m_gpuReorderedLU->getRowIndices().data(),
-                                                                         m_gpuReorderedLU->getColumnIndices().data(),
-                                                                         m_gpuReorderToNatural.data(),
-                                                                         levelStartIdx,
-                                                                         numOfRowsInLevel,
-                                                                         d.data(),
-                                                                         v.data(),
-                                                                         m_lowerSolveThreadBlockSize);
-            }
-            levelStartIdx += numOfRowsInLevel;
-        }
+        apply(v, d, m_lowerSolveThreadBlockSize, m_upperSolveThreadBlockSize);
+    }
+}
 
-        levelStartIdx = m_cpuMatrix.N();
-        for (int level = m_levelSets.size() - 1; level >= 0; --level) {
-            const int numOfRowsInLevel = m_levelSets[level].size();
-            levelStartIdx -= numOfRowsInLevel;
-            if (m_splitMatrix) {
-                detail::ILU0::solveUpperLevelSetSplit<field_type, blocksize_>(
-                    m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
-                    m_gpuMatrixReorderedUpper->getRowIndices().data(),
-                    m_gpuMatrixReorderedUpper->getColumnIndices().data(),
-                    m_gpuReorderToNatural.data(),
-                    levelStartIdx,
-                    numOfRowsInLevel,
-                    m_gpuMatrixReorderedDiag.value().data(),
-                    v.data(),
-                    m_upperSolveThreadBlockSize);
-            } else {
-                detail::ILU0::solveUpperLevelSet<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
-                                                                         m_gpuReorderedLU->getRowIndices().data(),
-                                                                         m_gpuReorderedLU->getColumnIndices().data(),
-                                                                         m_gpuReorderToNatural.data(),
-                                                                         levelStartIdx,
-                                                                         numOfRowsInLevel,
-                                                                         v.data(),
-                                                                         m_upperSolveThreadBlockSize);
-            }
+template <class M, class X, class Y, int l>
+void
+OpmCuILU0<M, X, Y, l>::apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int upperSolveThreadBlockSize)
+{
+    int levelStartIdx = 0;
+    for (int level = 0; level < m_levelSets.size(); ++level) {
+        const int numOfRowsInLevel = m_levelSets[level].size();
+        if (m_splitMatrix) {
+            detail::ILU0::solveLowerLevelSetSplit<field_type, blocksize_>(
+                m_gpuMatrixReorderedLower->getNonZeroValues().data(),
+                m_gpuMatrixReorderedLower->getRowIndices().data(),
+                m_gpuMatrixReorderedLower->getColumnIndices().data(),
+                m_gpuReorderToNatural.data(),
+                levelStartIdx,
+                numOfRowsInLevel,
+                d.data(),
+                v.data(),
+                lowerSolveThreadBlockSize);
+        } else {
+            detail::ILU0::solveLowerLevelSet<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
+                                                                        m_gpuReorderedLU->getRowIndices().data(),
+                                                                        m_gpuReorderedLU->getColumnIndices().data(),
+                                                                        m_gpuReorderToNatural.data(),
+                                                                        levelStartIdx,
+                                                                        numOfRowsInLevel,
+                                                                        d.data(),
+                                                                        v.data(),
+                                                                        lowerSolveThreadBlockSize);
+        }
+        levelStartIdx += numOfRowsInLevel;
+    }
+
+    levelStartIdx = m_cpuMatrix.N();
+    for (int level = m_levelSets.size() - 1; level >= 0; --level) {
+        const int numOfRowsInLevel = m_levelSets[level].size();
+        levelStartIdx -= numOfRowsInLevel;
+        if (m_splitMatrix) {
+            detail::ILU0::solveUpperLevelSetSplit<field_type, blocksize_>(
+                m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
+                m_gpuMatrixReorderedUpper->getRowIndices().data(),
+                m_gpuMatrixReorderedUpper->getColumnIndices().data(),
+                m_gpuReorderToNatural.data(),
+                levelStartIdx,
+                numOfRowsInLevel,
+                m_gpuMatrixReorderedDiag.value().data(),
+                v.data(),
+                upperSolveThreadBlockSize);
+        } else {
+            detail::ILU0::solveUpperLevelSet<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
+                                                                        m_gpuReorderedLU->getRowIndices().data(),
+                                                                        m_gpuReorderedLU->getColumnIndices().data(),
+                                                                        m_gpuReorderToNatural.data(),
+                                                                        levelStartIdx,
+                                                                        numOfRowsInLevel,
+                                                                        v.data(),
+                                                                        upperSolveThreadBlockSize);
         }
     }
 }
@@ -174,70 +181,76 @@ OpmCuILU0<M, X, Y, l>::update()
 {
     OPM_TIMEBLOCK(prec_update);
     {
-        m_gpuMatrix.updateNonzeroValues(m_cpuMatrix, true); // send updated matrix to the gpu
-        LUFactorizeAndMoveData();
+        update(m_moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
     }
 }
 
 template <class M, class X, class Y, int l>
 void
-OpmCuILU0<M, X, Y, l>::LUFactorizeAndMoveData()
+OpmCuILU0<M, X, Y, l>::update(int moveThreadBlockSize, int factorizationThreadBlockSize)
 {
     OPM_TIMEBLOCK(prec_update);
     {
+        m_gpuMatrix.updateNonzeroValues(m_cpuMatrix, true); // send updated matrix to the gpu
+        LUFactorizeAndMoveData(moveThreadBlockSize, factorizationThreadBlockSize);
+    }
+}
+template <class M, class X, class Y, int l>
+void
+OpmCuILU0<M, X, Y, l>::LUFactorizeAndMoveData(int moveThreadBlockSize, int factorizationThreadBlockSize)
+{
+    if (m_splitMatrix) {
+        detail::copyMatDataToReorderedSplit<field_type, blocksize_>(
+            m_gpuMatrix.getNonZeroValues().data(),
+            m_gpuMatrix.getRowIndices().data(),
+            m_gpuMatrix.getColumnIndices().data(),
+            m_gpuMatrixReorderedLower->getNonZeroValues().data(),
+            m_gpuMatrixReorderedLower->getRowIndices().data(),
+            m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
+            m_gpuMatrixReorderedUpper->getRowIndices().data(),
+            m_gpuMatrixReorderedDiag.value().data(),
+            m_gpuNaturalToReorder.data(),
+            m_gpuMatrixReorderedLower->N(),
+            moveThreadBlockSize);
+    } else {
+        detail::copyMatDataToReordered<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
+                                                                m_gpuMatrix.getRowIndices().data(),
+                                                                m_gpuReorderedLU->getNonZeroValues().data(),
+                                                                m_gpuReorderedLU->getRowIndices().data(),
+                                                                m_gpuNaturalToReorder.data(),
+                                                                m_gpuReorderedLU->N(),
+                                                                moveThreadBlockSize);
+    }
+    int levelStartIdx = 0;
+    for (int level = 0; level < m_levelSets.size(); ++level) {
+        const int numOfRowsInLevel = m_levelSets[level].size();
+
         if (m_splitMatrix) {
-            detail::copyMatDataToReorderedSplit<field_type, blocksize_>(
-                m_gpuMatrix.getNonZeroValues().data(),
-                m_gpuMatrix.getRowIndices().data(),
-                m_gpuMatrix.getColumnIndices().data(),
+            detail::ILU0::LUFactorizationSplit<field_type, blocksize_>(
                 m_gpuMatrixReorderedLower->getNonZeroValues().data(),
                 m_gpuMatrixReorderedLower->getRowIndices().data(),
+                m_gpuMatrixReorderedLower->getColumnIndices().data(),
                 m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
                 m_gpuMatrixReorderedUpper->getRowIndices().data(),
+                m_gpuMatrixReorderedUpper->getColumnIndices().data(),
                 m_gpuMatrixReorderedDiag.value().data(),
+                m_gpuReorderToNatural.data(),
                 m_gpuNaturalToReorder.data(),
-                m_gpuMatrixReorderedLower->N(),
-                m_moveThreadBlockSize);
+                levelStartIdx,
+                numOfRowsInLevel,
+                factorizationThreadBlockSize);
+
         } else {
-            detail::copyMatDataToReordered<field_type, blocksize_>(m_gpuMatrix.getNonZeroValues().data(),
-                                                                   m_gpuMatrix.getRowIndices().data(),
-                                                                   m_gpuReorderedLU->getNonZeroValues().data(),
-                                                                   m_gpuReorderedLU->getRowIndices().data(),
-                                                                   m_gpuNaturalToReorder.data(),
-                                                                   m_gpuReorderedLU->N(),
-                                                                   m_moveThreadBlockSize);
+            detail::ILU0::LUFactorization<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
+                                                                    m_gpuReorderedLU->getRowIndices().data(),
+                                                                    m_gpuReorderedLU->getColumnIndices().data(),
+                                                                    m_gpuNaturalToReorder.data(),
+                                                                    m_gpuReorderToNatural.data(),
+                                                                    numOfRowsInLevel,
+                                                                    levelStartIdx,
+                                                                    factorizationThreadBlockSize);
         }
-        int levelStartIdx = 0;
-        for (int level = 0; level < m_levelSets.size(); ++level) {
-            const int numOfRowsInLevel = m_levelSets[level].size();
-
-            if (m_splitMatrix) {
-                detail::ILU0::LUFactorizationSplit<field_type, blocksize_>(
-                    m_gpuMatrixReorderedLower->getNonZeroValues().data(),
-                    m_gpuMatrixReorderedLower->getRowIndices().data(),
-                    m_gpuMatrixReorderedLower->getColumnIndices().data(),
-                    m_gpuMatrixReorderedUpper->getNonZeroValues().data(),
-                    m_gpuMatrixReorderedUpper->getRowIndices().data(),
-                    m_gpuMatrixReorderedUpper->getColumnIndices().data(),
-                    m_gpuMatrixReorderedDiag.value().data(),
-                    m_gpuReorderToNatural.data(),
-                    m_gpuNaturalToReorder.data(),
-                    levelStartIdx,
-                    numOfRowsInLevel,
-                    m_ILU0FactorizationThreadBlockSize);
-
-            } else {
-                detail::ILU0::LUFactorization<field_type, blocksize_>(m_gpuReorderedLU->getNonZeroValues().data(),
-                                                                      m_gpuReorderedLU->getRowIndices().data(),
-                                                                      m_gpuReorderedLU->getColumnIndices().data(),
-                                                                      m_gpuNaturalToReorder.data(),
-                                                                      m_gpuReorderToNatural.data(),
-                                                                      numOfRowsInLevel,
-                                                                      levelStartIdx,
-                                                                      m_ILU0FactorizationThreadBlockSize);
-            }
-            levelStartIdx += numOfRowsInLevel;
-        }
+        levelStartIdx += numOfRowsInLevel;
     }
 }
 
@@ -245,21 +258,31 @@ template <class M, class X, class Y, int l>
 void
 OpmCuILU0<M, X, Y, l>::tuneThreadBlockSizes()
 {
-    using CuDILUType = std::remove_reference_t<decltype(*this)>;
-
     // tune the thread-block size of the update function
-    auto updateFunc = std::bind(&CuDILUType::update, this);
-    detail::tuneThreadBlockSize(updateFunc, m_moveThreadBlockSize);
-    detail::tuneThreadBlockSize(updateFunc, m_ILU0FactorizationThreadBlockSize);
+    auto tuneMoveThreadBlockSizeInUpdate = [this](int moveThreadBlockSize){
+        this->update(moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
+    };
+    m_moveThreadBlockSize = detail::tuneThreadBlockSize(tuneMoveThreadBlockSizeInUpdate);
+
+    auto tuneFactorizationThreadBlockSizeInUpdate = [this](int factorizationThreadBlockSize){
+        this->update(m_moveThreadBlockSize, factorizationThreadBlockSize);
+    };
+    m_ILU0FactorizationThreadBlockSize = detail::tuneThreadBlockSize(tuneFactorizationThreadBlockSizeInUpdate);
 
     // tune the thread-block size of the apply
-    auto applyFunc = std::bind(&CuDILUType::apply, this, std::placeholders::_1, std::placeholders::_1);
     CuVector<field_type> tmpV(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
     CuVector<field_type> tmpD(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
     tmpD = 1;
 
-    detail::tuneThreadBlockSize(applyFunc, m_lowerSolveThreadBlockSize, tmpV, tmpD);
-    detail::tuneThreadBlockSize(applyFunc, m_upperSolveThreadBlockSize, tmpV, tmpD);
+    auto tuneLowerSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int lowerSolveThreadBlockSize){
+        this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
+    };
+    m_lowerSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneLowerSolveThreadBlockSizeInApply);
+
+    auto tuneUpperSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int upperSolveThreadBlockSize){
+        this->apply(tmpV, tmpD, m_moveThreadBlockSize, upperSolveThreadBlockSize);
+    };
+    m_upperSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneUpperSolveThreadBlockSizeInApply);
 }
 
 } // namespace Opm::cuistl

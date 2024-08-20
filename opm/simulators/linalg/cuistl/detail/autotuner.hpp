@@ -29,11 +29,9 @@ namespace Opm::cuistl::detail
     /// @brief Function that tests the best thread block size, assumes updating the reference will affect runtimes
     /// @tparam func function to tune
     /// @tparam ...Args types of the arguments needed to call the function
-    /// @param f the function to tune
-    /// @param threadBlockSize reference to the thread block size that will affect kernel executions
-    /// @param ...args arguments needed by the function
+    /// @param f the function to tune, which takes the thread block size as the input
     template <typename func, typename... Args>
-    void tuneThreadBlockSize(func f, int& threadBlockSize, Args&&... args) {
+    int tuneThreadBlockSize(func& f) {
 
         // TODO: figure out a more rigorous way of deciding how many runs will suffice?
         constexpr const int runs = 2;
@@ -51,13 +49,11 @@ namespace Opm::cuistl::detail
 
         // try each possible blocksize
         for (int thrBlockSize = interval; thrBlockSize <= 1024; thrBlockSize += interval){
-            // update the blocksize
-            threadBlockSize = thrBlockSize;
 
             // record a first event, and then an event after each kernel
             OPM_CUDA_SAFE_CALL(cudaEventRecord(events[0]));
             for (int i = 0; i < runs; ++i){
-                f(std::forward<Args>(args)...); // runs an arbitrary function with the provided arguments
+                f(thrBlockSize); // runs an arbitrary function with the provided arguments
                 OPM_CUDA_SAFE_CALL(cudaEventRecord(events[i+1]));
             }
 
@@ -80,7 +76,7 @@ namespace Opm::cuistl::detail
         // TODO: have this only be printed if linear solver verbosity >0?
         printf("best size: %d, best time %f\n", bestBlockSize, bestTime);
 
-        threadBlockSize = bestBlockSize;
+        return bestBlockSize;
     }
 
 } // end namespace Opm::cuistl::detail
