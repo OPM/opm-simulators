@@ -1498,9 +1498,7 @@ public:
 
         // if requested, compensate systematic mass loss for cells which were "well
         // behaved" in the last time step
-        // Note that we don't allow for drift compensation if there are no active wells.
-        const bool compensateDrift = wellModel_.wellsActive();
-        if (enableDriftCompensation_ && compensateDrift) {
+        if (enableDriftCompensation_) {
             const auto& simulator = this->simulator();
             const auto& model = this->model();
 
