@@ -38,7 +38,7 @@
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
 
 #include <opm/simulators/flow/FlowProblem.hpp>
-#include <opm/simulators/flow/FlowProblemProperties.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 
@@ -57,7 +57,7 @@ namespace TTag {
 
 struct FlowExpTypeTag
 {
-    using InheritsFrom = std::tuple<FlowBaseProblem, BlackOilModel>;
+    using InheritsFrom = std::tuple<FlowBaseProblemBlackoil, BlackOilModel>;
 };
 
 }

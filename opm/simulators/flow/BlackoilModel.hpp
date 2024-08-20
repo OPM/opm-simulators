@@ -77,7 +77,7 @@ namespace Opm::Properties {
 
 namespace TTag {
 
-struct FlowProblem { using InheritsFrom = std::tuple<FlowBaseProblem, BlackOilModel>; };
+struct FlowProblem { using InheritsFrom = std::tuple<FlowBaseProblemBlackoil, BlackOilModel>; };
 
 }
 

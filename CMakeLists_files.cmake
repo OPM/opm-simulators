@@ -725,6 +725,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/ExtraConvergenceOutputThread.hpp
   opm/simulators/flow/FemCpGridCompat.hpp
   opm/simulators/flow/FIBlackoilModel.hpp
+  opm/simulators/flow/FlowBaseProblemProperties.hpp
   opm/simulators/flow/FlowBaseVanguard.hpp
   opm/simulators/flow/FlowGenericProblem.hpp
   opm/simulators/flow/FlowGenericProblem_impl.hpp
@@ -733,7 +734,7 @@ list (APPEND PUBLIC_HEADER_FILES
   opm/simulators/flow/FlowProblem.hpp
   opm/simulators/flow/FlowProblemComp.hpp
   opm/simulators/flow/FlowProblemParameters.hpp
-  opm/simulators/flow/FlowProblemProperties.hpp
+  opm/simulators/flow/FlowProblemBlackoilProperties.hpp
   opm/simulators/flow/FlowProblemCompProperties.hpp
   opm/simulators/flow/FlowUtils.hpp
   opm/simulators/flow/FlowsData.hpp

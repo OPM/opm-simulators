@@ -23,10 +23,10 @@
 /*!
  * \file
  *
- * \copydoc Opm::FlowBaseProblemComp
+ * \copydoc Opm::FlowBaseProblemBlackoil
  */
-#ifndef OPM_FLOW_PROBLEM_COMP_PROPERTIES_HPP
-#define OPM_FLOW_PROBLEM_COMP_PROPERTIES_HPP
+#ifndef OPM_FLOW_BASE_PROBLEM_BLACKOIL_PROPERTIES_HPP
+#define OPM_FLOW_BASE_PROBLEM_BLACKOIL_PROPERTIES_HPP
 
 
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
@@ -34,58 +34,49 @@
 #include <opm/models/utils/propertysystem.hh>
 
 #include <opm/simulators/flow/FlowBaseProblemProperties.hpp>
-#include <opm/simulators/flow/TracerModel.hpp> // we have an empty TracerModel later
+#include <opm/simulators/flow/FIBlackoilModel.hpp>
+#include <opm/simulators/flow/NewTranFluxModule.hpp>
+#include <opm/simulators/flow/OutputBlackoilModule.hpp>
+
 
 #include <tuple>
 
 namespace Opm {
 template <class TypeTag>
-class FlowProblemComp;
+class FlowProblem;
 }
 
 namespace Opm::Properties {
 
 namespace TTag {
 
-struct FlowBaseProblemComp {
+struct FlowBaseProblemBlackoil {
     using InheritsFrom = std::tuple<FlowBaseProblem>;
 };
 
 }
+
 // Set the problem property
 template<class TypeTag>
-struct Problem<TypeTag, TTag::FlowBaseProblemComp>
-{ using type = FlowProblemComp<TypeTag>; };
-
-// TODO: for the purpose of the compositional model
-template<class TypeTag, class MyTypeTag>
-struct TracerModelDef {
-    using type = UndefinedProperty;
-};
+struct Problem<TypeTag, TTag::FlowBaseProblemBlackoil>
+{ using type = FlowProblem<TypeTag>; };
 
 template<class TypeTag>
-struct TracerModelDef<TypeTag, TTag::FlowBaseProblemComp> {
-    using type = ::Opm::TracerModel<TypeTag>;
-};
+struct Model<TypeTag, TTag::FlowBaseProblemBlackoil>
+{ using type = FIBlackOilModel<TypeTag>; };
 
 // Set the material law for fluid fluxes
 template<class TypeTag>
-struct MaterialLaw<TypeTag, TTag::FlowBaseProblemComp>
+struct MaterialLaw<TypeTag, TTag::FlowBaseProblem>
 {
 private:
     using Scalar = GetPropType<TypeTag, Properties::Scalar>;
     using FluidSystem = GetPropType<TypeTag, Properties::FluidSystem>;
 
-    // using Traits = ThreePhaseMaterialTraits<Scalar,
-    //                                         /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
-    //                                         /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
-    //                                         /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
-
-    // TODO: We should be able to use FluidSystem here and using Indices to handle the active phases    
-        using Traits = ThreePhaseMaterialTraits<Scalar,
-                                            /*wettingPhaseIdx=*/ 0,
-                                            /*nonWettingPhaseIdx=*/ 1,
-                                            /*gasPhaseIdx=*/ 2>;
+    using Traits = ThreePhaseMaterialTraits<Scalar,
+                                            /*wettingPhaseIdx=*/FluidSystem::waterPhaseIdx,
+                                            /*nonWettingPhaseIdx=*/FluidSystem::oilPhaseIdx,
+                                            /*gasPhaseIdx=*/FluidSystem::gasPhaseIdx>;
 
 public:
     using EclMaterialLawManager = ::Opm::EclMaterialLawManager<Traits>;
@@ -93,10 +84,16 @@ public:
     using type = typename EclMaterialLawManager::MaterialLaw;
 };
 
-// Enable diffusion
+// Use the "velocity module" which uses the Eclipse "NEWTRAN" transmissibilities
 template<class TypeTag>
-struct EnableDiffusion<TypeTag, TTag::FlowBaseProblemComp>
-{ static constexpr bool value = false; };
+struct FluxModule<TypeTag, TTag::FlowBaseProblemBlackoil>
+{ using type = NewTranFluxModule<TypeTag>; };
+
+// Use the dummy gradient calculator in order not to do unnecessary work.
+template<class TypeTag>
+struct GradientCalculator<TypeTag, TTag::FlowBaseProblemBlackoil>
+{ using type = DummyGradientCalculator<TypeTag>; };
 
 } // namespace Opm::Properties
-#endif // OPM_FLOW_PROBLEM_COMP_PROPERTIES_HPP
+
+#endif // OPM_FLOW_BASE_PROBLEM_BLACKOIL_PROPERTIES_HPP
