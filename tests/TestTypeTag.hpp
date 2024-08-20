@@ -31,7 +31,7 @@
 #include <opm/models/utils/start.hh>
 
 #include <opm/simulators/aquifers/BlackoilAquiferModel.hpp>
-#include <opm/simulators/flow/FlowProblemProperties.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoilProperties.hpp>
 #include <opm/simulators/linalg/ISTLSolver.hpp>
 #include <opm/simulators/timestepping/EclTimeSteppingParams.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
