@@ -205,4 +205,8 @@ checkGroupConstraints(WellState<Scalar>& well_state,
 
 template class WellGroupConstraints<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class WellGroupConstraints<float>;
+#endif
+
 } // namespace Opm

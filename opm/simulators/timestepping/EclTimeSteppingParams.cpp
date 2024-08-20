@@ -53,4 +53,8 @@ void registerEclTimeSteppingParameters()
 
 template void registerEclTimeSteppingParameters<double>();
 
+#if FLOW_INSTANTIATE_FLOAT
+template void registerEclTimeSteppingParameters<float>();
+#endif
+
 } // namespace Opm

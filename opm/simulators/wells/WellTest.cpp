@@ -481,4 +481,8 @@ updateWellTestStatePhysical(const double simulation_time,
 
 template class WellTest<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class WellTest<float>;
+#endif
+
 } // namespace Opm

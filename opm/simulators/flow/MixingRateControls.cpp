@@ -302,26 +302,36 @@ updateConvectiveDRsDt_(const unsigned compressedDofIdx,
     // Also we restrict the effect of convective mixing to positive density differences
     // i.e. we only allow for fingers moving downward
 
-    Scalar co2Density = FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIndex,
-         t,p,0.0 /*=Rv*/, 0.0 /*=Rvw*/) * FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIndex);
-	Scalar factor = 1.0;
-	Scalar X = (rs - rssat * sg) / (rssat * ( 1.0 - sg));
+    Scalar co2Density =
+        FluidSystem::gasPvt().inverseFormationVolumeFactor(pvtRegionIndex,t,p,Scalar{0.0} /*=Rv*/, Scalar{0.0} /*=Rvw*/) *
+        FluidSystem::referenceDensity(FluidSystem::gasPhaseIdx, pvtRegionIndex);
+    Scalar factor = 1.0;
+    Scalar X = (rs - rssat * sg) / (rssat * ( 1.0 - sg));
     Scalar omega = 0.0;
     const Scalar pCap = Opm::abs(pg - p);
-	if ((rs >= (rssat * sg)) || (pCap < 1e-12)){
-	    if(X > Psi){
-		    factor = 0.0;
+    if ((rs >= (rssat * sg)) || (pCap < 1e-12)) {
+        if (X > Psi) {
+            factor = 0.0;
             omega = omegainn;
         }
-	} else {
-	    factor /= Xhi;
-	    deltaDensity = (saturatedDensity - co2Density);
-	}
+    } else {
+        factor /= Xhi;
+        deltaDensity = (saturatedDensity - co2Density);
+    }
     
-    convectiveDrs_[compressedDofIdx]
-        = factor * permz * rssat * max(0.0, deltaDensity) * gravity / ( std::max(sg_max - sg, 0.0) * visc * distZ * poro) + (omega/Xhi);
+    convectiveDrs_[compressedDofIdx] =
+        factor * permz * rssat * max(Scalar{0.0}, deltaDensity) *
+        gravity / ( std::max(sg_max - sg, Scalar{0.0}) *
+        visc * distZ * poro) + (omega/Xhi);
 }
 
-template class MixingRateControls<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
+#define INSTANTIATE_TYPE(T) \
+    template class MixingRateControls<BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>>;
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm

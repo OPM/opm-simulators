@@ -740,4 +740,8 @@ updateGroupIdxMap_(const std::string& group_name)
 
 template class GasLiftGroupInfo<double>;
 
+#if FLOW_INSTANTIATE_FLOAT
+template class GasLiftGroupInfo<float>;
+#endif
+
 } // namespace Opm

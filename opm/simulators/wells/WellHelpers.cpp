@@ -215,34 +215,42 @@ bool rateControlWithZeroInjTarget(const WellInjectionControls& controls,
     }
 }
 
-template class ParallelStandardWellB<double>;
-
-template<int Dim> using Vec = Dune::BlockVector<Dune::FieldVector<double,Dim>>;
-using DynVec = Dune::BlockVector<Dune::DynamicVector<double>>;
-
-#define INSTANCE(Dim) \
-    template void ParallelStandardWellB<double>::mv<Vec<Dim>,DynVec>(const Vec<Dim>&,DynVec&) const; \
-    template void ParallelStandardWellB<double>::mmv<Vec<Dim>,DynVec>(const Vec<Dim>&,DynVec&) const;
-
-INSTANCE(1)
-INSTANCE(2)
-INSTANCE(3)
-INSTANCE(4)
-INSTANCE(5)
-INSTANCE(6)
-
+template<class Scalar, int Dim>
+using Vec = Dune::BlockVector<Dune::FieldVector<Scalar,Dim>>;
+template<class Scalar>
+using DynVec = Dune::BlockVector<Dune::DynamicVector<Scalar>>;
+template<class Scalar>
+using DMatrix = Dune::DynamicMatrix<Scalar>;
 using Comm = Parallel::Communication;
-template void sumDistributedWellEntries<double,Comm>(Dune::DynamicMatrix<double>& mat,
-                                                     Dune::DynamicVector<double>& vec,
-                                                     const Comm& comm);
 
-using DMatrix = Dune::DynamicMatrix<double>;
-template DMatrix transposeDenseDynMatrix<DMatrix>(const DMatrix&);
+#define INSTANTIATE(T,Dim)                       \
+    template void ParallelStandardWellB<T>::     \
+        mv(const Vec<T,Dim>&,DynVec<T>&) const;  \
+    template void ParallelStandardWellB<T>::     \
+        mmv(const Vec<T,Dim>&,DynVec<T>&) const;
 
-template double computeHydrostaticCorrection<double>(const double,
-                                                     const double,
-                                                     const double,
-                                                     const double);
+#define INSTANTIATE_TYPE(T)                                               \
+    template class ParallelStandardWellB<T>;                              \
+    template void sumDistributedWellEntries(Dune::DynamicMatrix<T>& mat,  \
+                                            Dune::DynamicVector<T>& vec,  \
+                                            const Comm& comm);            \
+    template DMatrix<T> transposeDenseDynMatrix(const DMatrix<T>&);       \
+    template T computeHydrostaticCorrection(const T,                      \
+                                            const T,                      \
+                                            const T,                      \
+                                            const T);                     \
+    INSTANTIATE(T,1)                                                      \
+    INSTANTIATE(T,2)                                                      \
+    INSTANTIATE(T,3)                                                      \
+    INSTANTIATE(T,4)                                                      \
+    INSTANTIATE(T,5)                                                      \
+    INSTANTIATE(T,6)
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace wellhelpers
 } // namespace Opm

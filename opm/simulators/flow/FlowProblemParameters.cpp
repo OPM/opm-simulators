@@ -88,4 +88,8 @@ void registerFlowProblemParameters()
 
 template void registerFlowProblemParameters<double>();
 
+#if FLOW_INSTANTIATE_FLOAT
+template void registerFlowProblemParameters<float>();
+#endif
+
 }

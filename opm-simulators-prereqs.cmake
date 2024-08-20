@@ -24,6 +24,7 @@ set (opm-simulators_CONFIG_VAR
   HAVE_HDF5
   USE_HIP
   USE_TRACY
+  FLOW_INSTANTIATE_FLOAT
   )
 
 # dependencies
