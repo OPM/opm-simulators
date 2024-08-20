@@ -28,6 +28,7 @@
 #ifndef OPM_FLOW_PROBLEM_PROPERTIES_HPP
 #define OPM_FLOW_PROBLEM_PROPERTIES_HPP
 
+
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/thermal/EclThermalLawManager.hpp>
 

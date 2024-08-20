@@ -30,7 +30,6 @@
 #include <opm/simulators/flow/MixingRateControls.hpp>
 
 #include <opm/input/eclipse/EclipseState/EclipseState.hpp>
-#include <opm/material/fluidsystems/GenericOilGasFluidSystem.hpp>
 
 #include <algorithm>
 #include <limits>
@@ -364,10 +363,5 @@ INSTANTIATE_TYPE(double)
 #if FLOW_INSTANTIATE_FLOAT
 INSTANTIATE_TYPE(float)
 #endif
-
-// FlowGenericProblem requires the following specialization
-// TODO: Ideally, FlowGenericProblem can be more generic so that both compositional and blackoil simulation
-// can use it.
-template class MixingRateControls<GenericOilGasFluidSystem<double, 3>>;
 
 } // namespace Opm
