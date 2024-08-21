@@ -43,13 +43,7 @@
 #include <opm/material/densead/Evaluation.hpp>
 #include <opm/material/fluidmatrixinteractions/EclMaterialLawManager.hpp>
 #include <opm/material/fluidstates/CompositionalFluidState.hpp>
-#include <opm/material/fluidsystems/BlackOilFluidSystem.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/DryGasPvt.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/WetGasPvt.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/LiveOilPvt.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/DeadOilPvt.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityOilPvt.hpp>
-#include <opm/material/fluidsystems/blackoilpvt/ConstantCompressibilityWaterPvt.hpp>
+
 #include <opm/material/thermal/EclThermalLawManager.hpp>
 
 #include <opm/models/common/directionalmobility.hh>
@@ -62,7 +56,6 @@
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 #include <opm/simulators/flow/FlowProblemCompProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
-#include <opm/simulators/flow/TracerModel.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
 #include <opm/simulators/timestepping/AdaptiveTimeStepping.hpp>
@@ -161,9 +154,6 @@ class FlowProblemComp : public GetPropType<TypeTag, Properties::BaseProblem>
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
 
-    // TODO: figure out why here
-    using TracerModel = GetPropType<TypeTag, Properties::TracerModelDef>;
-    // using TracerModel = ::Opm::TracerModel<TypeTag>;
     using DirectionalMobilityPtr = Utility::CopyablePtr<DirectionalMobility<TypeTag, Evaluation>>;
 
 public:
@@ -224,12 +214,10 @@ public:
         , wellModel_(simulator)
         , aquiferModel_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
-        , tracerModel_(simulator)
     {
         const auto& vanguard = simulator.vanguard();
         enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>();
 
-        enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
         enableVtkOutput_ = Parameters::Get<Parameters::EnableVtkOutput>();
 
         this->enableTuning_ = Parameters::Get<Parameters::EnableTuning>();
@@ -328,13 +316,10 @@ public:
         readThermalParameters_();
 
         const auto& initconfig = eclState.getInitConfig();
-        tracerModel_.init(initconfig.restartRequested());
         if (initconfig.restartRequested())
             readEclRestartSolution_();
         else
             readInitialCondition_();
-
-        tracerModel_.prepareTracerBatches();
 
         updatePffDofData_();
 
@@ -500,8 +485,6 @@ public:
 
         wellModel_.beginTimeStep();
         aquiferModel_.beginTimeStep();
-        tracerModel_.beginTimeStep();
-
     }
 
     /*!
@@ -555,7 +538,6 @@ public:
 
         this->wellModel_.endTimeStep();
         this->aquiferModel_.endTimeStep();
-        this->tracerModel_.endTimeStep();
 
         // Compute flux for output
         this->model().linearizer().updateFlowsInfo();
@@ -594,9 +576,6 @@ public:
         // episode and that action block runs a UDQ assignment, then that
         // assignment would be dropped and the rest of the simulator will
         // never see its effect without this hack.
-	// TODO: comment out actionHandler_ for compositional
-        // this->actionHandler_
-        //     .evalUDQAssignments(episodeIdx, this->simulator().vanguard().udqState());
 
         this->wellModel_.endEpisode();
         this->aquiferModel_.endEpisode();
@@ -797,12 +776,6 @@ public:
 
     FlowThresholdPressure<TypeTag>& thresholdPressure()
     { return thresholdPressures_; }
-
-    const TracerModel& tracerModel() const
-    { return tracerModel_; }
-
-    TracerModel& tracerModel()
-    { return tracerModel_; }
 
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
@@ -1450,57 +1423,57 @@ public:
         return trans_mult;
     }
 
-    std::pair<BCType, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId) const
-    {
-        // TODO: we might need to empty this function for compositional
-        OPM_TIMEBLOCK_LOCAL(boundaryCondition);
-        if (!nonTrivialBoundaryConditions_) {
-            return { BCType::NONE, RateVector(0.0) };
-        }
-        FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
-        const auto& schedule = this->simulator().vanguard().schedule();
-        if (bcindex_(dir)[globalSpaceIdx] == 0) {
-            return { BCType::NONE, RateVector(0.0) };
-        }
-        if (schedule[this->episodeIndex()].bcprop.size() == 0) {
-            return { BCType::NONE, RateVector(0.0) };
-        }
-        const auto& bc = schedule[this->episodeIndex()].bcprop[bcindex_(dir)[globalSpaceIdx]];
-        if (bc.bctype!=BCType::RATE) {
-            return { bc.bctype, RateVector(0.0) };
-        }
-
-        RateVector rate = 0.0;
-        switch (bc.component) {
-        case BCComponent::OIL:
-            rate[Indices::canonicalToActiveComponentIndex(oilCompIdx)] = bc.rate;
-            break;
-        case BCComponent::GAS:
-            rate[Indices::canonicalToActiveComponentIndex(gasCompIdx)] = bc.rate;
-            break;
-        case BCComponent::WATER:
-            rate[Indices::canonicalToActiveComponentIndex(waterCompIdx)] = bc.rate;
-            break;
-        case BCComponent::SOLVENT:
-            if constexpr (!enableSolvent)
-                throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
-
-            rate[Indices::solventSaturationIdx] = bc.rate;
-            break;
-        case BCComponent::POLYMER:
-            if constexpr (!enablePolymer)
-                throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
-
-            rate[Indices::polymerConcentrationIdx] = bc.rate;
-            break;
-        case BCComponent::NONE:
-            throw std::logic_error("you need to specify the component when RATE type is set in BC");
-            break;
-        }
-        //TODO add support for enthalpy rate
-        return {bc.bctype, rate};
-	//         return { BCType::NONE, RateVector(0.0) };
-    }
+//    std::pair<BCType, RateVector> boundaryCondition(const unsigned int globalSpaceIdx, const int directionId) const
+//    {
+//        // TODO: we might need to empty this function for compositional
+//        OPM_TIMEBLOCK_LOCAL(boundaryCondition);
+//        if (!nonTrivialBoundaryConditions_) {
+//            return { BCType::NONE, RateVector(0.0) };
+//        }
+//        FaceDir::DirEnum dir = FaceDir::FromIntersectionIndex(directionId);
+//        const auto& schedule = this->simulator().vanguard().schedule();
+//        if (bcindex_(dir)[globalSpaceIdx] == 0) {
+//            return { BCType::NONE, RateVector(0.0) };
+//        }
+//        if (schedule[this->episodeIndex()].bcprop.size() == 0) {
+//            return { BCType::NONE, RateVector(0.0) };
+//        }
+//        const auto& bc = schedule[this->episodeIndex()].bcprop[bcindex_(dir)[globalSpaceIdx]];
+//        if (bc.bctype!=BCType::RATE) {
+//            return { bc.bctype, RateVector(0.0) };
+//        }
+//
+//        RateVector rate = 0.0;
+//        switch (bc.component) {
+//        case BCComponent::OIL:
+//            rate[Indices::canonicalToActiveComponentIndex(oilCompIdx)] = bc.rate;
+//            break;
+//        case BCComponent::GAS:
+//            rate[Indices::canonicalToActiveComponentIndex(gasCompIdx)] = bc.rate;
+//            break;
+//        case BCComponent::WATER:
+//            rate[Indices::canonicalToActiveComponentIndex(waterCompIdx)] = bc.rate;
+//            break;
+//        case BCComponent::SOLVENT:
+//            if constexpr (!enableSolvent)
+//                throw std::logic_error("solvent is disabled and you're trying to add solvent to BC");
+//
+//            rate[Indices::solventSaturationIdx] = bc.rate;
+//            break;
+//        case BCComponent::POLYMER:
+//            if constexpr (!enablePolymer)
+//                throw std::logic_error("polymer is disabled and you're trying to add polymer to BC");
+//
+//            rate[Indices::polymerConcentrationIdx] = bc.rate;
+//            break;
+//        case BCComponent::NONE:
+//            throw std::logic_error("you need to specify the component when RATE type is set in BC");
+//            break;
+//        }
+//        //TODO add support for enthalpy rate
+//        return {bc.bctype, rate};
+//	//         return { BCType::NONE, RateVector(0.0) };
+//    }
 
 
 
@@ -1511,10 +1484,7 @@ public:
         serializer(drift_);
         serializer(wellModel_);
         serializer(aquiferModel_);
-        serializer(tracerModel_);
         serializer(*materialLawManager_);
-        // TODO: comment this out for compositional
-        // serializer(*eclWriter_);
     }
 private:
     Implementation& asImp_()
@@ -1533,18 +1503,15 @@ protected:
 
 
         // deal with DRSDT and DRVDT
-        const bool invalidateDRDT = this->asImp_().updateCompositionChangeLimits_();
+        // const bool invalidateDRDT = this->asImp_().updateCompositionChangeLimits_();
 
-        // the derivatives may have change
+        // the derivatives may have changed
         bool invalidateIntensiveQuantities
-            = invalidateFromMaxWaterSat || invalidateFromMinPressure || invalidateFromHyst || invalidateFromMaxOilSat || invalidateDRDT;
+            = invalidateFromMaxWaterSat || invalidateFromMinPressure || invalidateFromHyst || invalidateFromMaxOilSat;// || invalidateDRDT;
         if (invalidateIntensiveQuantities) {
             OPM_TIMEBLOCK(beginTimeStepInvalidateIntensiveQuantities);
             this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         }
-
-//        if constexpr (getPropValue<TypeTag, Properties::EnablePolymer>())
-//            updateMaxPolymerAdsorption_();
 
         updateRockCompTransMultVal_();
     }
@@ -2173,7 +2140,6 @@ private:
     bool enableVtkOutput_;
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
-    TracerModel tracerModel_;
 
     template<class T>
     struct BCData
