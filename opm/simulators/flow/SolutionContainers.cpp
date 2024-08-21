@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Opm::FlowProblem
+ * \copydoc Opm::FlowProblemBlackoil
  */
 #include <config.h>
 #include <opm/simulators/flow/SolutionContainers.hpp>

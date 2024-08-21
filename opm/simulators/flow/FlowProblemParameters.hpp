@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Opm::FlowProblem
+ * \copydoc Opm::FlowProblemBlackoil
  */
 #ifndef OPM_FLOW_PROBLEM_PARAMETERS_HPP
 #define OPM_FLOW_PROBLEM_PARAMETERS_HPP

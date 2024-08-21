@@ -25,7 +25,7 @@
 /*!
  * \file
  *
- * \copydoc Opm::FlowProblem
+ * \copydoc Opm::FlowProblemBlackoil
  */
 #ifndef OPM_FLOW_PROBLEM_HPP
 #define OPM_FLOW_PROBLEM_HPP
@@ -109,7 +109,7 @@ namespace Opm {
  *        commercial ECLiPSE simulator.
  */
 template <class TypeTag>
-class FlowProblem : public GetPropType<TypeTag, Properties::BaseProblem>
+class FlowProblemBlackoil : public GetPropType<TypeTag, Properties::BaseProblem>
                   , public FlowGenericProblem<GetPropType<TypeTag, Properties::GridView>,
                                               GetPropType<TypeTag, Properties::FluidSystem>>
 {
@@ -245,7 +245,7 @@ public:
     /*!
      * \copydoc Doxygen::defaultProblemConstructor
      */
-    FlowProblem(Simulator& simulator)
+    FlowProblemBlackoil(Simulator& simulator)
         : ParentType(simulator)
         , BaseType(simulator.vanguard().eclState(),
                    simulator.vanguard().schedule(),
@@ -976,7 +976,7 @@ public:
     /*!
      * \copydoc FvBaseMultiPhaseProblem::porosity
      *
-     * For the FlowProblem, this method is identical to referencePorosity(). The intensive
+     * For the FlowProblemBlackoil, this method is identical to referencePorosity(). The intensive
      * quantities object may apply various multipliers (e.g. ones which model rock
      * compressibility and water induced rock compaction) to it which depend on the
      * current physical conditions.
@@ -1937,7 +1937,7 @@ protected:
             return false;
         }
 
-        this->updateProperty_("FlowProblem::updateCompositionChangeLimits_()) failed:",
+        this->updateProperty_("FlowProblemBlackoil::updateCompositionChangeLimits_()) failed:",
                               [this,episodeIdx,active](unsigned compressedDofIdx,
                                                        const IntensiveQuantities& iq)
                               {
@@ -1965,7 +1965,7 @@ protected:
 
         // we use VAPPARS
         if (this->vapparsActive(episodeIdx)) {
-            this->updateProperty_("FlowProblem::updateMaxOilSaturation_() failed:",
+            this->updateProperty_("FlowProblemBlackoil::updateMaxOilSaturation_() failed:",
                                   [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                                   {
                                       this->updateMaxOilSaturation_(compressedDofIdx,iq);
@@ -1998,7 +1998,7 @@ protected:
             return false;
 
         this->maxWaterSaturation_[/*timeIdx=*/1] = this->maxWaterSaturation_[/*timeIdx=*/0];
-        this->updateProperty_("FlowProblem::updateMaxWaterSaturation_() failed:",
+        this->updateProperty_("FlowProblemBlackoil::updateMaxWaterSaturation_() failed:",
                               [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                               {
                                   this->updateMaxWaterSaturation_(compressedDofIdx,iq);
@@ -2028,7 +2028,7 @@ protected:
         if (this->minRefPressure_.empty())
             return false;
 
-        this->updateProperty_("FlowProblem::updateMinPressure_() failed:",
+        this->updateProperty_("FlowProblemBlackoil::updateMinPressure_() failed:",
                               [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                               {
                                   this->updateMinPressure_(compressedDofIdx,iq);
@@ -2557,7 +2557,7 @@ protected:
 
         // we need to update the hysteresis data for _all_ elements (i.e., not just the
         // interior ones) to avoid desynchronization of the processes in the parallel case!
-        this->updateProperty_("FlowProblem::updateHysteresis_() failed:",
+        this->updateProperty_("FlowProblemBlackoil::updateHysteresis_() failed:",
                               [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                               {
                                   materialLawManager_->updateHysteresis(iq.fluidState(), compressedDofIdx);
@@ -2577,7 +2577,7 @@ protected:
     void updateMaxPolymerAdsorption_()
     {
         // we need to update the max polymer adsoption data for all elements
-        this->updateProperty_("FlowProblem::updateMaxPolymerAdsorption_() failed:",
+        this->updateProperty_("FlowProblemBlackoil::updateMaxPolymerAdsorption_() failed:",
                               [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
                               {
                                   this->updateMaxPolymerAdsorption_(compressedDofIdx,iq);

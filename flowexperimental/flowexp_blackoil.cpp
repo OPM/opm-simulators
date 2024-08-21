@@ -23,7 +23,7 @@
 #include <opm/models/discretization/common/tpfalinearizer.hh>
 #include <opm/models/utils/parametersystem.hh>
 #include <opm/simulators/flow/Main.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 
 #include "BlackOilIntensiveQuantitiesGlobalIndex.hpp"
 #include "FIBlackOilModelNoCache.hpp"
