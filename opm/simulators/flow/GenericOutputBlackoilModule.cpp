@@ -768,7 +768,7 @@ setRestart(const data::Solution& sol,
 
     if (!rswSol_.empty()) {
         if (sol.has("RSWSOL"))
-            rswSol_[elemIdx] = sol.data<Scalar>("RSWSOL")[globalDofIndex];
+            rswSol_[elemIdx] = sol.data<double>("RSWSOL")[globalDofIndex];
 
     }
 
@@ -1660,6 +1660,15 @@ assignGlobalFieldsToSolution(data::Solution& sol)
     }
 }
 
-template class GenericOutputBlackoilModule<BlackOilFluidSystem<double,BlackOilDefaultIndexTraits>>;
+template<class T> using FS = BlackOilFluidSystem<T,BlackOilDefaultIndexTraits>;
+
+#define INSTANTIATE_TYPE(T) \
+    template class GenericOutputBlackoilModule<FS<T>>;
+
+INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm

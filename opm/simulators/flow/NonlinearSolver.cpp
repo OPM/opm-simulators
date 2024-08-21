@@ -123,22 +123,26 @@ void registerNonlinearParameters()
 template<class Scalar, int Size>
 using BV = Dune::BlockVector<Dune::FieldVector<Scalar,Size>>;
 
-#define INSTANTIATE(T,Size) \
-    template void stabilizeNonlinearUpdate<BV<T,Size>,T>(BV<T,Size>&, BV<T,Size>&, \
-                                                         const T, NonlinearRelaxType);
+#define INSTANTIATE(T,Size)                                                 \
+    template void stabilizeNonlinearUpdate(BV<T,Size>&, BV<T,Size>&,        \
+                                           const T, NonlinearRelaxType);
 
-#define INSTANTIATE_TYPE(T) \
-    template void detectOscillations(const std::vector<std::vector<T>>&, \
-                                     const int, const int, const T, const int, \
-                                     bool&, bool&); \
-    template void registerNonlinearParameters<T>(); \
-    INSTANTIATE(T,1) \
-    INSTANTIATE(T,2) \
-    INSTANTIATE(T,3) \
-    INSTANTIATE(T,4) \
-    INSTANTIATE(T,5) \
+#define INSTANTIATE_TYPE(T)                                                 \
+    template void detectOscillations(const std::vector<std::vector<T>>&,    \
+                                     const int, const int, const T,         \
+                                     const int, bool&, bool&);              \
+    template void registerNonlinearParameters<T>();                         \
+    INSTANTIATE(T,1)                                                        \
+    INSTANTIATE(T,2)                                                        \
+    INSTANTIATE(T,3)                                                        \
+    INSTANTIATE(T,4)                                                        \
+    INSTANTIATE(T,5)                                                        \
     INSTANTIATE(T,6)
 
 INSTANTIATE_TYPE(double)
+
+#if FLOW_INSTANTIATE_FLOAT
+INSTANTIATE_TYPE(float)
+#endif
 
 } // namespace Opm::detail
