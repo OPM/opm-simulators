@@ -32,6 +32,9 @@ class PreconditionerWithUpdate : public Preconditioner<X, Y>
 {
 public:
     virtual void update() = 0;
+
+    // Force derived classes to define if preconditioner has perfect update
+    virtual bool hasPerfectUpdate() const = 0;
 };
 
 template <class OriginalPreconditioner>
@@ -71,6 +74,10 @@ public:
     // The update() function does nothing for a wrapped preconditioner.
     virtual void update() override
     {
+    }
+
+    virtual bool hasPerfectUpdate() const override {
+        return true;
     }
 
 private:
@@ -160,6 +167,10 @@ public:
     void update() override
     {
         orig_precond_ = preconditioner_maker_->make();
+    }
+
+    virtual bool hasPerfectUpdate() const override {
+        return true;
     }
 
 private:

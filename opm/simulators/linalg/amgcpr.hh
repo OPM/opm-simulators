@@ -169,6 +169,10 @@ namespace Dune
         return category_;
       }
 
+      virtual bool hasPerfectUpdate() const override {
+          return false;
+      }
+
       /** \copydoc Preconditioner::post */
       void post(Domain& x);
 

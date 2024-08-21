@@ -123,6 +123,10 @@ public:
         return m_underlyingPreconditioner;
     }
 
+    virtual bool hasPerfectUpdate() const override {
+        return m_underlyingPreconditioner->hasPerfectUpdate();
+    }
+
 private:
     //! \brief the underlying preconditioner to use
     std::shared_ptr<CudaPreconditionerType> m_underlyingPreconditioner;

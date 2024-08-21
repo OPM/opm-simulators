@@ -113,6 +113,10 @@ public:
         return m_preconditioner;
     }
 
+    virtual bool hasPerfectUpdate() const override {
+        return true;
+    }
+
 
 private:
     //! \brief a sequential preconditioner
