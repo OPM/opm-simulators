@@ -54,25 +54,14 @@
 
 #include <opm/models/common/directionalmobility.hh>
 #include <opm/models/utils/pffgridvector.hh>
-#include <opm/models/blackoil/blackoilmodel.hh>
-#include <opm/models/blackoil/blackoilconvectivemixingmodule.hh>
 #include <opm/models/discretization/ecfv/ecfvdiscretization.hh>
-#include <opm/models/blackoil/blackoillocalresidualtpfa.hh>
-
-#include <opm/output/eclipse/EclipseIO.hpp>
 
 #include <opm/simulators/flow/ActionHandler.hpp>
 #include <opm/simulators/flow/BaseAquiferModel.hpp>
 #include <opm/simulators/flow/CpGridVanguard.hpp>
-#include <opm/simulators/flow/DummyGradientCalculator.hpp>
-#include <opm/simulators/flow/EclWriter.hpp>
-#include <opm/simulators/flow/EquilInitializer.hpp>
-#include <opm/simulators/flow/FIBlackoilModel.hpp>
 #include <opm/simulators/flow/FlowGenericProblem.hpp>
 #include <opm/simulators/flow/FlowProblemCompProperties.hpp>
 #include <opm/simulators/flow/FlowThresholdPressure.hpp>
-#include <opm/simulators/flow/NewTranFluxModule.hpp>
-#include <opm/simulators/flow/OutputBlackoilModule.hpp>
 #include <opm/simulators/flow/TracerModel.hpp>
 #include <opm/simulators/flow/Transmissibility.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
@@ -86,10 +75,6 @@
 #include <opm/utility/CopyablePtr.hpp>
 
 #include <opm/common/OpmLog/OpmLog.hpp>
-
-#if HAVE_DAMARIS
-#include <opm/simulators/flow/DamarisWriter.hpp>
-#endif
 
 #include <algorithm>
 #include <functional>
@@ -143,9 +128,6 @@ class FlowProblemComp : public GetPropType<TypeTag, Properties::BaseProblem>
     enum { enableEnergy = getPropValue<TypeTag, Properties::EnableEnergy>() };
     enum { enableDiffusion = getPropValue<TypeTag, Properties::EnableDiffusion>() };
     enum { enableDispersion = getPropValue<TypeTag, Properties::EnableDispersion>() };
-    enum { enableConvectiveMixing = getPropValue<TypeTag, Properties::EnableConvectiveMixing>() };
-    enum { enableThermalFluxBoundaries = getPropValue<TypeTag, Properties::EnableThermalFluxBoundaries>() };
-    enum { enableApiTracking = getPropValue<TypeTag, Properties::EnableApiTracking>() };
     enum { enableMICP = getPropValue<TypeTag, Properties::EnableMICP>() };
     enum { gasPhaseIdx = FluidSystem::gasPhaseIdx };
     enum { oilPhaseIdx = FluidSystem::oilPhaseIdx };
@@ -173,28 +155,11 @@ class FlowProblemComp : public GetPropType<TypeTag, Properties::BaseProblem>
     using WellModel = GetPropType<TypeTag, Properties::WellModel>;
     using AquiferModel = GetPropType<TypeTag, Properties::AquiferModel>;
 
-    using SolventModule = BlackOilSolventModule<TypeTag>;
-    using PolymerModule = BlackOilPolymerModule<TypeTag>;
-    using FoamModule = BlackOilFoamModule<TypeTag>;
-    using BrineModule = BlackOilBrineModule<TypeTag>;
-    using ExtboModule = BlackOilExtboModule<TypeTag>;
-    using MICPModule = BlackOilMICPModule<TypeTag>;
-    using DispersionModule = BlackOilDispersionModule<TypeTag, enableDispersion>;
-    using DiffusionModule = BlackOilDiffusionModule<TypeTag, enableDiffusion>;
-    using ConvectiveMixingModule = BlackOilConvectiveMixingModule<TypeTag, enableConvectiveMixing>;
-    using ModuleParams = typename BlackOilLocalResidualTPFA<TypeTag>::ModuleParams;
-
     // TODO: for compositional
     using InitialFluidState = CompositionalFluidState<Scalar, FluidSystem>;
-    // using InitialFluidState = typename EquilInitializer<TypeTag>::ScalarFluidState;
 
     using Toolbox = MathToolbox<Evaluation>;
     using DimMatrix = Dune::FieldMatrix<Scalar, dimWorld, dimWorld>;
-
-    using EclWriterType = EclWriter<TypeTag>;
-#if HAVE_DAMARIS
-    using DamarisWriterType = DamarisWriter<TypeTag>;
-#endif
 
     // TODO: figure out why here
     using TracerModel = GetPropType<TypeTag, Properties::TracerModelDef>;
@@ -216,10 +181,6 @@ public:
     static void registerParameters()
     {
         ParentType::registerParameters();
-//         EclWriterType::registerParameters();
-// #if HAVE_DAMARIS
-//         DamarisWriterType::registerParameters();
-// #endif
 
         VtkTracerModule<TypeTag>::registerParameters();
         registerFlowProblemParameters<Scalar>();
@@ -264,32 +225,8 @@ public:
         , aquiferModel_(simulator)
         , pffDofData_(simulator.gridView(), this->elementMapper())
         , tracerModel_(simulator)
-        // , actionHandler_(simulator.vanguard().eclState(),
-        //                  simulator.vanguard().schedule(),
-        //                  simulator.vanguard().actionState(),
-        //                  simulator.vanguard().summaryState(),
-        //                  wellModel_,
-        //                  simulator.vanguard().grid().comm())
     {
-        // this->model().addOutputModule(new VtkTracerModule<TypeTag>(simulator));
-        // Tell the black-oil extensions to initialize their internal data structures
         const auto& vanguard = simulator.vanguard();
-        SolventModule::initFromState(vanguard.eclState(), vanguard.schedule());
-        PolymerModule::initFromState(vanguard.eclState());
-        FoamModule::initFromState(vanguard.eclState());
-        BrineModule::initFromState(vanguard.eclState());
-        ExtboModule::initFromState(vanguard.eclState());
-        MICPModule::initFromState(vanguard.eclState());
-        DispersionModule::initFromState(vanguard.eclState());
-        DiffusionModule::initFromState(vanguard.eclState());
-
-        // create the ECL writer
-        // eclWriter_ = std::make_unique<EclWriterType>(simulator);
-#if HAVE_DAMARIS
-        // create Damaris writer
-        // damarisWriter_ = std::make_unique<DamarisWriterType>(simulator);
-        // enableDamarisOutput_ = Parameters::Get<Parameters::EnableDamarisOutput>();
-#endif
         enableDriftCompensation_ = Parameters::Get<Parameters::EnableDriftCompensation>();
 
         enableEclOutput_ = Parameters::Get<Parameters::EnableEclOutput>();
@@ -338,26 +275,6 @@ public:
         // TODO: we call this for compostional
         finishTransmissibilities();
 
-        // calculating the TRANX, TRANY, TRANZ and NNC for output purpose
-        // for parallel running, it is based on global trans_
-        // for serial running, it is based on the transmissibilities_
-        // we try to avoid for the parallel running, has both global trans_ and transmissibilities_ allocated at the same time
-        /* if (enableEclOutput_) {
-            if (simulator.vanguard().grid().comm().size() > 1) {
-                if (simulator.vanguard().grid().comm().rank() == 0)
-                    // eclWriter_->setTransmissibilities(&simulator.vanguard().globalTransmissibility());
-                    int a;
-            } else {
-            //     eclWriter_->setTransmissibilities(&simulator.problem().eclTransmissibilities());
-            }
-
-            std::function<unsigned int(unsigned int)> equilGridToGrid = [&simulator](unsigned int i) {
-                return simulator.vanguard().gridEquilIdxToGridIdx(i);
-            };
-            // eclWriter_->extractOutputTransAndNNC(equilGridToGrid);
-        }
-        simulator.vanguard().releaseGlobalTransmissibilities(); */
-
         // TODO: test whether we need to remove the following
         const auto& eclState = simulator.vanguard().eclState();
         const auto& schedule = simulator.vanguard().schedule();
@@ -392,12 +309,6 @@ public:
 
         this->initFluidSystem_();
 
-        // deal with DRSDT
-	// TODO: remove this due to compositional
-        // this->mixControls_.init(this->model().numGridDof(),
-        //                         this->episodeIndex(),
-        //                         eclState.runspec().tabdims().getNumPVTTables());
-
         if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx) &&
             FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)) {
             this->maxOilSaturation_.resize(this->model().numGridDof(), 0.0);
@@ -415,14 +326,6 @@ public:
                                   });
         readMaterialParameters_();
         readThermalParameters_();
-
-        // write the static output files (EGRID, INIT)
-	// TODO: we do not do eclWriter_ for compostional yet
-        // if (enableEclOutput_) {
-        //     eclWriter_->writeInit();
-        // }
-
-        // finishTransmissibilities();
 
         const auto& initconfig = eclState.getInitConfig();
         tracerModel_.init(initconfig.restartRequested());
@@ -569,23 +472,6 @@ public:
             // if TUNING is enabled, also limit the time step size after a tuning event to TSINIT
             dt = std::min(dt, this->initialTimeStepSize_);
         simulator.setTimeStepSize(dt);
-
-        // Evaluate UDQ assign statements to make sure the settings are
-        // available as UDA controls for the current report step.
-	// TODO: we do not do actionHandler_ for compostional yet
-        // actionHandler_.evalUDQAssignments(episodeIdx, simulator.vanguard().udqState());
-
-        // TODO: we check whether we have to remote the following
-//        if (episodeIdx >= 0) {
-//            const auto& oilVap = schedule[episodeIdx].oilvap();
-//            if (oilVap.getType() == OilVaporizationProperties::OilVaporization::VAPPARS) {
-//                FluidSystem::setVapPars(oilVap.vap1(), oilVap.vap2());
-//            } else {
-//                FluidSystem::setVapPars(0.0, 0.0);
-//            }
-//        }
-
-        ConvectiveMixingModule::beginEpisode(simulator.vanguard().eclState(), simulator.vanguard().schedule(), episodeIdx, moduleParams_.convectiveMixingModuleParam);
     }
 
     /*!
@@ -687,50 +573,6 @@ public:
                 }
             }
         }
-
-        const bool isSubStep = !this->simulator().episodeWillBeOver();
-
-        // For CpGrid with LGRs, ecl/vtk output is not supported yet.
-	// TODO: disable eclWriter_ for the purpose of compostional
-        // const auto& grid = this->simulator().vanguard().gridView().grid();
-
-        /* using GridType = std::remove_cv_t<std::remove_reference_t<decltype(grid)>>;
-        constexpr bool isCpGrid = std::is_same_v<GridType, Dune::CpGrid>;
-        if (!isCpGrid || (grid.maxLevel() == 0)) {
-            this->eclWriter_->evalSummaryState(isSubStep);
-        } */
-	 
-	// TODO: check whether we need to comment out the following block
-//        {
-//            OPM_TIMEBLOCK(applyActions);
-//
-//            const int episodeIdx = this->episodeIndex();
-//
-//            // Re-ordering in case of Alugrid
-//            this->actionHandler_
-//                .applyActions(episodeIdx, simulator.time() + simulator.timeStepSize(),
-//                              [this](const bool global)
-//            {
-//                using TransUpdateQuantities = typename Vanguard::TransmissibilityType::TransUpdateQuantities;
-//                this->transmissibilities_
-//                    .update(global,  TransUpdateQuantities::All, [&vg = this->simulator().vanguard()]
-//                            (const unsigned int i)
-//                    {
-//                        return vg.gridIdxToEquilGridIdx(i);
-//                    });
-//            });
-//        }
-
-        // Deal with "clogging" for the MICP model
-        if constexpr (enableMICP) {
-            auto& model = this->model();
-            const auto& residual = model.linearizer().residual();
-
-            for (unsigned globalDofIdx = 0; globalDofIdx < residual.size(); ++globalDofIdx) {
-                auto& phi = this->referencePorosity_[/*timeIdx=*/1][globalDofIdx];
-                MICPModule::checkCloggingMICP(model, phi, globalDofIdx);
-            }
-        }
     }
 
     /*!
@@ -785,30 +627,10 @@ public:
             this->simulator().episodeWillBeOver()) {
             ParentType::writeOutput(verbose);
         }
-
-//        bool isSubStep = !this->simulator().episodeWillBeOver();
-
-//        data::Solution localCellData = {};
-	// TODO: comment out Damaris related for compositional
-/* #if HAVE_DAMARIS
-        // N.B. the Damaris output has to be done before the ECL output as the ECL one 
-        // does all kinds of std::move() relocation of data
-        if (enableDamarisOutput_) {
-            damarisWriter_->writeOutput(localCellData, isSubStep) ;
-        }
-#endif */
-        // TODO: comment out the eclWriter related for compositional
-        // if (enableEclOutput_){
-        //     eclWriter_->writeOutput(std::move(localCellData), timer, isSubStep);
-        // }
     }
 
     void finalizeOutput() {
         OPM_TIMEBLOCK(finalizeOutput);
-        // this will write all pending output to disk
-        // to avoid corruption of output files
-	// TODO: comment out eclWriter related for compositional
-        // eclWriter_.reset();
     }
 
 
@@ -1222,37 +1044,8 @@ public:
                   unsigned spaceIdx,
                   unsigned timeIdx) const
     {
-//        OPM_TIMEBLOCK_LOCAL(eclProblemBoundary);
-//        if (!context.intersection(spaceIdx).boundary())
-//            return;
-//
-//        if constexpr (!enableEnergy || !enableThermalFluxBoundaries)
-//            values.setNoFlow();
-//        else {
-//            // in the energy case we need to specify a non-trivial boundary condition
-//            // because the geothermal gradient needs to be maintained. for this, we
-//            // simply assume the initial temperature at the boundary and specify the
-//            // thermal flow accordingly. in this context, "thermal flow" means energy
-//            // flow due to a temerature gradient while assuming no-flow for mass
-//            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
-//            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
-//            values.setThermalFlow(context, spaceIdx, timeIdx, initialFluidStates_[globalDofIdx]);
-//        }
-//
-//        if (nonTrivialBoundaryConditions()) {
-//            unsigned indexInInside  = context.intersection(spaceIdx).indexInInside();
-//            unsigned interiorDofIdx = context.interiorScvIndex(spaceIdx, timeIdx);
-//            unsigned globalDofIdx = context.globalSpaceIndex(interiorDofIdx, timeIdx);
-//            unsigned pvtRegionIdx = pvtRegionIndex(context, spaceIdx, timeIdx);
-//            const auto [type, massrate] = boundaryCondition(globalDofIdx, indexInInside);
-//            if (type == BCType::THERMAL)
-//                values.setThermalFlow(context, spaceIdx, timeIdx, boundaryFluidState(globalDofIdx, indexInInside));
-//            else if (type == BCType::FREE || type == BCType::DIRICHLET)
-//                values.setFreeFlow(context, spaceIdx, timeIdx, boundaryFluidState(globalDofIdx, indexInInside));
-//            else if (type == BCType::RATE)
-//                values.setMassRate(massrate, pvtRegionIdx);
-//        }
     }
+
 
     /*!
      * \brief Returns an element's historic maximum oil phase saturation that was
@@ -1286,49 +1079,6 @@ public:
             return;
 
         this->maxOilSaturation_[globalDofIdx] = value;
-    }
-
-    /*!
-     * \brief Returns the maximum value of the gas dissolution factor at the current time
-     *        for a given degree of freedom.
-     */
-    Scalar maxGasDissolutionFactor(unsigned timeIdx, unsigned globalDofIdx) const
-    {
-        // TODO: comment out mixControls_ related for compositional
-        // return this->mixControls_.maxGasDissolutionFactor(timeIdx, globalDofIdx,
-        //                                                   this->episodeIndex(),
-        //                                                   this->pvtRegionIndex(globalDofIdx));
-    }
-
-    /*!
-     * \brief Returns the maximum value of the oil vaporization factor at the current
-     *        time for a given degree of freedom.
-     */
-    Scalar maxOilVaporizationFactor(unsigned timeIdx, unsigned globalDofIdx) const
-    {
-        // TODO: comment out mixControls_ related for compositional
-        // return this->mixControls_.maxOilVaporizationFactor(timeIdx, globalDofIdx,
-        //                                                    this->episodeIndex(),
-        //                                                    this->pvtRegionIndex(globalDofIdx));
-    }
-
-    /*!
-     * \brief Return if the storage term of the first iteration is identical to the storage
-     *        term for the solution of the previous time step.
-     *
-     * For quite technical reasons, the storage term cannot be recycled if either DRSDT
-     * or DRVDT are active. Nor if the porosity is changes between timesteps
-     * using a pore volume multiplier (i.e., poreVolumeMultiplier() != 1.0)
-     */
-    bool recycleFirstIterationStorage() const
-    {
-	// TODO: comment out mixControls_ related for compositional
-        // int episodeIdx = this->episodeIndex();
-        // return !this->mixControls_.drsdtActive(episodeIdx) &&
-        //        !this->mixControls_.drvdtActive(episodeIdx) &&
-        //        this->rockCompPoroMultWc_.empty() &&
-        //        this->rockCompPoroMult_.empty();
-        return true;
     }
 
     /*!
@@ -1390,46 +1140,6 @@ public:
         fs.setLvalue(Ltmp);
 
         values.assignNaive(fs);
-
-        // initialFluidState(fs, context, spaceIdx, timeIdx);
-        // values.assignNaive(initialFluidStates_[globalDofIdx]);
-
-        // TODO: commenting out the following one to use the one above
-	/* 
-	unsigned globalDofIdx = context.globalSpaceIndex(spaceIdx, timeIdx);
-
-        values.setPvtRegionIndex(pvtRegionIndex(context, spaceIdx, timeIdx));
-        values.assignNaive(initialFluidStates_[globalDofIdx]);
-
-        SolventModule::assignPrimaryVars(values,
-                                         enableSolvent ? this->solventSaturation_[globalDofIdx] : 0.0,
-                                         enableSolvent ? this->solventRsw_[globalDofIdx] : 0.0);
-
-        if constexpr (enablePolymer)
-            values[Indices::polymerConcentrationIdx] = this->polymer_.concentration[globalDofIdx];
-
-        if constexpr (enablePolymerMolarWeight)
-            values[Indices::polymerMoleWeightIdx]= this->polymer_.moleWeight[globalDofIdx];
-
-        if constexpr (enableBrine) {
-            if (enableSaltPrecipitation && values.primaryVarsMeaningBrine() == PrimaryVariables::BrineMeaning::Sp) {
-                values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltSaturation();
-            }
-            else {
-                values[Indices::saltConcentrationIdx] = initialFluidStates_[globalDofIdx].saltConcentration();
-            }
-        }
-
-        if constexpr (enableMICP){
-            values[Indices::microbialConcentrationIdx] = this->micp_.microbialConcentration[globalDofIdx];
-            values[Indices::oxygenConcentrationIdx]= this->micp_.oxygenConcentration[globalDofIdx];
-            values[Indices::ureaConcentrationIdx]= this->micp_.ureaConcentration[globalDofIdx];
-            values[Indices::calciteConcentrationIdx]= this->micp_.calciteConcentration[globalDofIdx];
-            values[Indices::biofilmConcentrationIdx]= this->micp_.biofilmConcentration[globalDofIdx];
-        }
-
-        values.checkDefined();
-	*/
     }
 
     /*!
@@ -1461,11 +1171,6 @@ public:
 
         aquiferModel_.initialSolutionApplied();
 
-        // TODO: comment out the eclWriter_ related for compostional
-        /* if (this->simulator().episodeIndex() == 0) {
-            eclWriter_->writeInitialFIPReport();
-        }
-	*/
 
         const bool invalidateFromHyst = updateHysteresis_();
         if (invalidateFromHyst) {
@@ -1516,99 +1221,6 @@ public:
                           unsigned globalDofIdx,
                           unsigned timeIdx) const
     {
-	// TODO: we might need to make this function empty for compositional
-//        aquiferModel_.addToSource(rate, globalDofIdx, timeIdx);
-//
-//        // Add source term from deck
-//        const auto& source = this->simulator().vanguard().schedule()[this->episodeIndex()].source();
-//        std::array<int,3> ijk;
-//        this->simulator().vanguard().cartesianCoordinate(globalDofIdx, ijk);
-//
-//        if (source.hasSource(ijk)) {
-//            const int pvtRegionIdx = this->pvtRegionIndex(globalDofIdx);
-//            static std::array<SourceComponent, 3> sc_map = {SourceComponent::WATER, SourceComponent::OIL, SourceComponent::GAS};
-//            static std::array<int, 3> phidx_map = {FluidSystem::waterPhaseIdx, FluidSystem::oilPhaseIdx, FluidSystem::gasPhaseIdx};
-//            static std::array<int, 3> cidx_map = {waterCompIdx, oilCompIdx, gasCompIdx};
-//
-//            for (unsigned i = 0; i < phidx_map.size(); ++i) {
-//                const auto phaseIdx = phidx_map[i];
-//                const auto sourceComp = sc_map[i];
-//                const auto compIdx = cidx_map[i];
-//                if (!FluidSystem::phaseIsActive(phaseIdx)) {
-//                    continue;
-//                }
-//                Scalar mass_rate = source.rate({ijk, sourceComp}) / this->model().dofTotalVolume(globalDofIdx);
-//                if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
-//                    mass_rate /= FluidSystem::referenceDensity(phaseIdx, pvtRegionIdx);
-//                }
-//                rate[Indices::canonicalToActiveComponentIndex(compIdx)] += mass_rate;
-//            }
-//
-//            if constexpr (enableSolvent) {
-//                Scalar mass_rate = source.rate({ijk, SourceComponent::SOLVENT}) / this->model().dofTotalVolume(globalDofIdx);
-//                if constexpr (getPropValue<TypeTag, Properties::BlackoilConserveSurfaceVolume>()) {
-//                    const auto& solventPvt = SolventModule::solventPvt();
-//                    mass_rate /= solventPvt.referenceDensity(pvtRegionIdx);
-//                }
-//                rate[Indices::contiSolventEqIdx] += mass_rate;
-//            }
-//            if constexpr (enablePolymer) {
-//                rate[Indices::polymerConcentrationIdx] += source.rate({ijk, SourceComponent::POLYMER}) / this->model().dofTotalVolume(globalDofIdx);
-//            }
-//            if constexpr (enableEnergy) {
-//                for (unsigned i = 0; i < phidx_map.size(); ++i) {
-//                    const auto phaseIdx = phidx_map[i];
-//                    if (!FluidSystem::phaseIsActive(phaseIdx)) {
-//                        continue;
-//                    }
-//                    const auto sourceComp = sc_map[i];
-//                    if (source.hasHrate({ijk, sourceComp})) {
-//                        rate[Indices::contiEnergyEqIdx] += source.hrate({ijk, sourceComp}) / this->model().dofTotalVolume(globalDofIdx);
-//                    } else {
-//                        const auto& intQuants = this->simulator().model().intensiveQuantities(globalDofIdx, /*timeIdx*/ 0);
-//                        auto fs = intQuants.fluidState();
-//                        // if temperature is not set, use cell temperature as default
-//                        if (source.hasTemperature({ijk, sourceComp})) {
-//                            Scalar temperature = source.temperature({ijk, sourceComp});
-//                            fs.setTemperature(temperature);
-//                        }
-//                        const auto& h = FluidSystem::enthalpy(fs, phaseIdx, pvtRegionIdx);
-//                        Scalar mass_rate = source.rate({ijk, sourceComp})/ this->model().dofTotalVolume(globalDofIdx);
-//                        Scalar energy_rate = getValue(h)*mass_rate;
-//                        rate[Indices::contiEnergyEqIdx] += energy_rate;
-//                    }
-//                }
-//            }
-//        }
-//
-//        // if requested, compensate systematic mass loss for cells which were "well
-//        // behaved" in the last time step
-//        // Note that we don't allow for drift compensation if there are no active wells.
-//        const bool compensateDrift = wellModel_.wellsActive();
-//        if (enableDriftCompensation_ && compensateDrift) {
-//            const auto& simulator = this->simulator();
-//            const auto& model = this->model();
-//
-//            // we use a lower tolerance for the compensation too
-//            // assure the added drift from the last step does not
-//            // cause convergence issues on the current step
-//            Scalar maxCompensation = model.newtonMethod().tolerance()/10;
-//            Scalar poro = this->porosity(globalDofIdx, timeIdx);
-//            Scalar dt = simulator.timeStepSize();
-//            EqVector dofDriftRate = drift_[globalDofIdx];
-//            dofDriftRate /= dt*model.dofTotalVolume(globalDofIdx);
-//
-//            // restrict drift compensation to the CNV tolerance
-//            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx) {
-//                Scalar cnv = std::abs(dofDriftRate[eqIdx])*dt*model.eqWeight(globalDofIdx, eqIdx)/poro;
-//                if (cnv > maxCompensation) {
-//                    dofDriftRate[eqIdx] *= maxCompensation/cnv;
-//                }
-//            }
-//
-//            for (unsigned eqIdx = 0; eqIdx < numEq; ++ eqIdx)
-//                rate[eqIdx] -= dofDriftRate[eqIdx];
-//        }
     }
 
     /*!
@@ -1631,16 +1243,6 @@ public:
     // temporary solution to facilitate output of initial state from flow
     const InitialFluidState& initialFluidState(unsigned globalDofIdx) const
     { return initialFluidStates_[globalDofIdx]; }
-
-    // TODO: comment out eclWriter_ related for compositional
-    // const EclipseIO& eclIO() const
-    // { return eclWriter_->eclIO(); }
-
-    // void setSubStepReport(const SimulatorReportSingle& report)
-    // { return eclWriter_->setSubStepReport(report); }
-
-    // void setSimulationReport(const SimulatorReport& report)
-    // { return eclWriter_->setSimulationReport(report); }
 
     bool nonTrivialBoundaryConditions() const
     { return nonTrivialBoundaryConditions_; }
@@ -1831,25 +1433,6 @@ public:
                         : this->simulator().problem().getRockCompTransMultVal(elementIdx);
     }
 
-    /*!
-     * \brief Calculate the transmissibility multiplier due to porosity reduction.
-     *
-     * TODO: The API of this is a bit ad-hoc, it would be better to use context objects.
-     */
-    template <class LhsEval>
-    LhsEval permFactTransMultiplier(const IntensiveQuantities& intQuants) const
-    {
-        OPM_TIMEBLOCK_LOCAL(permFactTransMultiplier);
-        if (!enableSaltPrecipitation)
-            return 1.0;
-        
-        const auto& fs = intQuants.fluidState();
-        unsigned tableIdx = fs.pvtRegionIndex();
-        LhsEval porosityFactor = decay<LhsEval>(1. - fs.saltSaturation());
-        porosityFactor = min(porosityFactor, 1.0);
-        const auto& permfactTable = BrineModule::permfactTable(tableIdx);
-        return permfactTable.eval(porosityFactor, /*extrapolation=*/true);
-    }
 
     /*!
      * \brief Return the well transmissibility multiplier due to rock changues.
@@ -1919,20 +1502,7 @@ public:
 	//         return { BCType::NONE, RateVector(0.0) };
     }
 
-    // TODO: comment out eclWriter_ related for compositional
-    /* const std::unique_ptr<EclWriterType>& eclWriter() const
-    {
-        return eclWriter_;
-    }
 
-    void setConvData(const std::vector<std::vector<int>>& data)
-    {
-        eclWriter_->mutableOutputModule().setCnvData(data);
-    } */
-
-    const ModuleParams& moduleParams() const {
-         return moduleParams_;
-    }
 
     template<class Serializer>
     void serializeOp(Serializer& serializer)
@@ -1973,8 +1543,8 @@ protected:
             this->model().invalidateAndUpdateIntensiveQuantities(/*timeIdx=*/0);
         }
 
-        if constexpr (getPropValue<TypeTag, Properties::EnablePolymer>())
-            updateMaxPolymerAdsorption_();
+//        if constexpr (getPropValue<TypeTag, Properties::EnablePolymer>())
+//            updateMaxPolymerAdsorption_();
 
         updateRockCompTransMultVal_();
     }
@@ -2002,36 +1572,6 @@ protected:
     // update the parameters needed for DRSDT and DRVDT
     bool updateCompositionChangeLimits_()
     {
-        // TODO: we migth need to empty this function for compositional due to mixControls_
-//        OPM_TIMEBLOCK(updateCompositionChangeLimits);
-//        // update the "last Rs" values for all elements, including the ones in the ghost
-//        // and overlap regions
-//        int episodeIdx = this->episodeIndex();
-//        std::array<bool,3> active{this->mixControls_.drsdtConvective(episodeIdx),
-//                                  this->mixControls_.drsdtActive(episodeIdx),
-//                                  this->mixControls_.drvdtActive(episodeIdx)};
-//        if (!active[0] && !active[1] && !active[2]) {
-//            return false;
-//        }
-//
-//        this->updateProperty_("FlowProblem::updateCompositionChangeLimits_()) failed:",
-//                              [this,episodeIdx,active](unsigned compressedDofIdx,
-//                                                       const IntensiveQuantities& iq)
-//                              {
-//                                  const DimMatrix& perm = this->intrinsicPermeability(compressedDofIdx);
-//                                  const Scalar distZ = active[0] ? this->simulator().vanguard().cellThickness(compressedDofIdx) : 0.0;
-//                                  const int pvtRegionIdx = this->pvtRegionIndex(compressedDofIdx);
-//                                  this->mixControls_.update(compressedDofIdx,
-//                                                            iq,
-//                                                            episodeIdx,
-//                                                            this->gravity_[dim - 1],
-//                                                            perm[dim - 1][dim - 1],
-//                                                            distZ,
-//                                                            pvtRegionIdx,
-//                                                            active);
-//                              }
-//            );
-
             return true;
     }
 
@@ -2268,371 +1808,15 @@ protected:
 
     void readEquilInitialCondition_()
     {
-        const auto& simulator = this->simulator();
-
-        // initial condition corresponds to hydrostatic conditions.
-	// TODO: we might need to comment the following for compositional
-        // EquilInitializer<TypeTag> equilInitializer(simulator, *materialLawManager_);
-
-        std::size_t numElems = this->model().numGridDof();
-        initialFluidStates_.resize(numElems);
-        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-            auto& elemFluidState = initialFluidStates_[elemIdx];
-	    // TODO: we might need to comment the following for compositional
-         //    elemFluidState.assign(equilInitializer.initialFluidState(elemIdx));
-        }
     }
 
     void readEclRestartSolution_()
     {
-        // TODO: we need to empty this function for compositional
-        // Throw an exception if the grid has LGRs. Refined grid are not supported for restart.
-//        if(this->simulator().vanguard().grid().maxLevel() > 0) {
-//            throw std::invalid_argument("Refined grids are not yet supported for restart ");
-//        }
-//
-//        // Set the start time of the simulation
-//        auto& simulator = this->simulator();
-//        const auto& schedule = simulator.vanguard().schedule();
-//        const auto& eclState = simulator.vanguard().eclState();
-//        const auto& initconfig = eclState.getInitConfig();
-//        {
-//            int restart_step = initconfig.getRestartStep();
-//
-//            simulator.setTime(schedule.seconds(restart_step));
-//
-//            simulator.startNextEpisode(simulator.startTime() + simulator.time(),
-//                                       schedule.stepLength(restart_step));
-//            simulator.setEpisodeIndex(restart_step);
-//        }
-//        eclWriter_->beginRestart();
-//
-//        Scalar dt = std::min(eclWriter_->restartTimeStepSize(), simulator.episodeLength());
-//        simulator.setTimeStepSize(dt);
-//
-//        std::size_t numElems = this->model().numGridDof();
-//        initialFluidStates_.resize(numElems);
-//        if constexpr (enableSolvent) {
-//            this->solventSaturation_.resize(numElems, 0.0);
-//            this->solventRsw_.resize(numElems, 0.0);
-//        }
-//
-//        if constexpr (enablePolymer)
-//            this->polymer_.concentration.resize(numElems, 0.0);
-//
-//        if constexpr (enablePolymerMolarWeight) {
-//            const std::string msg {"Support of the RESTART for polymer molecular weight "
-//                                   "is not implemented yet. The polymer weight value will be "
-//                                   "zero when RESTART begins"};
-//            OpmLog::warning("NO_POLYMW_RESTART", msg);
-//            this->polymer_.moleWeight.resize(numElems, 0.0);
-//        }
-//
-//        if constexpr (enableMICP) {
-//            this->micp_.resize(numElems);
-//        }
-//
-//        for (std::size_t elemIdx = 0; elemIdx < numElems; ++elemIdx) {
-//            auto& elemFluidState = initialFluidStates_[elemIdx];
-//            elemFluidState.setPvtRegionIndex(pvtRegionIndex(elemIdx));
-//            eclWriter_->outputModule().initHysteresisParams(simulator, elemIdx);
-//            eclWriter_->outputModule().assignToFluidState(elemFluidState, elemIdx);
-//
-//            // Note: Function processRestartSaturations_() mutates the
-//            // 'ssol' argument--the value from the restart file--if solvent
-//            // is enabled.  Then, store the updated solvent saturation into
-//            // 'solventSaturation_'.  Otherwise, just pass a dummy value to
-//            // the function and discard the unchanged result.  Do not index
-//            // into 'solventSaturation_' unless solvent is enabled.
-//            {
-//                auto ssol = enableSolvent
-//                    ? eclWriter_->outputModule().getSolventSaturation(elemIdx)
-//                    : Scalar(0);
-//
-//                processRestartSaturations_(elemFluidState, ssol);
-//
-//                if constexpr (enableSolvent) {
-//                    this->solventSaturation_[elemIdx] = ssol;
-//                    this->solventRsw_[elemIdx] = eclWriter_->outputModule().getSolventRsw(elemIdx);
-//                }
-//            }
-//
-//            // For CO2STORE and H2STORE we need to set the initial temperature for isothermal simulations
-//            bool isThermal = eclState.getSimulationConfig().isThermal();
-//            bool needTemperature = (eclState.runspec().co2Storage() || eclState.runspec().h2Storage());
-//            if (!isThermal && needTemperature) {
-//                const auto& fp = simulator.vanguard().eclState().fieldProps();
-//                elemFluidState.setTemperature(fp.get_double("TEMPI")[elemIdx]);
-//            }
-//
-//            this->mixControls_.updateLastValues(elemIdx, elemFluidState.Rs(), elemFluidState.Rv());
-//
-//            if constexpr (enablePolymer)
-//                 this->polymer_.concentration[elemIdx] = eclWriter_->outputModule().getPolymerConcentration(elemIdx);
-//            if constexpr (enableMICP){
-//                 this->micp_.microbialConcentration[elemIdx] = eclWriter_->outputModule().getMicrobialConcentration(elemIdx);
-//                 this->micp_.oxygenConcentration[elemIdx] = eclWriter_->outputModule().getOxygenConcentration(elemIdx);
-//                 this->micp_.ureaConcentration[elemIdx] = eclWriter_->outputModule().getUreaConcentration(elemIdx);
-//                 this->micp_.biofilmConcentration[elemIdx] = eclWriter_->outputModule().getBiofilmConcentration(elemIdx);
-//                 this->micp_.calciteConcentration[elemIdx] = eclWriter_->outputModule().getCalciteConcentration(elemIdx);
-//            }
-//            // if we need to restart for polymer molecular weight simulation, we need to add related here
-//        }
-//
-//        const int episodeIdx = this->episodeIndex();
-//        this->mixControls_.updateMaxValues(episodeIdx, simulator.timeStepSize());
-//
-//        // assign the restart solution to the current solution. note that we still need
-//        // to compute real initial solution after this because the initial fluid states
-//        // need to be correct for stuff like boundary conditions.
-//        auto& sol = this->model().solution(/*timeIdx=*/0);
-//        const auto& gridView = this->gridView();
-//        ElementContext elemCtx(simulator);
-//        for (const auto& elem : elements(gridView, Dune::Partitions::interior)) {
-//            elemCtx.updatePrimaryStencil(elem);
-//            int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-//            initial(sol[elemIdx], elemCtx, /*spaceIdx=*/0, /*timeIdx=*/0);
-//        }
-//
-//        // make sure that the ghost and overlap entities exhibit the correct
-//        // solution. alternatively, this could be done in the loop above by also
-//        // considering non-interior elements. Since the initial() method might not work
-//        // 100% correctly for such elements, let's play safe and explicitly synchronize
-//        // using message passing.
-//        this->model().syncOverlap();
-//
-//        eclWriter_->endRestart();
-    }
-
-    void processRestartSaturations_(InitialFluidState& elemFluidState, Scalar& solventSaturation)
-    {
-        // each phase needs to be above certain value to be claimed to be existing
-        // this is used to recover some RESTART running with the defaulted single-precision format
-        const Scalar smallSaturationTolerance = 1.e-6;
-        Scalar sumSaturation = 0.0;
-        for (std::size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (FluidSystem::phaseIsActive(phaseIdx)) {
-                if (elemFluidState.saturation(phaseIdx) < smallSaturationTolerance)
-                    elemFluidState.setSaturation(phaseIdx, 0.0);
-
-                sumSaturation += elemFluidState.saturation(phaseIdx);
-            }
-
-        }
-        if constexpr (enableSolvent) {
-            if (solventSaturation < smallSaturationTolerance)
-                solventSaturation = 0.0;
-
-           sumSaturation += solventSaturation;
-        }
-
-        assert(sumSaturation > 0.0);
-
-        for (std::size_t phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-            if (FluidSystem::phaseIsActive(phaseIdx)) {
-                const Scalar saturation = elemFluidState.saturation(phaseIdx) / sumSaturation;
-                elemFluidState.setSaturation(phaseIdx, saturation);
-            }
-        }
-        if constexpr (enableSolvent) {
-            solventSaturation = solventSaturation / sumSaturation;
-        }
     }
 
     void readExplicitInitialCondition_()
     {
         readExplicitInitialConditionCompositional_();
-	// TODO: comment out the following for compositional
-	// TODO: we should have two different functions here, one for balck-oil
-	// TODO: one for compositional
-//        const auto& simulator = this->simulator();
-//        const auto& vanguard = simulator.vanguard();
-//        const auto& eclState = vanguard.eclState();
-//        const auto& fp = eclState.fieldProps();
-//        bool has_swat     = fp.has_double("SWAT");
-//        bool has_sgas     = fp.has_double("SGAS");
-//        bool has_rs       = fp.has_double("RS");
-//        bool has_rv       = fp.has_double("RV");
-//        bool has_rvw       = fp.has_double("RVW");
-//        bool has_pressure = fp.has_double("PRESSURE");
-//        bool has_salt = fp.has_double("SALT");
-//        bool has_saltp = fp.has_double("SALTP");
-//
-//        // make sure all required quantities are enables
-//        if (Indices::numPhases > 1) {
-//            if (FluidSystem::phaseIsActive(waterPhaseIdx) && !has_swat)
-//                throw std::runtime_error("The ECL input file requires the presence of the SWAT keyword if "
-//                                     "the water phase is active");
-//            if (FluidSystem::phaseIsActive(gasPhaseIdx) && !has_sgas && FluidSystem::phaseIsActive(oilPhaseIdx))
-//                throw std::runtime_error("The ECL input file requires the presence of the SGAS keyword if "
-//                                     "the gas phase is active");
-//        }
-//        if (!has_pressure)
-//            throw std::runtime_error("The ECL input file requires the presence of the PRESSURE "
-//                                      "keyword if the model is initialized explicitly");
-//        if (FluidSystem::enableDissolvedGas() && !has_rs)
-//            throw std::runtime_error("The ECL input file requires the RS keyword to be present if"
-//                                     " dissolved gas is enabled");
-//        if (FluidSystem::enableVaporizedOil() && !has_rv)
-//            throw std::runtime_error("The ECL input file requires the RV keyword to be present if"
-//                                     " vaporized oil is enabled");
-//        if (FluidSystem::enableVaporizedWater() && !has_rvw)
-//            throw std::runtime_error("The ECL input file requires the RVW keyword to be present if"
-//                                     " vaporized water is enabled");
-//        if (enableBrine && !has_salt)
-//            throw std::runtime_error("The ECL input file requires the SALT keyword to be present if"
-//                                     " brine is enabled and the model is initialized explicitly");
-//        if (enableSaltPrecipitation && !has_saltp)
-//            throw std::runtime_error("The ECL input file requires the SALTP keyword to be present if"
-//                                     " salt precipitation is enabled and the model is initialized explicitly");
-//
-//        std::size_t numDof = this->model().numGridDof();
-//
-//        initialFluidStates_.resize(numDof);
-//
-//        std::vector<double> waterSaturationData;
-//        std::vector<double> gasSaturationData;
-//        std::vector<double> pressureData;
-//        std::vector<double> rsData;
-//        std::vector<double> rvData;
-//        std::vector<double> rvwData;
-//        std::vector<double> tempiData;
-//        std::vector<double> saltData;
-//        std::vector<double> saltpData;
-//
-//        if (FluidSystem::phaseIsActive(waterPhaseIdx) && Indices::numPhases > 1)
-//            waterSaturationData = fp.get_double("SWAT");
-//        else
-//            waterSaturationData.resize(numDof);
-//
-//        if (FluidSystem::phaseIsActive(gasPhaseIdx) && FluidSystem::phaseIsActive(oilPhaseIdx))
-//            gasSaturationData = fp.get_double("SGAS");
-//        else
-//            gasSaturationData.resize(numDof);
-//
-//        pressureData = fp.get_double("PRESSURE");
-//        if (FluidSystem::enableDissolvedGas())
-//            rsData = fp.get_double("RS");
-//
-//        if (FluidSystem::enableVaporizedOil())
-//            rvData = fp.get_double("RV");
-//
-//        if (FluidSystem::enableVaporizedWater())
-//            rvwData = fp.get_double("RVW");
-//
-//        // initial reservoir temperature
-//        tempiData = fp.get_double("TEMPI");
-//
-//        // initial salt concentration data
-//        if constexpr (enableBrine)
-//            saltData = fp.get_double("SALT");
-//
-//         // initial precipitated salt saturation data
-//         if constexpr (enableSaltPrecipitation)
-//            saltpData = fp.get_double("SALTP");
-//
-//        // calculate the initial fluid states
-//        for (std::size_t dofIdx = 0; dofIdx < numDof; ++dofIdx) {
-//            auto& dofFluidState = initialFluidStates_[dofIdx];
-//
-//            dofFluidState.setPvtRegionIndex(pvtRegionIndex(dofIdx));
-//
-//            //////
-//            // set temperature
-//            //////
-//            Scalar temperatureLoc = tempiData[dofIdx];
-//            if (!std::isfinite(temperatureLoc) || temperatureLoc <= 0)
-//                temperatureLoc = FluidSystem::surfaceTemperature;
-//            dofFluidState.setTemperature(temperatureLoc);
-//
-//            //////
-//            // set salt concentration
-//            //////
-//            if constexpr (enableBrine)
-//                dofFluidState.setSaltConcentration(saltData[dofIdx]);
-//
-//            //////
-//            // set precipitated salt saturation
-//            //////
-//            if constexpr (enableSaltPrecipitation)
-//                dofFluidState.setSaltSaturation(saltpData[dofIdx]);
-//
-//            //////
-//            // set saturations
-//            //////
-//            if (FluidSystem::phaseIsActive(FluidSystem::waterPhaseIdx))
-//                dofFluidState.setSaturation(FluidSystem::waterPhaseIdx,
-//                                            waterSaturationData[dofIdx]);
-//
-//            if (FluidSystem::phaseIsActive(FluidSystem::gasPhaseIdx)){
-//                if (!FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx)){
-//                    dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
-//                                            1.0
-//                                            - waterSaturationData[dofIdx]);
-//                }
-//                else
-//                    dofFluidState.setSaturation(FluidSystem::gasPhaseIdx,
-//                                                gasSaturationData[dofIdx]);
-//            }
-//            if (FluidSystem::phaseIsActive(FluidSystem::oilPhaseIdx))
-//                dofFluidState.setSaturation(FluidSystem::oilPhaseIdx,
-//                                            1.0
-//                                            - waterSaturationData[dofIdx]
-//                                            - gasSaturationData[dofIdx]);
-//
-//            //////
-//            // set phase pressures
-//            //////
-//            Scalar pressure = pressureData[dofIdx]; // oil pressure (or gas pressure for water-gas system or water pressure for single phase)
-//
-//            // this assumes that capillary pressures only depend on the phase saturations
-//            // and possibly on temperature. (this is always the case for ECL problems.)
-//            std::array<Scalar, numPhases> pc = {0};
-//            const auto& matParams = materialLawParams(dofIdx);
-//            MaterialLaw::capillaryPressures(pc, matParams, dofFluidState);
-//            Valgrind::CheckDefined(pressure);
-//            Valgrind::CheckDefined(pc);
-//            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-//                if (!FluidSystem::phaseIsActive(phaseIdx))
-//                    continue;
-//
-//                if (Indices::oilEnabled)
-//                    dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[oilPhaseIdx]));
-//                else if (Indices::gasEnabled)
-//                    dofFluidState.setPressure(phaseIdx, pressure + (pc[phaseIdx] - pc[gasPhaseIdx]));
-//                else if (Indices::waterEnabled)
-//                    //single (water) phase
-//                    dofFluidState.setPressure(phaseIdx, pressure);
-//            }
-//
-//            if (FluidSystem::enableDissolvedGas())
-//                dofFluidState.setRs(rsData[dofIdx]);
-//            else if (Indices::gasEnabled && Indices::oilEnabled)
-//                dofFluidState.setRs(0.0);
-//
-//            if (FluidSystem::enableVaporizedOil())
-//                dofFluidState.setRv(rvData[dofIdx]);
-//            else if (Indices::gasEnabled && Indices::oilEnabled)
-//                dofFluidState.setRv(0.0);
-//
-//            if (FluidSystem::enableVaporizedWater())
-//                dofFluidState.setRvw(rvwData[dofIdx]);
-//
-//            //////
-//            // set invB_
-//            //////
-//            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-//                if (!FluidSystem::phaseIsActive(phaseIdx))
-//                    continue;
-//
-//                const auto& b = FluidSystem::inverseFormationVolumeFactor(dofFluidState, phaseIdx, pvtRegionIndex(dofIdx));
-//                dofFluidState.setInvB(phaseIdx, b);
-//
-//                const auto& rho = FluidSystem::density(dofFluidState, phaseIdx, pvtRegionIndex(dofIdx));
-//                dofFluidState.setDensity(phaseIdx, rho);
-//
-//            }
-//        }
     }
     
     void readExplicitInitialConditionCompositional_()
@@ -2763,28 +1947,6 @@ protected:
         materialLawManager_->updateHysteresis(iq.fluidState(), compressedDofIdx);
         //TODO change materials to give a bool
         return true;
-    }
-
-    void updateMaxPolymerAdsorption_()
-    {
-        // we need to update the max polymer adsoption data for all elements
-        this->updateProperty_("FlowProblem::updateMaxPolymerAdsorption_() failed:",
-                              [this](unsigned compressedDofIdx, const IntensiveQuantities& iq)
-                              {
-                                  this->updateMaxPolymerAdsorption_(compressedDofIdx,iq);
-                              });
-    }
-
-    bool updateMaxPolymerAdsorption_(unsigned compressedDofIdx, const IntensiveQuantities& iq)
-    {
-        const Scalar pa = scalarValue(iq.polymerAdsorption());
-        auto& mpa = this->polymer_.maxAdsorption;
-        if (mpa[compressedDofIdx] < pa) {
-            mpa[compressedDofIdx] = pa;
-            return true;
-        } else {
-            return false;
-        }
     }
 
     Scalar getRockCompTransMultVal(std::size_t dofIdx) const
@@ -2927,36 +2089,6 @@ private:
 
     void computeAndSetEqWeights_()
     {
-        // TODO: we might need to empty this function
-//        std::vector<Scalar> sumInvB(numPhases, 0.0);
-//        const auto& gridView = this->gridView();
-//        ElementContext elemCtx(this->simulator());
-//        for(const auto& elem: elements(gridView, Dune::Partitions::interior)) {
-//            elemCtx.updatePrimaryStencil(elem);
-//            int elemIdx = elemCtx.globalSpaceIndex(/*spaceIdx=*/0, /*timeIdx=*/0);
-//            const auto& dofFluidState = initialFluidStates_[elemIdx];
-//            for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-//                if (!FluidSystem::phaseIsActive(phaseIdx))
-//                    continue;
-//
-//                sumInvB[phaseIdx] += dofFluidState.invB(phaseIdx);
-//            }
-//        }
-//
-//        std::size_t numDof = this->model().numGridDof();
-//        const auto& comm = this->simulator().vanguard().grid().comm();
-//        comm.sum(sumInvB.data(),sumInvB.size());
-//        Scalar numTotalDof = comm.sum(numDof);
-//
-//        for (unsigned phaseIdx = 0; phaseIdx < numPhases; ++phaseIdx) {
-//            if (!FluidSystem::phaseIsActive(phaseIdx))
-//                    continue;
-//
-//            Scalar avgB = numTotalDof / sumInvB[phaseIdx];
-//            unsigned solventCompIdx = FluidSystem::solventComponentIndex(phaseIdx);
-//            unsigned activeSolventCompIdx = Indices::canonicalToActiveComponentIndex(solventCompIdx);
-//            this->model().setEqWeight(activeSolventCompIdx, avgB);
-//        }
     }
 
     int refPressurePhaseIdx_() const {
@@ -3039,19 +2171,9 @@ private:
 
     bool enableEclOutput_;
     bool enableVtkOutput_;
-    // TODO: comment out eclWriter and damaris related for compositional
-    // std::unique_ptr<EclWriterType> eclWriter_;
-
-// #if HAVE_DAMARIS
-//     bool enableDamarisOutput_ = false ;
-//     std::unique_ptr<DamarisWriterType> damarisWriter_;
-// #endif
 
     PffGridVector<GridView, Stencil, PffDofData_, DofMapper> pffDofData_;
     TracerModel tracerModel_;
-
-    // TODO: comment out actionHandler_ related for compositional
-    // ActionHandler<Scalar> actionHandler_;
 
     template<class T>
     struct BCData
@@ -3085,10 +2207,6 @@ private:
     BCData<int> bcindex_;
     bool nonTrivialBoundaryConditions_ = false;
     bool explicitRockCompaction_ = false;
-
-    ModuleParams moduleParams_;
-
-
 };
 
 } // namespace Opm
