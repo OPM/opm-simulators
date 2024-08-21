@@ -445,6 +445,7 @@ public:
             drift_ = 0.0;
         }
 
+	// TODO: check wether the following can work with compostional
         if (enableVtkOutput_ && eclState.getIOConfig().initOnly()) {
             simulator.setTimeStepSize(0.0);
             ParentType::writeOutput(true);
