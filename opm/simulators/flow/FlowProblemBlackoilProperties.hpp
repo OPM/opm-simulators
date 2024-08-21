@@ -43,7 +43,7 @@
 
 namespace Opm {
 template <class TypeTag>
-class FlowProblem;
+class FlowProblemBlackoil;
 }
 
 namespace Opm::Properties {
@@ -59,7 +59,7 @@ struct FlowBaseProblemBlackoil {
 // Set the problem property
 template<class TypeTag>
 struct Problem<TypeTag, TTag::FlowBaseProblemBlackoil>
-{ using type = FlowProblem<TypeTag>; };
+{ using type = FlowProblemBlackoil<TypeTag>; };
 
 template<class TypeTag>
 struct Model<TypeTag, TTag::FlowBaseProblemBlackoil>

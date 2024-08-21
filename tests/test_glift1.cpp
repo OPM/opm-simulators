@@ -34,7 +34,7 @@
 #include <opm/input/eclipse/Schedule/Well/Well.hpp>
 #include <opm/simulators/utils/DeferredLogger.hpp>
 #include <opm/simulators/flow/BlackoilModel.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
 #include <opm/simulators/wells/StandardWell.hpp>
@@ -123,7 +123,7 @@ BOOST_GLOBAL_FIXTURE(GliftFixture);
 
 BOOST_AUTO_TEST_CASE(G1)
 {
-    //using TypeTag = Opm::Properties::TTag::FlowProblem;
+    //using TypeTag = Opm::Properties::TTag::FlowProblemBlackoil;
     using TypeTag = Opm::Properties::TTag::TestGliftTypeTag;
     //using EclProblem = Opm::EclProblem<TypeTag>;
     //using EclWellModel = typename EclProblem::EclWellModel;
