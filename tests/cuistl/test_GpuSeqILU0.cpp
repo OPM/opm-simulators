@@ -18,7 +18,7 @@
 */
 #include <config.h>
 
-#define BOOST_TEST_MODULE TestCuSeqILU0
+#define BOOST_TEST_MODULE TestGpuSeqILU0
 #define BOOST_TEST_NO_MAIN
 
 
@@ -27,7 +27,7 @@
 #include <dune/common/parallel/mpihelper.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/preconditioners.hh>
-#include <opm/simulators/linalg/cuistl/CuSeqILU0.hpp>
+#include <opm/simulators/linalg/cuistl/GpuSeqILU0.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
@@ -63,7 +63,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifference1D, T, NumericTypes)
     using M = Dune::FieldMatrix<T, 1, 1>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, 1>>;
-    using CuILU0 = Opm::gpuistl::CuSeqILU0<SpMatrix, Opm::gpuistl::CuVector<T>, Opm::gpuistl::CuVector<T>>;
+    using GpuILU0 = Opm::gpuistl::GpuSeqILU0<SpMatrix, Opm::gpuistl::CuVector<T>, Opm::gpuistl::CuVector<T>>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {
@@ -91,7 +91,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifference1D, T, NumericTypes)
 
     auto duneILU = Dune::SeqILU<SpMatrix, Vector, Vector>(B, 1.0);
 
-    auto cuILU = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, CuILU0>(std::make_shared<CuILU0>(B, 1.0));
+    auto gpuILU = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, GpuILU0>(std::make_shared<GpuILU0>(B, 1.0));
 
     // check for the standard basis {e_i}
     // (e_i=(0,...,0, 1 (i-th place), 0, ..., 0))
@@ -101,7 +101,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifference1D, T, NumericTypes)
         Vector outputVectorDune(N);
         Vector outputVectorCuistl(N);
         duneILU.apply(outputVectorDune, inputVector);
-        cuILU.apply(outputVectorCuistl, inputVector);
+        gpuILU.apply(outputVectorCuistl, inputVector);
 
         for (int component = 0; component < N; ++component) {
             BOOST_CHECK_CLOSE(outputVectorDune[component][0],
@@ -113,7 +113,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifference1D, T, NumericTypes)
     // Now we check that we can update the matrix. We basically just negate B
     B *= -1.0;
     auto duneILUNew = Dune::SeqILU<SpMatrix, Vector, Vector>(B, 1.0);
-    cuILU.update();
+    gpuILU.update();
     // check for the standard basis {e_i}
     // (e_i=(0,...,0, 1 (i-th place), 0, ..., 0))
     for (int i = 0; i < N; ++i) {
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifference1D, T, NumericTypes)
         Vector outputVectorDune(N);
         Vector outputVectorCuistl(N);
         duneILUNew.apply(outputVectorDune, inputVector);
-        cuILU.apply(outputVectorCuistl, inputVector);
+        gpuILU.apply(outputVectorCuistl, inputVector);
 
         for (int component = 0; component < N; ++component) {
             BOOST_CHECK_CLOSE(outputVectorDune[component][0],
@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifferenceBlock2, T, NumericTypes)
     using M = Dune::FieldMatrix<T, 2, 2>;
     using SpMatrix = Dune::BCRSMatrix<M>;
     using Vector = Dune::BlockVector<Dune::FieldVector<T, 2>>;
-    using CuILU0 = Opm::gpuistl::CuSeqILU0<SpMatrix, Opm::gpuistl::CuVector<T>, Opm::gpuistl::CuVector<T>>;
+    using GpuILU0 = Opm::gpuistl::GpuSeqILU0<SpMatrix, Opm::gpuistl::CuVector<T>, Opm::gpuistl::CuVector<T>>;
 
     SpMatrix B(N, N, nonZeroes, SpMatrix::row_wise);
     for (auto row = B.createbegin(); row != B.createend(); ++row) {
@@ -181,7 +181,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifferenceBlock2, T, NumericTypes)
 
     auto duneILU = Dune::SeqILU<SpMatrix, Vector, Vector>(B, 1.0);
 
-    auto cuILU = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, CuILU0>(std::make_shared<CuILU0>(B, 1.0));
+    auto gpuILU = Opm::gpuistl::PreconditionerAdapter<Vector, Vector, GpuILU0>(std::make_shared<GpuILU0>(B, 1.0));
 
     // check for the standard basis {e_i}
     // (e_i=(0,...,0, 1 (i-th place), 0, ..., 0))
@@ -191,7 +191,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifferenceBlock2, T, NumericTypes)
         Vector outputVectorDune(N);
         Vector outputVectorCuistl(N);
         duneILU.apply(outputVectorDune, inputVector);
-        cuILU.apply(outputVectorCuistl, inputVector);
+        gpuILU.apply(outputVectorCuistl, inputVector);
 
         for (int component = 0; component < N; ++component) {
             BOOST_CHECK_CLOSE(outputVectorDune[component][0],
@@ -203,7 +203,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifferenceBlock2, T, NumericTypes)
     // Now we check that we can update the matrix. We basically just negate B
     B *= -1.0;
     auto duneILUNew = Dune::SeqILU<SpMatrix, Vector, Vector>(B, 1.0);
-    cuILU.update();
+    gpuILU.update();
     // check for the standard basis {e_i}
     // (e_i=(0,...,0, 1 (i-th place), 0, ..., 0))
     for (int i = 0; i < N; ++i) {
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(TestFiniteDifferenceBlock2, T, NumericTypes)
         Vector outputVectorDune(N);
         Vector outputVectorCuistl(N);
         duneILUNew.apply(outputVectorDune, inputVector);
-        cuILU.apply(outputVectorCuistl, inputVector);
+        gpuILU.apply(outputVectorCuistl, inputVector);
 
         for (int component = 0; component < N; ++component) {
             BOOST_CHECK_CLOSE(outputVectorDune[component][0],

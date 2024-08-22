@@ -26,7 +26,7 @@
 #include <opm/simulators/linalg/hipistl/GpuDILU.hpp>
 #include <opm/simulators/linalg/hipistl/OpmCuILU0.hpp>
 #include <opm/simulators/linalg/hipistl/GpuJac.hpp>
-#include <opm/simulators/linalg/hipistl/CuSeqILU0.hpp>
+#include <opm/simulators/linalg/hipistl/GpuSeqILU0.hpp>
 #include <opm/simulators/linalg/hipistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/hipistl/PreconditionerConvertFieldTypeAdapter.hpp>
 #include <opm/simulators/linalg/hipistl/detail/cuda_safe_call.hpp>
@@ -35,7 +35,7 @@
 #include <opm/simulators/linalg/cuistl/GpuDILU.hpp>
 #include <opm/simulators/linalg/cuistl/OpmCuILU0.hpp>
 #include <opm/simulators/linalg/cuistl/GpuJac.hpp>
-#include <opm/simulators/linalg/cuistl/CuSeqILU0.hpp>
+#include <opm/simulators/linalg/cuistl/GpuSeqILU0.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerConvertFieldTypeAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
