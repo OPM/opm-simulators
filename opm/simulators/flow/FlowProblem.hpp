@@ -546,6 +546,10 @@ public:
         }
 
         bool tuningEvent = this->beginEpisode_(enableExperiments, this->episodeIndex());
+        this->mixControls_.init(this->model().numGridDof(),
+                                episodeIdx,
+                                eclState.runspec().tabdims().getNumPVTTables());
+
 
         // set up the wells for the next episode.
         wellModel_.beginEpisode();
@@ -1943,8 +1947,7 @@ protected:
                                                             this->gravity_[dim - 1],
                                                             perm[dim - 1][dim - 1],
                                                             distZ,
-                                                            pvtRegionIdx,
-                                                            active);
+                                                            pvtRegionIdx);
                               }
             );
 

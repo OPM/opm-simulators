@@ -60,7 +60,10 @@ public:
     bool drsdtActive(int episodeIdx) const;
     bool drvdtActive(int episodeIdx) const;
     bool drsdtConvective(int episodeIdx) const;
-
+    
+    bool drsdtActive(int episodeIdx, std::size_t pvtRegionIdx) const;
+    bool drvdtActive(int episodeIdx, std::size_t pvtRegionIdx) const;
+    bool drsdtConvective(int episodeIdx, std::size_t pvtRegionIdx) const;
     /*!
      * \brief Returns the dynamic drsdt convective mixing value
      */
@@ -114,11 +117,11 @@ public:
                 const Scalar gravity,
                 const Scalar permZ,
                 const Scalar distZ,
-                const int pvtRegionIdx,
-                const std::array<bool,3>& active)
+                const int pvtRegionIdx)
     {
         const auto& oilVaporizationControl = schedule_[episodeIdx].oilvap();
-        if (active[0]) {
+
+        if (oilVaporizationControl.drsdtConvective(pvtRegionIdx)) {
             // This implements the convective DRSDT as described in
             // Sandve et al. "Convective dissolution in field scale CO2 storage simulations using the OPM Flow
             // simulator" Submitted to TCCS 11, 2021
@@ -155,7 +158,7 @@ public:
                                          fs.pvtRegionIndex());
         }
 
-        if (active[1]) {
+        if (oilVaporizationControl.drsdtActive(pvtRegionIdx)) {
             const auto& fs = iq.fluidState();
 
             using FluidState = typename std::decay<decltype(fs)>::type;
@@ -171,7 +174,7 @@ public:
                 lastRs_[compressedDofIdx] = std::numeric_limits<Scalar>::infinity();
         }
 
-        if (active[2]) {
+        if (oilVaporizationControl.drvdtActive(pvtRegionIdx)) {
             const auto& fs = iq.fluidState();
             using FluidState = typename std::decay<decltype(fs)>::type;
             lastRv_[compressedDofIdx]
