@@ -19,9 +19,11 @@
 #include <cuda_runtime.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
+#include <opm/common/OpmLog/OpmLog.hpp>
 #include <functional>
 #include <utility>
 #include <limits>
+#include <string>
 
 namespace Opm::cuistl::detail
 {
@@ -31,7 +33,7 @@ namespace Opm::cuistl::detail
     /// @tparam ...Args types of the arguments needed to call the function
     /// @param f the function to tune, which takes the thread block size as the input
     template <typename func, typename... Args>
-    int tuneThreadBlockSize(func& f) {
+    int tuneThreadBlockSize(func& f, std::string descriptionOfFunction) {
 
         // TODO: figure out a more rigorous way of deciding how many runs will suffice?
         constexpr const int runs = 2;
@@ -73,8 +75,8 @@ namespace Opm::cuistl::detail
                 }
             }
         }
-        // TODO: have this only be printed if linear solver verbosity >0?
-        printf("best size: %d, best time %f\n", bestBlockSize, bestTime);
+
+        OpmLog::info(fmt::format("{}: Tuned Blocksize: {} (fastest runtime: {}).", descriptionOfFunction, bestBlockSize, bestTime));
 
         return bestBlockSize;
     }

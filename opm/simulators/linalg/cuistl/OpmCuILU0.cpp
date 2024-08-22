@@ -36,6 +36,7 @@
 #include <tuple>
 #include <functional>
 #include <utility>
+#include <string>
 namespace Opm::cuistl
 {
 
@@ -262,12 +263,12 @@ OpmCuILU0<M, X, Y, l>::tuneThreadBlockSizes()
     auto tuneMoveThreadBlockSizeInUpdate = [this](int moveThreadBlockSize){
         this->update(moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
     };
-    m_moveThreadBlockSize = detail::tuneThreadBlockSize(tuneMoveThreadBlockSizeInUpdate);
+    m_moveThreadBlockSize = detail::tuneThreadBlockSize(tuneMoveThreadBlockSizeInUpdate, "Kernel moving data to reordered matrix");
 
     auto tuneFactorizationThreadBlockSizeInUpdate = [this](int factorizationThreadBlockSize){
         this->update(m_moveThreadBlockSize, factorizationThreadBlockSize);
     };
-    m_ILU0FactorizationThreadBlockSize = detail::tuneThreadBlockSize(tuneFactorizationThreadBlockSizeInUpdate);
+    m_ILU0FactorizationThreadBlockSize = detail::tuneThreadBlockSize(tuneFactorizationThreadBlockSizeInUpdate, "Kernel computing ILU0 factorization");
 
     // tune the thread-block size of the apply
     CuVector<field_type> tmpV(m_gpuMatrix.N() * m_gpuMatrix.blockSize());
@@ -277,12 +278,12 @@ OpmCuILU0<M, X, Y, l>::tuneThreadBlockSizes()
     auto tuneLowerSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int lowerSolveThreadBlockSize){
         this->apply(tmpV, tmpD, lowerSolveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);
     };
-    m_lowerSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneLowerSolveThreadBlockSizeInApply);
+    m_lowerSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneLowerSolveThreadBlockSizeInApply, "Kernel computing a lower triangular solve for a level set");
 
     auto tuneUpperSolveThreadBlockSizeInApply = [this, &tmpV, &tmpD](int upperSolveThreadBlockSize){
         this->apply(tmpV, tmpD, m_moveThreadBlockSize, upperSolveThreadBlockSize);
     };
-    m_upperSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneUpperSolveThreadBlockSizeInApply);
+    m_upperSolveThreadBlockSize = detail::tuneThreadBlockSize(tuneUpperSolveThreadBlockSizeInApply, "Kernel computing an upper triangular solve for a level set");
 }
 
 } // namespace Opm::cuistl
