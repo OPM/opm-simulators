@@ -23,7 +23,7 @@
 /*!
  * \file
  *
- * \copydoc Opm::FlowProblem
+ * \copydoc Opm::FlowProblemBlackoil
  */
 #ifndef OPM_MIXING_RATE_CONTROLS_HPP
 #define OPM_MIXING_RATE_CONTROLS_HPP
@@ -40,7 +40,7 @@ namespace Opm {
 
 class EclipseState;
 
-//! \brief Class handling mixing rate controls for a FlowProblem.
+//! \brief Class handling mixing rate controls for a FlowProblemBlackoil.
 template<class FluidSystem>
 class MixingRateControls 
 {

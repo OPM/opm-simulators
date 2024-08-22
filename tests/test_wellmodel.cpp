@@ -47,7 +47,7 @@
 #include <opm/grid/GridHelpers.hpp>
 #include <opm/simulators/flow/FlowMain.hpp>
 #include <opm/simulators/flow/BlackoilModel.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 
 #include <opm/models/utils/start.hh>
 
