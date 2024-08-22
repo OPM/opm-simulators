@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUSPARSEMATRIX_HPP
-#define OPM_CUSPARSEMATRIX_HPP
+#ifndef OPM_GPUSPARSEMATRIX_HPP
+#define OPM_GPUSPARSEMATRIX_HPP
 #include <cusparse.h>
 #include <iostream>
 #include <memory>
@@ -32,7 +32,7 @@ namespace Opm::gpuistl
 {
 
 /**
- * @brief The CuSparseMatrix class simple wrapper class for a CuSparse matrix.
+ * @brief The GpuSparseMatrix class simple wrapper class for a CuSparse matrix.
  *
  * @note we currently only support simple raw primitives for T (double and float). Block size is handled through the
  * block size parameter
@@ -44,7 +44,7 @@ namespace Opm::gpuistl
  * @note We only support Block Compressed Sparse Row Format (BSR) for now.
  */
 template <typename T>
-class CuSparseMatrix
+class GpuSparseMatrix
 {
 public:
     //! Create the sparse matrix specified by the raw data.
@@ -60,7 +60,7 @@ public:
     //!
     //! \note We assume numberOfNonzeroBlocks, blockSize and numberOfRows all are representable as int due to
     //!       restrictions in the current version of cusparse. This might change in future versions.
-    CuSparseMatrix(const T* nonZeroElements,
+    GpuSparseMatrix(const T* nonZeroElements,
                    const int* rowIndices,
                    const int* columnIndices,
                    size_t numberOfNonzeroBlocks,
@@ -70,14 +70,14 @@ public:
     /**
      * We don't want to be able to copy this for now (too much hassle in copying the cusparse resources)
      */
-    CuSparseMatrix(const CuSparseMatrix&) = delete;
+    GpuSparseMatrix(const GpuSparseMatrix&) = delete;
 
     /**
      * We don't want to be able to copy this for now (too much hassle in copying the cusparse resources)
      */
-    CuSparseMatrix& operator=(const CuSparseMatrix&) = delete;
+    GpuSparseMatrix& operator=(const GpuSparseMatrix&) = delete;
 
-    virtual ~CuSparseMatrix();
+    virtual ~GpuSparseMatrix();
 
     /**
      * @brief fromMatrix creates a new matrix with the same block size and values as the given matrix
@@ -89,7 +89,7 @@ public:
      * @tparam MatrixType is assumed to be a Dune::BCRSMatrix compatible matrix.
      */
     template <class MatrixType>
-    static CuSparseMatrix<T> fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false);
+    static GpuSparseMatrix<T> fromMatrix(const MatrixType& matrix, bool copyNonZeroElementsDirectly = false);
 
     /**
      * @brief setUpperTriangular sets the CuSparse flag that this is an upper diagonal (with unit diagonal) matrix.
@@ -233,7 +233,7 @@ public:
      *
      * This description is needed for most calls to the CuSparse library
      */
-    detail::CuSparseMatrixDescription& getDescription()
+    detail::GpuSparseMatrixDescription& getDescription()
     {
         return *m_matrixDescription;
     }
@@ -292,7 +292,7 @@ private:
     const int m_numberOfRows;
     const int m_blockSize;
 
-    detail::CuSparseMatrixDescriptionPtr m_matrixDescription;
+    detail::GpuSparseMatrixDescriptionPtr m_matrixDescription;
     detail::CuSparseHandle& m_cusparseHandle;
 
     template <class VectorType>

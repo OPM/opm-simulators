@@ -25,23 +25,23 @@ namespace Opm::gpuistl::detail
 {
 
 /**
- * CuSparseMatrixDescription holder. This is internal information needed for most calls to the CuSparse API.
+ * GpuSparseMatrixDescription holder. This is internal information needed for most calls to the CuSparse API.
  */
-using CuSparseMatrixDescription = CuSparseResource<cusparseMatDescr_t>;
+using GpuSparseMatrixDescription = CuSparseResource<cusparseMatDescr_t>;
 
 /**
- * Pointer to CuSparseMatrixDescription holder. This is internal information needed for most calls to the CuSparse API.
+ * Pointer to GpuSparseMatrixDescription holder. This is internal information needed for most calls to the CuSparse API.
  */
-using CuSparseMatrixDescriptionPtr = std::shared_ptr<CuSparseResource<cusparseMatDescr_t>>;
+using GpuSparseMatrixDescriptionPtr = std::shared_ptr<CuSparseResource<cusparseMatDescr_t>>;
 
 /**
  * @brief createMatrixDescription creates a default matrix description
  * @return a matrix description to a general sparse matrix with zero based indexing.
  */
-inline CuSparseMatrixDescriptionPtr
+inline GpuSparseMatrixDescriptionPtr
 createMatrixDescription()
 {
-    auto description = std::make_shared<CuSparseMatrixDescription>();
+    auto description = std::make_shared<GpuSparseMatrixDescription>();
 
     // Note: We always want to use zero base indexing.
     OPM_CUSPARSE_SAFE_CALL(cusparseSetMatType(description->get(), CUSPARSE_MATRIX_TYPE_GENERAL));
@@ -56,7 +56,7 @@ createMatrixDescription()
  *
  * @note This will assume it has a unit diagonal
  */
-inline CuSparseMatrixDescriptionPtr
+inline GpuSparseMatrixDescriptionPtr
 createLowerDiagonalDescription()
 {
     auto description = createMatrixDescription();
@@ -71,7 +71,7 @@ createLowerDiagonalDescription()
  *
  * @note This will assume it has a non-unit diagonal.
  */
-inline CuSparseMatrixDescriptionPtr
+inline GpuSparseMatrixDescriptionPtr
 createUpperDiagonalDescription()
 {
     auto description = createMatrixDescription();

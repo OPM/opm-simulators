@@ -554,7 +554,7 @@ if(CUDA_FOUND)
                        cuSparse_matrix_operations
                        cuVector_operations
                        cuvector
-                       cusparsematrix
+                       GpuSparseMatrix
                        GpuSeqILU0
                        GpuOwnerOverlapCopy
                        solver_adapter

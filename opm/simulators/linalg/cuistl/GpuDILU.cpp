@@ -27,7 +27,7 @@
 #include <opm/simulators/linalg/GraphColoring.hpp>
 #include <opm/simulators/linalg/cuistl/detail/autotuner.hpp>
 #include <opm/simulators/linalg/cuistl/GpuDILU.hpp>
-#include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
+#include <opm/simulators/linalg/cuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/coloringAndReorderingUtils.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
@@ -46,7 +46,7 @@ GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels)
     , m_levelSets(Opm::getMatrixRowColoring(m_cpuMatrix, Opm::ColoringType::LOWER))
     , m_reorderedToNatural(detail::createReorderedToNatural(m_levelSets))
     , m_naturalToReordered(detail::createNaturalToReordered(m_levelSets))
-    , m_gpuMatrix(CuSparseMatrix<field_type>::fromMatrix(m_cpuMatrix, true))
+    , m_gpuMatrix(GpuSparseMatrix<field_type>::fromMatrix(m_cpuMatrix, true))
     , m_gpuNaturalToReorder(m_naturalToReordered)
     , m_gpuReorderToNatural(m_reorderedToNatural)
     , m_gpuDInv(m_gpuMatrix.N() * m_gpuMatrix.blockSize() * m_gpuMatrix.blockSize())
@@ -73,11 +73,11 @@ GpuDILU<M, X, Y, l>::GpuDILU(const M& A, bool splitMatrix, bool tuneKernels)
     if (m_splitMatrix) {
         m_gpuMatrixReorderedDiag = std::make_unique<CuVector<field_type>>(blocksize_ * blocksize_ * m_cpuMatrix.N());
         std::tie(m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper)
-            = detail::extractLowerAndUpperMatrices<M, field_type, CuSparseMatrix<field_type>>(m_cpuMatrix,
+            = detail::extractLowerAndUpperMatrices<M, field_type, GpuSparseMatrix<field_type>>(m_cpuMatrix,
                                                                                               m_reorderedToNatural);
     }
     else {
-        m_gpuMatrixReordered = detail::createReorderedMatrix<M, field_type, CuSparseMatrix<field_type>>(
+        m_gpuMatrixReordered = detail::createReorderedMatrix<M, field_type, GpuSparseMatrix<field_type>>(
             m_cpuMatrix, m_reorderedToNatural);
     }
     computeDiagAndMoveReorderedData(m_moveThreadBlockSize, m_DILUFactorizationThreadBlockSize);

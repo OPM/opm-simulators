@@ -18,12 +18,12 @@
 */
 #include <config.h>
 
-#define BOOST_TEST_MODULE TestCuSparseMatrix
+#define BOOST_TEST_MODULE TestGpuSparseMatrix
 
 #include <boost/test/unit_test.hpp>
 #include <dune/istl/bcrsmatrix.hh>
 #include <memory>
-#include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
+#include <opm/simulators/linalg/cuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <random>
@@ -76,17 +76,17 @@ BOOST_AUTO_TEST_CASE(TestConstruction1D)
         }
     }
 
-    auto cuSparseMatrix = Opm::gpuistl::CuSparseMatrix<double>::fromMatrix(B);
+    auto gpuSparseMatrix = Opm::gpuistl::GpuSparseMatrix<double>::fromMatrix(B);
 
-    const auto& nonZeroValuesCuda = cuSparseMatrix.getNonZeroValues();
-    std::vector<double> buffer(cuSparseMatrix.nonzeroes(), 0.0);
+    const auto& nonZeroValuesCuda = gpuSparseMatrix.getNonZeroValues();
+    std::vector<double> buffer(gpuSparseMatrix.nonzeroes(), 0.0);
     nonZeroValuesCuda.copyToHost(buffer.data(), buffer.size());
     const double* nonZeroElements = static_cast<const double*>(&((B[0][0][0][0])));
     BOOST_CHECK_EQUAL_COLLECTIONS(buffer.begin(), buffer.end(), nonZeroElements, nonZeroElements + B.nonzeroes());
-    BOOST_CHECK_EQUAL(N * 3 - 2, cuSparseMatrix.nonzeroes());
+    BOOST_CHECK_EQUAL(N * 3 - 2, gpuSparseMatrix.nonzeroes());
 
     std::vector<int> rowIndicesFromCUDA(N + 1);
-    cuSparseMatrix.getRowIndices().copyToHost(rowIndicesFromCUDA.data(), rowIndicesFromCUDA.size());
+    gpuSparseMatrix.getRowIndices().copyToHost(rowIndicesFromCUDA.data(), rowIndicesFromCUDA.size());
     BOOST_CHECK_EQUAL(rowIndicesFromCUDA[0], 0);
     BOOST_CHECK_EQUAL(rowIndicesFromCUDA[1], 2);
     for (int i = 2; i < N; ++i) {
@@ -95,7 +95,7 @@ BOOST_AUTO_TEST_CASE(TestConstruction1D)
 
 
     std::vector<int> columnIndicesFromCUDA(B.nonzeroes(), 0);
-    cuSparseMatrix.getColumnIndices().copyToHost(columnIndicesFromCUDA.data(), columnIndicesFromCUDA.size());
+    gpuSparseMatrix.getColumnIndices().copyToHost(columnIndicesFromCUDA.data(), columnIndicesFromCUDA.size());
 
     BOOST_CHECK_EQUAL(columnIndicesFromCUDA[0], 0);
     BOOST_CHECK_EQUAL(columnIndicesFromCUDA[1], 1);
@@ -143,7 +143,7 @@ BOOST_AUTO_TEST_CASE(RandomSparsityMatrix)
         }
     }
 
-    auto cuSparseMatrix = Opm::gpuistl::CuSparseMatrix<double>::fromMatrix(B);
+    auto gpuSparseMatrix = Opm::gpuistl::GpuSparseMatrix<double>::fromMatrix(B);
     // check each column
     for (size_t component = 0; component < N; ++component) {
         std::vector<double> inputDataX(N * dim, 0.0);
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(RandomSparsityMatrix)
         yHost = inputDataY[0];
         inputVectorX.copyToHost(xHost);
         const double alpha = 1.42;
-        cuSparseMatrix.usmv(alpha, inputVectorX, inputVectorY);
+        gpuSparseMatrix.usmv(alpha, inputVectorX, inputVectorY);
 
         inputVectorY.copyToHost(inputDataY);
 
@@ -167,7 +167,7 @@ BOOST_AUTO_TEST_CASE(RandomSparsityMatrix)
         }
         inputVectorX.copyToHost(xHost);
 
-        cuSparseMatrix.mv(inputVectorX, inputVectorY);
+        gpuSparseMatrix.mv(inputVectorX, inputVectorY);
 
         inputVectorY.copyToHost(inputDataY);
 

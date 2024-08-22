@@ -26,7 +26,7 @@
 #include <memory>
 #include <opm/simulators/linalg/DILU.hpp>
 #include <opm/simulators/linalg/cuistl/GpuDILU.hpp>
-#include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
+#include <opm/simulators/linalg/cuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
@@ -41,7 +41,7 @@ using B1x1Vec = Dune::BlockVector<Dune::FieldVector<double, 1>>;
 using B2x2Vec = Dune::BlockVector<Dune::FieldVector<double, 2>>;
 using Sp1x1BlockMatrix = Dune::BCRSMatrix<FM1x1>;
 using Sp2x2BlockMatrix = Dune::BCRSMatrix<FM2x2>;
-using CuMatrix = Opm::gpuistl::CuSparseMatrix<T>;
+using CuMatrix = Opm::gpuistl::GpuSparseMatrix<T>;
 using CuIntVec = Opm::gpuistl::CuVector<int>;
 using CuFloatingPointVec = Opm::gpuistl::CuVector<T>;
 using GpuDilu1x1 = Opm::gpuistl::GpuDILU<Sp1x1BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;

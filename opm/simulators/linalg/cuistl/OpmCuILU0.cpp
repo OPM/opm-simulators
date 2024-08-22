@@ -26,7 +26,7 @@
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/common/TimingMacros.hpp>
 #include <opm/simulators/linalg/GraphColoring.hpp>
-#include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
+#include <opm/simulators/linalg/cuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/OpmCuILU0.hpp>
 #include <opm/simulators/linalg/cuistl/detail/autotuner.hpp>
@@ -46,7 +46,7 @@ OpmCuILU0<M, X, Y, l>::OpmCuILU0(const M& A, bool splitMatrix, bool tuneKernels)
     , m_levelSets(Opm::getMatrixRowColoring(m_cpuMatrix, Opm::ColoringType::LOWER))
     , m_reorderedToNatural(detail::createReorderedToNatural(m_levelSets))
     , m_naturalToReordered(detail::createNaturalToReordered(m_levelSets))
-    , m_gpuMatrix(CuSparseMatrix<field_type>::fromMatrix(m_cpuMatrix, true))
+    , m_gpuMatrix(GpuSparseMatrix<field_type>::fromMatrix(m_cpuMatrix, true))
     , m_gpuMatrixReorderedLower(nullptr)
     , m_gpuMatrixReorderedUpper(nullptr)
     , m_gpuNaturalToReorder(m_naturalToReordered)
@@ -74,10 +74,10 @@ OpmCuILU0<M, X, Y, l>::OpmCuILU0(const M& A, bool splitMatrix, bool tuneKernels)
     if (m_splitMatrix) {
         m_gpuMatrixReorderedDiag.emplace(CuVector<field_type>(blocksize_ * blocksize_ * m_cpuMatrix.N()));
         std::tie(m_gpuMatrixReorderedLower, m_gpuMatrixReorderedUpper)
-            = detail::extractLowerAndUpperMatrices<M, field_type, CuSparseMatrix<field_type>>(m_cpuMatrix,
+            = detail::extractLowerAndUpperMatrices<M, field_type, GpuSparseMatrix<field_type>>(m_cpuMatrix,
                                                                                               m_reorderedToNatural);
     } else {
-        m_gpuReorderedLU = detail::createReorderedMatrix<M, field_type, CuSparseMatrix<field_type>>(
+        m_gpuReorderedLU = detail::createReorderedMatrix<M, field_type, GpuSparseMatrix<field_type>>(
             m_cpuMatrix, m_reorderedToNatural);
     }
     LUFactorizeAndMoveData(m_moveThreadBlockSize, m_ILU0FactorizationThreadBlockSize);

@@ -22,7 +22,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
+#include <opm/simulators/linalg/cuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuSparseResource.hpp>

@@ -21,7 +21,7 @@
 
 #include <dune/istl/preconditioner.hh>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
-#include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
+#include <opm/simulators/linalg/cuistl/GpuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuMatrixDescription.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuSparseHandle.hpp>
 #include <opm/simulators/linalg/cuistl/detail/CuSparseResource.hpp>
@@ -104,7 +104,7 @@ private:
     //! \brief The relaxation factor to use.
     const field_type m_relaxationFactor;
     //! \brief The A matrix stored on the gpu
-    CuSparseMatrix<field_type> m_gpuMatrix;
+    GpuSparseMatrix<field_type> m_gpuMatrix;
     //! \brief the diagonal of cuMatrix inverted, and then flattened to fit in a vector
     CuVector<field_type> m_diagInvFlattened;
 
