@@ -23,7 +23,7 @@
 #if HAVE_CUDA
 #if USE_HIP
 #include <opm/simulators/linalg/hipistl/GpuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/hipistl/CuDILU.hpp>
+#include <opm/simulators/linalg/hipistl/GpuDILU.hpp>
 #include <opm/simulators/linalg/hipistl/OpmCuILU0.hpp>
 #include <opm/simulators/linalg/hipistl/CuJac.hpp>
 #include <opm/simulators/linalg/hipistl/CuSeqILU0.hpp>
@@ -32,7 +32,7 @@
 #include <opm/simulators/linalg/hipistl/detail/cuda_safe_call.hpp>
 #else
 #include <opm/simulators/linalg/cuistl/GpuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/cuistl/CuDILU.hpp>
+#include <opm/simulators/linalg/cuistl/GpuDILU.hpp>
 #include <opm/simulators/linalg/cuistl/OpmCuILU0.hpp>
 #include <opm/simulators/linalg/cuistl/CuJac.hpp>
 #include <opm/simulators/linalg/cuistl/CuSeqILU0.hpp>

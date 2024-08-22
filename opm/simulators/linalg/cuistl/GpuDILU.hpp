@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUDILU_HPP
-#define OPM_CUDILU_HPP
+#ifndef OPM_GPUDILU_HPP
+#define OPM_GPUDILU_HPP
 
 #include <memory>
 #include <opm/grid/utility/SparseTable.hpp>
@@ -40,7 +40,7 @@ namespace Opm::gpuistl
 //! \note We assume X and Y are both CuVector<real_type>, but we leave them as template
 //! arguments in case of future additions.
 template <class M, class X, class Y, int l = 1>
-class CuDILU : public Dune::PreconditionerWithUpdate<X, Y>
+class GpuDILU : public Dune::PreconditionerWithUpdate<X, Y>
 {
 public:
     //! \brief The matrix type the preconditioner is for.
@@ -60,7 +60,7 @@ public:
     //! \param A The matrix to operate on.
     //! \param w The relaxation factor.
     //!
-    explicit CuDILU(const M& A, bool splitMatrix, bool tuneKernels);
+    explicit GpuDILU(const M& A, bool splitMatrix, bool tuneKernels);
 
     //! \brief Prepare the preconditioner.
     //! \note Does nothing at the time being.

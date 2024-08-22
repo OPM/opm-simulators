@@ -18,14 +18,14 @@
 */
 #include <config.h>
 
-#define BOOST_TEST_MODULE TestCuDiluHelpers
+#define BOOST_TEST_MODULE TestGpuDILU
 
 #include <boost/test/unit_test.hpp>
 #include <dune/common/fmatrix.hh>
 #include <dune/istl/bcrsmatrix.hh>
 #include <memory>
 #include <opm/simulators/linalg/DILU.hpp>
-#include <opm/simulators/linalg/cuistl/CuDILU.hpp>
+#include <opm/simulators/linalg/cuistl/GpuDILU.hpp>
 #include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
@@ -44,8 +44,8 @@ using Sp2x2BlockMatrix = Dune::BCRSMatrix<FM2x2>;
 using CuMatrix = Opm::gpuistl::CuSparseMatrix<T>;
 using CuIntVec = Opm::gpuistl::CuVector<int>;
 using CuFloatingPointVec = Opm::gpuistl::CuVector<T>;
-using CuDilu1x1 = Opm::gpuistl::CuDILU<Sp1x1BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
-using CuDilu2x2 = Opm::gpuistl::CuDILU<Sp2x2BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
+using GpuDilu1x1 = Opm::gpuistl::GpuDILU<Sp1x1BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
+using GpuDilu2x2 = Opm::gpuistl::GpuDILU<Sp2x2BlockMatrix, CuFloatingPointVec, CuFloatingPointVec>;
 
 Sp1x1BlockMatrix
 get1x1BlockTestMatrix()
@@ -211,7 +211,7 @@ BOOST_AUTO_TEST_CASE(TestDiluApply)
 
     // Initialize preconditioner objects
     Dune::MultithreadDILU<Sp1x1BlockMatrix, B1x1Vec, B1x1Vec> cpudilu(matA);
-    auto gpudilu = CuDilu1x1(matA, true, true);
+    auto gpudilu = GpuDilu1x1(matA, true, true);
 
     // Use the apply
     gpudilu.apply(d_output, d_input);
@@ -224,7 +224,7 @@ BOOST_AUTO_TEST_CASE(TestDiluApply)
     }
     auto cudilures = d_output.asStdVector();
 
-    // check that CuDilu results matches that of CPU dilu
+    // check that GpuDilu results matches that of CPU dilu
     for (size_t i = 0; i < cudilures.size(); ++i) {
         BOOST_CHECK_CLOSE(cudilures[i], cpudilures[i], 1e-7);
     }
@@ -235,7 +235,7 @@ BOOST_AUTO_TEST_CASE(TestDiluApplyBlocked)
 
     // init matrix with 2x2 blocks
     Sp2x2BlockMatrix matA = get2x2BlockTestMatrix();
-    auto gpudilu = CuDilu2x2(matA, true, true);
+    auto gpudilu = GpuDilu2x2(matA, true, true);
     Dune::MultithreadDILU<Sp2x2BlockMatrix, B2x2Vec, B2x2Vec> cpudilu(matA);
 
     // create input/output buffers for the apply
@@ -275,7 +275,7 @@ BOOST_AUTO_TEST_CASE(TestDiluInitAndUpdateLarge)
 {
     // create gpu dilu preconditioner
     Sp1x1BlockMatrix matA = get1x1BlockTestMatrix();
-    auto gpudilu = CuDilu1x1(matA, true, true);
+    auto gpudilu = GpuDilu1x1(matA, true, true);
 
     matA[0][0][0][0] = 11.0;
     matA[0][1][0][0] = 12.0;
@@ -325,7 +325,7 @@ BOOST_AUTO_TEST_CASE(TestDiluInitAndUpdateLarge)
     }
     auto cudilures = d_output.asStdVector();
 
-    // check that CuDilu results matches that of CPU dilu
+    // check that GpuDilu results matches that of CPU dilu
     for (size_t i = 0; i < cudilures.size(); ++i) {
         BOOST_CHECK_CLOSE(cudilures[i], cpudilures[i], 1e-7);
     }
