@@ -28,15 +28,15 @@
 # hipification, we a dependency that will trigger when the cuda source code is
 # changed.
 macro (ADD_CUDA_OR_HIP_FILE LIST DIR FILE)
-  set (cuda_file_path "${PROJECT_SOURCE_DIR}/${DIR}/cuistl/${FILE}")
+  set (cuda_file_path "${PROJECT_SOURCE_DIR}/${DIR}/gpuistl/${FILE}")
 
   if(CUDA_FOUND AND NOT CONVERT_CUDA_TO_HIP)
-    list (APPEND ${LIST} "${DIR}/cuistl/${FILE}")
+    list (APPEND ${LIST} "${DIR}/gpuistl/${FILE}")
   else()
     # we must hipify the code
     # and include the correct path which is in the build/binary dir
     string(REPLACE ".cu" ".hip" HIP_SOURCE_FILE ${FILE})
-    set (hip_file_path "${PROJECT_BINARY_DIR}/${DIR}/hipistl/${HIP_SOURCE_FILE}")
+    set (hip_file_path "${PROJECT_BINARY_DIR}/${DIR}/gpuistl_hip/${HIP_SOURCE_FILE}")
     file(RELATIVE_PATH relpath ${PROJECT_SOURCE_DIR} ${hip_file_path})
 
     # add a custom command that will hipify
