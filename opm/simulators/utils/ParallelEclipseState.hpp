@@ -56,7 +56,7 @@ public:
 
     //! \brief Returns actnum vector.
     //! \details If called on non-root process an empty vector is returned
-    std::vector<int> actnum() const override;
+    std::vector<int> actnum(const std::vector<double>* minpvv = nullptr) const override;
 
     //! \brief Reset the actnum vector.
     //! \details Can only be called on root process

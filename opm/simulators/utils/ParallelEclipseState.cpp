@@ -57,10 +57,10 @@ ParallelFieldPropsManager::ParallelFieldPropsManager(FieldPropsManager& manager,
 }
 
 
-std::vector<int> ParallelFieldPropsManager::actnum() const
+std::vector<int> ParallelFieldPropsManager::actnum(const std::vector<double>* minpvv) const
 {
     if (m_comm.rank() == 0)
-        return m_manager.actnum();
+        return m_manager.actnum(minpvv);
 
     return{};
 }
