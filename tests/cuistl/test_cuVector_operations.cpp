@@ -18,13 +18,13 @@
 */
 #include <config.h>
 
-#define BOOST_TEST_MODULE TestCuVectorOperations
+#define BOOST_TEST_MODULE TestGpuVectorOperations
 #include <boost/mpl/list.hpp>
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
 #include <dune/istl/bcrsmatrix.hh>
 #include <opm/simulators/linalg/cuistl/GpuJac.hpp>
-#include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <opm/simulators/linalg/cuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
 #include <opm/simulators/linalg/cuistl/detail/vector_operations.hpp>
@@ -47,9 +47,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ElementWiseMultiplicationOf3By3BlockVectorAndVecto
     std::vector<T> hostBlockVector({1.0, 2.0, 3.0, 5.0, 2.0, 3.0, 2.0, 1.0, 2.0});
     std::vector<T> hostVecVector({3.0, 2.0, 1.0});
     std::vector<T> hostDstVector({0, 0, 0});
-    Opm::gpuistl::CuVector<T> deviceBlockVector(hostBlockVector);
-    Opm::gpuistl::CuVector<T> deviceVecVector(hostVecVector);
-    Opm::gpuistl::CuVector<T> deviceDstVector(hostDstVector);
+    Opm::gpuistl::GpuVector<T> deviceBlockVector(hostBlockVector);
+    Opm::gpuistl::GpuVector<T> deviceVecVector(hostVecVector);
+    Opm::gpuistl::GpuVector<T> deviceDstVector(hostDstVector);
 
     Opm::gpuistl::detail::weightedDiagMV(
         deviceBlockVector.data(), N, blocksize, weight, deviceVecVector.data(), deviceDstVector.data());
@@ -81,9 +81,9 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(ElementWiseMultiplicationOf2By2BlockVectorAndVecto
     std::vector<T> hostBlockVector({1.0, 2.0, 3.0, 4.0, 4.0, 3.0, 2.0, 1.0});
     std::vector<T> hostVecVector({1.0, 3.0, 2.0, 4.0});
     std::vector<T> hostDstVector({0, 0, 0, 0});
-    Opm::gpuistl::CuVector<T> deviceBlockVector(hostBlockVector);
-    Opm::gpuistl::CuVector<T> deviceVecVector(hostVecVector);
-    Opm::gpuistl::CuVector<T> deviceDstVector(hostDstVector);
+    Opm::gpuistl::GpuVector<T> deviceBlockVector(hostBlockVector);
+    Opm::gpuistl::GpuVector<T> deviceVecVector(hostVecVector);
+    Opm::gpuistl::GpuVector<T> deviceDstVector(hostDstVector);
 
     Opm::gpuistl::detail::weightedDiagMV(
         deviceBlockVector.data(), N, blocksize, weight, deviceVecVector.data(), deviceDstVector.data());

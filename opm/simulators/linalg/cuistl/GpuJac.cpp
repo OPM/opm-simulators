@@ -21,7 +21,7 @@
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/GpuJac.hpp>
-#include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <opm/simulators/linalg/cuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/preconditionerKernels/JacKernels.hpp>
 #include <opm/simulators/linalg/cuistl/detail/vector_operations.hpp>
 #include <opm/simulators/linalg/matrixblock.hh>
@@ -111,11 +111,11 @@ GpuJac<M, X, Y, l>::invertDiagonalAndFlatten()
 } // namespace Opm::gpuistl
 #define INSTANTIATE_CUJAC_DUNE(realtype, blockdim)                                                                     \
     template class ::Opm::gpuistl::GpuJac<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,             \
-                                        ::Opm::gpuistl::CuVector<realtype>,                                             \
-                                        ::Opm::gpuistl::CuVector<realtype>>;                                            \
+                                        ::Opm::gpuistl::GpuVector<realtype>,                                             \
+                                        ::Opm::gpuistl::GpuVector<realtype>>;                                            \
     template class ::Opm::gpuistl::GpuJac<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,              \
-                                        ::Opm::gpuistl::CuVector<realtype>,                                             \
-                                        ::Opm::gpuistl::CuVector<realtype>>
+                                        ::Opm::gpuistl::GpuVector<realtype>,                                             \
+                                        ::Opm::gpuistl::GpuVector<realtype>>
 
 INSTANTIATE_CUJAC_DUNE(double, 1);
 INSTANTIATE_CUJAC_DUNE(double, 2);

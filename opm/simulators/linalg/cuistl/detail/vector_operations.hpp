@@ -65,11 +65,11 @@ void syncFromRecvBuf(T* deviceA, T* buffer, size_t numberOfElements, const int* 
 /**
  * @brief Compue the weighted matrix vector product where the matrix is diagonal, the diagonal is a vector, meaning we
  * compute the Hadamard product.
- * @param squareBlockVector A CuVector whose elements are NxN matrix blocks
+ * @param squareBlockVector A GpuVector whose elements are NxN matrix blocks
  * @param numberOfRows The number of rows in the vector
  * @param blocksize The sidelength of the square block elements in the vector
- * @param src_vec A pointer to the data of the CuVector we multiply the blockvector with
- * @param[out] dst_vec A pointer to the data of the CuVector we store the result in
+ * @param src_vec A pointer to the data of the GpuVector we multiply the blockvector with
+ * @param[out] dst_vec A pointer to the data of the GpuVector we store the result in
  *
  * @note This is implemented as a faster way to multiply a diagonal matrix with a blockvector. We need only store the
  * diagonal of the matrix and use this product.

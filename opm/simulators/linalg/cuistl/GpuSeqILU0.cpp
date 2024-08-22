@@ -332,7 +332,7 @@ GpuSeqILU0<M, X, Y, l>::updateILUConfiguration()
 {
     auto bufferSize = findBufferSize();
     if (!m_buffer || m_buffer->dim() < bufferSize) {
-        m_buffer.reset(new CuVector<field_type>((bufferSize + sizeof(field_type) - 1) / sizeof(field_type)));
+        m_buffer.reset(new GpuVector<field_type>((bufferSize + sizeof(field_type) - 1) / sizeof(field_type)));
     }
     analyzeMatrix();
     createILU();
@@ -340,11 +340,11 @@ GpuSeqILU0<M, X, Y, l>::updateILUConfiguration()
 } // namespace Opm::gpuistl
 #define INSTANTIATE_GPUSEQILU0_DUNE(realtype, blockdim)                                                                 \
     template class ::Opm::gpuistl::GpuSeqILU0<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,         \
-                                            ::Opm::gpuistl::CuVector<realtype>,                                         \
-                                            ::Opm::gpuistl::CuVector<realtype>>;                                        \
+                                            ::Opm::gpuistl::GpuVector<realtype>,                                         \
+                                            ::Opm::gpuistl::GpuVector<realtype>>;                                        \
     template class ::Opm::gpuistl::GpuSeqILU0<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,          \
-                                            ::Opm::gpuistl::CuVector<realtype>,                                         \
-                                            ::Opm::gpuistl::CuVector<realtype>>
+                                            ::Opm::gpuistl::GpuVector<realtype>,                                         \
+                                            ::Opm::gpuistl::GpuVector<realtype>>
 
 
 INSTANTIATE_GPUSEQILU0_DUNE(double, 1);

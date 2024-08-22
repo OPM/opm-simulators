@@ -29,7 +29,7 @@
 #include <opm/simulators/linalg/cuistl/GpuBlockPreconditioner.hpp>
 #include <opm/simulators/linalg/cuistl/GpuOwnerOverlapCopy.hpp>
 #include <opm/simulators/linalg/cuistl/GpuSparseMatrix.hpp>
-#include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <opm/simulators/linalg/cuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/detail/has_function.hpp>
 
@@ -56,7 +56,7 @@ public:
     using typename Dune::IterativeSolver<X, X>::real_type;
     using typename Dune::IterativeSolver<X, X>::scalar_real_type;
     static constexpr auto block_size = domain_type::block_type::dimension;
-    using XGPU = Opm::gpuistl::CuVector<real_type>;
+    using XGPU = Opm::gpuistl::GpuVector<real_type>;
 
     // TODO: Use a std::forward
     SolverAdapter(Operator& op,

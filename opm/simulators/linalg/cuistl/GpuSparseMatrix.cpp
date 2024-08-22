@@ -198,7 +198,7 @@ GpuSparseMatrix<T>::setNonUnitDiagonal()
 
 template <typename T>
 void
-GpuSparseMatrix<T>::mv(const CuVector<T>& x, CuVector<T>& y) const
+GpuSparseMatrix<T>::mv(const GpuVector<T>& x, GpuVector<T>& y) const
 {
     assertSameSize(x);
     assertSameSize(y);
@@ -232,7 +232,7 @@ GpuSparseMatrix<T>::mv(const CuVector<T>& x, CuVector<T>& y) const
 
 template <typename T>
 void
-GpuSparseMatrix<T>::umv(const CuVector<T>& x, CuVector<T>& y) const
+GpuSparseMatrix<T>::umv(const GpuVector<T>& x, GpuVector<T>& y) const
 {
     assertSameSize(x);
     assertSameSize(y);
@@ -267,7 +267,7 @@ GpuSparseMatrix<T>::umv(const CuVector<T>& x, CuVector<T>& y) const
 
 template <typename T>
 void
-GpuSparseMatrix<T>::usmv(T alpha, const CuVector<T>& x, CuVector<T>& y) const
+GpuSparseMatrix<T>::usmv(T alpha, const GpuVector<T>& x, GpuVector<T>& y) const
 {
     assertSameSize(x);
     assertSameSize(y);

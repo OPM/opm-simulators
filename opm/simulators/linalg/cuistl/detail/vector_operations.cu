@@ -18,7 +18,7 @@
 */
 #include <config.h>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <opm/simulators/linalg/cuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cublas_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cublas_wrapper.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
@@ -143,7 +143,7 @@ innerProductAtIndices(cublasHandle_t cublasHandle,
     elementWiseMultiplyKernel<<<nThreadBlocks, threadBlockSize>>>(deviceA, deviceB, buffer, numberOfElements, indices);
 
     // TODO: [perf] Get rid of the allocation here.
-    CuVector<T> oneVector(numberOfElements);
+    GpuVector<T> oneVector(numberOfElements);
     oneVector = 1.0;
     T result = 0.0;
     OPM_CUBLAS_SAFE_CALL(cublasDot(cublasHandle, numberOfElements, oneVector.data(), 1, buffer, 1, &result));

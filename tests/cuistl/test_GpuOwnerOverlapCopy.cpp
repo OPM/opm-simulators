@@ -27,7 +27,7 @@
 #include <dune/istl/owneroverlapcopy.hh>
 #include <memory>
 #include <opm/simulators/linalg/cuistl/GpuOwnerOverlapCopy.hpp>
-#include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <opm/simulators/linalg/cuistl/GpuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/set_device.hpp>
 #include <random>
@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(TestProject)
 
     auto ownerOverlapCopy = Dune::OwnerOverlapCopyCommunication<int>(indexInfo, MPI_COMM_WORLD);
     auto xCPU = std::vector<double> {{1.0, 2.0, 3.0}};
-    auto xGPU = Opm::gpuistl::CuVector<double>(xCPU);
+    auto xGPU = Opm::gpuistl::GpuVector<double>(xCPU);
 
     auto gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
     
@@ -94,7 +94,7 @@ BOOST_AUTO_TEST_CASE(TestDot)
     indexInfo.addRemoteIndex(std::make_tuple(0, 2, Dune::OwnerOverlapCopyAttributeSet::copy));
     auto ownerOverlapCopy = Dune::OwnerOverlapCopyCommunication<int>(indexInfo, MPI_COMM_WORLD);
     auto xCPU = std::vector<double> {{1.0, 2.0, 3.0}};
-    auto xGPU = Opm::gpuistl::CuVector<double>(xCPU);
+    auto xGPU = Opm::gpuistl::GpuVector<double>(xCPU);
 
     auto gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
 

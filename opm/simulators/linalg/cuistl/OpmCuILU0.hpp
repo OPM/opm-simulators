@@ -23,7 +23,7 @@
 #include <opm/grid/utility/SparseTable.hpp>
 #include <opm/simulators/linalg/PreconditionerWithUpdate.hpp>
 #include <opm/simulators/linalg/cuistl/GpuSparseMatrix.hpp>
-#include <opm/simulators/linalg/cuistl/CuVector.hpp>
+#include <opm/simulators/linalg/cuistl/GpuVector.hpp>
 #include <optional>
 #include <type_traits>
 #include <vector>
@@ -39,7 +39,7 @@ namespace Opm::gpuistl
 //! \tparam l Ignored. Just there to have the same number of template arguments
 //!    as other preconditioners.
 //!
-//! \note We assume X and Y are both CuVector<real_type>, but we leave them as template
+//! \note We assume X and Y are both GpuVector<real_type>, but we leave them as template
 //! arguments in case of future additions.
 template <class M, class X, class Y, int l = 1>
 class OpmCuILU0 : public Dune::PreconditionerWithUpdate<X, Y>
@@ -126,13 +126,13 @@ private:
     std::unique_ptr<CuMat> m_gpuMatrixReorderedLower;
     std::unique_ptr<CuMat> m_gpuMatrixReorderedUpper;
     //! \brief If matrix splitting is enabled, we also store the diagonal separately
-    std::optional<CuVector<field_type>> m_gpuMatrixReorderedDiag;
+    std::optional<GpuVector<field_type>> m_gpuMatrixReorderedDiag;
     //! row conversion from natural to reordered matrix indices stored on the GPU
-    CuVector<int> m_gpuNaturalToReorder;
+    GpuVector<int> m_gpuNaturalToReorder;
     //! row conversion from reordered to natural matrix indices stored on the GPU
-    CuVector<int> m_gpuReorderToNatural;
+    GpuVector<int> m_gpuReorderToNatural;
     //! \brief Stores the inverted diagonal that we use in ILU0
-    CuVector<field_type> m_gpuDInv;
+    GpuVector<field_type> m_gpuDInv;
     //! \brief Bool storing whether or not we should store matrices in a split format
     bool m_splitMatrix;
     //! \brief Bool storing whether or not we will tune the threadblock sizes. Only used for AMD cards

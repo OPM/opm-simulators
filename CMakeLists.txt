@@ -553,7 +553,7 @@ if(CUDA_FOUND)
                        cusparse_handle
                        cuSparse_matrix_operations
                        cuVector_operations
-                       cuvector
+                       GpuVector
                        GpuSparseMatrix
                        GpuSeqILU0
                        GpuOwnerOverlapCopy
