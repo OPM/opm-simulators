@@ -68,6 +68,7 @@ public:
         serializer(surface_rates);
         serializer(reservoir_rates);
         serializer(prev_surface_rates);
+        serializer(composition_fractions);
         serializer(trivial_target);
         serializer(segments);
         serializer(events);
@@ -107,6 +108,11 @@ public:
     std::vector<Scalar> surface_rates;
     std::vector<Scalar> reservoir_rates;
     std::vector<Scalar> prev_surface_rates;
+    // volume fractions of compositions in the wellbore under the surface condition
+    // for now, it is only for StandardWell
+    // for multi-segment wells, it should be based on the segments, and this should be
+    // the values for the top segments depending on how we want to do it
+    std::vector<Scalar> composition_fractions;
     PerfData<Scalar> perf_data;
     bool trivial_target;
     SegmentState<Scalar> segments;
