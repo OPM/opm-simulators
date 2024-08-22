@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUVIEW_HEADER_HPP
-#define OPM_CUVIEW_HEADER_HPP
+#ifndef OPM_GPUVIEW_HEADER_HPP
+#define OPM_GPUVIEW_HEADER_HPP
 
 #include <dune/common/fvector.hh>
 
@@ -41,7 +41,7 @@ namespace Opm::gpuistl
 {
 
 /**
- * @brief The CuView class is provides a view of some data allocated on the GPU
+ * @brief The GpuView class is provides a view of some data allocated on the GPU
  * Essenstially is only stores a pointer and a size.
  *
  *  This class supports being used from inside a CUDA/HIP Kernel.
@@ -55,19 +55,19 @@ namespace Opm::gpuistl
  *
  **/
 template <typename T>
-class CuView
+class GpuView
 {
 public:
     using value_type = T;
     /**
      * @brief Default constructor that will initialize cublas and allocate 0 bytes of memory
      */
-    explicit CuView() = default;
+    explicit GpuView() = default;
 
     //TODO: we probably dont need anything like this or is it useful to have views also be able to handle things on CPU?
     /// @brief constructor based on std::vectors, this will make a view on the CPU
     /// @param data std vector to pr
-    CuView(std::vector<T>& data);
+    GpuView(std::vector<T>& data);
 
     /**
      * @brief operator[] to retrieve a reference to an item in the buffer
@@ -95,7 +95,7 @@ public:
 
 
     /**
-     * @brief CuView allocates new GPU memory of size numberOfElements * sizeof(T) and copies numberOfElements from
+     * @brief GpuView allocates new GPU memory of size numberOfElements * sizeof(T) and copies numberOfElements from
      * data
      *
      * @note This assumes the data is on the CPU.
@@ -103,15 +103,15 @@ public:
      * @param numberOfElements number of T elements to allocate
      * @param dataOnHost data on host/CPU
      */
-    __host__ __device__ CuView(T* dataOnHost, size_t numberOfElements)
+    __host__ __device__ GpuView(T* dataOnHost, size_t numberOfElements)
         : m_dataPtr(dataOnHost), m_numberOfElements(numberOfElements)
     {
     }
 
     /**
-     * @brief ~CuView calls cudaFree
+     * @brief ~GpuView calls cudaFree
      */
-    ~CuView() = default;
+    ~GpuView() = default;
 
     /**
      * @return the raw pointer to the GPU data
@@ -128,7 +128,7 @@ public:
     }
 
     /**
-     * @return fetch the first element in a CuView
+     * @return fetch the first element in a GpuView
      */
     __host__ __device__ T& front()
     {
@@ -139,7 +139,7 @@ public:
     }
 
     /**
-     * @return fetch the last element in a CuView
+     * @return fetch the last element in a GpuView
      */
     __host__ __device__ T& back()
     {
@@ -150,7 +150,7 @@ public:
     }
 
     /**
-     * @return fetch the first element in a CuView
+     * @return fetch the first element in a GpuView
      */
     __host__ __device__ T front() const
     {
@@ -161,7 +161,7 @@ public:
     }
 
     /**
-     * @return fetch the last element in a CuView
+     * @return fetch the last element in a GpuView
      */
     __host__ __device__ T back() const
     {
@@ -220,7 +220,7 @@ public:
      * @return an std::vector containing the elements copied from the GPU.
      */
     std::vector<T> asStdVector() const;
-    /// @brief Iterator class to make CuViews more similar to std containers
+    /// @brief Iterator class to make GpuViews more similar to std containers
     class iterator {
     public:
         // Iterator typedefs
@@ -363,7 +363,7 @@ private:
 
     /// @brief Helper function to assert if another view has the same size
     /// @param other view
-    __host__ __device__ void assertSameSize(const CuView<T>& other) const
+    __host__ __device__ void assertSameSize(const GpuView<T>& other) const
     {
         assertSameSize(other.m_numberOfElements);
     }

@@ -18,13 +18,13 @@
 */
 #include <config.h>
 
-#define BOOST_TEST_MODULE TestCuView
+#define BOOST_TEST_MODULE TestGpuView
 
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
 #include <dune/common/fvector.hh>
 #include <dune/istl/bvector.hh>
-#include <opm/simulators/linalg/cuistl/CuView.hpp>
+#include <opm/simulators/linalg/cuistl/GpuView.hpp>
 #include <opm/simulators/linalg/cuistl/GpuBuffer.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <random>
@@ -32,10 +32,10 @@
 #include <algorithm>
 #include <type_traits>
 
-using CuViewDouble = ::Opm::gpuistl::CuView<double>;
+using GpuViewDouble = ::Opm::gpuistl::GpuView<double>;
 using GpuBufferDouble = ::Opm::gpuistl::GpuBuffer<double>;
 
-__global__ void useCuViewOnGPU(CuViewDouble a, CuViewDouble b){
+__global__ void useGpuViewOnGPU(GpuViewDouble a, GpuViewDouble b){
     b[0] = a.front();
     b[1] = a.back();
     b[2] = *a.begin();
@@ -48,24 +48,24 @@ BOOST_AUTO_TEST_CASE(TestCreationAndIndexing)
 {
     // A simple test to check that we can move data to and from the GPU
     auto cpubuffer = std::vector<double>({1.0, 2.0, 42.0, 59.9451743, 10.7132692});
-    auto GpuBuffer = GpuBufferDouble(cpubuffer);
-    auto cuview = CuViewDouble(GpuBuffer.data(), GpuBuffer.size());
-    const auto const_cuview = CuViewDouble(GpuBuffer.data(), GpuBuffer.size());
+    auto cubuffer = GpuBufferDouble(cpubuffer);
+    auto gpuview = GpuViewDouble(cubuffer.data(), cubuffer.size());
+    const auto const_gpuview = GpuViewDouble(cubuffer.data(), cubuffer.size());
 
-    auto stdVecOfCuView = cuview.asStdVector();
-    auto const_stdVecOfCuView = cuview.asStdVector();
+    auto stdVecOfGpuView = gpuview.asStdVector();
+    auto const_stdVecOfGpuView = gpuview.asStdVector();
 
     BOOST_CHECK_EQUAL_COLLECTIONS(
-        stdVecOfCuView.begin(), stdVecOfCuView.end(), cpubuffer.begin(), cpubuffer.end());
+        stdVecOfGpuView.begin(), stdVecOfGpuView.end(), cpubuffer.begin(), cpubuffer.end());
     BOOST_CHECK_EQUAL_COLLECTIONS(
-        stdVecOfCuView.begin(), stdVecOfCuView.end(), const_stdVecOfCuView.begin(), const_stdVecOfCuView.end());
+        stdVecOfGpuView.begin(), stdVecOfGpuView.end(), const_stdVecOfGpuView.begin(), const_stdVecOfGpuView.end());
 }
 
-BOOST_AUTO_TEST_CASE(TestCuViewOnCPUTypes)
+BOOST_AUTO_TEST_CASE(TestGpuViewOnCPUTypes)
 {
     auto buf = std::vector<double>({1.0, 2.0, 42.0, 59.9451743, 10.7132692});
-    auto cpuview = CuViewDouble(buf.data(), buf.size());
-    const auto const_cpuview = CuViewDouble(buf.data(), buf.size());
+    auto cpuview = GpuViewDouble(buf.data(), buf.size());
+    const auto const_cpuview = GpuViewDouble(buf.data(), buf.size());
 
     // check that indexing a mutable view gives references when indexing it
     bool correct_type_of_cpu_front = std::is_same_v<double&, decltype(cpuview.front())>;
@@ -83,26 +83,26 @@ BOOST_AUTO_TEST_CASE(TestCuViewOnCPUTypes)
     BOOST_CHECK(cpuview.back() == buf.back());
 }
 
-BOOST_AUTO_TEST_CASE(TestCuViewOnCPUWithSTLIteratorAlgorithm)
+BOOST_AUTO_TEST_CASE(TestGpuViewOnCPUWithSTLIteratorAlgorithm)
 {
     auto buf = std::vector<double>({1.0, 2.0, 42.0, 59.9451743, 10.7132692});
-    auto cpuview = CuViewDouble(buf.data(), buf.size());
+    auto cpuview = GpuViewDouble(buf.data(), buf.size());
     std::sort(buf.begin(), buf.end());
     BOOST_CHECK(42.0 == cpuview[3]);
 }
 
-BOOST_AUTO_TEST_CASE(TestCuViewOnGPU)
+BOOST_AUTO_TEST_CASE(TestGpuViewOnGPU)
 {
     auto buf = std::vector<double>({1.0, 2.0, 42.0, 59.9451743, 10.7132692});
     auto cubufA = GpuBufferDouble(buf);
-    auto cuviewA = CuViewDouble(cubufA.data(), cubufA.size());
+    auto gpuviewA = GpuViewDouble(cubufA.data(), cubufA.size());
     auto cubufB = GpuBufferDouble(4);
-    auto cuviewB = CuViewDouble(cubufB.data(), cubufB.size());
+    auto gpuviewB = GpuViewDouble(cubufB.data(), cubufB.size());
 
-    useCuViewOnGPU<<<1,1>>>(cuviewA, cuviewB);
+    useGpuViewOnGPU<<<1,1>>>(gpuviewA, gpuviewB);
 
-    auto vecA = cuviewA.asStdVector();
-    auto vecB = cuviewB.asStdVector();
+    auto vecA = gpuviewA.asStdVector();
+    auto vecB = gpuviewB.asStdVector();
 
     // checks that front/back/begin/end works
     BOOST_CHECK(vecB[0] == buf[0]);

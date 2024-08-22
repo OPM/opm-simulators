@@ -24,7 +24,7 @@
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/detail/safe_conversion.hpp>
-#include <opm/simulators/linalg/cuistl/CuView.hpp>
+#include <opm/simulators/linalg/cuistl/GpuView.hpp>
 #include <vector>
 #include <string>
 
@@ -274,7 +274,7 @@ private:
 };
 
 template <class T>
-CuView<const T> make_view(const GpuBuffer<T>&);
+GpuView<const T> make_view(const GpuBuffer<T>&);
 
 } // namespace Opm::gpuistl
 #endif

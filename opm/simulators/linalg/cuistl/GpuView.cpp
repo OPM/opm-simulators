@@ -20,21 +20,21 @@
 #include <cuda_runtime.h>
 #include <algorithm>
 #include <fmt/core.h>
-#include <opm/simulators/linalg/cuistl/CuView.hpp>
+#include <opm/simulators/linalg/cuistl/GpuView.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 
 namespace Opm::gpuistl
 {
 
 template <class T>
-CuView<T>::CuView(std::vector<T>& data)
-    : CuView(data.data(), data.size())
+GpuView<T>::GpuView(std::vector<T>& data)
+    : GpuView(data.data(), data.size())
 {
 }
 
 template <typename T>
 std::vector<T>
-CuView<T>::asStdVector() const
+GpuView<T>::asStdVector() const
 {
     std::vector<T> temporary(m_numberOfElements);
     copyToHost(temporary);
@@ -43,7 +43,7 @@ CuView<T>::asStdVector() const
 
 template <class T>
 void
-CuView<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
+GpuView<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
 {
     if (numberOfElements > size()) {
         OPM_THROW(std::runtime_error,
@@ -56,7 +56,7 @@ CuView<T>::copyFromHost(const T* dataPointer, size_t numberOfElements)
 
 template <class T>
 void
-CuView<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
+GpuView<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 {
     assertSameSize(numberOfElements);
     OPM_CUDA_SAFE_CALL(cudaMemcpy(dataPointer, data(), numberOfElements * sizeof(T), cudaMemcpyDeviceToHost));
@@ -64,19 +64,19 @@ CuView<T>::copyToHost(T* dataPointer, size_t numberOfElements) const
 
 template <class T>
 void
-CuView<T>::copyFromHost(const std::vector<T>& data)
+GpuView<T>::copyFromHost(const std::vector<T>& data)
 {
     copyFromHost(data.data(), data.size());
 }
 template <class T>
 void
-CuView<T>::copyToHost(std::vector<T>& data) const
+GpuView<T>::copyToHost(std::vector<T>& data) const
 {
     copyToHost(data.data(), data.size());
 }
 
-template class CuView<double>;
-template class CuView<float>;
-template class CuView<int>;
+template class GpuView<double>;
+template class GpuView<float>;
+template class GpuView<int>;
 
 } // namespace Opm::gpuistl

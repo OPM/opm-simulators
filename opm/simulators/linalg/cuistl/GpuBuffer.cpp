@@ -21,7 +21,7 @@
 #include <algorithm>
 #include <fmt/core.h>
 #include <opm/simulators/linalg/cuistl/GpuBuffer.hpp>
-#include <opm/simulators/linalg/cuistl/CuView.hpp>
+#include <opm/simulators/linalg/cuistl/GpuView.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 
 namespace Opm::gpuistl
@@ -193,12 +193,12 @@ template class GpuBuffer<float>;
 template class GpuBuffer<int>;
 
 template <class T>
-CuView<const T> make_view(const GpuBuffer<T>& buf) {
-    return CuView<const T>(buf.data(), buf.size());
+GpuView<const T> make_view(const GpuBuffer<T>& buf) {
+    return GpuView<const T>(buf.data(), buf.size());
 }
 
-template CuView<const double> make_view<double>(const GpuBuffer<double>&);
-template CuView<const float> make_view<float>(const GpuBuffer<float>&);
-template CuView<const int> make_view<int>(const GpuBuffer<int>&);
+template GpuView<const double> make_view<double>(const GpuBuffer<double>&);
+template GpuView<const float> make_view<float>(const GpuBuffer<float>&);
+template GpuView<const int> make_view<int>(const GpuBuffer<int>&);
 
 } // namespace Opm::gpuistl

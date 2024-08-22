@@ -559,7 +559,7 @@ if(CUDA_FOUND)
                        GpuOwnerOverlapCopy
                        solver_adapter
                        GpuBuffer
-                       cuview
+                       GpuView
                        PROPERTIES LABELS ${gpu_label})
 endif()
 
