@@ -27,7 +27,7 @@
 #include <dune/istl/solver.hh>
 #include <opm/common/ErrorMacros.hpp>
 #include <opm/simulators/linalg/cuistl/GpuBlockPreconditioner.hpp>
-#include <opm/simulators/linalg/cuistl/CuOwnerOverlapCopy.hpp>
+#include <opm/simulators/linalg/cuistl/GpuOwnerOverlapCopy.hpp>
 #include <opm/simulators/linalg/cuistl/CuSparseMatrix.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
@@ -191,7 +191,7 @@ private:
                 gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<real_type, block_size, typename Operator::communication_type>>(communication);
             }
 
-            using CudaCommunication = CuOwnerOverlapCopy<real_type, block_size, typename Operator::communication_type>;
+            using CudaCommunication = GpuOwnerOverlapCopy<real_type, block_size, typename Operator::communication_type>;
             using SchwarzOperator
                 = Dune::OverlappingSchwarzOperator<CuSparseMatrix<real_type>, XGPU, XGPU, CudaCommunication>;
             auto cudaCommunication = std::make_shared<CudaCommunication>(gpuComm);

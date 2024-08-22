@@ -16,8 +16,8 @@
   You should have received a copy of the GNU General Public License
   along with OPM.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef OPM_CUISTL_CUOWNEROVERLAPCOPY_HPP
-#define OPM_CUISTL_CUOWNEROVERLAPCOPY_HPP
+#ifndef OPM_GPUISTL_GPUOWNEROVERLAPCOPY_HPP
+#define OPM_GPUISTL_GPUOWNEROVERLAPCOPY_HPP
 #include <dune/istl/owneroverlapcopy.hh>
 #include <memory>
 #include <mutex>
@@ -380,12 +380,12 @@ private:
  * @tparam OwnerOverlapCopyCommunicationType should mimic Dune::OwnerOverlapCopyCommunication.
  */
 template <class field_type, int block_size, class OwnerOverlapCopyCommunicationType>
-class CuOwnerOverlapCopy
+class GpuOwnerOverlapCopy
 {
 public:
     using X = CuVector<field_type>;
 
-    CuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> sender) : m_sender(sender){}
+    GpuOwnerOverlapCopy(std::shared_ptr<GPUSender<field_type, OwnerOverlapCopyCommunicationType>> sender) : m_sender(sender){}
 
     void copyOwnerToAll(const X& source, X& dest) const {
         m_sender->copyOwnerToAll(source, dest);

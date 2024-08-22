@@ -18,7 +18,7 @@
 */
 #include <config.h>
 
-#define BOOST_TEST_MODULE TestCuOwnerOverlapCopy
+#define BOOST_TEST_MODULE TestGpuOwnerOverlapCopy
 #define BOOST_TEST_NO_MAIN
 
 #include <boost/test/unit_test.hpp>
@@ -26,7 +26,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <dune/istl/owneroverlapcopy.hh>
 #include <memory>
-#include <opm/simulators/linalg/cuistl/CuOwnerOverlapCopy.hpp>
+#include <opm/simulators/linalg/cuistl/GpuOwnerOverlapCopy.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cuda_safe_call.hpp>
 #include <opm/simulators/linalg/cuistl/set_device.hpp>
@@ -66,10 +66,10 @@ BOOST_AUTO_TEST_CASE(TestProject)
 
     auto gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
     
-    auto cuOwnerOverlapCopy
-        = Opm::gpuistl::CuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
+    auto GpuOwnerOverlapCopy
+        = Opm::gpuistl::GpuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
 
-    cuOwnerOverlapCopy.project(xGPU);
+    GpuOwnerOverlapCopy.project(xGPU);
 
     auto resultOfProject = xGPU.asStdVector();
 
@@ -98,15 +98,15 @@ BOOST_AUTO_TEST_CASE(TestDot)
 
     auto gpuComm = std::make_shared<Opm::gpuistl::GPUObliviousMPISender<double, 1, Dune::OwnerOverlapCopyCommunication<int>>>(ownerOverlapCopy);
 
-    auto cuOwnerOverlapCopy
-        = Opm::gpuistl::CuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
+    auto GpuOwnerOverlapCopy
+        = Opm::gpuistl::GpuOwnerOverlapCopy<double, 1, Dune::OwnerOverlapCopyCommunication<int>>(gpuComm);
 
     double outputDune = -1.0;
     auto xDune = xGPU.asDuneBlockVector<1>();
     ownerOverlapCopy.dot(xDune, xDune, outputDune);
 
     double output = -1.0;
-    cuOwnerOverlapCopy.dot(xGPU, xGPU, output);
+    GpuOwnerOverlapCopy.dot(xGPU, xGPU, output);
 
 
     BOOST_CHECK_EQUAL(outputDune, output);

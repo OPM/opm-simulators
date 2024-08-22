@@ -556,7 +556,7 @@ if(CUDA_FOUND)
                        cuvector
                        cusparsematrix
                        cuseqilu0
-                       cuowneroverlapcopy
+                       GpuOwnerOverlapCopy
                        solver_adapter
                        GpuBuffer
                        cuview
