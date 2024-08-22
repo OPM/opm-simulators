@@ -20,7 +20,7 @@
 #include <dune/istl/bcrsmatrix.hh>
 #include <fmt/core.h>
 #include <opm/common/ErrorMacros.hpp>
-#include <opm/simulators/linalg/cuistl/CuJac.hpp>
+#include <opm/simulators/linalg/cuistl/GpuJac.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/detail/preconditionerKernels/JacKernels.hpp>
 #include <opm/simulators/linalg/cuistl/detail/vector_operations.hpp>
@@ -30,7 +30,7 @@ namespace Opm::gpuistl
 {
 
 template <class M, class X, class Y, int l>
-CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
+GpuJac<M, X, Y, l>::GpuJac(const M& A, field_type w)
     : m_cpuMatrix(A)
     , m_relaxationFactor(w)
     , m_gpuMatrix(CuSparseMatrix<field_type>::fromMatrix(A))
@@ -58,13 +58,13 @@ CuJac<M, X, Y, l>::CuJac(const M& A, field_type w)
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
+GpuJac<M, X, Y, l>::pre([[maybe_unused]] X& x, [[maybe_unused]] Y& b)
 {
 }
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::apply(X& v, const Y& d)
+GpuJac<M, X, Y, l>::apply(X& v, const Y& d)
 {
     // Jacobi preconditioner: x_{n+1} = x_n + w * (D^-1 * (b - Ax_n) )
     // Working with defect d and update v it we only need to set v = w*(D^-1)*d
@@ -77,20 +77,20 @@ CuJac<M, X, Y, l>::apply(X& v, const Y& d)
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::post([[maybe_unused]] X& x)
+GpuJac<M, X, Y, l>::post([[maybe_unused]] X& x)
 {
 }
 
 template <class M, class X, class Y, int l>
 Dune::SolverCategory::Category
-CuJac<M, X, Y, l>::category() const
+GpuJac<M, X, Y, l>::category() const
 {
     return Dune::SolverCategory::sequential;
 }
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::update()
+GpuJac<M, X, Y, l>::update()
 {
     m_gpuMatrix.updateNonzeroValues(m_cpuMatrix);
     invertDiagonalAndFlatten();
@@ -98,7 +98,7 @@ CuJac<M, X, Y, l>::update()
 
 template <class M, class X, class Y, int l>
 void
-CuJac<M, X, Y, l>::invertDiagonalAndFlatten()
+GpuJac<M, X, Y, l>::invertDiagonalAndFlatten()
 {
     detail::JAC::invertDiagonalAndFlatten<field_type, matrix_type::block_type::cols>(
         m_gpuMatrix.getNonZeroValues().data(),
@@ -110,10 +110,10 @@ CuJac<M, X, Y, l>::invertDiagonalAndFlatten()
 
 } // namespace Opm::gpuistl
 #define INSTANTIATE_CUJAC_DUNE(realtype, blockdim)                                                                     \
-    template class ::Opm::gpuistl::CuJac<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,             \
+    template class ::Opm::gpuistl::GpuJac<Dune::BCRSMatrix<Dune::FieldMatrix<realtype, blockdim, blockdim>>,             \
                                         ::Opm::gpuistl::CuVector<realtype>,                                             \
                                         ::Opm::gpuistl::CuVector<realtype>>;                                            \
-    template class ::Opm::gpuistl::CuJac<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,              \
+    template class ::Opm::gpuistl::GpuJac<Dune::BCRSMatrix<Opm::MatrixBlock<realtype, blockdim, blockdim>>,              \
                                         ::Opm::gpuistl::CuVector<realtype>,                                             \
                                         ::Opm::gpuistl::CuVector<realtype>>
 

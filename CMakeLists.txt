@@ -548,7 +548,7 @@ if(CUDA_FOUND)
                        cuda_safe_call
                        cuda_check_last_error
                        cublas_handle
-                       cujac
+                       GpuJac
                        GpuDILU
                        cusparse_handle
                        cuSparse_matrix_operations

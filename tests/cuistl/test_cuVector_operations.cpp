@@ -23,7 +23,7 @@
 #include <boost/test/unit_test.hpp>
 #include <cuda_runtime.h>
 #include <dune/istl/bcrsmatrix.hh>
-#include <opm/simulators/linalg/cuistl/CuJac.hpp>
+#include <opm/simulators/linalg/cuistl/GpuJac.hpp>
 #include <opm/simulators/linalg/cuistl/CuVector.hpp>
 #include <opm/simulators/linalg/cuistl/PreconditionerAdapter.hpp>
 #include <opm/simulators/linalg/cuistl/detail/cusparse_matrix_operations.hpp>
