@@ -42,6 +42,7 @@
 #include <opm/simulators/flow/FIBlackoilModel.hpp>
 #include <opm/simulators/flow/NewTranFluxModule.hpp>
 #include <opm/simulators/flow/OutputBlackoilModule.hpp>
+#include <opm/simulators/flow/TracerModel.hpp>
 #include <opm/simulators/flow/VtkTracerModule.hpp>
 
 #if HAVE_DAMARIS
@@ -52,7 +53,7 @@
 
 namespace Opm {
 template <class TypeTag>
-class FlowProblem;
+class FlowProblemBlackoil;
 }
 
 namespace Opm::Properties {
@@ -89,10 +90,18 @@ struct EnableThermalFluxBoundaries { using type = UndefinedProperty; };
 template<class TypeTag, class MyTypeTag>
 struct WellModel { using type = UndefinedProperty; };
 
+// The class that deals with the tracer
+template<class TypeTag, class MyTypeTag>
+struct TracerModel {  using type = UndefinedProperty; };
+
+template <class TypeTag>
+struct TracerModel<TypeTag, TTag::FlowBaseProblem>
+{ using type =  ::Opm::TracerModel<TypeTag>; };
+
 // Set the problem property
 template<class TypeTag>
 struct Problem<TypeTag, TTag::FlowBaseProblem>
-{ using type = FlowProblem<TypeTag>; };
+{ using type = FlowProblemBlackoil<TypeTag>; };
 
 template<class TypeTag>
 struct Model<TypeTag, TTag::FlowBaseProblem>

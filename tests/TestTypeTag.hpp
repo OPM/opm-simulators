@@ -51,7 +51,7 @@ struct TestTypeTag
 // Set the problem class
 template<class TypeTag>
 struct Problem<TypeTag, TTag::TestTypeTag> {
-    using type = FlowProblem<TypeTag>;
+    using type = FlowProblemBlackoil<TypeTag>;
 };
 
 // Enable experimental features for ebos: ebos is the research simulator of the OPM

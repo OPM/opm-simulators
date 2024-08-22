@@ -37,7 +37,7 @@
 
 #include <opm/simulators/flow/BlackoilModelParameters.hpp>
 #include <opm/simulators/flow/FlowGenericVanguard.hpp>
-#include <opm/simulators/flow/FlowProblem.hpp>
+#include <opm/simulators/flow/FlowProblemBlackoil.hpp>
 #include <opm/simulators/flow/equil/EquilibrationHelpers.hpp>
 #include <opm/simulators/linalg/parallelbicgstabbackend.hh>
 #include <opm/simulators/wells/BlackoilWellModel.hpp>
