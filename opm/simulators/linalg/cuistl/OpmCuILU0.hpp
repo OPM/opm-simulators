@@ -82,7 +82,7 @@ public:
     void update() final;
 
     //! \brief Compute LU factorization, and update the data of the reordered matrix
-    void LUFactorizeAndMoveData();
+    void LUFactorizeAndMoveData(int moveThreadBlockSize, int factorizationThreadBlockSize);
 
     //! \brief function that will experimentally tune the thread block sizes of the important cuda kernels
     void tuneThreadBlockSizes();
@@ -105,6 +105,10 @@ public:
 
 
 private:
+    //! \brief Apply the preconditoner.
+    void apply(X& v, const Y& d, int lowerSolveThreadBlockSize, int upperSolveThreadBlockSize);
+    //! \brief Updates the matrix data.
+    void update(int moveThreadBlockSize, int factorizationThreadBlockSize);
     //! \brief Reference to the underlying matrix
     const M& m_cpuMatrix;
     //! \brief size_t describing the dimensions of the square block elements
@@ -135,8 +139,10 @@ private:
     bool m_tuneThreadBlockSizes;
     //! \brief variables storing the threadblocksizes to use if using the tuned sizes and AMD cards
     //! The default value of -1 indicates that we have not calibrated and selected a value yet
-    int m_applyThreadBlockSize = -1;
-    int m_updateThreadBlockSize = -1;
+    int m_upperSolveThreadBlockSize = -1;
+    int m_lowerSolveThreadBlockSize = -1;
+    int m_moveThreadBlockSize = -1;
+    int m_ILU0FactorizationThreadBlockSize = -1;
 };
 } // end namespace Opm::cuistl
 
