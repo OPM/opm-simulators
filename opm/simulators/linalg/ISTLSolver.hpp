@@ -238,12 +238,20 @@ std::unique_ptr<Matrix> blockJacobiAdjacency(const Grid& grid,
                 }
                 // ------------
             } else {
-                // Do a normal linear solver setup.
                 assert(parameters_.size() == 1);
                 assert(prm_.empty());
-                prm_.push_back(setupPropertyTree(parameters_[0],
-                                                 Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
-                                                 Parameters::IsSet<Parameters::LinearSolverReduction>()));
+
+                // Do a normal linear solver setup.
+                if (parameters_[0].is_nldd_local_solver_) {
+                    prm_.push_back(setupPropertyTree(parameters_[0],
+                                                     Parameters::IsSet<Parameters::NlddLocalLinearSolverMaxIter>(),
+                                                     Parameters::IsSet<Parameters::NlddLocalLinearSolverReduction>()));
+                }
+                else {
+                    prm_.push_back(setupPropertyTree(parameters_[0],
+                                                     Parameters::IsSet<Parameters::LinearSolverMaxIter>(),
+                                                     Parameters::IsSet<Parameters::LinearSolverReduction>()));
+                }
             }
             flexibleSolver_.resize(prm_.size());
 

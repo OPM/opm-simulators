@@ -32,9 +32,7 @@ namespace Opm {
 void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
 {
     // TODO: these parameters have undocumented non-trivial dependencies
-    linear_solver_reduction_ = Parameters::Get<Parameters::LinearSolverReduction>();
     relaxed_linear_solver_reduction_ = Parameters::Get<Parameters::RelaxedLinearSolverReduction>();
-    linear_solver_maxiter_ = Parameters::Get<Parameters::LinearSolverMaxIter>();
     linear_solver_restart_ = Parameters::Get<Parameters::LinearSolverRestart>();
     linear_solver_verbosity_ = Parameters::Get<Parameters::LinearSolverVerbosity>();
     ilu_relaxation_ = Parameters::Get<Parameters::IluRelaxation>();
@@ -56,6 +54,18 @@ void FlowLinearSolverParameters::init(bool cprRequestedInDataFile)
         linsolver_ = Parameters::Get<Parameters::LinearSolver>();
     }
 
+    // if local solver from nldd, use nldd local linear solver parameters
+    if (is_nldd_local_solver_) {
+        linsolver_ = Parameters::Get<Parameters::NlddLocalLinearSolver>();
+        linear_solver_reduction_ = Parameters::Get<Parameters::NlddLocalLinearSolverReduction>();
+        linear_solver_maxiter_ = Parameters::Get<Parameters::NlddLocalLinearSolverMaxIter>();
+    }
+    else {
+        linsolver_ = Parameters::Get<Parameters::LinearSolver>();
+        linear_solver_reduction_ = Parameters::Get<Parameters::LinearSolverReduction>();
+        linear_solver_maxiter_ = Parameters::Get<Parameters::LinearSolverMaxIter>();
+    }
+
     accelerator_mode_ = Parameters::Get<Parameters::AcceleratorMode>();
     bda_device_id_ = Parameters::Get<Parameters::BdaDeviceId>();
     opencl_platform_id_ = Parameters::Get<Parameters::OpenclPlatformId>();
@@ -66,11 +76,15 @@ void FlowLinearSolverParameters::registerParameters()
 {
     Parameters::Register<Parameters::LinearSolverReduction>
         ("The minimum reduction of the residual which the linear solver must achieve");
+    Parameters::Register<Parameters::NlddLocalLinearSolverReduction>
+        ("The minimum reduction of the residual which the NLDD local linear solver must achieve");
     Parameters::Register<Parameters::RelaxedLinearSolverReduction>
         ("The minimum reduction of the residual which the linear solver need to "
          "achieve for the solution to be accepted");
     Parameters::Register<Parameters::LinearSolverMaxIter>
         ("The maximum number of iterations of the linear solver");
+    Parameters::Register<Parameters::NlddLocalLinearSolverMaxIter>
+        ("The maximum number of iterations of the NLDD local linear solver");
     Parameters::Register<Parameters::LinearSolverRestart>
         ("The number of iterations after which GMRES is restarted");
     Parameters::Register<Parameters::LinearSolverVerbosity>
@@ -102,11 +116,16 @@ void FlowLinearSolverParameters::registerParameters()
     Parameters::Register<Parameters::ScaleLinearSystem>
         ("Scale linear system according to equation scale and primary variable types");
     Parameters::Register<Parameters::LinearSolver>
-        ("Configuration of solver. Valid options are: ilu0 (default), "
-         "dilu, cprw, cpr (an alias for cprw), cpr_quasiimpes, "
+        ("Configuration of solver. Valid options are: cprw (default), "
+         "ilu0, dilu, cpr (an alias for cprw), cpr_quasiimpes, "
          "cpr_trueimpes, cpr_trueimpesanalytic, amg or hybrid (experimental). "
          "Alternatively, you can request a configuration to be read from a "
          "JSON file by giving the filename here, ending with '.json.'");
+    Parameters::Register<Parameters::NlddLocalLinearSolver>
+        ("Configuration of NLDD local linear solver. Valid options are: ilu0 (default), "
+            "dilu, cpr_quasiimpes and amg. "
+            "Alternatively, you can request a configuration to be read from a "
+            "JSON file by giving the filename here, ending with '.json.'");
     Parameters::Register<Parameters::LinearSolverPrintJsonDefinition>
         ("Write the JSON definition of the linear solver setup to the DBG file.");
     Parameters::Register<Parameters::CprReuseSetup>
@@ -150,6 +169,7 @@ void FlowLinearSolverParameters::reset()
     newton_use_gmres_         = false;
     ignoreConvergenceFailure_ = false;
     scale_linear_system_      = false;
+    is_nldd_local_solver_     = false;
     linsolver_                = "cprw";
     linear_solver_print_json_definition_ = true;
     cpr_reuse_setup_          = 4;

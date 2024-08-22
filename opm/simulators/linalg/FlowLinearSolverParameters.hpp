@@ -63,9 +63,11 @@ struct LinearSolverBackend<TypeTag, TTag::FlowIstlSolverParams>
 namespace Opm::Parameters {
 
 struct LinearSolverReduction { static constexpr double value = 1e-2; };
+struct NlddLocalLinearSolverReduction { static constexpr double value = 1e-2; };
 struct RelaxedLinearSolverReduction { static constexpr double value = 1e-2; };
 struct IluRelaxation { static constexpr double value = 0.9; };
 struct LinearSolverMaxIter { static constexpr int value = 200; };
+struct NlddLocalLinearSolverMaxIter { static constexpr int value = 200; };
 struct LinearSolverRestart { static constexpr int value = 40; };
 struct IluFillinLevel { static constexpr int value = 0; };
 struct MiluVariant { static constexpr auto value = "ILU"; };
@@ -75,6 +77,7 @@ struct UseGmres { static constexpr bool value = false; };
 struct LinearSolverIgnoreConvergenceFailure { static constexpr bool value = false; };
 struct ScaleLinearSystem { static constexpr bool value = false; };
 struct LinearSolver { static constexpr auto value = "cprw"; };
+struct NlddLocalLinearSolver { static constexpr auto value = "ilu0"; };
 struct LinearSolverPrintJsonDefinition { static constexpr auto value = true; };
 struct CprReuseSetup { static constexpr int value = 4; };
 struct CprReuseInterval { static constexpr int value = 30; };
@@ -103,6 +106,7 @@ struct FlowLinearSolverParameters
     bool   newton_use_gmres_;
     bool   ignoreConvergenceFailure_;
     bool scale_linear_system_;
+    bool is_nldd_local_solver_;
     std::string linsolver_;
     bool linear_solver_print_json_definition_;
     int cpr_reuse_setup_;
