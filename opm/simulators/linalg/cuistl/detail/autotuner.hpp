@@ -28,12 +28,16 @@
 namespace Opm::cuistl::detail
 {
 
-    /// @brief Function that tests the best thread block size, assumes updating the reference will affect runtimes
-    /// @tparam func function to tune
-    /// @tparam ...Args types of the arguments needed to call the function
+    /// @brief Function that tests the best thread block size, assumes the provided function depends on threadblock-size
+    /// @tparam The type of the function to tune
     /// @param f the function to tune, which takes the thread block size as the input
-    template <typename func, typename... Args>
+    template <typename func>
     int tuneThreadBlockSize(func& f, std::string descriptionOfFunction) {
+        // This threadblock-tuner is very simple, it tests all valid block sizes divisble by 64
+        // 64 is chosen so it is a multiple of the AMD wavefront size.
+        // The maximum size of a threadblock is 1024, so an exhaustive search here will not be expensive
+        // We time the kernel with each possible threadblock-size, and return the one
+        // that gave the fastest invidivual run.
 
         // TODO: figure out a more rigorous way of deciding how many runs will suffice?
         constexpr const int runs = 2;
@@ -68,7 +72,7 @@ namespace Opm::cuistl::detail
                 for (int i = 0; i < runs; ++i){
                     float candidateBlockSizeTime;
                     OPM_CUDA_SAFE_CALL(cudaEventElapsedTime(&candidateBlockSizeTime, events[i], events[i+1]));
-                    if (candidateBlockSizeTime < bestTime){
+                    if (candidateBlockSizeTime < bestTime){ // checks if this configuration beat the current best
                         bestTime = candidateBlockSizeTime;
                         bestBlockSize = thrBlockSize;
                     }
